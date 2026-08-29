@@ -657,6 +657,7 @@ test('connector contract stays pending until current tools/list rediscovery is o
   );
   const discovery = {
     current_contract_observed: true,
+    attestation_verified: true,
     contract_sha256: contract.sha256,
     observed_at: '2026-08-18T00:00:00.000Z'
   };
@@ -677,6 +678,7 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: currentSha };
   const discovery = {
     current_contract_observed: true,
+    attestation_verified: true,
     contract_sha256: currentSha,
     observed_at: '2026-08-26T00:00:00.000Z',
     process_instance_id: processInstanceId,
@@ -768,6 +770,7 @@ test('activation connector acknowledgement accepts only an exact current-process
     tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: currentSha },
     connector_tool_discovery: {
       current_contract_observed: true,
+      attestation_verified: true,
       contract_sha256: currentSha,
       observed_at: new Date(nowUnixMs - 1).toISOString(),
       process_instance_id: 'process-current',
@@ -822,6 +825,7 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
   const bootstrap = {
     observed: true,
     current_contract_contact: true,
+    attestation_verified: true,
     client_id: 'chatweb-connector-current',
     client_type: 'chatweb',
     method: 'tools/call',
@@ -943,6 +947,7 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
 
   const currentDiscovery = {
     current_contract_observed: true,
+    attestation_verified: true,
     contract_sha256: currentSha,
     observed_at: new Date(nowUnixMs - 1).toISOString(),
     process_instance_id: nextBootstrap.process_instance_id,
@@ -966,6 +971,46 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
     observedAt: currentDiscovery.observed_at
   });
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
+test('managed connector attestation binds one Recovery Host secret to one exact MCP identity', () => {
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: () => '', set() {} },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  const health = {
+    activation_epoch_id: 'activation-attestation-binding-0001',
+    process_instance_id: 'process-attestation-0001',
+    instance_id: 'server-attestation-0001',
+    tool_contract: { sha256: 'a'.repeat(64) }
+  };
+  const secret = orchestrator.rotateConnectorAttestationSecret();
+  const established = orchestrator.connectorAttestationForHealth(health, { establish: true, secret });
+  assert.equal(established.secret, secret);
+  assert.deepEqual(orchestrator.connectorAttestationForHealth(health), established);
+  assert.throws(
+    () => orchestrator.connectorAttestationForHealth({
+      ...health,
+      process_instance_id: 'replacement-process-attestation-0002'
+    }),
+    { code: 'CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE' }
+  );
+
+  const adopted = new RuntimeOrchestrator({
+    settings: { load: () => ({}) },
+    secrets: { get: () => '', set() {} },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  adopted.connectorAttestationSecret = 'unrelated-recovery-host-secret';
+  assert.throws(
+    () => adopted.connectorAttestationForHealth(health),
+    { code: 'CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE' }
+  );
 });
 
 test('connector contract state is unavailable without a current contract fingerprint', () => {
@@ -1018,6 +1063,7 @@ test('persisted matching connector SHA survives process restart without forcing 
 
   const discovery = {
     current_contract_observed: true,
+    attestation_verified: true,
     contract_sha256: changedContract.sha256,
     observed_at: '2026-08-23T21:40:00.000Z'
   };
@@ -1071,6 +1117,7 @@ test('reviewed exact predecessor requires live current-process ChatWeb contact b
 
   const contact = {
     current_contract_contact: true,
+    attestation_verified: true,
     method: 'tools/call',
     contract_sha256: currentSha,
     observed_at: '2026-08-26T06:01:00.000Z',
@@ -1979,7 +2026,7 @@ test('MCP-only recovery refuses an unexpectedly occupied MCP port without touchi
   const port = server.address().port;
   const orchestrator = new RuntimeOrchestrator({
     paths: { stateFile: () => stateFile },
-    settings: { load: () => ({ workspace: root, mcpPort: port }) },
+    settings: { load: () => ({ workspace: root, mcpPort: port, tunnelId: 'tunnel-mcp-port-test', proxyMode: 'auto' }) },
     secrets: { get: () => 'token', set() {} },
     environment: {},
     log: { info() {}, warn() {}, error() {} },
@@ -2017,7 +2064,7 @@ test('MCP-only soft recovery stops the replacement when disk revision drifts aft
   await new Promise((resolve) => reservation.close(resolve));
   const orchestrator = new RuntimeOrchestrator({
     paths: { stateFile: () => stateFile },
-    settings: { load: () => ({ workspace: root, mcpPort: port }) },
+    settings: { load: () => ({ workspace: root, mcpPort: port, tunnelId: 'tunnel-mcp-revision-test', proxyMode: 'auto' }) },
     secrets: { get: () => 'token', set() {} },
     environment: {},
     log: { info() {}, warn() {}, error() {} },

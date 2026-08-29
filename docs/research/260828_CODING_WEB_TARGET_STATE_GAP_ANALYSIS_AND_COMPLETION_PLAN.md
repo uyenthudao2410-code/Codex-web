@@ -2565,3 +2565,434 @@ authority với exact guard; (2) recapture census yêu cầu stale-run count `0`
 và (4) chỉ khi source/proof/runtime/contract/performance cùng immutable mới ghi
 accepted P0.6 baseline. Không commit, push, package, release hoặc deploy trong
 checkpoint này; chronology `260826` không bị sửa.
+
+## 29. Superseding runtime/connector diagnosis — 2026-08-29T09:47:00Z
+
+Section 28 là một receipt lịch sử của epoch `activation-mte4v3zt` và không còn
+được dùng làm authority sau khi process replacement. Sau khi HEAD tiến tới
+`2e254b2b4478be7fb803a3bb2366dba5e6fe8a37`, tôi đã giữ nguyên worktree dirty và
+thực hiện exact-ID reconciliation qua primitive được hỗ trợ, không sửa SQLite
+trực tiếp, không bulk-close và không dùng synthetic workload. Bốn RUN vừa vượt
+ngưỡng theo thời gian đã được xử lý tuần tự với stopped-runtime fence:
+
+```text
+9b9c604cd5654cc1935ac97c594a98a0
+af372393fff74ef6b359955fb09bc0c7
+16b4d39038944365811da1da85bca3ce
+045b4a0b336640d88a275a4fba2894d2
+```
+
+Mỗi receipt trả `changed=true`, `idempotent=false`, `chain_ok=true`. Census
+độc lập cuối tại `2026-08-29T09:47:00.702Z` xác nhận:
+
+```text
+physical / logical SHA-256              48eb937580b0084142f15d1f70d1fd58a8055f57f9c82fbbb27b6672489cb1cf / cc86d753b6252828d682fc8f351ce53c6e2aa676c5f3802dd983d2cd52ae32a7
+integrity / foreign keys                ok / 0
+ordinary active runs                    11 (đều threshold-sensitive, chưa đủ 24 giờ)
+eligible_stale_count                    0
+active agent lanes / leases / fences    0 / 0 / 0
+live jobs / background operations       0 / 0
+unexplained / unbound / stale residue   0 / 0 / 0
+projection_drift / mutated ledger       false / false
+```
+
+`npm start` sau đó đã tạo epoch mới
+`activation-mte6px42-b67cd1c63b45adb65f234bf76e54951a` với Recovery Host
+`9d3c1d40887b1994c26aaaf606bf0cec`, UI `d06a7614d2f93ad04679d5d38d0fe6de`,
+Coding MCP/Tunnel mới (PID lần lượt `15424`/`43632`), và running/disk revision
+Coding MCP cùng là
+`8efa200a45a1bac182f61a15d467de81932fc0ba299d4c45287de68b875a0d70`. Tuy
+nhiên epoch đã hết hạn lúc `2026-08-29T09:45:01.329Z` với
+`ACTIVATION_REQUEST_EXPIRED`, `epoch_state=FAILED`, `admission_open=false` và
+`update_incomplete=true`.
+
+Nguyên nhân đã được xác định ở ranh giới connector, không phải tool registry
+hay source remediation:
+
+1. `Server.list_tools()` gọi `_record_tool_discovery()` trước khi trả payload,
+   nhưng receipt chỉ được lưu khi request đã đi qua HTTP identity context. Bộ
+   lọc `connector_tool_discovery()` chỉ chọn receipt có
+   `client_type == "chatweb"`, sau đó buộc khớp `contract_sha256`,
+   `process_instance_id` và `server_instance_id` của process hiện tại
+   (`resources/coding-tools-mcp/coding_tools_mcp/server.py`).
+2. Danh sách 8 tool là payload được cache trong lifetime của Runtime và
+   `tool_contract`/`tool_count` là metadata deterministic. Vì vậy câu trả lời
+   bằng chữ hoặc danh sách 8 tên không chứng minh request `tools/list` đã chạm
+   process mới.
+3. Browser ChatWeb tại thời điểm kiểm tra hiển thị `Coding-VP` ở trạng thái
+   host-disabled; các tool-card thực tế được quan sát là `GitHub Fetch`/
+   `Coding_MCP`, không có một lời gọi `Coding-VP tools/list` hoặc
+   `server/discover` được ghi nhận. Do đó Recovery Host giữ đúng
+   `connector_state=UNCHANGED_ACKNOWLEDGED`,
+   `connector_rediscovered=false`, `connector_rediscovered_at=null`,
+   `connector_refresh_required=false`, `connector_ack_pending=false`.
+4. Nếu request đi qua `hubProxyGateway`, allowlist chỉ cho
+   `codex-desktop|codex_desktop` và `opencode|opencode`; các receipt đó không
+   phải `chatweb` và bị loại khỏi strict discovery. Ngược lại, một HTTP call
+   thủ công không header có thể bị server suy ra là `chatweb`, nhưng không có
+   provenance chứng minh đó là ChatWeb thật; không được dùng làm acceptance
+   proof hoặc ACK.
+5. Full-clean epoch có TTL 600 giây. Khi không có current-process real-client
+   discovery trong cửa sổ này, supervisor phải đóng admission và để epoch
+   fail-closed; việc lặp `npm start` trước khi connector được bật thật chỉ tạo
+   thêm các epoch hết hạn cùng một nguyên nhân.
+
+Vì vậy phần phân tích trước đây rằng “đã gọi HTTP trực tiếp không header nên
+`mte4v3zt` là proof thật” là không đủ cơ sở provenance và không được kế thừa.
+Receipt `mte4v3zt` vẫn được giữ như chronology, nhưng chỉ một discovery mới từ
+ChatWeb/Coding-VP thật, khớp process/server/epoch hiện tại và sau đó qua guard
+ACK mới có thể mở admission. Accepted baseline, P5 treatment và production
+claim tiếp tục **NOT CREATED / NOT STARTED / NOT CLAIMED**. Bước mở duy nhất
+còn lại là bật lại host `Coding-VP`, thực hiện đúng một `tools/list` hoặc
+`server/discover` thực từ ChatWeb, rồi recapture official Recovery Host; không
+được thay bằng `workspace_context`, `tools/call`, raw HTTP, persisted SHA hoặc
+textual response.
+
+## 30. Đính chính phân tích được dán — 2026-08-29T10:00:00Z
+
+Phân tích được dán là một đầu vào tư vấn, không phải receipt runtime. Sau khi
+đối chiếu với source và epoch mới, cần chốt lại các mệnh đề theo bảng sau:
+
+| Mệnh đề | Kết luận chuẩn | Phạm vi bằng chứng |
+| --- | --- | --- |
+| ChatWeb hiển thị đúng 8 tên tool | Không đủ để chứng minh discovery | Đây chỉ là catalog/schema có thể được cache ở connector host; không chứng minh `tools/list` hoặc `server/discover` đã chạy trong MCP process hiện tại. |
+| Receipt phải có `client_type=chatweb` và khớp SHA/process/server | Đúng nhưng chưa đủ cho provenance bên ngoài | Đây là điều kiện cần của `connector_tool_discovery()`; nó vẫn dựa trên identity mà HTTP request cung cấp hoặc server suy ra. |
+| `CURRENT_COMPATIBLE_ACKNOWLEDGED` tương đương strict full-clean READY | Sai | Runtime có thể phân loại compatibility bootstrap là một continuity state, nhưng `validateConnectorReadyGate()` của full-clean cố ý thêm `STRICT_CONNECTOR_REDISCOVERY_REQUIRED`; state này không đáp ứng acceptance tuple bắt buộc của nhiệm vụ. |
+| Gọi loopback `/mcp` không header rồi nhận receipt `chatweb` là proof ChatWeb | Sai về provenance | `http_hub_identity.py` hiện suy ra `chatweb` khi thiếu header. Vì vậy request local có bearer token có thể tạo receipt trông hợp lệ. Receipt đó chỉ chứng minh MCP đã nhận request được gán identity `chatweb`, không chứng minh ChatGPT/Coding-VP là caller. |
+| Proxy `codex-desktop`/`opencode` có thể đóng strict ChatWeb gate | Sai | `hubProxyGateway` chỉ cho phép các identity đó ở vai trò proxy riêng; chúng không phải `client_type=chatweb` và không được bộ lọc strict tính là ChatWeb discovery. |
+| Epoch cũ có thể dùng lại sau khi process replacement | Sai | `connector_rediscovered_at`, `process_instance_id` và `server_instance_id` của `activation-mte4v3zt` chỉ là chronology. Epoch mới `activation-mte6px42-…` đã hết hạn với `ACTIVATION_REQUEST_EXPIRED`; không có current receipt để kế thừa. |
+
+Một chi tiết schema cũng phải ghi đúng: receipt do `Server._record_tool_discovery()`
+hiện lưu trực tiếp các field SHA/process/server/thời gian và **không** có
+`activation_epoch_id`. Guard strict đạt được liên kết epoch bằng cách đối chiếu
+`health.activation_epoch_id` của process hiện tại với durable activation epoch,
+đồng thời đối chiếu discovery với chính process/server đó. Vì vậy không được
+diễn đạt rằng bản thân discovery receipt đã là một epoch attestation độc lập;
+đó là một liên kết hai lớp của health snapshot và Recovery Host guard.
+
+Điểm cần phân biệt rõ là **runtime state**, **strict activation gate** và
+**provenance của caller** là ba lớp độc lập:
+
+```text
+catalog 8 tool
+    != current-process tools/list/server/discover
+    != official Recovery Host acknowledgement
+    != bằng chứng độc lập rằng caller là ChatGPT/Coding-VP thật
+```
+
+Vì vậy không nên sửa hiện tượng bằng cách gọi raw HTTP, tự đặt header
+`chatweb`, copy SHA, hoặc chấp nhận văn bản “discovery receipt”. Một bản sửa
+provenance thực sự phải có hợp đồng giữa tunnel/client và MCP (attestation có
+thể xác minh, bind với epoch/process/server/contract và được tunnel cấp), kèm
+producer/consumer tests. Source hiện tại chưa có hợp đồng attestation đó; chỉ
+đổi bộ lọc phía MCP sẽ làm mất khả năng phân biệt hoặc phá client hợp lệ. Do
+đó wave này **không giả vờ đã sửa provenance trong source** và không tạo ACK.
+
+Trạng thái vận hành chốt theo bằng chứng mới nhất:
+
+```text
+clean census:          active_agent_lanes=0; live jobs/leases/fences=0
+current process:       đã thay thế nhưng epoch mte6px42 đã FAILED/expired
+connector discovery:  connector_rediscovered=false; timestamp=null
+strict admission:     CLOSED
+accepted baseline:     NOT CREATED
+```
+
+Next action duy nhất để đóng gate là: bật host `Coding-VP`, chạy một full-clean
+activation mới sau census sạch, để chính ChatWeb thực hiện đúng một
+`tools/list` hoặc `server/discover`, rồi đọc **official Recovery Host receipt**.
+Chỉ chấp nhận khi đồng thời có:
+
+```text
+connector_rediscovered=true
+connector_rediscovered_at != empty
+connector_refresh_required=false
+connector_ack_pending=false
+```
+
+Ngoài bốn cờ trên, receipt phải khớp `activation_epoch_id`,
+`process_instance_id`, `server_instance_id`, contract SHA và running/disk
+revision. Chỉ sau đó mới xem xét ACK và accepted baseline. Tài liệu chronology
+`260826` không bị sửa.
+
+## 31. Checkpoint census/reconciliation superseding — 2026-08-29T10:07:07Z
+
+Sau §30, tôi recapture một Backup-API lifecycle census mới thay vì dùng lại
+hash của receipt cũ. Census tại `2026-08-29T10:05:20.327Z` đã xác nhận một
+RUN duy nhất vừa vượt ngưỡng stale `24h`:
+
+```text
+physical snapshot SHA-256              62505f4ecf0dd91c2cf13d3c86ca610dffa136148f87e00ad053e42f9e21920a
+logical snapshot SHA-256               d2cc0acb53104460e50b95b3c05e30100b8614812eb2dd3842af510c5269ad11
+integrity / foreign keys               ok / 0
+ordinary active runs                   6
+eligible stale candidates              1 (7f852fd7a0fa4c17838eedb41826e706)
+active agent lanes                     0 (mọi ownership.live_agent_lanes đều 0)
+active controller leases / write fences 0 / 0
+live managed jobs / background ops     0 / 0
+unexplained / unbound / stale residue  0 / 0 / 0
+projection_drift / mutated ledger      false / false
+```
+
+Preflight exact-ID ban đầu đúng về lifecycle nhưng lần apply đầu bị guard từ
+chối vì snapshot acknowledgement đã cũ (`exact stale-run physical snapshot
+changed or was not acknowledged`). Tôi không bỏ qua guard và không sửa SQLite
+trực tiếp. Preflight mới ngay sau đó vẫn khớp cả hai SHA nêu trên; lệnh được
+ủy quyền qua `reconcile_exact_stale_run.py` với stopped-runtime authority cho
+duy nhất RUN `7f852fd7a0fa4c17838eedb41826e706` và trả:
+
+```text
+changed=true
+idempotent=false
+chain_ok=true
+```
+
+Census hậu kiểm tại `2026-08-29T10:07:07.759Z` xác nhận RUN trên đã chuyển
+sang `status=stale`, `classification=RECONCILED_STALE` với receipt exact-ID;
+không có live child/ownership. Hash snapshot hậu kiểm là:
+
+```text
+physical snapshot SHA-256              ad263fb5025db491a855ae9b994de26d9256457e24babf6f6e2c6fa19c913d33
+logical snapshot SHA-256               f48a5e473c7690592ff23e2a8032d9ca903e931756a0ff11f0e61f0975151a1e
+integrity / foreign keys               ok / 0
+ordinary active runs                   5
+eligible stale candidates              0
+active agent lanes                     0
+active controller leases / write fences 0 / 0
+live managed jobs / background ops     0 / 0
+unexplained / unbound / stale residue  0 / 0 / 0
+projection_drift / mutated ledger      false / false
+remaining RUNs                         5, tất cả below_current_stale_threshold
+```
+
+Một read-only recapture ngay sau đó tại `2026-08-29T10:12:21Z` vẫn giữ nguyên
+hai SHA hậu kiểm và xác nhận trực tiếp `active_agent_lanes=0`,
+`active_controller_leases=0`, `active_write_fences=0`, `eligible_stale_count=0`,
+`projection_drift=false`, `mutated_canonical_ledger=false`, integrity `ok` và
+foreign-key violations `0`.
+
+Không reconcile tiếp năm RUN còn lại: mỗi RUN đều là
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE` nhưng chưa đáp ứng
+`meets_current_stale_threshold` tại census hậu kiểm. Đây là kết quả fail-closed
+đúng; không bulk-close và không coi `ordinary_active_runs=5` là lỗi connector.
+
+Runtime receipt ngay sau hậu kiểm vẫn là:
+
+```text
+state=CURRENT
+host=available / installation=current
+UI pid=5280 / instance=d06a7614d2f93ad04679d5d38d0fe6de
+running_revision == disk_revision
+  cb6c9bf6945e9b4e8aa41c12826ba8953adba7fcb1ac091c7d8e1cde80e21f90
+update_pending=false
+connector_state=UNAVAILABLE
+connector_rediscovered=false
+connector_rediscovered_at=none
+connector_refresh_required=false
+connector_ack_pending=false
+connector_current_sha=none
+connector_ack_sha=c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251
+error_code=none
+```
+
+Do đó checkpoint này chỉ đóng được phần lifecycle maintenance của một RUN và
+giữ được `active_agent_lanes=0`; nó **không** mở strict connector admission.
+Coding MCP/Tunnel/UI chưa có process identity/epoch receipt mới được chứng minh
+qua real ChatWeb/Coding-VP `tools/list` hoặc `server/discover`. Vì vậy vẫn giữ:
+
+P5 baseline report recapture lúc `2026-08-29T10:16:07.468Z` cũng không mở được
+gate: `baseline_kind=organic_rework_observational_v1`,
+`baseline_observed=true` nhưng `canonical_readiness_passed=false`, CAR
+`unavailable`/coverage `false`, current-source accepted runs `0`, exact current
+source window `false`, monetary cost coverage `0`, `p5_epoch=EPOCH_HARD_STOPPED`,
+`treatment_started=false`, `samples_created=false` và promotion
+`NOT_STARTED`. Đây là observational history, không phải accepted treatment
+baseline; thiếu dữ liệu vẫn là **unknown**, không được diễn giải thành zero.
+
+```text
+strict admission                 CLOSED
+connector ACK                    NOT CREATED
+accepted baseline / P5           NOT CREATED / NOT STARTED
+production/readiness claim       NOT CLAIMED
+```
+
+Next action có điều kiện duy nhất: khi host Coding-VP thật đã bật, recapture
+census sạch, chạy một full-clean activation, để chính client ChatWeb thực hiện
+đúng một `tools/list` hoặc `server/discover`, rồi đọc official Recovery Host
+snapshot. Chỉ chấp nhận ACK khi đồng thời có
+`connector_rediscovered=true`, `connector_rediscovered_at` không rỗng,
+`connector_refresh_required=false`, `connector_ack_pending=false` và mọi
+contract/process/server/epoch/revision đều khớp. Không chạy `npm start` trước
+khi điều kiện external này thay đổi; không dùng raw HTTP, `workspace_context`,
+`tools/call`, textual receipt hoặc persisted SHA để thay thế discovery.
+
+## 32. Current superseding checkpoint and provenance hardening — 2026-08-29T10:24:04Z
+
+§31 đã đúng cho thời điểm `10:12:21Z` nhưng không còn là census mới nhất. Tôi
+đã recapture lại bằng `report_lifecycle_census.py` sau khi áp dụng hardening
+provenance; không dùng lại snapshot cũ và không sửa SQLite trực tiếp.
+
+Census query-only mới nhất (`snapshot_at=2026-08-29T10:23:16.641Z`) xác nhận:
+
+```text
+physical snapshot SHA-256              ad263fb5025db491a855ae9b994de26d9256457e24babf6f6e2c6fa19c913d33
+logical snapshot SHA-256               f48a5e473c7690592ff23e2a8032d9ca903e931756a0ff11f0e61f0975151a1e
+integrity / foreign keys               ok / 0
+ordinary active runs                   5
+eligible_stale_count                   0
+active_agent_lanes                     0
+active controller leases / write fences 0 / 0
+live managed jobs / background ops     0 / 0
+unexplained / unbound residues         0 / 0
+projection_drift / mutated ledger      false / false
+```
+
+Năm RUN còn lại vẫn là `THRESHOLD_SENSITIVE_STALE_CANDIDATE` và đều có
+`below_current_stale_threshold`; không bulk-close chúng. Đây là trạng thái
+lifecycle sạch theo nghĩa ownership (`active_agent_lanes=0`), không phải bằng
+chứng connector đã hoạt động.
+
+Read-only `npm run dev:status` tại `2026-08-29T10:24:04.105Z` vẫn cho:
+
+```text
+state=CURRENT
+host=available / installation=current
+UI pid=5280 / instance=d06a7614d2f93ad04679d5d38d0fe6de
+running_revision == disk_revision
+  cb6c9bf6945e9b4e8aa41c12826ba8953adba7fcb1ac091c7d8e1cde80e21f90
+update_pending=false
+connector_state=UNAVAILABLE
+connector_rediscovered=false
+connector_rediscovered_at=none
+connector_freshness_mode=none
+connector_refresh_required=false
+connector_ack_pending=false
+connector_current_sha=none
+connector_ack_sha=c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251
+error_code=none
+```
+
+Durable epoch mới nhất của lần full-clean gần đây nhất không mở admission:
+
+```text
+activation_epoch_id                    activation-mte6px42-b67cd1c63b45adb65f234bf76e54951a
+operation_id                           full-clean-refresh-mte6ppe4-2c01282364cbc4de0e751e86
+state / admission                      FAILED / CLOSED
+error                                  ACTIVATION_REQUEST_EXPIRED
+failed_at                              2026-08-29T09:45:05.343Z
+process_instance_id / server_instance  M9MqwT-31L8F-8x8 / uDKIVLSVKjXXPrqE
+tunnel_instance_id                     7a8d470eb50c69b218ba9709
+Coding MCP running == disk revision    true (8efa200a45a1bac182f61a15d467de81932fc0ba299d4c45287de68b875a0d70)
+connector_rediscovered_at              none
+connector_freshness_mode               none
+```
+
+Để sửa đúng phần false-positive đã nêu trong phân tích được dán, source hiện
+đã có một hardening hẹp và backward-compatible:
+
+* `http_hub_identity.py` ghi `identity_source` là
+  `explicit_headers`, `partial_headers` hoặc `implicit_default`;
+* `_record_tool_discovery()` chỉ đưa receipt vào strict candidate khi caller
+  chuyển **đồng thời** `X-Coding-Tools-Client-Id` và
+  `X-Coding-Tools-Client-Type`, và receipt giữ lại nguồn identity;
+* `electron/services/tunnelService.js` cấu hình managed Coding Tunnel chuyển
+  rõ hai header `chatweb` cho cả `mcp.extra-headers` và
+  `mcp.discovery-extra-headers`;
+* loopback HTTP thiếu identity vẫn được phục vụ, nhưng không còn tạo
+  `connector_rediscovered` authoritative.
+
+Hardening này giải quyết chính đường tắt “raw localhost không header tự được
+gán ChatWeb”. Nó **chưa phải attestation mật mã của tunnel**: một caller cục
+bộ có thể tự biết và tự gửi hai header explicit. Vì vậy strict acceptance vẫn
+phải dựa trên official Recovery Host + tunnel/client contract; không được gọi
+explicit header, SHA, process ID hoặc timestamp riêng lẻ là bằng chứng ChatGPT
+thật. Bước attestation bind `activation_epoch_id + process_instance_id +
+server_instance_id + contract_sha256 + nonce/timestamp` vẫn là backlog kiến
+trúc, cần producer/consumer contract với tunnel trước khi triển khai tiếp.
+
+Focused proof của hardening:
+
+```text
+pytest test_connector_bootstrap_identity.py test_stateless_http_2026.py  24 passed
+pytest test_activation_epoch.py test_multi_workspace_http_matrix.py        7 passed
+pytest test_execution_hub.py test_execution_hub_faults.py
+      test_hub_proxy_stdio.py test_exception_group_boundary.py
+      test_live_transport_failures.py                                      35 passed
+node --test tests/hub-proxy-gateway.test.js tests/runtime-lifecycle.test.js
+                 tests/dev-ui-lifecycle.test.js                            116 passed
+```
+
+Các lớp còn lại không thay đổi: catalog 8 tool vẫn không phải discovery,
+compatibility bootstrap không phải strict rediscovery, `connector_rediscovered`
+vẫn `false`, admission vẫn `CLOSED`, accepted baseline/P5 vẫn
+`NOT CREATED`/`NOT STARTED`. Không gọi `tools/call`, không ACK, không
+restart/deploy trong checkpoint này. Next action chỉ được mở sau khi host
+Coding-VP thật phát sinh request `tools/list`/`server/discover` mới qua managed
+transport và Recovery Host trả đúng tuple bốn cờ cùng identity/epoch/revision
+khớp; khi đó mới cân nhắc attestation contract và accepted baseline.
+
+## 33. Attestation contract hardening — 2026-08-29T10:50:43Z
+
+Phân tích được dán đã chỉ đúng root defect còn lại: cặp header
+`X-Coding-Tools-Client-Id/Type=chatweb` có thể do một caller local tự đặt, nên
+SHA/process/server/timestamp khớp vẫn chưa chứng minh được provenance của
+ChatWeb. Hardening bước một ở §32 chỉ chặn trường hợp **thiếu** header; nó
+không chặn impersonation bằng header explicit.
+
+Source hiện đã bổ sung hợp đồng attestation tối thiểu cho managed Coding
+Tunnel:
+
+* `connector_attestation.py` định nghĩa giá trị HMAC `v1` bind đồng thời
+  `client_id`, `client_type`, `activation_epoch_id`, `process_instance_id`,
+  `server_instance_id`, `contract_sha256`, `issued_at_unix_ms` và nonce;
+  secret không bao giờ đi vào wire receipt/health/tool output.
+* Native MCP process nhận secret one-shot từ Electron qua
+  `CODING_TOOLS_MCP_CONNECTOR_ATTESTATION_SECRET`; Electron xoay secret mỗi
+  lần thay process.
+* Coding Tunnel ký một giá trị tĩnh bằng secret và gắn nó vào
+  `mcp.extra-headers` cho traffic MCP được forward. `mcp.discovery-extra-headers`
+  của tunnel-client (probe nội bộ) **không** nhận attestation, vì probe nội bộ
+  không được phép tự tạo ChatWeb discovery receipt.
+* MCP chỉ nâng `identity_source` thành `attested_transport` khi chữ ký, tuple
+  hiện tại và cửa sổ thời gian đều hợp lệ. `tools/list/server/discover`,
+  compatibility bootstrap và ordinary successful `tools/call` contact không có
+  attestation vẫn phục vụ/quan sát như MCP bình thường nhưng không thể mở
+  strict connector gate.
+* Recovery Host/RuntimeOrchestrator kiểm tra `attestation_verified=true` trên
+  discovery/contact/bootstrap trước khi ACK hoặc tính freshness; receipt cũ,
+  replay khác process/server/epoch/contract và explicit header không chữ ký đều
+  fail-closed.
+
+Đây là provenance contract thực thi được giữa Electron-managed tunnel và MCP,
+không phải tuyên bố rằng mọi local administrator đều không thể đọc process
+environment. Vì vậy vẫn phải giữ official Recovery Host snapshot và real
+ChatWeb/Coding-VP request làm acceptance authority; attestation không biến
+catalog tám tool, raw HTTP, `workspace_context` hay textual receipt thành
+discovery proof.
+
+Focused proof sau hardening:
+
+```text
+Python attestation/identity/stateless discovery                  30 passed
+Python activation/workspace matrix                                7 passed
+Python hub/fault/proxy/exception/transport                       35 passed
+Node connector-attestation helper                                  1 passed
+Node runtime-lifecycle/full-clean activation                     108 passed
+Python compileall + module-size guard                             PASS
+git diff --check                                                   PASS
+```
+
+Runtime live **chưa** được restart để áp dụng source mới và chưa có request
+`tools/list/server/discover` từ ChatWeb/Coding-VP thật sau epoch mới. Vì vậy
+checkpoint này chỉ đóng source/provenance remediation; nó không nâng trạng
+thái hiện tại thành `READY/open`, không ACK connector và không tạo accepted
+baseline/P5. Chuỗi external còn bắt buộc vẫn là:
+
+```text
+census active_agent_lanes=0
+-> full-clean activation mới
+-> real ChatWeb/Coding-VP tools/list hoặc server/discover qua managed tunnel
+-> Recovery Host snapshot khớp epoch/process/server/contract/revision
+-> chỉ ACK khi bốn cờ strict đồng thời đạt
+-> sau đó mới xem xét accepted baseline
+```

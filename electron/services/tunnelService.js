@@ -18,6 +18,10 @@ const {
   sameProcessIdentity,
   terminateExactProcessTree
 } = require('./processIdentity');
+const {
+  CONNECTOR_ATTESTATION_HEADER,
+  connectorAttestationHeader
+} = require('./connectorAttestation');
 
 function tunnelFingerprint(settings, deviceId = '', activationEpochId = '') {
   const payload = {
@@ -135,6 +139,25 @@ class TunnelService {
       MCP_RUNTIME_HEADER_VALUE: `Bearer ${token}`
     };
     if (activationEpochId) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = activationEpochId;
+    const attestation = options.connectorAttestation && typeof options.connectorAttestation === 'object'
+      ? options.connectorAttestation
+      : null;
+    let attestationValue = '';
+    if (attestation) {
+      attestationValue = connectorAttestationHeader({
+        secret: attestation.secret,
+        clientId: attestation.clientId || 'chatweb',
+        clientType: attestation.clientType || 'chatweb',
+        activationEpochId: attestation.activationEpochId || activationEpochId,
+        processInstanceId: attestation.processInstanceId,
+        serverInstanceId: attestation.serverInstanceId,
+        contractSha256: attestation.contractSha256
+      });
+      env.MCP_DISCOVERY_ATTESTATION_VALUE = attestationValue;
+      // The attestation is deliberately added only to ordinary forwarded MCP
+      // traffic.  tunnel-client's discovery-extra-headers are its own local
+      // health/probe requests and must not manufacture a ChatWeb receipt.
+    }
     const args = [
       'run',
       '--control-plane.tunnel-id', settings.tunnelId,
@@ -142,7 +165,12 @@ class TunnelService {
       '--health.listen-addr', `127.0.0.1:${settings.healthPort}`,
       '--mcp.server-url', `url=http://127.0.0.1:${settings.mcpPort}/mcp,channel=main`,
       '--mcp.extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE',
+      '--mcp.extra-headers', 'X-Coding-Tools-Client-Id: chatweb',
+      '--mcp.extra-headers', 'X-Coding-Tools-Client-Type: chatweb',
+      ...(attestationValue ? ['--mcp.extra-headers', `${CONNECTOR_ATTESTATION_HEADER}: env:MCP_DISCOVERY_ATTESTATION_VALUE`] : []),
       '--mcp.discovery-extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE',
+      '--mcp.discovery-extra-headers', 'X-Coding-Tools-Client-Id: chatweb',
+      '--mcp.discovery-extra-headers', 'X-Coding-Tools-Client-Type: chatweb',
       '--log.file', this.paths.tunnelLogFile()
     ];
     const proxyUrl = Object.prototype.hasOwnProperty.call(settings, 'effectiveProxyUrl')

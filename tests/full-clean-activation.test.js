@@ -583,6 +583,7 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
     tool_contract: { sha256: contractSha256 },
     connector_tool_discovery: {
       current_contract_observed: true,
+      attestation_verified: true,
       contract_sha256: contractSha256,
       observed_at: observedAt,
       process_instance_id: processInstanceId,
@@ -635,6 +636,7 @@ test('connector gate keeps an exact no-workspace compatibility bootstrap pending
   const bootstrap = {
     observed: true,
     current_contract_contact: true,
+    attestation_verified: true,
     client_id: 'chatweb-compatible-client',
     client_type: 'chatweb',
     method: 'tools/call',
@@ -867,6 +869,7 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
         tool_contract: { sha256: contractSha256 },
         connector_tool_discovery: {
           current_contract_observed: true,
+          attestation_verified: true,
           contract_sha256: contractSha256,
           observed_at: connectorRediscoveredAt,
           process_instance_id: processInstanceId,

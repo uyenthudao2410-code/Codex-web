@@ -74,7 +74,10 @@ function spawnMcp(workspace, port, options = {}) {
     ...(options.authToken ? { CODING_TOOLS_MCP_AUTH_TOKEN: options.authToken } : {}),
     ...(options.deviceId ? { CODING_TOOLS_MCP_DEVICE_ID: options.deviceId } : {}),
     ...(options.deviceInstanceId ? { CODING_TOOLS_MCP_DEVICE_INSTANCE_ID: options.deviceInstanceId } : {}),
-    ...(options.deviceDisplayName ? { CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME: options.deviceDisplayName } : {})
+    ...(options.deviceDisplayName ? { CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME: options.deviceDisplayName } : {}),
+    ...(options.connectorAttestationSecret ? {
+      CODING_TOOLS_MCP_CONNECTOR_ATTESTATION_SECRET: options.connectorAttestationSecret
+    } : {})
   };
   const child = spawn(PYTHON, ['-m', 'coding_tools_mcp', '--port', String(port), '--workspace', workspace], {
     cwd: MCP_ROOT,
@@ -128,6 +131,17 @@ function makeHarness(mcpProcess, mcpPortSetting, tunnelStatus, failureKind) {
       await new Promise((resolve) => mcpProcess.once('close', resolve));
     }
   };
+  const connectorHealth = {
+    ready: true,
+    process_instance_id: 'managed-mcp-process-test',
+    instance_id: 'managed-mcp-server-test',
+    tool_contract: { sha256: 'a'.repeat(64) }
+  };
+  if (failureKind === 'tunnel_unavailable') {
+    orchestrator.currentMcpHealth = async () => connectorHealth;
+    const connectorSecret = orchestrator.rotateConnectorAttestationSecret();
+    orchestrator.connectorAttestationForHealth(connectorHealth, { establish: true, secret: connectorSecret });
+  }
   orchestrator.recoverMcpOnly = async (options = {}) => {
     assert.equal(options.replaceLiveOwned, true);
     calls.mcpReplacements += 1;
@@ -151,9 +165,10 @@ test('real primary Tunnel recovery replaces only the Tunnel PID and preserves th
   const authToken='m'.repeat(48);
   const deviceId='12345678-1234-4123-8123-123456789abc';
   const deviceInstanceId='primary-tunnel-real-instance-0001';
+  const connectorAttestationSecret='primary-tunnel-attestation-secret';
   const proxy=await startLoopbackProxy();
   const stateFile=path.join(temp,'runtime-state.json');
-  const mcp=spawnMcp(workspace,mcpPort,{authToken,deviceId,deviceInstanceId,deviceDisplayName:'Primary tunnel PID test'});
+  const mcp=spawnMcp(workspace,mcpPort,{authToken,deviceId,deviceInstanceId,deviceDisplayName:'Primary tunnel PID test',connectorAttestationSecret});
   let activeTunnelPid=0;
   try {
     await waitForHealth(mcpPort,30000,authToken);
@@ -175,6 +190,10 @@ test('real primary Tunnel recovery replaces only the Tunnel PID and preserves th
       deviceInstanceId
     });
     orchestrator.activationEpochStore = { current: () => null };
+    orchestrator.connectorAttestationForHealth(initialHealth, {
+      establish: true,
+      secret: connectorAttestationSecret
+    });
 
     await withWorkingDirectory(fixtureDir,()=>orchestrator.recoverTunnelOnly());
     let state=JSON.parse(fs.readFileSync(stateFile,'utf8'));
@@ -270,7 +289,7 @@ test('live supervisor escalates by replacing only a hung live MCP after repeated
   }
 });
 
-test('live supervisor replaces only a dead owned Coding MCP and preserves the exact primary Tunnel PID', { skip: process.platform !== 'win32', timeout: 60000 }, async () => {
+test('live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel', { skip: process.platform !== 'win32', timeout: 60000 }, async () => {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-only-real-'));
   const workspace = path.join(temp, 'workspace');
   const fixtureDir = path.join(temp, 'tunnel-fixture');
@@ -318,9 +337,12 @@ test('live supervisor replaces only a dead owned Coding MCP and preserves the ex
   let activeMcpPid = 0;
   let activeTunnelPid = 0;
   try {
-    const initialMcp = await orchestrator.recoverMcpOnly();
+    const initialMcp = await withWorkingDirectory(fixtureDir, () => orchestrator.recoverMcpOnly());
     activeMcpPid = initialMcp.new_pid;
+    activeTunnelPid = initialMcp.tunnel_pid;
     assert.ok(activeMcpPid > 0);
+    assert.ok(activeTunnelPid > 0);
+    assert.equal(initialMcp.tunnel_attestation_refreshed, true);
     assert.ok(await readMcpHealth(mcpPort, authToken, workspace, deviceId));
     assert.equal(await loopbackListenerPid(mcpPort), activeMcpPid);
 
@@ -342,7 +364,7 @@ test('live supervisor replaces only a dead owned Coding MCP and preserves the ex
     orchestrator.heartbeatFailures = 2;
     orchestrator.heartbeatFailureKind = 'mcp_process_exited';
     orchestrator.nextRecoveryAt = 0;
-    await orchestrator.supervise();
+    await withWorkingDirectory(fixtureDir, () => orchestrator.supervise());
 
     state = JSON.parse(fs.readFileSync(paths.stateFile(), 'utf8'));
     const replacementMcpPid = Number(state.nativePid);
@@ -352,12 +374,15 @@ test('live supervisor replaces only a dead owned Coding MCP and preserves the ex
     assert.equal(state.nativeWorkspace, path.resolve(workspace));
     assert.equal(state.nativeDeviceId, deviceId);
     assert.equal(state.nativeDeviceInstanceId, deviceInstanceId);
-    assert.equal(Number(state.tunnelPid), preservedTunnelPid);
+    const replacementTunnelPid = Number(state.tunnelPid);
+    activeTunnelPid = replacementTunnelPid;
+    assert.ok(replacementTunnelPid > 0);
+    assert.notEqual(replacementTunnelPid, preservedTunnelPid);
     assert.equal(state.tunnelDeviceId, deviceId);
     assert.equal(state.tunnelDeviceInstanceId, deviceInstanceId);
-    assert.equal(processAlive(preservedTunnelPid), true);
-    assert.equal(await loopbackListenerPid(healthPort), preservedTunnelPid);
-    assert.equal((await readLoopbackJson(healthPort)).body.pid, preservedTunnelPid);
+    assert.equal(processAlive(preservedTunnelPid), false);
+    assert.equal(await loopbackListenerPid(healthPort), replacementTunnelPid);
+    assert.equal((await readLoopbackJson(healthPort)).body.pid, replacementTunnelPid);
     assert.equal(await loopbackListenerPid(mcpPort), replacementMcpPid);
     const replacementHealth = await readMcpHealth(mcpPort, authToken, workspace, deviceId);
     assert.ok(replacementHealth);

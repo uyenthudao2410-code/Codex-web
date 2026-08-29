@@ -330,6 +330,7 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
       add('DISCOVERY_RECEIPT_MISSING');
     } else {
       if (discovery.current_contract_observed !== true) add('CURRENT_CONTRACT_NOT_REDISCOVERED');
+      if (discovery.attestation_verified !== true) add('DISCOVERY_ATTESTATION_INVALID');
       if (text(discovery.contract_sha256) !== currentSha256) add('DISCOVERY_CONTRACT_SHA256_MISMATCH');
       if (text(discovery.process_instance_id) !== processInstanceId) add('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH');
       if (text(discovery.server_instance_id) !== serverInstanceId) add('DISCOVERY_SERVER_INSTANCE_ID_MISMATCH');
@@ -352,6 +353,7 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
       add('COMPATIBILITY_BOOTSTRAP_RECEIPT_MISSING');
     } else {
       if (activationBootstrap.current_contract_contact !== true) add('COMPATIBILITY_BOOTSTRAP_NOT_CURRENT');
+      if (activationBootstrap.attestation_verified !== true) add('COMPATIBILITY_BOOTSTRAP_ATTESTATION_INVALID');
       if (text(activationBootstrap.client_type) !== 'chatweb') add('COMPATIBILITY_BOOTSTRAP_CLIENT_TYPE_INVALID');
       if (!text(activationBootstrap.client_id)) add('COMPATIBILITY_BOOTSTRAP_CLIENT_ID_MISSING');
       if (text(activationBootstrap.method) !== 'tools/call') add('COMPATIBILITY_BOOTSTRAP_METHOD_INVALID');

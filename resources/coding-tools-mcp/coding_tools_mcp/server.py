@@ -135,6 +135,7 @@ from .usage_events import usage_event_from_provider_delegation  # noqa: F401  # 
 from .provider_traffic import ProviderTrafficGovernor  # noqa: F401  # composition-root namespace
 from .provider_telemetry import HUB_PROVIDER_TELEMETRY_STATUSES, normalize_provider_telemetry  # noqa: F401  # compatibility re-export
 from .runtime_activity import RuntimeActivityMixin  # noqa: F401  # composition-root namespace
+from .connector_attestation import CONNECTOR_ATTESTATION_ENV  # noqa: F401  # composition-root namespace
 from .workspace_scope import Workspace, _PrimaryLedgerCompatibilityView, configured_authorized_roots  # noqa: F401  # compatibility re-export
 from .runtime_background import BACKGROUND_BUDGET_POLL_SECONDS, BACKGROUND_BUDGET_TERMINAL_GRACE_SECONDS, MAX_BACKGROUND_OPERATIONS, BackgroundOperationsMixin  # noqa: F401  # compatibility re-export
 from .runtime_cache import RuntimeCacheMixin  # noqa: F401  # composition-root namespace
@@ -353,6 +354,12 @@ class Runtime(
             )
         self.allow_network = allow_network or self.capabilities.network
         self.auth_token = auth_token or None
+        # The managed Electron Tunnel injects a short-lived HMAC attestation
+        # over the exact connector/runtime tuple.  Keep the secret process
+        # local and never expose it through health, receipts, or tool output.
+        self.connector_attestation_secret = str(
+            os.environ.get(CONNECTOR_ATTESTATION_ENV) or ""
+        ).strip() or None
         self.secret_broker = secret_broker or SecretBroker()
         self.oauth_config = oauth_config
         self.server_instance_id = secrets.token_urlsafe(12)
@@ -1166,15 +1173,30 @@ class Runtime(
         receipt = {
             "client_id": client_id,
             "client_type": str(identity.get("client_type") or "client"),
+            "identity_source": str(identity.get("identity_source") or "unknown"),
+            "attestation_verified": identity.get("attestation_verified") is True,
+            "attestation_source": str(identity.get("attestation_source") or "none"),
             "client_name": str(capabilities.get("client_name") or "")[:100],
             "client_version": str(capabilities.get("client_version") or "")[:50],
             "contract_sha256": str(self.tool_contract.get("sha256") or ""),
             "process_instance_id": self.process_instance_id,
             "server_instance_id": self.server_instance_id,
+            "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or "") or None,
             "observed_at": datetime.now(timezone.utc).isoformat(),
         }
+        # Preserve authoritative and non-authoritative observations in
+        # separate slots. A direct loopback caller still defaults to the
+        # legacy client_id "chatweb" for protocol compatibility; without a
+        # provenance suffix it could overwrite a valid managed-tunnel receipt
+        # and create a false negative after real discovery had already passed.
+        provenance = (
+            "attested_transport"
+            if receipt["attestation_verified"] is True
+            else str(receipt["identity_source"] or "untrusted")
+        )
+        record_id = f"{self._hub_client_record_id(identity)}:{provenance}"
         with self.tool_discovery_lock:
-            self.tool_discovery_receipts[client_id] = receipt
+            self.tool_discovery_receipts[record_id] = receipt
 
     def connector_tool_discovery(self, *, blocking: bool = True) -> dict[str, Any]:
         acquired = self.tool_discovery_lock.acquire(blocking=blocking)
@@ -1186,6 +1208,9 @@ class Runtime(
                 "observed_at": None,
                 "client_id": None,
                 "client_name": None,
+                "activation_epoch_id": None,
+                "attestation_verified": False,
+                "attestation_source": None,
                 "process_instance_id": None,
                 "server_instance_id": None,
                 "snapshot_busy": True,
@@ -1195,6 +1220,8 @@ class Runtime(
                 dict(receipt)
                 for receipt in self.tool_discovery_receipts.values()
                 if str(receipt.get("client_type") or "") == "chatweb"
+                and str(receipt.get("identity_source") or "") == "attested_transport"
+                and receipt.get("attestation_verified") is True
             ]
         finally:
             self.tool_discovery_lock.release()
@@ -1205,6 +1232,11 @@ class Runtime(
             and str(latest.get("contract_sha256") or "") == current_sha
             and str(latest.get("process_instance_id") or "") == self.process_instance_id
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
+            and (
+                not str(getattr(self, "activation_epoch_id", None) or "").strip()
+                or str(latest.get("activation_epoch_id") or "").strip()
+                == str(getattr(self, "activation_epoch_id", None) or "").strip()
+            )
         )
         return {
             "observed": latest is not None,
@@ -1215,6 +1247,9 @@ class Runtime(
             "client_name": str((latest or {}).get("client_name") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,
+            "attestation_verified": (latest or {}).get("attestation_verified") is True,
+            "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
             "snapshot_busy": False,
         }
 

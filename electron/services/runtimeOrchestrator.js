@@ -412,6 +412,14 @@ class RuntimeOrchestrator {
     this.activationEpochId = String(activationEpochId || '').trim() || (() => {
       try { return String(this.activationEpochStore?.current?.()?.activation_epoch_id || '').trim(); } catch { return ''; }
     })();
+    // One secret is shared only by an MCP process launched by this
+    // orchestrator and the managed Coding Tunnel bound to that exact process.
+    // Do not invent an apparently usable secret when adopting an already
+    // running MCP after a Recovery Host restart: without the original secret
+    // a Tunnel-only repair must fail closed and request a full-clean
+    // activation instead of emitting an attestation the MCP cannot verify.
+    this.connectorAttestationSecret = '';
+    this.connectorAttestationBinding = null;
     this.fullCleanActivation = fullCleanActivation;
     this.resolveFullCleanSourceCheckpoint = typeof resolveFullCleanSourceCheckpoint === 'function'
       ? resolveFullCleanSourceCheckpoint : null;
@@ -443,6 +451,42 @@ class RuntimeOrchestrator {
   setActivationEpoch(activationEpochId = '') {
     this.activationEpochId = String(activationEpochId || '').trim();
     return this.activationEpochId || null;
+  }
+
+  rotateConnectorAttestationSecret() {
+    this.connectorAttestationSecret = crypto.randomBytes(32).toString('base64url');
+    this.connectorAttestationBinding = null;
+    return this.connectorAttestationSecret;
+  }
+
+  connectorAttestationForHealth(health, { establish = false, secret = this.connectorAttestationSecret } = {}) {
+    const key = String(secret || '').trim();
+    const binding = {
+      activationEpochId: String(health?.activation_epoch_id || this.activationEpochId || '').trim(),
+      processInstanceId: String(health?.process_instance_id || '').trim(),
+      serverInstanceId: String(health?.instance_id || health?.server_instance_id || '').trim(),
+      contractSha256: String(health?.tool_contract?.sha256 || '').trim().toLowerCase()
+    };
+    if (!key || !binding.processInstanceId || !binding.serverInstanceId
+      || !/^[0-9a-f]{64}$/.test(binding.contractSha256)) {
+      throw Object.assign(new Error('Coding Tools MCP did not expose a complete managed connector-attestation identity.'), {
+        code: 'CONNECTOR_ATTESTATION_IDENTITY_UNAVAILABLE'
+      });
+    }
+    if (establish) {
+      this.connectorAttestationSecret = key;
+      this.connectorAttestationBinding = { ...binding };
+    } else {
+      const active = this.connectorAttestationBinding;
+      const matches = active
+        && Object.keys(binding).every((field) => String(active[field] || '') === String(binding[field] || ''));
+      if (!matches) {
+        throw Object.assign(new Error('The current Recovery Host does not own the connector attestation for this Coding MCP process; full-clean activation is required.'), {
+          code: 'CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE'
+        });
+      }
+    }
+    return { secret: key, ...binding };
   }
 
   setFullCleanActivation(coordinator) {
@@ -1023,11 +1067,13 @@ class RuntimeOrchestrator {
       assertActivationDeadline(expiresAtUnixMs, 'before_native_stop', false);
       await this.native.stop();
       assertActivationDeadline(expiresAtUnixMs, 'before_native_start', true);
+      const connectorAttestationSecret = this.rotateConnectorAttestationSecret();
       const started = await this.native.start(settings, token, this.progress.bind(this), {
         expectedCodeRevision: expectedRevision,
         expiresAtUnixMs,
         activationProcessMutated: true,
-        p5Seed: this.p5A0Seed()
+        p5Seed: this.p5A0Seed(),
+        connectorAttestationSecret
       });
       replacementStarted = true;
       let health = null;
@@ -1111,6 +1157,7 @@ class RuntimeOrchestrator {
     const rediscovered = Boolean(
       currentSha256
       && discovery?.current_contract_observed === true
+      && discovery?.attestation_verified === true
       && rediscoveredSha256 === currentSha256
       && observedAtValid
     );
@@ -1121,6 +1168,7 @@ class RuntimeOrchestrator {
     const contactCurrent = Boolean(
       currentSha256
       && contact?.current_contract_contact === true
+      && contact?.attestation_verified === true
       && String(contact?.method || '') === 'tools/call'
       && contactSha256 === currentSha256
       && contactObservedAtValid
@@ -1133,6 +1181,7 @@ class RuntimeOrchestrator {
       currentSha256
       && activationEpochId
       && activationBootstrap?.current_contract_contact === true
+      && activationBootstrap?.attestation_verified === true
       && String(activationBootstrap?.method || '') === 'tools/call'
       && String(activationBootstrap?.tool_name || '') === 'workspace_context'
       && String(activationBootstrap?.client_type || '') === 'chatweb'
@@ -1339,6 +1388,7 @@ class RuntimeOrchestrator {
     if (contractStatus.contractState === 'CURRENT_ACKNOWLEDGED'
       && contractStatus.rediscovered === true
       && discovery?.current_contract_observed === true
+      && discovery?.attestation_verified === true
       && String(discovery.contract_sha256 || '').trim() === currentSha256
       && String(discovery.process_instance_id || '').trim() === processInstanceId
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
@@ -1354,6 +1404,7 @@ class RuntimeOrchestrator {
       && contractStatus.compatibilityAcknowledged === true
       && contractStatus.bootstrapCurrent === true
       && bootstrap?.current_contract_contact === true
+      && bootstrap?.attestation_verified === true
       && String(bootstrap.client_type || '') === 'chatweb'
       && String(bootstrap.client_id || '').trim()
       && String(bootstrap.method || '') === 'tools/call'
@@ -1396,6 +1447,7 @@ class RuntimeOrchestrator {
       baseExact
       && discovery && typeof discovery === 'object' && !Array.isArray(discovery)
       && discovery.current_contract_observed === true
+      && discovery.attestation_verified === true
       && String(discovery.contract_sha256 || '').trim().toLowerCase() === contractSha256
       && String(discovery.process_instance_id || '').trim() === processInstanceId
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
@@ -1406,6 +1458,7 @@ class RuntimeOrchestrator {
       baseExact
       && activationBootstrap && typeof activationBootstrap === 'object' && !Array.isArray(activationBootstrap)
       && activationBootstrap.current_contract_contact === true
+      && activationBootstrap.attestation_verified === true
       && String(activationBootstrap.client_type || '') === 'chatweb'
       && String(activationBootstrap.client_id || '').trim()
       && String(activationBootstrap.method || '') === 'tools/call'
@@ -1748,12 +1801,14 @@ class RuntimeOrchestrator {
         throw new Error(`Cổng cục bộ ${settings.healthPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng bảng điều khiển Tunnel.`);
       }
 
+      const connectorAttestationSecret = this.rotateConnectorAttestationSecret();
       await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
         activationEpochId: this.activationEpochId || '',
         activationGate: options.activationGate || '',
         activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
-        activationExpiresAtUnixMs: Number(options.expiresAtUnixMs || 0) || 0
+        activationExpiresAtUnixMs: Number(options.expiresAtUnixMs || 0) || 0,
+        connectorAttestationSecret
       });
 
       this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
@@ -1767,8 +1822,14 @@ class RuntimeOrchestrator {
       }
       if (!ready) throw new Error('Coding Tools MCP không vượt qua kiểm tra sức khỏe trong thời gian quy định.');
 
+      const attestationHealth = await this.currentMcpHealth({ timeoutMs: 5000 });
+      const connectorAttestation = this.connectorAttestationForHealth(attestationHealth, {
+        establish: true,
+        secret: connectorAttestationSecret
+      });
       await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this), {
-        activationEpochId: this.activationEpochId || ''
+        activationEpochId: this.activationEpochId || '',
+        connectorAttestation
       });
       this.setManualStop(false);
       this.autoRecoveryBlocked = false;
@@ -1996,12 +2057,17 @@ class RuntimeOrchestrator {
     if (settings.proxyMode === 'manual' && !proxy.reachable) {
       throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`);
     }
+    const health = await this.currentMcpHealth({ timeoutMs: 5000 });
+    const connectorAttestation = this.connectorAttestationForHealth(health);
     await this.tunnel.start(
       { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
       runtimeApiKey,
       token,
       this.progress.bind(this),
-      { activationEpochId: this.activationEpochId || '' }
+      {
+        activationEpochId: this.activationEpochId || '',
+        connectorAttestation
+      }
     );
     this.log.info('OpenAI Tunnel đã được khôi phục mà không khởi động lại Coding Tools MCP');
     this.invalidateSnapshot();
@@ -2011,7 +2077,14 @@ class RuntimeOrchestrator {
     this.assertSoftRecoveryAllowed();
     const settings = this.settingsStore.load();
     this.validate(settings);
+    const runtimeApiKey = this.secrets.get('runtimeApiKey');
+    if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
+    if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
     const token = await this.ensureToken();
+    const proxy = await resolveProxy(settings);
+    if (settings.proxyMode === 'manual' && !proxy.reachable) {
+      throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`);
+    }
     const before = readJson(this.paths.stateFile(), {});
     const continuity = this.assertActivationRevisionContinuity();
     const expectedRevision = continuity.verified === true
@@ -2027,7 +2100,6 @@ class RuntimeOrchestrator {
       }
       // Semantic recovery may replace a persistently hung process, but only
       // through NativeService's exact PID + process-start-token authority.
-      // Tunnel remains untouched and its identity is verified after spawn.
       await this.native.stop();
     }
     if (await canConnect('127.0.0.1', settings.mcpPort, 350)) {
@@ -2038,9 +2110,11 @@ class RuntimeOrchestrator {
 
     let started = null;
     try {
+      const connectorAttestationSecret = this.rotateConnectorAttestationSecret();
       started = await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
         activationEpochId: this.activationEpochId || '',
+        connectorAttestationSecret,
         ...(expectedRevision ? { expectedCodeRevision: expectedRevision } : {})
       });
       let health = null;
@@ -2072,19 +2146,40 @@ class RuntimeOrchestrator {
           });
         }
       }
+      // The managed Tunnel carries a static attestation bound to the exact MCP
+      // process/server tuple. Replacing MCP therefore invalidates the old
+      // Tunnel header even when the public contract is unchanged. Refresh only
+      // this dependent Tunnel (not Recovery Host/UI/recovery plane) so soft
+      // recovery remains scoped while connector provenance stays usable.
+      const connectorAttestation = this.connectorAttestationForHealth(health, {
+        establish: true,
+        secret: connectorAttestationSecret
+      });
+      const tunnelStarted = await this.tunnel.start(
+        { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
+        runtimeApiKey,
+        token,
+        this.progress.bind(this),
+        {
+          activationEpochId: this.activationEpochId || '',
+          connectorAttestation
+        }
+      );
       const after = readJson(this.paths.stateFile(), {});
-      this.log.info('Coding Tools MCP đã được khôi phục mà không khởi động lại OpenAI Tunnel', {
+      this.log.info('Coding Tools MCP và attestation phụ thuộc của Coding Tunnel đã được khôi phục', {
         oldPid: oldNativePid || null,
         newPid: ownedPid,
-        tunnelPid: tunnelPid || null,
-        tunnelStatePreserved: Number(after.tunnelPid || 0) === tunnelPid
+        oldTunnelPid: tunnelPid || null,
+        newTunnelPid: Number(after.tunnelPid || tunnelStarted?.pid || 0) || null
       });
       this.invalidateSnapshot();
       return {
         old_pid: oldNativePid || null,
         new_pid: ownedPid,
-        tunnel_pid: tunnelPid || null,
-        tunnel_preserved: Number(after.tunnelPid || 0) === tunnelPid,
+        old_tunnel_pid: tunnelPid || null,
+        tunnel_pid: Number(after.tunnelPid || tunnelStarted?.pid || 0) || null,
+        tunnel_preserved: false,
+        tunnel_attestation_refreshed: true,
         health_verified: true
       };
     } catch (error) {

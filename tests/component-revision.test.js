@@ -110,6 +110,13 @@ test('Recovery Host revision owns the semantic watchdog implementation it loads'
   );
 });
 
+test('Recovery Host revision owns the connector attestation boundary it loads', () => {
+  assert.equal(
+    COMPONENT_SPECS.recovery_host.files.includes('electron/services/connectorAttestation.js'),
+    true
+  );
+});
+
 test('Recovery Host revision manifest owns stale-host bootstrap source', () => {
   assert.equal(
     COMPONENT_SPECS.recovery_host.files.includes('electron/services/recoveryBootstrap.js'),

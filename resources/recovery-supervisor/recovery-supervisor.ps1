@@ -25,7 +25,15 @@ function Get-DataRoot { Join-Path ([Environment]::GetFolderPath('ApplicationData
 function Get-InstallRoot { Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'WebMcpRecoverySupervisor' }
 function Get-InstalledScript { Join-Path (Get-InstallRoot) 'recovery-supervisor.ps1' }
 function Get-InstalledManifest { Join-Path (Get-InstallRoot) 'manifest.json' }
-function Get-StopRequest { Join-Path (Get-InstallRoot) 'stop.request' }
+function Get-StopRequest {
+  # Explicit manifest/status paths are used by packaged smoke tests and local
+  # harnesses. Keep their stop sentinel in the same isolated data directory so
+  # a legitimate stop.request from the installed development supervisor does
+  # not force every independent Once/Run invocation into `stopping`.
+  if($StatusPath){return Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($StatusPath))) 'stop.request'}
+  if($ManifestPath){return Join-Path (Split-Path -Parent ([IO.Path]::GetFullPath($ManifestPath))) 'stop.request'}
+  Join-Path (Get-InstallRoot) 'stop.request'
+}
 function Get-Sha256File([string]$Path) {
   $sha = [Security.Cryptography.SHA256]::Create()
   $stream = $null

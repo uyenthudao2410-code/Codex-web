@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from typing import Any
+
+from .connector_attestation import (
+    CONNECTOR_ATTESTATION_ENV,
+    CONNECTOR_ATTESTATION_HEADER,
+    verify_connector_attestation,
+)
 
 
 _HUB_CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
@@ -56,7 +63,7 @@ class HTTPHubIdentityMixin:
         raw_session = str(self.headers.get("Mcp-Session-Id") or "")
         logical_session = raw_session or str(getattr(self.runtime, "http_session_id", "") or "")
         session_instance = hashlib.sha256(logical_session.encode("utf-8")).hexdigest()[:16] if logical_session else ""
-        return self._hub_identity_from_values(
+        identity = self._hub_identity_from_values(
             client_id=client_id,
             client_type=client_type,
             client_name=str(client_info.get("name") or ""),
@@ -64,3 +71,34 @@ class HTTPHubIdentityMixin:
             session_instance=session_instance,
             execution_context_id=str(getattr(self.runtime, "execution_context_id", "") or ""),
         )
+        # The legacy defaults keep ordinary unauthenticated/legacy HTTP calls
+        # usable, but they are not caller provenance.  Discovery acceptance
+        # must therefore distinguish a managed transport that explicitly
+        # supplied both identity headers from an implicit or partial label.
+        identity["identity_source"] = (
+            "explicit_headers"
+            if raw_client_id and raw_client_type
+            else "partial_headers"
+            if raw_client_id or raw_client_type
+            else "implicit_default"
+        )
+        attestation = str(self.headers.get(CONNECTOR_ATTESTATION_HEADER) or "").strip()
+        attestation_secret = str(
+            getattr(self.runtime, "connector_attestation_secret", None)
+            or os.environ.get(CONNECTOR_ATTESTATION_ENV, "")
+        ).strip()
+        verified, reason = verify_connector_attestation(
+            attestation,
+            attestation_secret,
+            client_id=client_id,
+            client_type=client_type,
+            activation_epoch_id=getattr(self.runtime, "activation_epoch_id", ""),
+            process_instance_id=getattr(self.runtime, "process_instance_id", ""),
+            server_instance_id=getattr(self.runtime, "server_instance_id", ""),
+            contract_sha256=(getattr(self.runtime, "tool_contract", {}) or {}).get("sha256", ""),
+        )
+        identity["attestation_verified"] = verified
+        identity["attestation_source"] = "managed_tunnel" if verified else reason
+        if verified and identity["identity_source"] == "explicit_headers":
+            identity["identity_source"] = "attested_transport"
+        return identity

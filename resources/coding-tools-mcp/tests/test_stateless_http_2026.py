@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from coding_tools_mcp.controller_usage_ingress import CONTROLLER_USAGE_META_KEY, CONTROLLER_USAGE_STATUS_META_KEY
+from coding_tools_mcp.connector_attestation import CONNECTOR_ATTESTATION_HEADER, build_connector_attestation
 from coding_tools_mcp.protocol import STATELESS_PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 from coding_tools_mcp.task_state import TaskStateStore
@@ -52,6 +53,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
                 "CODING_TOOLS_MCP_DEVICE_ID": "11111111-1111-4111-8111-111111111111",
                 "CODING_TOOLS_MCP_DEVICE_INSTANCE_ID": "device-instance-office-0001",
                 "CODING_TOOLS_MCP_DEVICE_DISPLAY_NAME": "Office Workstation",
+                "CODING_TOOLS_MCP_CONNECTOR_ATTESTATION_SECRET": "test-connector-attestation-secret",
             },
         )
         self.env.start()
@@ -74,8 +76,23 @@ class StatelessHttp2026Tests(unittest.TestCase):
             "Content-Type": "application/json",
             "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION,
             "Mcp-Method": method,
+            # Model the managed Coding Tunnel, which explicitly forwards its
+            # caller identity to MCP.  A separate regression below exercises
+            # a direct loopback request without these provenance headers.
+            "X-Coding-Tools-Client-Id": "chatweb",
+            "X-Coding-Tools-Client-Type": "chatweb",
         }
         headers.update(extra_headers or {})
+        if CONNECTOR_ATTESTATION_HEADER not in headers and "X-Coding-Tools-Client-Id" in headers and "X-Coding-Tools-Client-Type" in headers:
+            headers[CONNECTOR_ATTESTATION_HEADER] = build_connector_attestation(
+                "test-connector-attestation-secret",
+                client_id=headers["X-Coding-Tools-Client-Id"],
+                client_type=headers["X-Coding-Tools-Client-Type"],
+                activation_epoch_id=getattr(self.runtime, "activation_epoch_id", ""),
+                process_instance_id=self.runtime.process_instance_id,
+                server_instance_id=self.runtime.server_instance_id,
+                contract_sha256=self.runtime.tool_contract["sha256"],
+            )
         body = json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}).encode("utf-8")
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
@@ -169,6 +186,68 @@ class StatelessHttp2026Tests(unittest.TestCase):
             connection.close()
         self.assertEqual(response.status, 200)
         self.assertTrue(health["connector_tool_discovery"]["current_contract_observed"])
+
+    def test_loopback_tools_list_without_identity_headers_is_not_authoritative_discovery(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        headers = {
+            "Content-Type": "application/json",
+            "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION,
+            "Mcp-Method": "tools/list",
+        }
+        body = json.dumps({"jsonrpc": "2.0", "id": 99, "method": "tools/list", "params": modern_params()}).encode("utf-8")
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("POST", "/mcp", body=body, headers=headers)
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertEqual({item["name"] for item in payload["result"]["tools"]}, EXPECTED_SMART_TOOLS)
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertFalse(discovery["observed"])
+        self.assertFalse(discovery["current_contract_observed"])
+
+    def test_explicit_chatweb_headers_without_attestation_are_not_authoritative(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        status, _, payload = self.request(
+            "tools/list",
+            modern_params(),
+            request_id=100,
+            extra_headers={CONNECTOR_ATTESTATION_HEADER: ""},
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("result", payload)
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertFalse(discovery["observed"])
+        self.assertFalse(discovery["current_contract_observed"])
+
+    def test_untrusted_loopback_observation_cannot_overwrite_attested_discovery(self) -> None:
+        status, _, payload = self.request("tools/list", modern_params(), request_id=101)
+        self.assertEqual(status, 200)
+        self.assertIn("result", payload)
+        authoritative = self.runtime.connector_tool_discovery()
+        self.assertTrue(authoritative["current_contract_observed"])
+        self.assertTrue(authoritative["attestation_verified"])
+
+        headers = {
+            "Content-Type": "application/json",
+            "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION,
+            "Mcp-Method": "tools/list",
+        }
+        body = json.dumps({"jsonrpc": "2.0", "id": 102, "method": "tools/list", "params": modern_params()}).encode("utf-8")
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("POST", "/mcp", body=body, headers=headers)
+            response = connection.getresponse()
+            response.read()
+        finally:
+            connection.close()
+        self.assertEqual(response.status, 200)
+        after_untrusted = self.runtime.connector_tool_discovery()
+        self.assertTrue(after_untrusted["current_contract_observed"])
+        self.assertTrue(after_untrusted["attestation_verified"])
+        self.assertEqual(after_untrusted["observed_at"], authoritative["observed_at"])
 
     def test_tools_call_records_current_contact_without_fabricating_discovery(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])

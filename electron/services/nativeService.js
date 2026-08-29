@@ -9,6 +9,7 @@ const { rotateLog } = require('./logService');
 const { ComponentRevisionTracker } = require('./componentRevision');
 const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 const { canonicalPath } = require('./runtimeIdentity');
+const { CONNECTOR_ATTESTATION_ENV } = require('./connectorAttestation');
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
@@ -55,7 +56,8 @@ function buildNativeMcpEnv({
   activationEpochId = '',
   activationGate = '',
   activationAllowAcceptancePending = false,
-  activationExpiresAtUnixMs = 0
+  activationExpiresAtUnixMs = 0,
+  connectorAttestationSecret = ''
 }) {
   const env = coreNativeEnvironment(sourceEnv);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
@@ -79,6 +81,9 @@ function buildNativeMcpEnv({
     CODING_TOOLS_MCP_CODE_REVISION: diskRevision
   });
   if (String(activationEpochId || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = String(activationEpochId).trim();
+  if (String(connectorAttestationSecret || '').trim()) {
+    env[CONNECTOR_ATTESTATION_ENV] = String(connectorAttestationSecret).trim();
+  }
   if (String(activationGate || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_GATE = String(activationGate).trim().toLowerCase();
   if (activationAllowAcceptancePending === true) {
     env.CODING_TOOLS_MCP_ACTIVATION_ALLOW_ACCEPTANCE_PENDING = 'true';
@@ -470,7 +475,8 @@ class NativeService {
       activationEpochId: requestedEpoch,
       activationGate: options.activationGate,
       activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
-      activationExpiresAtUnixMs: requestedExpiry
+      activationExpiresAtUnixMs: requestedExpiry,
+      connectorAttestationSecret: options.connectorAttestationSecret || ''
     });
     const args = [
       ...python.prefixArgs,

@@ -166,7 +166,15 @@ class RuntimeActivityMixin:
         client_id = str(identity.get("client_id") or "").strip()
         client_type = str(identity.get("client_type") or "client").strip()
         epoch_id = str(getattr(self, "activation_epoch_id", None) or "").strip()
-        if not client_id or client_type != "chatweb" or not epoch_id:
+        # Compatibility bootstrap is still connector authority.  It therefore
+        # needs the same managed-tunnel attestation as strict tools/list; a
+        # caller that merely self-labels as chatweb must not open the fast path.
+        if (
+            not client_id
+            or client_type != "chatweb"
+            or not epoch_id
+            or identity.get("attestation_verified") is not True
+        ):
             return
         if str(bootstrap.get("activation_epoch_id") or "").strip() != epoch_id:
             return
@@ -174,6 +182,9 @@ class RuntimeActivityMixin:
         receipt = {
             "client_id": client_id,
             "client_type": client_type,
+            "identity_source": str(identity.get("identity_source") or "unknown"),
+            "attestation_verified": True,
+            "attestation_source": str(identity.get("attestation_source") or "managed_tunnel"),
             "client_name": str(capabilities.get("client_name") or "")[:100],
             "client_version": str(capabilities.get("client_version") or "")[:50],
             "method": "tools/call",
@@ -243,6 +254,7 @@ class RuntimeActivityMixin:
             and str(latest.get("process_instance_id") or "") == self.process_instance_id
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
             and str(latest.get("activation_epoch_id") or "") == epoch_id
+            and latest.get("attestation_verified") is True
         )
         return {
             "observed": latest is not None,
@@ -256,6 +268,8 @@ class RuntimeActivityMixin:
             "client_type": str((latest or {}).get("client_type") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "attestation_verified": (latest or {}).get("attestation_verified") is True,
+            "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
             "workspace_accessed": (latest or {}).get("workspace_accessed"),
             "snapshot_busy": False,
         }
@@ -265,18 +279,26 @@ class RuntimeActivityMixin:
             return
         client_id = str(identity.get("client_id") or "").strip()
         client_type = str(identity.get("client_type") or "client").strip()
-        if not client_id or client_type != "chatweb":
+        if (
+            not client_id
+            or client_type != "chatweb"
+            or identity.get("attestation_verified") is not True
+        ):
             return
         capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
         receipt = {
             "client_id": client_id,
             "client_type": client_type,
+            "identity_source": str(identity.get("identity_source") or "unknown"),
+            "attestation_verified": True,
+            "attestation_source": str(identity.get("attestation_source") or "managed_tunnel"),
             "client_name": str(capabilities.get("client_name") or "")[:100],
             "client_version": str(capabilities.get("client_version") or "")[:50],
             "method": "tools/call",
             "contract_sha256": str(self.tool_contract.get("sha256") or ""),
             "process_instance_id": self.process_instance_id,
             "server_instance_id": self.server_instance_id,
+            "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or "") or None,
             "observed_at": datetime.now(timezone.utc).isoformat(),
         }
         with self.tool_contact_lock:
@@ -310,6 +332,12 @@ class RuntimeActivityMixin:
             and str(latest.get("contract_sha256") or "") == current_sha
             and str(latest.get("process_instance_id") or "") == self.process_instance_id
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
+            and (
+                not str(getattr(self, "activation_epoch_id", None) or "").strip()
+                or str(latest.get("activation_epoch_id") or "").strip()
+                == str(getattr(self, "activation_epoch_id", None) or "").strip()
+            )
+            and latest.get("attestation_verified") is True
         )
         return {
             "observed": latest is not None,
@@ -321,5 +349,8 @@ class RuntimeActivityMixin:
             "client_name": str((latest or {}).get("client_name") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,
+            "attestation_verified": (latest or {}).get("attestation_verified") is True,
+            "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
             "snapshot_busy": False,
         }

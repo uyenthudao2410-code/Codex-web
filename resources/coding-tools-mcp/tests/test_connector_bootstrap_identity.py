@@ -4,12 +4,21 @@ import unittest
 from types import SimpleNamespace
 
 from coding_tools_mcp.http_hub_identity import HTTPHubIdentityMixin
+from coding_tools_mcp.connector_attestation import CONNECTOR_ATTESTATION_HEADER, build_connector_attestation
 
 
 class IdentityProbe(HTTPHubIdentityMixin):
-    def __init__(self, headers: dict[str, str]) -> None:
+    def __init__(self, headers: dict[str, str], *, secret: str = "") -> None:
         self.headers = headers
-        self.runtime = SimpleNamespace(http_session_id="", execution_context_id="ctx-test")
+        self.runtime = SimpleNamespace(
+            http_session_id="",
+            execution_context_id="ctx-test",
+            connector_attestation_secret=secret or None,
+            activation_epoch_id="epoch-test",
+            process_instance_id="process-test",
+            server_instance_id="server-test",
+            tool_contract={"sha256": "a" * 64},
+        )
 
 
 class ConnectorBootstrapIdentityTests(unittest.TestCase):
@@ -42,6 +51,43 @@ class ConnectorBootstrapIdentityTests(unittest.TestCase):
         })._hub_identity_from_request(self.request())
         self.assertEqual(identity["client_type"], "electron")
         self.assertEqual(identity["role"], "supervisor")
+
+    def test_identity_source_distinguishes_transport_headers_from_implicit_defaults(self) -> None:
+        explicit = IdentityProbe({
+            "X-Coding-Tools-Client-Id": "chatweb",
+            "X-Coding-Tools-Client-Type": "chatweb",
+        })._hub_identity_from_request(self.request())
+        self.assertEqual(explicit["identity_source"], "explicit_headers")
+
+        implicit = IdentityProbe({})._hub_identity_from_request(self.request())
+        self.assertEqual(implicit["identity_source"], "implicit_default")
+        self.assertEqual(implicit["client_type"], "chatweb")
+
+    def test_attestation_upgrades_explicit_identity_to_managed_transport(self) -> None:
+        headers = {
+            "X-Coding-Tools-Client-Id": "chatweb",
+            "X-Coding-Tools-Client-Type": "chatweb",
+        }
+        headers[CONNECTOR_ATTESTATION_HEADER] = build_connector_attestation(
+            "identity-test-secret",
+            client_id="chatweb",
+            client_type="chatweb",
+            activation_epoch_id="epoch-test",
+            process_instance_id="process-test",
+            server_instance_id="server-test",
+            contract_sha256="a" * 64,
+        )
+        identity = IdentityProbe(headers, secret="identity-test-secret")._hub_identity_from_request(self.request())
+        self.assertEqual(identity["identity_source"], "attested_transport")
+        self.assertTrue(identity["attestation_verified"])
+
+    def test_explicit_identity_without_attestation_stays_untrusted(self) -> None:
+        identity = IdentityProbe({
+            "X-Coding-Tools-Client-Id": "chatweb",
+            "X-Coding-Tools-Client-Type": "chatweb",
+        }, secret="identity-test-secret")._hub_identity_from_request(self.request())
+        self.assertEqual(identity["identity_source"], "explicit_headers")
+        self.assertFalse(identity["attestation_verified"])
 
 
 if __name__ == "__main__":
