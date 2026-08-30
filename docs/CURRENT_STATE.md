@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-26
+> **Status date:** 2026-08-30
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -28,17 +28,262 @@ The supported development closure is `ACCEPTED/CHECKPOINTED -> ACTIVATABLE -> co
 
 A schema-v2 postflight is accepted only when its operation, component, checkpoint lineage, expected/running/disk revision, instance transition, timestamps, health result, and fresh post-cancel lifecycle decision all verify. That final lifecycle decision must come from a new immutable, query-only SQLite Backup-API snapshot with `integrity_check=["ok"]`, zero foreign-key rows, valid physical/logical SHA-256 values, the exact operation/checkpoint, no fence, and zero blocking lifecycle counts, unexplained active RUNs, or unbound live residues. A contradictory `clean=true` flag cannot override those facts; the same lifecycle rule applies when an accepted checkpoint affects zero runtime components.
 
-`LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: persisted SHA equality alone is not process-freshness proof for a new full-clean epoch. Freshness is satisfied either by current-process `tools/list` / `server/discover` followed by official Recovery Host acknowledgement, or by the admission-closed, no-workspace compatibility bootstrap for an exact declared predecessor/current SHA. That bootstrap is accepted only from the real ChatWeb `workspace_context` call, is bound to the current contract/process/server/activation epoch, returns `completed=false`, `retryable=true`, and `workspace_accessed=false`, and is recorded separately from discovery and ordinary successful tool contact. The first exact bootstrap receipt is immutable for that process/server/epoch boundary, so connector retries cannot advance its timestamp after Recovery Host has durably acknowledged it. Its acknowledged state is `CURRENT_COMPATIBLE_ACKNOWLEDGED`; it never sets `connectorRediscovered=true` or invents a rediscovery timestamp.
+`LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: persisted SHA equality alone is not process-freshness proof for a new full-clean epoch. Every full-clean epoch reaches `READY` / admission `OPEN` only after an attested current-process `tools/list` or `server/discover` receipt and official Recovery Host acknowledgement. The transport receipt must be bound to the exact activation epoch, MCP process instance, server instance and contract SHA; raw HTTP, implicit or explicit identity headers without the managed-tunnel attestation, catalog metadata, `tools/call`, or a textual receipt cannot satisfy this gate. The admission-closed, no-workspace compatibility bootstrap for an exact declared predecessor/current SHA remains a separate continuity signal only. It is accepted only from an attested ChatWeb `workspace_context` call, returns `completed=false`, `retryable=true`, and `workspace_accessed=false`, and is recorded separately from discovery and ordinary successful tool contact. Its acknowledged state is `CURRENT_COMPATIBLE_ACKNOWLEDGED`; it never sets `connectorRediscovered=true`, never invents a rediscovery timestamp, and the full-clean validator keeps it pending with `STRICT_CONNECTOR_REDISCOVERY_REQUIRED` rather than using it to finalize the epoch.
 
 ### Operational recency override — 2026-08-27
 
 The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
 
-- The checked-out baseline is `main @ f85082b7b016dfd20dc9c1f769362c9a9942cb61`. The current full-clean activation-closure and PRL v11 hardening waves are newer uncommitted source until an exact accepted checkpoint says otherwise. PRL now fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
+- The checked-out Git identity observed on 2026-08-29 is `main @ c0aa335c7c12746a1f4ff42e84234f8c54914658`, matching `origin/main`. The current full-clean activation-closure, PRL v11, managed-tunnel attestation, exact discovery-receipt and lightweight-UI waves remain newer uncommitted source until an exact accepted checkpoint says otherwise; therefore the P5 source baseline is not clean even though HEAD matches upstream. PRL fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
 - Earlier P0/P4 connector acknowledgements and tool calls are `VERIFIED_SNAPSHOT`, not current-process authority. The current connector claim must be read from a fresh Recovery Host closure receipt under the unchanged-versus-changed SHA rules above; no persisted hash, generic tool call, or historical rediscovery timestamp may substitute for it.
 - P5 anchors remain terminal and the earlier A0 source-drift epoch retains its truthful zero funnel. Volatile ordinary-RUN, managed-job, and residue counts are not frozen in this maintained source document: recapture them from one immutable `report_lifecycle_census.py` snapshot before activation or stale-run reconciliation, and use only the official exact-ID path for a genuinely eligible stale RUN.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
 - The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
+
+### Current local activation and UI performance receipt — 2026-08-29T20:15:03Z
+
+The exact current development process has now closed the local connector and UI
+performance gates for the uncommitted source on disk. Query-only lifecycle
+census observed `active_agent_lanes=0`, no managed jobs, unexplained active
+runs, unbound resources, stale background residue or projection drift, and did
+not mutate the canonical ledger. Three ordinary `active` rows remain classified
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE`; each has zero live ownership and remains
+untouched until the supported stale threshold/authority permits reconciliation.
+
+Full-clean epoch
+`activation-mtetdl86-68c08c2f914e8049a4ebb4bf69833539` is `READY` with
+admission `OPEN`. Coding MCP process/server identities are
+`9RkQbeqAUay5_LRD` / `4OtFTiY9AnN5C8Po`, and its running revision equals disk
+revision `68f0a59095855c4250f85bc72a7784ffafca99b424e73158a95948d1112ceff6`.
+The real Coding-VP Live connection produced current-process discovery at
+`2026-08-29T20:10:30.820587Z`; Recovery Host guarded acknowledgement reports
+`CURRENT_ACKNOWLEDGED`, `connector_rediscovered=true`,
+`connector_refresh_required=false`, `connector_ack_pending=false`, and exact
+current/acknowledged contract SHA
+`c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251`.
+
+On Electron UI instance `2709389fe3f50d3202ae67a25b3b7218`, the retained
+25-renderer/50-main/558-event-loop sample window passes all current budgets:
+event-loop p95 `15.6 ms`, normal IPC p95 `44.2 ms`, snapshot-apply p95 `0 ms`,
+and dashboard-refresh p95 `66.2 ms`. Direct Recovery IPC also passes with 20
+samples and p95 `3.07 ms`.
+
+This is exact local runtime/connector/UI evidence for the present dirty
+worktree, not an immutable accepted source baseline. P0.6 remains open until an
+accepted/checkpointed Git identity exists under explicit scoped commit
+authority and the remaining threshold-sensitive lifecycle rows can be handled
+through supported authority. P5 remains gated on natural eligible workload and
+an explicit frozen manifest/operator action. No commit, push, package, release,
+deployment, or production operation is implied by this receipt.
+
+### Operational follow-up — 2026-08-29T23:39:08Z
+
+A new authenticated Recovery Host snapshot for the same checkout confirms that
+the local control plane has not regressed: the epoch above remains `READY` with
+admission `OPEN`; MCP, Tunnel and aggregate readiness are true; failures are
+zero; connector state remains `CURRENT_ACKNOWLEDGED`; the strict discovery
+receipt is still bound to the current process at
+`2026-08-29T20:10:30.820587Z`; and both Coding MCP and Electron UI still report
+`running_revision == disk_revision` with `update_pending=false`. The installed
+development Recovery Supervisor is also `Running` / `healthy` with zero
+consecutive failures. Consequently, an error observed through an older
+ChatGPT connector or tunnel ID is not evidence that this active Electron
+runtime is offline.
+
+The ChatGPT Business workspace now shows the developer-mode app
+`Coding-VP Live` as connected and exposes the expected eight-tool schema.
+However, neither the app-details **Refresh** action nor a new normal ChatWeb
+conversation advanced `connector_rediscovered_at`; the conversation reported
+that protocol-level `tools/list` and `server/discover` are not exposed as model
+callable operations, and no business tool fallback was used. The schema view,
+the textual response, and the unchanged timestamp are therefore **not** a new
+discovery receipt. They do not invalidate the accepted receipt for the current
+process, but they leave rediscovery of a future replacement process unproven.
+Do not stop this healthy epoch or run another full-clean merely to probe that
+external client limitation.
+
+The immutable/query-only census captured at
+`2026-08-29T23:39:08.645Z` again reports `integrity_check=ok`, zero foreign-key
+rows, `mutated_canonical_ledger=false`, no managed jobs, no unexplained active
+RUN, no unbound live resource, no stale background residue and no projection
+drift. The three ordinary active rows still have zero controller lease, write
+fence, live agent lane, managed job and background operation, but remain
+`below_current_stale_threshold`. Their earliest eligible times are
+`2026-08-30 09:34:34`, `09:36:13` and `09:50:58` Asia/Saigon. No reconciliation,
+runtime stop, activation, connector ACK, accepted-baseline creation, P5 action,
+commit, push, package, release or deployment was performed in this follow-up.
+The active completion monitor must recapture fresh hashes and exact-ID
+preflight after those thresholds; it must also prove a managed-attested
+discovery route before replacing the current process.
+
+### Causal correction and live recapture — 2026-08-29T23:43:51Z
+
+The discovery prerequisite above means a demonstrably connected official
+route, not an impossible receipt for a process that does not yet exist.  The
+same `Coding-VP Live` route already produced the managed-attested receipt for
+the current replacement process at `2026-08-29T20:10:30.820587Z`.  A later
+same-process app refresh that did not advance the timestamp does not invalidate
+that receipt; it only fails to prove another protocol discovery occurred.  A
+future replacement must therefore create its own receipt *after* the process
+exists and before guarded acknowledgement.  If it does not, the new epoch must
+remain fail-closed with admission closed; neither model text nor another
+full-clean loop is a substitute.
+
+Fresh local checks also disprove the attached claim that the active Coding
+Tunnel is currently offline.  `npm run dev:status` reports `CURRENT`,
+`host=available`, matching Electron running/disk revisions,
+`CURRENT_ACKNOWLEDGED`, current-process discovery, no connector refresh/ACK
+pending state, and no error.  The independent Recovery Supervisor briefly
+reported `blocked_live_owner / LIVE_OWNER_UNRESPONSIVE` for one 1.5-second ping
+while concurrent status/census reads were running, correctly refused to kill a
+live owner, and returned on its next poll to `Running / healthy` with zero
+consecutive failures and no restart attempt.  This is a transient uncertain
+observation, not proof of a stopped tunnel or authority to replace the owner.
+
+The immutable/query-only census at `2026-08-29T23:43:04.726Z` retained SQLite
+integrity, zero foreign-key rows, no managed jobs, unexplained active RUNs,
+unbound resources, stale background residues or projection drift.  Its
+physical/logical SHA-256 values are respectively
+`b556ead11a7ddb5fb303a47c98e9bb74ebb575202da8b65dc2e4c87a58d07107` and
+`ed2cb592030ddefbcf5459475dcd9f4a67757e6654a8fd27c2e594c3ba426b5c`.
+All three ordinary rows still had zero controller leases, write fences, live
+agent lanes, managed jobs and running background operations, but their ages
+were only `75123`–`76108` seconds against the supported `86400`-second
+threshold.  These hashes are observation-only and must be recaptured after the
+last threshold at `2026-08-30 09:50:58` Asia/Saigon; they are not authority for
+later reconciliation.
+
+### Recovery Supervisor false-owner remediation — 2026-08-30T00:04:36Z
+
+The one-poll `blocked_live_owner / LIVE_OWNER_UNRESPONSIVE` transition above is
+now reproducible and has a bounded source cause.  Both `recovery.ping` and
+`recovery.status` previously built `hostStatus()` synchronously on the Recovery
+Host IPC event loop.  That path performs Windows process-identity observation,
+forced component-revision work and durable activation-state reads.  A normal
+`npm run dev:status` can therefore overlap the independent Supervisor's
+1.5-second liveness deadline and make an exact live owner temporarily
+unresponsive.  The Supervisor response remains correct and fail-closed: the
+live owner is not killed or adopted, the failure streak is one, no restart is
+attempted, and the following poll returns to `healthy`.
+
+The dirty source now separates liveness, cached presentation and mutation
+authority.  `recovery.ping` is an in-memory exact host identity receipt;
+`recovery.status` copies the most recent completed supervision projection and
+adds bounded age/staleness metadata.  Activation and mutation paths retain
+their fresh exact-identity, revision, epoch and ledger preflights.  A real
+process harness race exposed by the faster ping was also corrected: the harness
+must wait for a projection carrying the expected positive MCP/Tunnel PIDs and
+must never probe or signal PID `0` during cleanup.
+
+Current focused proof is `71/71 PASS` for Recovery Host and lifecycle status,
+and `152/152 PASS` for the affected Supervisor, full-clean, runtime-lifecycle
+and real-process boundary.  The real-process subset is `3/3 PASS` and
+`git diff --check` passes.  A live recapture at `2026-08-30T00:04:10Z` still
+reports `CURRENT`, `CURRENT_ACKNOWLEDGED`, current-process rediscovery, exact
+connector SHA equality, no refresh/ACK pending state and no error.  The next
+Supervisor poll reproduced the old one-failure state and the poll at
+`2026-08-30T00:04:36Z` returned to `healthy` with the same host identity and no
+restart attempt.  This proves the source cause against the still-running old
+process; it does not claim that the new source is active.  Loading the fix
+remains part of the single supported post-threshold full-clean sequence.
+
+The same dirty source fingerprint now also has broad repository proof.  The
+Node repository suite originally reported `547/547 PASS`, followed by the source-root
+policy guard and repository secret check passing.  The complete Coding Tools
+MCP suite reports `741 PASS` with `4` environment-conditional skips out of
+`745` collected tests.  These broader results strengthen source acceptance but
+do not create a checkpointed Git identity, mutate lifecycle state, activate the
+new Recovery Host source, or promote P0.6/P5 by themselves.
+
+### Development Supervisor suppression correction — 2026-08-30T00:38:27Z
+
+A later live recapture found a second, independent resilience cause. The
+previous Recovery Host was last observed healthy at `2026-08-30T00:09:31Z`,
+but `%LOCALAPPDATA%\WebMcpRecoverySupervisor\stop.request` was written at
+`2026-08-30T00:09:37.473Z`. Every subsequent Scheduled Task invocation
+therefore exited in `stopping`; by `2026-08-30T00:38:25Z`, `npm run dev:status`
+correctly reported `MISSING / RECOVERY_DESCRIPTOR_STALE`. The task remained
+installed and its manifest still identified this exact checkout, so this was
+not a `blocked_live_owner`, connector-cache result, or foreign-checkout
+takeover.
+
+The source cause was `ensureRecoveryHost()` suppressing any installed
+development Supervisor *before* it checked whether the UI could simply attach
+to the already healthy exact-checkout Recovery Host. That ordinary attachment
+created the stop sentinel even though no host mutation or handoff followed;
+when the Host later disappeared, the deliberately suppressed Supervisor could
+not resurrect it. The dirty source now defers the decision until immediately
+before an actual stale-host retirement or missing-host spawn and preserves an
+installed Supervisor whose app-root/executable identity already matches the
+current checkout. An exact healthy attachment never reaches suppression.
+Focused launcher coverage is `15/15 PASS`, and the scoped diff check passes. The
+current stopped runtime has not loaded this correction, and no restart or
+Supervisor reinstall was performed during the diagnosis. The full Node
+repository suite for this corrected source reports `550/550 PASS`, and the
+source-root policy guard plus repository secret check also pass.
+
+The same census also explains the fourth ordinary active RUN
+`037b642a187e4f098dc66e6dd1c9b3c1`. It was not created by a status poll or
+background cleanup. A distinct ChatWeb task context explicitly invoked the
+destructive/project-write `agent_workflow(phase="prepare")` at
+`2026-08-29T23:52:54Z`, which intentionally created a durable `PREFLIGHT` RUN,
+then ended after read-only commands without using exact-context
+`task_control(action="stop")`. That caller action contradicted its own stated
+"do not create RUN/WAVE" constraint. The RUN has zero controller lease, write
+fence, live lane, managed job and background operation, but the current
+controller is not authorized to forge the old task context or reconcile below
+the supported 24-hour threshold. Its earliest stale-reconciliation time is
+approximately `2026-08-31 06:53:20` Asia/Saigon. This is a caller lifecycle
+contract violation, not evidence that a read-only status or census path
+spontaneously creates RUN rows.
+
+### Long-lived managed-Tunnel discovery correction — 2026-08-30
+
+The unchanged rediscovery timestamp after the later real `Coding-VP Live`
+refresh was not merely a model-binding limitation. Sanitized Tunnel chronology
+shows that the official control plane forwarded `openai-mcp-discover` at about
+`2026-08-30 03:10:30` and again at `06:27:17` Asia/Saigon for the same exact
+activation epoch, MCP process/server identities and contract SHA. The first
+request created the strict receipt at `2026-08-29T20:10:30.820587Z`; the second
+request reached MCP but did not advance it.
+
+The repository-side cause was a mismatch between producer and verifier
+semantics. `tunnel-client` supports one static `--mcp.extra-headers` value for a
+managed Tunnel lifecycle, while the MCP verifier expired that same HMAC after
+15 minutes. Legitimate discovery on a long-lived exact process was therefore
+served but downgraded from `attested_transport` with `timestamp_expired`, so it
+could not update the authoritative receipt. The source now models the primitive
+truthfully as a lifecycle-bound capability: it retains HMAC-SHA256, exact
+client/epoch/process/server/contract binding, future-timestamp rejection,
+tamper rejection and secret rotation on MCP replacement, but does not expire an
+otherwise exact live-lifecycle capability solely by wall-clock age. Direct
+regressions prove that an exact 24-hour-old capability remains valid, while
+cross-epoch/process/server/SHA replay, secret rotation, tamper and future
+timestamps remain rejected.
+
+The Tunnel launch contract is also covered directly: the attestation reference
+appears only under `--mcp.extra-headers`; local
+`--mcp.discovery-extra-headers` probes receive no attestation and cannot
+manufacture a ChatWeb receipt. Recovery Host now ignores even an exact
+compatibility `workspace_context` bootstrap when deciding whether to wake the
+strict final-census/finalize path. Bootstrap leaves the epoch
+`VERIFYING` / admission `CLOSED`; only an exact managed-attested current-tuple
+`tools/list` or `server/discover` receipt can lead to strict ACK and
+`READY` / `OPEN`.
+
+Focused source proof for this correction is `42 passed, 4 subtests passed` in
+the Python connector/protocol/HTTP/activation suite and `213 passed` in the
+affected Node Tunnel/lifecycle/full-clean/Recovery Host/development-status
+suite. Module-size budgets and `git diff --check` pass. These results prove the
+dirty source behavior only. A read-only `npm run dev:status` at the end of the
+wave reports `state=MISSING`, `host=unavailable`,
+`error_code=RECOVERY_DESCRIPTOR_STALE`; no live process has loaded this fix.
+The status line now labels its legacy revision fields
+`revision_scope=electron_ui` and separately reports Coding MCP revision,
+aggregate readiness and snapshot freshness, preventing a UI `CURRENT` result
+from being misread as whole-stack currency. No restart, activation, connector
+ACK, commit, push, package, release or deployment was performed by this source
+correction.
 
 ### Source validation update — 2026-08-27
 
@@ -357,7 +602,7 @@ The manual-only GitHub workflow `.github/workflows/p4-readiness.yml` exposes the
 
 The P4 empirical gate remains **COLLECTING unless the canonical ledger reporter says `EMPIRICALLY_COMPLETE`**. The 2026-08-19 snapshot (9 representative terminal shadow tasks, 0 representative causal-solution repairs, and `validated_signals=[]`) remains historical evidence that predictive validity was not established; it must not be reused as an activation proof for later source. P4-C therefore remains strict/shadow-only and P4-E remains coverage-first/advisory-only.
 
-**Current P4 readiness (`VERIFIED_CURRENT`, descriptive) remains `COLLECTING`.** At the `2026-08-24T02:19:09.4513934Z` immutable ledger projection, there were `89` representative terminal shadows: causal-solution repair `n=2`, nonrepair `n=64`, and repair-unknown `n=23`; raw post-replan patched observations were `n=27`. `validated_signals=[]`, familywise/holdout validation was not evaluable, and predictive-policy activation remained false. These small/imbalanced labels do not establish a prediction effect or causal intervention result. The newest connector receipt is blocked pending current-process discovery; even a future connector pass would not be a P4 outcome or authorize automatic policy, P5 treatment, or routing.
+**Current P4 readiness (`VERIFIED_CURRENT`, descriptive) remains `COLLECTING`.** The immutable canonical-ledger report captured at `2026-08-29T14:19:17.492306Z` contains `99` representative terminal shadows: causal-solution repair `n=1`, nonrepair `n=72`, and repair-unknown `n=26`; raw post-replan patched observations were `n=26`. `validated_signals=[]`, `p4_empirically_complete=false`, and predictive-policy activation remains false. The source implementation exists, but the upstream-matched P5 baseline is not ready because code-bearing source is dirty. These imbalanced labels do not establish a prediction effect or causal intervention result. The current connector now has the attested current-process discovery receipt recorded above, but that connector pass is not a P4 outcome and does not authorize automatic policy, P5 treatment, or routing.
 
 P5 has a separately gated **source implementation**: manifest v2, secret-handle seed commitment, pre-assignment arm-neutral eligibility/enrollment, restart-safe block randomization, immutable all-assigned ITT outcome rows, analyzer/source-identity checks, and pause/close/hard-stop controls are exposed as `task_control(action="p5")` inside the unchanged eight-tool `smart-v3` surface. A write-capable `agent_workflow` can carry `p5_assignment_id` only for the immutable `feature`/`bugfix` task class; after the ordinary workspace fence is acquired and before any mkdir/patch call, the runtime records an immutable P5 pre-write binding to the exact run, wave, and lease. Caller-supplied first-write time is rejected. The feasibility analyzer projects the complete durable funnel (`assessed → eligible → enrolled → assigned → protocol started → pre-write binding/first-write record → terminal → immediate quality → delayed follow-up/interference`) by assigned arm and workflow stratum. It verifies completed 2/2 block shape and exact table joins instead of pretending that a low-power canary SRM p-value proves randomization; completed-block mismatch, orphaned rows, arm crossover, or a write-binding/first-write mismatch hard-stops a live epoch. Incomplete live blocks are reported as pending, not claimed as imbalance. It does not loosen P4-C or require P4 predictive readiness before a P5-A0 instrumentation epoch. An operator must still explicitly open a frozen, source/runtime-matching manifest, with a clean upstream-matched control-plane source when the manifest requires it and with no active workspace write fence. `p5_automatic_start=false`, `automatic_policy_activation=false`, and automatic production promotion remain invariants. No source proof substitutes for a live P5-A0 A/A epoch, a P5-A treatment canary, an efficacy conclusion, or promotion.
 
@@ -435,6 +680,20 @@ Independent recovery is no longer only a roadmap concept. The current source con
 - controlled component activation and accepted-code activation gates.
 
 The Recovery Tunnel must use a distinct tunnel identity from the primary Coding Tunnel. If a second tunnel resource is not configured, the independent local Recovery MCP may still exist while remote Recovery Tunnel status remains `not_configured`.
+
+Development-startup note: the current checkout intentionally writes a bounded
+`%LOCALAPPDATA%\\WebMcpRecoverySupervisor\\stop.request` sentinel only before an
+actual development Recovery Host retirement/handoff or missing-host spawn when
+the installed development Supervisor is not proven to match the current
+app-root/executable identity, so another checkout cannot resurrect the wrong runtime.
+Attaching an Electron UI to the already healthy exact-checkout Host must not
+write this sentinel. The sentinel is operational suppression, not a health
+result and not evidence of `blocked_live_owner`. After a development handoff,
+re-enable supervision only through the supported
+`npm run recovery:supervisor:install` installer for the exact current checkout;
+it refreshes the installed script/manifest identity and removes the sentinel.
+Packaged supervision has a separate installed identity and is not affected by
+this development-only guard.
 
 Implementation in source is not the same as a packaged/live proof. Recovery changes still require the relevant process-boundary, activation, packaged-Windows/login, and fault-matrix acceptance appropriate to the change.
 

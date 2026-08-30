@@ -25,6 +25,7 @@ test('package start contract routes through the full-system refresh lifecycle', 
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
   assert.equal(packageJson.scripts.start, 'node scripts/dev-ui-lifecycle.js refresh');
   assert.equal(packageJson.scripts['dev:refresh'], packageJson.scripts.start);
+  assert.equal(packageJson.scripts['dev:control-center'], 'node scripts/dev-ui-lifecycle.js control-center');
 });
 
 function acceptedClosure(overrides = {}) {
@@ -262,6 +263,15 @@ test('dev focuses an exact current UI and reports process plus revision postflig
   assert.match(fixture.lines.at(-1), /runtime=ready mcp_running=true native_alive=true tunnel_running=true/);
 });
 
+test('dev:control-center opens the manager through the exact current Electron instance', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const result = await runLifecycle('control-center', fixture.deps);
+  assert.equal(result.ui.state, 'CURRENT');
+  assert.deepEqual(fixture.calls, ['signal:control-center:electron-ui-instance-0001']);
+  assert.match(fixture.lines.at(-1), /DEV_UI CONTROL_CENTER action=open pid=42001 instance=electron-ui-instance-0001/);
+  assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
+});
+
 test('dev reports UI_CURRENT and fails typed when Recovery Host backend is not ready', async () => {
   const fixture = harness(observation('CURRENT'));
   fixture.deps.runtimeReadiness = async () => ({
@@ -332,6 +342,46 @@ test('dev:status reports lifecycle state without signaling or activating the UI'
   assert.deepEqual(fixture.calls, []);
   assert.match(fixture.lines.at(-1), /DEV_UI STATUS state=STALE host=available installation=current/);
   assert.match(fixture.lines.at(-1), /running_revision=b+ disk_revision=a+/);
+  assert.match(fixture.lines.at(-1), /connector_rediscovered=unknown/);
+});
+
+test('dev:status scopes UI revision and exposes MCP drift plus aggregate runtime freshness', async () => {
+  const fixture = harness(observation('CURRENT'));
+  const mcpRunningRevision = 'b'.repeat(64);
+  const mcpDiskRevision = 'c'.repeat(64);
+  fixture.deps.runtimeSnapshot = async () => ({
+    codeRevision: {
+      codingMcp: {
+        state: 'update_pending',
+        running_revision: mcpRunningRevision,
+        disk_revision: mcpDiskRevision,
+        update_pending: true,
+        checked_at: '2026-08-30T00:47:29.905Z'
+      }
+    },
+    componentsReady: false,
+    fullyReady: false,
+    updateIncomplete: true,
+    telemetryAvailable: true,
+    signalStale: false,
+    snapshotSource: 'recovery_host_supervision_cache',
+    snapshotAgeMs: 1250
+  });
+
+  const result = await runLifecycle('status', fixture.deps);
+
+  assert.equal(result.ui.state, 'CURRENT');
+  assert.deepEqual(fixture.calls, []);
+  const line = fixture.lines.at(-1);
+  assert.match(line, new RegExp(`state=CURRENT .*running_revision=${REVISION} disk_revision=${REVISION}`));
+  assert.match(line, /revision_scope=electron_ui/);
+  assert.match(line, /mcp_revision_state=update_pending/);
+  assert.match(line, new RegExp(`mcp_running_revision=${mcpRunningRevision}`));
+  assert.match(line, new RegExp(`mcp_disk_revision=${mcpDiskRevision}`));
+  assert.match(line, /mcp_update_pending=true/);
+  assert.match(line, /components_ready=false fully_ready=false runtime_update_incomplete=true/);
+  assert.match(line, /runtime_telemetry_available=true runtime_signal_stale=false/);
+  assert.match(line, /runtime_snapshot_source=recovery_host_supervision_cache runtime_snapshot_age_ms=1250/);
 });
 
 test('dev:status exposes connector receipt and acknowledgement gate from a read-only runtime snapshot', async () => {
@@ -1239,8 +1289,8 @@ test('connector presentation distinguishes exact activation compatibility ACK fr
     connectorRediscovered: false
   });
   assert.equal(acknowledged.state, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
-  assert.equal(acknowledged.notice, false);
-  assert.match(acknowledged.message, /no-workspace bootstrap/);
+  assert.equal(acknowledged.notice, true);
+  assert.match(acknowledged.message, /full-clean activation vẫn chờ tools\/list/);
 });
 
 test('Command Center exposes the machine closure state without promoting source health to LIVE_CLOSED', () => {

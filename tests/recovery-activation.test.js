@@ -522,6 +522,97 @@ test('Electron UI registration completes only after the expected revision is run
   assert.equal(manager.status(activation.operation_id).postflight.source_checkpoint_id, SOURCE_CHECKPOINT.checkpoint_id);
 });
 
+test('cached Electron UI presence reuses only the exact last observed registration', (t) => {
+  const paths = fixture(t);
+  let identityCalls = 0;
+  let now = 1_700_000_000_000;
+  const processStartToken = '123456789';
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(NEXT),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: NEXT,
+    now: () => now,
+    processIdentityObserver: (pid) => {
+      identityCalls += 1;
+      return { state: 'live', pid, process_start_token: processStartToken };
+    }
+  });
+  manager.uiRegistration = {
+    instance_id: 'electron-ui-cached-0001',
+    pid: 42001,
+    process_start_token: processStartToken,
+    revision: NEXT,
+    registered_at_unix_ms: now
+  };
+
+  const observed = manager.uiPresence();
+  assert.equal(observed.alive, true);
+  assert.equal(identityCalls, 1);
+  now += 5_000;
+  const cached = manager.uiPresence({ preferCached: true });
+  assert.equal(cached.alive, true);
+  assert.equal(cached.observed_at_unix_ms, observed.observed_at_unix_ms);
+  assert.equal(identityCalls, 1, 'cached projection must not repeat the OS identity observation');
+  assert.equal(manager.uiRevisionStatus({ preferCachedPresence: true }).state, 'current');
+  assert.equal(identityCalls, 1);
+
+  manager.uiRegistration = { ...manager.uiRegistration, instance_id: 'electron-ui-cached-0002' };
+  const mismatched = manager.uiPresence({ preferCached: true });
+  assert.equal(mismatched.alive, null, 'a cached receipt cannot transfer authority to a different UI registration');
+  assert.equal(mismatched.observed_at_unix_ms, null);
+  assert.equal(identityCalls, 1);
+});
+
+test('asynchronous Electron UI presence is exact-registration-bound and fail-closed on uncertainty', async (t) => {
+  const paths = fixture(t);
+  const processStartToken = '123456789';
+  let asyncIdentityCalls = 0;
+  let resolveObservation;
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(NEXT),
+    orchestrator: orchestrator(),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: NEXT,
+    processIdentityObserver: () => {
+      throw new Error('watchdog presence must not use the synchronous observer');
+    },
+    asyncProcessIdentityObserver: (pid) => {
+      asyncIdentityCalls += 1;
+      return new Promise((resolve) => { resolveObservation = () => resolve({
+        state: 'live',
+        pid,
+        process_start_token: processStartToken
+      }); });
+    }
+  });
+  manager.uiRegistration = {
+    instance_id: 'electron-ui-async-0001',
+    pid: 42001,
+    process_start_token: processStartToken,
+    revision: NEXT,
+    registered_at_unix_ms: Date.now()
+  };
+
+  const pending = manager.observeUiPresence();
+  manager.uiRegistration = { ...manager.uiRegistration, instance_id: 'electron-ui-async-0002' };
+  resolveObservation();
+  const raced = await pending;
+  assert.equal(raced.alive, null, 'an observation for an old registration cannot authorize the replacement');
+  assert.equal(raced.instance_id, 'electron-ui-async-0002');
+  assert.equal(raced.observed_at_unix_ms, null);
+  assert.equal(asyncIdentityCalls, 1);
+
+  manager.asyncProcessIdentityObserver = async (pid) => ({ state: 'unavailable', pid });
+  const unavailable = await manager.observeUiPresence();
+  assert.equal(unavailable.tracked, true);
+  assert.equal(unavailable.alive, null);
+});
+
 test('Recovery Host activation prepares MCP continuity before scheduling a fixed handoff', async (t) => {
   const paths = fixture(t);
   const events = [];

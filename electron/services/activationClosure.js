@@ -3,11 +3,12 @@ const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
 const CLOSURE_INPUT_SCHEMA_VERSION = 1;
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
-const CONNECTOR_CURRENT_STATES = new Set([
-  'UNCHANGED_ACKNOWLEDGED',
-  'CURRENT_ACKNOWLEDGED',
-  'CURRENT_COMPATIBLE_ACKNOWLEDGED'
-]);
+// `UNCHANGED_ACKNOWLEDGED` is SHA continuity only.  It deliberately carries no
+// current-process discovery timestamp and must not close an accepted-to-live
+// activation after a process replacement.  Only the exact rediscovered state
+// is current for LIVE_CLOSED.
+const CONNECTOR_CURRENT_STATES = new Set(['CURRENT_ACKNOWLEDGED']);
+const CONNECTOR_CONTINUITY_STATES = new Set(['UNCHANGED_ACKNOWLEDGED']);
 const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified_file', 'durable_wave_patch_surface']);
 const { componentOwnsPath } = require('./componentRevision');
 const {
@@ -274,15 +275,13 @@ function computeActivationClosure({
   const connectorShaCurrent = HEX64.test(currentConnectorSha)
     && currentConnectorSha === acknowledgedConnectorSha;
   const rediscoveredAt = text(connectorRediscoveredAt);
-  const connectorFreshnessCurrent = connectorState === 'UNCHANGED_ACKNOWLEDGED'
-    || connectorState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
-    || (connectorState === 'CURRENT_ACKNOWLEDGED'
-      && rediscoveredAt && Number.isFinite(Date.parse(rediscoveredAt)));
-  const connectorCurrent = CONNECTOR_CURRENT_STATES.has(connectorState)
+  const connectorFreshnessCurrent = Boolean(connectorState === 'CURRENT_ACKNOWLEDGED'
+    && rediscoveredAt && Number.isFinite(Date.parse(rediscoveredAt)));
+  const connectorCurrent = Boolean(CONNECTOR_CURRENT_STATES.has(connectorState)
     && connectorRefreshRequired === false
     && connectorAcknowledgementPending === false
     && connectorShaCurrent
-    && connectorFreshnessCurrent;
+    && connectorFreshnessCurrent);
   const normalizedLifecycle = normalizeLifecycleDecision(source.lifecycle_decision);
   const lifecycleOperationBound = affectedComponents.length === 0
     ? OPERATION_ID_PATTERN.test(normalizedLifecycle?.operation_id || '')
@@ -311,6 +310,7 @@ function computeActivationClosure({
     component_current: componentCurrent,
     components_current: componentsCurrent,
     connector_contract_state: connectorState,
+    connector_continuity_only: CONNECTOR_CONTINUITY_STATES.has(connectorState),
     connector_refresh_required: connectorRefreshRequired,
     connector_acknowledgement_pending: connectorAcknowledgementPending,
     connector_rediscovered_at: rediscoveredAt || null,
@@ -335,6 +335,7 @@ function computeActivationClosure({
 module.exports = {
   COMPONENTS,
   CONNECTOR_CURRENT_STATES,
+  CONNECTOR_CONTINUITY_STATES,
   CLOSURE_INPUT_SCHEMA_VERSION,
   computeActivationClosure,
   checkpointIdentity,

@@ -39,7 +39,10 @@ def runtime_activity_snapshot(
     limit: int = 8,
 ) -> dict[str, Any]:
     bounded_limit = max(1, min(int(limit), 20))
-    managed = runtime.execution_resource_governor.snapshot(limit=max(12, bounded_limit))
+    managed = runtime.execution_resource_governor.snapshot(
+        limit=max(12, bounded_limit),
+        reconcile=False,
+    )
     active_job_states = {"starting", "running", "terminating", "orphaned"}
     managed_jobs = [
         dict(item)
@@ -102,6 +105,99 @@ def runtime_activity_snapshot(
 class RuntimeActivityMixin:
     hub_client_activity_state = staticmethod(hub_client_activity_state)
     runtime_activity_snapshot = runtime_activity_snapshot
+
+    def _record_tool_discovery(self) -> None:
+        identity = self._current_hub_client()
+        if identity is None:
+            return
+        client_id = str(identity.get("client_id") or "").strip()
+        if not client_id:
+            return
+        capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
+        receipt = {
+            "client_id": client_id,
+            "client_type": str(identity.get("client_type") or "client"),
+            "identity_source": str(identity.get("identity_source") or "unknown"),
+            "attestation_verified": identity.get("attestation_verified") is True,
+            "attestation_source": str(identity.get("attestation_source") or "none"),
+            "client_name": str(capabilities.get("client_name") or "")[:100],
+            "client_version": str(capabilities.get("client_version") or "")[:50],
+            "contract_sha256": str(self.tool_contract.get("sha256") or ""),
+            "process_instance_id": self.process_instance_id,
+            "server_instance_id": self.server_instance_id,
+            "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or "") or None,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+        }
+        # Preserve authoritative and non-authoritative observations in
+        # separate slots. A direct loopback caller still defaults to the
+        # legacy client_id "chatweb" for protocol compatibility; without a
+        # provenance suffix it could overwrite a valid managed-tunnel receipt
+        # and create a false negative after real discovery had already passed.
+        provenance = (
+            "attested_transport"
+            if receipt["attestation_verified"] is True
+            else str(receipt["identity_source"] or "untrusted")
+        )
+        record_id = f"{self._hub_client_record_id(identity)}:{provenance}"
+        with self.tool_discovery_lock:
+            self.tool_discovery_receipts[record_id] = receipt
+
+    def connector_tool_discovery(self, *, blocking: bool = True) -> dict[str, Any]:
+        acquired = self.tool_discovery_lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "observed": False,
+                "current_contract_observed": False,
+                "contract_sha256": None,
+                "observed_at": None,
+                "client_id": None,
+                "client_name": None,
+                "identity_source": None,
+                "activation_epoch_id": None,
+                "attestation_verified": False,
+                "attestation_source": None,
+                "process_instance_id": None,
+                "server_instance_id": None,
+                "snapshot_busy": True,
+            }
+        try:
+            candidates = [
+                dict(receipt)
+                for receipt in self.tool_discovery_receipts.values()
+                if str(receipt.get("client_type") or "") == "chatweb"
+                and str(receipt.get("identity_source") or "") == "attested_transport"
+                and receipt.get("attestation_verified") is True
+            ]
+        finally:
+            self.tool_discovery_lock.release()
+        latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
+        current_sha = str(self.tool_contract.get("sha256") or "")
+        current = bool(
+            latest
+            and str(latest.get("contract_sha256") or "") == current_sha
+            and str(latest.get("process_instance_id") or "") == self.process_instance_id
+            and str(latest.get("server_instance_id") or "") == self.server_instance_id
+            and (
+                not str(getattr(self, "activation_epoch_id", None) or "").strip()
+                or str(latest.get("activation_epoch_id") or "").strip()
+                == str(getattr(self, "activation_epoch_id", None) or "").strip()
+            )
+        )
+        return {
+            "observed": latest is not None,
+            "current_contract_observed": current,
+            "contract_sha256": str((latest or {}).get("contract_sha256") or "") or None,
+            "observed_at": str((latest or {}).get("observed_at") or "") or None,
+            "client_id": str((latest or {}).get("client_id") or "") or None,
+            "client_name": str((latest or {}).get("client_name") or "") or None,
+            "identity_source": str((latest or {}).get("identity_source") or "") or None,
+            "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
+            "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
+            "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,
+            "attestation_verified": (latest or {}).get("attestation_verified") is True,
+            "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
+            "snapshot_busy": False,
+        }
 
     def _record_successful_rpc_contact(
         self,
@@ -173,6 +269,7 @@ class RuntimeActivityMixin:
             not client_id
             or client_type != "chatweb"
             or not epoch_id
+            or str(identity.get("identity_source") or "") != "attested_transport"
             or identity.get("attestation_verified") is not True
         ):
             return
@@ -232,6 +329,9 @@ class RuntimeActivityMixin:
                 "observed_at": None,
                 "client_id": None,
                 "client_type": None,
+                "identity_source": None,
+                "attestation_verified": False,
+                "attestation_source": None,
                 "process_instance_id": None,
                 "server_instance_id": None,
                 "workspace_accessed": None,
@@ -250,6 +350,7 @@ class RuntimeActivityMixin:
             and str(latest.get("method") or "") == "tools/call"
             and str(latest.get("tool_name") or "") == "workspace_context"
             and latest.get("workspace_accessed") is False
+            and str(latest.get("identity_source") or "") == "attested_transport"
             and str(latest.get("contract_sha256") or "") == current_sha
             and str(latest.get("process_instance_id") or "") == self.process_instance_id
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
@@ -266,6 +367,7 @@ class RuntimeActivityMixin:
             "observed_at": str((latest or {}).get("observed_at") or "") or None,
             "client_id": str((latest or {}).get("client_id") or "") or None,
             "client_type": str((latest or {}).get("client_type") or "") or None,
+            "identity_source": str((latest or {}).get("identity_source") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
             "attestation_verified": (latest or {}).get("attestation_verified") is True,
@@ -282,6 +384,7 @@ class RuntimeActivityMixin:
         if (
             not client_id
             or client_type != "chatweb"
+            or str(identity.get("identity_source") or "") != "attested_transport"
             or identity.get("attestation_verified") is not True
         ):
             return
@@ -315,6 +418,10 @@ class RuntimeActivityMixin:
                 "observed_at": None,
                 "client_id": None,
                 "client_name": None,
+                "identity_source": None,
+                "activation_epoch_id": None,
+                "attestation_verified": False,
+                "attestation_source": None,
                 "process_instance_id": None,
                 "server_instance_id": None,
                 "snapshot_busy": True,
@@ -329,6 +436,7 @@ class RuntimeActivityMixin:
             latest
             and str(latest.get("client_type") or "") == "chatweb"
             and str(latest.get("method") or "") == "tools/call"
+            and str(latest.get("identity_source") or "") == "attested_transport"
             and str(latest.get("contract_sha256") or "") == current_sha
             and str(latest.get("process_instance_id") or "") == self.process_instance_id
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
@@ -347,6 +455,7 @@ class RuntimeActivityMixin:
             "observed_at": str((latest or {}).get("observed_at") or "") or None,
             "client_id": str((latest or {}).get("client_id") or "") or None,
             "client_name": str((latest or {}).get("client_name") or "") or None,
+            "identity_source": str((latest or {}).get("identity_source") or "") or None,
             "process_instance_id": str((latest or {}).get("process_instance_id") or "") or None,
             "server_instance_id": str((latest or {}).get("server_instance_id") or "") or None,
             "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,

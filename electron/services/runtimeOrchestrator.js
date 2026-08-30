@@ -694,6 +694,30 @@ class RuntimeOrchestrator {
     if (!token || !(await this.native.status(settings, { activationEpochId: id }))) {
       throw Object.assign(new Error('Coding MCP replacement is not running for the requested activation epoch.'), { code: 'UPDATE_INCOMPLETE' });
     }
+    // The durable commit is necessary but not sufficient: Tunnel/UI/Recovery
+    // Plane identities can regress after the final census and before this
+    // external mutation.  FullCleanActivation owns those component proofs, so
+    // ask it to re-census the exact committed tuple at the last safe point.
+    // The callback is read-only and admission remains CLOSED on every error.
+    if (typeof this.fullCleanActivation?.revalidateBeforeAdmission === 'function') {
+      const revalidation = await this.fullCleanActivation.revalidateBeforeAdmission({
+        activationEpochId: id,
+        readyCommitDigest: digest,
+        expiresAtUnixMs
+      });
+      if (!revalidation || revalidation.valid !== true
+        || String(revalidation.activation_epoch_id || '') !== id
+        || String(revalidation.ready_commit_digest || '') !== digest) {
+        throw Object.assign(new Error('Committed component identities changed before Coding MCP admission.'), {
+          code: 'UPDATE_INCOMPLETE',
+          details: {
+            activation_epoch_id: id,
+            ready_commit_digest: digest,
+            revalidation: revalidation || null
+          }
+        });
+      }
+    }
     const result = await controlMcpActivation(settings.mcpPort, token, {
       action: 'complete_epoch',
       activation_epoch_id: id,
@@ -1157,8 +1181,11 @@ class RuntimeOrchestrator {
     const rediscovered = Boolean(
       currentSha256
       && discovery?.current_contract_observed === true
+      && String(discovery?.identity_source || '').trim() === 'attested_transport'
       && discovery?.attestation_verified === true
       && rediscoveredSha256 === currentSha256
+      && (!activationEpochId
+        || String(discovery?.activation_epoch_id || '').trim() === activationEpochId)
       && observedAtValid
     );
     const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
@@ -1168,6 +1195,7 @@ class RuntimeOrchestrator {
     const contactCurrent = Boolean(
       currentSha256
       && contact?.current_contract_contact === true
+      && String(contact?.identity_source || '').trim() === 'attested_transport'
       && contact?.attestation_verified === true
       && String(contact?.method || '') === 'tools/call'
       && contactSha256 === currentSha256
@@ -1181,6 +1209,7 @@ class RuntimeOrchestrator {
       currentSha256
       && activationEpochId
       && activationBootstrap?.current_contract_contact === true
+      && String(activationBootstrap?.identity_source || '').trim() === 'attested_transport'
       && activationBootstrap?.attestation_verified === true
       && String(activationBootstrap?.method || '') === 'tools/call'
       && String(activationBootstrap?.tool_name || '') === 'workspace_context'
@@ -1388,10 +1417,12 @@ class RuntimeOrchestrator {
     if (contractStatus.contractState === 'CURRENT_ACKNOWLEDGED'
       && contractStatus.rediscovered === true
       && discovery?.current_contract_observed === true
+      && String(discovery.identity_source || '').trim() === 'attested_transport'
       && discovery?.attestation_verified === true
       && String(discovery.contract_sha256 || '').trim() === currentSha256
       && String(discovery.process_instance_id || '').trim() === processInstanceId
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
+      && String(discovery.activation_epoch_id || '').trim() === activationEpochId
       && rediscoveredAt
       && rediscoveredAt === String(contractStatus.rediscoveredAt || '').trim()
       && Number.isFinite(Date.parse(rediscoveredAt))) {
@@ -1404,6 +1435,7 @@ class RuntimeOrchestrator {
       && contractStatus.compatibilityAcknowledged === true
       && contractStatus.bootstrapCurrent === true
       && bootstrap?.current_contract_contact === true
+      && String(bootstrap.identity_source || '').trim() === 'attested_transport'
       && bootstrap?.attestation_verified === true
       && String(bootstrap.client_type || '') === 'chatweb'
       && String(bootstrap.client_id || '').trim()
@@ -1417,7 +1449,12 @@ class RuntimeOrchestrator {
       && compatibilityAt
       && compatibilityAt === String(contractStatus.compatibilityAcknowledgedAt || '').trim()
       && Number.isFinite(Date.parse(compatibilityAt))) {
-      return { ready: true, mode: 'compatible_activation_bootstrap', observedAt: compatibilityAt };
+      return {
+        ready: false,
+        mode: 'compatible_activation_bootstrap',
+        observedAt: compatibilityAt,
+        reason: 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'
+      };
     }
     return { ready: false, mode: null };
   }
@@ -1447,10 +1484,12 @@ class RuntimeOrchestrator {
       baseExact
       && discovery && typeof discovery === 'object' && !Array.isArray(discovery)
       && discovery.current_contract_observed === true
+      && String(discovery.identity_source || '').trim() === 'attested_transport'
       && discovery.attestation_verified === true
       && String(discovery.contract_sha256 || '').trim().toLowerCase() === contractSha256
       && String(discovery.process_instance_id || '').trim() === processInstanceId
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
+      && String(discovery.activation_epoch_id || '').trim() === observedEpochId
       && Number.isFinite(discoveryObservedAtUnixMs)
       && discoveryObservedAtUnixMs <= nowUnixMs + 5000
     );
@@ -1458,6 +1497,7 @@ class RuntimeOrchestrator {
       baseExact
       && activationBootstrap && typeof activationBootstrap === 'object' && !Array.isArray(activationBootstrap)
       && activationBootstrap.current_contract_contact === true
+      && String(activationBootstrap.identity_source || '').trim() === 'attested_transport'
       && activationBootstrap.attestation_verified === true
       && String(activationBootstrap.client_type || '') === 'chatweb'
       && String(activationBootstrap.client_id || '').trim()
@@ -1990,12 +2030,18 @@ class RuntimeOrchestrator {
   async lightweightSnapshot(options = {}) {
     const settings = this.settingsStore.load();
     const suppliedMcpHealth = Object.prototype.hasOwnProperty.call(options, 'mcpHealth');
-    const [mcpHealth, nativeAlive, tunnelRunning, git] = await Promise.all([
+    const [mcpHealth, nativeObservation, tunnelRunning, git] = await Promise.all([
       suppliedMcpHealth ? Promise.resolve(options.mcpHealth) : this.currentMcpHealth(options),
-      this.native.status().catch(() => false),
+      this.native.status(settings, {
+        activationEpochId: this.activationEpochId || '',
+        returnIdentity: true
+      }).catch(() => false),
       this.tunnel.status(settings, { activationEpochId: this.activationEpochId || '' }).catch(() => false),
       this.gitStatus(settings.workspace)
     ]);
+    const nativeAlive = Boolean(nativeObservation);
+    const verifiedProcessIdentity = nativeObservation && typeof nativeObservation === 'object'
+      ? nativeObservation : null;
     const mcpRunning = Boolean(mcpHealth);
     const connectorContract = this.connectorContractStatus(
       mcpHealth?.tool_contract || null,
@@ -2006,7 +2052,9 @@ class RuntimeOrchestrator {
     const connectorFreshness = this.connectorContractFreshness(mcpHealth, connectorContract);
     const activationEpoch = this.activationEpochStatus();
     const epochReady = activationEpoch.admission_open === true;
-    const codeRevision = this.codingMcpRevisionStatus();
+    const codeRevision = this.codingMcpRevisionStatus(verifiedProcessIdentity
+      ? { verifiedProcessIdentity }
+      : {});
     const revisionDrift = Boolean(
       codeRevision.update_pending === true
       || (codeRevision.running_revision && codeRevision.disk_revision

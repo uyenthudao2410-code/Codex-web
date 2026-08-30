@@ -19,7 +19,8 @@ const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS } = require('../electr
 const {
   RecoveryHost,
   acquireRecoveryHostLock,
-  releaseRecoveryHostLock
+  releaseRecoveryHostLock,
+  validatePersistedReadyConnectorProof
 } = require('../electron/services/recoveryHost');
 const {
   recoveryHostArguments,
@@ -85,6 +86,121 @@ function fixture(t) {
   fs.mkdirSync(appRoot, { recursive: true });
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return createRuntimePaths({ dataRoot, resourcesRoot, appRoot });
+}
+
+function seedReadyEpoch(host, {
+  freshnessMode = 'current_process_discovery',
+  processInstanceId = 'coding-mcp-process-ready-0001',
+  serverInstanceId = 'coding-mcp-server-ready-0001',
+  contractSha256 = 'f'.repeat(64),
+  connectorProcessInstanceId = processInstanceId,
+  connectorServerInstanceId = serverInstanceId,
+  runtimeContractSha256 = null,
+  rediscoveredAt = new Date(Date.now() - 1000).toISOString(),
+  compatibilityAcknowledgedAt = null,
+  connectorAcknowledged = true
+} = {}) {
+  const store = host.activationEpochStore;
+  const activationEpochId = 'activation-ready-adoption-0001';
+  const created = store.create({
+    activation_epoch_id: activationEpochId,
+    operation_id: 'ready-adoption-operation-0001',
+    components: ['coding_mcp']
+  });
+  store.update(activationEpochId, { state: 'STOPPING' });
+  store.update(activationEpochId, { state: 'VERIFYING' });
+  const finalCensus = {
+    pass: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId,
+    connector_acknowledged: connectorAcknowledged,
+    connector_validation: {
+      valid: true,
+      code: 'READY',
+      reasons: [],
+      current_sha256: contractSha256,
+      acknowledged_sha256: contractSha256,
+      freshness_mode: freshnessMode,
+      rediscovered_at: rediscoveredAt,
+      compatibility_acknowledged_at: compatibilityAcknowledgedAt,
+      activation_epoch_id: activationEpochId,
+      process_instance_id: connectorProcessInstanceId,
+      server_instance_id: connectorServerInstanceId
+    },
+    ...(runtimeContractSha256 ? {
+      runtime: { toolContract: { sha256: runtimeContractSha256 } }
+    } : {})
+  };
+  const committed = store.commitReady(activationEpochId, {
+    verified: true,
+    activation_epoch_id: activationEpochId,
+    final_census: finalCensus
+  });
+  store.ready(activationEpochId, committed.ready_commit_digest);
+  assert.equal(created.activation_epoch_id, activationEpochId);
+  return store.current();
+}
+
+function readyAdoptionHost(t) {
+  const paths = fixture(t);
+  const calls = { orchestratorEpochs: [], recoveryPlaneEpochs: [], gatewayStart: 0, ipcStart: 0 };
+  const revision = 'a'.repeat(64);
+  const orchestrator = {
+    setActivationEpoch: (epochId) => calls.orchestratorEpochs.push(epochId),
+    activationEpochStatus: () => ({
+      activation_epoch_id: 'activation-ready-adoption-0001',
+      operation_id: 'ready-adoption-operation-0001',
+      state: 'READY',
+      epoch_state: 'READY',
+      admission_open: true,
+      update_incomplete: false
+    }),
+    completeActivationEpoch: async () => ({}),
+    codingMcpRevisionStatus: () => ({
+      running_revision: revision,
+      disk_revision: revision,
+      update_pending: false,
+      state: 'current'
+    }),
+    isManuallyStopped: () => true
+  };
+  const gateway = {
+    server: null,
+    start: async function start() { calls.gatewayStart += 1; this.server = {}; },
+    stop: async function stop() { this.server = null; }
+  };
+  const recoveryPlaneService = {
+    setActivationEpoch: (epochId) => calls.recoveryPlaneEpochs.push(epochId),
+    ensure: async () => ({ state: 'healthy' }),
+    stop: async () => true
+  };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ autoStartServices: false, workspace: paths.appRoot() }) },
+    secrets: { get: () => 'runtime-key' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator,
+    healthService: {},
+    gateway,
+    recoveryPlaneService,
+    ipcServerFactory: () => ({
+      start: async () => { calls.ipcStart += 1; },
+      stop: async () => true
+    }),
+    revisionTracker: {
+      captureRunning: () => revision,
+      status: (_component, running) => ({
+        running_revision: running || revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    }
+  });
+  t.after(() => host.stop());
+  return { host, calls };
 }
 
 function uiRecoveryFixture(t, { paths = fixture(t), revision = 'a'.repeat(64), spawnElectronUi = async () => 0 } = {}) {
@@ -280,6 +396,133 @@ test('duplicate replacement contender cannot fail the epoch owned by the live Re
   assert.equal(host.running, false);
 });
 
+test('persisted READY connector proof requires strict current-process discovery and exact identities', (t) => {
+  const { host } = readyAdoptionHost(t);
+  const valid = seedReadyEpoch(host);
+  const accepted = validatePersistedReadyConnectorProof(valid);
+  assert.equal(accepted.valid, true);
+  assert.deepEqual(accepted.reasons, []);
+
+  const cases = [
+    ['compatibility bootstrap', { freshnessMode: 'compatible_activation_bootstrap' }, 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'],
+    ['missing rediscovery timestamp', { rediscoveredAt: '' }, 'REDISCOVERY_TIMESTAMP_INVALID'],
+    ['process identity mismatch', { connectorProcessInstanceId: 'coding-mcp-process-other-0001' }, 'CONNECTOR_PROCESS_INSTANCE_ID_MISMATCH'],
+    ['server identity mismatch', { connectorServerInstanceId: 'coding-mcp-server-other-0001' }, 'CONNECTOR_SERVER_INSTANCE_ID_MISMATCH'],
+    ['contract hash mismatch', { runtimeContractSha256: 'e'.repeat(64) }, 'RUNTIME_CONTRACT_SHA256_MISMATCH']
+  ];
+  for (const [label, options, reason] of cases) {
+    const { host: candidateHost } = readyAdoptionHost(t);
+    const candidate = seedReadyEpoch(candidateHost, options);
+    const result = validatePersistedReadyConnectorProof(candidate);
+    assert.equal(result.valid, false, label);
+    assert.ok(result.reasons.includes(reason), `${label}: ${result.reasons.join(', ')}`);
+  }
+});
+
+test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch without rewriting history', async (t) => {
+  const { host, calls } = readyAdoptionHost(t);
+  const before = seedReadyEpoch(host, {
+    freshnessMode: 'compatible_activation_bootstrap',
+    compatibilityAcknowledgedAt: new Date(Date.now() - 1000).toISOString()
+  });
+
+  const status = await host.start();
+  assert.equal(host.running, true);
+  assert.equal(status.state, 'update_incomplete');
+  assert.equal(status.activation_epoch.admission_open, false);
+  assert.equal(status.activation_epoch.update_incomplete, true);
+  assert.equal(status.ready_adoption.state, 'blocked');
+  assert.ok(status.ready_adoption.reasons.includes('STRICT_CONNECTOR_REDISCOVERY_REQUIRED'));
+  assert.deepEqual(calls.orchestratorEpochs, []);
+  assert.deepEqual(calls.recoveryPlaneEpochs, []);
+  assert.equal(calls.gatewayStart, 0);
+  assert.equal(calls.ipcStart, 1, 'authenticated Recovery IPC remains available for explicit refresh');
+  await assert.rejects(host.handlers()['runtime.start']({}), { code: 'UPDATE_INCOMPLETE' });
+
+  const refreshCalls = [];
+  host.fullCleanActivation.restart = async (options) => {
+    refreshCalls.push(options);
+    return { state: 'HANDOFF', admission_open: false, fully_ready: false };
+  };
+  await host.handlers()['runtime.restart']({ refresh: true, mode: 'full_clean_refresh', reason: 'invalid-ready-recovery' });
+  assert.equal(refreshCalls.length, 1, 'explicit full-clean refresh must remain callable');
+  assert.equal(refreshCalls[0].refresh, true);
+  assert.equal(refreshCalls[0].mode, 'full_clean_refresh');
+  const after = host.activationEpochStore.current();
+  assert.deepEqual(after, before, 'startup guard must not rewrite immutable READY history');
+});
+
+test('invalid READY adoption guard retires only after a different durable epoch becomes current', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  const blocked = seedReadyEpoch(host, {
+    freshnessMode: 'compatible_activation_bootstrap',
+    compatibilityAcknowledgedAt: new Date(Date.now() - 1000).toISOString()
+  });
+  await host.start();
+  assert.equal(host.readyAdoptionBlocksAdmission(), true);
+  assert.equal(host.refreshReadyAdoptionGuard(), false,
+    'the same malformed READY epoch must not clear its process-local guard');
+
+  const originalCurrent = host.activationEpochStore.current.bind(host.activationEpochStore);
+  try {
+    host.activationEpochStore.current = () => null;
+    assert.equal(host.refreshReadyAdoptionGuard(), false,
+      'a missing durable current record is not evidence that the blocked epoch was replaced');
+    assert.equal(host.readyAdoptionBlocksAdmission(), true);
+
+    host.activationEpochStore.current = () => {
+      throw Object.assign(new Error('unreadable activation store'), { code: 'ACTIVATION_EPOCH_STORE_INVALID' });
+    };
+    assert.equal(host.refreshReadyAdoptionGuard(), false,
+      'an unreadable durable store must retain the fail-closed guard');
+    assert.equal(host.readyAdoptionBlocksAdmission(), true);
+  } finally {
+    host.activationEpochStore.current = originalCurrent;
+  }
+
+  const replacement = host.activationEpochStore.create({
+    activation_epoch_id: 'activation-ready-adoption-0002',
+    operation_id: 'ready-adoption-operation-0002',
+    components: ['coding_mcp']
+  });
+  host.orchestrator.activationEpochStatus = () => {
+    const current = host.activationEpochStore.current();
+    return {
+      activation_epoch_id: current?.activation_epoch_id || null,
+      operation_id: current?.operation_id || null,
+      state: current?.state || 'NONE',
+      epoch_state: current?.state || 'NONE',
+      admission_open: Boolean(current?.state === 'READY' && current?.admission_state === 'OPEN'),
+      update_incomplete: Boolean(current && (current.state !== 'READY' || current.admission_state !== 'OPEN'))
+    };
+  };
+
+  const status = host.hostStatus();
+  assert.equal(host.readyAdoptionBlocksAdmission(), false,
+    'a different durable current epoch must retire only the old process-local guard');
+  assert.equal(status.ready_adoption.state, 'adopted');
+  assert.equal(status.activation_epoch.activation_epoch_id, replacement.activation_epoch_id);
+  assert.equal(status.activation_epoch.state, 'PREPARING');
+  assert.equal(status.activation_epoch.admission_open, false,
+    'the replacement epoch keeps admission closed under its own durable state');
+  assert.equal(status.activation_epoch.update_incomplete, true,
+    'retiring the old guard must not project an in-progress replacement as ready');
+  assert.equal(host.activationEpochStore.get(blocked.activation_epoch_id).state, 'READY',
+    'the retired malformed READY record remains immutable history');
+});
+
+test('Recovery Host adopts a durable READY epoch only after strict proof validation', async (t) => {
+  const { host, calls } = readyAdoptionHost(t);
+  const ready = seedReadyEpoch(host);
+
+  await host.start();
+  assert.equal(host.running, true);
+  assert.deepEqual(calls.orchestratorEpochs, [ready.activation_epoch_id]);
+  assert.deepEqual(calls.recoveryPlaneEpochs, [ready.activation_epoch_id]);
+  assert.equal(calls.gatewayStart, 1);
+  assert.equal(calls.ipcStart, 1);
+});
+
 test('Recovery Host owns supervision and IPC without stopping the runtime when UI exits', async (t) => {
   const paths = fixture(t);
   const calls = { supervise: 0, runtimeStop: 0, gatewayStart: 0, gatewayStop: 0 };
@@ -352,13 +595,14 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
 });
 
-test('connector-pending supervision persists tunnel recovery and wakes on an exact compatibility bootstrap', async (t) => {
+test('connector-pending supervision ignores compatibility bootstrap and wakes only on exact discovery', async (t) => {
   const paths = fixture(t);
   const revision = 'a'.repeat(64);
   const epochId = 'activation-connector-pending-0001';
   const processInstanceId = 'coding-process-instance-0001';
   const serverInstanceId = 'coding-server-instance-00001';
   let bootstrapObserved = false;
+  let discoveryObserved = false;
   let lightweightCalls = 0;
   let censusCalls = 0;
   let persistedCensusCalls = 0;
@@ -381,9 +625,21 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
       sha256: 'f'.repeat(64),
       compatible_predecessor_sha256: ['e'.repeat(64)]
     },
-    connector_tool_discovery: null,
+    connector_tool_discovery: discoveryObserved ? {
+      current_contract_observed: true,
+      identity_source: 'attested_transport',
+      attestation_verified: true,
+      client_id: 'chatweb-recovery-host-test',
+      contract_sha256: 'f'.repeat(64),
+      activation_epoch_id: epochId,
+      process_instance_id: processInstanceId,
+      server_instance_id: serverInstanceId,
+      observed_at: '2026-08-27T06:01:00.000Z'
+    } : null,
     connector_activation_bootstrap: bootstrapObserved ? {
       current_contract_contact: true,
+      identity_source: 'attested_transport',
+      attestation_verified: true,
       client_id: 'chatweb-recovery-host-test',
       client_type: 'chatweb',
       method: 'tools/call',
@@ -400,14 +656,16 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
     setFullCleanActivation() {},
     setFullCleanSourceCheckpointResolver() {},
     currentMcpHealth: async () => health(),
-    connectorContractStatus: (_contract, _discovery, _contact, bootstrap) => ({
+    connectorContractStatus: (_contract, discovery, _contact, bootstrap) => ({
       currentSha256: 'f'.repeat(64),
       acknowledgedSha256: 'e'.repeat(64),
-      contractState: bootstrap ? 'CHANGED_COMPATIBLE_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY',
-      refreshRequired: !bootstrap,
-      acknowledgementPending: Boolean(bootstrap),
-      rediscovered: false,
-      rediscoveredAt: null,
+      contractState: discovery
+        ? 'CHANGED_DISCOVERED_NEEDS_ACK'
+        : bootstrap ? 'CHANGED_COMPATIBLE_NEEDS_ACK' : 'CHANGED_NEEDS_DISCOVERY',
+      refreshRequired: !discovery && !bootstrap,
+      acknowledgementPending: Boolean(discovery || bootstrap),
+      rediscovered: Boolean(discovery),
+      rediscoveredAt: discovery?.observed_at || null,
       bootstrapCurrent: Boolean(bootstrap)
     }),
     activationEpochStatus: () => ({
@@ -521,10 +779,10 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
         'connector-pending watchdog census must reuse only the strict durable projection receipt');
       epoch.verification.tunnel_health_verified = true;
       return {
-        pass: bootstrapObserved,
-        verified: bootstrapObserved,
+        pass: discoveryObserved,
+        verified: discoveryObserved,
         activation_epoch_id: epochId,
-        reason: bootstrapObserved ? null : 'UPDATE_INCOMPLETE'
+        reason: discoveryObserved ? null : 'UPDATE_INCOMPLETE'
       };
     },
     recordPendingCensus: (_epochId, census) => {
@@ -572,16 +830,50 @@ test('connector-pending supervision persists tunnel recovery and wakes on an exa
 
   bootstrapObserved = true;
   await host.superviseOnce();
-  assert.equal(censusCalls, 2, 'an exact current-process compatibility bootstrap must trigger the authoritative final census and ACK path');
-  assert.equal(persistedCensusCalls, 2, 'the passing compatibility census must replace the older durable receipt before finalize');
+  assert.equal(censusCalls, 1, 'a compatibility bootstrap must not substitute for protocol discovery');
+  assert.equal(persistedCensusCalls, 1, 'bootstrap evidence must leave the strict pending census unchanged');
+  assert.equal(finalizeCalls, 0, 'bootstrap evidence must keep admission closed');
+  assert.equal(host.cachedActivationSnapshot().fullyReady, false);
+
+  discoveryObserved = true;
+  await host.superviseOnce();
+  assert.equal(censusCalls, 2, 'exact current-process tools/list discovery must trigger the authoritative final census and ACK path');
+  assert.equal(persistedCensusCalls, 2, 'the passing strict-discovery census must replace the older durable receipt before finalize');
   assert.equal(finalizeCalls, 1);
   assert.deepEqual(activationOrder.slice(-2), ['persist:true', 'finalize']);
   assert.equal(lightweightCalls, 0);
 });
 
 test('Recovery Host lightweight IPC serves one fresh supervision projection without duplicate live probes', async (t) => {
-  const { host } = uiRecoveryFixture(t);
+  const { host, revision } = uiRecoveryFixture(t);
   let directProbeCalls = 0;
+  let uiIdentityCalls = 0;
+  let durableEpochReads = 0;
+  let componentRevisionReads = 0;
+  const uiProcessStartToken = '123456789';
+  host.activation.processIdentityObserver = (pid) => {
+    uiIdentityCalls += 1;
+    return { state: 'live', pid, process_start_token: uiProcessStartToken };
+  };
+  host.activation.uiRegistration = {
+    instance_id: 'electron-ui-cache-test-0001',
+    pid: 42001,
+    process_start_token: uiProcessStartToken,
+    revision,
+    registered_at_unix_ms: Date.now()
+  };
+  assert.equal(host.activation.uiPresence().alive, true, 'supervision must establish one exact UI presence receipt');
+  uiIdentityCalls = 0;
+  const originalEpochCurrent = host.fullCleanActivation.current.bind(host.fullCleanActivation);
+  host.fullCleanActivation.current = (...args) => {
+    durableEpochReads += 1;
+    return originalEpochCurrent(...args);
+  };
+  const originalRevisionStatus = host.revisions.status.bind(host.revisions);
+  host.revisions.status = (...args) => {
+    componentRevisionReads += 1;
+    return originalRevisionStatus(...args);
+  };
   host.orchestrator.lightweightSnapshot = async () => {
     directProbeCalls += 1;
     throw new Error('UI heartbeat must not launch a second live probe');
@@ -601,6 +893,28 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
     failures: 0,
     codeRevision: { codingMcp: { running_revision: 'a'.repeat(64), disk_revision: 'a'.repeat(64) } }
   });
+  const projectionEpochReads = durableEpochReads;
+  const projectionRevisionReads = componentRevisionReads;
+  const ping = await host.handlers()['recovery.ping']();
+  assert.equal(ping.pid, process.pid);
+  assert.equal(ping.instance_id, host.instanceId);
+  assert.equal(ping.ready, false);
+  assert.equal(uiIdentityCalls, 0, 'liveness ping must not start a blocking UI identity probe');
+  assert.equal(durableEpochReads, projectionEpochReads,
+    'liveness ping must not re-read the durable activation epoch');
+  assert.equal(componentRevisionReads, projectionRevisionReads,
+    'liveness ping must not recalculate component revisions');
+
+  const cachedStatus = await host.handlers()['recovery.status']();
+  assert.equal(cachedStatus.electron_ui_revision.state, 'current');
+  assert.equal(cachedStatus.telemetry_available, true);
+  assert.equal(cachedStatus.signal_stale, false);
+  assert.equal(uiIdentityCalls, 0, 'cached status must not repeat the blocking UI identity probe');
+  assert.equal(durableEpochReads, projectionEpochReads,
+    'cached status must not re-read the durable activation epoch');
+  assert.equal(componentRevisionReads, projectionRevisionReads,
+    'cached status must not recalculate component revisions');
+
   const handler = host.handlers()['runtime.lightweight_snapshot'];
   host.supervisionInFlight = Promise.resolve();
   const first = await handler();
@@ -610,13 +924,22 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
   assert.equal(first.snapshotBusy, true);
   assert.equal(first.snapshotSource, 'recovery_host_supervision_cache');
   assert.equal(first.signalStale, false);
+  assert.equal(first.recoveryHost.electron_ui_revision.state, 'current');
+  assert.equal(first.recoveryHost.electron_ui_recovery.alive, true);
+  assert.equal(uiIdentityCalls, 0, 'cached lightweight IPC must not repeat the blocking UI process identity probe');
   assert.ok(Number(first.snapshotAgeMs) >= 0);
   assert.equal(first.recoveryHost.recovery_plane.tunnel.state, 'healthy');
+  assert.equal(durableEpochReads, projectionEpochReads,
+    'lightweight IPC must not re-read the durable activation epoch');
+  assert.equal(componentRevisionReads, projectionRevisionReads,
+    'lightweight IPC must not recalculate component revisions');
 
   host.supervisionInFlight = null;
   host.lastSupervisionObservedAtUnixMs = Date.now() - 31_000;
   const stale = await handler();
   assert.equal(directProbeCalls, 0);
+  assert.equal(durableEpochReads, projectionEpochReads);
+  assert.equal(componentRevisionReads, projectionRevisionReads);
   assert.equal(stale.signalStale, true);
   assert.ok(stale.snapshotAgeMs >= 30_000);
 
@@ -624,6 +947,8 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
   host.lastSupervisionObservedAtUnixMs = 0;
   const unavailable = await handler();
   assert.equal(directProbeCalls, 0);
+  assert.equal(durableEpochReads, projectionEpochReads);
+  assert.equal(componentRevisionReads, projectionRevisionReads);
   assert.equal(unavailable.telemetryAvailable, false);
   assert.equal(unavailable.signalStale, true);
   assert.equal(unavailable.mcpRunning, null);
@@ -669,6 +994,31 @@ test('Recovery Host relaunches a previously registered UI when its process dies 
   assert.equal(host.uiRecoveryStatus().registered, true);
   assert.equal(host.uiRecoveryStatus().alive, false);
   assert.equal(host.uiRecoveryStatus().state, 'waiting_for_registration');
+});
+
+test('UI watchdog does not relaunch a registered UI when async process identity is unavailable', async (t) => {
+  let launches = 0;
+  const { host, revision } = uiRecoveryFixture(t, {
+    spawnElectronUi: async () => { launches += 1; return 42600 + launches; }
+  });
+  host.activation.uiRegistration = {
+    instance_id: 'uncertain-electron-ui-0001',
+    pid: process.pid,
+    process_start_token: '123456789',
+    revision,
+    registered_at_unix_ms: Date.now()
+  };
+  host.activation.processIdentityObserver = () => {
+    throw new Error('UI watchdog must not call the synchronous observer');
+  };
+  host.activation.asyncProcessIdentityObserver = async (pid) => ({ state: 'unavailable', pid });
+  host.uiRecoveryInitialGraceUntil = 0;
+
+  const status = await host.superviseElectronUi();
+  assert.equal(launches, 0);
+  assert.equal(status.state, 'unknown');
+  assert.equal(status.alive, null);
+  assert.equal(status.last_error_code, 'UI_PROCESS_IDENTITY_UNVERIFIED');
 });
 
 test('explicit operator quit suppression survives Recovery Host replacement and blocks default-armed recovery', async (t) => {

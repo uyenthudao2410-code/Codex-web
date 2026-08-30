@@ -1173,31 +1173,89 @@ class ExecutionResourceGovernor:
             )
         }
 
-    def snapshot(self, *, limit: int = 20) -> dict[str, Any]:
-        self.reconcile()
-        rows = self._rows()
-        active = [row for row in rows if row["lifecycle_state"] in ACTIVE_LIFECYCLES]
+    def snapshot(self, *, limit: int = 20, reconcile: bool = True) -> dict[str, Any]:
+        # Mutation/control paths keep reconciliation enabled by default.  A
+        # high-frequency read model may explicitly request the latest durable
+        # observation without probing process identity or rewriting lifecycle
+        # rows as a side effect of rendering telemetry.
+        if reconcile:
+            self.reconcile()
         bounded_limit = max(1, min(int(limit), 100))
-        terminal = [row for row in rows if row["lifecycle_state"] not in ACTIVE_LIFECYCLES]
-        visible_active = active[-bounded_limit:]
-        remaining = bounded_limit - len(visible_active)
-        visible_terminal = terminal[-remaining:] if remaining else []
+        active_states = tuple(sorted(ACTIVE_LIFECYCLES))
+        placeholders = ",".join("?" for _ in active_states)
+        with self.ledger._lock, self.ledger._connect() as connection:
+            job_counts = connection.execute(
+                """SELECT lifecycle_state,resource_class,COUNT(*) AS row_count
+                   FROM managed_process_jobs WHERE checkout_id=?
+                   GROUP BY lifecycle_state,resource_class""",
+                (self.checkout_id,),
+            ).fetchall()
+            active_rows = connection.execute(
+                f"""SELECT * FROM managed_process_jobs
+                    WHERE checkout_id=? AND lifecycle_state IN ({placeholders})
+                    ORDER BY started_at DESC LIMIT ?""",
+                (self.checkout_id, *active_states, bounded_limit),
+            ).fetchall()
+            visible_active = [self._row(row) for row in reversed(active_rows)]
+            remaining = bounded_limit - len(visible_active)
+            terminal_rows = connection.execute(
+                f"""SELECT * FROM managed_process_jobs
+                    WHERE checkout_id=? AND lifecycle_state NOT IN ({placeholders})
+                    ORDER BY started_at DESC LIMIT ?""",
+                (self.checkout_id, *active_states, remaining),
+            ).fetchall() if remaining else []
+            visible_terminal = [self._row(row) for row in reversed(terminal_rows)]
+            claim_counts = connection.execute(
+                """SELECT lifecycle_state,resource_class,COUNT(*) AS row_count
+                   FROM checkout_resource_claims WHERE checkout_id=?
+                   GROUP BY lifecycle_state,resource_class""",
+                (self.checkout_id,),
+            ).fetchall()
+            claim_rows = connection.execute(
+                """SELECT * FROM checkout_resource_claims
+                   WHERE checkout_id=? ORDER BY acquired_at DESC LIMIT ?""",
+                (self.checkout_id, bounded_limit),
+            ).fetchall()
+            visible_claims = [self._public_claim(dict(row)) for row in reversed(claim_rows)]
+
+        active_command_count = sum(
+            int(row["row_count"] or 0)
+            for row in job_counts
+            if str(row["lifecycle_state"]) in ACTIVE_LIFECYCLES
+        )
+        active_heavy_count = sum(
+            int(row["row_count"] or 0)
+            for row in job_counts
+            if str(row["lifecycle_state"]) in ACTIVE_LIFECYCLES
+            and str(row["resource_class"]) == "HEAVY"
+        )
+        orphaned_count = sum(
+            int(row["row_count"] or 0)
+            for row in job_counts
+            if str(row["lifecycle_state"]) == "orphaned"
+        )
+        active_claim_count = sum(
+            int(row["row_count"] or 0)
+            for row in claim_counts
+            if str(row["lifecycle_state"]) == "active"
+        )
+        active_heavy_claim_count = sum(
+            int(row["row_count"] or 0)
+            for row in claim_counts
+            if str(row["lifecycle_state"]) == "active"
+            and str(row["resource_class"]) == "HEAVY"
+        )
         visible = [*visible_active, *visible_terminal]
-        claims = self._claim_rows()
-        active_claims = [row for row in claims if row["lifecycle_state"] == "active"]
-        visible_claims = claims[-bounded_limit:]
         return {
             "schema_version": 2,
             "checkout_id": self.checkout_id,
             "heavy_concurrency_limit": 1,
-            "active_command_count": len(active),
-            "active_heavy_count": sum(1 for row in active if row["resource_class"] == "HEAVY"),
-            "active_claim_count": len(active_claims),
-            "active_heavy_claim_count": sum(
-                1 for row in active_claims if row["resource_class"] == "HEAVY"
-            ),
-            "orphaned_count": sum(1 for row in active if row["lifecycle_state"] == "orphaned"),
-            "quiescent": not active and not active_claims,
+            "active_command_count": active_command_count,
+            "active_heavy_count": active_heavy_count,
+            "active_claim_count": active_claim_count,
+            "active_heavy_claim_count": active_heavy_claim_count,
+            "orphaned_count": orphaned_count,
+            "quiescent": not active_command_count and not active_claim_count,
             "quiescence_scope": "managed_processes_and_scheduling_claims",
             "host_pressure": dict(self._last_pressure),
             "semantic_native_admission": dict(self._last_semantic_admission),

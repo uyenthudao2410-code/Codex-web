@@ -60,6 +60,8 @@
       taskHistory: () => ok([]),
       performanceTrace: () => ok(null),
       clearPerformanceTrace: fail,
+      recordUiPerformance: fail,
+      uiPerformance: () => ok(null),
       inspectBuild: fail,
       runBuild: fail,
       inspectHealth: fail,

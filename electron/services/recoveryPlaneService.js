@@ -15,6 +15,7 @@ const { runtimeDeviceIdentity, classifyStoredDeviceOwner } = require('./deviceId
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   sameProcessIdentity,
   terminateExactProcessTree
 } = require('./processIdentity');
@@ -180,6 +181,7 @@ class RecoveryPlaneService {
     deviceInstanceId = '',
     activationEpochId = '',
     processIdentityObserver = observeProcessIdentity,
+    asyncProcessIdentityObserver = null,
     exactProcessTerminator = terminateExactProcessTree,
     identitySleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
   }) {
@@ -194,6 +196,11 @@ class RecoveryPlaneService {
     this.processIdentityObserver = typeof processIdentityObserver === 'function'
       ? processIdentityObserver
       : observeProcessIdentity;
+    this.asyncProcessIdentityObserver = typeof asyncProcessIdentityObserver === 'function'
+      ? asyncProcessIdentityObserver
+      : this.processIdentityObserver === observeProcessIdentity
+        ? observeProcessIdentityAsync
+        : this.processIdentityObserver;
     this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
       ? exactProcessTerminator
       : terminateExactProcessTree;
@@ -230,7 +237,7 @@ class RecoveryPlaneService {
       pid: state?.[`${prefix}Pid`],
       processStartToken: state?.[`${prefix}ProcessStartToken`]
     }, {
-      processIdentityObserver: this.processIdentityObserver,
+      processIdentityObserver: this.asyncProcessIdentityObserver,
       kind
     });
   }

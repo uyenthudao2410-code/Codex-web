@@ -170,7 +170,16 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
                     exit_code=0,
                 )
 
-            snapshot = self.governor.snapshot(limit=3)
+            with patch.object(
+                self.governor,
+                "_rows",
+                side_effect=AssertionError("snapshot must use bounded SQL instead of loading all jobs"),
+            ), patch.object(
+                self.governor,
+                "_claim_rows",
+                side_effect=AssertionError("snapshot must use bounded SQL instead of loading all claims"),
+            ):
+                snapshot = self.governor.snapshot(limit=3, reconcile=False)
 
             self.assertEqual(snapshot["active_command_count"], 1)
             self.assertEqual(snapshot["active_heavy_count"], 0)

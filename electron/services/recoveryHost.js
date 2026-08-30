@@ -17,6 +17,7 @@ const { writeBootstrapResult, readBootstrapResult, removeBootstrapEnvelope } = r
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   processIdentityFrom,
   sameProcessIdentity,
   terminateExactProcessTree
@@ -36,6 +37,12 @@ const UI_RECOVERY_WINDOW_MS = 10 * 60_000;
 const UI_RECOVERY_ATTEMPT_LIMIT = 4;
 const UI_RECOVERY_CIRCUIT_BREAK_MS = 5 * 60_000;
 const TERMINAL_BOOTSTRAP_STATES = new Set(['completed', 'failed', 'expired', 'reconciled_terminal_receipt']);
+const READY_CONNECTOR_SHA_PATTERN = /^[a-f0-9]{64}$/;
+// A durable connector receipt may be old (the attestation capability is
+// lifecycle-bound rather than a per-request signature), but a timestamp from
+// the future is never credible evidence. Keep this aligned with the bounded
+// skew accepted by the runtime connector gate.
+const READY_CONNECTOR_FUTURE_SKEW_MS = 5_000;
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -88,7 +95,6 @@ function activationAwaitsTunnelOrConnector(record) {
 
 function exactConnectorEvidenceObserved(health, census) {
   const discovery = health?.connector_tool_discovery;
-  const bootstrap = health?.connector_activation_bootstrap;
   const currentSha256 = String(health?.tool_contract?.sha256 || '').trim();
   const processInstanceId = String(health?.process_instance_id || '').trim();
   const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
@@ -96,33 +102,142 @@ function exactConnectorEvidenceObserved(health, census) {
   const discoveryObservedAt = String(discovery?.observed_at || '').trim();
   const exactDiscovery = Boolean(discovery
     && discovery.current_contract_observed === true
+    && String(discovery.identity_source || '').trim() === 'attested_transport'
+    && discovery.attestation_verified === true
     && currentSha256
     && String(discovery.contract_sha256 || '').trim() === currentSha256
     && processInstanceId === String(census?.process_instance_id || '').trim()
     && serverInstanceId === String(census?.server_instance_id || '').trim()
     && String(discovery.process_instance_id || '').trim() === processInstanceId
     && String(discovery.server_instance_id || '').trim() === serverInstanceId
+    && activationEpochId === String(census?.activation_epoch_id || '').trim()
+    && String(discovery.activation_epoch_id || '').trim() === activationEpochId
     && discoveryObservedAt
     && Number.isFinite(Date.parse(discoveryObservedAt)));
-  const bootstrapObservedAt = String(bootstrap?.observed_at || '').trim();
-  const exactBootstrap = Boolean(bootstrap
-    && bootstrap.current_contract_contact === true
-    && String(bootstrap.client_type || '') === 'chatweb'
-    && String(bootstrap.client_id || '').trim()
-    && String(bootstrap.method || '') === 'tools/call'
-    && String(bootstrap.tool_name || '') === 'workspace_context'
-    && bootstrap.workspace_accessed === false
-    && currentSha256
-    && String(bootstrap.contract_sha256 || '').trim() === currentSha256
-    && processInstanceId === String(census?.process_instance_id || '').trim()
-    && serverInstanceId === String(census?.server_instance_id || '').trim()
-    && String(bootstrap.process_instance_id || '').trim() === processInstanceId
-    && String(bootstrap.server_instance_id || '').trim() === serverInstanceId
-    && activationEpochId === String(census?.activation_epoch_id || '').trim()
-    && String(bootstrap.activation_epoch_id || '').trim() === activationEpochId
-    && bootstrapObservedAt
-    && Number.isFinite(Date.parse(bootstrapObservedAt)));
-  return exactDiscovery || exactBootstrap;
+  return exactDiscovery;
+}
+
+/**
+ * Validate the connector portion of a persisted terminal READY census before
+ * an ordinary Recovery Host restart adopts that epoch.  ActivationEpochStore
+ * intentionally validates only the generic two-phase READY proof so it can be
+ * shared by components; this boundary adds the product-specific invariant
+ * that READY is admissible only after an attested current-process discovery.
+ *
+ * This is deliberately read-only.  A malformed/legacy READY record is not
+ * rewritten or silently downgraded here because terminal history is immutable;
+ * the caller must keep startup fail-closed and require an explicit new
+ * full-clean activation to establish a replacement proof.
+ */
+function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() } = {}) {
+  const reasons = [];
+  const add = (reason) => { if (!reasons.includes(reason)) reasons.push(reason); };
+  const epochId = String(record?.activation_epoch_id || '').trim();
+  const verification = record?.verification;
+  const census = verification?.final_census;
+  const connector = census?.connector_validation;
+
+  if (!record || record.state !== 'READY' || record.admission_state !== 'OPEN') {
+    add('READY_ADMISSION_STATE_INVALID');
+  }
+  if (!epochId) add('ACTIVATION_EPOCH_ID_MISSING');
+  if (!verification || typeof verification !== 'object' || Array.isArray(verification)
+    || verification.verified !== true) {
+    add('READY_VERIFICATION_INVALID');
+  } else if (String(verification.activation_epoch_id || '').trim() !== epochId) {
+    add('VERIFICATION_ACTIVATION_EPOCH_ID_MISMATCH');
+  }
+  if (!census || typeof census !== 'object' || Array.isArray(census)) {
+    add('FINAL_CENSUS_MISSING');
+  } else {
+    if (census.pass !== true) add('FINAL_CENSUS_NOT_PASSING');
+    if (String(census.activation_epoch_id || '').trim() !== epochId) {
+      add('FINAL_CENSUS_ACTIVATION_EPOCH_ID_MISMATCH');
+    }
+  }
+  if (!connector || typeof connector !== 'object' || Array.isArray(connector)) {
+    add('CONNECTOR_VALIDATION_MISSING');
+  } else {
+    if (connector.valid !== true) add('CONNECTOR_VALIDATION_NOT_VALID');
+    if (connector.code !== 'READY') add('CONNECTOR_VALIDATION_CODE_INVALID');
+    if (!Array.isArray(connector.reasons) || connector.reasons.length !== 0) {
+      add('CONNECTOR_VALIDATION_REASONS_NON_EMPTY');
+    }
+    if (connector.freshness_mode !== 'current_process_discovery') {
+      add('STRICT_CONNECTOR_REDISCOVERY_REQUIRED');
+    }
+
+    const currentSha = String(connector.current_sha256 || '').trim();
+    const acknowledgedSha = String(connector.acknowledged_sha256 || '').trim();
+    if (!READY_CONNECTOR_SHA_PATTERN.test(currentSha)) add('CURRENT_CONTRACT_SHA256_INVALID');
+    if (!READY_CONNECTOR_SHA_PATTERN.test(acknowledgedSha)) add('ACKNOWLEDGED_CONTRACT_SHA256_INVALID');
+    if (currentSha && acknowledgedSha && currentSha !== acknowledgedSha) {
+      add('ACKNOWLEDGED_CONTRACT_SHA256_MISMATCH');
+    }
+
+    const processInstanceId = String(census?.process_instance_id || '').trim();
+    const serverInstanceId = String(census?.server_instance_id || '').trim();
+    if (!processInstanceId) add('PROCESS_INSTANCE_ID_MISSING');
+    if (!serverInstanceId) add('SERVER_INSTANCE_ID_MISSING');
+    if (String(connector.activation_epoch_id || '').trim() !== epochId) {
+      add('CONNECTOR_ACTIVATION_EPOCH_ID_MISMATCH');
+    }
+    if (String(connector.process_instance_id || '').trim() !== processInstanceId) {
+      add('CONNECTOR_PROCESS_INSTANCE_ID_MISMATCH');
+    }
+    if (String(connector.server_instance_id || '').trim() !== serverInstanceId) {
+      add('CONNECTOR_SERVER_INSTANCE_ID_MISMATCH');
+    }
+
+    const rediscoveredAt = String(connector.rediscovered_at || '').trim();
+    const rediscoveredAtUnixMs = Date.parse(rediscoveredAt);
+    if (!rediscoveredAt || !Number.isFinite(rediscoveredAtUnixMs)) {
+      add('REDISCOVERY_TIMESTAMP_INVALID');
+    } else if (Number.isFinite(Number(nowUnixMs))
+      && rediscoveredAtUnixMs > Number(nowUnixMs) + READY_CONNECTOR_FUTURE_SKEW_MS) {
+      add('REDISCOVERY_TIMESTAMP_FROM_FUTURE');
+    }
+    // A compatibility acknowledgement is a separate, admission-closed
+    // continuity signal. It must never be carried alongside a strict READY
+    // proof, even if the freshness_mode field was tampered with.
+    if (connector.compatibility_acknowledged_at !== undefined
+      && connector.compatibility_acknowledged_at !== null
+      && String(connector.compatibility_acknowledged_at).trim()) {
+      add('COMPATIBILITY_RECEIPT_PRESENT');
+    }
+    if (census.connector_acknowledged !== true) add('CONNECTOR_ACKNOWLEDGEMENT_INVALID');
+
+    // Keep the contract hash bound to any duplicated runtime projection when
+    // that optional projection is present. Missing legacy duplicates are not
+    // treated as proof, but are tolerated because connector_validation is the
+    // canonical persisted receipt field.
+    const runtimeContractSha = String(
+      census?.runtime?.toolContract?.sha256
+      || census?.runtime?.tool_contract?.sha256
+      || ''
+    ).trim();
+    if (runtimeContractSha && runtimeContractSha !== currentSha) {
+      add('RUNTIME_CONTRACT_SHA256_MISMATCH');
+    }
+    const runtimeEpoch = String(
+      census?.runtime?.activationEpoch?.activation_epoch_id
+      || census?.runtime?.activation_epoch_id
+      || ''
+    ).trim();
+    if (runtimeEpoch && runtimeEpoch !== epochId) add('RUNTIME_ACTIVATION_EPOCH_ID_MISMATCH');
+  }
+
+  return {
+    valid: reasons.length === 0,
+    code: reasons.length === 0 ? 'READY' : 'UPDATE_INCOMPLETE',
+    reasons,
+    activation_epoch_id: epochId || null,
+    process_instance_id: String(census?.process_instance_id || '').trim() || null,
+    server_instance_id: String(census?.server_instance_id || '').trim() || null,
+    current_sha256: String(connector?.current_sha256 || '').trim() || null,
+    freshness_mode: String(connector?.freshness_mode || '').trim() || null,
+    rediscovered_at: String(connector?.rediscovered_at || '').trim() || null
+  };
 }
 
 function activationClosureProjection({
@@ -228,6 +343,7 @@ class RecoveryHost {
     exitProcess = null, replacement = null, autoActivationController = null, recoveryPlaneService = null,
     deviceIdentity = null, bootstrap = null, processAlive = isProcessAlive,
     processIdentityObserver = observeProcessIdentity,
+    asyncProcessIdentityObserver = null,
     exactProcessTerminator = terminateExactProcessTree,
     canonicalLedgerCensusFn = canonicalLedgerCensus
   }) {
@@ -267,9 +383,20 @@ class RecoveryHost {
     this.supervisionInFlight = null;
     this.lastSupervisionStatus = null;
     this.lastSupervisionObservedAtUnixMs = 0;
+    // The supervisor owns the potentially expensive runtime observation path.
+    // Lightweight UI heartbeats consume this completed projection instead of
+    // re-reading durable activation state or probing process identities.
+    this.lastSupervisionProjection = null;
+    this.lastSupervisionProjectionSource = 'recovery_host_supervision_cache';
     this.lastRecoveryPlaneStatus = null;
     this.ownsLock = false;
     this.running = false;
+    // A terminal READY record is not sufficient to resume ownership: the
+    // persisted connector receipt must prove an attested, current-process
+    // discovery.  Keep a read-only diagnostic when that proof is absent so
+    // the authenticated control plane can remain available for an explicit
+    // full-clean refresh without admitting the stale runtime.
+    this.readyAdoptionBlocked = null;
     this.replacement = replacement;
     // A bootstrap envelope is present only when a current-checkout process was
     // launched to replace a stale Recovery Host.  It is consumed before normal
@@ -282,6 +409,11 @@ class RecoveryHost {
     this.processIdentityObserver = typeof processIdentityObserver === 'function'
       ? processIdentityObserver
       : observeProcessIdentity;
+    this.asyncProcessIdentityObserver = typeof asyncProcessIdentityObserver === 'function'
+      ? asyncProcessIdentityObserver
+      : this.processIdentityObserver === observeProcessIdentity
+        ? observeProcessIdentityAsync
+        : this.processIdentityObserver;
     this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
       ? exactProcessTerminator
       : terminateExactProcessTree;
@@ -314,6 +446,7 @@ class RecoveryHost {
       spawnRecoveryReplacement,
       spawnElectronUi,
       processIdentityObserver: this.processIdentityObserver,
+      asyncProcessIdentityObserver: this.asyncProcessIdentityObserver,
       beginRecoveryHandoff: (operationId) => this.scheduleRecoveryHandoff(operationId)
     });
     if (this.activation.uiRecoveryPreferenceStatus().suppressed) {
@@ -450,26 +583,29 @@ class RecoveryHost {
     this.uiRecoveryLastState = state;
   }
 
-  uiRecoveryStatus() {
+  uiRecoveryStatus({ presence = null, preferCachedPresence = false } = {}) {
     const now = Date.now();
     const preference = this.activation.uiRecoveryPreferenceStatus();
-    const presence = this.activation.uiPresence();
+    const observedPresence = presence && typeof presence === 'object'
+      ? presence
+      : this.activation.uiPresence({ preferCached: preferCachedPresence });
     this.uiRecoveryAttempts = this.uiRecoveryAttempts.filter((time) => time >= now - UI_RECOVERY_WINDOW_MS);
     let state = this.uiRecoveryLastState;
     if (preference.suppressed) state = 'suppressed';
-    else if (presence.alive) state = 'healthy';
+    else if (observedPresence.alive === true) state = 'healthy';
+    else if (observedPresence.alive === null) state = 'unknown';
     else if (this.activation.hasPendingUiActivation()) state = 'activation_pending';
-    else if (!presence.tracked && this.uiRecoveryInitialGraceUntil > now) state = 'awaiting_initial_registration';
+    else if (!observedPresence.tracked && this.uiRecoveryInitialGraceUntil > now) state = 'awaiting_initial_registration';
     else if (this.uiRecoveryCircuitUntil > now) state = 'circuit_suppressed';
     else if (this.uiRecoveryPendingUntil > now) state = 'waiting_for_registration';
     else if (this.uiRecoveryNextAttemptAt > now) state = 'cooldown';
-    else if (!presence.alive) state = 'missing';
+    else if (observedPresence.alive === false) state = 'missing';
     return {
       state,
-      registered: presence.tracked,
-      alive: presence.alive,
-      pid: presence.pid || null,
-      instance_id: presence.instance_id || null,
+      registered: observedPresence.tracked,
+      alive: observedPresence.alive,
+      pid: observedPresence.pid || null,
+      instance_id: observedPresence.instance_id || null,
       started_at_unix_ms: Number(this.activation.uiRegistration?.started_at_unix_ms || 0) || null,
       runtime_mode: typeof this.paths.runtimeMode === 'function' ? this.paths.runtimeMode() : null,
       suppressed: preference.suppressed,
@@ -489,45 +625,50 @@ class RecoveryHost {
     const operation = (async () => {
       const now = Date.now();
       const preference = this.activation.uiRecoveryPreferenceStatus();
-      const presence = this.activation.uiPresence();
+      const presence = await this.activation.observeUiPresence();
       this.uiRecoveryAttempts = this.uiRecoveryAttempts.filter((time) => time >= now - UI_RECOVERY_WINDOW_MS);
       if (preference.suppressed) {
         this.uiRecoveryLastState = 'suppressed';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (presence.alive) {
         this.resetUiRecoveryTracking('healthy');
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
+      }
+      if (presence.alive === null) {
+        this.uiRecoveryLastState = 'unknown';
+        this.uiRecoveryLastErrorCode = 'UI_PROCESS_IDENTITY_UNVERIFIED';
+        return this.uiRecoveryStatus({ presence });
       }
       if (this.activation.hasPendingUiActivation()) {
         this.uiRecoveryLastState = 'activation_pending';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (!presence.tracked && this.uiRecoveryInitialGraceUntil > now) {
         this.uiRecoveryLastState = 'awaiting_initial_registration';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (typeof this.spawnElectronUi !== 'function') {
         this.uiRecoveryLastState = 'unavailable';
         this.uiRecoveryLastErrorCode = 'UI_RECOVERY_LAUNCHER_UNAVAILABLE';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (this.uiRecoveryCircuitUntil > now) {
         this.uiRecoveryLastState = 'circuit_suppressed';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (this.uiRecoveryPendingUntil > now) {
         this.uiRecoveryLastState = 'waiting_for_registration';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (this.uiRecoveryNextAttemptAt > now) {
         this.uiRecoveryLastState = 'cooldown';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       if (this.uiRecoveryAttempts.length >= UI_RECOVERY_ATTEMPT_LIMIT) {
         this.uiRecoveryCircuitUntil = now + UI_RECOVERY_CIRCUIT_BREAK_MS;
         this.uiRecoveryLastState = 'circuit_suppressed';
-        return this.uiRecoveryStatus();
+        return this.uiRecoveryStatus({ presence });
       }
       this.uiRecoveryAttempts.push(now);
       try {
@@ -548,7 +689,7 @@ class RecoveryHost {
         this.uiRecoveryLastState = 'launch_failed';
         this.log.error(error.message, { stage: 'electron-ui-recovery', code: this.uiRecoveryLastErrorCode });
       }
-      return this.uiRecoveryStatus();
+      return this.uiRecoveryStatus({ presence });
     })();
     this.uiRecoveryLaunchInFlight = operation;
     try {
@@ -565,6 +706,53 @@ class RecoveryHost {
     // reconcileTerminalBootstrapReceipt(), which validates the independent
     // durable epoch, current Recovery Host identity, and a fresh ledger census.
     return Boolean(this.bootstrap && !TERMINAL_BOOTSTRAP_STATES.has(state));
+  }
+
+  readyAdoptionBlocksAdmission() {
+    return Boolean(this.readyAdoptionBlocked);
+  }
+
+  refreshReadyAdoptionGuard() {
+    const blockedEpochId = String(this.readyAdoptionBlocked?.activation_epoch_id || '').trim();
+    if (!blockedEpochId) return false;
+    let current = null;
+    try { current = this.activationEpochStore.current(); }
+    catch {
+      // An unreadable store is never evidence that the guard can be cleared.
+      return false;
+    }
+    const currentEpochId = String(current?.activation_epoch_id || '').trim();
+    if (!currentEpochId || currentEpochId === blockedEpochId) return false;
+    // A replacement/full-clean operation owns the new epoch.  Drop only the
+    // process-local diagnostic for the retired READY record; the new epoch's
+    // own state/admission gates remain authoritative and are revalidated by
+    // the coordinator before any READY/open projection.
+    this.readyAdoptionBlocked = null;
+    return true;
+  }
+
+  readyAdoptionBlockDetails() {
+    if (!this.readyAdoptionBlocked) return null;
+    return {
+      ...this.readyAdoptionBlocked,
+      code: 'UPDATE_INCOMPLETE',
+      message: 'Durable READY activation lacks strict current-process connector discovery proof.'
+    };
+  }
+
+  assertReadyAdoptionMutationAllowed({ allowFullCleanRefresh = false } = {}) {
+    // The guard is process-local because the durable READY record is immutable.
+    // Reconcile it immediately before every guarded mutation so a replacement
+    // epoch created by an explicit full-clean refresh can become authoritative
+    // without requiring a Recovery Host process restart.  A failed/read-error
+    // read leaves the guard intact (refreshReadyAdoptionGuard is fail-closed).
+    this.refreshReadyAdoptionGuard();
+    if (!this.readyAdoptionBlocksAdmission() || allowFullCleanRefresh) return true;
+    const details = this.readyAdoptionBlockDetails();
+    throw Object.assign(new Error(details.message), {
+      code: 'UPDATE_INCOMPLETE',
+      details
+    });
   }
 
   assertBootstrapMutationAllowed() {
@@ -942,7 +1130,51 @@ class RecoveryHost {
     return this.bootstrapActivation;
   }
 
+  recoveryPingStatus() {
+    const bootstrapAdmissionBlocked = this.bootstrapBlocksAdmission();
+    const readyAdoptionBlocked = this.readyAdoptionBlocksAdmission();
+    return {
+      ready: this.running && !bootstrapAdmissionBlocked && !readyAdoptionBlocked,
+      state: bootstrapAdmissionBlocked
+        ? 'bootstrapping'
+        : readyAdoptionBlocked
+          ? 'update_incomplete'
+          : this.running ? 'healthy' : 'starting',
+      pid: process.pid,
+      process_start_token: this.processIdentity?.process_start_token || null,
+      instance_id: this.instanceId,
+      device_id: this.deviceIdentity.device_id,
+      device_instance_id: this.deviceInstanceId,
+      started_at: this.startedAt,
+      ...(readyAdoptionBlocked ? { ready_adoption: this.readyAdoptionBlockDetails() } : {})
+    };
+  }
+
+  cachedHostStatus() {
+    const projected = this.lastSupervisionProjection?.recoveryHost;
+    if (projected && typeof projected === 'object' && !Array.isArray(projected)) {
+      const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
+      const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
+      return {
+        ...projected,
+        telemetry_available: true,
+        signal_stale: ageMs === null || ageMs > SUPERVISION_STATUS_STALE_MS,
+        snapshot_observed_at_unix_ms: observedAtUnixMs || null,
+        snapshot_age_ms: ageMs
+      };
+    }
+    // Before the first supervision projection, retain fail-closed status
+    // semantics but prohibit fresh OS process-identity and forced revision
+    // probes on the IPC event loop.
+    return this.hostStatus({ preferCachedRuntime: true });
+  }
+
   hostStatus({ preferCachedRuntime = false } = {}) {
+    // Cached IPC projections must remain a pure read model: invoking the
+    // durable store here would turn a lightweight heartbeat into a blocking
+    // disk/lock read.  Fresh operator/status reads, however, are an
+    // authoritative opportunity to retire a guard for a genuinely new epoch.
+    if (!preferCachedRuntime) this.refreshReadyAdoptionGuard();
     let codeRevision;
     try {
       codeRevision = this.revisions.status('recovery_host', this.recoveryHostRunningRevision, { force: !preferCachedRuntime });
@@ -955,7 +1187,11 @@ class RecoveryHost {
         error_code: String(error?.code || 'REVISION_UNAVAILABLE')
       };
     }
-    const electronUiRevision = this.activation.uiRevisionStatus({ force: !preferCachedRuntime });
+    const electronUiPresence = this.activation.uiPresence({ preferCached: preferCachedRuntime });
+    const electronUiRevision = this.activation.uiRevisionStatus({
+      force: !preferCachedRuntime,
+      presence: electronUiPresence
+    });
     const autoActivation = this.autoActivation?.status?.() || null;
     let codingMcpRevision = {};
     if (preferCachedRuntime) {
@@ -998,6 +1234,21 @@ class RecoveryHost {
         update_incomplete: true
       };
     }
+    const readyAdoptionBlocked = this.readyAdoptionBlocksAdmission();
+    if (readyAdoptionBlocked) {
+      const block = this.readyAdoptionBlockDetails();
+      epochStatus = {
+        ...epochStatus,
+        // Preserve the durable READY state as `epoch_state` while exposing the
+        // host's effective admission state as incomplete.  This prevents a
+        // malformed terminal record from being projected as a usable runtime.
+        state: 'UPDATE_INCOMPLETE',
+        admission_open: false,
+        update_incomplete: true,
+        error_code: 'UPDATE_INCOMPLETE',
+        error: block
+      };
+    }
     const fullCleanAvailable = Boolean(
       this.fullCleanActivation
       && typeof this.fullCleanActivation.restart === 'function'
@@ -1018,11 +1269,8 @@ class RecoveryHost {
     );
     const connectorContractState = String(this.lastSupervisionStatus?.connectorContractState || 'UNAVAILABLE');
     const connectorEvidenceCurrent = Boolean(
-      (connectorContractState === 'CURRENT_ACKNOWLEDGED'
-        && this.lastSupervisionStatus?.connectorRediscovered === true)
-      || (connectorContractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
-        && this.lastSupervisionStatus?.connectorCompatibilityAcknowledged === true
-        && this.lastSupervisionStatus?.connectorFreshnessMode === 'compatible_activation_bootstrap')
+      connectorContractState === 'CURRENT_ACKNOWLEDGED'
+      && this.lastSupervisionStatus?.connectorRediscovered === true
     );
     const connectorReady = Boolean(
       this.lastSupervisionStatus?.connectorRefreshRequired === false
@@ -1041,7 +1289,11 @@ class RecoveryHost {
       }
     });
     return {
-      state: bootstrapAdmissionBlocked ? 'bootstrapping' : this.running ? 'healthy' : 'starting',
+      state: bootstrapAdmissionBlocked
+        ? 'bootstrapping'
+        : readyAdoptionBlocked
+          ? 'update_incomplete'
+          : this.running ? 'healthy' : 'starting',
       pid: process.pid,
       process_start_token: this.processIdentity?.process_start_token || null,
       instance_id: this.instanceId,
@@ -1079,10 +1331,17 @@ class RecoveryHost {
         activation_epoch: true
       },
       electron_ui_revision: electronUiRevision,
-      electron_ui_recovery: this.uiRecoveryStatus(),
+      electron_ui_recovery: this.uiRecoveryStatus({
+        presence: electronUiPresence,
+        preferCachedPresence: preferCachedRuntime
+      }),
       auto_activation: autoActivation,
       activation_closure: activationClosure,
       activation_epoch: epochStatus,
+      ready_adoption: readyAdoptionBlocked ? {
+        state: 'blocked',
+        ...this.readyAdoptionBlockDetails()
+      } : { state: 'adopted' },
       recovery_plane_mode: 'independent_mcp_tunnel_v1',
       recovery_plane: this.lastRecoveryPlaneStatus,
       last_progress: this.lastProgress,
@@ -1146,6 +1405,16 @@ class RecoveryHost {
       }
     } catch (error) {
       epochStatus = { state: 'UPDATE_INCOMPLETE', admission_open: false, update_incomplete: true, error_code: String(error?.code || 'ACTIVATION_EPOCH_STORE_INVALID') };
+    }
+    if (this.readyAdoptionBlocksAdmission()) {
+      epochStatus = {
+        ...epochStatus,
+        state: 'UPDATE_INCOMPLETE',
+        admission_open: false,
+        update_incomplete: true,
+        error_code: 'UPDATE_INCOMPLETE',
+        error: this.readyAdoptionBlockDetails()
+      };
     }
     const epochIncomplete = Boolean(epochStatus && (
       epochStatus.update_incomplete === true
@@ -1258,37 +1527,56 @@ class RecoveryHost {
   }
 
   cachedActivationSnapshot() {
-    let record = null;
-    try { record = this.fullCleanActivation.current?.() || null; } catch {}
-    if (!activationAwaitsConnector(record) || !this.lastSupervisionStatus) return null;
+    if (this.lastSupervisionProjectionSource !== 'activation_connector_pending_cache'
+      || !this.lastSupervisionStatus
+      || !this.lastSupervisionProjection) return null;
     const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
     const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
-    return this.decorate({
-      ...this.lastSupervisionStatus,
+    return {
+      ...this.lastSupervisionProjection,
       telemetryAvailable: true,
       signalStale: ageMs === null || ageMs > SUPERVISION_STATUS_STALE_MS,
       snapshotBusy: Boolean(this.supervisionInFlight),
       snapshotSource: 'activation_connector_pending_cache',
       snapshotObservedAtUnixMs: observedAtUnixMs || null,
       snapshotAgeMs: ageMs
-    }, { preferCachedRuntime: true });
+    };
   }
 
-  recordSupervisionStatus(value) {
+  recordSupervisionStatus(value, { activationConnectorPending = false } = {}) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return this.lastSupervisionStatus;
     this.lastSupervisionStatus = value;
     this.lastSupervisionObservedAtUnixMs = Date.now();
+    this.lastSupervisionProjectionSource = activationConnectorPending
+      ? 'activation_connector_pending_cache'
+      : 'recovery_host_supervision_cache';
+    try {
+      // Build the decorated read model once, on the supervisor's observation
+      // path.  The IPC handler below only copies this object and updates
+      // bounded telemetry fields; it never calls decorate/hostStatus again.
+      this.lastSupervisionProjection = this.decorate({
+        ...value,
+        telemetryAvailable: true,
+        signalStale: false,
+        snapshotBusy: Boolean(this.supervisionInFlight),
+        snapshotSource: this.lastSupervisionProjectionSource,
+        snapshotObservedAtUnixMs: this.lastSupervisionObservedAtUnixMs,
+        snapshotAgeMs: 0
+      }, { preferCachedRuntime: true });
+    } catch (error) {
+      // Projection failure is an explicit unavailable read model, never a
+      // reason to project stale raw runtime data as healthy/ready.
+      this.lastSupervisionProjection = null;
+      this.log?.warn?.(error.message, { stage: 'recovery-host-supervision-projection' });
+    }
     return value;
   }
 
   cachedRuntimeSnapshot() {
-    const activation = this.cachedActivationSnapshot();
-    if (activation) return activation;
-    const observed = this.lastSupervisionStatus;
     const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
     const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
-    if (!observed) {
-      return this.decorate({
+    if (!this.lastSupervisionStatus || !this.lastSupervisionProjection) {
+      return {
         mcpRunning: null,
         nativeAlive: null,
         tunnelRunning: null,
@@ -1300,27 +1588,51 @@ class RecoveryHost {
         snapshotBusy: Boolean(this.supervisionInFlight),
         snapshotSource: 'recovery_host_supervision_unavailable',
         snapshotObservedAtUnixMs: null,
-        snapshotAgeMs: null
-      }, { preferCachedRuntime: true });
+        snapshotAgeMs: null,
+        recoveryHost: null,
+        updateIncomplete: true
+      };
     }
-    return this.decorate({
-      ...observed,
+    return {
+      ...this.lastSupervisionProjection,
       telemetryAvailable: true,
       signalStale: ageMs === null || ageMs > SUPERVISION_STATUS_STALE_MS,
       snapshotBusy: Boolean(this.supervisionInFlight),
-      snapshotSource: 'recovery_host_supervision_cache',
+      snapshotSource: this.lastSupervisionProjectionSource,
       snapshotObservedAtUnixMs: observedAtUnixMs || null,
       snapshotAgeMs: ageMs
-    }, { preferCachedRuntime: true });
+    };
   }
 
   handlers() {
     return {
-      'recovery.ping': async () => ({ ready: this.running && !this.bootstrapBlocksAdmission(), ...this.hostStatus() }),
-      'recovery.status': async () => this.hostStatus(),
+      // Liveness must stay responsive while an unrelated authenticated read is
+      // in flight.  Exact PID/instance/start-token identity is already bound
+      // by the descriptor and is sufficient for the independent supervisor;
+      // never run PowerShell identity or revision probes in this handler.
+      'recovery.ping': async () => this.recoveryPingStatus(),
+      // Operator status consumes the latest completed supervision read model.
+      // Activation/mutation paths retain their own exact preflight and fresh
+      // runtime snapshot authority; cached presentation is never mutation
+      // authority.
+      'recovery.status': async () => this.cachedHostStatus(),
       'code.activation_preflight': async (request) => this.activation.preflight(request),
       'code.activate_update': async (request) => {
         this.assertBootstrapMutationAllowed();
+        // The production path intentionally delegates to FullCleanActivation
+        // (and therefore may not call the ordinary mutation assertion), but it
+        // still needs to retire a stale process-local READY-adoption guard when
+        // a replacement epoch already exists.
+        this.refreshReadyAdoptionGuard();
+        // Production hosts route this action through FullCleanActivation,
+        // which is the supported way to replace an invalid terminal READY
+        // epoch.  Minimal legacy/unit hosts may lack that coordinator; keep
+        // their component-scoped fallback fail-closed instead of mutating
+        // runtime state under an unverified READY record.
+        if (!(this.fullCleanActivation?.restart
+          && typeof this.orchestrator?.completeActivationEpoch === 'function')) {
+          this.assertReadyAdoptionMutationAllowed();
+        }
         return this.activation.activate(request);
       },
       'code.activation_status': async (operationId) => this.activation.status(operationId),
@@ -1340,6 +1652,7 @@ class RecoveryHost {
       'runtime.activation_epoch_status': async () => this.hostStatus().activation_epoch,
       'runtime.complete_activation_epoch': async (activationEpochId) => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         if (!this.fullCleanActivation || typeof this.orchestrator?.completeActivationEpoch !== 'function') {
           throw Object.assign(new Error('Full clean activation is unavailable for this runtime owner.'), { code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE' });
         }
@@ -1348,16 +1661,23 @@ class RecoveryHost {
       },
       'runtime.start': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         return this.decorate(await this.orchestrator.start(options));
       },
       'runtime.stop': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
+        // Stop is deliberately available while an invalid READY record is
+        // blocked so the authenticated bootstrap/refresh handoff can quiesce
+        // the old runtime.  Reconcile a retired guard when a replacement epoch
+        // is already durable, without opening admission for the old epoch.
+        this.refreshReadyAdoptionGuard();
         return this.decorate(await this.orchestrator.stop(options));
       },
       'runtime.restart': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
         const soft = options?.automatic === true || options?.mode === 'soft_recovery';
         const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+        this.assertReadyAdoptionMutationAllowed({ allowFullCleanRefresh: refresh });
         const result = soft
           ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
           : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
@@ -1386,23 +1706,27 @@ class RecoveryHost {
       },
       'runtime.switch_workspace': async (workspace) => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         return this.decorate(await this.orchestrator.switchWorkspace(workspace));
       },
       'runtime.update_authorized_roots': async (roots) => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         return this.decorate(await this.orchestrator.updateAuthorizedRoots(roots));
       },
       'runtime.acknowledge_connector_contract': async () => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         return this.decorate(await this.orchestrator.acknowledgeConnectorContract());
       },
       'health.inspect': async () => this.healthService.inspect(),
       'health.repair': async () => {
         this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
         return this.healthService.repair();
       },
       'logs.read': async (limit = 300) => this.log.read(Math.max(1, Math.min(500, Number(limit) || 300))),
-      'logs.clear': async () => { this.assertBootstrapMutationAllowed(); this.log.clear(); return true; }
+      'logs.clear': async () => { this.assertBootstrapMutationAllowed(); this.assertReadyAdoptionMutationAllowed(); this.log.clear(); return true; }
     };
   }
 
@@ -1410,6 +1734,11 @@ class RecoveryHost {
     if (!this.running || this.handoffStarted) return this.lastSupervisionStatus;
     if (this.supervisionInFlight) return this.supervisionInFlight;
     const operation = (async () => {
+      // A full-clean coordinator can create a replacement epoch while this
+      // Recovery Host process remains alive.  Retire only the old process-local
+      // diagnostic before deriving admissionBlocked; the durable new epoch's
+      // own state and census still control all subsequent supervision.
+      this.refreshReadyAdoptionGuard();
       let runtime = null;
       let epoch = null;
       try {
@@ -1431,7 +1760,8 @@ class RecoveryHost {
           return this.lastSupervisionStatus;
         }
       }
-      const admissionBlocked = Boolean(epoch && epoch.state !== 'READY');
+      const admissionBlocked = this.readyAdoptionBlocksAdmission()
+        || Boolean(epoch && epoch.state !== 'READY');
       const connectorPending = activationAwaitsTunnelOrConnector(epoch);
       let pendingObservation = null;
       try {
@@ -1448,7 +1778,9 @@ class RecoveryHost {
         runtime = admissionBlocked
           ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
           : await this.orchestrator.supervise();
-        this.recordSupervisionStatus(runtime);
+        this.recordSupervisionStatus(runtime, {
+          activationConnectorPending: connectorPending
+        });
       } catch (error) {
         this.log.error(error.message, { stage: 'recovery-host-supervise' });
       }
@@ -1480,7 +1812,9 @@ class RecoveryHost {
             // stale/incomplete. recordPendingCensus never opens admission.
             this.fullCleanActivation.recordPendingCensus(epoch.activation_epoch_id, census);
             const completed = await this.fullCleanActivation.finalize(epoch.activation_epoch_id, census);
-            this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed });
+            this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed }, {
+              activationConnectorPending: connectorPending
+            });
             this.recordBootstrapEpoch(this.activationEpochStore.current(), {
               replacement_host_instance_id: this.instanceId,
               replacement_host_pid: process.pid
@@ -1496,7 +1830,7 @@ class RecoveryHost {
               this.recordSupervisionStatus({
                 ...census.runtime,
                 tunnelRunning: census.tunnel_health_verified === true
-              });
+              }, { activationConnectorPending: connectorPending });
             }
             this.lastRecoveryPlaneStatus = this.recoveryPlane?.lastStatus || this.lastRecoveryPlaneStatus;
             this.recordBootstrapEpoch(this.activationEpochStore.current(), {
@@ -1580,6 +1914,10 @@ class RecoveryHost {
       this.log?.error?.(error.message, { stage: 'recovery-host-activation-epoch-load', code: error?.code || '' });
       throw error;
     }
+    // Recompute this process-local admission guard from the current durable
+    // record on every start.  It is intentionally not persisted or inferred
+    // from a previous host instance.
+    this.readyAdoptionBlocked = null;
     let bootstrapPlan = null;
     try { bootstrapPlan = await this.prepareBootstrapStart(durableEpoch); }
     catch (error) {
@@ -1598,6 +1936,7 @@ class RecoveryHost {
     // startup/recovery remains suppressed below until that new epoch reaches
     // READY; a failed transaction must never be auto-healed by the watchdog.
     let failedEpochBlocked = Boolean(!bootstrapPlan && !fullCleanReplacement && durableEpoch && durableEpoch.state === 'FAILED');
+    let readyEpochBlocked = false;
     if (failedEpochBlocked) {
       this.log?.warn?.('Recovery Host is serving control-plane IPC with a failed activation epoch; explicit full-clean activation is required.', {
         activationEpochId: durableEpoch.activation_epoch_id
@@ -1672,9 +2011,28 @@ class RecoveryHost {
       }
     } else if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'READY') {
       // A READY epoch remains the current activation identity across an
-      // ordinary host process restart; child services must use that epoch.
-      this.orchestrator.setActivationEpoch?.(durableEpoch.activation_epoch_id);
-      this.recoveryPlane?.setActivationEpoch?.(durableEpoch.activation_epoch_id);
+      // ordinary host process restart only when its persisted census contains
+      // the strict current-process attested discovery receipt.  Older builds
+      // could persist a compatibility bootstrap as READY; adopting that bit
+      // would let a stale epoch appear admitted without a real tools/list /
+      // server/discover proof.  Keep the terminal record untouched, but retain
+      // the authenticated Recovery control plane so an explicit full-clean
+      // refresh can replace this terminal record.  No component/gateway
+      // admission is opened while this process-local guard is active.
+      const readyConnectorProof = validatePersistedReadyConnectorProof(durableEpoch);
+      if (!readyConnectorProof.valid) {
+        readyEpochBlocked = true;
+        this.readyAdoptionBlocked = readyConnectorProof;
+        this.log?.warn?.('Durable READY activation lacks strict current-process connector discovery proof; keeping only the authenticated control plane available for an explicit full-clean refresh.', {
+          stage: 'recovery-host-ready-epoch-adoption',
+          activationEpochId: durableEpoch.activation_epoch_id,
+          reasons: readyConnectorProof.reasons
+        });
+      } else {
+        this.readyAdoptionBlocked = null;
+        this.orchestrator.setActivationEpoch?.(durableEpoch.activation_epoch_id);
+        this.recoveryPlane?.setActivationEpoch?.(durableEpoch.activation_epoch_id);
+      }
     }
     const persistReplacementFailure = (error) => {
       if (!replacementEpochId) return;
@@ -1812,7 +2170,11 @@ class RecoveryHost {
     }
     this.ownsLock = true;
     try {
-      await this.gateway.start();
+      // A malformed/legacy READY epoch must not expose the execution gateway
+      // while its strict connector proof is absent.  The Recovery IPC server
+      // below remains available so an operator can submit an explicit
+      // full-clean refresh that creates a replacement epoch.
+      if (!readyEpochBlocked) await this.gateway.start();
       this.ipcServer = this.ipcServerFactory({
         paths: this.paths,
         handlers: this.handlers(),
@@ -1821,7 +2183,9 @@ class RecoveryHost {
         startedAt: this.startedAt,
         deviceIdentity: this.deviceIdentity,
         deviceInstanceId: this.deviceInstanceId,
-        activationEpochId: this.orchestrator.activationEpochId || this.fullCleanActivation.current?.()?.activation_epoch_id || '',
+        activationEpochId: readyEpochBlocked
+          ? ''
+          : this.orchestrator.activationEpochId || this.fullCleanActivation.current?.()?.activation_epoch_id || '',
         processIdentityObserver: async (pid) => {
           if (Number(pid) === Number(process.pid) && this.processIdentity) {
             return { state: 'live', ...this.processIdentity };
@@ -1931,7 +2295,7 @@ class RecoveryHost {
           this.log.error(error.message, { stage: 'legacy-primary-device-migration', code: error?.code || '' });
         }
       }
-      if (!fullCleanReplacement && !failedEpochBlocked) {
+      if (!fullCleanReplacement && !failedEpochBlocked && !readyEpochBlocked) {
         await this.ensureRecoveryPlane({ legacyMigrationPlan: recoveryLegacyMigration });
       }
       this.supervisionTimer = setInterval(() => { this.superviseOnce(); }, SUPERVISION_INTERVAL_MS);
@@ -1941,7 +2305,7 @@ class RecoveryHost {
         hostInstanceId: this.instanceId
       });
       const current = this.settings.load();
-      if (!fullCleanReplacement && !failedEpochBlocked && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
+      if (!fullCleanReplacement && !failedEpochBlocked && !readyEpochBlocked && !recoveredFromDurableEpoch && !primaryMigrationFailed && current.autoStartServices && !this.orchestrator.isManuallyStopped()) {
         const observed = await this.orchestrator.lightweightSnapshot().catch(() => null);
         this.recordSupervisionStatus(observed);
         if (!observed?.nativeAlive && !observed?.tunnelRunning) {
@@ -1951,7 +2315,7 @@ class RecoveryHost {
         }
       }
       const postStartEpoch = this.fullCleanActivation.current?.();
-      if (!postStartEpoch || postStartEpoch.state === 'READY') this.autoActivation?.start?.();
+      if ((!postStartEpoch || postStartEpoch.state === 'READY') && !readyEpochBlocked) this.autoActivation?.start?.();
       return this.hostStatus();
     } catch (error) {
       const beforeCleanupEpoch = this.activationEpochStore.current();
@@ -2113,5 +2477,6 @@ module.exports = {
   UI_RECOVERY_COOLDOWN_MS,
   UI_RECOVERY_ATTEMPT_LIMIT,
   waitForReplacementLockRelease,
-  activationClosureProjection
+  activationClosureProjection,
+  validatePersistedReadyConnectorProof
 };

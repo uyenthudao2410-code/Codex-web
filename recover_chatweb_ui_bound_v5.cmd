@@ -611,11 +611,6 @@ function Test-ConnectorReadySnapshot {
   if ([string]$status.connectorContractState -eq 'CURRENT_ACKNOWLEDGED') {
     return $status.connectorRediscovered -eq $true -and (Test-ConnectorTimestamp ([string]$status.connectorRediscoveredAt))
   }
-  if ([string]$status.connectorContractState -eq 'CURRENT_COMPATIBLE_ACKNOWLEDGED') {
-    return $status.connectorCompatibilityAcknowledged -eq $true `
-      -and [string]$status.connectorFreshnessMode -eq 'compatible_activation_bootstrap' `
-      -and (Test-ConnectorTimestamp ([string]$status.connectorCompatibilityAcknowledgedAt))
-  }
   return $false
 }
 

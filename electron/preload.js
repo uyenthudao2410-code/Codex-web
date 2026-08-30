@@ -111,6 +111,8 @@ function subscribeWithHeartbeatWatchdog(listener) {
 contextBridge.exposeInMainWorld('mcpAssistant', {
   snapshot: (options) => ipcRenderer.invoke('app:snapshot', options),
   lightweightSnapshot: () => ipcRenderer.invoke('app:lightweight-snapshot'),
+  recordUiPerformance: (sample) => ipcRenderer.invoke('ui-performance:record', sample),
+  uiPerformance: () => ipcRenderer.invoke('ui-performance:read'),
   orchestration: () => ipcRenderer.invoke('panel:orchestration').then(sanitizeOrchestrationResult),
   liveOrchestration: () => ipcRenderer.invoke('panel:live-control').then(sanitizeOrchestrationResult),
   dashboardAnalytics: () => ipcRenderer.invoke('panel:dashboard-analytics'),

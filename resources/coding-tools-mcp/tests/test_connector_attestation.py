@@ -32,18 +32,31 @@ class ConnectorAttestationTests(unittest.TestCase):
         self.assertTrue(verified)
         self.assertEqual(reason, "verified")
 
-    def test_replay_against_replacement_process_is_rejected(self) -> None:
+    def test_replay_against_replacement_runtime_binding_is_rejected(self) -> None:
         value = build_connector_attestation(self.secret, **self.binding)
-        verified, reason = verify_connector_attestation(
-            value,
-            self.secret,
-            **{key: value for key, value in {**self.binding, "process_instance_id": "replacement-process"}.items() if key not in {"issued_at_unix_ms", "nonce"}},
-            now_unix_ms=self.binding["issued_at_unix_ms"] + 1000,
-        )
-        self.assertFalse(verified)
-        self.assertEqual(reason, "binding_mismatch")
+        replacements = {
+            "activation_epoch_id": "activation-replacement-002",
+            "process_instance_id": "replacement-process",
+            "server_instance_id": "replacement-server",
+            "contract_sha256": "b" * 64,
+        }
+        for field, replacement in replacements.items():
+            with self.subTest(field=field):
+                expected = {**self.binding, field: replacement}
+                verified, reason = verify_connector_attestation(
+                    value,
+                    self.secret,
+                    **{
+                        key: item
+                        for key, item in expected.items()
+                        if key not in {"issued_at_unix_ms", "nonce"}
+                    },
+                    now_unix_ms=self.binding["issued_at_unix_ms"] + 1000,
+                )
+                self.assertFalse(verified)
+                self.assertEqual(reason, "binding_mismatch")
 
-    def test_tampering_and_expiry_are_rejected(self) -> None:
+    def test_tampering_is_rejected(self) -> None:
         value = build_connector_attestation(self.secret, **self.binding)
         tampered = value.replace("chatweb|chatweb|", "chatweb|opencode|", 1)
         verified, reason = verify_connector_attestation(
@@ -55,14 +68,56 @@ class ConnectorAttestationTests(unittest.TestCase):
         self.assertFalse(verified)
         self.assertEqual(reason, "binding_mismatch")
 
+        replacement_nibble = "0" if value[-1] != "0" else "1"
+        signature_tampered = f"{value[:-1]}{replacement_nibble}"
+        verified, reason = verify_connector_attestation(
+            signature_tampered,
+            self.secret,
+            **{key: value for key, value in self.binding.items() if key not in {"issued_at_unix_ms", "nonce"}},
+            now_unix_ms=self.binding["issued_at_unix_ms"] + 1000,
+        )
+        self.assertFalse(verified)
+        self.assertEqual(reason, "signature_invalid")
+
+        verified, reason = verify_connector_attestation(
+            value,
+            "rotated-connector-attestation-secret",
+            **{key: value for key, value in self.binding.items() if key not in {"issued_at_unix_ms", "nonce"}},
+            now_unix_ms=self.binding["issued_at_unix_ms"] + 1000,
+        )
+        self.assertFalse(verified)
+        self.assertEqual(reason, "signature_invalid")
+
+    def test_static_attestation_remains_valid_for_long_lived_exact_runtime(self) -> None:
+        value = build_connector_attestation(self.secret, **self.binding)
         verified, reason = verify_connector_attestation(
             value,
             self.secret,
             **{key: value for key, value in self.binding.items() if key not in {"issued_at_unix_ms", "nonce"}},
-            now_unix_ms=self.binding["issued_at_unix_ms"] + 15 * 60 * 1000 + 1,
+            now_unix_ms=self.binding["issued_at_unix_ms"] + 24 * 60 * 60 * 1000,
+        )
+        self.assertTrue(verified)
+        self.assertEqual(reason, "verified")
+
+    def test_future_issued_attestation_is_rejected(self) -> None:
+        now_unix_ms = self.binding["issued_at_unix_ms"]
+        future_binding = {
+            **self.binding,
+            "issued_at_unix_ms": now_unix_ms + 5001,
+        }
+        value = build_connector_attestation(self.secret, **future_binding)
+        verified, reason = verify_connector_attestation(
+            value,
+            self.secret,
+            **{
+                key: item
+                for key, item in future_binding.items()
+                if key not in {"issued_at_unix_ms", "nonce"}
+            },
+            now_unix_ms=now_unix_ms,
         )
         self.assertFalse(verified)
-        self.assertEqual(reason, "timestamp_expired")
+        self.assertEqual(reason, "timestamp_invalid")
 
 
 if __name__ == "__main__":

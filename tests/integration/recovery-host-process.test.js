@@ -17,7 +17,9 @@ const NEXT_REVISION = 'b'.repeat(64);
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function processAlive(pid) {
-  try { process.kill(Number(pid), 0); return true; } catch { return false; }
+  const value = Number(pid);
+  if (!Number.isInteger(value) || value <= 0) return false;
+  try { process.kill(value, 0); return true; } catch { return false; }
 }
 
 function readJson(file) {
@@ -176,6 +178,22 @@ async function waitForSupervision(client, previousCount, timeoutMs = 12_000) {
   throw new Error('Recovery Host watchdog did not run after the Electron client exited.');
 }
 
+async function waitForRuntimeProjection(client, accept, timeoutMs = 12_000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    last = await client.lightweightSnapshot();
+    const mcpPid = Number(last?.mcpPid || 0);
+    const tunnelPid = Number(last?.tunnelPid || 0);
+    if (mcpPid > 0 && tunnelPid > 0 && (!accept || accept(last))) return last;
+    await wait(100);
+  }
+  throw Object.assign(new Error('Recovery Host did not publish the expected runtime projection.'), {
+    code: 'RECOVERY_RUNTIME_PROJECTION_TIMEOUT',
+    details: { snapshot: last }
+  });
+}
+
 function removeTempTree(target) {
   fs.rmSync(target, {
     recursive: true,
@@ -242,7 +260,9 @@ test('real Electron client can be killed and reattach without replacing Recovery
     const supervised = await waitForSupervision(parentClient, first.supervisionCount);
     assert.equal(supervised.mcpPid, hostReport.mcpPid);
     assert.equal(supervised.tunnelPid, hostReport.tunnelPid);
-    assert.equal(supervised.fullyReady, true);
+    assert.equal(supervised.fullyReady, false,
+      'component ownership continuity must not invent aggregate readiness without connector attestation');
+    assert.equal(supervised.updateIncomplete, true);
 
     secondClient = spawnElectron({
       role: 'client',
@@ -310,7 +330,10 @@ test('real Safe Code Activation replaces Coding MCP process while preserving Tun
     const status = await client.activationStatus(request.operation_id);
     assert.equal(status.state, 'completed');
 
-    const snapshot = await client.lightweightSnapshot();
+    const snapshot = await waitForRuntimeProjection(client, (value) => (
+      Number(value?.mcpPid || 0) !== Number(hostReport.mcpPid)
+      && Number(value?.tunnelPid || 0) === Number(hostReport.tunnelPid)
+    ));
     replacementMcpPid = Number(snapshot.mcpPid || 0);
     assert.notEqual(replacementMcpPid, hostReport.mcpPid);
     assert.equal(await waitForPidExit(hostReport.mcpPid, 5000), true);
@@ -397,7 +420,10 @@ test('real Recovery Host activation hands ownership to a new Electron host witho
     assert.equal(completed.state, 'completed');
     assert.equal(completed.result.coding_mcp_preserved, true);
     assert.equal(completed.result.tunnel_preserved, true);
-    const snapshot = await replacementClient.lightweightSnapshot();
+    const snapshot = await waitForRuntimeProjection(replacementClient, (value) => (
+      Number(value?.mcpPid || 0) === Number(mcp.pid)
+      && Number(value?.tunnelPid || 0) === Number(tunnel.pid)
+    ));
     assert.equal(snapshot.mcpPid, mcp.pid);
     assert.equal(snapshot.tunnelPid, tunnel.pid);
     assert.equal(replacementReport.gatewayOwnerPid, replacementReport.hostPid);

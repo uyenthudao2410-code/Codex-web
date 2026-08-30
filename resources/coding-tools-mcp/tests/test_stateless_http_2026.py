@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -161,6 +162,8 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertIn(endpoint["route_key"], result["_meta"][ENDPOINT_ROUTING_META_KEY])
         discovery = self.runtime.connector_tool_discovery()
         self.assertTrue(discovery["current_contract_observed"])
+        self.assertEqual(discovery["identity_source"], "attested_transport")
+        self.assertTrue(discovery["attestation_verified"])
         self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])
         self.assertEqual(discovery["client_id"], "chatweb")
 
@@ -175,6 +178,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(body["result"]["_meta"][ENDPOINT_META_KEY]["endpoint_id"], endpoint["endpoint_id"])
         discovery = self.runtime.connector_tool_discovery()
         self.assertTrue(discovery["current_contract_observed"])
+        self.assertEqual(discovery["identity_source"], "attested_transport")
         self.assertEqual(discovery["contract_sha256"], self.runtime.tool_contract["sha256"])
         self.assertEqual(discovery["client_id"], "chatweb")
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
@@ -208,6 +212,44 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertFalse(discovery["observed"])
         self.assertFalse(discovery["current_contract_observed"])
 
+    def test_attestation_without_explicit_identity_is_observed_but_not_authoritative(self) -> None:
+        activation_epoch_id = "activation-implicit-attestation-0001"
+        self.runtime.activation_epoch_id = activation_epoch_id
+        attestation = build_connector_attestation(
+            "test-connector-attestation-secret",
+            client_id="chatweb",
+            client_type="chatweb",
+            activation_epoch_id=activation_epoch_id,
+            process_instance_id=self.runtime.process_instance_id,
+            server_instance_id=self.runtime.server_instance_id,
+            contract_sha256=self.runtime.tool_contract["sha256"],
+        )
+        headers = {
+            "Content-Type": "application/json",
+            "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION,
+            "Mcp-Method": "tools/list",
+            CONNECTOR_ATTESTATION_HEADER: attestation,
+        }
+        body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 103,
+            "method": "tools/list",
+            "params": modern_params(),
+        }).encode("utf-8")
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        try:
+            connection.request("POST", "/mcp", body=body, headers=headers)
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            connection.close()
+        self.assertEqual(response.status, 200)
+        self.assertEqual({item["name"] for item in payload["result"]["tools"]}, EXPECTED_SMART_TOOLS)
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertFalse(discovery["observed"])
+        self.assertFalse(discovery["current_contract_observed"])
+        self.assertIsNone(discovery["identity_source"])
+
     def test_explicit_chatweb_headers_without_attestation_are_not_authoritative(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
         status, _, payload = self.request(
@@ -221,6 +263,33 @@ class StatelessHttp2026Tests(unittest.TestCase):
         discovery = self.runtime.connector_tool_discovery()
         self.assertFalse(discovery["observed"])
         self.assertFalse(discovery["current_contract_observed"])
+
+    def test_long_lived_managed_attestation_records_authoritative_discovery(self) -> None:
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        attestation = build_connector_attestation(
+            "test-connector-attestation-secret",
+            client_id="chatweb",
+            client_type="chatweb",
+            activation_epoch_id=getattr(self.runtime, "activation_epoch_id", ""),
+            process_instance_id=self.runtime.process_instance_id,
+            server_instance_id=self.runtime.server_instance_id,
+            contract_sha256=self.runtime.tool_contract["sha256"],
+            issued_at_unix_ms=int(time.time() * 1000) - 24 * 60 * 60 * 1000,
+        )
+        status, _, payload = self.request(
+            "tools/list",
+            modern_params(),
+            request_id=104,
+            extra_headers={CONNECTOR_ATTESTATION_HEADER: attestation},
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("result", payload)
+        discovery = self.runtime.connector_tool_discovery()
+        self.assertTrue(discovery["current_contract_observed"])
+        self.assertEqual(discovery["identity_source"], "attested_transport")
+        self.assertTrue(discovery["attestation_verified"])
+        self.assertEqual(discovery["process_instance_id"], self.runtime.process_instance_id)
+        self.assertEqual(discovery["server_instance_id"], self.runtime.server_instance_id)
 
     def test_untrusted_loopback_observation_cannot_overwrite_attested_discovery(self) -> None:
         status, _, payload = self.request("tools/list", modern_params(), request_id=101)

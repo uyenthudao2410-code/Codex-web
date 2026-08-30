@@ -40,6 +40,7 @@ class CoordinationStateTests(unittest.TestCase):
             self.assertTrue(clients["chatweb"]["online"])
             self.assertTrue(clients["codex-desktop"]["online"])
             self.assertEqual(clients["chatweb"]["runtime_instance_id"], "runtime-1")
+            self.assertEqual(len(restored.list_hub_clients(limit=1)), 1)
             self.assertEqual(restored.get_hub_client_cursor(client_id="chatweb", run_id="run-1")["last_event_seq"], 12)
             self.assertEqual(restored.get_hub_client_cursor(client_id="codex-desktop", run_id="run-1")["last_event_seq"], 7)
 

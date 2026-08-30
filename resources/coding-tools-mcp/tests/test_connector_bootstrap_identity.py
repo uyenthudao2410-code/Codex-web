@@ -89,6 +89,22 @@ class ConnectorBootstrapIdentityTests(unittest.TestCase):
         self.assertEqual(identity["identity_source"], "explicit_headers")
         self.assertFalse(identity["attestation_verified"])
 
+    def test_attestation_without_explicit_identity_cannot_claim_managed_transport(self) -> None:
+        attestation = build_connector_attestation(
+            "identity-test-secret",
+            client_id="chatweb",
+            client_type="chatweb",
+            activation_epoch_id="epoch-test",
+            process_instance_id="process-test",
+            server_instance_id="server-test",
+            contract_sha256="a" * 64,
+        )
+        identity = IdentityProbe({
+            CONNECTOR_ATTESTATION_HEADER: attestation,
+        }, secret="identity-test-secret")._hub_identity_from_request(self.request())
+        self.assertEqual(identity["identity_source"], "implicit_default")
+        self.assertTrue(identity["attestation_verified"])
+
 
 if __name__ == "__main__":
     unittest.main()

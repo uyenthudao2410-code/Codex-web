@@ -2,7 +2,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { RecoveryActionStore, OPERATION_ID_PATTERN } = require('./recoveryActionStore');
 const {
+  normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   processIdentityFrom,
   sameProcessIdentity
 } = require('./processIdentity');
@@ -239,6 +241,7 @@ class RecoveryActivation {
     beginRecoveryHandoff = null,
     fullCleanActivation = null,
     processIdentityObserver = observeProcessIdentity,
+    asyncProcessIdentityObserver = null,
     now = () => Date.now()
   }) {
     this.paths = paths;
@@ -255,8 +258,14 @@ class RecoveryActivation {
     this.processIdentityObserver = typeof processIdentityObserver === 'function'
       ? processIdentityObserver
       : observeProcessIdentity;
+    this.asyncProcessIdentityObserver = typeof asyncProcessIdentityObserver === 'function'
+      ? asyncProcessIdentityObserver
+      : this.processIdentityObserver === observeProcessIdentity
+        ? observeProcessIdentityAsync
+        : this.processIdentityObserver;
     this.now = now;
     this.uiRegistration = null;
+    this.lastUiPresence = null;
     this.uiRecoveryStateFile = path.join(paths.dataRoot(), 'electron-ui-recovery.json');
     this.uiRecoveryPreference = this.loadUiRecoveryPreference();
   }
@@ -305,8 +314,30 @@ class RecoveryActivation {
     };
   }
 
-  uiPresence() {
+  uiPresence({ preferCached = false } = {}) {
     const registration = this.uiRegistration;
+    const cached = this.lastUiPresence;
+    const cacheMatches = Boolean(
+      cached
+      && registration
+      && cached.instance_id === registration.instance_id
+      && Number(cached.pid || 0) === Number(registration.pid || 0)
+      && normalizeProcessStartToken(cached.process_start_token)
+        === normalizeProcessStartToken(registration.process_start_token)
+    );
+    if (preferCached) {
+      if (cacheMatches) return { ...cached };
+      return {
+        tracked: Boolean(registration),
+        alive: null,
+        instance_id: registration?.instance_id || null,
+        activation_epoch_id: registration?.activation_epoch_id || null,
+        pid: registration?.pid || null,
+        process_start_token: registration?.process_start_token || null,
+        registered_at_unix_ms: registration?.registered_at_unix_ms || null,
+        observed_at_unix_ms: null
+      };
+    }
     let identityMatches = false;
     if (registration) {
       try {
@@ -316,15 +347,79 @@ class RecoveryActivation {
         identityMatches = !observed?.then && sameProcessIdentity(registration, observed);
       } catch { identityMatches = false; }
     }
-    return {
+    const presence = {
       tracked: Boolean(registration),
       alive: Boolean(registration && identityMatches),
       instance_id: registration?.instance_id || null,
       activation_epoch_id: registration?.activation_epoch_id || null,
       pid: registration?.pid || null,
       process_start_token: registration?.process_start_token || null,
-      registered_at_unix_ms: registration?.registered_at_unix_ms || null
+      registered_at_unix_ms: registration?.registered_at_unix_ms || null,
+      observed_at_unix_ms: this.now()
     };
+    this.lastUiPresence = presence;
+    return { ...presence };
+  }
+
+  async observeUiPresence() {
+    const registration = this.uiRegistration;
+    if (!registration) {
+      const presence = {
+        tracked: false,
+        alive: false,
+        instance_id: null,
+        activation_epoch_id: null,
+        pid: null,
+        process_start_token: null,
+        registered_at_unix_ms: null,
+        observed_at_unix_ms: this.now()
+      };
+      this.lastUiPresence = presence;
+      return { ...presence };
+    }
+
+    let observed;
+    try { observed = await this.asyncProcessIdentityObserver(registration.pid); }
+    catch (error) {
+      observed = { state: 'unavailable', code: error?.code || 'PROCESS_IDENTITY_UNVERIFIED' };
+    }
+
+    const current = this.uiRegistration;
+    const registrationStillCurrent = Boolean(
+      current
+      && current.instance_id === registration.instance_id
+      && Number(current.pid || 0) === Number(registration.pid || 0)
+      && normalizeProcessStartToken(current.process_start_token)
+        === normalizeProcessStartToken(registration.process_start_token)
+    );
+    if (!registrationStillCurrent) {
+      return {
+        tracked: Boolean(current),
+        alive: null,
+        instance_id: current?.instance_id || null,
+        activation_epoch_id: current?.activation_epoch_id || null,
+        pid: current?.pid || null,
+        process_start_token: current?.process_start_token || null,
+        registered_at_unix_ms: current?.registered_at_unix_ms || null,
+        observed_at_unix_ms: null
+      };
+    }
+
+    let alive = null;
+    if (observed?.state === 'absent') alive = false;
+    else if (observed?.state === 'live') alive = sameProcessIdentity(registration, observed);
+    const presence = {
+      tracked: true,
+      alive,
+      instance_id: registration.instance_id,
+      activation_epoch_id: registration.activation_epoch_id || null,
+      pid: registration.pid,
+      process_start_token: registration.process_start_token,
+      registered_at_unix_ms: registration.registered_at_unix_ms || null,
+      observed_at_unix_ms: this.now()
+    };
+    this.lastUiPresence = presence;
+    return { ...presence };
   }
 
   hasPendingUiActivation() {
@@ -353,7 +448,9 @@ class RecoveryActivation {
   }
 
   uiRevisionStatus(options = {}) {
-    const presence = this.uiPresence();
+    const presence = options.presence && typeof options.presence === 'object'
+      ? options.presence
+      : this.uiPresence({ preferCached: options.preferCachedPresence === true });
     try {
       return this.revisions.status('electron_ui', presence.alive ? this.uiRegistration?.revision || null : null, options);
     } catch (error) {
@@ -853,7 +950,7 @@ class RecoveryActivation {
       throw activationError('INVALID_UI_REGISTRATION', 'Electron UI registration is invalid.');
     }
     let observed;
-    try { observed = await this.processIdentityObserver(registration.pid); }
+    try { observed = await this.asyncProcessIdentityObserver(registration.pid); }
     catch (error) {
       throw activationError('UI_PROCESS_IDENTITY_UNVERIFIED', 'Electron UI process creation identity is unavailable.', {
         pid: registration.pid,
@@ -879,6 +976,22 @@ class RecoveryActivation {
       });
     }
     this.uiRegistration = registration;
+    const verifiedPresence = {
+      tracked: true,
+      alive: true,
+      instance_id: registration.instance_id,
+      activation_epoch_id: registration.activation_epoch_id,
+      pid: registration.pid,
+      process_start_token: registration.process_start_token,
+      registered_at_unix_ms: registration.registered_at_unix_ms,
+      observed_at_unix_ms: this.now()
+    };
+    this.lastUiPresence = verifiedPresence;
+    const verifiedRevision = (options = {}) => this.uiRevisionStatus({
+      ...options,
+      presence: verifiedPresence,
+      preferCachedPresence: true
+    });
     const epoch = this.fullCleanActivation?.current?.();
     if (epoch) {
       const epochMatches = registration.activation_epoch_id && registration.activation_epoch_id === epoch.activation_epoch_id;
@@ -889,7 +1002,7 @@ class RecoveryActivation {
           activation_epoch_id: epoch.activation_epoch_id,
           expected_activation_epoch_id: epoch.activation_epoch_id,
           code: 'UPDATE_INCOMPLETE',
-          code_revision: this.uiRevisionStatus()
+          code_revision: verifiedRevision()
         };
       }
       this.fullCleanActivation.uiRegistration = registration;
@@ -898,7 +1011,7 @@ class RecoveryActivation {
           registered: true,
           restart_required: false,
           activation_epoch_id: epoch.activation_epoch_id,
-          code_revision: this.uiRevisionStatus()
+          code_revision: verifiedRevision()
         };
       }
     }
@@ -910,7 +1023,7 @@ class RecoveryActivation {
       && item.state === 'accepted'
       && Number(item.expires_at_unix_ms || 0) > this.now()
     )) || null;
-    if (!pending) return { registered: true, restart_required: false, code_revision: this.uiRevisionStatus() };
+    if (!pending) return { registered: true, restart_required: false, code_revision: verifiedRevision() };
     if (pending.expected_disk_revision !== registration.revision) {
       if (!pending.old_instance_id) this.actions.annotate(pending.operation_id, { old_instance_id: registration.instance_id });
       return {
@@ -919,7 +1032,7 @@ class RecoveryActivation {
         operation_id: pending.operation_id,
         expires_at_unix_ms: Number(pending.expires_at_unix_ms || 0),
         expected_revision: pending.expected_disk_revision,
-        code_revision: this.uiRevisionStatus()
+        code_revision: verifiedRevision()
       };
     }
     const refreshed = this.actions.get(pending.operation_id) || pending;
@@ -929,7 +1042,7 @@ class RecoveryActivation {
       expected_disk_revision: refreshed.expected_disk_revision,
       source_checkpoint: refreshed.source_checkpoint || null
     };
-    const revision = this.uiRevisionStatus({ force: true });
+    const revision = verifiedRevision({ force: true });
     const completedAt = new Date(this.now()).toISOString();
     let postflight;
     try {
@@ -941,7 +1054,7 @@ class RecoveryActivation {
         diskRevision: revision.disk_revision,
         startedAt: refreshed.started_at,
         completedAt,
-        healthVerified: this.uiPresence().alive
+        healthVerified: verifiedPresence.alive
       });
     } catch (error) {
       const failed = this.actions.finish(pending.operation_id, 'failed', null, {

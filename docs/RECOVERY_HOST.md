@@ -44,6 +44,15 @@ khóa app root, executable và SHA-256 executable; binary đổi thì yêu cầu
 Sau spawn có cooldown 20 giây; tối đa 4 lần trong 10 phút rồi suppress 5 phút.
 Status secret-free nằm ở `%APPDATA%\\web-mcp-assistant\\recovery-supervisor-status.json`.
 
+Trong development, `stop.request` chỉ được tạo ngay trước khi `ensureRecoveryHost`
+thực sự retire/handoff Recovery Host khác checkout hoặc spawn Host đang thiếu,
+và chỉ khi installed Supervisor chưa khớp exact app-root/executable hiện tại.
+Một Electron UI chỉ attach vào exact-checkout Recovery Host đang healthy không
+được suppress Supervisor; nếu suppress ở đường attach, Host có thể biến mất sau
+đó mà Scheduled Task cố ý không resurrect. Sau một mutation/handoff development
+thành công, cài lại Supervisor từ đúng checkout để refresh manifest/script và
+xóa sentinel.
+
 ```text
 npm run recovery:supervisor:install
 npm run recovery:supervisor:status
@@ -70,6 +79,16 @@ một health observation duy nhất chứng minh discovery thuộc đúng
 SHA hiện tại. Vì vậy deferred restart từ `task_control` không phụ thuộc vào một
 CLI worker còn sống để hoàn tất ACK, nhưng vẫn không thể dùng persisted SHA,
 `tools/call` hoặc receipt của process cũ để mở admission.
+
+Managed Coding Tunnel gắn một attestation capability tĩnh vào traffic MCP được
+forward cho đúng một lifecycle MCP/Tunnel. HMAC bind capability này với
+`client_id/client_type`, activation epoch, MCP process/server identity và contract
+SHA; secret được rotate khi MCP process bị thay. Timestamp/nonce là trường bind và
+audit, không phải chữ ký per-request, vì `tunnel-client` hiện không re-sign từng
+request. Verifier vẫn từ chối timestamp tương lai, tamper và mọi binding mismatch,
+nhưng không làm capability của một process đang sống tự hết hạn theo wall clock.
+Local discovery probe của Tunnel không nhận attestation này và không thể tạo
+ChatWeb discovery receipt.
 
 Watchdog vẫn dùng `soft_recovery` theo component: Tunnel failure chỉ thay Tunnel;
 MCP exit hoặc semantic hang sau ngưỡng defer chỉ thay exact owned MCP process và
@@ -154,16 +173,18 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 - After exact process replacement, `npm start` may report the truthful pending
   receipt `activation=VERIFYING admission=closed fully_ready=false
   connector=pending` while the external connector has not contacted the new MCP
-  process yet. Recovery Host keeps the epoch closed and automatically re-enters
-  final census after either an exact current-process `tools/list` /
-  `server/discover` receipt or the activation-only compatibility bootstrap
-  described below. While only that gate is pending, the supervisor refreshes
+  process yet. Recovery Host keeps the epoch closed and re-enters final census
+  when an exact current-process `tools/list` / `server/discover` receipt arrives.
+  An activation-only compatibility bootstrap may refresh pending continuity
+  evidence, but it cannot make connector validation pass, commit the strict ACK
+  or open admission. While only that gate is pending, the supervisor refreshes
   its exact component projection with bounded live MCP/PID observations;
   lightweight UI status only consumes that completed projection and never starts
   a second heavy OS-identity/Tunnel census. The first
   cached-client `workspace_context` call can therefore return a retryable
-  bootstrap envelope; after the watchdog commits the ACK and opens admission,
-  the retry performs the real workspace read.
+  bootstrap envelope; only a later strict discovery receipt lets the watchdog
+  commit the ACK and open admission, after which the retry performs the real
+  workspace read.
 - A watchdog census may reuse the exact durable projection-rebuild receipt only
   while the epoch remains `VERIFYING`, admission remains `CLOSED`, the connector
   is the sole incomplete gate, and all recorded process, workspace, device,
@@ -364,29 +385,25 @@ checkpoint không có component cần restart.
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
 fully ready và connector contract current. Exact `tools/list` SHA vẫn là audit
 identity; persisted SHA một mình không phải process-freshness proof. Sau process
-replacement hoặc full-clean epoch, connector freshness phải đi qua một trong hai
-đường exact:
+replacement hoặc full-clean epoch chỉ có một đường connector-freshness đủ mở
+admission: target process nhận `tools/list` hoặc `server/discover` qua managed
+Tunnel, tạo receipt có verified attestation bind đúng current contract SHA,
+activation epoch, process instance và server instance; trạng thái đổi từ
+`CHANGED_NEEDS_DISCOVERY` sang `CHANGED_DISCOVERED_NEEDS_ACK`, rồi Recovery Host
+ACK exact current SHA thành `CURRENT_ACKNOWLEDGED`.
 
-1. Target process nhận `tools/list` hoặc `server/discover`, tạo receipt bind đúng
-   current contract SHA, process instance và server instance; trạng thái đổi từ
-   `CHANGED_NEEDS_DISCOVERY` sang `CHANGED_DISCOVERED_NEEDS_ACK`, rồi Recovery
-   Host ACK exact current SHA thành `CURRENT_ACKNOWLEDGED`.
-2. Khi admission của activation đang đóng và current contract khai báo exact
-   predecessor tương thích (hoặc SHA đã acknowledge chính là current SHA), cached
-   ChatWeb connector được phép gọi duy nhất `workspace_context` qua no-workspace
-   bootstrap. Đường này không resolve path, không đọc workspace/ledger, không chạy
-   tool implementation và trả `completed=false`, `retryable=true`,
-   `workspace_accessed=false`. Receipt được lưu riêng, bind `client_type=chatweb`,
-   current contract/process/server/activation epoch/timestamp. Receipt exact đầu
-   tiên của cùng boundary này là immutable; các retry tiếp theo, kể cả qua client
-   identity mới, không được đổi timestamp sau khi Recovery Host đã ghi ACK. Recovery Host chỉ
-   ACK khi mọi field exact và predecessor/boundary hợp lệ; trạng thái cuối là
-   `CURRENT_COMPATIBLE_ACKNOWLEDGED`.
+Khi admission đang đóng, cached ChatWeb connector vẫn có thể gọi no-workspace
+`workspace_context` bootstrap để chứng minh continuity. Đường này không resolve
+path, không đọc workspace/ledger, không chạy tool implementation và trả
+`completed=false`, `retryable=true`, `workspace_accessed=false`. Nó có thể tạo
+trạng thái supporting `CURRENT_COMPATIBLE_ACKNOWLEDGED`, nhưng
+`connectorContractFreshness.ready` vẫn false và full-clean gate vẫn yêu cầu strict
+rediscovery. Compatibility bootstrap không ghi `connectorRediscovered=true`,
+không tạo rediscovery timestamp và không được ghi thành ordinary successful tool
+contact. Một `tools/call` bình thường sau khi admission mở cũng không thay thế
+discovery.
 
-Compatibility bootstrap không ghi `connectorRediscovered=true`, không tạo
-rediscovery timestamp và không được ghi thành ordinary successful tool contact.
-Một `tools/call` bình thường sau khi admission mở vẫn không thay thế discovery.
-Post-ACK của cả hai đường yêu cầu `acknowledged_sha256 == tool_contract_sha256`,
+Post-ACK strict yêu cầu `acknowledged_sha256 == tool_contract_sha256`,
 `connectorRefreshRequired == false`, không còn acknowledgement pending, và final
 census phải bind lại đúng process/server/epoch trước khi mở admission. Trạng thái
 legacy `COMPATIBLE_ACKNOWLEDGED` vẫn bị từ chối. `LIVE_CLOSED` chỉ là local runtime
@@ -420,6 +437,13 @@ running revision, and disk revision. `npm run dev:replace` deliberately activate
 a stale handler first, suppresses recovery, gracefully stops that exact instance,
 launches once, and requires a new instance with matching revisions. A different
 checkout/installation is a typed refusal, not an implicit takeover.
+
+`npm run dev:status` is read-only. Its legacy `state`, `running_revision`,
+`disk_revision`, and `update_pending` fields describe only the Electron UI and
+are now marked with `revision_scope=electron_ui`. The same line separately emits
+`mcp_revision_*`, aggregate component/readiness fields, and Recovery Host
+snapshot freshness, so an Electron UI `CURRENT` result cannot be mistaken for a
+current Coding MCP process or a fully ready connector-gated stack.
 
 Sau final acceptance, Recovery Host có accepted-code auto activation. Host không
 watch source file: nó chỉ xét task current/history đã `CHECKPOINTED`, yêu cầu

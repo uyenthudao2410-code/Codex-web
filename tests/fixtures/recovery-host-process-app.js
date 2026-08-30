@@ -114,6 +114,20 @@ async function stopChild(child) {
   });
 }
 
+async function waitForRuntimeProjection(client, timeoutMs = 5000) {
+  const deadline = Date.now() + Math.max(250, Number(timeoutMs) || 5000);
+  let last = null;
+  while (Date.now() < deadline) {
+    last = await client.lightweightSnapshot();
+    if (Number(last?.mcpPid || 0) > 0 && Number(last?.tunnelPid || 0) > 0) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw Object.assign(new Error('Recovery process fixture did not publish a completed runtime projection.'), {
+    code: 'RECOVERY_FIXTURE_PROJECTION_TIMEOUT',
+    details: { snapshot: last }
+  });
+}
+
 function runtimeProjection(mcp, tunnel, supervisionCount) {
   const mcpRunning = processAlive(mcp.pid);
   const tunnelRunning = processAlive(tunnel.pid);
@@ -330,7 +344,10 @@ async function runHost(paths, dataRoot, reportFile, errorFile, nodeExecutable) {
 async function runClient(paths, reportFile, clientId, exitAfterAttach) {
   const client = new RecoveryIpcClient({ paths });
   const ping = await client.ping();
-  const snapshot = await client.lightweightSnapshot();
+  // A liveness ping is intentionally in-memory and must not hide supervision
+  // startup latency by performing blocking status work. Wait explicitly for
+  // the first completed runtime projection before grading client attachment.
+  const snapshot = await waitForRuntimeProjection(client);
   const gateway = readJson(paths.hubProxyDescriptorFile(), null);
   const reachable = await gatewayReachable(gateway?.port);
   writeJsonAtomic(reportFile, {

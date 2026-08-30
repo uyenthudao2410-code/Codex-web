@@ -21,7 +21,7 @@ const {
 } = require('../electron/services/recoveryHostLauncher');
 const { activationSourceCheckpoint: sourceCheckpointForActivation } = require('../electron/services/activationClosure');
 
-const ACTIONS = new Set(['start', 'stop', 'replace', 'refresh', 'status']);
+const ACTIONS = new Set(['start', 'stop', 'replace', 'refresh', 'status', 'control-center']);
 const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 // Electron can take tens of seconds to become ready on a cold Windows
 // profile.  A full refresh also has to start MCP, prove its health, start the
@@ -92,7 +92,7 @@ function lifecycleError(code, message, details = {}) {
 function normalizeAction(value) {
   const action = String(value || 'start').trim().toLowerCase();
   if (!ACTIONS.has(action)) {
-    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm start | npm run dev | npm run dev:status | npm run dev:stop | npm run dev:replace');
+    throw lifecycleError('DEV_UI_ACTION_INVALID', 'Usage: npm start | npm run dev | npm run dev:status | npm run dev:stop | npm run dev:replace | npm run dev:control-center');
   }
   return action;
 }
@@ -885,7 +885,7 @@ function createRuntimeDependencies(options = {}) {
     },
     launch: () => spawnElectron(executable, appRoot, [], { spawnProcess, detached: true, windowsHide: false }),
     signal: (action, instanceId) => {
-      if (!['focus', 'stop'].includes(action) || !INSTANCE_ID_PATTERN.test(String(instanceId || ''))) {
+      if (!['focus', 'stop', 'control-center'].includes(action) || !INSTANCE_ID_PATTERN.test(String(instanceId || ''))) {
         throw lifecycleError('DEV_UI_SIGNAL_INVALID', 'The Electron single-instance lifecycle signal is invalid.');
       }
       return spawnElectron(executable, appRoot, [`--dev-ui-${action}=${instanceId}`], {
@@ -1115,7 +1115,6 @@ async function statusLifecycle(deps) {
     }
   }
   const connectorState = String(runtime?.connectorContractState || 'UNAVAILABLE');
-  const connectorRediscovered = runtime?.connectorRediscovered === true;
   const connectorRefreshRequired = typeof runtime?.connectorRefreshRequired === 'boolean'
     ? String(runtime.connectorRefreshRequired)
     : 'unknown';
@@ -1127,6 +1126,12 @@ async function statusLifecycle(deps) {
   const connectorRediscoveredAt = String(runtime?.connectorRediscoveredAt || '') || 'none';
   const connectorFreshnessMode = String(runtime?.connectorFreshnessMode || '') || 'none';
   const connectorCompatibilityAcknowledgedAt = String(runtime?.connectorCompatibilityAcknowledgedAt || '') || 'none';
+  const mcpRevision = runtime?.codeRevision?.codingMcp && typeof runtime.codeRevision.codingMcp === 'object'
+    ? runtime.codeRevision.codingMcp
+    : {};
+  const booleanStatus = (value) => typeof value === 'boolean' ? String(value) : 'unknown';
+  const connectorRediscovered = booleanStatus(runtime?.connectorRediscovered);
+  const snapshotAgeMs = Number.isFinite(runtime?.snapshotAgeMs) ? String(runtime.snapshotAgeMs) : 'none';
   deps.output([
     'DEV_UI STATUS',
     `state=${ui.state || 'UNKNOWN'}`,
@@ -1138,8 +1143,21 @@ async function statusLifecycle(deps) {
     `running_revision=${ui.runningRevision || 'none'}`,
     `disk_revision=${ui.diskRevision || 'none'}`,
     `update_pending=${ui.updatePending === true ? 'true' : 'false'}`,
+    'revision_scope=electron_ui',
+    `mcp_revision_state=${String(mcpRevision.state || '') || 'unknown'}`,
+    `mcp_running_revision=${String(mcpRevision.running_revision || '') || 'none'}`,
+    `mcp_disk_revision=${String(mcpRevision.disk_revision || '') || 'none'}`,
+    `mcp_update_pending=${booleanStatus(mcpRevision.update_pending)}`,
+    `mcp_revision_checked_at=${String(mcpRevision.checked_at || '') || 'none'}`,
+    `components_ready=${booleanStatus(runtime?.componentsReady)}`,
+    `fully_ready=${booleanStatus(runtime?.fullyReady)}`,
+    `runtime_update_incomplete=${booleanStatus(runtime?.updateIncomplete)}`,
+    `runtime_telemetry_available=${booleanStatus(runtime?.telemetryAvailable)}`,
+    `runtime_signal_stale=${booleanStatus(runtime?.signalStale)}`,
+    `runtime_snapshot_source=${String(runtime?.snapshotSource || '') || 'none'}`,
+    `runtime_snapshot_age_ms=${snapshotAgeMs}`,
     `connector_state=${connectorState}`,
-    `connector_rediscovered=${connectorRediscovered ? 'true' : 'false'}`,
+    `connector_rediscovered=${connectorRediscovered}`,
     `connector_rediscovered_at=${connectorRediscoveredAt}`,
     `connector_freshness_mode=${connectorFreshnessMode}`,
     `connector_compatibility_acknowledged_at=${connectorCompatibilityAcknowledgedAt}`,
@@ -1165,6 +1183,22 @@ async function startLifecycle(deps) {
     return throwRuntimeUnavailable(deps, postflight.observation, 'start', postflight.runtime);
   }
   return reportCurrent(deps, postflight.observation, 'start', postflight.runtime);
+}
+
+async function controlCenterLifecycle(deps) {
+  const observation = await ensureCurrent(deps);
+  assertCurrentReceipt(observation);
+  await deps.signal('control-center', observation.ui.instanceId);
+  const verified = await deps.inspect();
+  assertSameDevelopmentInstallation(verified);
+  if (verified.ui.state !== 'CURRENT' || verified.ui.instanceId !== observation.ui.instanceId) {
+    throw lifecycleError(
+      'DEV_UI_CONTROL_CENTER_POSTFLIGHT_FAILED',
+      'Electron Control Center did not retain the exact current UI instance after the guarded open signal.'
+    );
+  }
+  deps.output(`DEV_UI CONTROL_CENTER action=open pid=${verified.ui.pid || 'unknown'} instance=${verified.ui.instanceId} running_revision=${verified.ui.runningRevision} disk_revision=${verified.ui.diskRevision}`);
+  return verified;
 }
 
 async function stopLifecycle(deps) {
@@ -1678,6 +1712,7 @@ async function runLifecycle(action, dependencies = null) {
   const normalized = normalizeAction(action);
   const deps = dependencies || createRuntimeDependencies();
   if (normalized === 'status') return statusLifecycle(deps);
+  if (normalized === 'control-center') return controlCenterLifecycle(deps);
   if (normalized === 'stop') return stopLifecycle(deps);
   if (normalized === 'replace') return replaceLifecycle(deps);
   if (normalized === 'refresh') return refreshLifecycle(deps);
@@ -1710,6 +1745,7 @@ module.exports = {
   statusLifecycle,
   ensureCurrent,
   startLifecycle,
+  controlCenterLifecycle,
   stopLifecycle,
   replaceLifecycle,
   refreshLifecycle,

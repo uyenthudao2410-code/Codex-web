@@ -164,10 +164,13 @@ test('V5 leaves connector acknowledgement/finalization to the exact coordinator 
   assert.match(text, /operation_id/);
   assert.match(text, /function Test-ConnectorReadySnapshot/);
   assert.match(text, /CURRENT_ACKNOWLEDGED/);
-  assert.match(text, /CURRENT_COMPATIBLE_ACKNOWLEDGED/);
   assert.match(text, /connectorRediscovered -eq \$true/);
-  assert.match(text, /connectorCompatibilityAcknowledged -eq \$true/);
-  assert.match(text, /connectorFreshnessMode -eq 'compatible_activation_bootstrap'/);
+  const connectorGate = text.slice(
+    text.indexOf('function Test-ConnectorReadySnapshot'),
+    text.indexOf('function Assert-WorkspaceMatch')
+  );
+  assert.doesNotMatch(connectorGate, /CURRENT_COMPATIBLE_ACKNOWLEDGED/);
+  assert.doesNotMatch(connectorGate, /compatible_activation_bootstrap/);
   assert.match(text, /connectorRefreshRequired -ne \$false/);
   assert.match(text, /connectorAcknowledgementPending -ne \$false/);
   assert.match(text, /Test-EpochSnapshotBinding \$lastSnapshot \$lastEpoch/);

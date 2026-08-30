@@ -13,6 +13,7 @@ const { CONNECTOR_ATTESTATION_ENV } = require('./connectorAttestation');
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   processIdentityFrom,
   sameProcessIdentity,
   terminateExactProcessTree
@@ -236,6 +237,32 @@ function runtimeFingerprint(settings) {
   })).digest('hex');
 }
 
+// The attestation capability is supplied to the MCP child through its launch
+// environment and is intentionally never persisted in plaintext.  A detached
+// child cannot be queried for its environment reliably, so keep only a
+// one-way digest in the owned runtime receipt.  This lets a subsequent start
+// distinguish the exact capability that was used for the live process while
+// preserving the existing fail-closed behavior for legacy receipts that have
+// no digest.
+function connectorAttestationSecretHash(secret) {
+  const value = String(secret || '').trim();
+  if (!value) return '';
+  return crypto.createHash('sha256').update(value, 'utf8').digest('hex');
+}
+
+function connectorAttestationSecretMatches(state, secret) {
+  const value = String(secret || '').trim();
+  // Callers that do not request a managed connector capability retain the
+  // historical reuse behavior.  There is no new secret whose binding needs
+  // to be established in that case.
+  if (!value) return true;
+  const observed = String(state?.nativeConnectorAttestationSecretHash || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(observed)) return false;
+  const expected = Buffer.from(connectorAttestationSecretHash(value), 'hex');
+  const actual = Buffer.from(observed, 'hex');
+  return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
+}
+
 function pathKey(value) {
   const normalized = path.normalize(String(value || ''));
   return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
@@ -295,6 +322,7 @@ function currentRuntimeState(input = {}) {
     'nativePid', 'nativeFingerprint', 'nativeWorkspace', 'nativePort',
     'nativePermissionMode', 'nativeToolMode', 'nativeCommand', 'nativeCodeRevision', 'nativeInstanceId', 'nativeActivationEpochId', 'nativeProcessStartToken',
     'nativeActivationExpiresAtUnixMs',
+    'nativeConnectorAttestationSecretHash',
     'nativeRuntimeMode', 'nativeModuleRoot',
     'nativeDeviceId', 'nativeDeviceInstanceId', 'startedAt',
     'chatgptToolContractSha256', 'chatgptToolContractAcknowledgedAt', 'chatgptToolContractRediscoveredAt'
@@ -311,6 +339,11 @@ class NativeService {
     this.processIdentityObserver = typeof options.processIdentityObserver === 'function'
       ? options.processIdentityObserver
       : observeProcessIdentity;
+    this.asyncProcessIdentityObserver = typeof options.asyncProcessIdentityObserver === 'function'
+      ? options.asyncProcessIdentityObserver
+      : typeof options.processIdentityObserver === 'function'
+        ? options.processIdentityObserver
+        : observeProcessIdentityAsync;
     this.exactProcessTerminator = typeof options.exactProcessTerminator === 'function'
       ? options.exactProcessTerminator
       : terminateExactProcessTree;
@@ -327,7 +360,7 @@ class NativeService {
     throw Object.assign(new Error(ownership === 'foreign' ? 'Coding MCP process state belongs to another device; refusing to adopt or terminate it.' : 'Coding MCP process state predates device ownership metadata; refusing to adopt or terminate the live process.'), { code, ownerDeviceId: String(state.nativeDeviceId || '') || null, expectedDeviceId: this.device.deviceId });
   }
 
-  async ownedIdentity(state) {
+  async ownedIdentity(state, processIdentityObserver = this.processIdentityObserver) {
     // Establish OS start-token authority before applying device ownership.
     // A live legacy record without a token must surface the typed identity
     // failure and may never be adopted or terminated.
@@ -335,7 +368,7 @@ class NativeService {
       pid: state.nativePid,
       processStartToken: state.nativeProcessStartToken
     }, {
-      processIdentityObserver: this.processIdentityObserver,
+      processIdentityObserver,
       kind: 'NATIVE'
     });
     this.assertOwnedLive(state);
@@ -364,7 +397,8 @@ class NativeService {
         nativeDeviceId: '',
         nativeDeviceInstanceId: '',
         nativeActivationEpochId: null,
-        nativeActivationExpiresAtUnixMs: null
+        nativeActivationExpiresAtUnixMs: null,
+        nativeConnectorAttestationSecretHash: ''
       };
     });
   }
@@ -404,6 +438,8 @@ class NativeService {
     const currentReceipt = storedProcessReceipt(current, 'nativePid', 'nativeProcessStartToken');
     const currentIdentity = await this.ownedIdentity(current);
     const requestedEpoch = String(options.activationEpochId || '').trim();
+    const requestedConnectorAttestationSecret = String(options.connectorAttestationSecret || '').trim();
+    const requestedConnectorAttestationSecretHash = connectorAttestationSecretHash(requestedConnectorAttestationSecret);
     const requestedExpiry = Number(options.activationExpiresAtUnixMs || options.expiresAtUnixMs || 0);
     if (requestedExpiry > 0 && !Number.isSafeInteger(requestedExpiry)) {
       throw Object.assign(new Error('Coding MCP activation expiry is invalid.'), {
@@ -415,7 +451,12 @@ class NativeService {
     const epochMatches = !requestedEpoch || String(current.nativeActivationEpochId || '').trim() === requestedEpoch;
     const expiryMatches = !requestedEpoch
       || Number(current.nativeActivationExpiresAtUnixMs || 0) === requestedExpiry;
-    if (currentIdentity && current.nativeFingerprint === fingerprint && launchAuthorityMatches && epochMatches && expiryMatches) {
+    const connectorAttestationMatches = connectorAttestationSecretMatches(
+      current,
+      requestedConnectorAttestationSecret
+    );
+    if (currentIdentity && current.nativeFingerprint === fingerprint && launchAuthorityMatches && epochMatches && expiryMatches
+      && connectorAttestationMatches) {
       // Re-read the receipt immediately before reuse; a concurrent stop or
       // replacement must not turn a stale observation into an owner claim.
       const latest = readJson(this.paths.stateFile(), {});
@@ -426,7 +467,8 @@ class NativeService {
         && latest.nativeRuntimeMode === launch.runtimeMode
         && pathKey(latest.nativeModuleRoot) === pathKey(launch.moduleRoot)
         && (!requestedEpoch || String(latest.nativeActivationEpochId || '').trim() === requestedEpoch)
-        && (!requestedEpoch || Number(latest.nativeActivationExpiresAtUnixMs || 0) === requestedExpiry)) {
+        && (!requestedEpoch || Number(latest.nativeActivationExpiresAtUnixMs || 0) === requestedExpiry)
+        && connectorAttestationSecretMatches(latest, requestedConnectorAttestationSecret)) {
         const updatePending = Boolean(latest.nativeCodeRevision && latest.nativeCodeRevision !== diskRevision);
         this.log.info('MCP Portable đã chạy trong thư mục làm việc mục tiêu', { pid: latest.nativePid, workspace: settings.workspace });
         if (updatePending) {
@@ -448,6 +490,16 @@ class NativeService {
         runningActivationEpochId: String(current.nativeActivationEpochId || '') || null,
         requestedActivationExpiresAtUnixMs: requestedExpiry || null,
         runningActivationExpiresAtUnixMs: Number(current.nativeActivationExpiresAtUnixMs || 0) || null
+      });
+    }
+    if (currentIdentity && current.nativeFingerprint === fingerprint && !connectorAttestationMatches) {
+      // Do not expose the secret or its digest in logs.  A missing digest is
+      // deliberately treated like a mismatch so a legacy live process is
+      // never adopted under a newly supplied capability.
+      this.log.warn('Coding MCP đang chạy với connector-attestation capability khác; sẽ tạo lại thay vì reuse', {
+        pid: current.nativePid,
+        requestedConnectorAttestation: true,
+        storedConnectorAttestationDigestPresent: /^[0-9a-f]{64}$/i.test(String(current.nativeConnectorAttestationSecretHash || '').trim())
       });
     }
     if (currentIdentity) {
@@ -534,6 +586,7 @@ class NativeService {
           nativeCodeRevision: diskRevision,
           nativeRuntimeMode: launch.runtimeMode,
           nativeModuleRoot: launch.moduleRoot,
+          nativeConnectorAttestationSecretHash: requestedConnectorAttestationSecretHash,
           nativeDeviceId: this.device?.deviceId || '',
           nativeDeviceInstanceId: this.device?.deviceInstanceId || '',
           startedAt: new Date().toISOString(),
@@ -597,15 +650,16 @@ class NativeService {
   async status(settings = null, options = {}) {
     const state = readJson(this.paths.stateFile(), {});
     let identity;
-    try { identity = await this.ownedIdentity(state); } catch { return false; }
+    try { identity = await this.ownedIdentity(state, this.asyncProcessIdentityObserver); } catch { return false; }
     if (!identity) return false;
     if (this.device && classifyStoredDeviceOwner(state.nativeDeviceId, this.device.deviceId) !== 'owned') return false;
     if (settings && state.nativeFingerprint !== runtimeFingerprint(settings)) return false;
     const expectedEpoch = String(options.activationEpochId || '').trim();
     if (expectedEpoch && String(state.nativeActivationEpochId || '').trim() !== expectedEpoch) return false;
     try {
-      const latest = await this.ownedIdentity(readJson(this.paths.stateFile(), {}));
-      return Boolean(latest && sameProcessIdentity(identity, latest));
+      const latest = await this.ownedIdentity(readJson(this.paths.stateFile(), {}), this.asyncProcessIdentityObserver);
+      const exact = Boolean(latest && sameProcessIdentity(identity, latest));
+      return options.returnIdentity === true ? (exact ? latest : null) : exact;
     } catch {
       return false;
     }
@@ -615,16 +669,24 @@ class NativeService {
     const state = readJson(this.paths.stateFile(), {});
     let alive = false;
     if (isAlive(state.nativePid) && normalizeProcessStartToken(state.nativeProcessStartToken)) {
-      try {
-        const observed = this.processIdentityObserver(state.nativePid);
-        alive = !observed?.then && sameProcessIdentity({
-          pid: state.nativePid,
-          process_start_token: state.nativeProcessStartToken
-        }, observed);
-      } catch { alive = false; }
+      const expected = {
+        pid: state.nativePid,
+        process_start_token: state.nativeProcessStartToken
+      };
+      const verified = options.verifiedProcessIdentity;
+      if (verified && sameProcessIdentity(expected, verified)) {
+        alive = true;
+      } else {
+        try {
+          const observed = this.processIdentityObserver(state.nativePid);
+          alive = !observed?.then && sameProcessIdentity(expected, observed);
+        } catch { alive = false; }
+      }
     }
     try {
-      const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null, options);
+      const status = this.revisions.status('coding_mcp', alive ? state.nativeCodeRevision : null, {
+        force: options.force === true
+      });
       if (!alive) return { ...status, update_pending: false, state: 'stopped', activation_epoch_id: null };
       status.activation_epoch_id = String(state.nativeActivationEpochId || '') || null;
       return status;
@@ -646,6 +708,8 @@ module.exports = {
   captureSpawnedProcessIdentity,
   requireExactStoredProcessIdentity,
   runtimeFingerprint,
+  connectorAttestationSecretHash,
+  connectorAttestationSecretMatches,
   currentRuntimeState,
   resolveNativeLaunchContract,
   buildNativeMcpEnv,

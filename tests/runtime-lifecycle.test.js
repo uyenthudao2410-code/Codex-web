@@ -10,6 +10,8 @@ const {
   NativeService,
   isAlive,
   runtimeFingerprint,
+  connectorAttestationSecretHash,
+  connectorAttestationSecretMatches,
   currentRuntimeState,
   resolveNativeLaunchContract,
   buildNativeMcpEnv,
@@ -22,6 +24,7 @@ const {
   P5_A0_SEED_HANDLE
 } = require('../electron/services/nativeService');
 const { TunnelService } = require('../electron/services/tunnelService');
+const { observeProcessIdentityAsync } = require('../electron/services/processIdentity');
 const { normalizeProxyValue } = require('../electron/services/proxyService');
 const runtimePaths = require('../electron/paths');
 const runtimeStatePath = path.join(os.tmpdir(), `webcodex-runtime-lifecycle-${process.pid}.json`);
@@ -524,14 +527,21 @@ test('native revision status is pending only when the live process has a capture
     })
   };
   const processStartToken = '10000000000000001';
+  let observerCalls = 0;
   const native = new NativeService({ info() {} }, paths, revisions, null, {
-    processIdentityObserver: (pid) => ({ state: 'live', pid, process_start_token: processStartToken })
+    processIdentityObserver: (pid) => {
+      observerCalls += 1;
+      return { state: 'live', pid, process_start_token: processStartToken };
+    }
   });
   try {
     fs.writeFileSync(runtimeStatePath, JSON.stringify({ nativePid: process.pid, nativeProcessStartToken: processStartToken, nativeCodeRevision: 'running-revision' }));
-    const pending = native.revisionStatus();
+    const pending = native.revisionStatus({
+      verifiedProcessIdentity: { pid: process.pid, process_start_token: processStartToken }
+    });
     assert.equal(pending.update_pending, true);
     assert.equal(pending.state, 'update_pending');
+    assert.equal(observerCalls, 0, 'an exact identity from the same health snapshot must prevent a duplicate blocking probe');
 
     fs.writeFileSync(runtimeStatePath, JSON.stringify({ nativePid: process.pid }));
     const legacy = native.revisionStatus();
@@ -657,6 +667,7 @@ test('connector contract stays pending until current tools/list rediscovery is o
   );
   const discovery = {
     current_contract_observed: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: contract.sha256,
     observed_at: '2026-08-18T00:00:00.000Z'
@@ -678,11 +689,13 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: currentSha };
   const discovery = {
     current_contract_observed: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: currentSha,
     observed_at: '2026-08-26T00:00:00.000Z',
     process_instance_id: processInstanceId,
-    server_instance_id: serverInstanceId
+    server_instance_id: serverInstanceId,
+    activation_epoch_id: activationEpochId
   };
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
     manualStop: false,
@@ -770,11 +783,13 @@ test('activation connector acknowledgement accepts only an exact current-process
     tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: currentSha },
     connector_tool_discovery: {
       current_contract_observed: true,
+      identity_source: 'attested_transport',
       attestation_verified: true,
       contract_sha256: currentSha,
       observed_at: new Date(nowUnixMs - 1).toISOString(),
       process_instance_id: 'process-current',
-      server_instance_id: 'server-current'
+      server_instance_id: 'server-current',
+      activation_epoch_id: activationEpochId
     }
   };
   assert.throws(
@@ -783,6 +798,18 @@ test('activation connector acknowledgement accepts only an exact current-process
       connector_tool_discovery: {
         ...health.connector_tool_discovery,
         process_instance_id: 'process-retired'
+      }
+    }, { activationEpochId, nowUnixMs }),
+    { code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED' }
+  );
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+
+  assert.throws(
+    () => orchestrator.acknowledgeExactConnectorDiscovery({
+      ...health,
+      connector_tool_discovery: {
+        ...health.connector_tool_discovery,
+        activation_epoch_id: 'activation-retired-connector-epoch-0001'
       }
     }, { activationEpochId, nowUnixMs }),
     { code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED' }
@@ -825,6 +852,7 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
   const bootstrap = {
     observed: true,
     current_contract_contact: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     client_id: 'chatweb-connector-current',
     client_type: 'chatweb',
@@ -894,9 +922,10 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
   assert.equal(acknowledged.rediscoveredAt, null);
   assert.equal(acknowledged.acknowledgedSha256, currentSha);
   assert.deepEqual(orchestrator.connectorContractFreshness(health, acknowledged), {
-    ready: true,
+    ready: false,
     mode: 'compatible_activation_bootstrap',
-    observedAt
+    observedAt,
+    reason: 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'
   });
   const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
   assert.equal(persisted.chatgptToolContractCompatibilitySource, 'declared_exact_predecessor_activation_bootstrap');
@@ -947,11 +976,13 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
 
   const currentDiscovery = {
     current_contract_observed: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: currentSha,
     observed_at: new Date(nowUnixMs - 1).toISOString(),
     process_instance_id: nextBootstrap.process_instance_id,
-    server_instance_id: nextBootstrap.server_instance_id
+    server_instance_id: nextBootstrap.server_instance_id,
+    activation_epoch_id: nextEpochId
   };
   const rediscovered = nextOrchestrator.connectorContractStatus(
     nextHealth.tool_contract,
@@ -1013,6 +1044,32 @@ test('managed connector attestation binds one Recovery Host secret to one exact 
   );
 });
 
+test('native reuse binds a requested connector attestation secret to the launch digest', () => {
+  const launchSecret = 'launch-secret-for-native-reuse';
+  const rotatedSecret = 'rotated-secret-for-native-reuse';
+  const digest = connectorAttestationSecretHash(launchSecret);
+  const state = { nativeConnectorAttestationSecretHash: digest };
+
+  assert.match(digest, /^[0-9a-f]{64}$/);
+  assert.equal(connectorAttestationSecretMatches(state, launchSecret), true);
+  assert.equal(connectorAttestationSecretMatches(state, rotatedSecret), false,
+    'a rotated capability must force the exact stop/spawn path');
+  assert.equal(connectorAttestationSecretMatches({}, rotatedSecret), false,
+    'legacy live receipts without a digest must not be adopted under a new capability');
+  assert.equal(connectorAttestationSecretMatches(state, ''), true,
+    'callers that do not request a capability retain the legacy reuse behavior');
+  assert.equal(JSON.stringify(state).includes(launchSecret), false,
+    'the raw launch capability must never be persisted in the runtime receipt');
+
+  const projected = currentRuntimeState({
+    nativePid: 123,
+    nativeConnectorAttestationSecretHash: digest,
+    unrelated: launchSecret
+  });
+  assert.equal(projected.nativeConnectorAttestationSecretHash, digest);
+  assert.equal(projected.unrelated, undefined);
+});
+
 test('connector contract state is unavailable without a current contract fingerprint', () => {
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
@@ -1063,6 +1120,7 @@ test('persisted matching connector SHA survives process restart without forcing 
 
   const discovery = {
     current_contract_observed: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: changedContract.sha256,
     observed_at: '2026-08-23T21:40:00.000Z'
@@ -1117,6 +1175,7 @@ test('reviewed exact predecessor requires live current-process ChatWeb contact b
 
   const contact = {
     current_contract_contact: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     method: 'tools/call',
     contract_sha256: currentSha,
@@ -2190,10 +2249,21 @@ test('native and tunnel stop paths require exact process identity before tree te
   }
 });
 
+test('native and tunnel health probes use non-blocking process identity observation by default', () => {
+  const native = new NativeService({ info() {} }, runtimePaths, { status() { return {}; } });
+  const tunnel = new TunnelService({ info() {} }, runtimePaths);
+  assert.equal(native.asyncProcessIdentityObserver, observeProcessIdentityAsync);
+  assert.equal(tunnel.asyncProcessIdentityObserver, observeProcessIdentityAsync);
+});
+
 function exactStopHarness(ServiceClass, prefix, token, observed) {
   const file = path.join(os.tmpdir(), `webcodex-exact-stop-${prefix}-${process.pid}-${crypto.randomBytes(4).toString('hex')}.json`);
   const fields = prefix === 'native'
-    ? { nativePid: process.pid, nativeProcessStartToken: token }
+    ? {
+      nativePid: process.pid,
+      nativeProcessStartToken: token,
+      nativeConnectorAttestationSecretHash: 'a'.repeat(64)
+    }
     : { tunnelPid: process.pid, tunnelProcessStartToken: token };
   fs.writeFileSync(file, JSON.stringify(fields), 'utf8');
   const paths = { stateFile: () => file };
@@ -2221,6 +2291,7 @@ for (const [label, ServiceClass, prefix] of [
     const state = JSON.parse(fs.readFileSync(harness.file, 'utf8'));
     assert.equal(state[`${prefix}Pid`], null);
     assert.equal(state[`${prefix}ProcessStartToken`], null);
+    if (prefix === 'native') assert.equal(state.nativeConnectorAttestationSecretHash, '');
   });
 
   test(`${label} stop rejects a recycled PID without calling the terminator`, async (t) => {

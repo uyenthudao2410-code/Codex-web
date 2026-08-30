@@ -3274,14 +3274,23 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
             ).fetchone()
         return self._hub_client_row(row) if row else None
 
-    def list_hub_clients(self, *, online_within_seconds: float = 45.0) -> list[dict[str, Any]]:
+    def list_hub_clients(
+        self,
+        *,
+        online_within_seconds: float = 45.0,
+        limit: int | None = None,
+    ) -> list[dict[str, Any]]:
         cutoff = datetime.fromtimestamp(
             time.time() - max(1.0, float(online_within_seconds)), timezone.utc
         ).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        bounded_limit = None if limit is None else max(1, min(int(limit), 1000))
+        query = "SELECT * FROM hub_clients ORDER BY last_seen_at DESC, client_id"
+        params: tuple[Any, ...] = ()
+        if bounded_limit is not None:
+            query += " LIMIT ?"
+            params = (bounded_limit,)
         with self._lock, self._connect() as connection:
-            rows = connection.execute(
-                "SELECT * FROM hub_clients ORDER BY last_seen_at DESC, client_id"
-            ).fetchall()
+            rows = connection.execute(query, params).fetchall()
         clients = [self._hub_client_row(row) for row in rows]
         for client in clients:
             client["online"] = bool(

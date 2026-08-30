@@ -129,9 +129,9 @@ sha256
 tool_count = 8
 ```
 
-Electron so fingerprint hiện tại với fingerprint mà operator đã xác nhận cho ChatGPT. Khi contract thay đổi, app hiện cảnh báo cần **Refresh actions / làm mới MCP app trong ChatGPT**. Sau khi đã refresh thành công, operator bấm **“Tôi đã làm mới ChatGPT MCP”** để ghi nhận hash hiện tại.
+Electron so fingerprint hiện tại với fingerprint đã được connector thực sự discover. Khi contract hoặc MCP process thay đổi, app yêu cầu **Refresh actions / Scan Tools / reconnect hoặc recreate MCP app trong ChatGPT** theo khả năng của workspace. Nút **“Kiểm tra lại trạng thái”** chỉ poll bằng chứng; Recovery Host chỉ tự ACK sau khi MCP process hiện tại nhận `tools/list` hoặc `server/discover` từ external ChatGPT connector qua managed Tunnel, có attestation hợp lệ và khớp exact activation epoch, process/server identity cùng contract SHA. Xác nhận thủ công, `tools/call`, persisted hash và raw localhost HTTP không thay thế receipt này.
 
-Cơ chế này là **stale-schema detection**, không giả định ChatGPT sẽ tự động nhận schema mới. Việc refresh/re-publish phía ChatGPT vẫn phụ thuộc khả năng của workspace/host.
+Cơ chế này là **stale-schema detection fail-closed**, không giả định ChatGPT sẽ tự động nhận schema mới và repository không có API để tự ép connector phía ChatGPT rescan. Việc refresh/re-publish phía ChatGPT vẫn phụ thuộc khả năng của workspace/host.
 
 ### Vì sao chỉ giữ 8 tool?
 
@@ -570,7 +570,7 @@ Desktop proxy gửi heartbeat định kỳ khi stdio còn attach, nhưng không 
 
 Trong desktop app, nút **“Khởi động lại toàn bộ dịch vụ”** luôn yêu cầu exact accepted source checkpoint và chạy `full_clean_activation`: đóng admission, thay Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và Electron UI bằng process mới cùng một `activation_epoch_id`, rồi chỉ báo READY sau final census + connector discovery/ACK. Nút này không còn là stop/start riêng MCP và Tunnel.
 
-Nếu MCP tool contract thay đổi, sau restart app có thể hiện cảnh báo connector stale. Khi đó refresh/recreate MCP app phía ChatGPT theo khả năng workspace, mở chat mới nếu cần, xác minh schema mới rồi mới xác nhận contract trong desktop app.
+Nếu MCP tool contract thay đổi, sau restart app có thể hiện cảnh báo connector stale. Khi đó refresh/recreate MCP app phía ChatGPT theo khả năng workspace, mở chat mới nếu cần, rồi dùng **“Kiểm tra lại trạng thái”**. Desktop chỉ tự ACK khi nhận exact managed-attested `tools/list`/`server/discover` receipt; thao tác của operator không tự nó xác nhận contract.
 
 ### Chạy test của desktop app
 

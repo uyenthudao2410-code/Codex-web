@@ -150,7 +150,20 @@ async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   return child.pid;
 }
 
-function suppressDevelopmentRecoverySupervisor({ env = process.env, fsApi = fs, now = () => new Date() } = {}) {
+function sameAbsolutePath(left, right) {
+  const lhs = String(left || '').trim();
+  const rhs = String(right || '').trim();
+  if (!lhs || !rhs || !path.isAbsolute(lhs) || !path.isAbsolute(rhs)) return false;
+  return path.resolve(lhs).toLowerCase() === path.resolve(rhs).toLowerCase();
+}
+
+function suppressDevelopmentRecoverySupervisor({
+  env = process.env,
+  fsApi = fs,
+  now = () => new Date(),
+  expectedAppRoot = '',
+  expectedExecutable = ''
+} = {}) {
   const localAppData = String(env?.LOCALAPPDATA || '').trim();
   if (!localAppData || !path.isAbsolute(localAppData)) return { suppressed: false, reason: 'local_app_data_unavailable' };
   const installRoot = path.join(localAppData, 'WebMcpRecoverySupervisor');
@@ -165,6 +178,10 @@ function suppressDevelopmentRecoverySupervisor({ env = process.env, fsApi = fs, 
   }
   if (manifest?.schema_version !== 1 || String(manifest?.mode || '') !== 'development') {
     return { suppressed: false, reason: 'not_development_supervisor' };
+  }
+  if (sameAbsolutePath(manifest.app_root, expectedAppRoot)
+    && sameAbsolutePath(manifest.executable, expectedExecutable)) {
+    return { suppressed: false, reason: 'matching_development_supervisor' };
   }
   fsApi.mkdirSync(installRoot, { recursive: true });
   fsApi.writeFileSync(path.join(installRoot, 'stop.request'), now().toISOString(), { encoding: 'ascii', mode: 0o600 });
@@ -241,7 +258,26 @@ async function waitForProcessExit(pid, {
   return !processAlive(pid);
 }
 
-async function readVerifiedReadyHost(client, paths, readDescriptor = loadRecoveryDescriptor, attempts = 2) {
+function controlPlaneAvailableStatus(status) {
+  if (!status || typeof status !== 'object' || Array.isArray(status)) return false;
+  if (status.ready === true) return true;
+  // A host that deliberately keeps admission closed for an invalid/legacy
+  // durable epoch still owns a live authenticated IPC endpoint.  Treat that
+  // state as a usable control-plane target so callers can issue the explicit
+  // full-clean refresh instead of spawning a duplicate Recovery Host behind
+  // the same ownership lock.  This does not imply runtime or connector
+  // readiness; consumers must continue to inspect `status.ready`.
+  return status.ready === false
+    && ['update_incomplete', 'bootstrapping'].includes(String(status.state || '').trim().toLowerCase());
+}
+
+async function readVerifiedReadyHost(
+  client,
+  paths,
+  readDescriptor = loadRecoveryDescriptor,
+  attempts = 2,
+  { allowAdmissionBlocked = false } = {}
+) {
   let lastError = null;
   for (let attempt = 0; attempt < Math.max(1, Number(attempts) || 1); attempt += 1) {
     try {
@@ -264,7 +300,11 @@ async function readVerifiedReadyHost(client, paths, readDescriptor = loadRecover
           }
         });
       }
-      return status?.ready ? { descriptor, status } : null;
+      if (status?.ready === true) return { descriptor, status, controlPlaneAvailable: true };
+      if (allowAdmissionBlocked && controlPlaneAvailableStatus(status)) {
+        return { descriptor, status, controlPlaneAvailable: true };
+      }
+      return null;
     } catch (error) {
       lastError = error;
       if (error?.code !== 'RECOVERY_DESCRIPTOR_CHANGED') throw error;
@@ -427,20 +467,27 @@ async function ensureRecoveryHost({
   sleep = wait,
   suppressDevelopmentSupervisor = suppressDevelopmentRecoverySupervisor
 }) {
-  if (!app.isPackaged) {
-    const supervisor = suppressDevelopmentSupervisor();
+  let developmentSupervisorChecked = false;
+  const suppressDevelopmentSupervisorBeforeMutation = () => {
+    if (app.isPackaged || developmentSupervisorChecked) return;
+    developmentSupervisorChecked = true;
+    const supervisor = suppressDevelopmentSupervisor({
+      expectedAppRoot: typeof paths?.appRoot === 'function' ? paths.appRoot() : app.getAppPath(),
+      expectedExecutable: typeof paths?.executablePath === 'function' ? paths.executablePath() : process.execPath
+    });
     if (supervisor?.suppressed) {
       log?.warn?.('Disabled a persisted development Recovery Supervisor so it cannot resurrect another checkout.');
     }
-  }
+  };
 
   const client = clientFactory({ paths });
   const expectedIdentity = typeof paths.runtimeIdentity === 'function' ? paths.runtimeIdentity() : null;
   try {
-    const existing = await readVerifiedReadyHost(client, paths, readDescriptor, 2);
-    if (existing?.status?.ready) {
+    const existing = await readVerifiedReadyHost(client, paths, readDescriptor, 2, { allowAdmissionBlocked: true });
+    if (existing?.controlPlaneAvailable) {
       if (expectedIdentity && descriptorMatchesInstallation(existing.descriptor, expectedIdentity)) return client;
       if (app.isPackaged || !expectedIdentity) throw installationMismatchError(expectedIdentity, existing.descriptor);
+      suppressDevelopmentSupervisorBeforeMutation();
       await retireStaleDevelopmentRecoveryHost({
         client,
         paths,
@@ -463,6 +510,7 @@ async function ensureRecoveryHost({
   const executablePath = typeof paths?.executablePath === 'function'
     ? String(paths.executablePath() || '').trim()
     : '';
+  suppressDevelopmentSupervisorBeforeMutation();
   await spawnRecoveryHost(app, spawnProcess, {
     ...(executablePath ? { executablePath } : {})
   });
@@ -470,8 +518,8 @@ async function ensureRecoveryHost({
   let lastError = null;
   while (Date.now() < deadline) {
     try {
-      const ready = await readVerifiedReadyHost(client, paths, readDescriptor, 2);
-      if (ready?.status?.ready) {
+      const ready = await readVerifiedReadyHost(client, paths, readDescriptor, 2, { allowAdmissionBlocked: true });
+      if (ready?.controlPlaneAvailable) {
         if (!expectedIdentity || descriptorMatchesInstallation(ready.descriptor, expectedIdentity)) return client;
         lastError = installationMismatchError(expectedIdentity, ready.descriptor);
       }
@@ -505,6 +553,7 @@ module.exports = {
   descriptorMatchesInstallation,
   descriptorRequestOptions,
   readVerifiedReadyHost,
+  controlPlaneAvailableStatus,
   retireStaleDevelopmentRecoveryHost,
   waitForProcessExit,
   installationMismatchError,

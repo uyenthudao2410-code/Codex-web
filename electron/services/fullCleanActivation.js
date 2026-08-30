@@ -330,10 +330,12 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
       add('DISCOVERY_RECEIPT_MISSING');
     } else {
       if (discovery.current_contract_observed !== true) add('CURRENT_CONTRACT_NOT_REDISCOVERED');
+      if (text(discovery.identity_source) !== 'attested_transport') add('DISCOVERY_IDENTITY_SOURCE_INVALID');
       if (discovery.attestation_verified !== true) add('DISCOVERY_ATTESTATION_INVALID');
       if (text(discovery.contract_sha256) !== currentSha256) add('DISCOVERY_CONTRACT_SHA256_MISMATCH');
       if (text(discovery.process_instance_id) !== processInstanceId) add('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH');
       if (text(discovery.server_instance_id) !== serverInstanceId) add('DISCOVERY_SERVER_INSTANCE_ID_MISMATCH');
+      if (text(discovery.activation_epoch_id) !== activationEpochId) add('DISCOVERY_ACTIVATION_EPOCH_ID_MISMATCH');
       if (!discoveryObservedAt || !Number.isFinite(discoveryObservedAtUnixMs)) add('DISCOVERY_TIMESTAMP_INVALID');
       else if (Number.isSafeInteger(nowUnixMs)
         && discoveryObservedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('DISCOVERY_FROM_FUTURE');
@@ -353,6 +355,7 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
       add('COMPATIBILITY_BOOTSTRAP_RECEIPT_MISSING');
     } else {
       if (activationBootstrap.current_contract_contact !== true) add('COMPATIBILITY_BOOTSTRAP_NOT_CURRENT');
+      if (text(activationBootstrap.identity_source) !== 'attested_transport') add('COMPATIBILITY_BOOTSTRAP_IDENTITY_SOURCE_INVALID');
       if (activationBootstrap.attestation_verified !== true) add('COMPATIBILITY_BOOTSTRAP_ATTESTATION_INVALID');
       if (text(activationBootstrap.client_type) !== 'chatweb') add('COMPATIBILITY_BOOTSTRAP_CLIENT_TYPE_INVALID');
       if (!text(activationBootstrap.client_id)) add('COMPATIBILITY_BOOTSTRAP_CLIENT_ID_MISSING');
@@ -395,8 +398,20 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
   };
 }
 
-function reusablePendingProjectionObservation(record) {
-  const verification = record?.verification;
+function reusablePendingProjectionObservation(record, { allowCommitted = false } = {}) {
+  // A pending VERIFYING census can be reused by the watchdog/finalize path
+  // while admission is closed.  The same immutable projection is also useful
+  // for the narrow post-commit identity fence immediately before
+  // `complete_epoch`; in that case the store is READY_COMMITTED but admission
+  // is still CLOSED and the proof has moved under `verification.final_census`.
+  // Keep the default strict (READY_COMMITTED is not reusable) so callers must
+  // opt into this bounded revalidation explicitly.
+  const verificationContainer = record?.verification;
+  const verification = verificationContainer?.final_census
+    && typeof verificationContainer.final_census === 'object'
+    && !Array.isArray(verificationContainer.final_census)
+    ? verificationContainer.final_census
+    : verificationContainer;
   const receipt = verification?.projection_rebuild_receipt;
   const connectorValidation = verification?.connector_validation;
   const strictConnectorReceipt = Boolean(
@@ -409,7 +424,7 @@ function reusablePendingProjectionObservation(record) {
   );
   const reusable = Boolean(
     record
-    && record.state === 'VERIFYING'
+    && (record.state === 'VERIFYING' || (allowCommitted && record.state === 'READY_COMMITTED'))
     && record.admission_state === 'CLOSED'
     && verification && typeof verification === 'object' && !Array.isArray(verification)
     && verification.projection_rebuild_verified === true
@@ -1713,7 +1728,11 @@ class FullCleanActivation {
     }
   }
 
-  async finalCensus(activationEpochId, { expectedOldInstanceId = '', reusePendingProjection = false } = {}) {
+  async finalCensus(activationEpochId, {
+    expectedOldInstanceId = '',
+    reusePendingProjection = false,
+    revalidateCommitted = false
+  } = {}) {
     const epochId = text(activationEpochId);
     if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required for final census.');
     const record = this.store.current();
@@ -1725,7 +1744,9 @@ class FullCleanActivation {
     let activationObservationFailure = null;
     let projectionObservationReused = false;
     if (reusePendingProjection === true) {
-      activationObservation = reusablePendingProjectionObservation(record);
+      activationObservation = reusablePendingProjectionObservation(record, {
+        allowCommitted: revalidateCommitted === true
+      });
       projectionObservationReused = Boolean(activationObservation);
     }
     if (!activationObservation) {
@@ -2063,6 +2084,140 @@ class FullCleanActivation {
       lifecycle_decision: activationObservation?.lifecycle_decision || null,
       reason: pass ? null : 'UPDATE_INCOMPLETE',
       runtime
+    };
+  }
+
+  /**
+   * Revalidate the committed component identities at the last safe point
+   * before Coding MCP admission is opened.  `finalize()` first commits the
+   * immutable READY proof while admission is CLOSED; this method is then
+   * called by RuntimeOrchestrator immediately before it sends `complete_epoch`.
+   * A process, Tunnel, UI, or Recovery-Plane replacement between those two
+   * observations must therefore fail closed instead of opening MCP under a
+   * proof for a different runtime.
+   *
+   * The recheck deliberately reuses only the exact projection receipt already
+   * committed for this epoch.  It still performs fresh live identity/health
+   * reads through `finalCensus`; no ledger mutation or synthetic connector
+   * receipt is created here.
+   */
+  async revalidateBeforeAdmission({
+    activationEpochId,
+    readyCommitDigest = '',
+    expiresAtUnixMs = 0
+  } = {}) {
+    const epochId = text(activationEpochId);
+    const digest = text(readyCommitDigest);
+    if (!epochId) throw epochError('ACTIVATION_EPOCH_ID_REQUIRED', 'Activation epoch is required for admission revalidation.');
+    const record = this.store.current();
+    if (!record || text(record.activation_epoch_id) !== epochId) {
+      throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Admission revalidation must target the current durable activation epoch.');
+    }
+    if (record.state !== 'READY_COMMITTED' || record.admission_state !== 'CLOSED') {
+      throw epochError('UPDATE_INCOMPLETE', 'Admission revalidation requires the exact closed READY_COMMITTED proof.', {
+        activation_epoch_id: epochId,
+        state: record.state || null,
+        admission_state: record.admission_state || null
+      });
+    }
+    if (!digest || text(record.ready_commit_digest) !== digest) {
+      throw epochError('ACTIVATION_EPOCH_READY_COMMIT_CONFLICT', 'Admission revalidation digest does not match the durable READY proof.', {
+        activation_epoch_id: epochId,
+        expected_ready_commit_digest: text(record.ready_commit_digest) || null,
+        supplied_ready_commit_digest: digest || null
+      });
+    }
+    const durableExpiry = Number(record.expires_at_unix_ms || 0);
+    const suppliedExpiry = Number(expiresAtUnixMs || 0);
+    if (suppliedExpiry > 0 && durableExpiry !== suppliedExpiry) {
+      throw epochError('ACTIVATION_EPOCH_EXPIRY_MISMATCH', 'Admission revalidation expiry does not match the durable activation.', {
+        activation_epoch_id: epochId,
+        durable_expires_at_unix_ms: durableExpiry || null,
+        supplied_expires_at_unix_ms: suppliedExpiry
+      });
+    }
+
+    const committed = record.verification?.final_census;
+    if (!committed || typeof committed !== 'object' || Array.isArray(committed)) {
+      throw epochError('UPDATE_INCOMPLETE', 'The durable READY proof has no committed final census for admission revalidation.', {
+        activation_epoch_id: epochId
+      });
+    }
+
+    const expectedOldInstanceId = text(record.component_evidence?.recovery_host?.instance_id);
+    let fresh;
+    try {
+      fresh = await this.finalCensus(epochId, {
+        expectedOldInstanceId,
+        reusePendingProjection: true,
+        revalidateCommitted: true
+      });
+    } catch (error) {
+      if (error?.code) throw error;
+      throw epochError('UPDATE_INCOMPLETE', 'The final live identity revalidation failed before MCP admission.', {
+        activation_epoch_id: epochId,
+        cause_code: text(error?.code) || null,
+        message: text(error?.message) || null
+      });
+    }
+    if (!fresh || fresh.pass !== true) {
+      throw epochError('UPDATE_INCOMPLETE', 'A live component identity changed before MCP admission.', {
+        activation_epoch_id: epochId,
+        revalidation: fresh || null
+      });
+    }
+
+    // Compare every identity captured in the committed census.  Optional
+    // Recovery-Tunnel fields may legitimately be null when that plane is not
+    // configured; a one-sided value is still a mismatch.  Connector receipt
+    // timestamps are intentionally not compared byte-for-byte because a
+    // second valid discovery on the same process is allowed to refresh it.
+    const identityFields = [
+      'activation_epoch_id', 'host_instance_id', 'host_pid',
+      'process_instance_id', 'server_instance_id', 'supervisor_instance_id',
+      'tunnel_instance_id', 'tunnel_pid',
+      'recovery_mcp_instance_id', 'recovery_mcp_pid',
+      'recovery_tunnel_instance_id', 'recovery_tunnel_pid',
+      'ui_instance_id', 'ui_running_revision', 'recovery_host_running_revision',
+      'running_revision', 'disk_revision'
+    ];
+    const normalizeIdentity = (field, value) => {
+      if (field.endsWith('_pid')) {
+        const number = Number(value);
+        return Number.isSafeInteger(number) && number > 0 ? number : null;
+      }
+      return text(value) || null;
+    };
+    const mismatches = [];
+    for (const field of identityFields) {
+      const expected = normalizeIdentity(field, committed[field]);
+      const observed = normalizeIdentity(field, fresh[field]);
+      if (expected !== observed) mismatches.push({ field, expected, observed });
+    }
+    if (mismatches.length > 0) {
+      throw epochError('UPDATE_INCOMPLETE', 'A committed activation identity no longer matches the live process set.', {
+        activation_epoch_id: epochId,
+        mismatches
+      });
+    }
+
+    // Ensure the durable record did not change while the asynchronous census
+    // was running.  This closes a second CAS window before the orchestrator
+    // sends the external MCP mutation.
+    const after = this.store.current();
+    if (!after || text(after.activation_epoch_id) !== epochId
+      || after.state !== 'READY_COMMITTED'
+      || after.admission_state !== 'CLOSED'
+      || text(after.ready_commit_digest) !== digest) {
+      throw epochError('ACTIVATION_EPOCH_CONFLICT', 'The durable READY proof changed during admission revalidation.', {
+        activation_epoch_id: epochId
+      });
+    }
+    return {
+      valid: true,
+      activation_epoch_id: epochId,
+      ready_commit_digest: digest,
+      census: fresh
     };
   }
 

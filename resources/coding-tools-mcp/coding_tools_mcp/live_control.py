@@ -53,7 +53,10 @@ def control_presence_projection(
 ) -> dict[str, Any]:
     """Project current client/authority/continuity facts without analytics."""
     ledger = runtime.orchestration_ledger
-    clients = ledger.list_hub_clients(online_within_seconds=client_online_seconds)
+    clients = ledger.list_hub_clients(
+        online_within_seconds=client_online_seconds,
+        limit=16,
+    )
     cursors = ledger.list_hub_client_cursors(run_id=run_id) if include_cursors and run_id else []
     cursor_by_client = {str(item.get("client_id") or ""): item for item in cursors}
     client_view: list[dict[str, Any]] = []
@@ -231,10 +234,11 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
     projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     ledger = runtime.orchestration_ledger
     run_id = str(projection.get("run_id") or "").strip()
-    if not run_id:
-        active = ledger.peek_current_active_run()
-        if active:
-            run_id = str(active.get("run_id") or "").strip()
+    # The task-state projection is the current UI binding.  Ledger rows remain
+    # durable execution history, but an "active" row without this exact binding
+    # is not authority for the two-second live poll.  Falling back to the newest
+    # ledger row can both surface an unrelated stale run and make an idle panel
+    # perform unnecessary projection reads on every refresh.
 
     run = ledger.get_run(run_id) if run_id else None
     live_projection = ledger.live_run_projection(run_id) if run_id else {

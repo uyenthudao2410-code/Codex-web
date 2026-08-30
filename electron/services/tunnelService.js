@@ -15,6 +15,7 @@ const { classifyStoredDeviceOwner } = require('./deviceIdentity');
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   sameProcessIdentity,
   terminateExactProcessTree
 } = require('./processIdentity');
@@ -88,6 +89,11 @@ class TunnelService {
     this.processIdentityObserver = typeof options.processIdentityObserver === 'function'
       ? options.processIdentityObserver
       : observeProcessIdentity;
+    this.asyncProcessIdentityObserver = typeof options.asyncProcessIdentityObserver === 'function'
+      ? options.asyncProcessIdentityObserver
+      : typeof options.processIdentityObserver === 'function'
+        ? options.processIdentityObserver
+        : observeProcessIdentityAsync;
     this.exactProcessTerminator = typeof options.exactProcessTerminator === 'function'
       ? options.exactProcessTerminator
       : terminateExactProcessTree;
@@ -267,7 +273,7 @@ class TunnelService {
   async status(settings, options = {}) {
     const state = readJson(this.paths.stateFile(), {});
     let identity;
-    try { identity = await this.ownedIdentity(state); } catch { return false; }
+    try { identity = await this.ownedIdentity(state, this.asyncProcessIdentityObserver); } catch { return false; }
     if (!identity) return false;
     if (this.device && classifyStoredDeviceOwner(state.tunnelDeviceId, this.device.deviceId) !== 'owned') return false;
     if (state.tunnelFingerprint !== tunnelFingerprint(settings, this.device?.deviceId || '', options.activationEpochId || '')) return false;
@@ -282,21 +288,21 @@ class TunnelService {
     const healthy = await this.probeControlPlaneHealth(settings, Number(state.tunnelPid));
     if (!healthy) return false;
     try {
-      const latest = await this.ownedIdentity(readJson(this.paths.stateFile(), {}));
+      const latest = await this.ownedIdentity(readJson(this.paths.stateFile(), {}), this.asyncProcessIdentityObserver);
       return Boolean(latest && sameProcessIdentity(identity, latest));
     } catch {
       return false;
     }
   }
 
-  async ownedIdentity(state) {
+  async ownedIdentity(state, processIdentityObserver = this.processIdentityObserver) {
     // Require the OS start token before applying device ownership.  A live
     // legacy receipt without a token must fail with the typed identity error.
     const identity = await requireExactStoredProcessIdentity({
       pid: state.tunnelPid,
       processStartToken: state.tunnelProcessStartToken
     }, {
-      processIdentityObserver: this.processIdentityObserver,
+      processIdentityObserver,
       kind: 'TUNNEL'
     });
     this.assertOwnedLive(state);

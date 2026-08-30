@@ -11,7 +11,7 @@
  */
 
 const fs = require('node:fs');
-const { spawnSync } = require('node:child_process');
+const { spawn, spawnSync } = require('node:child_process');
 
 const PROCESS_START_TOKEN_PATTERN = /^[0-9]{1,32}$/;
 const MAX_PROBE_OUTPUT_BYTES = 512;
@@ -33,6 +33,19 @@ const POWERSHELL_OBSERVE_SCRIPT = [
 ].join('; ');
 
 let currentProcessToken = null;
+
+function windowsProbeArgs(pid) {
+  return [
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command',
+    POWERSHELL_OBSERVE_SCRIPT,
+    String(pid)
+  ];
+}
 
 function identityError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -133,16 +146,7 @@ function defaultWindowsProbe(pid, options = {}) {
   const spawn = options.spawnSync || spawnSync;
   let result;
   try {
-    result = spawn('powershell.exe', [
-      '-NoLogo',
-      '-NoProfile',
-      '-NonInteractive',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-Command',
-      POWERSHELL_OBSERVE_SCRIPT,
-      String(pid)
-    ], {
+    result = spawn('powershell.exe', windowsProbeArgs(pid), {
       windowsHide: true,
       shell: false,
       encoding: 'utf8',
@@ -167,6 +171,71 @@ function defaultWindowsProbe(pid, options = {}) {
   return token ? liveIdentity(pid, token) : unavailableIdentity(pid);
 }
 
+function defaultWindowsProbeAsync(pid, options = {}) {
+  const spawnProcess = options.spawn || spawn;
+  const timeoutMs = Math.max(100, Number(options.timeoutMs) || DEFAULT_PROBE_TIMEOUT_MS);
+  return new Promise((resolve) => {
+    let child;
+    let timer = null;
+    let settled = false;
+    let total = 0;
+    const chunks = [];
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(value);
+    };
+    try {
+      child = spawnProcess('powershell.exe', windowsProbeArgs(pid), {
+        windowsHide: true,
+        shell: false,
+        stdio: ['ignore', 'pipe', 'ignore']
+      });
+    } catch (error) {
+      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }));
+      return;
+    }
+    if (!child?.stdout || typeof child.once !== 'function') {
+      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_process_invalid' }));
+      return;
+    }
+    child.stdout.on('data', (chunk) => {
+      if (settled) return;
+      const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      total += value.length;
+      if (total > MAX_PROBE_OUTPUT_BYTES) {
+        try { child.kill?.(); } catch {}
+        finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_output_too_large' }));
+        return;
+      }
+      chunks.push(value);
+    });
+    child.once('error', (error) => {
+      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }));
+    });
+    child.once('close', (code) => {
+      if (settled) return;
+      if (Number(code) === 3) {
+        finish(absentIdentity(pid));
+        return;
+      }
+      if (Number(code) !== 0) {
+        finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { exit_code: code }));
+        return;
+      }
+      const tokenText = Buffer.concat(chunks).toString('utf8').replace(/^\uFEFF/, '').trim();
+      const token = normalizeProcessStartToken(tokenText);
+      finish(token ? liveIdentity(pid, token) : unavailableIdentity(pid));
+    });
+    timer = setTimeout(() => {
+      try { child.kill?.(); } catch {}
+      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_timeout' }));
+    }, timeoutMs);
+    timer.unref?.();
+  });
+}
+
 /**
  * Observe the OS process identity without mutating the process.
  *
@@ -188,6 +257,25 @@ function observeProcessIdentity(pidValue, options = {}) {
   let observed;
   if (process.platform === 'win32') observed = defaultWindowsProbe(pid, options);
   else if (process.platform === 'linux') observed = readLinuxProcessIdentity(pid);
+  else observed = unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'unsupported_platform' });
+  if (pid === process.pid && observed.state === 'live' && !options.noCache) currentProcessToken = observed.process_start_token;
+  return observed;
+}
+
+async function observeProcessIdentityAsync(pidValue, options = {}) {
+  const pid = normalizePid(pidValue);
+  if (!pid) return unavailableIdentity(null, 'PROCESS_IDENTITY_INVALID');
+  if (typeof options.observe === 'function') {
+    try { return normalizeObservation(await options.observe(pid), pid); }
+    catch (error) { return unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }); }
+  }
+  const platform = String(options.platform || process.platform);
+  if (pid === process.pid && platform === 'win32' && currentProcessToken && !options.noCache) {
+    return liveIdentity(pid, currentProcessToken);
+  }
+  let observed;
+  if (platform === 'win32') observed = await defaultWindowsProbeAsync(pid, options);
+  else if (platform === 'linux') observed = readLinuxProcessIdentity(pid);
   else observed = unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'unsupported_platform' });
   if (pid === process.pid && observed.state === 'live' && !options.noCache) currentProcessToken = observed.process_start_token;
   return observed;
@@ -366,6 +454,7 @@ module.exports = {
   normalizeProcessStartToken,
   processIdentityFrom,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   sameProcessIdentity,
   requireLiveProcessIdentity,
   terminateExactProcessTree,

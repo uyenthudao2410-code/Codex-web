@@ -117,6 +117,14 @@ test('Recovery Host revision owns the connector attestation boundary it loads', 
   );
 });
 
+test('Electron UI revision owns its real-renderer performance collector', () => {
+  assert.equal(
+    COMPONENT_SPECS.electron_ui.files.includes('electron/services/uiPerformanceMetrics.js'),
+    true
+  );
+  assert.equal(componentOwnsPath('electron_ui', 'electron/services/uiPerformanceMetrics.js'), true);
+});
+
 test('Recovery Host revision manifest owns stale-host bootstrap source', () => {
   assert.equal(
     COMPONENT_SPECS.recovery_host.files.includes('electron/services/recoveryBootstrap.js'),

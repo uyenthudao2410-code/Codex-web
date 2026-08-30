@@ -11,7 +11,6 @@ from typing import Any
 CONNECTOR_ATTESTATION_HEADER = "X-Coding-Tools-Connector-Attestation"
 CONNECTOR_ATTESTATION_ENV = "CODING_TOOLS_MCP_CONNECTOR_ATTESTATION_SECRET"
 CONNECTOR_ATTESTATION_VERSION = "v1"
-CONNECTOR_ATTESTATION_MAX_AGE_MS = 15 * 60 * 1000
 CONNECTOR_ATTESTATION_MAX_FUTURE_SKEW_MS = 5_000
 _FIELD_RE = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
 _HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -60,11 +59,14 @@ def build_connector_attestation(
     issued_at_unix_ms: int | None = None,
     nonce: str | None = None,
 ) -> str:
-    """Build the static transport proof injected by the managed tunnel.
+    """Build the lifecycle-bound transport proof injected by the managed tunnel.
 
     The secret is never included in the wire value.  The value binds the
     caller label and the exact runtime identities so a receipt cannot be
-    replayed after a process, server, epoch, or contract replacement.
+    replayed after a process, server, epoch, or contract replacement.  The
+    managed tunnel injects one static value for that exact lifecycle; the
+    issuance timestamp and nonce are binding/audit fields, not per-request
+    freshness claims.
     """
 
     key = _text(secret).encode("utf-8")
@@ -108,7 +110,7 @@ def verify_connector_attestation(
     contract_sha256: object,
     now_unix_ms: int | None = None,
 ) -> tuple[bool, str]:
-    """Verify an attestation without returning secret-bearing diagnostics."""
+    """Verify a lifecycle-bound attestation without secret-bearing diagnostics."""
 
     key = _text(secret).encode("utf-8")
     raw = _text(value)
@@ -134,8 +136,6 @@ def verify_connector_attestation(
     now = int(now_unix_ms if now_unix_ms is not None else time.time() * 1000)
     if issued_at <= 0 or issued_at > now + CONNECTOR_ATTESTATION_MAX_FUTURE_SKEW_MS:
         return False, "timestamp_invalid"
-    if now - issued_at > CONNECTOR_ATTESTATION_MAX_AGE_MS:
-        return False, "timestamp_expired"
     expected_values = {
         "client_id": _text(client_id),
         "client_type": _text(client_type).lower().replace("-", "_"),
@@ -172,4 +172,3 @@ def attestation_metadata(identity: dict[str, Any]) -> dict[str, Any]:
         "attestation_verified": identity.get("attestation_verified") is True,
         "attestation_source": _text(identity.get("attestation_source")) or "none",
     }
-

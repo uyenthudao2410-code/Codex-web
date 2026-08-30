@@ -2,11 +2,14 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
+const { PassThrough } = require('node:stream');
 
 const {
   POWERSHELL_OBSERVE_SCRIPT,
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeProcessIdentityAsync,
   terminateExactProcessTree,
   waitForExactProcessExit
 } = require('../electron/services/processIdentity');
@@ -216,5 +219,43 @@ test('Windows observation uses fixed PowerShell command, structured argv, and bo
   assert.equal(options.windowsHide, true);
   assert.equal(options.timeout, 1_234);
   assert.equal(options.maxBuffer, 512);
+  assert.deepEqual(options.stdio, ['ignore', 'pipe', 'ignore']);
+});
+
+test('asynchronous Windows observation preserves the exact structured probe without blocking spawnSync', async () => {
+  const calls = [];
+  const observed = await observeProcessIdentityAsync(PID, {
+    platform: 'win32',
+    noCache: true,
+    timeoutMs: 1_234,
+    spawn: (command, args, options) => {
+      calls.push({ command, args, options });
+      const child = new EventEmitter();
+      child.stdout = new PassThrough();
+      child.kill = () => true;
+      queueMicrotask(() => {
+        child.stdout.end(START_TOKEN);
+        child.emit('close', 0);
+      });
+      return child;
+    }
+  });
+
+  assert.deepEqual(observed, live());
+  assert.equal(calls.length, 1);
+  const [{ command, args, options }] = calls;
+  assert.equal(command, 'powershell.exe');
+  assert.deepEqual(args.slice(0, 6), [
+    '-NoLogo',
+    '-NoProfile',
+    '-NonInteractive',
+    '-ExecutionPolicy',
+    'Bypass',
+    '-Command'
+  ]);
+  assert.equal(args[6], POWERSHELL_OBSERVE_SCRIPT);
+  assert.equal(args[7], String(PID));
+  assert.equal(options.shell, false);
+  assert.equal(options.windowsHide, true);
   assert.deepEqual(options.stdio, ['ignore', 'pipe', 'ignore']);
 });

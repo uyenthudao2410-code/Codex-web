@@ -18,6 +18,10 @@
   let performance = null;
   let refreshInFlight = false;
   let lastPerformanceRead = 0;
+  let coalescedUpdates = 0;
+  const eventLoopLagSamples = [];
+  const UI_EVENT_LOOP_SAMPLE_MS = 250;
+  const UI_EVENT_LOOP_BATCH_SIZE = 30;
   const CONTROL_CENTER_BUSY_POLL_MS = 4000;
   const CONTROL_CENTER_IDLE_POLL_MS = 6000;
   const CONTROL_CENTER_HIDDEN_POLL_MS = 15000;
@@ -502,6 +506,35 @@
     renderCommandCenter(data);
   }
 
+  function nowMs() {
+    return window.performance?.now?.() ?? Date.now();
+  }
+
+  function snapshotAgeMs(payload) {
+    const direct = Number(payload?.snapshotAgeMs);
+    if (Number.isFinite(direct) && direct >= 0) return direct;
+    const observedAt = Number(payload?.snapshotObservedAtUnixMs);
+    return Number.isFinite(observedAt) && observedAt > 0 ? Math.max(0, Date.now() - observedAt) : null;
+  }
+
+  function nextPaintDuration(startedAt) {
+    if (typeof window.requestAnimationFrame !== 'function') return Promise.resolve(null);
+    return new Promise((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve(nowMs() - startedAt)));
+    });
+  }
+
+  function submitUiPerformance(sample, paintStartedAt) {
+    if (!api.recordUiPerformance) return;
+    void nextPaintDuration(paintStartedAt).then((paintCommitMs) => api.recordUiPerformance({
+      ...sample,
+      ...(Number.isFinite(paintCommitMs) ? { paint_commit_ms: paintCommitMs } : {}),
+      observed_at_unix_ms: Date.now(),
+      event_loop_lag_samples_ms: eventLoopLagSamples.splice(0, eventLoopLagSamples.length),
+      coalesced_updates: coalescedUpdates
+    })).then(() => { coalescedUpdates = 0; }).catch(() => {});
+  }
+
   async function refreshPerformance(force = false) {
     if (!force && Date.now() - lastPerformanceRead < 10000) return;
     lastPerformanceRead = Date.now();
@@ -510,12 +543,25 @@
   }
 
   async function refresh(force = false) {
-    if (refreshInFlight || (!force && !shouldPoll())) return;
+    if (refreshInFlight) {
+      coalescedUpdates += 1;
+      return;
+    }
+    if (!force && !shouldPoll()) return;
     refreshInFlight = true;
+    const refreshStartedAt = nowMs();
+    let lightweightIpcMs = null;
+    let orchestrationIpcMs = null;
+    let snapshotApplyMs = null;
     try {
+      const snapshotIpcStartedAt = nowMs();
       const snapshotRequest = api.lightweightSnapshot();
+      void snapshotRequest.finally(() => { lightweightIpcMs = nowMs() - snapshotIpcStartedAt; }).catch(() => {});
+      const orchestrationIpcStartedAt = nowMs();
       const orchestrationRequest = api.liveOrchestration();
+      void orchestrationRequest.finally(() => { orchestrationIpcMs = nowMs() - orchestrationIpcStartedAt; }).catch(() => {});
       const [snapshotResult, orchestrationResult] = await Promise.allSettled([snapshotRequest, orchestrationRequest]);
+      const applyStartedAt = nowMs();
       if (snapshotResult.status === 'fulfilled') {
         try {
           const payload = unwrap(snapshotResult.value);
@@ -525,12 +571,28 @@
       if (orchestrationResult.status === 'fulfilled') {
         try { orchestration = unwrap(orchestrationResult.value); } catch { orchestration = null; }
       }
+      snapshotApplyMs = nowMs() - applyStartedAt;
       await refreshPerformance(force);
+      const renderStartedAt = nowMs();
       renderAll();
+      const renderMs = nowMs() - renderStartedAt;
       setText('ccLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
+      const pulseStartedAt = nowMs();
       document.dispatchEvent(new CustomEvent('coding-tools:overview-pulse', {
         detail: { snapshot, orchestration, performance, force: force === true, observedAt: Date.now() }
       }));
+      const overviewPulseApplyMs = nowMs() - pulseStartedAt;
+      const refreshWorkMs = nowMs() - refreshStartedAt;
+      submitUiPerformance({
+        ipc_lightweight_snapshot_ms: lightweightIpcMs,
+        ipc_live_orchestration_ms: orchestrationIpcMs,
+        snapshot_apply_ms: snapshotApplyMs,
+        render_ms: renderMs,
+        overview_pulse_apply_ms: overviewPulseApplyMs,
+        dashboard_refresh_ms: refreshWorkMs,
+        refresh_work_ms: refreshWorkMs,
+        snapshot_age_ms: snapshotAgeMs(snapshot?.status)
+      }, refreshStartedAt);
     } finally {
       refreshInFlight = false;
     }
@@ -580,6 +642,18 @@
     reducedMotion = Boolean(event.matches);
     renderAll();
   });
+
+  let eventLoopExpectedAt = nowMs() + UI_EVENT_LOOP_SAMPLE_MS;
+  const sampleEventLoopLag = () => {
+    const observedAt = nowMs();
+    eventLoopLagSamples.push(Math.max(0, observedAt - eventLoopExpectedAt));
+    if (eventLoopLagSamples.length > UI_EVENT_LOOP_BATCH_SIZE) {
+      eventLoopLagSamples.splice(0, eventLoopLagSamples.length - UI_EVENT_LOOP_BATCH_SIZE);
+    }
+    eventLoopExpectedAt = observedAt + UI_EVENT_LOOP_SAMPLE_MS;
+    window.setTimeout(sampleEventLoopLag, UI_EVENT_LOOP_SAMPLE_MS);
+  };
+  window.setTimeout(sampleEventLoopLag, UI_EVENT_LOOP_SAMPLE_MS);
 
   api.onHeartbeat?.((health) => {
     if (!snapshot) snapshot = { status: {} };

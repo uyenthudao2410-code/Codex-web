@@ -1,0 +1,83 @@
+{
+  "version": 2,
+  "task_id": "c4275f450a0f40d4bc666327cbcc9258",
+  "orchestration": {
+    "run_id": "037b642a187e4f098dc66e6dd1c9b3c1",
+    "wave_id": "0742b3e58f714d6faac3835471840b1b",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "c0aa335c7c12746a1f4ff42e84234f8c54914658",
+    "worktree_fp": "44299db57fd927decdfce745a3029d4e6de102caae1681fe5fb8baf6d177f6f4",
+    "contract_fp": ""
+  },
+  "objective": "Read-only validate the user's technical diagnosis about MCP protocol discovery versus callable business tools, Coding-VP/Coding-VP Live client exposure, tunnel-client polling, connector_tool_discovery receipts, and whether current LIVE blockers are host/transport or client-binding related. Do not modify files, create RUN/WAVE, restart services, or run destructive commands.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "04t6hgoimbhMg5LY0iqny3u1",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 4235,
+    "finished_at": "2026-08-29T23:53:20.378Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-29T23:52:54.481Z",
+  "updated_at": "2026-08-29T23:53:20.378Z",
+  "events": [
+    {
+      "time": "2026-08-29T23:52:54.481Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only validate the user's technical diagnosis about MCP protocol discovery versus callable business tools, Coding-VP/Coding-VP Live client exposure, tunnel-client polling, connector_tool_discovery receipts, and whether current LIVE blockers are host/transport or client-binding related. Do not modify files, create RUN/WAVE, restart services, or run destructive commands."
+      }
+    },
+    {
+      "time": "2026-08-29T23:52:55.413Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T23:52:59.719Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-29T23:53:16.168Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "04t6hgoimbhMg5LY0iqny3u1"
+      }
+    },
+    {
+      "time": "2026-08-29T23:53:20.378Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    }
+  ]
+}

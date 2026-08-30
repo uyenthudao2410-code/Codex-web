@@ -41,6 +41,20 @@ test('development startup never suppresses a packaged Recovery Supervisor', (t) 
   assert.equal(fs.existsSync(path.join(installRoot, 'stop.request')), false);
 });
 
+test('development startup keeps an exact-checkout Supervisor enabled for same-identity recovery', (t) => {
+  const { localAppData, installRoot } = fixture(t, 'development');
+  const result = suppressDevelopmentRecoverySupervisor({
+    env: { LOCALAPPDATA: localAppData },
+    expectedAppRoot: 'C:\\fixture\\checkout',
+    expectedExecutable: 'C:\\fixture\\electron.exe'
+  });
+  assert.deepEqual(result, {
+    suppressed: false,
+    reason: 'matching_development_supervisor'
+  });
+  assert.equal(fs.existsSync(path.join(installRoot, 'stop.request')), false);
+});
+
 test('missing or malformed supervisor state is ignored without creating persistent files', (t) => {
   const localAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-localappdata-'));
   t.after(() => fs.rmSync(localAppData, { recursive: true, force: true }));

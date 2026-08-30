@@ -269,6 +269,166 @@ test('ensureRecoveryHost replaces checkout A with checkout B instead of attachin
   assert.equal(calls.spawn, 1);
 });
 
+test('ensureRecoveryHost keeps the exact-checkout development Supervisor enabled when attaching to a healthy host', async (t) => {
+  const root = makeRoot(t);
+  const checkout = makeCheckout(root, 'checkout-current');
+  const expected = identity(checkout);
+  const current = {
+    version: 1,
+    host: '127.0.0.1',
+    port: 18766,
+    token: 'x'.repeat(43),
+    owner: 'recovery-host',
+    owner_pid: 42421,
+    owner_process_start_token: CURRENT_PROCESS_START_TOKEN,
+    instance_id: 'current-recovery-host-001',
+    installation_id: expected.installation_id,
+    runtime_mode: 'development'
+  };
+  let suppressCalls = 0;
+  let spawnCalls = 0;
+  const client = {
+    ping: async () => ({
+      ready: true,
+      pid: current.owner_pid,
+      process_start_token: current.owner_process_start_token,
+      instance_id: current.instance_id
+    })
+  };
+
+  const result = await ensureRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => checkout.appRoot },
+    paths: { runtimeIdentity: () => expected },
+    log: { warn() {}, error() {} },
+    clientFactory: () => client,
+    readDescriptor: () => current,
+    suppressDevelopmentSupervisor: () => {
+      suppressCalls += 1;
+      return { suppressed: true };
+    },
+    spawnProcess: () => {
+      spawnCalls += 1;
+      throw new Error('healthy exact-checkout attachment must not spawn');
+    }
+  });
+
+  assert.equal(result, client);
+  assert.equal(suppressCalls, 0);
+  assert.equal(spawnCalls, 0);
+});
+
+test('ensureRecoveryHost attaches to a live admission-blocked control plane without spawning a duplicate host', async (t) => {
+  const root = makeRoot(t);
+  const checkout = makeCheckout(root, 'checkout-current');
+  const expected = identity(checkout);
+  const current = {
+    version: 1,
+    host: '127.0.0.1',
+    port: 18766,
+    token: 'x'.repeat(43),
+    owner: 'recovery-host',
+    owner_pid: 42421,
+    owner_process_start_token: CURRENT_PROCESS_START_TOKEN,
+    instance_id: 'blocked-recovery-host-001',
+    installation_id: expected.installation_id,
+    runtime_mode: 'development'
+  };
+  let spawnCalls = 0;
+  let suppressCalls = 0;
+  const client = {
+    ping: async () => ({
+      ready: false,
+      state: 'update_incomplete',
+      pid: current.owner_pid,
+      process_start_token: current.owner_process_start_token,
+      instance_id: current.instance_id,
+      ready_adoption: {
+        code: 'UPDATE_INCOMPLETE',
+        reasons: ['STRICT_CONNECTOR_REDISCOVERY_REQUIRED']
+      }
+    })
+  };
+
+  const result = await ensureRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => checkout.appRoot },
+    paths: { runtimeIdentity: () => expected },
+    log: { warn() {}, error() {} },
+    clientFactory: () => client,
+    readDescriptor: () => current,
+    suppressDevelopmentSupervisor: () => {
+      suppressCalls += 1;
+      return { suppressed: true };
+    },
+    spawnProcess: () => {
+      spawnCalls += 1;
+      throw new Error('an authenticated blocked control plane must not spawn a duplicate host');
+    }
+  });
+
+  assert.equal(result, client);
+  assert.equal(spawnCalls, 0);
+  assert.equal(suppressCalls, 0);
+});
+
+test('ensureRecoveryHost suppresses the development Supervisor exactly once before a missing-host spawn', async (t) => {
+  const root = makeRoot(t);
+  const checkout = makeCheckout(root, 'checkout-current');
+  const expected = identity(checkout);
+  const current = {
+    version: 1,
+    host: '127.0.0.1',
+    port: 18766,
+    token: 'x'.repeat(43),
+    owner: 'recovery-host',
+    owner_pid: 42421,
+    owner_process_start_token: CURRENT_PROCESS_START_TOKEN,
+    instance_id: 'current-recovery-host-001',
+    installation_id: expected.installation_id,
+    runtime_mode: 'development'
+  };
+  let ready = false;
+  const calls = [];
+  const client = {
+    ping: async () => {
+      if (!ready) throw Object.assign(new Error('missing'), { code: 'RECOVERY_DESCRIPTOR_MISSING' });
+      return {
+        ready: true,
+        pid: current.owner_pid,
+        process_start_token: current.owner_process_start_token,
+        instance_id: current.instance_id
+      };
+    }
+  };
+
+  const result = await ensureRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => checkout.appRoot },
+    paths: { runtimeIdentity: () => expected },
+    log: { warn() {}, error() {} },
+    clientFactory: () => client,
+    readDescriptor: () => {
+      if (!ready) throw Object.assign(new Error('missing'), { code: 'RECOVERY_DESCRIPTOR_MISSING' });
+      return current;
+    },
+    suppressDevelopmentSupervisor: () => {
+      calls.push('suppress');
+      return { suppressed: true };
+    },
+    spawnProcess: () => {
+      calls.push('spawn');
+      ready = true;
+      const child = new EventEmitter();
+      child.pid = current.owner_pid;
+      child.unref = () => {};
+      process.nextTick(() => child.emit('spawn'));
+      return child;
+    },
+    sleep: async () => {}
+  });
+
+  assert.equal(result, client);
+  assert.deepEqual(calls, ['suppress', 'spawn']);
+});
+
 test('dev relocation fails closed if Recovery Host owner changes after runtime shutdown', async (t) => {
   const root = makeRoot(t);
   const checkout = makeCheckout(root, 'checkout-current');

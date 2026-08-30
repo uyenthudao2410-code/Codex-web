@@ -2,6 +2,7 @@ const path = require('node:path');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const http = require('node:http');
+const { performance: nodePerformance } = require('node:perf_hooks');
 const { app, BrowserWindow, dialog, ipcMain, shell, Tray, Menu, nativeImage, session, WebContentsView, clipboard } = require('electron');
 const { SettingsStore } = require('./services/settingsStore');
 const { SecretStore } = require('./services/secretStore');
@@ -28,6 +29,7 @@ const {
 const { ComponentRevisionTracker } = require('./services/componentRevision');
 const { activationSourceCheckpoint } = require('./services/activationClosure');
 const { startRecoveryHostApplication } = require('./recoveryHost');
+const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerformanceMetrics');
 
 // Version 1.0 has a new product identity but retains the existing encrypted
 // desktop profile so an upgrade does not orphan its runtime configuration.
@@ -80,6 +82,20 @@ const uiActivationEpochId = (() => {
       : '';
   } catch { return ''; }
 })();
+const uiPerformanceMetrics = new UiPerformanceMetrics({
+  filePath: path.join(app.getPath('userData'), 'ui-performance.json'),
+  context: {
+    workspace: settings.load().workspace,
+    ui_instance_id: uiInstanceId,
+    ui_running_revision: uiRunningRevision || '',
+    activation_epoch_id: uiActivationEpochId,
+    session_started_at: new Date(uiStartedAtUnixMs).toISOString(),
+    pid: process.pid,
+    platform: process.platform,
+    architecture: process.arch,
+    product_version: app.getVersion()
+  }
+});
 let uiRestartScheduled = false;
 let uiExitInFlight = false;
 let uiWindowReady = false;
@@ -91,10 +107,12 @@ const DEV_UI_INSTANCE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 function devUiSecondInstanceRequest(commandLine = []) {
   const controls = (Array.isArray(commandLine) ? commandLine : [])
     .map((value) => String(value || ''))
-    .filter((value) => value.startsWith('--dev-ui-focus=') || value.startsWith('--dev-ui-stop='));
+    .filter((value) => value.startsWith('--dev-ui-focus=')
+      || value.startsWith('--dev-ui-stop=')
+      || value.startsWith('--dev-ui-control-center='));
   if (!controls.length) return null;
   if (controls.length !== 1) return { action: 'invalid', instanceId: '' };
-  const match = /^--dev-ui-(focus|stop)=(.+)$/.exec(controls[0]);
+  const match = /^--dev-ui-(focus|stop|control-center)=(.+)$/.exec(controls[0]);
   if (!match || !DEV_UI_INSTANCE_PATTERN.test(match[2])) return { action: 'invalid', instanceId: '' };
   return { action: match[1], instanceId: match[2] };
 }
@@ -114,6 +132,10 @@ function handleSecondInstance(commandLine = []) {
   }
   if (request.action === 'stop') {
     void quitUi('operator_quit');
+    return;
+  }
+  if (request.action === 'control-center') {
+    openManagerWindow();
     return;
   }
   showChatWindow();
@@ -229,6 +251,20 @@ function safeMessage(error) {
 function assertTrustedIpc(event) {
   const url = event.senderFrame?.url || event.sender?.getURL?.() || '';
   if (!url.startsWith('file://')) throw new Error('Đã chặn cuộc gọi IPC từ trang không phải cục bộ.');
+}
+
+function isManagerIpc(event) {
+  return Boolean(
+    managerWindow
+    && !managerWindow.isDestroyed()
+    && managerWindow.webContents
+    && !managerWindow.webContents.isDestroyed()
+    && event?.sender === managerWindow.webContents
+  );
+}
+
+function assertManagerIpc(event) {
+  if (!isManagerIpc(event)) throw new Error('Đã chặn telemetry UI từ cửa sổ không phải Command Center.');
 }
 
 function secureHandle(channel, handler) {
@@ -724,7 +760,27 @@ function openManagerWindow() {
 
 function registerIpc() {
   secureHandle('app:snapshot', (_event, options) => invokeSafely(() => orchestrator.snapshot(options || {})));
-  secureHandle('app:lightweight-snapshot', () => invokeSafely(() => orchestrator.lightweightSnapshot()));
+  secureHandle('app:lightweight-snapshot', (event) => invokeSafely(async () => {
+    const startedAt = nodePerformance.now();
+    const snapshot = await orchestrator.lightweightSnapshot();
+    if (isManagerIpc(event)) {
+      uiPerformanceMetrics.recordMain({
+        observed_at_unix_ms: Date.now(),
+        snapshot_build_ms: nodePerformance.now() - startedAt,
+        snapshot_size_bytes: jsonByteLength(snapshot)
+      });
+    }
+    return snapshot;
+  }));
+  secureHandle('ui-performance:record', (event, sample) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    uiPerformanceMetrics.updateContext({ workspace: settings.load().workspace });
+    return uiPerformanceMetrics.recordRenderer(sample);
+  }));
+  secureHandle('ui-performance:read', (event) => invokeSafely(async () => {
+    assertManagerIpc(event);
+    return uiPerformanceMetrics.report();
+  }));
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
   secureHandle('workspace:switch', (_event, workspace) => invokeSafely(() => orchestrator.switchWorkspace(workspace)));
   secureHandle('workspace:authorized-roots', (_event, roots) => invokeSafely(() => orchestrator.updateAuthorizedRoots(roots)));
@@ -802,17 +858,26 @@ function registerIpc() {
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
   secureHandle('panel:visibility', () => invokeSafely(async () => ({ visible: panelVisible })));
-  secureHandle('panel:live-control', () => invokeSafely(async () => {
+  secureHandle('panel:live-control', (event) => invokeSafely(async () => {
+    const startedAt = nodePerformance.now();
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');
     if (!token) throw new Error('MCP chưa sẵn sàng để đọc trạng thái điều tuyến trực tiếp.');
-    return httpRequestJson({
+    const orchestration = await httpRequestJson({
       port: current.mcpPort,
       path: '/__control/orchestration/live',
       method: 'GET',
       token,
       timeout: PANEL_LIVE_CONTROL_TIMEOUT_MS
     });
+    if (isManagerIpc(event)) {
+      uiPerformanceMetrics.recordMain({
+        observed_at_unix_ms: Date.now(),
+        orchestration_build_ms: nodePerformance.now() - startedAt,
+        orchestration_size_bytes: jsonByteLength(orchestration)
+      });
+    }
+    return orchestration;
   }));
   secureHandle('panel:dashboard-analytics', () => invokeSafely(async () => {
     const current = settings.load();
@@ -1033,7 +1098,10 @@ if (recoveryHostMode) {
     log.info('Coding Tools MCP UI đã kết nối Recovery Host');
     });
 
-    app.on('before-quit', () => { forceQuit = true; });
+    app.on('before-quit', () => {
+      forceQuit = true;
+      void uiPerformanceMetrics.flush().catch(() => {});
+    });
     app.on('window-all-closed', () => {
       if (!forceQuit && settings.load().keepRunningOnClose) return;
       if (!forceQuit) app.quit();

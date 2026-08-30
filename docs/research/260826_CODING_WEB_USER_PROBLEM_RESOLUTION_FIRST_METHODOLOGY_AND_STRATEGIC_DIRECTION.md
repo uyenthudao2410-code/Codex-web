@@ -4138,3 +4138,384 @@ khi đồng thời `connector_rediscovered=true`, timestamp không rỗng,
 identity/revision khớp. Accepted baseline/P5 chỉ được xem xét sau gate này;
 catalog tám tool, raw HTTP, `workspace_context`, `tools/call` hoặc textual
 receipt không thay thế được connector proof.
+
+## 38.20. Superseding connector closure wave — 2026-08-29
+
+Attestation ở §38.19 là điều kiện cần nhưng chưa đủ để gọi remediation hoàn
+chỉnh. Review tích hợp đã tìm và sửa bốn failure mode có thể làm proof bị sai
+hoặc recovery bị mất khả năng tạo proof:
+
+* Tunnel-only recovery không được tự phát secret khi Recovery Host chỉ adopt
+  MCP sẵn có. Nó chỉ dùng binding exact do chính host sở hữu; thiếu binding thì
+  fail-closed và chuyển operator sang full-clean activation.
+* MCP replacement bắt buộc refresh Coding Tunnel phụ thuộc để header attestation
+  mang process/server tuple mới. Việc giữ tunnel cũ sau khi xoay secret là sai
+  dù public contract SHA không đổi.
+* Receipt storage phân vùng theo provenance, nên raw/legacy caller dùng cùng
+  `client_id=chatweb` không thể ghi đè authoritative receipt đã attested.
+* Recovery Host revision manifest bao phủ `connectorAttestation.js`; Recovery
+  Supervisor harness có stop sentinel riêng khi dùng path test explicit, không
+  bị trạng thái stop toàn cục của máy làm sai kết quả.
+
+Một guard sau broad suite còn phát hiện composition root vượt budget:
+`server.py=3505 > 3500`. Thay vì tăng allowlist, discovery activity được chuyển
+đúng về `RuntimeActivityMixin`; hiện `server.py=3414`,
+`runtime_activity.py=447`. Semantics không đổi và package full suite được chạy
+lại sau extraction theo package guide.
+
+Proof cuối của source wave:
+
+```text
+Node repository suite                                      533/533 PASS
+Node runtime/full-clean/attestation focused                109/109 PASS
+Node live recovery                                          73/73 PASS
+Recovery Supervisor                                         10/10 PASS
+Python focused attestation/bootstrap/stateless              31/31 PASS
+Python MCP full suite                          738 PASS, 4 SKIPPED
+compileall / module-size / diff / secret / history               PASS
+```
+
+Việc thấy tám tool vẫn chỉ là catalog evidence. Strict evidence bây giờ phải là
+receipt `identity_source=attested_transport`, `attestation_verified=true`, khớp
+exact activation epoch, MCP process instance, server instance, contract SHA và
+revision đang chạy. Compatibility bootstrap vẫn là continuity path riêng;
+không được đổi nó thành `connector_rediscovered=true`.
+
+Tại checkpoint source này chưa có full-clean activation của exact worktree mới,
+chưa có request discovery thật qua managed tunnel, chưa ACK, chưa accepted
+baseline/P5 và chưa có production claim. Phương pháp tiếp tục là:
+
+```text
+Observe     fresh query-only census + exact component revisions
+Intervene   one full-clean activation, no raw HTTP impersonation
+Measure     official attested discovery receipt from real ChatWeb/Coding-VP
+Accept      guarded ACK only when all strict flags and identities match
+Promote     consider immutable baseline only after connector gate closes
+```
+
+`HEAD c0aa335c7c12746a1f4ff42e84234f8c54914658` được quan sát đã tồn tại trên
+`main`/`origin/main` trước module extraction; lượt hiện tại không tạo hoặc push
+commit. Worktree delta được giữ rõ ràng để không viết đè concurrent history.
+
+## 38.21. Compatibility is continuity evidence, not full-clean readiness — 2026-08-29
+
+Kiểm tra lại advisory với implementation hiện tại phát hiện một điểm cần sửa
+thêm: `CURRENT_COMPATIBLE_ACKNOWLEDGED` là trạng thái continuity hợp lệ để
+ghi nhận no-workspace bootstrap, nhưng không được chiếu thành readiness chung
+ở nơi full-clean đã yêu cầu strict rediscovery. Nếu không thống nhất, UI hoặc
+Recovery Host có thể hiển thị một connector “current” trong khi admission vẫn
+đóng và `connector_rediscovered=false`.
+
+Đã sửa theo nguyên tắc fail-closed:
+
+1. `RuntimeOrchestrator.connectorContractFreshness()` giữ mode
+   `compatible_activation_bootstrap` để chẩn đoán nhưng trả `ready=false` và
+   reason `STRICT_CONNECTOR_REDISCOVERY_REQUIRED`.
+2. `activationClosure` chỉ cho `CURRENT_ACKNOWLEDGED` có timestamp discovery
+   hợp lệ (hoặc acknowledgement unchanged đã có từ trước) đóng connector
+   contract; compatibility-only không thể tạo `LIVE_CLOSED`.
+3. Recovery Host và script V5 chỉ coi strict current-process discovery là
+   `connectorReady`; compatibility vẫn được hiển thị như continuity pending.
+4. Command Center cảnh báo rõ compatibility ACK chưa phải
+   `tools/list/server/discover` proof, không che giấu sự thiếu receipt.
+
+Đây là correction của projection semantics, không phải nới lỏng auth hay
+thay đổi HMAC provenance. Các request thiếu attestation, raw HTTP, catalog
+tám tool, `workspace_context`, `tools/call` và textual receipt vẫn không thể
+mở strict gate.
+
+Proof sau correction:
+
+```text
+Node repository suite                          543/543 PASS
+connector/runtime/closure/UI focused subset    144/144 PASS
+git diff --check                               PASS
+```
+
+Wave live vẫn chưa đóng: source cần một full-clean activation mới, rồi một
+request discovery thật từ ChatWeb/Coding-VP qua managed tunnel. Chỉ sau receipt
+`identity_source=attested_transport`, `attestation_verified=true`, exact
+epoch/process/server/SHA/revision và bốn cờ strict đồng thời hợp lệ mới được
+ACK và xem xét accepted baseline/P5.
+
+## 38.22. Measurement closure for lightweight IPC — 2026-08-29
+
+Áp dụng nguyên tắc `Observe -> Attribute Cause -> Intervene -> Measure` cho
+độ trễ Control Center đã tách được nguyên nhân khỏi connector gate. Read path
+`runtime.lightweight_snapshot` không còn tự chạy durable epoch/revision/UI
+identity reads. Supervisor dựng projection hoàn chỉnh; IPC chỉ trả projection
+đó cùng tuổi tín hiệu và cờ stale/busy. Projection thất bại hoặc chưa từng có
+vẫn giữ `fullyReady=false` và `updateIncomplete=true`.
+
+Regression proof đếm trực tiếp durable epoch, component revision và OS process
+identity calls: sau khi projection được dựng, nhiều lần lightweight IPC không
+phát sinh thêm bất kỳ call nào. Đây là sửa nguyên nhân, không phải loại bỏ
+outlier, đổi percentile hay hạ budget.
+
+Bằng chứng đo trên process UI mới sau `npm start`:
+
+```text
+context ui_instance_id       c385d43b6bd1827521f2400c570731b4
+context activation_epoch_id  activation-mtef5pxm-affcc3ab2a36dfe85eed1f9618725869
+renderer/main/event-loop     25 / 50 / 568 samples
+normal IPC p95                17.2 ms  PASS (<100)
+dashboard refresh p95         35.0 ms  PASS (<500)
+snapshot apply p95             0.1 ms  PASS (<50)
+event-loop p95                15.8 ms  PASS (<50)
+```
+
+Census query-only cùng wave giữ `active_agent_lanes=0`, không active lease,
+write fence, managed job hay background operation; projection drift=false,
+canonical ledger không bị mutate, integrity/FK đều hợp lệ. Full-clean refresh
+đã tạo process identities mới nhưng epoch còn `VERIFYING`/đóng admission.
+`UNCHANGED_ACKNOWLEDGED` chỉ là continuity state và vẫn có
+`connector_rediscovered=false`; không được gọi đó là discovery hoặc readiness.
+
+Chuỗi acceptance không đổi:
+
+```text
+fresh census -> full-clean epoch -> real ChatWeb/Coding-VP tools/list|server/discover
+-> attested receipt exact identity -> guarded ACK -> accepted baseline/P5 review
+```
+
+Ở thời điểm checkpoint này chưa có real-client attested discovery, chưa ACK,
+chưa baseline/P5, chưa package/release/deploy. Bước kế tiếp duy nhất là gửi
+request discovery đã chuẩn bị trong phiên ChatGPT đang đăng nhập; phải xin xác
+nhận action-time ngay trước thao tác gửi.
+
+## 38.23. Advisory correction and current measurement boundary — 2026-08-29T13:52:44Z
+
+Advisory mới được dùng như một giả thuyết kiểm tra, không phải runtime proof.
+Nó đúng khi phân biệt catalog tám tool với current-process discovery và khi từ
+chối raw localhost làm bằng chứng ChatWeb. Nó không còn đúng ở hai điểm sau khi
+source đã được harden:
+
+* compatibility bootstrap là continuity evidence nhưng không thể mở một
+  full-clean epoch; mọi projection readiness trả
+  `STRICT_CONNECTOR_REDISCOVERY_REQUIRED` cho
+  `CURRENT_COMPATIBLE_ACKNOWLEDGED`;
+* authoritative discovery không còn dựa vào `client_type=chatweb` hoặc hai
+  explicit identity header. Chỉ managed-tunnel HMAC đã verify, bind exact
+  epoch/process/server/contract/time/nonce, mới tạo receipt
+  `identity_source=attested_transport` có quyền tham gia connector gate.
+
+Focused verification mới đạt `168/168` Node và `31/31` Python; diff check đạt.
+Census immutable/query-only lúc `13:47:50.244Z` tiếp tục có zero active agent
+lane, controller lease, write fence, live job, background operation,
+unexplained run và unbound residue; integrity/FK đạt, projection không drift,
+canonical ledger không bị writer của census mutate. Ba ordinary RUN còn lại
+đều dưới stale threshold nên không được reconcile.
+
+Epoch `activation-mtefja7g-eab34afccae5db73bee23540af684af2` đã fail-closed
+với `ACTIVATION_REQUEST_EXPIRED` lúc `13:51:46.250Z`: component identities mới
+và MCP revision match đã có, nhưng không có attested ChatWeb discovery,
+admission vẫn đóng và ACK chưa được thử. UI window của chính epoch này cũng
+chưa được nâng thành PASS: chỉ có `10/20/214` samples và dashboard refresh p95
+`733.6 ms`; các budget normal IPC/snapshot apply/event-loop đạt. Giữ nguyên
+outlier và phân biệt measurement chưa đạt của epoch này với cửa sổ đủ mẫu PASS
+ở §38.22.
+
+Vì vậy bước kế tiếp không phải sửa thêm bằng HTTP hoặc chạy lặp `npm start`
+trong khi chưa sẵn sàng gửi discovery. Sau action-time confirmation, thực hiện
+đúng một chuỗi `fresh census -> full-clean -> real Coding-VP discovery ->
+official attested receipt -> guarded ACK`; accepted baseline/P5 chỉ được xem
+xét sau strict receipt và toàn bộ identity/revision flags cùng khớp.
+
+## 38.24. Exact provenance projection closure — 2026-08-29T14:08:59Z
+
+Review tiếp theo áp dụng đúng nguyên tắc `observation != authority`: không chỉ
+HMAC phải verify, mọi consumer còn phải nhìn thấy và so khớp chính provenance
+tuple đã tạo authority. Ba thiếu sót được phát hiện là health projection chưa
+expose `identity_source`, một số guard chưa so trực tiếp discovery epoch và
+compatibility/contact path chưa độc lập yêu cầu
+`identity_source=attested_transport`.
+
+Intervention giữ nhỏ và nhân quả:
+
+* Python projection nay luôn mang `identity_source`; busy/unavailable state có
+  schema provenance đầy đủ với giá trị null/false, không tạo false positive từ
+  trường bị thiếu;
+* recording và current checks của discovery/contact/bootstrap đều yêu cầu cả
+  `attested_transport` lẫn `attestation_verified=true`;
+* full-clean, runtime freshness, Recovery Host evidence wake-up và guarded ACK
+  đều so exact activation epoch, MCP process instance, server instance,
+  contract SHA, timestamp và provenance;
+* compatibility bootstrap tiếp tục tồn tại như continuity evidence nhưng vẫn
+  trả `STRICT_CONNECTOR_REDISCOVERY_REQUIRED`, không mở `READY/open`.
+
+Oracle mới bao phủ raw request thiếu header, explicit header giả lập ChatWeb,
+HMAC hợp lệ nhưng identity source không authoritative, wrong-epoch receipt và
+managed discovery hợp lệ. Kết quả exact source wave:
+
+```text
+Node focused exact receipt tuple                              132/132 PASS
+Python focused provenance/attestation                           33/33 PASS
+Node full suite                                               543/543 PASS
+Python full suite                     740 PASS, 4 SKIPPED, 106 subtests PASS
+module-size / source-root / secret guards                         PASS
+```
+
+Đây là `Intervene + source Measure`, chưa phải live `Promote`. Runtime gần nhất
+đã hết TTL trước khi có official real-client receipt, vì vậy không được dùng
+test xanh hoặc source contract để tự nhận connector đã rediscover. Sau một
+fresh census phải tạo epoch/process mới, gửi đúng một discovery qua Coding-VP
+thật, rồi đọc official Recovery Host tuple. Chỉ khi đồng thời có
+`identity_source=attested_transport`, `attestation_verified=true`, exact
+epoch/process/server/SHA/revision, `connector_rediscovered=true`, timestamp
+không rỗng, `connector_refresh_required=false` và
+`connector_ack_pending=false` mới được ACK. UI performance và immutable
+accepted baseline/P5 phải gắn với wave live mới; không backfill bằng epoch cũ.
+
+## 38.25. Baseline and causal-promotion boundary audit — 2026-08-29T14:21:41Z
+
+Áp dụng `Observe -> Attribute Cause -> Intervene -> Measure -> Promote/Revert`
+cho phần còn lại cho thấy connector chỉ là một gate cần, không phải toàn bộ
+Definition of Done. Reporter canonical hiện cho:
+
+```text
+P4                              COLLECTING
+terminal representative tasks   99
+repair / nonrepair / unknown     1 / 72 / 26
+validated predictive signals    []
+P4 empirically complete          false
+clean upstream-matched baseline  false
+P5 start/causal efficacy         false / false
+latest P5 epoch                  EPOCH_HARD_STOPPED
+```
+
+HEAD khớp `origin/main`, nhưng code-bearing worktree còn WIP nên
+`source_worktree_clean=false`. Đây là distinction quan trọng: upstream identity
+match không làm source packet bất biến khi thay đổi chưa được accepted/commit.
+Không được tự commit để lấy baseline vì nhiệm vụ hiện không ủy quyền commit.
+
+Organic measurement cũng chưa thể promote. P5 observational reporter thấy
+baseline lịch sử nhưng `canonical_readiness_passed=false`, current-source
+accepted window `0`, exact window `false` và monetary CAR unavailable. Current
+ledger reporter thấy `505` accepted runs trong cohort rộng hơn, nhưng policy
+giữ historical counts descriptive. Missing controller token/cost coverage bằng
+`0.0` là coverage bằng không, không phải cost bằng không; reporter ghi rõ
+`missing_monetary_cost_is_zero=false`.
+
+Arm-neutral planner trả `HOLD_ARM_NEUTRAL_ELIGIBILITY` mà không mutate runtime,
+không enroll, không assign và không đổi production behavior. Vì invocation này
+không supplied các eligibility assertions, không được diễn giải các field false
+như measurement phủ định census; nó chỉ chứng minh automatic start không tồn
+tại và mọi enrollment cần một natural feature/bugfix, stable oracle, bounded
+surface, exact source identity, common contract và explicit operator gate.
+
+UI measurement của epoch gần nhất cũng chưa promote được: `10/20/214` samples,
+dashboard refresh p95 `733.6 ms` làm readiness `fail`, dù normal IPC, snapshot
+apply và event-loop đạt budget. Không bỏ outlier, đổi threshold hoặc dùng cửa
+sổ `25/50/568` của epoch trước để đóng epoch này.
+
+Do đó closure phải giữ thứ tự: strict real-client discovery/ACK trong epoch
+mới, current-epoch UI PASS đủ mẫu, exact accepted/checkpointed source bundle,
+rồi clean upstream-matched baseline dưới authority phù hợp. P5 chỉ được mở sau
+explicit frozen manifest cho một natural eligible task; P4 descriptive evidence
+không tự kích hoạt treatment, routing hay production promotion.
+
+## 38.26. Advisory verification and transport/provenance correction — 2026-08-29T14:42Z
+
+Đối chiếu bản advisory với source và runtime hiện tại xác nhận phần attestation
+và strict-gate của advisory là đúng, nhưng không xác nhận claim live
+`tunnel_client_not_seen >300s`. Primary và Recovery Tunnel hiện tại đều có
+PID/identity đúng, `healthz`/`readyz` đạt và control-plane poll mới; tunnel ID
+`6a76a869...` chỉ còn trong log lịch sử ngày 08/08. Vì vậy không được phân loại
+blocker hiện tại là transport mất nếu không có receipt mới cho đúng tunnel
+identity.
+
+Bằng chứng vận hành cho thấy development Recovery Supervisor từng bị dừng bởi
+`stop.request` tồn dư sau handoff. Đó là cơ chế suppression để ngăn checkout
+khác resurrect host, không phải `blocked_live_owner`. Installer hỗ trợ đã được
+chạy lại từ exact checkout; hiện task `Running`, state `healthy`, host PID
+`50024`, script cài đặt khớp SHA checkout và không có restart attempt. Quy tắc
+fail-closed không đổi: supervisor không được kill/adopt live owner chỉ vì health
+không đủ; development supervision chỉ được bật lại qua installer có identity.
+
+Browser evidence của đúng Coding-VP/ChatGPT Work session cho thấy client gọi
+`read_resource`/`list_resources` rồi lặp `workspace_context`, không có call
+`tools/list` hoặc `server/discover`. Compatibility response có
+`accepted=true`, `completed=false`, `retry_required=true`,
+`workspace_accessed=false` cho epoch `activation-mtefja7g...`; nó chứng minh
+đường client tới MCP còn hoạt động nhưng không chứng minh strict rediscovery.
+Do đó `connector_rediscovered` vẫn `false`, timestamp rỗng và không ACK.
+
+Census query-only mới tại `2026-08-29T14:40:10.625Z` tiếp tục chứng minh
+`active_agent_lanes=0`, zero leases/fences/jobs/background operations,
+zero unexplained/unbound residue, `projection_drift=false`,
+`mutated_canonical_ledger=false`, integrity `ok`, foreign-key `0`; ba RUN
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE` vẫn được giữ nguyên. `dev:status` còn
+`CURRENT` với `running_revision == disk_revision`, nhưng epoch gần nhất là
+`FAILED/CLOSED` do `ACTIVATION_REQUEST_EXPIRED` tại `recovery_host_supervise`.
+
+Kết luận hiệu chỉnh: source remediation đã đúng; local transport và supervisor
+đã hồi phục; external quality gate còn thiếu chính xác một discovery thật cho
+process mới. Không mở TTL mới bằng cách spam `npm start` khi chưa sẵn sàng gửi
+ngay discovery, không lấy danh sách tám tool/schema cache làm proof, không ACK
+giả và không tạo accepted baseline/P5. Sau action-time confirmation, chỉ chạy
+một chuỗi `fresh census -> full-clean -> Coding-VP tools/list/server/discover
+-> official attested receipt -> guarded ACK`; các gate UI/source/baseline/P5
+tiếp tục độc lập.
+
+## 38.27. Causal closure of the current UI latency and connector gate — 2026-08-29T20:15:03Z
+
+Chuỗi `Observe -> Attribute Cause -> Intervene -> Measure -> Promote/Hold` đã
+được chạy lại trọn vẹn trên exact current process, không dùng textual catalog,
+raw HTTP, compatibility contact, ACK cũ hoặc window của epoch khác.
+
+Observed causes:
+
+- Khi task-state không bind `run_id`, live UI đã fallback sang một ledger row
+  `active` lịch sử. Durable observation vì thế bị dùng sai như authority.
+- Telemetry read đã gọi resource reconciliation, đồng thời load/parse `1053`
+  hub clients, `6149` managed jobs và `427` claims trước khi cắt kết quả. Một
+  poll read-only vì thế mang cả OS/process probes, possible ledger writes và
+  unbounded historical reads.
+
+Intervention giữ nhỏ và trực tiếp:
+
+- chỉ exact projected run được phép xuất hiện trong live control snapshot;
+- unbound projection trả `NO_ACTIVE_EXECUTION`;
+- live telemetry dùng `reconcile=false`, còn mutation/control callers vẫn giữ
+  reconciliation mặc định;
+- hub clients, managed jobs và claims được aggregate/limit tại SQL boundary,
+  với one-connection consistent read cho job/claim projection.
+
+Deterministic proof đạt `162/162` focused Node tests và `49/49` focused Python
+Execution Hub/resource/coordination tests; module-size và `git diff --check`
+đều PASS. Regression mới cố ý fail nếu live GET adopt unbound run, gọi resource
+reconcile, hoặc quay lại `_rows()`/`_claim_rows()` unbounded.
+
+Fresh query-only census tại `2026-08-29T20:09:05.374Z` có integrity `ok`,
+`mutated_canonical_ledger=false`, `active_agent_lanes=0`, zero managed job,
+zero unexplained active/unbound/stale-background residue và
+`projection_drift=false`. Ba ordinary row dưới stale threshold không có live
+ownership được giữ nguyên thay vì reconcile sớm.
+
+`npm start` tạo epoch
+`activation-mtetdl86-68c08c2f914e8049a4ebb4bf69833539`. Một lần refresh
+connection Coding-VP Live tạo attested current-process discovery; Recovery Host
+tự guarded-ACK và chuyển epoch sang `READY/OPEN`. MCP process/server lần lượt là
+`9RkQbeqAUay5_LRD` / `4OtFTiY9AnN5C8Po`; connector receipt có timestamp
+`2026-08-29T20:10:30.820587Z`, `current_process_discovery`,
+`refresh_required=false`, `ack_pending=false`, và exact current/ACK SHA
+`c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251`.
+
+Measurement sau intervention trên exact UI instance
+`2709389fe3f50d3202ae67a25b3b7218` giữ nguyên cold-start max và đạt readiness
+`pass` với `25/50/558` renderer/main/event-loop samples:
+
+```text
+event-loop p95          15.6 ms  (<50)
+normal IPC p95          44.2 ms  (<100)
+snapshot apply p95       0.0 ms  (<50)
+dashboard refresh p95   66.2 ms  (<500)
+```
+
+Đây là P0.5 causal/performance closure và current local connector closure, không
+phải immutable Git baseline hay product outcome. P0.6 vẫn HOLD vì code-bearing
+worktree chưa có accepted/checkpointed immutable source identity, scoped commit
+chưa được ủy quyền và ba threshold-sensitive rows chưa đủ authority để
+reconcile. P5 vẫn `HOLD_NATURAL_EVIDENCE`: không synthetic task/enrollment,
+không treatment start, không automatic routing/promotion. Không commit, push,
+package, release hoặc deploy.

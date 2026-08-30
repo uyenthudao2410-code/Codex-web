@@ -67,7 +67,8 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/preload.js',
       'electron/panelPreload.js',
       'electron/browserPreload.js',
-      'electron/chatViewController.js'
+      'electron/chatViewController.js',
+      'electron/services/uiPerformanceMetrics.js'
     ]),
     directories: Object.freeze([
       Object.freeze({ path: 'renderer', extensions: Object.freeze(['.css', '.html', '.js']) })

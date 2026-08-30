@@ -276,6 +276,45 @@ test('pending projection reuse permits a strict discovered candidate for finaliz
   assert.equal(reusable.projection_rebuild_receipt, receipt);
 });
 
+test('committed projection reuse is explicit and remains admission-closed', () => {
+  const root = path.resolve('committed-projection-reuse-workspace');
+  const receipt = projectionReceipt(root);
+  const finalCensus = {
+    pass: true,
+    activation_epoch_id: receipt.activation_epoch_id,
+    projection_rebuild_verified: true,
+    projection_rebuild_receipt: receipt,
+    connector_validation: {
+      valid: true,
+      freshness_mode: 'current_process_discovery',
+      rediscovered_at: '2026-08-29T00:00:00.000Z'
+    },
+    process_identity_verified: true,
+    workspace_matches: true,
+    device_matches: true,
+    revision_matches: true,
+    recovery_host_revision_matches: true,
+    recovery_host_epoch_matches: true,
+    ui_verified: true,
+    recovery_plane_verified: true,
+    epoch_matches: true,
+    lifecycle_decision: { safe: true, code: 'READY' }
+  };
+  const record = {
+    activation_epoch_id: receipt.activation_epoch_id,
+    state: 'READY_COMMITTED',
+    admission_state: 'CLOSED',
+    verification: { final_census: finalCensus }
+  };
+
+  assert.equal(reusablePendingProjectionObservation(record), null,
+    'ordinary callers cannot reuse terminal-commit evidence');
+  const reusable = reusablePendingProjectionObservation(record, { allowCommitted: true });
+  assert.ok(reusable);
+  assert.equal(reusable.reused_pending_projection, true);
+  assert.equal(reusable.projection_rebuild_receipt, receipt);
+});
+
 function projectionGateInput(root, {
   preflightReceipt = projectionReceipt(root),
   healthReceipt = preflightReceipt,
@@ -573,21 +612,24 @@ test('projection rebuild gate fails closed for identity, ledger, projection, tim
 test('connector gate binds ACK and rediscovery to the exact post-preflight health observation', () => {
   const nowUnixMs = 1_700_000_000_000;
   const contractSha256 = 'c'.repeat(64);
+  const activationEpochId = id('activation-connector-gate', '1001');
   const processInstanceId = id('mcp-process-connector', '1001');
   const serverInstanceId = id('mcp-server-connector', '1001');
   const observedAt = new Date(nowUnixMs - 1000).toISOString();
   const health = {
-    activation_epoch_id: id('activation-connector-gate', '1001'),
+    activation_epoch_id: activationEpochId,
     process_instance_id: processInstanceId,
     instance_id: serverInstanceId,
     tool_contract: { sha256: contractSha256 },
     connector_tool_discovery: {
       current_contract_observed: true,
+      identity_source: 'attested_transport',
       attestation_verified: true,
       contract_sha256: contractSha256,
       observed_at: observedAt,
       process_instance_id: processInstanceId,
-      server_instance_id: serverInstanceId
+      server_instance_id: serverInstanceId,
+      activation_epoch_id: activationEpochId
     }
   };
   const contractStatus = {
@@ -617,6 +659,18 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
   assert.equal(mixedProcess.valid, false);
   assert.ok(mixedProcess.reasons.includes('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH'));
 
+  const mixedEpochObservation = structuredClone(health);
+  mixedEpochObservation.connector_tool_discovery.activation_epoch_id = id('retired-activation-epoch', '1001');
+  const mixedEpoch = validateConnectorReadyGate({ health: mixedEpochObservation, contractStatus, nowUnixMs });
+  assert.equal(mixedEpoch.valid, false);
+  assert.ok(mixedEpoch.reasons.includes('DISCOVERY_ACTIVATION_EPOCH_ID_MISMATCH'));
+
+  const untrustedIdentityObservation = structuredClone(health);
+  untrustedIdentityObservation.connector_tool_discovery.identity_source = 'explicit_headers';
+  const untrustedIdentity = validateConnectorReadyGate({ health: untrustedIdentityObservation, contractStatus, nowUnixMs });
+  assert.equal(untrustedIdentity.valid, false);
+  assert.ok(untrustedIdentity.reasons.includes('DISCOVERY_IDENTITY_SOURCE_INVALID'));
+
   const staleAcknowledgement = validateConnectorReadyGate({
     health,
     contractStatus: { ...contractStatus, acknowledgedSha256: 'd'.repeat(64) },
@@ -636,6 +690,7 @@ test('connector gate keeps an exact no-workspace compatibility bootstrap pending
   const bootstrap = {
     observed: true,
     current_contract_contact: true,
+    identity_source: 'attested_transport',
     attestation_verified: true,
     client_id: 'chatweb-compatible-client',
     client_type: 'chatweb',
@@ -681,6 +736,7 @@ test('connector gate keeps an exact no-workspace compatibility bootstrap pending
   assert.equal(ready.compatibility_acknowledged_at, observedAt);
 
   for (const [field, value, reason] of [
+    ['identity_source', 'explicit_headers', 'COMPATIBILITY_BOOTSTRAP_IDENTITY_SOURCE_INVALID'],
     ['process_instance_id', id('retired-compatible-process', '1001'), 'COMPATIBILITY_BOOTSTRAP_PROCESS_INSTANCE_ID_MISMATCH'],
     ['server_instance_id', id('retired-compatible-server', '1001'), 'COMPATIBILITY_BOOTSTRAP_SERVER_INSTANCE_ID_MISMATCH'],
     ['activation_epoch_id', id('activation-compatible-retired', '1001'), 'COMPATIBILITY_BOOTSTRAP_ACTIVATION_EPOCH_ID_MISMATCH'],
@@ -869,11 +925,13 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
         tool_contract: { sha256: contractSha256 },
         connector_tool_discovery: {
           current_contract_observed: true,
+          identity_source: 'attested_transport',
           attestation_verified: true,
           contract_sha256: contractSha256,
           observed_at: connectorRediscoveredAt,
           process_instance_id: processInstanceId,
-          server_instance_id: serverInstanceId
+          server_instance_id: serverInstanceId,
+          activation_epoch_id: activationEpochId
         },
         projection_rebuild: wrapper
       };
@@ -1790,6 +1848,75 @@ test('ordinary runtime start is refused while a durable activation epoch is inco
   await assert.rejects(orchestrator.start(), { code: 'UPDATE_INCOMPLETE' });
   assert.equal(store.current().activation_epoch_id, created.activation_epoch_id);
   assert.equal(store.current().admission_state, 'CLOSED');
+});
+
+test('pre-admission revalidation rejects process drift against the committed census', async (t) => {
+  const { root, paths } = fixture(t);
+  const activationEpochId = id('activation-pre-open-drift', '1001');
+  const readyCommitDigest = 'd'.repeat(64);
+  const expiresAtUnixMs = 1_700_000_120_000;
+  const committedCensus = {
+    pass: true,
+    activation_epoch_id: activationEpochId,
+    host_instance_id: id('recovery-host-current', '1001'),
+    host_pid: 101,
+    process_instance_id: id('mcp-process-current', '1001'),
+    server_instance_id: id('mcp-server-current', '1001'),
+    supervisor_instance_id: id('native-supervisor-current', '1001'),
+    tunnel_instance_id: id('coding-tunnel-current', '1001'),
+    tunnel_pid: 102,
+    recovery_mcp_instance_id: id('recovery-mcp-current', '1001'),
+    recovery_mcp_pid: 103,
+    recovery_tunnel_instance_id: null,
+    recovery_tunnel_pid: null,
+    ui_instance_id: id('electron-ui-current', '1001'),
+    ui_running_revision: '1'.repeat(64),
+    recovery_host_running_revision: '2'.repeat(64),
+    running_revision: '3'.repeat(64),
+    disk_revision: '3'.repeat(64)
+  };
+  const record = {
+    activation_epoch_id: activationEpochId,
+    state: 'READY_COMMITTED',
+    admission_state: 'CLOSED',
+    ready_commit_digest: readyCommitDigest,
+    expires_at_unix_ms: expiresAtUnixMs,
+    component_evidence: {
+      recovery_host: { instance_id: id('recovery-host-retired', '1001') }
+    },
+    verification: { final_census: committedCensus }
+  };
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: { current: () => record },
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {},
+    now: () => 1_700_000_000_000
+  });
+  coordinator.finalCensus = async (epochIdValue, options) => {
+    assert.equal(epochIdValue, activationEpochId);
+    assert.deepEqual(options, {
+      expectedOldInstanceId: id('recovery-host-retired', '1001'),
+      reusePendingProjection: true,
+      revalidateCommitted: true
+    });
+    return {
+      ...committedCensus,
+      process_instance_id: id('mcp-process-replaced-again', '1001')
+    };
+  };
+
+  await assert.rejects(
+    coordinator.revalidateBeforeAdmission({
+      activationEpochId,
+      readyCommitDigest,
+      expiresAtUnixMs
+    }),
+    (error) => error?.code === 'UPDATE_INCOMPLETE'
+      && error?.details?.mismatches?.some((item) => item.field === 'process_instance_id')
+  );
+  assert.equal(record.state, 'READY_COMMITTED');
+  assert.equal(record.admission_state, 'CLOSED');
 });
 
 test('finalize never opens MCP admission when the durable ready commit fails', async (t) => {

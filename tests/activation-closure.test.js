@@ -140,10 +140,10 @@ function liveArgs(overrides = {}) {
   return {
     acceptedCode: acceptedCode(),
     componentRevisions: revisions(),
-    connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
+    connectorContractState: 'CURRENT_ACKNOWLEDGED',
     connectorRefreshRequired: false,
     connectorAcknowledgementPending: false,
-    connectorRediscoveredAt: null,
+    connectorRediscoveredAt: '2026-08-25T08:00:00.000Z',
     connectorCurrentSha256: CONTRACT,
     connectorAcknowledgedSha256: CONTRACT,
     runtimeFullyReady: true,
@@ -342,7 +342,18 @@ test('canonical empty proof closes only a valid zero-target checkpoint', () => {
   assert.equal(mutationBearing.closure_state, 'CHECKPOINT_IDENTITY_INVALID');
 });
 
-test('unchanged acknowledgement needs matching SHA and no refresh, while changed acknowledgement needs timestamp', () => {
+test('LIVE_CLOSED requires current-process rediscovery; unchanged acknowledgement is continuity only', () => {
+  const unchanged = computeActivationClosure(liveArgs({
+    connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
+    connectorRediscoveredAt: null
+  }));
+  assert.equal(unchanged.connector_continuity_only, true);
+  assert.equal(unchanged.connector_contract_current, false);
+  assert.equal(unchanged.closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
+  assert.equal(computeActivationClosure(liveArgs({
+    connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
+    connectorRediscoveredAt: '2026-08-25T08:00:00.000Z'
+  })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
   assert.equal(computeActivationClosure(liveArgs()).closure_state, 'LIVE_CLOSED');
   assert.equal(computeActivationClosure(liveArgs({ connectorRefreshRequired: true })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
   assert.equal(computeActivationClosure(liveArgs({ connectorAcknowledgementPending: true })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
@@ -358,7 +369,7 @@ test('unchanged acknowledgement needs matching SHA and no refresh, while changed
   assert.equal(computeActivationClosure(liveArgs({
     connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
     connectorRediscoveredAt: null
-  })).closure_state, 'LIVE_CLOSED');
+  })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
 });
 
 test('unknown, duplicate, or unordered affected components fail closed', () => {
@@ -433,10 +444,10 @@ test('Recovery Host projection uses fresh component revision and contradictory r
       runtimeRunning: true,
       tunnelRunning: true,
       fullyReady: true,
-      connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
+      connectorContractState: 'CURRENT_ACKNOWLEDGED',
       connectorRefreshRequired: false,
       connectorAcknowledgementPending: false,
-      connectorRediscoveredAt: null,
+      connectorRediscoveredAt: '2026-08-25T08:00:00.000Z',
       connectorContractAcknowledgedSha256: CONTRACT,
       toolContract: { sha256: CONTRACT },
       codeRevision: { codingMcp: { running_revision: 'f'.repeat(64), disk_revision: 'f'.repeat(64), update_pending: false } }
@@ -468,6 +479,8 @@ test('Recovery Host projection uses fresh component revision and contradictory r
     deviceInstanceId: 'device-instance-closure-0001',
     orchestrator: { codingMcpRevisionStatus: () => ({}) },
     bootstrapBlocksAdmission: () => false,
+    readyAdoptionBlocksAdmission: () => false,
+    readyAdoptionBlockDetails: () => null,
     running: true
   };
   const decorated = RecoveryHost.prototype.decorate.call(host, runtime);

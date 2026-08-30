@@ -184,6 +184,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         original_operations = mcp_http_handler_module.operations_analytics
         original_stale_reconcile = self.runtime._maybe_reconcile_stale_orchestration
         original_projection_reconcile = self.runtime._reconcile_task_orchestration_projection
+        original_resource_reconcile = self.runtime.execution_resource_governor.reconcile
         original_verify = ledger.verify_chain
         original_list_waves = ledger.list_waves
         original_list_events = ledger.list_events
@@ -198,6 +199,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         mcp_http_handler_module.operations_analytics = unexpected_heavy_call
         self.runtime._maybe_reconcile_stale_orchestration = unexpected_heavy_call
         self.runtime._reconcile_task_orchestration_projection = unexpected_heavy_call
+        self.runtime.execution_resource_governor.reconcile = unexpected_heavy_call
         ledger.verify_chain = unexpected_heavy_call
         ledger.list_waves = unexpected_heavy_call
         ledger.list_events = unexpected_heavy_call
@@ -215,6 +217,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             mcp_http_handler_module.operations_analytics = original_operations
             self.runtime._maybe_reconcile_stale_orchestration = original_stale_reconcile
             self.runtime._reconcile_task_orchestration_projection = original_projection_reconcile
+            self.runtime.execution_resource_governor.reconcile = original_resource_reconcile
             ledger.verify_chain = original_verify
             ledger.list_waves = original_list_waves
             ledger.list_events = original_list_events
@@ -251,6 +254,39 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(body["snapshot_scope"], "live_control")
         self.assertEqual(body["authority"]["write"]["status"], "released")
+
+    def test_live_snapshot_does_not_adopt_an_unbound_active_ledger_run(self) -> None:
+        # The canonical ledger deliberately keeps the active row created by
+        # setUp, but an empty task-state projection means the current UI has no
+        # execution binding.  Observation of that row must not become authority
+        # for the high-frequency live path.
+        self.runtime.task_state.update({"orchestration": {}}, event="hub_test_projection_unbound")
+        ledger = self.runtime.orchestration_ledger
+        with patch.object(
+            ledger,
+            "peek_current_active_run",
+            side_effect=AssertionError("live path must not adopt an unbound ledger run"),
+        ), patch.object(
+            ledger,
+            "get_run",
+            side_effect=AssertionError("live path must not read an unbound ledger run"),
+        ), patch.object(
+            ledger,
+            "live_run_projection",
+            side_effect=AssertionError("live path must not project an unbound ledger run"),
+        ):
+            status, body = self.get_live_snapshot()
+
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["snapshot_scope"], "live_control")
+        self.assertEqual(body["run_id"], "")
+        self.assertIsNone(body["run"])
+        self.assertEqual(body["waves"], [])
+        self.assertEqual(body["events"], [])
+        self.assertEqual(body["proofs"], [])
+        self.assertEqual(body["delegations"], [])
+        self.assertEqual(body["counts"], {"events": 0, "waves": 0, "checkpoints": 0})
+        self.assertEqual(body["continuity"]["reason_codes"], ["NO_ACTIVE_EXECUTION"])
 
     def test_dashboard_analytics_isolated_from_live_control_polling(self) -> None:
         ledger = self.runtime.orchestration_ledger

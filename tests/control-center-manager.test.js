@@ -67,6 +67,26 @@ test('manager preload reuses the existing read-only orchestration IPC without ch
   assert.doesNotMatch(controlCenter, /api\.orchestration\(\)/);
 });
 
+test('manager captures a bounded real-renderer performance window without payload or ledger telemetry', () => {
+  const preload = read('electron/preload.js');
+  const main = read('electron/main.js');
+  const controlCenter = read('renderer/control-center.js');
+  const metrics = read('electron/services/uiPerformanceMetrics.js');
+  assert.match(preload, /recordUiPerformance:\s*\(sample\)\s*=>\s*ipcRenderer\.invoke\('ui-performance:record', sample\)/);
+  assert.match(preload, /uiPerformance:\s*\(\)\s*=>\s*ipcRenderer\.invoke\('ui-performance:read'\)/);
+  assert.match(main, /secureHandle\('ui-performance:record'/);
+  assert.match(main, /assertManagerIpc\(event\)/);
+  assert.match(controlCenter, /event_loop_lag_samples_ms/);
+  assert.match(controlCenter, /ipc_lightweight_snapshot_ms/);
+  assert.match(controlCenter, /ipc_live_orchestration_ms/);
+  assert.match(controlCenter, /snapshot_apply_ms/);
+  assert.match(controlCenter, /paint_commit_ms/);
+  assert.match(controlCenter, /coalesced_updates/);
+  assert.match(metrics, /MAX_RENDERER_SAMPLES = 180/);
+  assert.match(metrics, /PERSIST_INTERVAL_MS = 30_000/);
+  assert.doesNotMatch(metrics, /authorization|prompt|command_text|ledger\.sqlite3/);
+});
+
 test('manager router treats OpenCode connectivity and DeepSeek model activity as separate evidence', () => {
   const js = read('renderer/control-center.js');
   assert.match(js, /function delegationLane/);

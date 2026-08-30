@@ -26,7 +26,7 @@ function createPreviewApi() {
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
     logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
-    taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true),
+    taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true), recordUiPerformance: () => ok({ accepted: false }), uiPerformance: () => ok(null),
     inspectBuild: () => ok({ type: 'electron', name: 'demo', version: '0.1.0', testCommand: 'npm test', buildCommand: 'npm run dist', artifacts: ['dist'] }), runBuild: () => ok({ overallStatus: 'passed', project: { type: 'electron', name: 'demo', version: '0.1.0' }, testResult: { status: 'passed' }, buildResult: { status: 'passed' }, artifacts: [] }), inspectHealth: () => ok({ healthy: true, checks: [] }), repairHealth: () => ok({ healthy: true, checks: [], actions: [], unresolved: [] }),
     openExternal: () => ok(true), installPython: () => ok(true), detectProxy: () => ok(snapshot.environment.proxy), onProgress: () => () => {}, onLog: () => () => {}, onStatus: () => () => {}, onHeartbeat: () => () => {}, onBuildProgress: () => () => {}
   };
@@ -361,9 +361,9 @@ function connectorContractPresentation(status = {}) {
   if (explicit === 'CURRENT_COMPATIBLE_ACKNOWLEDGED') {
     return {
       state: explicit,
-      notice: false,
-      message: 'Tool contract hiện tại đã được compatibility ACK bằng no-workspace bootstrap của đúng process/epoch; không ghi nhận discovery giả.',
-      toast: 'Connector compatibility đã được ACK cho activation hiện tại.'
+      notice: true,
+      message: 'No-workspace compatibility bootstrap của đúng process/epoch đã được ACK như continuity evidence; full-clean activation vẫn chờ tools/list hoặc server/discover đã attestation.',
+      toast: 'Compatibility continuity đã được ghi nhận; strict connector rediscovery vẫn còn thiếu.'
     };
   }
   if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {

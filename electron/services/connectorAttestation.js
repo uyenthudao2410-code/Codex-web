@@ -25,6 +25,9 @@ function canonical({ clientId, clientType, activationEpochId, processInstanceId,
   ].join('|');
 }
 
+// tunnel-client injects the returned value as a static header for one exact
+// managed-Tunnel/MCP lifecycle. issuedAtUnixMs and nonce bind issuance and aid
+// audit; they do not claim that the transport can re-sign every request.
 function connectorAttestationHeader({
   secret,
   clientId = 'chatweb',
@@ -65,4 +68,3 @@ module.exports = {
   CONNECTOR_ATTESTATION_ENV,
   connectorAttestationHeader
 };
-
