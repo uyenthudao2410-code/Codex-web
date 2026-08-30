@@ -90,11 +90,19 @@ nhưng không làm capability của một process đang sống tự hết hạn 
 Local discovery probe của Tunnel không nhận attestation này và không thể tạo
 ChatWeb discovery receipt.
 
-Watchdog vẫn dùng `soft_recovery` theo component: Tunnel failure chỉ thay Tunnel;
-MCP exit hoặc semantic hang sau ngưỡng defer chỉ thay exact owned MCP process và
-giữ nguyên Tunnel PID. MCP replacement mang expected code revision qua spawn và
-được dừng fail-closed nếu disk revision đổi trước postflight, thay vì âm thầm tải
-source mới dưới activation epoch cũ.
+Watchdog vẫn dùng `soft_recovery` theo component: Tunnel failure chỉ thay Tunnel.
+Khi durable epoch còn đủ điều kiện replacement tại chỗ, MCP exit hoặc semantic
+hang sau ngưỡng defer thay exact owned MCP process và khởi động lại duy nhất
+Coding Tunnel phụ thuộc để bind managed attestation vào tuple process/server mới.
+Cấu hình Tunnel, Recovery Host/UI và Recovery Plane được giữ nguyên; không được
+diễn đạt việc này là giữ nguyên Tunnel PID. MCP replacement mang expected code
+revision qua spawn và được dừng fail-closed nếu disk revision đổi trước
+postflight, thay vì âm thầm tải source mới dưới activation epoch cũ.
+Nhánh replacement tại chỗ chỉ hợp lệ khi durable epoch authority đọc được và
+epoch còn nonterminal. `READY_COMMITTED`, `READY` hoặc `FAILED` không được tái sử
+dụng để spawn MCP mới, kể cả caller truyền gate `closed`; phải tạo full-clean
+epoch mới. Store thiếu/không đọc được cũng bị từ chối trước mọi Native/Tunnel
+mutation, không được fallback sang no-epoch legacy path.
 
 Semantic watchdog không dùng `workspace_context` như một liveness probe. Trước
 canary, nó lấy HTTP control-health trong cửa sổ tối đa 5 giây; nếu health tạm thời

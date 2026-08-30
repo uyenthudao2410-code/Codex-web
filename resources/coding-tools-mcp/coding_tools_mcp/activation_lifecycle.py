@@ -17,6 +17,9 @@ from .projection_rebuild import (
 
 
 READY_COMMIT_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
+ACTIVATION_GATE_OPEN = "open"
+ACTIVATION_GATE_CLOSED = "closed"
+ACTIVATION_GATE_VALUES = frozenset({ACTIVATION_GATE_OPEN, ACTIVATION_GATE_CLOSED})
 
 
 class ActivationLifecycleMixin:
@@ -40,15 +43,44 @@ class ActivationLifecycleMixin:
             expires_at_unix_ms = int(raw_expiry) if raw_expiry else 0
         except ValueError:
             expires_at_unix_ms = 0
+        if configured_gate and configured_gate not in ACTIVATION_GATE_VALUES:
+            raise ToolFailure(
+                "ACTIVATION_GATE_INVALID",
+                "Coding MCP activation gate must be either 'open' or 'closed'.",
+                category="validation",
+                retryable=False,
+                details={
+                    "activation_epoch_id": epoch_id or None,
+                    "activation_gate": configured_gate,
+                    "supported": sorted(ACTIVATION_GATE_VALUES),
+                },
+            )
+        if epoch_id and configured_gate == ACTIVATION_GATE_OPEN:
+            raise ToolFailure(
+                "ACTIVATION_GATE_INVALID",
+                "Epoch-bound Coding MCP processes must start with admission closed.",
+                category="validation",
+                retryable=False,
+                details={
+                    "activation_epoch_id": epoch_id,
+                    "activation_gate": configured_gate,
+                    "required_gate": ACTIVATION_GATE_CLOSED,
+                },
+            )
+        normalized_gate = (
+            ACTIVATION_GATE_CLOSED
+            if epoch_id
+            else (configured_gate or ACTIVATION_GATE_OPEN)
+        )
         self.activation_epoch_id = epoch_id or None
-        self.activation_gate_config = configured_gate or "open"
-        self.activation_admission = "closed" if configured_gate == "closed" else "open"
+        self.activation_gate_config = normalized_gate
+        self.activation_admission = normalized_gate
         # This is startup-bound authority from the exact Recovery Host epoch,
         # not a caller-controlled GET parameter. It preserves durable
         # AWAITING_ACCEPTANCE rows during a process refresh while the ordinary
         # live-work, ownership and ledger-integrity gates remain fail-closed.
         self.activation_allow_acceptance_pending = bool(
-            epoch_id and configured_gate == "closed" and allow_acceptance_pending == "true"
+            epoch_id and normalized_gate == ACTIVATION_GATE_CLOSED and allow_acceptance_pending == "true"
         )
         self.activation_expires_at_unix_ms = expires_at_unix_ms if expires_at_unix_ms > 0 else None
         self.activation_ready_commit_digest: str | None = None

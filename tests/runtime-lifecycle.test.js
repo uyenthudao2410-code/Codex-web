@@ -649,6 +649,7 @@ test('revision observation failure cannot break runtime supervision', () => {
 });
 
 test('connector contract stays pending until current tools/list rediscovery is observed', () => {
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
     secrets: { get: () => '' },
@@ -670,14 +671,16 @@ test('connector contract stays pending until current tools/list rediscovery is o
     identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: contract.sha256,
-    observed_at: '2026-08-18T00:00:00.000Z'
+    observed_at: '2026-08-18T00:00:00.000Z',
+    process_instance_id: 'detached-process-0001',
+    server_instance_id: 'detached-server-00001'
   };
   assert.equal(orchestrator.connectorContractStatus(contract, discovery).contractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
-  const acknowledged = orchestrator.synchronizeConnectorContract(contract, discovery);
-  assert.equal(acknowledged.refreshRequired, false);
-  assert.equal(acknowledged.acknowledgedSha256, contract.sha256);
-  assert.equal(acknowledged.rediscovered, true);
-  assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
+  assert.throws(
+    () => orchestrator.synchronizeConnectorContract(contract, discovery),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, undefined);
 });
 
 test('runtime snapshots expose rediscovery without implicitly acknowledging a changed contract', async () => {
@@ -745,7 +748,19 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
   assert.equal(snapshot.status.connectorContractAcknowledgedSha256, acknowledgedSha);
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
 
-  const acknowledged = orchestrator.acknowledgeConnectorContractHash(contract, discovery);
+  assert.throws(
+    () => orchestrator.acknowledgeConnectorContractHash(contract, discovery),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+  const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery({
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: contract,
+    connector_tool_discovery: discovery
+  }, { activationEpochId, nowUnixMs: Date.now() });
   assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
   const ready = await orchestrator.lightweightSnapshot();
@@ -753,6 +768,65 @@ test('runtime snapshots expose rediscovery without implicitly acknowledging a ch
   assert.equal(ready.connectorReady, true);
   assert.equal(ready.fullyReady, true);
   assert.equal(ready.updateIncomplete, false);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
+test('live runtime snapshot rejects a discovery receipt from a different MCP process tuple', async () => {
+  const acknowledgedSha = 'b'.repeat(64);
+  const currentSha = 'c'.repeat(64);
+  const activationEpochId = 'activation-live-tuple-mismatch-0001';
+  const contract = { schema_version: 1, profile: 'smart-v3', sha256: currentSha };
+  const discovery = {
+    current_contract_observed: true,
+    identity_source: 'attested_transport',
+    attestation_verified: true,
+    contract_sha256: currentSha,
+    observed_at: new Date(Date.now() - 10).toISOString(),
+    process_instance_id: 'retired-process-tuple-0001',
+    server_instance_id: 'retired-server-tuple-00001',
+    activation_epoch_id: activationEpochId
+  };
+  const health = {
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: 'current-process-tuple-0001',
+    instance_id: 'current-server-tuple-00001',
+    tool_contract: contract,
+    connector_tool_discovery: discovery
+  };
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => 'token', status: () => ({}) },
+    environment: { inspect: async () => ({}) },
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  orchestrator.currentMcpHealth = async () => health;
+  orchestrator.native = {
+    status: async () => true,
+    revisionStatus: () => ({ running_revision: 'r', disk_revision: 'r', update_pending: false, state: 'current' })
+  };
+  orchestrator.tunnel = { status: async () => true };
+  orchestrator.activationEpochStatus = () => ({ admission_open: true, update_incomplete: false });
+  orchestrator.gitStatus = async () => ({ available: true, branch: 'main', head: null, head_short: null, dirty: true });
+
+  // Detached diagnostics still parse the receipt, but the live projection is
+  // bound to the exact health process/server/epoch tuple and must reject it.
+  assert.equal(orchestrator.connectorContractStatus(contract, discovery).rediscovered, true);
+  const live = await orchestrator.lightweightSnapshot();
+  assert.equal(live.connectorRediscovered, false);
+  assert.equal(live.connectorRediscoveredAt, null);
+  assert.equal(live.connectorContractState, 'CHANGED_NEEDS_DISCOVERY');
+  assert.equal(live.connectorRefreshRequired, true);
+  assert.equal(live.connectorReady, false);
+  assert.equal(live.fullyReady, false);
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
 });
 
@@ -816,6 +890,37 @@ test('activation connector acknowledgement accepts only an exact current-process
   );
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
 
+  for (const invalidHealth of [
+    {
+      ...health,
+      connector_tool_discovery: {
+        ...health.connector_tool_discovery,
+        server_instance_id: 'server-retired'
+      }
+    },
+    { ...health, process_instance_id: '' },
+    { ...health, instance_id: '' },
+    {
+      ...health,
+      connector_tool_discovery: {
+        ...health.connector_tool_discovery,
+        observed_at: new Date(nowUnixMs + 2_000).toISOString()
+      }
+    }
+  ]) {
+    assert.throws(
+      () => orchestrator.acknowledgeExactConnectorDiscovery(invalidHealth, { activationEpochId, nowUnixMs }),
+      { code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED' }
+    );
+    assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, acknowledgedSha);
+  }
+
+  const futureDiscovery = {
+    ...health.connector_tool_discovery,
+    observed_at: new Date(nowUnixMs + 2_000).toISOString()
+  };
+  assert.equal(orchestrator.connectorContractStatus(health.tool_contract, futureDiscovery).rediscovered, false);
+
   const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery(health, {
     activationEpochId,
     nowUnixMs
@@ -823,6 +928,79 @@ test('activation connector acknowledgement accepts only an exact current-process
   assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
   assert.equal(acknowledged.acknowledgedSha256, currentSha);
   assert.equal(acknowledged.rediscovered, true);
+  assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
+});
+
+test('official connector acknowledgement is bound to the exact health receipt', async (t) => {
+  const acknowledgedSha = 'b'.repeat(64);
+  const currentSha = 'c'.repeat(64);
+  const activationEpochId = 'activation-official-connector-0001';
+  const processInstanceId = 'official-process-connector-0001';
+  const serverInstanceId = 'official-server-connector-00001';
+  const token = 'official-connector-token';
+  let health = {
+    ready: true,
+    workspace: 'C:\\work\\one',
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: { schema_version: 1, profile: 'smart-v3', sha256: currentSha },
+    connector_tool_discovery: {
+      current_contract_observed: true,
+      identity_source: 'attested_transport',
+      attestation_verified: true,
+      contract_sha256: currentSha,
+      observed_at: new Date(Date.now() - 10).toISOString(),
+      process_instance_id: processInstanceId,
+      server_instance_id: serverInstanceId,
+      activation_epoch_id: activationEpochId
+    }
+  };
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: acknowledgedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/health');
+    assert.equal(request.headers.authorization, `Bearer ${token}`);
+    const body = JSON.stringify(health);
+    response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+    response.end(body);
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one', mcpPort: server.address().port }) },
+    secrets: { get: (name) => name === 'mcpAuthToken' ? token : '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  orchestrator.snapshot = async () => ({ acknowledged: true });
+
+  const acknowledged = await orchestrator.acknowledgeConnectorContract();
+  assert.deepEqual(acknowledged, { acknowledged: true });
+  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  assert.equal(persisted.chatgptToolContractSha256, currentSha);
+  assert.equal(persisted.chatgptToolContractRediscoveredSha256, currentSha);
+  assert.equal(persisted.chatgptToolContractRediscoveredAt, health.connector_tool_discovery.observed_at);
+
+  health = {
+    ...health,
+    connector_tool_discovery: {
+      ...health.connector_tool_discovery,
+      server_instance_id: 'retired-server-connector-00001'
+    }
+  };
+  await assert.rejects(
+    () => orchestrator.acknowledgeConnectorContract(),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
   assert.equal(JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8')).chatgptToolContractSha256, currentSha);
   fs.writeFileSync(runtimeStatePath, JSON.stringify({ manualStop: false }), 'utf8');
 });
@@ -1087,6 +1265,9 @@ test('connector contract state is unavailable without a current contract fingerp
 
 test('persisted matching connector SHA survives process restart without forcing rediscovery', () => {
   const contract = { schema_version: 1, profile: 'smart-v3', sha256: 'b'.repeat(64) };
+  const activationEpochId = 'activation-persisted-connector-0001';
+  const processInstanceId = 'persisted-process-connector-0001';
+  const serverInstanceId = 'persisted-server-connector-00001';
   fs.writeFileSync(runtimeStatePath, JSON.stringify({
     manualStop: false,
     chatgptToolContractSha256: contract.sha256,
@@ -1097,7 +1278,8 @@ test('persisted matching connector SHA survives process restart without forcing 
     secrets: { get: () => '' },
     environment: {},
     log: { info() {}, warn() {}, error() {} },
-    emitProgress() {}
+    emitProgress() {},
+    activationEpochId
   });
 
   const retainedAcknowledgement = orchestrator.connectorContractStatus(contract);
@@ -1123,13 +1305,28 @@ test('persisted matching connector SHA survives process restart without forcing 
     identity_source: 'attested_transport',
     attestation_verified: true,
     contract_sha256: changedContract.sha256,
-    observed_at: '2026-08-23T21:40:00.000Z'
+    observed_at: '2026-08-23T21:40:00.000Z',
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId,
+    activation_epoch_id: activationEpochId
   };
   const currentDiscovery = orchestrator.connectorContractStatus(changedContract, discovery);
   assert.equal(currentDiscovery.contractState, 'CHANGED_DISCOVERED_NEEDS_ACK');
   assert.equal(currentDiscovery.refreshRequired, false);
   assert.equal(currentDiscovery.acknowledgementPending, true);
-  assert.doesNotThrow(() => orchestrator.acknowledgeConnectorContractHash(changedContract, discovery));
+  assert.throws(
+    () => orchestrator.acknowledgeConnectorContractHash(changedContract, discovery),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
+  const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery({
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: changedContract,
+    connector_tool_discovery: discovery
+  }, { activationEpochId, nowUnixMs: Date.now() });
+  assert.equal(acknowledged.contractState, 'CURRENT_ACKNOWLEDGED');
   assert.equal(orchestrator.connectorContractStatus(changedContract, discovery).contractState, 'CURRENT_ACKNOWLEDGED');
 });
 
@@ -1192,21 +1389,21 @@ test('reviewed exact predecessor requires live current-process ChatWeb contact b
   assert.equal(compatible.compatibilitySource, 'declared_exact_predecessor_live_contact');
   assert.equal(compatible.compatibilityMetadataBackfillPending, true);
 
-  const synchronized = orchestrator.synchronizeConnectorContract(contract, null, contact);
-  assert.equal(synchronized.contractState, 'UNCHANGED_ACKNOWLEDGED');
-  assert.equal(synchronized.acknowledgedSha256, currentSha);
-  assert.equal(synchronized.rediscovered, false);
+  assert.throws(
+    () => orchestrator.synchronizeConnectorContract(contract, null, contact),
+    (error) => error?.code === 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+  );
   const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
-  assert.equal(persisted.chatgptToolContractSha256, currentSha);
-  assert.equal(persisted.chatgptToolContractSchemaVersion, 1);
-  assert.equal(persisted.chatgptToolContractProfile, 'smart-v3');
+  assert.equal(persisted.chatgptToolContractSha256, acknowledgedSha);
+  assert.equal(persisted.chatgptToolContractSchemaVersion, undefined);
+  assert.equal(persisted.chatgptToolContractProfile, undefined);
   assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredAt'), false);
   assert.equal(Object.hasOwn(persisted, 'chatgptToolContractRediscoveredSha256'), false);
-  assert.equal(persisted.chatgptToolContractCompatibilitySource, 'declared_exact_predecessor_live_contact');
-  assert.equal(persisted.chatgptToolContractCompatibilityPredecessorSha256, acknowledgedSha);
-  assert.equal(persisted.chatgptToolContractCompatibilityContactSha256, currentSha);
-  assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, 'process-current');
-  assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, 'server-current');
+  assert.equal(persisted.chatgptToolContractCompatibilitySource, undefined);
+  assert.equal(persisted.chatgptToolContractCompatibilityPredecessorSha256, undefined);
+  assert.equal(persisted.chatgptToolContractCompatibilityContactSha256, undefined);
+  assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, undefined);
+  assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, undefined);
 });
 
 test('compatibility route stays fail closed for undeclared or boundary-changing contracts', () => {
@@ -1613,7 +1810,7 @@ test('Recovery Host activation preflight capability is operation-bound and HMAC-
   assert.notEqual(activationPreflightProof(token, operationId), activationPreflightProof(token, `${operationId}-other`));
 });
 
-test('Coding MCP activation verifies revision and a new process identity without touching the tunnel', async (t) => {
+test('Coding MCP activation without a configured tunnel reports that no tunnel was preserved', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-mcp-activation-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const stateFile = path.join(root, 'runtime-state.json');
@@ -1630,6 +1827,7 @@ test('Coding MCP activation verifies revision and a new process identity without
     emitProgress() {},
     revisionTracker: { disk: () => ({ revision: expectedRevision }) }
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.validate = () => {};
   orchestrator.ensureToken = async () => 'token';
   let health = {
@@ -1669,7 +1867,8 @@ test('Coding MCP activation verifies revision and a new process identity without
   assert.equal(result.new_server_instance_id, 'new-server');
   assert.equal(result.new_revision, expectedRevision);
   assert.equal(result.disk_revision_verified, true);
-  assert.equal(result.tunnel_preserved, true);
+  assert.equal(result.tunnel_preserved, false);
+  assert.equal(result.tunnel_attestation_refreshed, false);
   assert.deepEqual(calls, { stop: 1, start: 1, tunnel: 0 });
 });
 
@@ -1686,6 +1885,7 @@ test('Coding MCP activation refuses an expired request immediately before stoppi
     emitProgress() {},
     revisionTracker: { disk: () => ({ revision: expectedRevision }) }
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.validate = () => {};
   orchestrator.ensureToken = async () => 'token';
   orchestrator.currentMcpHealth = async () => ({
@@ -1718,6 +1918,7 @@ test('Coding MCP activation fails closed when disk revision changes after replac
     emitProgress() {},
     revisionTracker: { disk: () => ({ revision: ++revisionReads === 1 ? expectedRevision : changedRevision }) }
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.validate = () => {};
   orchestrator.ensureToken = async () => 'token';
   let health = {
@@ -1755,6 +1956,7 @@ test('Coding MCP activation fails before stop when the requested revision change
     emitProgress() {},
     revisionTracker: { disk: () => ({ revision: 'c'.repeat(64) }) }
   });
+  orchestrator.activationEpochStore = { current: () => null };
   orchestrator.validate = () => {};
   orchestrator.ensureToken = async () => 'token';
   let stopped = false;
@@ -2134,12 +2336,25 @@ test('MCP-only soft recovery stops the replacement when disk revision drifts aft
   orchestrator.activationEpochStore = {
     current: () => ({
       activation_epoch_id: activationEpochId,
-      state: 'READY',
-      admission_state: 'OPEN',
+      // This fixture isolates the post-spawn disk-drift rollback.  A terminal
+      // READY/OPEN epoch is intentionally covered by the dedicated soft-
+      // replacement admission tests and must be refused before spawn.
+      state: 'VERIFYING',
+      admission_state: 'CLOSED',
       component_revisions: { coding_mcp: { disk_revision: expectedRevision } },
       verification: { final_census: { running_revision: expectedRevision, disk_revision: expectedRevision } }
     })
   };
+  // Production soft recovery is suppressed for an incomplete epoch.  Bypass
+  // that unrelated lifecycle gate here so this test can exercise the later
+  // revision-drift fence after a replacement has actually spawned.
+  orchestrator.assertSoftRecoveryAllowed = () => ({
+    activation_epoch_id: activationEpochId,
+    epoch_state: 'VERIFYING',
+    state: 'UPDATE_INCOMPLETE',
+    admission_open: false,
+    update_incomplete: false
+  });
   let revisionReads = 0;
   orchestrator.revisions = {
     disk: () => ({ revision: ++revisionReads === 1 ? expectedRevision : changedRevision })

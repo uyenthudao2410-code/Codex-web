@@ -154,6 +154,11 @@ test('NativeService refuses a rotated or unknown launch secret and takes exact r
   assert.equal(JSON.stringify(state).includes(oldSecret), false);
   assert.equal(JSON.stringify(state).includes(rotatedSecret), false);
   assert.equal(spawnCalls[0].options.env.CODING_TOOLS_MCP_CONNECTOR_ATTESTATION_SECRET, rotatedSecret);
+  assert.equal(
+    spawnCalls[0].options.env.CODING_TOOLS_MCP_ACTIVATION_GATE,
+    'closed',
+    'an epoch-bound NativeService replacement must never inherit the Python runtime open default'
+  );
 
   // A legacy live receipt without a digest is also unknown and must not be
   // adopted under a newly supplied capability.
@@ -175,4 +180,3 @@ test('NativeService refuses a rotated or unknown launch secret and takes exact r
   });
   assert.deepEqual(legacyTerminated, [{ pid: process.pid, process_start_token: OLD_PROCESS_TOKEN }]);
 });
-

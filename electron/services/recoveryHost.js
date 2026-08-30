@@ -1480,7 +1480,8 @@ class RecoveryHost {
         health.tool_contract || null,
         health.connector_tool_discovery || null,
         health.connector_client_contact || null,
-        health.connector_activation_bootstrap || null
+        health.connector_activation_bootstrap || null,
+        health
       )
       : null;
     const runtime = {

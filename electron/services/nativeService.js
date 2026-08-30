@@ -26,6 +26,8 @@ const OPENAI_API_KEY_HANDLE = 'secret://provider/openai/api-key';
 const P5_A0_SEED_ENV = 'CODING_TOOLS_P5_A0_SEED';
 const P5_A0_SEED_SECRET = 'p5A0Seed';
 const P5_A0_SEED_HANDLE = 'secret://experiment/p5/a';
+const ACTIVATION_GATE_CLOSED = 'closed';
+const ACTIVATION_GATE_OPEN = 'open';
 const CORE_NATIVE_ENV_NAMES = new Set([
   'PATH', 'PATHEXT', 'COMSPEC', 'SYSTEMROOT', 'WINDIR', 'SYSTEMDRIVE',
   'PROGRAMDATA', 'PROGRAMFILES', 'PROGRAMFILES(X86)', 'PROGRAMW6432',
@@ -45,6 +47,42 @@ function coreNativeEnvironment(sourceEnv = process.env) {
   return env;
 }
 
+/**
+ * Normalize the startup admission gate for an MCP child.
+ *
+ * An activation epoch is a transaction boundary.  A child bound to that
+ * epoch must start with admission CLOSED and can only be opened later by the
+ * exact `complete_epoch` control action after the durable census is committed.
+ * Keeping this invariant here (rather than at individual callers) protects
+ * cold-start, recovery, and future replacement paths when one of them omits
+ * an option.  Legacy launches without an epoch retain their historical
+ * implicit-open behavior.
+ */
+function normalizeActivationGate(activationEpochId = '', activationGate = '') {
+  const epochId = String(activationEpochId || '').trim();
+  const suppliedGate = String(activationGate || '').trim().toLowerCase();
+  if (suppliedGate && suppliedGate !== ACTIVATION_GATE_CLOSED && suppliedGate !== ACTIVATION_GATE_OPEN) {
+    throw Object.assign(new Error('Coding MCP activation gate is invalid.'), {
+      code: 'ACTIVATION_GATE_INVALID',
+      details: {
+        activation_epoch_id: epochId || null,
+        activation_gate: suppliedGate
+      }
+    });
+  }
+  if (epochId && suppliedGate === ACTIVATION_GATE_OPEN) {
+    throw Object.assign(new Error('Epoch-bound Coding MCP processes must start with admission closed.'), {
+      code: 'ACTIVATION_GATE_INVALID',
+      details: {
+        activation_epoch_id: epochId,
+        activation_gate: suppliedGate,
+        required_gate: ACTIVATION_GATE_CLOSED
+      }
+    });
+  }
+  return epochId ? ACTIVATION_GATE_CLOSED : suppliedGate;
+}
+
 function buildNativeMcpEnv({
   sourceEnv = process.env,
   launch,
@@ -61,6 +99,8 @@ function buildNativeMcpEnv({
   connectorAttestationSecret = ''
 }) {
   const env = coreNativeEnvironment(sourceEnv);
+  const normalizedEpochId = String(activationEpochId || '').trim();
+  const normalizedActivationGate = normalizeActivationGate(normalizedEpochId, activationGate);
   const broker = { [MCP_AUTH_HANDLE]: String(token || '') };
   if (String(sourceEnv.OPENAI_API_KEY || '')) broker[OPENAI_API_KEY_HANDLE] = String(sourceEnv.OPENAI_API_KEY);
   // P5-A0 may only reach the child process through a seed explicitly read from
@@ -81,11 +121,11 @@ function buildNativeMcpEnv({
     CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE: supervisorRequestFile,
     CODING_TOOLS_MCP_CODE_REVISION: diskRevision
   });
-  if (String(activationEpochId || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = String(activationEpochId).trim();
+  if (normalizedEpochId) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = normalizedEpochId;
   if (String(connectorAttestationSecret || '').trim()) {
     env[CONNECTOR_ATTESTATION_ENV] = String(connectorAttestationSecret).trim();
   }
-  if (String(activationGate || '').trim()) env.CODING_TOOLS_MCP_ACTIVATION_GATE = String(activationGate).trim().toLowerCase();
+  if (normalizedActivationGate) env.CODING_TOOLS_MCP_ACTIVATION_GATE = normalizedActivationGate;
   if (activationAllowAcceptancePending === true) {
     env.CODING_TOOLS_MCP_ACTIVATION_ALLOW_ACCEPTANCE_PENDING = 'true';
   }
@@ -438,6 +478,12 @@ class NativeService {
     const currentReceipt = storedProcessReceipt(current, 'nativePid', 'nativeProcessStartToken');
     const currentIdentity = await this.ownedIdentity(current);
     const requestedEpoch = String(options.activationEpochId || '').trim();
+    // Resolve and validate the admission gate before any exact process
+    // replacement mutation.  NativeService is the shared launch boundary for
+    // cold start and recovery callers; an omitted gate on an epoch-bound
+    // replacement must never fall through to the Python runtime's implicit
+    // open default.
+    const requestedActivationGate = normalizeActivationGate(requestedEpoch, options.activationGate);
     const requestedConnectorAttestationSecret = String(options.connectorAttestationSecret || '').trim();
     const requestedConnectorAttestationSecretHash = connectorAttestationSecretHash(requestedConnectorAttestationSecret);
     const requestedExpiry = Number(options.activationExpiresAtUnixMs || options.expiresAtUnixMs || 0);
@@ -525,7 +571,7 @@ class NativeService {
       p5Seed: options.p5Seed,
       device: this.device,
       activationEpochId: requestedEpoch,
-      activationGate: options.activationGate,
+      activationGate: requestedActivationGate,
       activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
       activationExpiresAtUnixMs: requestedExpiry,
       connectorAttestationSecret: options.connectorAttestationSecret || ''
@@ -710,6 +756,7 @@ module.exports = {
   runtimeFingerprint,
   connectorAttestationSecretHash,
   connectorAttestationSecretMatches,
+  normalizeActivationGate,
   currentRuntimeState,
   resolveNativeLaunchContract,
   buildNativeMcpEnv,
@@ -719,5 +766,7 @@ module.exports = {
   OPENAI_API_KEY_HANDLE,
   P5_A0_SEED_ENV,
   P5_A0_SEED_SECRET,
-  P5_A0_SEED_HANDLE
+  P5_A0_SEED_HANDLE,
+  ACTIVATION_GATE_CLOSED,
+  ACTIVATION_GATE_OPEN
 };

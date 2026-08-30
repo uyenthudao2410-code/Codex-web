@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "task_id": "c4275f450a0f40d4bc666327cbcc9258",
+  "orchestration": {
+    "run_id": "037b642a187e4f098dc66e6dd1c9b3c1",
+    "wave_id": "0742b3e58f714d6faac3835471840b1b",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "c0aa335c7c12746a1f4ff42e84234f8c54914658",
+    "worktree_fp": "44299db57fd927decdfce745a3029d4e6de102caae1681fe5fb8baf6d177f6f4",
+    "contract_fp": ""
+  },
+  "objective": "Read-only validate the user's technical diagnosis about MCP protocol discovery versus callable business tools, Coding-VP/Coding-VP Live client exposure, tunnel-client polling, connector_tool_discovery receipts, and whether current LIVE blockers are host/transport or client-binding related. Do not modify files, create RUN/WAVE, restart services, or run destructive commands.",
+  "status": "idle",
+  "steps": [],
+  "current_step": "",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-30T03:30:56.457Z",
+  "updated_at": "2026-08-30T03:30:56.457Z",
+  "events": [
+    {
+      "time": "2026-08-30T03:30:56.457Z",
+      "event": "orchestration_projection_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "037b642a187e4f098dc66e6dd1c9b3c1"
+      }
+    }
+  ]
+}

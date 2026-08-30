@@ -2,7 +2,14 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
-const { NativeService, isAlive, runtimeFingerprint, P5_A0_SEED_SECRET } = require('./nativeService');
+const {
+  NativeService,
+  isAlive,
+  runtimeFingerprint,
+  P5_A0_SEED_SECRET,
+  normalizeActivationGate,
+  ACTIVATION_GATE_CLOSED
+} = require('./nativeService');
 const { TunnelService } = require('./tunnelService');
 const { validateRuntimeSettings, mergeRecentWorkspaces, normalizeWorkspacePath, workspaceKey } = require('./config');
 const { canConnect } = require('./environmentService');
@@ -111,6 +118,10 @@ const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 15_000;
 // avoid.  Keep the probe bounded while allowing normal Windows/Python
 // scheduling jitter and one in-flight read-only tool call to drain.
 const MCP_HEALTH_TIMEOUT_MS = 5_000;
+// Keep connector receipt validation aligned with the full-clean admission
+// gate.  A small clock skew is tolerated, but a receipt materially from the
+// future is not evidence of a client having contacted this runtime yet.
+const CONNECTOR_DISCOVERY_FUTURE_SKEW_MS = 1_000;
 
 function mcpHealthFailure(kind, details = {}) {
   return {
@@ -643,6 +654,74 @@ class RuntimeOrchestrator {
     return epoch;
   }
 
+  /**
+   * Validate the durable epoch before any MCP process replacement mutation.
+   *
+   * READY/OPEN is terminal in ActivationEpochStore: it can only be reached by
+   * committing the exact READY proof and has no supported transition back to a
+   * closed/re-verifying state.  Starting a new MCP process under that epoch
+   * would therefore create a closed child that can never be reopened by
+   * completeActivationEpoch().  Refuse that path before touching MCP or Tunnel
+   * and require a new full-clean activation epoch instead.
+   *
+   * The same check binds an epoch-bearing launch to the durable current record.
+   * This prevents a stale in-memory activationEpochId from creating a closed
+   * process after the epoch store was cleared/replaced.  Empty/empty remains
+   * the legacy no-epoch launch contract.
+   */
+  assertMcpReplacementAllowed({ activationEpochId = '', operation = 'mcp_replacement' } = {}) {
+    const durable = this.activationEpochStatus();
+    const requestedEpochId = String(activationEpochId || '').trim();
+    const durableEpochId = String(durable.activation_epoch_id || '').trim();
+    const hasRequestedEpoch = Boolean(requestedEpochId);
+    const hasDurableEpoch = Boolean(durableEpochId);
+    // NONE is the only legitimate empty durable state. An unreadable,
+    // unavailable, or invalid epoch store also projects an empty id, but that
+    // uncertainty is not authority to take the legacy no-epoch mutation path.
+    if (!hasDurableEpoch && durable.update_incomplete === true) {
+      throw Object.assign(new Error('Durable activation authority is unavailable; refusing Coding MCP replacement.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: {
+          activation_epoch_id: requestedEpochId || null,
+          current_activation_epoch_id: null,
+          epoch_state: durable.epoch_state || durable.state || null,
+          error_code: durable.error_code || null,
+          admission_open: false,
+          full_clean_activation_required: true,
+          replacement_operation: String(operation || 'mcp_replacement')
+        }
+      });
+    }
+    if (hasRequestedEpoch !== hasDurableEpoch
+      || (hasRequestedEpoch && requestedEpochId !== durableEpochId)) {
+      throw Object.assign(new Error('The requested MCP replacement is not bound to the current durable activation epoch.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: {
+          activation_epoch_id: requestedEpochId || null,
+          current_activation_epoch_id: durableEpochId || null,
+          epoch_state: durable.epoch_state || durable.state || null,
+          admission_open: durable.admission_open === true,
+          full_clean_activation_required: true,
+          replacement_operation: String(operation || 'mcp_replacement')
+        }
+      });
+    }
+    const epochState = String(durable.epoch_state || durable.state || '').trim().toUpperCase();
+    if (hasDurableEpoch && ['READY_COMMITTED', 'READY', 'FAILED'].includes(epochState)) {
+      throw Object.assign(new Error('A committed or terminal activation cannot replace Coding MCP in place; start a new full-clean activation epoch.'), {
+        code: 'UPDATE_INCOMPLETE',
+        details: {
+          activation_epoch_id: durableEpochId,
+          epoch_state: epochState,
+          admission_open: durable.admission_open === true,
+          full_clean_activation_required: true,
+          replacement_operation: String(operation || 'mcp_replacement')
+        }
+      });
+    }
+    return durable;
+  }
+
   async completeActivationEpoch(activationEpochId, readyCommitDigest) {
     const id = String(activationEpochId || '').trim();
     if (!id) throw Object.assign(new Error('Activation epoch is required.'), { code: 'ACTIVATION_EPOCH_ID_REQUIRED' });
@@ -1062,6 +1141,24 @@ class RuntimeOrchestrator {
         reason: options.reason || 'coding_mcp_revision_activation'
       });
     }
+    const launchActivationEpochId = String(options.activationEpochId || this.activationEpochId || '').trim();
+    this.assertMcpReplacementAllowed({
+      activationEpochId: launchActivationEpochId,
+      operation: 'coding_mcp_revision_activation'
+    });
+    // Do not change the shared health identity for a call that cannot acquire
+    // lifecycle ownership. There are no awaits between this check, binding,
+    // and setting busy, so another local lifecycle call cannot interleave.
+    if (this.busy || this.recovering) {
+      throw Object.assign(new Error('Runtime lifecycle is already busy.'), { code: 'RUNTIME_BUSY' });
+    }
+    // Bind an explicitly supplied epoch only after the durable replacement
+    // guard has accepted it.  This keeps the health/liveness probes and the
+    // child launch on one exact epoch even when a Recovery Host instance was
+    // reconstructed with a stale or empty in-memory binding.
+    if (launchActivationEpochId && launchActivationEpochId !== this.activationEpochId) {
+      this.setActivationEpoch(launchActivationEpochId);
+    }
     // Soft recovery must never silently load source bytes from a newer
     // revision under the old activation epoch. Check continuity before any
     // stop/spawn mutation; a mismatch is a typed UPDATE_INCOMPLETE refusal and
@@ -1070,9 +1167,6 @@ class RuntimeOrchestrator {
     if (options.automatic === true || options.mode === 'soft_recovery') {
       this.assertSoftRecoveryAllowed();
       this.assertActivationRevisionContinuity();
-    }
-    if (this.busy || this.recovering) {
-      throw Object.assign(new Error('Runtime lifecycle is already busy.'), { code: 'RUNTIME_BUSY' });
     }
     this.busy = true;
     let replacementStarted = false;
@@ -1088,6 +1182,26 @@ class RuntimeOrchestrator {
       const oldState = readJson(this.paths.stateFile(), {});
       const oldHealth = await this.currentMcpHealth();
       if (!oldHealth) throw Object.assign(new Error('Coding MCP health identity is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
+      // Managed Coding Tunnel attestation is bound to the exact MCP
+      // process/server tuple and secret. Resolve every prerequisite before
+      // stopping MCP, so the component-scoped fallback either refreshes that
+      // dependent Tunnel or refuses without mutation.
+      let tunnelLaunch = null;
+      if (String(settings.tunnelId || '').trim()) {
+        const runtimeApiKey = this.secrets.get('runtimeApiKey');
+        if (!runtimeApiKey) {
+          throw Object.assign(new Error('Coding Tunnel attestation cannot be rebound without the Runtime API Key.'), {
+            code: 'CONNECTOR_ATTESTATION_REBIND_UNAVAILABLE'
+          });
+        }
+        const proxy = await resolveProxy(settings);
+        if (settings.proxyMode === 'manual' && !proxy.reachable) {
+          throw Object.assign(new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`), {
+            code: 'CONNECTOR_ATTESTATION_REBIND_UNAVAILABLE'
+          });
+        }
+        tunnelLaunch = { runtimeApiKey, proxy };
+      }
       assertActivationDeadline(expiresAtUnixMs, 'before_native_stop', false);
       await this.native.stop();
       assertActivationDeadline(expiresAtUnixMs, 'before_native_start', true);
@@ -1097,6 +1211,8 @@ class RuntimeOrchestrator {
         expiresAtUnixMs,
         activationProcessMutated: true,
         p5Seed: this.p5A0Seed(),
+        activationEpochId: launchActivationEpochId,
+        activationGate: launchActivationEpochId ? ACTIVATION_GATE_CLOSED : '',
         connectorAttestationSecret
       });
       replacementStarted = true;
@@ -1104,7 +1220,7 @@ class RuntimeOrchestrator {
       for (let index = 0; index < 35; index += 1) {
         health = await this.currentMcpHealth();
         if (health?.code_revision === expectedRevision) break;
-        if (!(await this.native.status(settings))) {
+        if (!(await this.native.status(settings, { activationEpochId: launchActivationEpochId }))) {
           throw Object.assign(new Error('Coding MCP exited during activation.'), { code: 'ACTIVATION_HEALTH_FAILED' });
         }
         await wait(1000);
@@ -1127,6 +1243,24 @@ class RuntimeOrchestrator {
           details: { expected_revision: expectedRevision, disk_revision: verifiedDiskRevision }
         });
       }
+      let tunnelStarted = null;
+      if (tunnelLaunch) {
+        const connectorAttestation = this.connectorAttestationForHealth(health, {
+          establish: true,
+          secret: connectorAttestationSecret
+        });
+        tunnelStarted = await this.tunnel.start(
+          { ...settings, effectiveProxyUrl: tunnelLaunch.proxy.resolvedUrl },
+          tunnelLaunch.runtimeApiKey,
+          token,
+          this.progress.bind(this),
+          {
+            activationEpochId: launchActivationEpochId,
+            connectorAttestation
+          }
+        );
+      }
+      const currentState = readJson(this.paths.stateFile(), {});
       this.invalidateSnapshot();
       return {
         old_instance_id: oldProcessInstanceId,
@@ -1139,7 +1273,10 @@ class RuntimeOrchestrator {
         new_revision: health.code_revision,
         health_verified: true,
         disk_revision_verified: true,
-        tunnel_preserved: true
+        old_tunnel_pid: Number(oldState.tunnelPid || 0) || null,
+        tunnel_pid: Number(currentState.tunnelPid || tunnelStarted?.pid || 0) || null,
+        tunnel_preserved: false,
+        tunnel_attestation_refreshed: Boolean(tunnelLaunch)
       };
     } catch (error) {
       if (replacementStarted) await this.native.stop().catch(() => false);
@@ -1161,7 +1298,8 @@ class RuntimeOrchestrator {
     }));
   }
 
-  connectorContractStatus(toolContract, discovery = null, contact = null, activationBootstrap = null) {
+  connectorContractStatus(toolContract, discovery = null, contact = null, activationBootstrap = null, runtimeIdentity = null) {
+    const nowUnixMs = Date.now();
     const currentSha256 = String(toolContract?.sha256 || '').trim();
     const activationEpochId = String(this.activationEpochId || '').trim();
     const schemaVersion = Number(toolContract?.schema_version || 0);
@@ -1177,7 +1315,29 @@ class RuntimeOrchestrator {
     const acknowledgedProfile = String(runtimeState.chatgptToolContractProfile || '').trim();
     const rediscoveredSha256 = String(discovery?.contract_sha256 || '').trim();
     const observedAt = String(discovery?.observed_at || '').trim();
-    const observedAtValid = Boolean(observedAt && Number.isFinite(Date.parse(observedAt)));
+    const observedAtUnixMs = Date.parse(observedAt);
+    const observedAtValid = Boolean(observedAt && Number.isFinite(observedAtUnixMs));
+    const observedAtCurrent = Boolean(
+      observedAtValid && observedAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS
+    );
+    const discoveryProcessInstanceId = String(discovery?.process_instance_id || '').trim();
+    const discoveryServerInstanceId = String(discovery?.server_instance_id || '').trim();
+    const expectedProcessInstanceId = String(runtimeIdentity?.process_instance_id || '').trim();
+    const expectedServerInstanceId = String(runtimeIdentity?.instance_id || runtimeIdentity?.server_instance_id || '').trim();
+    const expectedActivationEpochId = String(runtimeIdentity?.activation_epoch_id || '').trim();
+    // Detached status helpers remain backwards-compatible for diagnostics,
+    // while every live projection supplies the health identity and therefore
+    // refuses to display a receipt from another process/server tuple.
+    const runtimeIdentityMatches = (processInstanceId, serverInstanceId, epochId = '') => Boolean(
+      !runtimeIdentity
+      || (
+        expectedProcessInstanceId
+        && expectedServerInstanceId
+        && processInstanceId === expectedProcessInstanceId
+        && serverInstanceId === expectedServerInstanceId
+        && (!expectedActivationEpochId || epochId === expectedActivationEpochId)
+      )
+    );
     const rediscovered = Boolean(
       currentSha256
       && discovery?.current_contract_observed === true
@@ -1186,12 +1346,20 @@ class RuntimeOrchestrator {
       && rediscoveredSha256 === currentSha256
       && (!activationEpochId
         || String(discovery?.activation_epoch_id || '').trim() === activationEpochId)
-      && observedAtValid
+      && discoveryProcessInstanceId
+      && discoveryServerInstanceId
+      && runtimeIdentityMatches(
+        discoveryProcessInstanceId,
+        discoveryServerInstanceId,
+        String(discovery?.activation_epoch_id || '').trim()
+      )
+      && observedAtCurrent
     );
     const contractChanged = Boolean(currentSha256 && currentSha256 !== acknowledgedSha256);
     const contactSha256 = String(contact?.contract_sha256 || '').trim();
     const contactObservedAt = String(contact?.observed_at || '').trim();
-    const contactObservedAtValid = Boolean(contactObservedAt && Number.isFinite(Date.parse(contactObservedAt)));
+    const contactObservedAtUnixMs = Date.parse(contactObservedAt);
+    const contactObservedAtValid = Boolean(contactObservedAt && Number.isFinite(contactObservedAtUnixMs));
     const contactCurrent = Boolean(
       currentSha256
       && contact?.current_contract_contact === true
@@ -1200,11 +1368,18 @@ class RuntimeOrchestrator {
       && String(contact?.method || '') === 'tools/call'
       && contactSha256 === currentSha256
       && contactObservedAtValid
+      && contactObservedAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS
       && String(contact?.process_instance_id || '').trim()
       && String(contact?.server_instance_id || '').trim()
+      && runtimeIdentityMatches(
+        String(contact?.process_instance_id || '').trim(),
+        String(contact?.server_instance_id || '').trim(),
+        String(contact?.activation_epoch_id || '').trim()
+      )
     );
     const bootstrapObservedAt = String(activationBootstrap?.observed_at || '').trim();
-    const bootstrapObservedAtValid = Boolean(bootstrapObservedAt && Number.isFinite(Date.parse(bootstrapObservedAt)));
+    const bootstrapObservedAtUnixMs = Date.parse(bootstrapObservedAt);
+    const bootstrapObservedAtValid = Boolean(bootstrapObservedAt && Number.isFinite(bootstrapObservedAtUnixMs));
     const bootstrapCurrent = Boolean(
       currentSha256
       && activationEpochId
@@ -1220,8 +1395,14 @@ class RuntimeOrchestrator {
       && String(activationBootstrap?.activation_epoch_id || '').trim()
         === activationEpochId
       && bootstrapObservedAtValid
+      && bootstrapObservedAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS
       && String(activationBootstrap?.process_instance_id || '').trim()
       && String(activationBootstrap?.server_instance_id || '').trim()
+      && runtimeIdentityMatches(
+        String(activationBootstrap?.process_instance_id || '').trim(),
+        String(activationBootstrap?.server_instance_id || '').trim(),
+        String(activationBootstrap?.activation_epoch_id || '').trim()
+      )
     );
     const acknowledgedBoundaryKnown = acknowledgedSchemaVersion > 0 && Boolean(acknowledgedProfile);
     const sameCompatibilityBoundary = Boolean(
@@ -1340,10 +1521,17 @@ class RuntimeOrchestrator {
     };
   }
 
-  acknowledgeConnectorContractHash(toolContract, discovery = null, contact = null, activationBootstrap = null) {
-    const status = this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
-    if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
-    if (!status.contractChanged && (!status.sameContractBootstrapEligible || status.compatibilityAcknowledged)) return status;
+  // Persist only a status that has already been validated against a complete
+  // current health receipt by acknowledgeExactConnectorDiscovery().  Keeping
+  // this write separate from the public hash/sync helpers prevents a caller
+  // from manufacturing a strict-looking receipt out of an unbound
+  // tools/list/contact fragment.
+  _persistConnectorContractAcknowledgement(status) {
+    if (!status || status.available !== true) {
+      throw Object.assign(new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.'), {
+        code: 'CONNECTOR_CONTRACT_UNAVAILABLE'
+      });
+    }
     if (!status.rediscovered && !status.compatibilityEligible && !status.sameContractBootstrapEligible) {
       throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list và chưa có compatible cached-client receipt hợp lệ cho tool contract hiện tại.'), {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
@@ -1388,10 +1576,28 @@ class RuntimeOrchestrator {
       }
       return next;
     });
-    return this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
+  }
+
+  acknowledgeConnectorContractHash(toolContract, discovery = null, contact = null, activationBootstrap = null) {
+    const status = this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
+    if (!status.available) throw new Error('Coding Tools MCP chưa cung cấp tool contract fingerprint để xác nhận.');
+    if (!status.contractChanged && (!status.sameContractBootstrapEligible || status.compatibilityAcknowledged)) return status;
+    if (!status.rediscovered && !status.compatibilityEligible && !status.sameContractBootstrapEligible) {
+      throw Object.assign(new Error('ChatGPT chưa đọc lại tools/list và chưa có compatible cached-client receipt hợp lệ cho tool contract hiện tại.'), {
+        code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+      });
+    }
+    // This legacy helper intentionally has no health authority (ready,
+    // activation epoch, process identity and server identity).  It may report
+    // status, but it must never persist a pending acknowledgement.  The only
+    // mutating path is acknowledgeExactConnectorDiscovery(health).
+    throw Object.assign(new Error('Connector acknowledgement requires an exact current-process health receipt; use acknowledgeExactConnectorDiscovery().'), {
+      code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+    });
   }
 
   connectorContractFreshness(health, contractStatus) {
+    const nowUnixMs = Date.now();
     const currentSha256 = String(health?.tool_contract?.sha256 || '').trim();
     const processInstanceId = String(health?.process_instance_id || '').trim();
     const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
@@ -1414,6 +1620,7 @@ class RuntimeOrchestrator {
 
     const discovery = health.connector_tool_discovery;
     const rediscoveredAt = String(discovery?.observed_at || '').trim();
+    const rediscoveredAtUnixMs = Date.parse(rediscoveredAt);
     if (contractStatus.contractState === 'CURRENT_ACKNOWLEDGED'
       && contractStatus.rediscovered === true
       && discovery?.current_contract_observed === true
@@ -1425,12 +1632,14 @@ class RuntimeOrchestrator {
       && String(discovery.activation_epoch_id || '').trim() === activationEpochId
       && rediscoveredAt
       && rediscoveredAt === String(contractStatus.rediscoveredAt || '').trim()
-      && Number.isFinite(Date.parse(rediscoveredAt))) {
+      && Number.isFinite(rediscoveredAtUnixMs)
+      && rediscoveredAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) {
       return { ready: true, mode: 'current_process_discovery', observedAt: rediscoveredAt };
     }
 
     const bootstrap = health.connector_activation_bootstrap;
     const compatibilityAt = String(bootstrap?.observed_at || '').trim();
+    const compatibilityAtUnixMs = Date.parse(compatibilityAt);
     if (contractStatus.contractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
       && contractStatus.compatibilityAcknowledged === true
       && contractStatus.bootstrapCurrent === true
@@ -1448,7 +1657,8 @@ class RuntimeOrchestrator {
       && String(bootstrap.activation_epoch_id || '').trim() === activationEpochId
       && compatibilityAt
       && compatibilityAt === String(contractStatus.compatibilityAcknowledgedAt || '').trim()
-      && Number.isFinite(Date.parse(compatibilityAt))) {
+      && Number.isFinite(compatibilityAtUnixMs)
+      && compatibilityAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) {
       return {
         ready: false,
         mode: 'compatible_activation_bootstrap',
@@ -1491,7 +1701,7 @@ class RuntimeOrchestrator {
       && String(discovery.server_instance_id || '').trim() === serverInstanceId
       && String(discovery.activation_epoch_id || '').trim() === observedEpochId
       && Number.isFinite(discoveryObservedAtUnixMs)
-      && discoveryObservedAtUnixMs <= nowUnixMs + 5000
+      && discoveryObservedAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS
     );
     const exactCompatibilityBootstrap = Boolean(
       baseExact
@@ -1509,7 +1719,7 @@ class RuntimeOrchestrator {
       && String(activationBootstrap.server_instance_id || '').trim() === serverInstanceId
       && String(activationBootstrap.activation_epoch_id || '').trim() === expectedEpochId
       && Number.isFinite(bootstrapObservedAtUnixMs)
-      && bootstrapObservedAtUnixMs <= nowUnixMs + 5000
+      && bootstrapObservedAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS
     );
     if (!exactDiscovery && !exactCompatibilityBootstrap) {
       throw Object.assign(new Error('Connector acknowledgement requires exact current-process discovery or a no-workspace compatibility bootstrap for this activation epoch.'), {
@@ -1520,7 +1730,8 @@ class RuntimeOrchestrator {
       health.tool_contract,
       discovery,
       health.connector_client_contact,
-      activationBootstrap
+      activationBootstrap,
+      health
     );
     const alreadyCurrent = exactDiscovery
       ? before.contractState === 'CURRENT_ACKNOWLEDGED' && before.rediscovered === true
@@ -1538,11 +1749,13 @@ class RuntimeOrchestrator {
         code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
       });
     }
-    const acknowledged = this.acknowledgeConnectorContractHash(
+    this._persistConnectorContractAcknowledgement(before);
+    const acknowledged = this.connectorContractStatus(
       health.tool_contract,
       discovery,
       health.connector_client_contact,
-      activationBootstrap
+      activationBootstrap,
+      health
     );
     const expectedState = exactDiscovery ? 'CURRENT_ACKNOWLEDGED' : 'CURRENT_COMPATIBLE_ACKNOWLEDGED';
     const freshnessCommitted = exactDiscovery
@@ -1567,7 +1780,13 @@ class RuntimeOrchestrator {
   synchronizeConnectorContract(toolContract, discovery = null, contact = null, activationBootstrap = null) {
     const status = this.connectorContractStatus(toolContract, discovery, contact, activationBootstrap);
     if (!status.acknowledgementPending) return status;
-    return this.acknowledgeConnectorContractHash(toolContract, discovery, contact, activationBootstrap);
+    // Synchronization is retained as a read/status convenience for callers
+    // that already have an acknowledged contract.  A pending state has no
+    // complete health authority, so fail closed instead of persisting a
+    // receipt assembled from detached connector evidence.
+    throw Object.assign(new Error('Connector synchronization requires an exact current-process health receipt; use acknowledgeExactConnectorDiscovery().'), {
+      code: 'CONNECTOR_CONTRACT_NOT_REDISCOVERED'
+    });
   }
 
   async acknowledgeConnectorContract() {
@@ -1587,12 +1806,10 @@ class RuntimeOrchestrator {
       )
       : null;
     if (!health?.tool_contract) throw new Error('Coding Tools MCP chưa chạy hoặc chưa cung cấp tool contract fingerprint.');
-    this.acknowledgeConnectorContractHash(
-      health.tool_contract,
-      health.connector_tool_discovery,
-      health.connector_client_contact,
-      health.connector_activation_bootstrap
-    );
+    this.acknowledgeExactConnectorDiscovery(health, {
+      activationEpochId: this.activationEpochId,
+      nowUnixMs: Date.now()
+    });
     this.invalidateSnapshot();
     return this.snapshot({ force: true, reason: 'connector-contract-acknowledged' });
   }
@@ -1777,12 +1994,17 @@ class RuntimeOrchestrator {
   async start(options = {}) {
     if (this.busy) throw new Error('Hiện đã có nhiệm vụ triển khai đang chạy.');
     const automatic = options.automatic === true;
-    const durableEpoch = this.activationEpochStatus();
+    const launchActivationEpochId = String(options.activationEpochId || this.activationEpochId || '').trim();
+    const normalizedActivationGate = normalizeActivationGate(launchActivationEpochId, options.activationGate);
+    const durableEpoch = this.assertMcpReplacementAllowed({
+      activationEpochId: launchActivationEpochId,
+      operation: automatic ? 'automatic_runtime_start' : 'runtime_start'
+    });
     if (durableEpoch.update_incomplete === true) {
       const internalReplacement = automatic
         && options.fullClean === true
-        && String(options.activationGate || '').toLowerCase() === 'closed'
-        && String(options.activationEpochId || '').trim() === String(durableEpoch.activation_epoch_id || '').trim();
+        && normalizedActivationGate === ACTIVATION_GATE_CLOSED
+        && launchActivationEpochId === String(durableEpoch.activation_epoch_id || '').trim();
       if (!internalReplacement) {
         throw Object.assign(new Error('Runtime activation is incomplete; only the epoch-bound closed-gate replacement may start processes.'), {
           code: 'UPDATE_INCOMPLETE',
@@ -1844,8 +2066,8 @@ class RuntimeOrchestrator {
       const connectorAttestationSecret = this.rotateConnectorAttestationSecret();
       await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
-        activationEpochId: this.activationEpochId || '',
-        activationGate: options.activationGate || '',
+        activationEpochId: launchActivationEpochId,
+        activationGate: normalizedActivationGate,
         activationAllowAcceptancePending: options.activationAllowAcceptancePending === true,
         activationExpiresAtUnixMs: Number(options.expiresAtUnixMs || 0) || 0,
         connectorAttestationSecret
@@ -1854,8 +2076,8 @@ class RuntimeOrchestrator {
       this.progress('mcp-health', 64, 'Đang xác minh Coding Tools MCP');
       let ready = false;
       for (let index = 0; index < 35; index += 1) {
-        if (await probeMcp(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '', this.activationEpochId || '')) { ready = true; break; }
-        if (!(await this.native.status(settings))) {
+        if (await probeMcp(settings.mcpPort, token, settings.workspace, this.device?.deviceId || '', launchActivationEpochId)) { ready = true; break; }
+        if (!(await this.native.status(settings, { activationEpochId: launchActivationEpochId }))) {
           throw new Error('Tiến trình Coding Tools MCP đã thoát sớm. Vui lòng xem mcp.log trong nhật ký vận hành để biết lỗi khởi động chi tiết.');
         }
         await wait(1000);
@@ -1868,7 +2090,7 @@ class RuntimeOrchestrator {
         secret: connectorAttestationSecret
       });
       await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this), {
-        activationEpochId: this.activationEpochId || '',
+        activationEpochId: launchActivationEpochId,
         connectorAttestation
       });
       this.setManualStop(false);
@@ -1927,7 +2149,11 @@ class RuntimeOrchestrator {
         code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
       });
     }
-    const durableEpoch = this.activationEpochStatus();
+    const launchActivationEpochId = String(options.activationEpochId || this.activationEpochId || '').trim();
+    const durableEpoch = this.assertMcpReplacementAllowed({
+      activationEpochId: launchActivationEpochId,
+      operation: 'automatic_runtime_restart'
+    });
     if (durableEpoch.update_incomplete === true) {
       throw Object.assign(new Error('Runtime activation is incomplete; soft recovery is suppressed until a full-clean epoch reaches READY.'), {
         code: 'UPDATE_INCOMPLETE',
@@ -2047,7 +2273,8 @@ class RuntimeOrchestrator {
       mcpHealth?.tool_contract || null,
       mcpHealth?.connector_tool_discovery || null,
       mcpHealth?.connector_client_contact || null,
-      mcpHealth?.connector_activation_bootstrap || null
+      mcpHealth?.connector_activation_bootstrap || null,
+      mcpHealth
     );
     const connectorFreshness = this.connectorContractFreshness(mcpHealth, connectorContract);
     const activationEpoch = this.activationEpochStatus();
@@ -2140,12 +2367,27 @@ class RuntimeOrchestrator {
     const oldNativePid = Number(before.nativePid || 0);
     const tunnelPid = Number(before.tunnelPid || 0);
 
+    if (isAlive(oldNativePid) && options.replaceLiveOwned !== true) {
+      throw Object.assign(new Error('Coding MCP process is still alive; refusing dead-process recovery.'), {
+        code: 'MCP_PROCESS_STILL_ALIVE'
+      });
+    }
+    const launchActivationEpochId = String(options.activationEpochId || this.activationEpochId || '').trim();
+    const normalizedActivationGate = normalizeActivationGate(launchActivationEpochId, options.activationGate);
+    this.assertMcpReplacementAllowed({
+      activationEpochId: launchActivationEpochId,
+      operation: options.replaceLiveOwned === true ? 'mcp_hung_process_replacement' : 'mcp_process_recovery'
+    });
+    // Bind the per-call launch identity only after the durable epoch guard has
+    // accepted it.  Recovery callers may supply an explicit epoch while this
+    // Recovery Host still carries a stale/empty in-memory value; subsequent
+    // health and attestation checks must observe the exact identity that was
+    // sent to NativeService/TunnelService.  Keep the legacy no-epoch path
+    // untouched so an empty launch identity does not become a new binding.
+    if (launchActivationEpochId && launchActivationEpochId !== this.activationEpochId) {
+      this.setActivationEpoch(launchActivationEpochId);
+    }
     if (isAlive(oldNativePid)) {
-      if (options.replaceLiveOwned !== true) {
-        throw Object.assign(new Error('Coding MCP process is still alive; refusing dead-process recovery.'), {
-          code: 'MCP_PROCESS_STILL_ALIVE'
-        });
-      }
       // Semantic recovery may replace a persistently hung process, but only
       // through NativeService's exact PID + process-start-token authority.
       await this.native.stop();
@@ -2161,7 +2403,8 @@ class RuntimeOrchestrator {
       const connectorAttestationSecret = this.rotateConnectorAttestationSecret();
       started = await this.native.start(settings, token, this.progress.bind(this), {
         p5Seed: this.p5A0Seed(),
-        activationEpochId: this.activationEpochId || '',
+        activationEpochId: launchActivationEpochId,
+        activationGate: normalizedActivationGate,
         connectorAttestationSecret,
         ...(expectedRevision ? { expectedCodeRevision: expectedRevision } : {})
       });
@@ -2175,7 +2418,7 @@ class RuntimeOrchestrator {
           && (!expectedRevision || String(health.code_revision || '') === expectedRevision)
           && await loopbackListenerPid(settings.mcpPort) === ownedPid) break;
         health = null;
-        if (!(await this.native.status(settings))) {
+        if (!(await this.native.status(settings, { activationEpochId: launchActivationEpochId }))) {
           throw Object.assign(new Error('Coding Tools MCP exited during MCP-only recovery.'), { code: 'MCP_RECOVERY_PROCESS_EXITED' });
         }
         await wait(1000);
@@ -2209,7 +2452,7 @@ class RuntimeOrchestrator {
         token,
         this.progress.bind(this),
         {
-          activationEpochId: this.activationEpochId || '',
+          activationEpochId: launchActivationEpochId,
           connectorAttestation
         }
       );
@@ -2398,7 +2641,8 @@ class RuntimeOrchestrator {
       health?.tool_contract || null,
       health?.connector_tool_discovery || null,
       health?.connector_client_contact || null,
-      health?.connector_activation_bootstrap || null
+      health?.connector_activation_bootstrap || null,
+      health
     );
     const connectorFreshness = this.connectorContractFreshness(health, connectorContract);
     const nativeAlive = await this.native.status().catch(() => false);

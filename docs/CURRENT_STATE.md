@@ -285,6 +285,44 @@ from being misread as whole-stack currency. No restart, activation, connector
 ACK, commit, push, package, release or deployment was performed by this source
 correction.
 
+### Strict discovery authority hardening and live recapture — 2026-08-30T07:22:22Z
+
+The current dirty source now closes the remaining authority gaps around MCP
+replacement and connector projection. Every epoch-bound Native/Python launch
+normalizes to admission `closed`; explicit `open` or unknown gates are rejected.
+Durable epoch authority that is missing or unreadable fails closed before
+process mutation, and `READY_COMMITTED`, `READY`, or `FAILED` epochs cannot be
+reused for another MCP spawn. A direct eligible MCP replacement rotates the
+attestation secret and replaces the dependent Coding Tunnel with an attestation
+bound to the new MCP epoch/process/server/contract tuple; failure to rebind the
+Tunnel rolls the new MCP back. Live connector projections compare discovery,
+contact, and bootstrap receipts to the exact health tuple, so a receipt from a
+retired process cannot be presented as current. Detached hash/synchronization
+helpers no longer persist an acknowledgement; the mutating path requires the
+complete current health receipt.
+
+The final core affected Node packet is `239/239 PASS`, and the broader lifecycle
+packet is `340/340 PASS`. The focused Python activation packet is `9/9 PASS`
+with `2` passing subtests; JavaScript syntax, Python compilation, and
+`git diff --check` also pass. This is source proof for the dirty worktree, not
+loaded-runtime or delivery proof.
+
+A read-only `npm run dev:status` recapture reports `state=CURRENT` and
+`host=available` for Electron UI, with its running/disk revisions equal and
+`update_pending=false`. Coding MCP is still the older loaded source:
+`mcp_revision_state=update_pending`, running revision
+`23b6aa33d59083a9706289a4d4cdbf261b84cebe1a59d758d903079e0e3101af`, disk
+revision `84f0f941c46386812746d0b6f3bcace449475b5106551c980e0be476d68da800`.
+Therefore `components_ready=false`, `fully_ready=false`, and
+`runtime_update_incomplete=true`. Connector state is
+`UNCHANGED_COMPATIBLE_NEEDS_ACK` with `connector_rediscovered=false`, no
+rediscovery timestamp, `connector_ack_pending=true`, and
+`connector_refresh_required=false`. The last field does not cancel the pending
+strict gate. This recapture supersedes older live-looking receipts above only
+for current process state; it does not rewrite their historical chronology.
+No restart, activation, connector ACK, commit, push, package, release, or
+deployment was performed in this hardening wave.
+
 ### Source validation update — 2026-08-27
 
 Before the automatic endpoint-identity packet below, the then-current uncommitted source fingerprint had a green Node repository suite (`482/482`) and a green complete Coding Tools MCP result (`698` tests, `4` environment-conditional skips, `106` subtests), including the focused full-clean/activation, acceptance, orchestration, PRL, and projection packet (`120` tests, `1` skip, `43` subtests). The newer endpoint packet has focused source proof for installation separation, workspace-generation invalidation, stateless discovery metadata, unchanged tool-contract SHA, and Python compilation. These remain source-level results only; they do not establish current-process connector discovery/ACK, controlled activation, package, release, deployment, or production readiness. Live process-refresh evidence remains a separate receipt.
@@ -418,10 +456,17 @@ checkpoint authority.
 
 Runtime activation has two explicit modes. `soft_recovery` remains component-scoped
 for automatic local fault recovery (for example, a dead Tunnel or a crashed MCP)
-and is revision-continuity guarded. Repeated semantic MCP failures replace only
-the exact owned MCP PID while preserving Tunnel identity; the replacement is
-stopped again if disk revision drifts across its spawn boundary. Operator
-`restart`, accepted code/revision
+and is revision-continuity guarded. When the durable epoch is eligible for an
+in-place replacement, repeated semantic MCP failures replace the exact owned
+MCP process and restart only its dependent Coding Tunnel process so
+the managed attestation is rebound to the new MCP process/server tuple; Tunnel
+configuration and the Recovery Host/UI/Recovery Plane stay in place. The MCP
+replacement is stopped again if disk revision drifts across its spawn boundary.
+This path is legal only while durable epoch authority is readable and
+nonterminal. `READY_COMMITTED`, `READY`, and `FAILED` epochs cannot be reused for
+another MCP spawn, even with a closed gate; a new full-clean epoch is required,
+and missing/unreadable epoch authority fails closed before Native or Tunnel
+mutation. Operator `restart`, accepted code/revision
 activation, and controlled updates use `full_clean_activation`: a durable
 `activation_epoch_id` is created, admission closes, durable state is checkpointed,
 Electron UI/Coding Tunnel/Coding MCP and configured Recovery MCP/Tunnel are stopped,

@@ -34,6 +34,52 @@ class ActivationEpochTests(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def test_epoch_bound_missing_gate_defaults_closed(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"CODING_TOOLS_MCP_ACTIVATION_GATE": ""},
+        ):
+            runtime = Runtime(Path(self.temp.name))
+        try:
+            self.assertEqual(runtime.activation_gate_config, "closed")
+            self.assertEqual(runtime.activation_admission, "closed")
+            self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
+            blocked = runtime.call_tool("task_control", {"action": "get"})
+            self.assertTrue(blocked["isError"])
+            self.assertEqual(
+                blocked["structuredContent"]["error"]["code"],
+                "RUNTIME_ACTIVATION_PENDING",
+            )
+        finally:
+            runtime.close()
+
+    def test_epoch_bound_open_or_unknown_gate_fails_closed(self) -> None:
+        for configured_gate in ("open", "unexpected-value"):
+            with self.subTest(configured_gate=configured_gate):
+                with patch.dict(
+                    os.environ,
+                    {"CODING_TOOLS_MCP_ACTIVATION_GATE": configured_gate},
+                ):
+                    with self.assertRaises(ToolFailure) as failure:
+                        Runtime(Path(self.temp.name))
+                self.assertEqual(failure.exception.code, "ACTIVATION_GATE_INVALID")
+
+    def test_legacy_runtime_without_epoch_keeps_implicit_open_gate(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID": "",
+                "CODING_TOOLS_MCP_ACTIVATION_GATE": "",
+            },
+        ):
+            runtime = Runtime(Path(self.temp.name))
+        try:
+            self.assertEqual(runtime.activation_gate_config, "open")
+            self.assertEqual(runtime.activation_admission, "open")
+            self.assertTrue(runtime.activation_admission_snapshot()["admission_open"])
+        finally:
+            runtime.close()
+
     def test_closed_gate_returns_typed_pending_and_exact_epoch_opens_admission(self) -> None:
         runtime = Runtime(Path(self.temp.name))
         try:
