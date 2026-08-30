@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "2358dc0d75a84abba09ebe6aa30271fa",
     "wave_id": "bb7575df98374d6186b84c2e203fc128",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "REPLAN",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -37,7 +37,7 @@
       "updated_at": "2026-08-30T14:36:38.825Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Replan required - operator report required",
   "current_command": {
     "command": "git diff --check",
     "kind": "command",
@@ -70,19 +70,44 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "no_durable_file_receipts",
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_truth_snapshot.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
+      "orchestration_state": "REPLAN",
       "run_status": "active",
       "wave_status": "active",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 31,
-        "head_hash": "daf6a9bdb759b2d6a5c01844908ef8639108f4adba94ca38140990d9e516871f"
+        "checked": 35,
+        "head_hash": "667ca1d3c5d94153110e2af17a04cac676909f1be24c595087113057f850e9aa"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2358dc0d75a84abba09ebe6aa30271fa\\run-summary.md",
@@ -121,12 +146,16 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
-    "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Reject to REPLAN because the only proof is bound to Base HEAD 5f232e99f20873b4950d89d597989cb4c25e3404 and worktree fingerprint da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0, while current HEAD is 9b766f241432b9b5bfa8aa75ae2f1816709a2c2d and later accepted work changed overlapping Control Center/live_control/test files. Proof is no longer exact-current and must not be reused. Preserve committed source; do not create a new RUN/WAVE.",
+      "event_seq": 32807
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
   },
-  "completion_report_id": "632f4424e1cf9ea3e67fade6111b2bdaa2701d8e7cb1cdd8ebff193ce8d32a02",
+  "completion_report_id": "522f23ad188edc4751a812d4d832f20997fa28f8cc492e3f49c82c29ed442f7c",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -12006,9 +12035,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
   "created_at": "2026-08-30T14:35:02.211Z",
-  "updated_at": "2026-08-30T14:37:34.720Z",
+  "updated_at": "2026-08-30T16:31:04.290Z",
   "events": [
     {
       "time": "2026-08-30T14:35:02.211Z",
@@ -12201,6 +12230,35 @@
           "orchestration",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-08-30T16:31:04.113Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-30T16:31:04.138Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-30T16:31:04.266Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "522f23ad188edc4751a812d4d832f20997fa28f8cc492e3f49c82c29ed442f7c"
       }
     }
   ]

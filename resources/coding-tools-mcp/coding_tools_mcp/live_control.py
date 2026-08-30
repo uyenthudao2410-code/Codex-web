@@ -101,6 +101,27 @@ def _direct_usage_projection(events: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _tool_call_metering_projection() -> dict[str, Any]:
+    """Project host Tool-call-card token truth without fabricating it.
+
+    ChatWeb/Coding-VP can display a token total after an invocation completes,
+    but the current MCP request/response transport does not return that
+    host-computed total to this runtime. Keep this plane separate from both
+    tools/list and model UsageEvents, and fail closed until an exact client
+    receipt exists.
+    """
+    return {
+        "schema_version": 1,
+        "measurement": "unobserved",
+        "source": "chatweb_tool_call_card",
+        "provenance": "client_receipt_required",
+        "missing_measurement_policy": "unknown_not_zero",
+        "total_tokens": None,
+        "latest": None,
+        "reason": "client_receipt_not_exposed_by_mcp_transport",
+    }
+
+
 def _bounded_objective_provenance(run: dict[str, Any], wave: dict[str, Any]) -> dict[str, Any]:
     metadata = wave.get("metadata") if isinstance(wave.get("metadata"), dict) else {}
     run_objective = str(run.get("objective") or "")[:4000]
@@ -309,6 +330,7 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
                 "tools": list(runtime.exposed_tool_names()),
             },
             "direct_usage": _direct_usage_projection([]),
+            "tool_call_metering": _tool_call_metering_projection(),
             "truth_snapshot": pending_truth,
             "clients": [],
             "authority": {
@@ -442,6 +464,7 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
             "tools": list(runtime.exposed_tool_names()),
         },
         "direct_usage": direct_usage,
+        "tool_call_metering": _tool_call_metering_projection(),
         "truth_snapshot": truth_snapshot,
         "clients": presence["clients"],
         "authority": {"controller": presence["controller"], "write": presence["write"]},

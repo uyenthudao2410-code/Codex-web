@@ -65,7 +65,7 @@
   let analyticsSnapshot = null;
   let cost = {
     preset: 'gpt-4o-mini', rateIn: 0.15, rateOut: 0.6, currency: 'USD',
-    fxRate: 0, bytesPerToken: 4, laneRates: { ...DEFAULT_LANE_RATES }
+    fxRate: 0, laneRates: { ...DEFAULT_LANE_RATES }
   };
   let analyticsInFlight = null;
   let lastAnalyticsReadAt = 0;
@@ -387,9 +387,8 @@
     return aggregated;
   }
 
-  function chartTrendBuckets(measured, records, mode = chartTimeMode) {
-    const hourly = canonicalHourBuckets(measured, DASHBOARD_WINDOW_HOURS)
-      || performanceBuckets(records, DASHBOARD_WINDOW_HOURS);
+  function chartTrendBuckets(measured, mode = chartTimeMode) {
+    const hourly = canonicalHourBuckets(measured, DASHBOARD_WINDOW_HOURS) || [];
     return mode === 'day' ? aggregateHourBuckets(hourly, 24) : hourly;
   }
 
@@ -911,6 +910,14 @@
     const container = byId('daModelTable');
     const summary = byId('daModelSummary');
     if (!container) return;
+    if (!(breakdown instanceof Map) || breakdown.size === 0) {
+      if (summary) setPill('daModelSummary', 'usage unknown', 'waiting');
+      const empty = document.createElement('div');
+      empty.className = 'da-model-empty';
+      empty.textContent = 'Chưa có UsageEvent canonical đủ để gán token/chi phí theo lane; không suy diễn từ bytes.';
+      container.replaceChildren(empty);
+      return;
+    }
     const activeModels = MODELS.filter((model) => ['active', 'connected', 'waiting', 'blocked'].includes(modelState(model.id))).length;
     if (summary) {
       setPill('daModelSummary', `${activeModels} model active`, activeModels ? 'active' : 'offline');
@@ -1053,6 +1060,17 @@
     const tbody = byId('daFleetTableBody');
     if (!tbody) return;
     tbody.replaceChildren();
+    if (!(breakdown instanceof Map) || breakdown.size === 0) {
+      const tr = document.createElement('tr');
+      tr.className = 'da-fleet-row';
+      const td = document.createElement('td');
+      td.colSpan = 11;
+      td.className = 'cell-num';
+      td.textContent = 'Token/chi phí theo model chưa có mapping UsageEvent canonical; giữ unknown, không quy đổi từ bytes.';
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+      return;
+    }
 
     const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + entry.cost, 0);
     const totalTokens = [...breakdown.values()].reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
@@ -1253,13 +1271,15 @@
     }
   }
 
-  function updateQuickSummary(summary, totalTokens, okRate, entries, measured) {
+  function updateQuickSummary(summary, okRate, entries, measured) {
     const summaryList = $('.da-summary-list');
     if (!summaryList) return;
     const topTool = entries[0]?.tool || 'MCP Tools';
     const hasMeasured = Boolean(measured && measured.events > 0);
-    const distributionTotal = hasMeasured ? measured.total : totalTokens;
-    const topToolPct = entries[0] ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, distributionTotal)).toFixed(0) : '0';
+    const distributionTotal = hasMeasured ? measured.total : 0;
+    const topToolPct = hasMeasured && entries[0]
+      ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, distributionTotal)).toFixed(0)
+      : null;
     const measuredTokens = measured ? measured.total : 0;
 
     summaryList.innerHTML = `
@@ -1282,8 +1302,8 @@
       <div class="da-summary-item">
         <div class="sum-icon-circle cyan">☵</div>
         <div class="sum-info">
-          <b>${hasMeasured ? 'Phân bổ mô hình' : 'Phân bổ context ước tính'}</b>
-          <small>${topTool} chiếm ${topToolPct}% ${hasMeasured ? 'token canonical' : 'context ESTIMATED'}</small>
+          <b>${hasMeasured ? 'Phân bổ mô hình' : 'Token chưa có phép đo'}</b>
+          <small>${hasMeasured ? `${topTool} chiếm ${topToolPct}% token canonical` : 'Không suy diễn token từ model-visible bytes'}</small>
         </div>
         <span class="sum-link-btn cyan">Chi tiết ›</span>
       </div>
@@ -1612,16 +1632,10 @@
     const measured = canonicalMeasuredUsage();
     const controllerUsage = canonicalControllerUsageState();
     const operations = canonicalOperationsAnalytics();
-    const buckets = chartTrendBuckets(measured, records, chartTimeMode);
-    const estimatedEntries = toolBreakdown(today);
-    const entries = measured?.byModel?.length ? measured.byModel : estimatedEntries;
-    const evidence = measured?.byModel?.length ? 'measured' : 'estimated';
-    const models = modelBreakdown(today);
-    const laneTotalUsd = [...models.values()]
-      .filter((entry) => ['fast', 'deepseek', 'terra', 'sol'].includes(entry.model))
-      .reduce((sum, entry) => sum + entry.cost, 0);
-
-    const totalTokens = summary.inTokens + summary.outTokens;
+    const buckets = chartTrendBuckets(measured, chartTimeMode);
+    const entries = measured?.byModel?.length ? measured.byModel : [];
+    const evidence = 'measured';
+    const models = new Map();
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 100;
 
     updateHeaderContext();
@@ -1632,11 +1646,11 @@
       ? `Cửa sổ 7 ngày · accepted-result operations${controllerWindowLabel}`
       : `Cửa sổ 7 ngày · operations analytics unavailable${controllerWindowLabel}`);
     const chart = byId('daChart');
-    if (chart) chart.setAttribute('aria-label', measured ? 'Canonical measured token trend' : 'Estimated model-visible context trend');
+    if (chart) chart.setAttribute('aria-label', measured ? 'Canonical measured token trend' : 'Canonical token trend unavailable');
     const donutHeading = byId('daDonut')?.closest('.da-card')?.querySelector('h3');
-    if (donutHeading?.firstChild) donutHeading.firstChild.textContent = measured ? 'Phân bố Token theo mô hình ' : 'Phân bố Context theo công cụ ';
+    if (donutHeading?.firstChild) donutHeading.firstChild.textContent = 'Phân bố Token theo mô hình · measured ';
     const costHeading = byId('daToolBars')?.closest('.da-card')?.querySelector('h3');
-    if (costHeading?.firstChild) costHeading.firstChild.textContent = measured ? 'Chi phí theo mô hình ' : 'Chi phí kịch bản theo công cụ ';
+    if (costHeading?.firstChild) costHeading.firstChild.textContent = 'Chi phí theo mô hình · measured/provider ';
     renderOperationsTiles(operations);
     renderOperationsTable(operations);
     renderChart(buckets, chartTimeMode);
@@ -1647,7 +1661,7 @@
     renderHeatmap(measured);
     updateRealtimeMetrics(records, measured);
     updateAnomalyAlerts(summary, records);
-    updateQuickSummary(summary, totalTokens, okRate, entries, measured);
+    updateQuickSummary(summary, okRate, entries, measured);
     renderTicker();
     setText('daLastSync', `Đồng bộ ${new Date().toLocaleTimeString('vi-VN')}`);
     setText('daToolCostTotal', measured && measured.costSource !== 'unobserved' ? money(displayedCost(measured.cost)) : '—');
@@ -1673,14 +1687,12 @@
     const presetDef = PRICING_PRESETS.find((item) => item.id === preset);
     const rateIn = Number(byId('daRateIn')?.value);
     const rateOut = Number(byId('daRateOut')?.value);
-    const bytesPerToken = Number(byId('daBytesPerToken')?.value);
     const currency = String(byId('daCurrency')?.value || 'USD');
     const fxRate = Number(byId('daFx')?.value || 0);
     const patch = {
       costPreset: preset,
       costRateInUsd: Number.isFinite(rateIn) && rateIn >= 0 ? rateIn : 0,
       costRateOutUsd: Number.isFinite(rateOut) && rateOut >= 0 ? rateOut : 0,
-      costBytesPerToken: Number.isFinite(bytesPerToken) && bytesPerToken >= 1 ? bytesPerToken : 4,
       costCurrency: currency === 'VND' ? 'VND' : 'USD',
       costFxRate: Number.isFinite(fxRate) && fxRate > 0 ? fxRate : 0,
       costLaneRates: JSON.stringify(collectLaneRates())
@@ -1692,7 +1704,6 @@
         rateOut: Number(saved?.costRateOutUsd ?? patch.costRateOutUsd),
         currency: saved?.costCurrency || patch.costCurrency,
         fxRate: Number(saved?.costFxRate ?? patch.costFxRate),
-        bytesPerToken: Number(saved?.costBytesPerToken ?? patch.costBytesPerToken),
         laneRates: parseLaneRates(saved?.costLaneRates)
       };
       renderAll();
@@ -1703,7 +1714,6 @@
         rateOut: patch.costRateOutUsd,
         currency: patch.costCurrency,
         fxRate: patch.costFxRate,
-        bytesPerToken: patch.costBytesPerToken,
         laneRates: collectLaneRates()
       };
       renderAll();
@@ -1730,7 +1740,6 @@
     if (preset) preset.value = presetDef.id;
     if (byId('daRateIn')) byId('daRateIn').value = String(cost.rateIn);
     if (byId('daRateOut')) byId('daRateOut').value = String(cost.rateOut);
-    if (byId('daBytesPerToken')) byId('daBytesPerToken').value = String(cost.bytesPerToken);
     if (byId('daCurrency')) byId('daCurrency').value = cost.currency;
     if (byId('daFx')) byId('daFx').value = cost.fxRate > 0 ? String(cost.fxRate) : '';
     const currencyField = byId('daFxField');
@@ -1752,7 +1761,6 @@
       rateOut: Number(settings.costRateOutUsd ?? 0.6),
       currency: settings.costCurrency === 'VND' ? 'VND' : 'USD',
       fxRate: Number(settings.costFxRate || 0),
-      bytesPerToken: Number(settings.costBytesPerToken ?? 4),
       laneRates: parseLaneRates(settings.costLaneRates)
     };
     fillCostForm();

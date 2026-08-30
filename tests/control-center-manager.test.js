@@ -191,6 +191,9 @@ test('Control Center reports the direct MCP tool contract and measured usage rec
   const js = read('renderer/control-center.js');
   assert.match(js, /data\?\.runtime\?\.tools/);
   assert.match(js, /data\?\.direct_usage/);
+  assert.match(js, /data\?\.tool_call_metering/);
+  assert.match(js, /Tool-card tokens — · client receipt unavailable/);
+  assert.match(js, /MCP tools/);
   assert.match(js, /input_total_tokens/);
   assert.match(js, /input_cached_tokens/);
   assert.match(js, /output_total_tokens/);

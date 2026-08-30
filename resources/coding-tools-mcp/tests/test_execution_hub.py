@@ -294,7 +294,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(body["snapshot_scope"], "live_control")
         self.assertEqual(body["integrity"]["code"], "UNVERIFIED_ON_LIVE_PATH")
-        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic", "runtime", "direct_usage", "truth_snapshot"):
+        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic", "runtime", "direct_usage", "tool_call_metering", "truth_snapshot"):
             self.assertIn(key, body)
         self.assertEqual(observed_usage_limits, [8])
         self.assertEqual(body["runtime"]["tools"], list(self.runtime.exposed_tool_names()))
@@ -310,6 +310,14 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(direct["provider"]["usage"]["input_total_tokens"], 80)
         self.assertEqual(direct["provider"]["cost"]["provider_cost"], 0.003)
         self.assertEqual(direct["provider"]["provenance"]["usage"], "provider_reported")
+        tool_call_metering = body["tool_call_metering"]
+        self.assertEqual(tool_call_metering["measurement"], "unobserved")
+        self.assertEqual(tool_call_metering["source"], "chatweb_tool_call_card")
+        self.assertEqual(tool_call_metering["provenance"], "client_receipt_required")
+        self.assertEqual(tool_call_metering["missing_measurement_policy"], "unknown_not_zero")
+        self.assertIsNone(tool_call_metering["total_tokens"])
+        self.assertIsNone(tool_call_metering["latest"])
+        self.assertEqual(tool_call_metering["reason"], "client_receipt_not_exposed_by_mcp_transport")
         truth = body["truth_snapshot"]
         self.assertEqual(truth["source"]["git_head"], "hub-test-head")
         self.assertEqual(truth["source"]["worktree_fp"], "hub-test-fp")

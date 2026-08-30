@@ -1,0 +1,640 @@
+[
+  {
+    "version": 2,
+    "task_id": "bfe291389a2f45d98d5dacd432ad430d",
+    "orchestration": {
+      "run_id": "b79b05760db84f04b6e4031e83b19fbc",
+      "wave_id": "a0ea656f23eb4d74bbbfe092c5a73cc6",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9b766f241432b9b5bfa8aa75ae2f1816709a2c2d",
+      "worktree_fp": "da4bde021da882b709da1ff1fe4ac79d23913268830125ef8e0c0cb193caa9a0",
+      "contract_fp": ""
+    },
+    "objective": "Correct Codex-web observability so it distinguishes MCP tools/list discovery from the per-invocation token counts shown on Coding-VP Live Tool call cards. The canonical per-tool-call metric must consume an exact invocation/tool-call token receipt from the ChatWeb/Coding-VP client/transport when such metadata is actually exposed; provider/controller model-usage receipts stay separate. Never derive per-tool-call tokens from tools/list, serialized byte size, elapsed time, or aggregate analytics, and never convert missing measurement to zero. Preserve the exact 8-tool smart-v3 contract and bounded non-mutating fast Overview path. Add focused regression coverage and provenance. User screenshot shows card-level counts such as agent_workflow 64,143 tokens and exec_command 895 tokens; determine whether current request metadata, host observation, performance events, or durable tool-call events already carry that exact card count; if not, identify the smallest authoritative ingress needed rather than fabricate it.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T15:21:39.111Z",
+    "updated_at": "2026-08-30T15:38:08.464Z",
+    "events": [
+      {
+        "time": "2026-08-30T15:21:39.111Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Correct Codex-web observability so it distinguishes MCP tools/list discovery from the per-invocation token counts shown on Coding-VP Live Tool call cards. The canonical per-tool-call metric must consume an exact invocation/tool-call token receipt from the ChatWeb/Coding-VP client/transport when such metadata is actually exposed; provider/controller model-usage receipts stay separate. Never derive per-tool-call tokens from tools/list, serialized byte size, elapsed time, or aggregate analytics, and never convert missing measurement to zero. Preserve the exact 8-tool smart-v3 contract and bounded non-mutating fast Overview path. Add focused regression coverage and provenance. User screenshot shows card-level counts such as agent_workflow 64,143 tokens and exec_command 895 tokens; determine whether current request metadata, host observation, performance events, or durable tool-call events already carry that exact card count; if not, identify the smallest authoritative ingress needed rather than fabricate it."
+        }
+      },
+      {
+        "time": "2026-08-30T15:21:40.008Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PRL_EXACT_BINDING_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:21:55.271Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PRL_CONTEXT_INVALID"
+        }
+      },
+      {
+        "time": "2026-08-30T15:22:06.991Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:22:10.247Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:22:10.257Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:23:14.322Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:23:42.484Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:24:41.359Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:24:59.969Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:26:18.777Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:26:37.413Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:27:49.662Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:28:18.025Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:29:27.500Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:29:54.533Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:31:03.550Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:31:27.400Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:32:39.004Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:34:00.236Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-30T15:34:24.890Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:35:35.190Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:36:17.824Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:37:53.371Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-30T15:38:08.464Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T15:38:24.191Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "b01432fda48e408190519f7d9ac19e27",
+    "orchestration": {
+      "run_id": "f8fecacd91d14d84925d87d688bf7199",
+      "wave_id": "3b440b68b41a42db811477a98a1ec35a",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9b766f241432b9b5bfa8aa75ae2f1816709a2c2d",
+      "worktree_fp": "3cecd01950ca189c768d8f641a0d24edc857ba9e12e2e2ae9851f82cfa4940eb",
+      "contract_fp": ""
+    },
+    "objective": "Apply only the exact-current Control Center slice of the truthful token-metering fix: render host Tool-call-card tokens as a separate evidence plane from MCP tools/list and controller/provider UsageEvents. Because the current MCP transport does not expose an exact post-call host receipt, render Tool-card tokens as unavailable rather than estimated. Preserve all unrelated bytes.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-30T15:39:35.614Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-30T15:39:35.614Z"
+      }
+    ],
+    "current_step": "Replan required - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "renderer/control-center.js",
+            "operation": "update"
+          },
+          {
+            "path": "tests/control-center-manager.test.js",
+            "operation": "update"
+          }
+        ],
+        "source": "aligned_task_modified_files",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 21,
+          "head_hash": "cfee5fec7173a558b2990f1294caa143ca802001c395b7db2703ce5a47c4363c"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f8fecacd91d14d84925d87d688bf7199\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f8fecacd91d14d84925d87d688bf7199\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "f8fecacd91d14d84925d87d688bf7199",
+        "wave_id": "01947bc07f6f4eabbcef096499d3eeef",
+        "base_head": "9b766f241432b9b5bfa8aa75ae2f1816709a2c2d",
+        "worktree_fp": "da4bde021da882b709da1ff1fe4ac79d23913268830125ef8e0c0cb193caa9a0",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Apply only the exact-current Control Center slice of the truthful token-metering fix: render host Tool-call-card tokens as a separate evidence plane from MCP tools/list and controller/provider UsageEvents. Because the current MCP transport does not expose an exact post-call host receipt, render Tool-card tokens as unavailable rather than estimated. Preserve all unrelated bytes.",
+          "objective_revision": 1,
+          "objective_sha256": "72e31c61af5df3bc803c6742fd5f0363b79b1cce1c72937b06ec00a2fd45660f",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "SOL_REJECTED",
+        "reason": "Reject this partial wave as incomplete/unproven: it changed only Control Center and its source assertion, recorded zero proof, and does not yet implement the backend tool_call_metering projection or remove visible Dashboard byte-derived token fallback. Preserve the two applied files and replan the same RUN to complete the causal scope with focused Node/Python proof.",
+        "event_seq": 32764
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "d84c7f520b50c29ce35e5c4e0fc38fda43b1dd1c7fde0d7fe5f3460ddd7994ba",
+    "completion_report_acknowledged_id": "d84c7f520b50c29ce35e5c4e0fc38fda43b1dd1c7fde0d7fe5f3460ddd7994ba",
+    "completion_report_acknowledged_at": "2026-08-30T15:41:58.867Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "renderer/control-center.js",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:39:36.386Z"
+      },
+      {
+        "path": "tests/control-center-manager.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:39:36.386Z"
+      }
+    ],
+    "failure": "Patch context matched 2 locations in tests/dashboard-analytics.test.js; add more context.",
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-30T15:38:24.191Z",
+    "updated_at": "2026-08-30T15:45:14.011Z",
+    "events": [
+      {
+        "time": "2026-08-30T15:38:24.191Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:38:24.964Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:38:25.336Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:38:51.357Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:06.777Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:29.653Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:30.695Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:32.146Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:32.157Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:34.070Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:35.611Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:35.614Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:36.032Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:36.032Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:36.200Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "669339b7f3048b9814d5c3699c4cc4d44a2638904ea4df1f43fcb9d2c5743f2f"
+        }
+      },
+      {
+        "time": "2026-08-30T15:39:36.386Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:00.642Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:01.024Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "669339b7f3048b9814d5c3699c4cc4d44a2638904ea4df1f43fcb9d2c5743f2f"
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:14.111Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:16.034Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:16.038Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:16.188Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "d84c7f520b50c29ce35e5c4e0fc38fda43b1dd1c7fde0d7fe5f3460ddd7994ba"
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:36.547Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:40:38.920Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:41:58.867Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "d84c7f520b50c29ce35e5c4e0fc38fda43b1dd1c7fde0d7fe5f3460ddd7994ba"
+        }
+      },
+      {
+        "time": "2026-08-30T15:42:50.421Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:42:51.339Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-30T15:43:10.469Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:44:04.872Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:44:05.294Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-08-30T15:45:14.011Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T15:46:04.490Z",
+    "archive_reason": "superseded"
+  }
+]

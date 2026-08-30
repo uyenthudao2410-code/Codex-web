@@ -11,8 +11,8 @@
 
 - Waves: **1**
 - Route decisions: **1**
-- Failures observed: **0**
-- REPLAN transitions: **0**
+- Failures observed: **1**
+- REPLAN transitions: **1**
 - Proof stages: **1**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
@@ -39,11 +39,12 @@
 
 | Seq | Failure class | State | Evidence |
 |---:|---|---|---|
+| 32807 | `SOL_REJECTED` | `ACCEPTING` | Reject to REPLAN because the only proof is bound to Base HEAD 5f232e99f20873b4950d89d597989cb4c25e3404 and worktree fingerprint da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0, while current HEAD is 9b766f241432b9b5bfa8aa75ae2f1816709a2c2d and later accepted work changed overlapping Control Center/live_control/test files. Proof is no longer exact-current and must not be reused. Preserve committed source; do not create a new RUN/WAVE. |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `31`
-- Chain head: `daf6a9bdb759b2d6a5c01844908ef8639108f4adba94ca38140990d9e516871f`
+- Events checked: `35`
+- Chain head: `667ca1d3c5d94153110e2af17a04cac676909f1be24c595087113057f850e9aa`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

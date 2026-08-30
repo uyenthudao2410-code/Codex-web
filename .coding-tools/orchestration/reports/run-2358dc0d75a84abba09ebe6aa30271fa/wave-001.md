@@ -53,6 +53,10 @@
 | 32658 | 2026-08-30T14:36:38.146Z | proof_recorded |  |  | stage_id=verify:all; status=passed; cache_hit=False; input_fingerprint=b2e9e4be8993e321abc5616b4602268f90d5d264070b4e7b7df909aa583b7484 |
 | 32659 | 2026-08-30T14:36:38.885Z | observation_span_recorded |  |  |  |
 | 32660 | 2026-08-30T14:36:39.098Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
+| 32806 | 2026-08-30T16:31:03.208Z | observation_span_recorded |  |  |  |
+| 32807 | 2026-08-30T16:31:03.477Z | failure_observed | ACCEPTING | ACCEPTING | reason=Reject to REPLAN because the only proof is bound to Base HEAD 5f232e99f20873b4950d89d597989cb4c25e3404 and worktree fingerprint da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0, while current HEAD is 9b766f241432b9b5bfa8aa75ae2f1816709a2c2d and later accepted work changed overlapping Control Center/live_control/test files. Proof is no longer exact-current and must not be reused. Preserve committed source; do not create a new RUN/WAVE.; failure_class=SOL_REJECTED |
+| 32808 | 2026-08-30T16:31:03.698Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
+| 32809 | 2026-08-30T16:31:03.910Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
 
 ## Proof
 
@@ -69,5 +73,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `31`
-- Chain head: `daf6a9bdb759b2d6a5c01844908ef8639108f4adba94ca38140990d9e516871f`
+- Events checked: `35`
+- Chain head: `667ca1d3c5d94153110e2af17a04cac676909f1be24c595087113057f850e9aa`

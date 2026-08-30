@@ -130,6 +130,14 @@
     const toolCount = tools.length || contractCount;
     const direct = data?.direct_usage || {};
     const parts = [`${toolCount === null ? 'unknown' : toolCount} MCP tools`];
+    const toolCallMetering = data?.tool_call_metering || {};
+    const toolCallTotal = finiteNumber(toolCallMetering?.total_tokens);
+    if (String(toolCallMetering?.measurement || 'unobserved') === 'measured'
+      && toolCallTotal !== null && toolCallTotal >= 0) {
+      parts.push(`Tool-card ${compactNumber(toolCallTotal)} tokens · ${String(toolCallMetering?.provenance || 'client_reported')}`);
+    } else {
+      parts.push('Tool-card tokens — · client receipt unavailable');
+    }
     const addReceipt = (label, receipt) => {
       if (!receipt) return;
       const usage = receipt?.usage || {};

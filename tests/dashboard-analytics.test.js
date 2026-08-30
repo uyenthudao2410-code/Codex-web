@@ -10,9 +10,10 @@ test('manager overview embeds accepted-result KPIs plus secondary token/cost dia
   const html = read('renderer/index.html');
   assert.match(html, /dashboard\.css/);
   assert.match(html, /dashboard\.js/);
-  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daBytesPerToken', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
+  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing analytics id ${id}`);
   }
+  assert.doesNotMatch(html, /id="daBytesPerToken"/);
   for (const label of ['ACCEPTED', 'TIME / ACCEPT', 'FIRST PASS', 'OBSERVED COST', 'TOOLS / ACCEPT', 'REWORK / REPLAN']) assert.match(html, new RegExp(label.replace('/', '\\/')));
 });
 
@@ -54,16 +55,21 @@ test('realtime performance uses exact rolling five-minute evidence without stale
   assert.doesNotMatch(js, /compactNumber/);
 });
 
-test('dashboard analytics derive context estimates from measured model-visible bytes', () => {
+test('dashboard visible token path uses canonical UsageEvents and never byte-derived fallback', () => {
   const js = read('renderer/dashboard.js');
   const controlCenter = read('renderer/control-center.js');
   assert.match(controlCenter, /api\.performanceTrace\(\)/);
   assert.match(controlCenter, /detail: \{ snapshot, orchestration, performance, force:/);
-  assert.match(js, /NON_TOKEN_TOOLS = new Set\(\['view_image'\]\)/);
-  assert.match(js, /function tokensFromBytes/);
-  assert.match(js, /function hourBuckets/);
-  assert.match(js, /function toolBreakdown/);
-  assert.match(js, /function costOf/);
+  assert.match(js, /function canonicalMeasuredUsage/);
+  assert.match(js, /const hourly = canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\) \|\| \[\]/);
+  assert.match(js, /const entries = measured\?\.byModel\?\.length \? measured\.byModel : \[\]/);
+  assert.match(js, /const models = new Map\(\)/);
+  assert.match(js, /Canonical token trend unavailable/);
+  assert.doesNotMatch(js, /chartTrendBuckets\(measured, records/);
+  assert.doesNotMatch(js, /const estimatedEntries = toolBreakdown\(today\)/);
+  assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
+  assert.doesNotMatch(js, /byId\('daBytesPerToken'\)/);
+  assert.doesNotMatch(js, /costBytesPerToken:/);
   assert.match(js, /perf\?\.recent/);
   assert.match(js, /model_visible_bytes/);
   assert.match(js, /request_bytes/);
@@ -104,22 +110,18 @@ test('dashboard analytics never fabricate provider billing data', () => {
   assert.match(js, /SCENARIO/);
   assert.match(js, /not provider billing/);
   assert.match(html, /Phân tích Context & Chi phí/);
-  assert.match(html, /recent trace/);
-  assert.match(html, /MEASURED/);
-  assert.match(html, /ESTIMATED/);
-  assert.match(html, /SCENARIO/);
-  assert.match(html, /Request\/response transport bytes không được coi là token/);
+  assert.match(html, /Tool call của ChatGPT\/Coding-VP/);
+  assert.match(html, /Không quy đổi byte→token/);
+  assert.doesNotMatch(html, /Byte \/ context token/);
   assert.doesNotMatch(js, /api\.openai\.com|platform\.openai\.com\/usage/);
 });
 
-test('dashboard analytics measure traffic over time from persisted hourly buckets, not one fixed snapshot', () => {
+test('dashboard token trend uses canonical hourly UsageEvent evidence only', () => {
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');
-  assert.match(js, /hourly_metrics/);
-  assert.match(js, /function hourlyFromStore/);
-  assert.match(js, /function performanceBuckets/);
-  assert.match(js, /return hourlyFromStore\(count\) \|\| hourBuckets\(records, count\);/);
-  assert.match(js, /model_visible_bytes/);
+  assert.match(js, /function canonicalHourBuckets/);
+  assert.match(js, /const hourly = canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\) \|\| \[\]/);
+  assert.doesNotMatch(js, /performanceBuckets\(records, DASHBOARD_WINDOW_HOURS\)/);
   assert.match(js, /Giờ gần nhất ≈/);
   assert.match(html, /id="daTokensRate"/);
   assert.doesNotMatch(js, /fetch\(/);
@@ -136,6 +138,8 @@ test('model control table attributes traffic to every running lane including Cha
   assert.match(js, /function controllerWindows/);
   assert.match(js, /function modelOf/);
   assert.match(js, /function modelBreakdown/);
+  assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
+  assert.match(js, /const models = new Map\(\)/);
   assert.match(js, /controller_transferred/);
   assert.match(js, /coding-tools:overview-pulse/);
 });
@@ -160,7 +164,8 @@ test('dashboard honors real evidence: delegations drive lanes, controller lease 
   assert.match(js, /function modelState/);
   assert.match(js, /delegationLane\(delegation\)/);
   assert.doesNotMatch(js, /const measuredByLane = new Map/);
-  assert.match(js, /usageEvidence = 'ESTIMATED'/);
+  assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
+  assert.match(js, /không suy diễn từ bytes/);
   assert.match(js, /Chưa phân bổ/);
   assert.match(js, /không có bằng chứng delegation\/controller/);
 });
@@ -184,7 +189,7 @@ test('cost model settings are allowlisted, normalized and persisted', () => {
   assert.equal(repaired.terra.out, 10);
 });
 
-test('dashboard prices canonical measured tokens while secondary estimates stay scenario-only', () => {
+test('dashboard prices canonical measured tokens while visible secondary token paths stay fail-closed', () => {
   const js = read('renderer/dashboard.js');
   assert.match(js, /MODEL_PRICING = \{/);
   assert.match(js, /'deepseek-v4-flash': \{ in: 0\.28, out: 0\.42, cached: 0\.028 \}/);
@@ -193,6 +198,7 @@ test('dashboard prices canonical measured tokens while secondary estimates stay 
   assert.match(js, /costSource = 'provider_reported'/);
   assert.match(js, /entry\.costSource = 'pricing_derived'/);
   assert.match(js, /entry\.costSource = 'settings_estimate'/);
+  assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
   assert.match(js, /cachedTokens = Number\(summary\.cachedTokens\) \|\| 0/);
   assert.match(js, /uncached = Math\.max\(0, Number\(summary\.inTokens\) - cachedTokens\)/);
   assert.match(js, /DERIVED từ canonical token pricing/);
@@ -242,7 +248,7 @@ test('operations overview renders measured token KPIs from canonical non-overlap
   assert.doesNotMatch(js, /measured\.output \+ measured\.reasoning/);
 });
 
-test('operations overview uses canonical hourly and rolling evidence with explicit estimated fallback', () => {
+test('operations overview uses canonical hourly and rolling evidence without byte-derived fallback', () => {
   const js = read('renderer/dashboard.js');
   assert.match(js, /const DASHBOARD_WINDOW_HOURS = 7 \* 24/);
   assert.match(js, /function canonicalHourBuckets/);
@@ -251,12 +257,12 @@ test('operations overview uses canonical hourly and rolling evidence with explic
   assert.match(js, /Array\.isArray\(analytics\.hourly\)/);
   assert.match(js, /analytics\.rolling_5m/);
   assert.match(js, /canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\)/);
-  assert.match(js, /performanceBuckets\(records, DASHBOARD_WINDOW_HOURS\)/);
+  assert.match(js, /const hourly = canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\) \|\| \[\]/);
+  assert.doesNotMatch(js, /performanceBuckets\(records, DASHBOARD_WINDOW_HOURS\)/);
   assert.match(js, /aggregateHourBuckets\(hourly, 24\)/);
   assert.doesNotMatch(js, /canonicalHourBuckets\(measured, 24\)/);
   assert.match(js, /TOKEN MEASURED/);
-  assert.match(js, /TOKEN ESTIMATED/);
-  assert.match(js, /Estimated model-visible context trend/);
+  assert.match(js, /Canonical token trend unavailable/);
 });
 
 test('token trend time selector switches between full-window hourly and daily rendering', () => {
@@ -267,7 +273,7 @@ test('token trend time selector switches between full-window hourly and daily re
   assert.match(html, /<option value="day">Theo ngày<\/option>/);
   assert.match(js, /byId\('daChartTimeMode'\)\?\.addEventListener\('change'/);
   assert.match(js, /chartTimeMode = event\.currentTarget\?\.value === 'day' \? 'day' : 'hour'/);
-  assert.match(js, /const buckets = chartTrendBuckets\(measured, records, chartTimeMode\)/);
+  assert.match(js, /const buckets = chartTrendBuckets\(measured, chartTimeMode\)/);
   assert.match(js, /renderChart\(buckets, chartTimeMode\)/);
   assert.match(js, /const tickEvery = timeMode === 'day'/);
 });
@@ -291,20 +297,17 @@ test('operations overview keeps accepted-result KPIs primary while token cost di
   assert.match(js, /DERIVED từ canonical token pricing/);
 });
 
-test('secondary model and fleet economics stay explicitly estimated and scenario-only', () => {
+test('secondary model and fleet token economics fail closed without canonical lane mapping', () => {
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');
-  assert.doesNotMatch(js, /const measuredByLane = new Map/);
-  assert.doesNotMatch(js, /entry\.usageEvidence = 'MEASURED'/);
-  assert.match(js, /entry\.costSource = 'settings_estimate'/);
-  assert.match(js, /Input \/ context \(EST\.\)/);
-  assert.match(js, /Output \(EST\.\)/);
-  assert.match(js, /ESTIMATED từ model-visible bytes trong performance trace/);
-  assert.match(js, /SCENARIO settings estimate/);
-  assert.match(html, /TOKEN \(EST\.\)/);
-  assert.match(html, /CHI PHÍ \(SCENARIO\)/);
-  assert.match(html, /SCENARIO \/ 1K EST\. TOKEN/);
-  assert.match(html, /Token ESTIMATED và chi phí SCENARIO theo model/);
+  assert.match(js, /Chưa có UsageEvent canonical đủ để gán token\/chi phí theo lane; không suy diễn từ bytes/);
+  assert.match(js, /Token\/chi phí theo model chưa có mapping UsageEvent canonical; giữ unknown, không quy đổi từ bytes/);
+  assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
+  assert.doesNotMatch(html, /TOKEN \(EST\.\)/);
+  assert.doesNotMatch(html, /CHI PHÍ \(SCENARIO\)/);
+  assert.doesNotMatch(html, /SCENARIO \/ 1K EST\. TOKEN/);
+  assert.match(html, /TOKEN \(USAGE EVENT\)/);
+  assert.match(html, /PROVENANCE/);
 });
 
 test('dead legacy measuredUsage helper is absent and dashboard rendering stays canonical', () => {

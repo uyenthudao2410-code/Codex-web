@@ -92,7 +92,7 @@
             <div class="da-section-head">
               <div>
                 <h2>Phân tích Context & Chi phí</h2>
-                <p>Model-visible bytes được đo từ text MCP thực sự trả cho model trong recent trace; token chỉ là ước tính (ESTIMATED) và không hiển thị ở KPI chính. KPI token & chi phí chỉ hiển thị phép đo THỰC TẾ từ provider (usage_events của các delegation); khi chưa có phép đo nào hiển thị "—" thay vì số giả định. Chi phí SCENARIO chỉ là tham chiếu, không phải hóa đơn nhà cung cấp. Request/response transport bytes không được coi là token và không dữ liệu nào ở đây là hóa đơn nhà cung cấp.</p>
+                <p>Model-visible bytes được giữ nguyên ở đơn vị byte. Token/chi phí model chỉ hiển thị từ UsageEvent canonical có provenance. Token trên từng card Tool call của ChatGPT/Coding-VP là metric riêng của host; MCP hiện chưa nhận receipt hậu-call chứa con số đó nên hiển thị "—"/unknown thay vì ước lượng. Không quy đổi byte→token và request/response transport bytes không được coi là token.</p>
               </div>
             </div>
 
@@ -320,7 +320,7 @@
                 </div>
                 <div class="cc-card-body">
                   <div class="da-chart-wrap" id="daChartCard">
-                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Context model-visible trong recent trace" role="img"></svg>
+                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Canonical measured token trend" role="img"></svg>
 
                     <div id="daChartEmpty" class="da-chart-empty" hidden>Chưa có dữ liệu</div>
                     <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
@@ -346,7 +346,7 @@
                       <circle cx="65" cy="65" r="48" fill="none" stroke="#8b5cf6" stroke-width="16" stroke-dasharray="22 301" stroke-dashoffset="-278"/>
                       <circle cx="65" cy="65" r="48" fill="none" stroke="#6366f1" stroke-width="16" stroke-dasharray="10 301" stroke-dashoffset="-302"/>
                       <text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text>
-                      <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Token ước tính</text>
+                      <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Token measured</text>
                     </svg>
                     <div class="da-legend-list" id="daLegend">
                       <div class="da-legend-item"><span class="legend-name">Đang chờ dữ liệu lưu lượng</span><b>—</b></div>
@@ -508,10 +508,10 @@
                     <thead>
                       <tr>
                         <th>MÔ HÌNH</th>
-                        <th>TOKEN (EST.)</th>
+                        <th>TOKEN (USAGE EVENT)</th>
                         <th>TỶ LỆ</th>
-                        <th>CHI PHÍ (SCENARIO)</th>
-                        <th>SCENARIO / 1K EST. TOKEN</th>
+                        <th>CHI PHÍ (USAGE EVENT)</th>
+                        <th>PROVENANCE</th>
                         <th>HIỆU SUẤT ⓘ</th>
                         <th>P95 ĐỘ TRỄ</th>
                         <th>TỶ LỆ LỖI</th>
@@ -536,7 +536,7 @@
                       </tr>
                     </tbody>
                   </table>
-                  <div class="da-model-table" id="daModelTable" role="table" aria-label="Token ESTIMATED và chi phí SCENARIO theo model" hidden></div>
+                  <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
                 </div>
               </div>
               <div class="da-model-table-foot">
@@ -609,7 +609,6 @@
                     </select></div>
                     <div class="da-field"><label>Giá vào ($/1M)</label><input id="daRateIn" type="number" min="0" step="0.01" inputmode="decimal"></div>
                     <div class="da-field"><label>Giá ra ($/1M)</label><input id="daRateOut" type="number" min="0" step="0.01" inputmode="decimal"></div>
-                    <div class="da-field"><label>Byte / context token</label><input id="daBytesPerToken" type="number" min="1" step="0.5" inputmode="decimal" title="Hệ số quy đổi model-visible text bytes thành context-token ước tính"></div>
                     <div class="da-field"><label>Đơn vị tiền</label><select id="daCurrency"><option value="USD">USD</option><option value="VND">VND</option></select></div>
                     <div class="da-field" id="daFxField" hidden><label>Tỷ giá VND/USD</label><input id="daFx" type="number" min="1" step="100" inputmode="decimal" placeholder="25000"></div>
                     <button class="da-apply" id="daApply">Áp dụng</button>
@@ -622,7 +621,7 @@
                     <label class="da-lane-row"><span><i class="is-terra"></i>Codex Deep (Terra)</span><input id="daLaneTerraIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneTerraOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
                     <label class="da-lane-row"><span><i class="is-sol"></i>Codex Critical (Sol)</span><input id="daLaneSolIn" type="number" min="0" step="0.01" inputmode="decimal"><input id="daLaneSolOut" type="number" min="0" step="0.01" inputmode="decimal"></label>
                   </div>
-                  <p class="da-cost-note"><b>Evidence:</b> MEASURED = usage counter số từ delegation/model hoặc model-visible byte count tại MCP projection. ESTIMATED = quy đổi model-visible bytes theo byte/token. SCENARIO = áp rate cấu hình để so sánh tương đối. Request/response transport bytes không được coi là token và không dữ liệu nào ở đây là hóa đơn nhà cung cấp.</p>
+                  <p class="da-cost-note"><b>Evidence:</b> Token/cost chỉ dùng UsageEvent canonical kèm provenance. Model-visible bytes giữ nguyên là byte telemetry. Tool-call-card tokens của ChatGPT/Coding-VP cần exact client receipt; khi transport chưa expose receipt thì giữ unknown. Không quy đổi byte→token và không hiển thị scenario estimate như provider billing.</p>
                 </div>
               </div>
             </details>

@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "005918521de64ba3a06bea64a27d584c",
     "wave_id": "28ff1702c86d448d8214987452831097",
-    "orchestration_state": "PREFLIGHT",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Chẩn đoán fail-closed DEV_UI_CHECKPOINT_NOT_ACTIVATABLE sau khi RUN deb31225dc0a499ab5f47975f0ee8776 / WAVE 3a31fece922b4eefac6e793b17f97095 đã ACCEPTED/CHECKPOINTED. Xác định chính xác component eligibility của accepted-code closure checkpoint cho Electron UI và Coding MCP, không sửa source, không reset/revert concurrent dirty work, không dev:refresh. Mục tiêu là tìm least-destructive official path để nạp accepted disk revision và chứng minh runtime CURRENT.",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [],
   "current_step": "Waiting for model",
   "current_command": null,
@@ -37,10 +37,10 @@
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": null,
-  "next_step": "",
+  "failure": "Superseded by explicit user evidence: the required metric is the per-tool-call token count shown on each Coding-VP Live tool-call card, not MCP tools/list contract size nor provider/controller aggregate usage. Terminalizing the temporary activation diagnostic before starting the corrected implementation objective.",
+  "next_step": "Resume or start a new task.",
   "created_at": "2026-08-30T15:07:02.739Z",
-  "updated_at": "2026-08-30T15:12:45.955Z",
+  "updated_at": "2026-08-30T15:21:01.216Z",
   "events": [
     {
       "time": "2026-08-30T15:07:02.739Z",
@@ -142,6 +142,25 @@
       "event": "files_modified",
       "details": {
         "count": 0
+      }
+    },
+    {
+      "time": "2026-08-30T15:21:01.212Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-08-30T15:21:01.214Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]
