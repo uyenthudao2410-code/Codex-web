@@ -1,0 +1,699 @@
+[
+  {
+    "version": 2,
+    "task_id": "6c18b6c4a5cd4b0f928b73fbffd01b0f",
+    "orchestration": {
+      "run_id": "8d3aff88412e42bda0001b9d4f68b3a6",
+      "wave_id": "942d206f771b486b826935245e0772d8",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "e4075d81e5de465837e501e28016ccc7b2afa7ce",
+      "worktree_fp": "d24fa2c1d10fe91ab73de8638453188c4b7e6c5accc85e132e600a4b245fcbe2",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose why the Dashboard/Control Center 'Loaded runtime source' and 'Operator Truth Console' panels render UNKNOWN/UNAVAILABLE despite the live runtime being CURRENT. Determine whether these panels have a valid operational purpose and, if so, identify the smallest causal wiring/data-contract fix so they show truthful live values; if a panel is dead/duplicative with no reliable authoritative data source, identify it for removal. Preserve unrelated dirty worktree changes and do not modify source during prepare.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "AGQWpcr6IhBSf9c924c5fsFw",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 694,
+      "finished_at": "2026-08-29T02:36:13.536Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-08-29T02:31:38.857Z",
+    "updated_at": "2026-08-30T14:27:25.736Z",
+    "events": [
+      {
+        "time": "2026-08-29T02:31:38.857Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose why the Dashboard/Control Center 'Loaded runtime source' and 'Operator Truth Console' panels render UNKNOWN/UNAVAILABLE despite the live runtime being CURRENT. Determine whether these panels have a valid operational purpose and, if so, identify the smallest causal wiring/data-contract fix so they show truthful live values; if a panel is dead/duplicative with no reliable authoritative data source, identify it for removal. Preserve unrelated dirty worktree changes and do not modify source during prepare."
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:39.962Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:42.662Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-29T02:31:42.672Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:32:02.230Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:10.180Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:33:24.992Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:19.877Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:34:37.730Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:35:29.812Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-29T02:35:48.559Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 90 -B 8 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py",
+          "session_id": "OMN6cemxWT5d8DVPOeXwgxG-"
+        }
+      },
+      {
+        "time": "2026-08-29T02:35:49.694Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 90 -B 8 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-29T02:36:12.935Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 55 -B 10 \"lastSupervisionStatus\" -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js && git grep -n -A 35 -B 8 \"codeRevision\" -- electron/services/runtimeOrchestrator.js | head -n 220",
+          "session_id": "AGQWpcr6IhBSf9c924c5fsFw"
+        }
+      },
+      {
+        "time": "2026-08-29T02:36:13.536Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 55 -B 10 \"lastSupervisionStatus\" -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js && git grep -n -A 35 -B 8 \"codeRevision\" -- electron/services/runtimeOrchestrator.js | head -n 220",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:26:54.020Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:27:36.651Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "5fe039fbf7914bc9a56d208780f863c4",
+    "orchestration": {
+      "run_id": "a27a63b84df3488c8626fb8f397dc20b",
+      "wave_id": "004c771fb99b48e6854bd5dfb851bb46",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "5f232e99f20873b4950d89d597989cb4c25e3404",
+      "worktree_fp": "da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0",
+      "contract_fp": ""
+    },
+    "objective": "Fix the Command Center/Dashboard truth surfaces so 'Loaded runtime source' and 'Operator Truth Console' show truthful bounded live values instead of UNKNOWN/UNAVAILABLE, while preserving the fast-path performance architecture and all unrelated dirty worktree changes.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "SbD96ZX9gO9X-X13xhX0bAvq",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 953,
+      "finished_at": "2026-08-30T14:28:28.046Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Apply the smallest bounded wiring fix, run focused proof, validate loaded runtime, and accept/checkpoint.",
+    "created_at": "2026-08-30T14:27:36.652Z",
+    "updated_at": "2026-08-30T14:28:28.046Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:27:36.654Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T14:27:47.542Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T14:27:49.538Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T14:27:49.546Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:05.865Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 120 -B 8 \"async lightweightSnapshot\" -- electron/services/runtimeOrchestrator.js && git diff -- renderer/app.js electron/services/runtimeOrchestrator.js",
+          "session_id": "PYfUWyvnxyWMdGdXsmiGxB7j"
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:06.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 120 -B 8 \"async lightweightSnapshot\" -- electron/services/runtimeOrchestrator.js && git diff -- renderer/app.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:16.599Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 120 -B 10 \"recoveryStatus()\" -- electron/services/runtimeOrchestrator.js",
+          "session_id": "7uC_neUCfLMtz4nCEk4m2OH0"
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:17.246Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 120 -B 10 \"recoveryStatus()\" -- electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:27.464Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 90 -B 10 \"publishSnapshot\" -- electron/services/runtimeOrchestrator.js && git grep -n \"recoveryHost\" -- electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js renderer/app.js | head -n 120",
+          "session_id": "SbD96ZX9gO9X-X13xhX0bAvq"
+        }
+      },
+      {
+        "time": "2026-08-30T14:28:28.046Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 90 -B 10 \"publishSnapshot\" -- electron/services/runtimeOrchestrator.js && git grep -n \"recoveryHost\" -- electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js renderer/app.js | head -n 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:29:31.530Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "85950d358d95478d98d54d71518ee66c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-30T14:30:31.311Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-30T14:29:31.532Z",
+    "updated_at": "2026-08-30T14:30:31.312Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:29:31.532Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T14:29:32.059Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 110 -B 10 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py & git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py & git grep -n -A 80 -B 12 \"activation_closure\\|electron_ui_revision\\|recoveryHost\" -- electron/main.js electron/recoveryHost.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "session_id": "NFv6RgFLZtFRfbWuaKCsc-mm"
+        }
+      },
+      {
+        "time": "2026-08-30T14:29:32.541Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 110 -B 10 \"def _orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py & git grep -n \"_orchestration_workspace_identity\" -- resources/coding-tools-mcp/coding_tools_mcp/*.py & git grep -n -A 80 -B 12 \"activation_closure\\|electron_ui_revision\\|recoveryHost\" -- electron/main.js electron/recoveryHost.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:29:49.318Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 100 -B 12 \"cachedRuntimeSnapshot\" -- electron/services/recoveryHost.js & git grep -n -A 80 -B 12 \"truth_snapshot\\|Truth Console\\|truthSnapshot\" -- renderer/control-center.js renderer/dashboard.js renderer/app.js tests resources/coding-tools-mcp/tests",
+          "session_id": "l30q27h852kjSb7j4sh9yyk2"
+        }
+      },
+      {
+        "time": "2026-08-30T14:29:49.700Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 100 -B 12 \"cachedRuntimeSnapshot\" -- electron/services/recoveryHost.js & git grep -n -A 80 -B 12 \"truth_snapshot\\|Truth Console\\|truthSnapshot\" -- renderer/control-center.js renderer/dashboard.js renderer/app.js tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:01.627Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 70 -B 35 \"lastSupervisionProjection =\" -- electron/services/recoveryHost.js & git grep -n -A 80 -B 20 \"function renderTruthConsole\" -- renderer/panel.js renderer/control-center.js renderer/dashboard.js",
+          "session_id": "YsKtu32CacgGa3fxRwb7qgRR"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:02.128Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 70 -B 35 \"lastSupervisionProjection =\" -- electron/services/recoveryHost.js & git grep -n -A 80 -B 20 \"function renderTruthConsole\" -- renderer/panel.js renderer/control-center.js renderer/dashboard.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:13.613Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "SrEV036WYRkH8SkHYU74Uvbc"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:14.668Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:31.312Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 60 -B 15 \"cachedRuntimeSnapshot\\|renderRuntimeSourceStatus\\|recovery_host_supervision_cache\" -- tests/*.test.js electron/services/*.test.js 2>nul & git grep -n -A 80 -B 20 \"test_live\\|orchestration/live\\|live_control_snapshot\" -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_truth_snapshot.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:31.312Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:30:41.930Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "314224b0d6e5485190adb20e6e38880a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sP_Xr0EYoYa8gAOTO_Zl8tCL",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 461,
+      "finished_at": "2026-08-30T14:31:15.569Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T14:30:41.932Z",
+    "updated_at": "2026-08-30T14:31:15.569Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:30:41.932Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:42.272Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 60 -B 15 \"cachedRuntimeSnapshot\\|renderRuntimeSourceStatus\\|recovery_host_supervision_cache\" -- tests electron/services & git grep -n -A 80 -B 20 \"orchestration/live\\|live_control_snapshot\" -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_truth_snapshot.py",
+          "session_id": "bLtZ7HHOZI7IrLsOaQpyOU8Y"
+        }
+      },
+      {
+        "time": "2026-08-30T14:30:42.653Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 60 -B 15 \"cachedRuntimeSnapshot\\|renderRuntimeSourceStatus\\|recovery_host_supervision_cache\" -- tests electron/services & git grep -n -A 80 -B 20 \"orchestration/live\\|live_control_snapshot\" -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_truth_snapshot.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:02.466Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 120 -B 10 \"def live_run_projection\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py & git grep -n -A 90 -B 5 \"test_live_snapshot_skips_heavy_analytics\" -- resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "session_id": "_KdZi3ibn-fmrwUV-UiBg7IW"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:02.825Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 120 -B 10 \"def live_run_projection\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py & git grep -n -A 90 -B 5 \"test_live_snapshot_skips_heavy_analytics\" -- resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:15.243Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 100 -B 10 \"def wave_objective_provenance\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/*.py & git grep -n -A 80 -B 10 \"def _checkpoint_row\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "sP_Xr0EYoYa8gAOTO_Zl8tCL"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:15.569Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 100 -B 10 \"def wave_objective_provenance\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/*.py & git grep -n -A 80 -B 10 \"def _checkpoint_row\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:31:28.115Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "1641e5b106784cf7a0f22c32fc877b59",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "fyB3dAJR0EFeJdYdGNHy-nDW",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 420,
+      "finished_at": "2026-08-30T14:32:15.583Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T14:31:28.117Z",
+    "updated_at": "2026-08-30T14:32:15.583Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:31:28.117Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:28.453Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 45 -B 8 \"CREATE TABLE IF NOT EXISTS checkpoints\\|def .*checkpoint\\|checkpoint_id\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "tKoEQTfPkWCZStyKVALoK1d1"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:28.749Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 45 -B 8 \"CREATE TABLE IF NOT EXISTS checkpoints\\|def .*checkpoint\\|checkpoint_id\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:43.046Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_truth_snapshot.py tests/recovery-host.test.js tests/dev-ui-lifecycle.test.js renderer/app.js electron/services/recoveryHost.js",
+          "session_id": "0rY498sXJzxqM6bTpYa6P4KP"
+        }
+      },
+      {
+        "time": "2026-08-30T14:31:43.313Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_truth_snapshot.py tests/recovery-host.test.js tests/dev-ui-lifecycle.test.js renderer/app.js electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:32:15.224Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 120 -B 5 \"class ExecutionHubTests\\|def setUp\" -- resources/coding-tools-mcp/tests/test_execution_hub.py & git grep -n -A 30 -B 5 \"from .truth_snapshot\\|from .envutils\" -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "session_id": "fyB3dAJR0EFeJdYdGNHy-nDW"
+        }
+      },
+      {
+        "time": "2026-08-30T14:32:15.583Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 120 -B 5 \"class ExecutionHubTests\\|def setUp\" -- resources/coding-tools-mcp/tests/test_execution_hub.py & git grep -n -A 30 -B 5 \"from .truth_snapshot\\|from .envutils\" -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:32:25.983Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3c294ac23ea144bc913fb607b270aac2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "D9VVw6Auhm8W5XKCgUgGvzYt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 362,
+      "finished_at": "2026-08-30T14:32:26.625Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T14:32:25.986Z",
+    "updated_at": "2026-08-30T14:32:26.625Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:32:25.986Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T14:32:26.334Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --no-index -- NUL resources\\coding-tools-mcp\\coding_tools_mcp\\live_control.py",
+          "session_id": "D9VVw6Auhm8W5XKCgUgGvzYt"
+        }
+      },
+      {
+        "time": "2026-08-30T14:32:26.625Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --no-index -- NUL resources\\coding-tools-mcp\\coding_tools_mcp\\live_control.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:34:06.531Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9d4b25f61f3742178c3a447598604c5c",
+    "orchestration": {},
+    "objective": "Make Operator Truth Console consume truthful bounded data from /__control/orchestration/live without reintroducing Git/full-history/hash-chain work on the high-frequency path; preserve the already-correct cached Loaded runtime source path and all unrelated dirty worktree changes.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Run complete agent workflow",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T14:34:06.534Z",
+    "updated_at": "2026-08-30T14:34:46.413Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:34:06.535Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Make Operator Truth Console consume truthful bounded data from /__control/orchestration/live without reintroducing Git/full-history/hash-chain work on the high-frequency path; preserve the already-correct cached Loaded runtime source path and all unrelated dirty worktree changes."
+        }
+      },
+      {
+        "time": "2026-08-30T14:34:06.916Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:35:02.206Z",
+    "archive_reason": "superseded"
+  }
+]

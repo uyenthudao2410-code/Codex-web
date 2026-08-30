@@ -342,7 +342,7 @@ test('canonical empty proof closes only a valid zero-target checkpoint', () => {
   assert.equal(mutationBearing.closure_state, 'CHECKPOINT_IDENTITY_INVALID');
 });
 
-test('LIVE_CLOSED requires current-process rediscovery; unchanged acknowledgement is continuity only', () => {
+test('LIVE_CLOSED requires an exact current-process connector receipt; unchanged acknowledgement is continuity only', () => {
   const unchanged = computeActivationClosure(liveArgs({
     connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
     connectorRediscoveredAt: null
@@ -368,7 +368,18 @@ test('LIVE_CLOSED requires current-process rediscovery; unchanged acknowledgemen
   })).closure_state, 'LIVE_CLOSED');
   assert.equal(computeActivationClosure(liveArgs({
     connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
-    connectorRediscoveredAt: null
+    connectorRediscoveredAt: null,
+    connectorCompatibilityAcknowledgedAt: '2026-08-25T08:00:00.000Z'
+  })).closure_state, 'LIVE_CLOSED');
+  assert.equal(computeActivationClosure(liveArgs({
+    connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
+    connectorRediscoveredAt: null,
+    connectorCompatibilityAcknowledgedAt: null
+  })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
+  assert.equal(computeActivationClosure(liveArgs({
+    connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
+    connectorRediscoveredAt: '2026-08-25T08:00:00.000Z',
+    connectorCompatibilityAcknowledgedAt: '2026-08-25T08:00:00.000Z'
   })).closure_state, 'CONNECTOR_CONTRACT_NOT_CURRENT');
 });
 

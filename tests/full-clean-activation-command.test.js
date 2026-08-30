@@ -43,6 +43,7 @@ const {
   parseDeferredWorkerArgs,
   run,
   readAuthority,
+  connectorAcknowledgementEligible,
   waitForReplacementReady
 } = require('../scripts/full-clean-activation');
 
@@ -751,6 +752,44 @@ function fakeContext(paths, descriptor, clientCall = async () => ({})) {
     requestOptions: { expectedOwnerPid: descriptor.owner_pid, expectedInstanceId: descriptor.instance_id }
   };
 }
+
+test('replacement connector ACK eligibility accepts exact discovery or compatibility bootstrap snapshots', () => {
+  const startedAt = Date.now();
+  const epochId = 'epoch-connector-eligibility-0001';
+  const descriptor = {
+    activation_epoch_id: epochId,
+    started_at: new Date(startedAt).toISOString()
+  };
+  const base = {
+    activationEpoch: { activation_epoch_id: epochId },
+    connectorRefreshRequired: false,
+    connectorAcknowledgementPending: true,
+    toolContract: { sha256: 'c'.repeat(64) }
+  };
+  const strict = {
+    ...base,
+    connectorContractState: 'CHANGED_DISCOVERED_NEEDS_ACK',
+    connectorRediscovered: true,
+    connectorRediscoveredAt: new Date(startedAt + 1_000).toISOString()
+  };
+  const compatible = {
+    ...base,
+    connectorContractState: 'UNCHANGED_COMPATIBLE_NEEDS_ACK',
+    connectorRediscovered: false,
+    connectorBootstrapObservedAt: new Date(startedAt + 1_000).toISOString()
+  };
+
+  assert.equal(connectorAcknowledgementEligible(strict, descriptor, epochId, startedAt), true);
+  assert.equal(connectorAcknowledgementEligible(compatible, descriptor, epochId, startedAt), true);
+  assert.equal(connectorAcknowledgementEligible({
+    ...compatible,
+    connectorBootstrapObservedAt: new Date(startedAt - 1_000).toISOString()
+  }, descriptor, epochId, startedAt), false);
+  assert.equal(connectorAcknowledgementEligible({
+    ...compatible,
+    connectorRediscovered: true
+  }, descriptor, epochId, startedAt), false);
+});
 
 test('replacement connector ACK waits for fresh current-epoch discovery and runs once', async () => {
   const { root, paths } = tempPaths();

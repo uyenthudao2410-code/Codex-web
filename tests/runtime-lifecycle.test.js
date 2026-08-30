@@ -1100,10 +1100,9 @@ test('activation connector compatibility bootstrap is exact, no-workspace, and n
   assert.equal(acknowledged.rediscoveredAt, null);
   assert.equal(acknowledged.acknowledgedSha256, currentSha);
   assert.deepEqual(orchestrator.connectorContractFreshness(health, acknowledged), {
-    ready: false,
+    ready: true,
     mode: 'compatible_activation_bootstrap',
-    observedAt,
-    reason: 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'
+    observedAt
   });
   const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
   assert.equal(persisted.chatgptToolContractCompatibilitySource, 'declared_exact_predecessor_activation_bootstrap');

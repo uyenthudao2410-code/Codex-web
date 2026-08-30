@@ -36,5 +36,6 @@ module.exports = {
   mcpLogFile: () => current().mcpLogFile(),
   tunnelLogFile: () => current().tunnelLogFile(),
   tunnelExecutable: () => current().tunnelExecutable(),
-  portablePython: () => current().portablePython()
+  portablePython: () => current().portablePython(),
+  tunnelCodexAppServerLauncher: () => current().tunnelCodexAppServerLauncher()
 };

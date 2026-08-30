@@ -23,6 +23,7 @@ const {
   CONNECTOR_ATTESTATION_HEADER,
   connectorAttestationHeader
 } = require('./connectorAttestation');
+const { buildTunnelProcessEnvironment } = require('./tunnelProcessEnvironment');
 
 function tunnelFingerprint(settings, deviceId = '', activationEpochId = '') {
   const payload = {
@@ -139,11 +140,11 @@ class TunnelService {
     ensureParent(this.paths.tunnelLogFile());
     rotateLog(this.paths.tunnelLogFile());
     const output = fs.openSync(this.paths.tunnelLogFile(), 'a');
-    const env = {
+    const env = buildTunnelProcessEnvironment(this.paths, {
       ...process.env,
       CONTROL_PLANE_API_KEY: runtimeApiKey,
       MCP_RUNTIME_HEADER_VALUE: `Bearer ${token}`
-    };
+    });
     if (activationEpochId) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = activationEpochId;
     const attestation = options.connectorAttestation && typeof options.connectorAttestation === 'object'
       ? options.connectorAttestation

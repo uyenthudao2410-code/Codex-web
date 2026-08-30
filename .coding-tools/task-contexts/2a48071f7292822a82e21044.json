@@ -1,0 +1,278 @@
+{
+  "version": 2,
+  "task_id": "049fad8d630645d28f40af569bf510da",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-30T15:13:17.304Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "2v-oYlIEzPEgEM1OufaTF3sh",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "2v-oYlIEzPEgEM1OufaTF3sh",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": 863
+      },
+      "git": {
+        "head": "5f232e99f20873b4950d89d597989cb4c25e3404",
+        "branch": "main",
+        "worktree_fp": "1328001413db8a8e7bd4b98745c6c6379d60758425c0a86f4eb5997af884c036",
+        "dirty_paths": [
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/paths.js",
+          "electron/services/activationClosure.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/recoveryHost.js",
+          "electron/services/recoveryPlaneService.js",
+          "electron/services/runtimeOrchestrator.js",
+          "electron/services/runtimePaths.js",
+          "electron/services/tunnelService.js",
+          "recover_chatweb_ui_bound_v5.cmd",
+          "renderer/app.js",
+          "renderer/control-center.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/truth_snapshot.py",
+          "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "resources/coding-tools-mcp/tests/test_truth_snapshot.py",
+          "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "scripts/full-clean-activation.js",
+          "tests/activation-closure.test.js",
+          "tests/control-center-manager.test.js",
+          "tests/dev-ui-lifecycle.test.js",
+          "tests/full-clean-activation-command.test.js",
+          "tests/full-clean-activation.test.js",
+          "tests/recover-chatweb-ui-bound-v5.test.js",
+          "tests/recovery-bootstrap.test.js",
+          "tests/recovery-host.test.js",
+          "tests/recovery-supervisor.test.js",
+          "tests/runtime-lifecycle.test.js",
+          "tests/source-bundle.test.js",
+          "electron/services/tunnelProcessEnvironment.js",
+          "resources/recovery-supervisor/recovery-supervisor-launcher.vbs",
+          "resources/tunnel-client/codex_app_server_launcher.py",
+          "tests/tunnel-process-environment.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "049fad8d630645d28f40af569bf510da",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "e5dbe7d14f17b58a470b69184d2913199affa7d97ec8d54e75771d5cdbd31297",
+  "completion_report_acknowledged_id": "e5dbe7d14f17b58a470b69184d2913199affa7d97ec8d54e75771d5cdbd31297",
+  "completion_report_acknowledged_at": "2026-08-30T15:13:25.380Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-30T15:03:10.753Z",
+  "updated_at": "2026-08-30T15:13:25.384Z",
+  "events": [
+    {
+      "time": "2026-08-30T15:03:10.753Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-08-30T15:03:10.757Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-30T15:03:18.765Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /s /c \"git status --short && echo ---DIFFSTAT--- && git diff --stat && echo ---DIFFCHECK--- && git diff --check && echo ---RECENT--- && git log -5 --oneline --decorate\"",
+        "session_id": "LTIfEqmf9mKO9MzX9cobHDs8"
+      }
+    },
+    {
+      "time": "2026-08-30T15:03:21.374Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /s /c \"git status --short && echo ---DIFFSTAT--- && git diff --stat && echo ---DIFFCHECK--- && git diff --check && echo ---RECENT--- && git log -5 --oneline --decorate\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:04:19.359Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.git\\index.lock'; if (-not (Test-Path -LiteralPath $p)) { 'LOCK_EXISTS=NO'; exit 0 }; $i=Get-Item -LiteralPath $p; 'LOCK_EXISTS=YES'; 'LOCK_LENGTH='+$i.Length; 'LOCK_LASTWRITE_UTC='+$i.LastWriteTimeUtc.ToString('o'); try { $fs=[System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None); 'LOCK_EXCLUSIVE_OPEN=YES'; $fs.Close() } catch { 'LOCK_EXCLUSIVE_OPEN=NO'; 'LOCK_ERROR='+$_.Exceptio",
+        "session_id": "igLZNy_ZkYPsj2OliFmLZr1R"
+      }
+    },
+    {
+      "time": "2026-08-30T15:04:20.112Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.git\\index.lock'; if (-not (Test-Path -LiteralPath $p)) { 'LOCK_EXISTS=NO'; exit 0 }; $i=Get-Item -LiteralPath $p; 'LOCK_EXISTS=YES'; 'LOCK_LENGTH='+$i.Length; 'LOCK_LASTWRITE_UTC='+$i.LastWriteTimeUtc.ToString('o'); try { $fs=[System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None); 'LOCK_EXCLUSIVE_OPEN=YES'; $fs.Close() } catch { 'LOCK_EXCLUSIVE_OPEN=NO'; 'LOCK_ERROR='+$_.Exceptio",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:04:31.570Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.git\\index.lock'; if (-not (Test-Path -LiteralPath $p)) { 'LOCK_ALREADY_ABSENT'; exit 0 }; $i=Get-Item -LiteralPath $p; if ($i.Length -ne 0 -or $i.LastWriteTimeUtc.ToString('o') -ne '2026-08-30T10:24:23.7561183Z') { Write-Error 'LOCK_CHANGED_SINCE_PREFLIGHT'; exit 31 }; try { $fs=[System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None); $fs.Close() } catch { Write-Error 'LOCK_NOT_EX",
+        "session_id": "AoE70k0067-Zwu-_G0hhHy2E"
+      }
+    },
+    {
+      "time": "2026-08-30T15:04:32.070Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.git\\index.lock'; if (-not (Test-Path -LiteralPath $p)) { 'LOCK_ALREADY_ABSENT'; exit 0 }; $i=Get-Item -LiteralPath $p; if ($i.Length -ne 0 -or $i.LastWriteTimeUtc.ToString('o') -ne '2026-08-30T10:24:23.7561183Z') { Write-Error 'LOCK_CHANGED_SINCE_PREFLIGHT'; exit 31 }; try { $fs=[System.IO.File]::Open($p,[System.IO.FileMode]::Open,[System.IO.FileAccess]::ReadWrite,[System.IO.FileShare]::None); $fs.Close() } catch { Write-Error 'LOCK_NOT_EX",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:04:39.779Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /s /c \"npm test && npm run test:mcp\"",
+        "session_id": "gvmNI8x9mBx7jSwLZ5sZPO2T"
+      }
+    },
+    {
+      "time": "2026-08-30T15:06:40.247Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('python.exe','pythonw.exe','node.exe') -and ($_.CommandLine -match 'pytest|node --test|npm-cli|npm test|test:mcp') } | Select-Object ProcessId,ParentProcessId,Name,CreationDate,CommandLine | Format-List\"",
+        "session_id": "aMCOzS3JrEtihHRHkqx6Js-7"
+      }
+    },
+    {
+      "time": "2026-08-30T15:06:41.671Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimInstance Win32_Process | Where-Object { $_.Name -in @('python.exe','pythonw.exe','node.exe') -and ($_.CommandLine -match 'pytest|node --test|npm-cli|npm test|test:mcp') } | Select-Object ProcessId,ParentProcessId,Name,CreationDate,CommandLine | Format-List\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:09:02.351Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-30T15:11:35.429Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Get-Process -Id 30608 -ErrorAction SilentlyContinue; 'NOW_UTC='+(Get-Date).ToUniversalTime().ToString('o'); if ($p) { 'PYTEST_RUNNING=YES'; 'PYTEST_START_UTC='+$p.StartTime.ToUniversalTime().ToString('o'); 'PYTEST_CPU_SECONDS='+[math]::Round($p.CPU,2) } else { 'PYTEST_RUNNING=NO' }\"",
+        "session_id": "2v-oYlIEzPEgEM1OufaTF3sh"
+      }
+    },
+    {
+      "time": "2026-08-30T15:11:36.307Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Get-Process -Id 30608 -ErrorAction SilentlyContinue; 'NOW_UTC='+(Get-Date).ToUniversalTime().ToString('o'); if ($p) { 'PYTEST_RUNNING=YES'; 'PYTEST_START_UTC='+$p.StartTime.ToUniversalTime().ToString('o'); 'PYTEST_CPU_SECONDS='+[math]::Round($p.CPU,2) } else { 'PYTEST_RUNNING=NO' }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:12:49.300Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "2v-oYlIEzPEgEM1OufaTF3sh",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "e5dbe7d14f17b58a470b69184d2913199affa7d97ec8d54e75771d5cdbd31297"
+      }
+    },
+    {
+      "time": "2026-08-30T15:13:03.354Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /s /c \"git add -A -- . \\\" :(exclude).coding-tools\\\"\"",
+        "session_id": "HA6WiPVrAVjEr1TTMu-AzrIY"
+      }
+    },
+    {
+      "time": "2026-08-30T15:13:03.771Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /s /c \"git add -A -- . \\\" :(exclude).coding-tools\\\"\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:13:17.304Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /s /c \"git add -A && npm run stage:coding-tools-delivery && npm run check:coding-tools-delivery && git diff --cached --check && echo ---STAGED_STATUS--- && git status --short && echo ---STAGED_STAT--- && git diff --cached --stat\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-08-30T15:13:17.304Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-08-30T15:13:25.380Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "e5dbe7d14f17b58a470b69184d2913199affa7d97ec8d54e75771d5cdbd31297"
+      }
+    }
+  ]
+}

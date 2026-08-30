@@ -156,7 +156,7 @@ test('V5 fails closed when the pinned descriptor endpoint or bearer drifts', () 
     'pinned bearer values must never be copied into diagnostics');
 });
 
-test('V5 leaves connector acknowledgement/finalization to the exact coordinator and only polls receipts', () => {
+test('V5 leaves connector acknowledgement/finalization to the exact coordinator and polls both accepted receipt modes', () => {
   const text = source();
   assert.doesNotMatch(text, /'runtime\.acknowledge_connector_contract'/);
   assert.doesNotMatch(text, /CURRENT_CONNECTOR_ACK_PASS/);
@@ -169,8 +169,10 @@ test('V5 leaves connector acknowledgement/finalization to the exact coordinator 
     text.indexOf('function Test-ConnectorReadySnapshot'),
     text.indexOf('function Assert-WorkspaceMatch')
   );
-  assert.doesNotMatch(connectorGate, /CURRENT_COMPATIBLE_ACKNOWLEDGED/);
-  assert.doesNotMatch(connectorGate, /compatible_activation_bootstrap/);
+  assert.match(connectorGate, /CURRENT_COMPATIBLE_ACKNOWLEDGED/);
+  assert.match(connectorGate, /compatible_activation_bootstrap/);
+  assert.match(connectorGate, /connectorCompatibilityAcknowledged -eq \$true/);
+  assert.match(connectorGate, /connectorRediscovered -ne \$true/);
   assert.match(text, /connectorRefreshRequired -ne \$false/);
   assert.match(text, /connectorAcknowledgementPending -ne \$false/);
   assert.match(text, /Test-EpochSnapshotBinding \$lastSnapshot \$lastEpoch/);

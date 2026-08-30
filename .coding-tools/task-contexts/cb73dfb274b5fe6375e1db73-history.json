@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "ba466e9eba1749f5a4dfd1a379622ff5",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "WtFhOZL6Q0vIhatV4BHhXJzy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 900,
+      "finished_at": "2026-08-30T14:12:49.135Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T14:12:40.067Z",
+    "updated_at": "2026-08-30T14:12:49.135Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:12:40.067Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T14:12:40.488Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate -12 && git status --short && git diff --stat",
+          "session_id": "Fhzn0kF5aTkfgXkb_vIMyOQ7"
+        }
+      },
+      {
+        "time": "2026-08-30T14:12:41.447Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate -12 && git status --short && git diff --stat",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:12:48.289Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show --stat --oneline --summary 2b6d84e && git show --stat --oneline --summary 5f232e9 && rg -n \"proof_fingerprint|all-zero|zero sentinel|reconcile_exact_stale_run|preflight_exact_stale_run_reconciliation|completion_report|CHECKPOINTED\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests | head -n 240",
+          "session_id": "WtFhOZL6Q0vIhatV4BHhXJzy"
+        }
+      },
+      {
+        "time": "2026-08-30T14:12:49.135Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show --stat --oneline --summary 2b6d84e && git show --stat --oneline --summary 5f232e9 && rg -n \"proof_fingerprint|all-zero|zero sentinel|reconcile_exact_stale_run|preflight_exact_stale_run_reconciliation|completion_report|CHECKPOINTED\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests | head -n 240",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T14:12:56.357Z",
+    "archive_reason": "finished"
+  }
+]

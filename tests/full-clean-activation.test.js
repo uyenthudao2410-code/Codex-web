@@ -276,6 +276,42 @@ test('pending projection reuse permits a strict discovered candidate for finaliz
   assert.equal(reusable.projection_rebuild_receipt, receipt);
 });
 
+test('pending projection reuse permits an exact compatible bootstrap candidate for finalize', () => {
+  const root = path.resolve('pending-projection-compatible-workspace');
+  const receipt = projectionReceipt(root);
+  const record = {
+    activation_epoch_id: receipt.activation_epoch_id,
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: {
+      projection_rebuild_verified: true,
+      projection_rebuild_receipt: receipt,
+      connector_validation: {
+        valid: true,
+        freshness_mode: 'compatible_activation_bootstrap',
+        rediscovered_at: null,
+        compatibility_acknowledged_at: '2026-08-29T00:00:00.000Z'
+      },
+      process_identity_verified: true,
+      workspace_matches: true,
+      device_matches: true,
+      revision_matches: true,
+      recovery_host_revision_matches: true,
+      recovery_host_epoch_matches: true,
+      ui_verified: true,
+      recovery_plane_verified: true,
+      epoch_matches: true,
+      lifecycle_decision: { safe: true, code: 'READY' }
+    }
+  };
+
+  const reusable = reusablePendingProjectionObservation(record);
+
+  assert.ok(reusable);
+  assert.equal(reusable.reused_pending_projection, true);
+  assert.equal(reusable.projection_rebuild_receipt, receipt);
+});
+
 test('committed projection reuse is explicit and remains admission-closed', () => {
   const root = path.resolve('committed-projection-reuse-workspace');
   const receipt = projectionReceipt(root);
@@ -680,7 +716,7 @@ test('connector gate binds ACK and rediscovery to the exact post-preflight healt
   assert.ok(staleAcknowledgement.reasons.includes('ACKNOWLEDGED_SHA256_MISMATCH'));
 });
 
-test('connector gate keeps an exact no-workspace compatibility bootstrap pending strict rediscovery', () => {
+test('connector gate accepts only an acknowledged exact no-workspace compatibility bootstrap', () => {
   const nowUnixMs = 1_700_000_000_000;
   const activationEpochId = id('activation-compatible-gate', '1001');
   const contractSha256 = 'e'.repeat(64);
@@ -729,8 +765,9 @@ test('connector gate keeps an exact no-workspace compatibility bootstrap pending
   };
 
   const ready = validateConnectorReadyGate({ health, contractStatus, nowUnixMs });
-  assert.equal(ready.valid, false);
-  assert.ok(ready.reasons.includes('STRICT_CONNECTOR_REDISCOVERY_REQUIRED'));
+  assert.equal(ready.valid, true);
+  assert.equal(ready.code, 'READY');
+  assert.deepEqual(ready.reasons, []);
   assert.equal(ready.freshness_mode, 'compatible_activation_bootstrap');
   assert.equal(ready.rediscovered_at, null);
   assert.equal(ready.compatibility_acknowledged_at, observedAt);
@@ -769,6 +806,8 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   let nowUnixMs = 1_700_000_000_000;
   const contractSha256 = 'c'.repeat(64);
   let connectorRediscoveredAt = new Date(nowUnixMs - 1000).toISOString();
+  let connectorBootstrapObservedAt = new Date(nowUnixMs - 500).toISOString();
+  let connectorEvidenceMode = 'discovery';
   let receipt = projectionReceipt(root, {
     projection_classification: 'NO_ACTIVE_PROJECTION',
     projection: { run_id: '', wave_id: '', orchestration_state: '', mode: 'global' }
@@ -923,7 +962,7 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
         device_instance_id: recoveryHostInstanceId,
         code_revision: revision,
         tool_contract: { sha256: contractSha256 },
-        connector_tool_discovery: {
+        connector_tool_discovery: connectorEvidenceMode === 'discovery' ? {
           current_contract_observed: true,
           identity_source: 'attested_transport',
           attestation_verified: true,
@@ -932,11 +971,47 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
           process_instance_id: processInstanceId,
           server_instance_id: serverInstanceId,
           activation_epoch_id: activationEpochId
-        },
+        } : null,
+        connector_activation_bootstrap: connectorEvidenceMode === 'compatibility' ? {
+          current_contract_contact: true,
+          identity_source: 'attested_transport',
+          attestation_verified: true,
+          client_id: 'chatweb-full-clean-compatible',
+          client_type: 'chatweb',
+          method: 'tools/call',
+          tool_name: 'workspace_context',
+          workspace_accessed: false,
+          contract_sha256: contractSha256,
+          observed_at: connectorBootstrapObservedAt,
+          process_instance_id: processInstanceId,
+          server_instance_id: serverInstanceId,
+          activation_epoch_id: activationEpochId
+        } : null,
         projection_rebuild: wrapper
       };
     },
-    connectorContractStatus(toolContract, discovery) {
+    connectorContractStatus(toolContract, discovery, _contact, bootstrap) {
+      if (connectorEvidenceMode === 'compatibility') {
+        return {
+          available: true,
+          currentSha256: toolContract?.sha256 || '',
+          acknowledgedSha256: connectorAcknowledged ? contractSha256 : 'd'.repeat(64),
+          rediscovered: false,
+          rediscoveredSha256: '',
+          rediscoveredAt: null,
+          bootstrapCurrent: Boolean(bootstrap),
+          bootstrapObservedAt: bootstrap?.observed_at || null,
+          compatibilityAcknowledged: connectorAcknowledged,
+          compatibilityAcknowledgedAt: connectorAcknowledged ? bootstrap?.observed_at || null : null,
+          compatibilitySource: 'declared_exact_predecessor_activation_bootstrap',
+          refreshRequired: false,
+          acknowledgementPending: !connectorAcknowledged,
+          contractChanged: !connectorAcknowledged,
+          contractState: connectorAcknowledged
+            ? 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+            : 'CHANGED_COMPATIBLE_NEEDS_ACK'
+        };
+      }
       return {
         available: true,
         currentSha256: toolContract?.sha256 || '',
@@ -955,12 +1030,20 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
       assert.equal(health.process_instance_id, processInstanceId);
       assert.equal(health.instance_id, serverInstanceId);
       assert.equal(options.activationEpochId, activationEpochId);
-      if (health.connector_tool_discovery?.process_instance_id !== processInstanceId
-        || health.connector_tool_discovery?.server_instance_id !== serverInstanceId) {
+      const evidence = connectorEvidenceMode === 'compatibility'
+        ? health.connector_activation_bootstrap
+        : health.connector_tool_discovery;
+      if (evidence?.process_instance_id !== processInstanceId
+        || evidence?.server_instance_id !== serverInstanceId) {
         throw codedError('CONNECTOR_CONTRACT_NOT_REDISCOVERED');
       }
       connectorAcknowledged = true;
-      return this.connectorContractStatus(health.tool_contract, health.connector_tool_discovery);
+      return this.connectorContractStatus(
+        health.tool_contract,
+        health.connector_tool_discovery,
+        null,
+        health.connector_activation_bootstrap
+      );
     },
     tunnel: {
       status: async () => {
@@ -1028,6 +1111,21 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   assert.equal(census.reason, null);
   assert.equal(tunnelStatusCalls, 3, 'one transient Tunnel observation is retried within the same bounded census');
   assert.deepEqual(tunnelWaits, [250, 250]);
+
+  connectorEvidenceMode = 'compatibility';
+  connectorAcknowledged = false;
+  connectorBootstrapObservedAt = new Date(nowUnixMs - 250).toISOString();
+  const callsBeforeCompatibility = calls.length;
+  const compatible = await coordinator.finalCensus(activationEpochId);
+  assert.deepEqual(calls.slice(callsBeforeCompatibility), ['preflight', 'health', 'connector-ack']);
+  assert.equal(compatible.connector_acknowledgement.attempted, true);
+  assert.equal(compatible.connector_acknowledgement.completed, true);
+  assert.equal(compatible.connector_validation.freshness_mode, 'compatible_activation_bootstrap');
+  assert.equal(compatible.connector_validation.rediscovered_at, null);
+  assert.equal(compatible.connector_validation.compatibility_acknowledged_at, connectorBootstrapObservedAt);
+  assert.equal(compatible.pass, true);
+
+  connectorEvidenceMode = 'discovery';
 
   connectorAcknowledged = false;
   coordinator.recordPendingCensus(activationEpochId, {

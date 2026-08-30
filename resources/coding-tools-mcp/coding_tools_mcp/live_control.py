@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 from typing import Any
+
+from . import __version__
+from .envutils import ENV_PREFIX
+from .truth_snapshot import build_truth_snapshot
 
 
 def _compact_command(value: Any) -> dict[str, Any] | None:
@@ -36,6 +42,86 @@ def _compact_proofs(proofs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         }
         for item in proofs[-6:]
     ]
+
+
+def _compact_direct_usage_receipt(event: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not isinstance(event, dict):
+        return None
+    usage = event.get("usage") if isinstance(event.get("usage"), dict) else {}
+    measurement = event.get("measurement") if isinstance(event.get("measurement"), dict) else {}
+    provenance = event.get("provenance") if isinstance(event.get("provenance"), dict) else {}
+    cost = event.get("cost") if isinstance(event.get("cost"), dict) else {}
+    usage_keys = (
+        "input_total_tokens",
+        "input_cached_tokens",
+        "input_uncached_tokens",
+        "uncached_input_tokens",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_total_tokens",
+        "output_reasoning_tokens",
+        "output_tokens",
+        "reasoning_output_tokens",
+        "total_tokens",
+    )
+    return {
+        "usage_id": event.get("usage_id") or None,
+        "turn_id": event.get("turn_id") or None,
+        "event_time": event.get("event_time") or None,
+        "actor": event.get("actor") or None,
+        "provider_id": event.get("provider_id") or None,
+        "model": event.get("model") or event.get("model_id") or None,
+        "usage": {key: usage.get(key) for key in usage_keys if key in usage},
+        "measurement": {
+            "usage": measurement.get("usage") or "unobserved",
+            "cost": measurement.get("cost") or "unobserved",
+        },
+        "provenance": {
+            "usage": provenance.get("usage") or provenance.get("source") or "unobserved",
+            "cost": provenance.get("cost") or provenance.get("source") or "unobserved",
+        },
+        "cost": {"provider_cost": cost.get("provider_cost")},
+    }
+
+
+def _direct_usage_projection(events: list[dict[str, Any]]) -> dict[str, Any]:
+    latest: dict[str, dict[str, Any] | None] = {"controller": None, "provider": None}
+    for event in reversed(events):
+        actor = str(event.get("actor") or "provider").strip().lower()
+        if actor in latest and latest[actor] is None:
+            latest[actor] = _compact_direct_usage_receipt(event)
+        if all(latest.values()):
+            break
+    return {
+        "schema_version": 1,
+        "source": "bounded_recent_direct_usage_events",
+        "missing_measurement_policy": "unknown_not_zero",
+        "controller": latest["controller"],
+        "provider": latest["provider"],
+    }
+
+
+def _bounded_objective_provenance(run: dict[str, Any], wave: dict[str, Any]) -> dict[str, Any]:
+    metadata = wave.get("metadata") if isinstance(wave.get("metadata"), dict) else {}
+    run_objective = str(run.get("objective") or "")[:4000]
+    effective_objective = str(metadata.get("effective_objective") or run_objective)[:4000]
+    revision_raw = metadata.get("objective_revision")
+    revision = (
+        int(revision_raw)
+        if isinstance(revision_raw, int) and not isinstance(revision_raw, bool) and revision_raw >= 1
+        else 1
+    )
+    stored_sha = str(metadata.get("objective_sha256") or "").strip().lower()
+    calculated_sha = hashlib.sha256(effective_objective.encode("utf-8", errors="replace")).hexdigest()
+    return {
+        "run_initial_objective": run_objective,
+        "effective_objective": effective_objective,
+        "objective_revision": revision,
+        "objective_sha256": stored_sha or calculated_sha,
+        "objective_hash_valid": stored_sha == calculated_sha if stored_sha else None,
+        "objective_source": str(metadata.get("objective_source") or "legacy_run_objective"),
+        "objective_changed_from_previous": bool(metadata.get("objective_changed_from_previous", False)),
+    }
 
 
 def control_presence_projection(
@@ -158,6 +244,21 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
     """Return the bounded authoritative state required by the 2-second panel poll."""
     activation = runtime.activation_admission_snapshot(blocking=False)
     if activation.get("admission_open") is not True:
+        pending_truth = build_truth_snapshot(
+            source=None,
+            runtime_identity={
+                "runtime_version": __version__,
+                "process_instance_id": runtime.process_instance_id,
+                "server_instance_id": runtime.server_instance_id,
+                "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
+                "tool_contract": runtime.tool_contract,
+            },
+            orchestration=None,
+            objective=None,
+            proof=None,
+            checkpoint=None,
+            package=None,
+        )
         # A full-clean activation deliberately closes tool admission while the
         # replacement process rebuilds its projection and captures a canonical
         # ledger census.  Panel polling must not compete with that transaction
@@ -205,7 +306,10 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
                 "process_instance_id": runtime.process_instance_id,
                 "server_instance_id": runtime.server_instance_id,
                 "tool_contract": runtime.tool_contract,
+                "tools": list(runtime.exposed_tool_names()),
             },
+            "direct_usage": _direct_usage_projection([]),
+            "truth_snapshot": pending_truth,
             "clients": [],
             "authority": {
                 "controller": {
@@ -269,6 +373,40 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
         latest_material_event_at=str(live_projection.get("latest_material_event_at") or ""),
     )
     provider_traffic = runtime.provider_traffic_snapshot()
+    direct_usage = _direct_usage_projection(ledger.list_usage_events(run_id, limit=8) if run_id else [])
+    wave_id = str(projection.get("wave_id") or "").strip()
+    selected_wave = next(
+        (item for item in reversed(waves) if str(item.get("wave_id") or "") == wave_id),
+        waves[-1] if waves else {},
+    )
+    source_identity = runtime._cached_orchestration_workspace_identity()
+    # A write lease means the cached source observation can predate mutation.
+    # Fail closed until a subsequent exact workspace identity refreshes it.
+    if presence["write_lease"] is not None:
+        source_identity = {}
+    truth_snapshot = build_truth_snapshot(
+        source=source_identity,
+        runtime_identity={
+            "runtime_version": __version__,
+            "process_instance_id": runtime.process_instance_id,
+            "server_instance_id": runtime.server_instance_id,
+            "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
+            "tool_contract": runtime.tool_contract,
+        },
+        orchestration={
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "state": projection.get("orchestration_state"),
+            "run_status": (run or {}).get("status"),
+            "wave_status": selected_wave.get("status") if isinstance(selected_wave, dict) else None,
+            "base_head": selected_wave.get("base_head") if isinstance(selected_wave, dict) else None,
+            "worktree_fp": selected_wave.get("worktree_fp") if isinstance(selected_wave, dict) else None,
+        },
+        objective=_bounded_objective_provenance(run or {}, selected_wave if isinstance(selected_wave, dict) else {}),
+        proof=proofs[-1] if proofs else None,
+        checkpoint=live_projection.get("latest_checkpoint"),
+        package=None,
+    )
     return {
         "schema_version": 2,
         "snapshot_scope": "live_control",
@@ -301,7 +439,10 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
             "process_instance_id": runtime.process_instance_id,
             "server_instance_id": runtime.server_instance_id,
             "tool_contract": runtime.tool_contract,
+            "tools": list(runtime.exposed_tool_names()),
         },
+        "direct_usage": direct_usage,
+        "truth_snapshot": truth_snapshot,
         "clients": presence["clients"],
         "authority": {"controller": presence["controller"], "write": presence["write"]},
         "continuity": presence["continuity"],

@@ -187,6 +187,19 @@ test('Control Center renders provider admission, bounded flight recorder, histor
   assert.doesNotMatch(js, /contextPercent|context_percentage|estimatedContextPressure/);
 });
 
+test('Control Center reports the direct MCP tool contract and measured usage receipts without analytics inference', () => {
+  const js = read('renderer/control-center.js');
+  assert.match(js, /data\?\.runtime\?\.tools/);
+  assert.match(js, /data\?\.direct_usage/);
+  assert.match(js, /input_total_tokens/);
+  assert.match(js, /input_cached_tokens/);
+  assert.match(js, /output_total_tokens/);
+  assert.match(js, /output_reasoning_tokens/);
+  assert.match(js, /unknown_not_zero/);
+  assert.match(js, /missing=unknown/);
+  assert.doesNotMatch(js, /usage_analytics/);
+});
+
 
 test('Tasks & Proof exposes only the authenticated P5-A0 shadow operator path without treatment controls or raw seed material', () => {
   const html = read('renderer/index.html');

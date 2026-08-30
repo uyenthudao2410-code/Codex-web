@@ -19,6 +19,7 @@ const {
   sameProcessIdentity,
   terminateExactProcessTree
 } = require('./processIdentity');
+const { buildTunnelProcessEnvironment } = require('./tunnelProcessEnvironment');
 
 const RECOVERY_MCP_START_ATTEMPTS = 30;
 // tunnel-client defaults to a 30s control-plane long poll plus a 5s deadline guardrail.
@@ -736,7 +737,11 @@ class RecoveryPlaneService {
     ensureParent(this.paths.recoveryTunnelLogFile());
     rotateLog(this.paths.recoveryTunnelLogFile());
     const output = fs.openSync(this.paths.recoveryTunnelLogFile(), 'a');
-    const env = { ...process.env, CONTROL_PLANE_API_KEY: runtimeApiKey, MCP_RUNTIME_HEADER_VALUE: `Bearer ${authToken}` };
+    const env = buildTunnelProcessEnvironment(this.paths, {
+      ...process.env,
+      CONTROL_PLANE_API_KEY: runtimeApiKey,
+      MCP_RUNTIME_HEADER_VALUE: `Bearer ${authToken}`
+    });
     if (this.activationEpochId) env.WEBCODEX_ACTIVATION_EPOCH_ID = this.activationEpochId;
     const args = ['run', '--control-plane.tunnel-id', tunnelId, '--control-plane.api-key', 'env:CONTROL_PLANE_API_KEY', '--health.listen-addr', `127.0.0.1:${settings.recoveryHealthPort}`, '--mcp.server-url', `url=http://127.0.0.1:${settings.recoveryMcpPort}/mcp,channel=main`, '--mcp.extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE', '--mcp.discovery-extra-headers', 'Authorization: env:MCP_RUNTIME_HEADER_VALUE', '--log.file', this.paths.recoveryTunnelLogFile()];
     const proxyUrl = Object.prototype.hasOwnProperty.call(settings, 'effectiveProxyUrl') ? settings.effectiveProxyUrl : settings.proxyUrl;

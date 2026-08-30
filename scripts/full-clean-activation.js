@@ -1019,7 +1019,17 @@ function connectorAcknowledgementEligible(snapshot, descriptor, activationEpochI
   const expectedEpoch = String(activationEpochId || '').trim();
   const descriptorEpoch = String(descriptor?.activation_epoch_id || '').trim();
   const snapshotEpoch = String(epoch?.activation_epoch_id || epoch?.activationEpochId || '').trim();
-  const observedAt = String(runtime?.connectorRediscoveredAt || runtime?.connector_rediscovered_at || '').trim();
+  const contractState = String(runtime?.connectorContractState || '').trim();
+  const strictDiscovery = contractState === 'CHANGED_DISCOVERED_NEEDS_ACK';
+  const compatibilityBootstrap = [
+    'CHANGED_COMPATIBLE_NEEDS_ACK',
+    'UNCHANGED_COMPATIBLE_NEEDS_ACK'
+  ].includes(contractState);
+  const observedAt = String(strictDiscovery
+    ? (runtime?.connectorRediscoveredAt || runtime?.connector_rediscovered_at || '')
+    : compatibilityBootstrap
+      ? (runtime?.connectorBootstrapObservedAt || runtime?.connector_bootstrap_observed_at || '')
+      : '').trim();
   const observedAtUnixMs = Date.parse(observedAt);
   const descriptorStartedAtUnixMs = Date.parse(String(descriptor?.started_at || ''));
   const suppliedBoundary = Number(notBeforeUnixMs || 0);
@@ -1032,10 +1042,10 @@ function connectorAcknowledgementEligible(snapshot, descriptor, activationEpochI
     expectedEpoch
     && descriptorEpoch === expectedEpoch
     && snapshotEpoch === expectedEpoch
-    && runtime?.connectorRediscovered === true
+    && (strictDiscovery || compatibilityBootstrap)
+    && (strictDiscovery ? runtime?.connectorRediscovered === true : runtime?.connectorRediscovered !== true)
     && runtime?.connectorRefreshRequired === false
     && runtime?.connectorAcknowledgementPending === true
-    && String(runtime?.connectorContractState || '') === 'CHANGED_DISCOVERED_NEEDS_ACK'
     && HEX64.test(currentSha256)
     && Number.isFinite(observedAtUnixMs)
     && observedAtUnixMs >= freshnessBoundary
@@ -1195,10 +1205,10 @@ async function waitForReplacementReady(paths, initialDescriptor, activationEpoch
         }
         if (!connectorAckAttempted
           && connectorAcknowledgementEligible(runtime, descriptor, activationEpochId, notBeforeUnixMs)) {
-          // The fresh discovery projection is produced by the replacement
-          // Recovery Host from the current MCP process receipt.  ACK exactly
-          // once on this authenticated descriptor, then continue polling so
-          // final readiness is still proven independently.
+          // The current-process discovery/bootstrap projection is produced by
+          // the replacement Recovery Host from an exact attested receipt. ACK
+          // exactly once on this authenticated descriptor, then continue
+          // polling so final readiness is still proven independently.
           connectorAckAttempted = true;
           await client.call('runtime.acknowledge_connector_contract', [], requestOptions);
         }

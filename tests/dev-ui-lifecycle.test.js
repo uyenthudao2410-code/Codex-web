@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { EventEmitter } = require('node:events');
 const {
   runLifecycle,
   uiObservation,
@@ -26,6 +27,41 @@ test('package start contract routes through the full-system refresh lifecycle', 
   assert.equal(packageJson.scripts.start, 'node scripts/dev-ui-lifecycle.js refresh');
   assert.equal(packageJson.scripts['dev:refresh'], packageJson.scripts.start);
   assert.equal(packageJson.scripts['dev:control-center'], 'node scripts/dev-ui-lifecycle.js control-center');
+});
+
+test('development lifecycle keeps the operator UI visible while helper signals stay hidden', async () => {
+  const launches = [];
+  const spawnProcess = (command, args, options) => {
+    const child = new EventEmitter();
+    child.pid = 43001 + launches.length;
+    child.unref = () => {};
+    launches.push({ command, args, options });
+    queueMicrotask(() => {
+      child.emit('spawn');
+      if (!options.detached) child.emit('exit', 0);
+    });
+    return child;
+  };
+  const deps = createRuntimeDependencies({
+    paths: {
+      runtimeIdentity: () => ({ runtime_mode: 'development', installation_id: 'c'.repeat(64) }),
+      executablePath: () => process.execPath,
+      appRoot: () => path.resolve(__dirname, '..')
+    },
+    spawnProcess,
+    output: () => {},
+    sleep: async () => {}
+  });
+
+  await deps.launch();
+  await deps.signal('focus', 'electron-ui-instance-0001');
+
+  assert.equal(launches.length, 2);
+  assert.equal(launches[0].options.detached, true);
+  assert.equal(launches[0].options.windowsHide, false, 'the operator-facing BrowserWindow must be allowed to show');
+  assert.equal(launches[0].options.env.WEBCODEX_PROCESS_ROLE, 'electron-ui');
+  assert.equal(launches[1].options.detached, false);
+  assert.equal(launches[1].options.windowsHide, true, 'the short-lived lifecycle helper must not create a console window');
 });
 
 function acceptedClosure(overrides = {}) {
@@ -1289,8 +1325,8 @@ test('connector presentation distinguishes exact activation compatibility ACK fr
     connectorRediscovered: false
   });
   assert.equal(acknowledged.state, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
-  assert.equal(acknowledged.notice, true);
-  assert.match(acknowledged.message, /full-clean activation vẫn chờ tools\/list/);
+  assert.equal(acknowledged.notice, false);
+  assert.match(acknowledged.message, /connector hiện tại đã sẵn sàng/);
 });
 
 test('Command Center exposes the machine closure state without promoting source health to LIVE_CLOSED', () => {

@@ -361,9 +361,9 @@ function connectorContractPresentation(status = {}) {
   if (explicit === 'CURRENT_COMPATIBLE_ACKNOWLEDGED') {
     return {
       state: explicit,
-      notice: true,
-      message: 'No-workspace compatibility bootstrap của đúng process/epoch đã được ACK như continuity evidence; full-clean activation vẫn chờ tools/list hoặc server/discover đã attestation.',
-      toast: 'Compatibility continuity đã được ghi nhận; strict connector rediscovery vẫn còn thiếu.'
+      notice: false,
+      message: 'No-workspace compatibility bootstrap của đúng process/server/epoch đã được xác minh và Recovery Host ACK; connector hiện tại đã sẵn sàng theo contract tương thích.',
+      toast: 'Compatibility bootstrap hiện tại đã được xác minh và acknowledge.'
     };
   }
   if (explicit === 'CHANGED_DISCOVERED_NEEDS_ACK') {

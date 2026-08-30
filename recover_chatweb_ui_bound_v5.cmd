@@ -609,7 +609,15 @@ function Test-ConnectorReadySnapshot {
   if ($currentSha -notmatch '^[0-9a-fA-F]{64}$' -or [string]::IsNullOrWhiteSpace($ackSha) `
     -or $ackSha.ToLowerInvariant() -ne $currentSha.ToLowerInvariant()) { return $false }
   if ([string]$status.connectorContractState -eq 'CURRENT_ACKNOWLEDGED') {
-    return $status.connectorRediscovered -eq $true -and (Test-ConnectorTimestamp ([string]$status.connectorRediscoveredAt))
+    return [string]$status.connectorFreshnessMode -eq 'current_process_discovery' `
+      -and $status.connectorRediscovered -eq $true `
+      -and (Test-ConnectorTimestamp ([string]$status.connectorRediscoveredAt))
+  }
+  if ([string]$status.connectorContractState -eq 'CURRENT_COMPATIBLE_ACKNOWLEDGED') {
+    return [string]$status.connectorFreshnessMode -eq 'compatible_activation_bootstrap' `
+      -and $status.connectorRediscovered -ne $true `
+      -and $status.connectorCompatibilityAcknowledged -eq $true `
+      -and (Test-ConnectorTimestamp ([string]$status.connectorCompatibilityAcknowledgedAt))
   }
   return $false
 }

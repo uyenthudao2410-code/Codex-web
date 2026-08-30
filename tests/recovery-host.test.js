@@ -396,16 +396,39 @@ test('duplicate replacement contender cannot fail the epoch owned by the live Re
   assert.equal(host.running, false);
 });
 
-test('persisted READY connector proof requires strict current-process discovery and exact identities', (t) => {
+test('persisted READY connector proof accepts either exact freshness mode and rejects malformed identities or timestamps', (t) => {
   const { host } = readyAdoptionHost(t);
-  const valid = seedReadyEpoch(host);
-  const accepted = validatePersistedReadyConnectorProof(valid);
-  assert.equal(accepted.valid, true);
-  assert.deepEqual(accepted.reasons, []);
+  const strict = validatePersistedReadyConnectorProof(seedReadyEpoch(host));
+  assert.equal(strict.valid, true);
+  assert.deepEqual(strict.reasons, []);
+
+  const { host: compatibilityHost } = readyAdoptionHost(t);
+  const compatibilityAt = new Date(Date.now() - 1000).toISOString();
+  const compatible = validatePersistedReadyConnectorProof(seedReadyEpoch(compatibilityHost, {
+    freshnessMode: 'compatible_activation_bootstrap',
+    rediscoveredAt: null,
+    compatibilityAcknowledgedAt: compatibilityAt
+  }));
+  assert.equal(compatible.valid, true);
+  assert.deepEqual(compatible.reasons, []);
+  assert.equal(compatible.rediscovered_at, null);
+  assert.equal(compatible.compatibility_acknowledged_at, compatibilityAt);
 
   const cases = [
-    ['compatibility bootstrap', { freshnessMode: 'compatible_activation_bootstrap' }, 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'],
+    ['unknown freshness mode', { freshnessMode: 'unknown_mode' }, 'CONNECTOR_FRESHNESS_MODE_INVALID'],
     ['missing rediscovery timestamp', { rediscoveredAt: '' }, 'REDISCOVERY_TIMESTAMP_INVALID'],
+    ['strict mode carries compatibility receipt', { compatibilityAcknowledgedAt: compatibilityAt }, 'COMPATIBILITY_RECEIPT_PRESENT'],
+    ['compatibility timestamp missing', {
+      freshnessMode: 'compatible_activation_bootstrap', rediscoveredAt: null, compatibilityAcknowledgedAt: null
+    }, 'COMPATIBILITY_TIMESTAMP_INVALID'],
+    ['compatibility timestamp from future', {
+      freshnessMode: 'compatible_activation_bootstrap',
+      rediscoveredAt: null,
+      compatibilityAcknowledgedAt: new Date(Date.now() + 60_000).toISOString()
+    }, 'COMPATIBILITY_TIMESTAMP_FROM_FUTURE'],
+    ['compatibility mode carries rediscovery', {
+      freshnessMode: 'compatible_activation_bootstrap', compatibilityAcknowledgedAt: compatibilityAt
+    }, 'COMPATIBILITY_MODE_REDISCOVERY_PRESENT'],
     ['process identity mismatch', { connectorProcessInstanceId: 'coding-mcp-process-other-0001' }, 'CONNECTOR_PROCESS_INSTANCE_ID_MISMATCH'],
     ['server identity mismatch', { connectorServerInstanceId: 'coding-mcp-server-other-0001' }, 'CONNECTOR_SERVER_INSTANCE_ID_MISMATCH'],
     ['contract hash mismatch', { runtimeContractSha256: 'e'.repeat(64) }, 'RUNTIME_CONTRACT_SHA256_MISMATCH']
@@ -423,7 +446,8 @@ test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch wit
   const { host, calls } = readyAdoptionHost(t);
   const before = seedReadyEpoch(host, {
     freshnessMode: 'compatible_activation_bootstrap',
-    compatibilityAcknowledgedAt: new Date(Date.now() - 1000).toISOString()
+    rediscoveredAt: null,
+    compatibilityAcknowledgedAt: null
   });
 
   const status = await host.start();
@@ -432,7 +456,7 @@ test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch wit
   assert.equal(status.activation_epoch.admission_open, false);
   assert.equal(status.activation_epoch.update_incomplete, true);
   assert.equal(status.ready_adoption.state, 'blocked');
-  assert.ok(status.ready_adoption.reasons.includes('STRICT_CONNECTOR_REDISCOVERY_REQUIRED'));
+  assert.ok(status.ready_adoption.reasons.includes('COMPATIBILITY_TIMESTAMP_INVALID'));
   assert.deepEqual(calls.orchestratorEpochs, []);
   assert.deepEqual(calls.recoveryPlaneEpochs, []);
   assert.equal(calls.gatewayStart, 0);
@@ -456,7 +480,8 @@ test('invalid READY adoption guard retires only after a different durable epoch 
   const { host } = readyAdoptionHost(t);
   const blocked = seedReadyEpoch(host, {
     freshnessMode: 'compatible_activation_bootstrap',
-    compatibilityAcknowledgedAt: new Date(Date.now() - 1000).toISOString()
+    rediscoveredAt: null,
+    compatibilityAcknowledgedAt: null
   });
   await host.start();
   assert.equal(host.readyAdoptionBlocksAdmission(), true);
@@ -595,7 +620,7 @@ test('Recovery Host owns supervision and IPC without stopping the runtime when U
   assert.equal(fs.existsSync(paths.recoveryHostDescriptorFile()), false);
 });
 
-test('connector-pending supervision ignores compatibility bootstrap and wakes only on exact discovery', async (t) => {
+test('connector-pending supervision wakes final census for an exact compatible bootstrap', async (t) => {
   const paths = fixture(t);
   const revision = 'a'.repeat(64);
   const epochId = 'activation-connector-pending-0001';
@@ -776,13 +801,14 @@ test('connector-pending supervision ignores compatibility bootstrap and wakes on
       censusCalls += 1;
       assert.equal(_epochId, epochId);
       assert.equal(options.reusePendingProjection, true,
-        'connector-pending watchdog census must reuse only the strict durable projection receipt');
+        'connector-pending watchdog census must reuse the exact durable projection receipt');
       epoch.verification.tunnel_health_verified = true;
+      const connectorObserved = bootstrapObserved || discoveryObserved;
       return {
-        pass: discoveryObserved,
-        verified: discoveryObserved,
+        pass: connectorObserved,
+        verified: connectorObserved,
         activation_epoch_id: epochId,
-        reason: discoveryObserved ? null : 'UPDATE_INCOMPLETE'
+        reason: connectorObserved ? null : 'UPDATE_INCOMPLETE'
       };
     },
     recordPendingCensus: (_epochId, census) => {
@@ -830,15 +856,8 @@ test('connector-pending supervision ignores compatibility bootstrap and wakes on
 
   bootstrapObserved = true;
   await host.superviseOnce();
-  assert.equal(censusCalls, 1, 'a compatibility bootstrap must not substitute for protocol discovery');
-  assert.equal(persistedCensusCalls, 1, 'bootstrap evidence must leave the strict pending census unchanged');
-  assert.equal(finalizeCalls, 0, 'bootstrap evidence must keep admission closed');
-  assert.equal(host.cachedActivationSnapshot().fullyReady, false);
-
-  discoveryObserved = true;
-  await host.superviseOnce();
-  assert.equal(censusCalls, 2, 'exact current-process tools/list discovery must trigger the authoritative final census and ACK path');
-  assert.equal(persistedCensusCalls, 2, 'the passing strict-discovery census must replace the older durable receipt before finalize');
+  assert.equal(censusCalls, 2, 'an exact compatible bootstrap must trigger the authoritative final census and guarded ACK path');
+  assert.equal(persistedCensusCalls, 2, 'the passing compatibility census must replace the older durable receipt before finalize');
   assert.equal(finalizeCalls, 1);
   assert.deepEqual(activationOrder.slice(-2), ['persist:true', 'finalize']);
   assert.equal(lightweightCalls, 0);

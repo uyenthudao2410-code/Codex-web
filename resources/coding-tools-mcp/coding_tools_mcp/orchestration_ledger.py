@@ -1102,6 +1102,10 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                    ORDER BY d.started_at DESC,d.delegation_id DESC LIMIT ?""",
                 (run_key, delegations_limit),
             ).fetchall()
+            checkpoint_row = connection.execute(
+                "SELECT * FROM checkpoints WHERE run_id=? ORDER BY created_at DESC, checkpoint_id DESC LIMIT 1",
+                (run_key,),
+            ).fetchone()
             counts = connection.execute(
                 """SELECT
                        (SELECT COUNT(*) FROM events WHERE run_id=?),
@@ -1136,6 +1140,15 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
             "events": [self._event_row(row) for row in reversed(event_rows)],
             "proofs": [self._proof_row(row) for row in reversed(proof_rows)],
             "delegations": [self._delegation_row(row) for row in reversed(delegation_rows)],
+            "latest_checkpoint": ({
+                "checkpoint_id": checkpoint_row["checkpoint_id"],
+                "run_id": checkpoint_row["run_id"],
+                "wave_id": checkpoint_row["wave_id"],
+                "git_head": checkpoint_row["git_head"],
+                "proof_fingerprint": checkpoint_row["proof_fingerprint"],
+                "status": checkpoint_row["status"],
+                "created_at": checkpoint_row["created_at"],
+            } if checkpoint_row else None),
             "counts": {
                 "events": int(counts[0] or 0) if counts else 0,
                 "waves": int(counts[1] or 0) if counts else 0,

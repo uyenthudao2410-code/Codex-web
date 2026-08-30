@@ -51,6 +51,15 @@ function isProcessAlive(pid) {
   try { process.kill(Number(pid), 0); return true; } catch { return false; }
 }
 
+function connectorTimestampValid(value, nowUnixMs = Date.now()) {
+  const timestamp = String(value || '').trim();
+  const timestampUnixMs = Date.parse(timestamp);
+  return Boolean(timestamp
+    && Number.isFinite(timestampUnixMs)
+    && (!Number.isFinite(Number(nowUnixMs))
+      || timestampUnixMs <= Number(nowUnixMs) + READY_CONNECTOR_FUTURE_SKEW_MS));
+}
+
 function activationCensus(record) {
   const verification = record?.verification;
   if (!verification || typeof verification !== 'object' || Array.isArray(verification)) return null;
@@ -95,6 +104,7 @@ function activationAwaitsTunnelOrConnector(record) {
 
 function exactConnectorEvidenceObserved(health, census) {
   const discovery = health?.connector_tool_discovery;
+  const bootstrap = health?.connector_activation_bootstrap;
   const currentSha256 = String(health?.tool_contract?.sha256 || '').trim();
   const processInstanceId = String(health?.process_instance_id || '').trim();
   const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
@@ -112,9 +122,27 @@ function exactConnectorEvidenceObserved(health, census) {
     && String(discovery.server_instance_id || '').trim() === serverInstanceId
     && activationEpochId === String(census?.activation_epoch_id || '').trim()
     && String(discovery.activation_epoch_id || '').trim() === activationEpochId
-    && discoveryObservedAt
-    && Number.isFinite(Date.parse(discoveryObservedAt)));
-  return exactDiscovery;
+    && connectorTimestampValid(discoveryObservedAt));
+  const bootstrapObservedAt = String(bootstrap?.observed_at || '').trim();
+  const exactCompatibilityBootstrap = Boolean(bootstrap
+    && bootstrap.current_contract_contact === true
+    && String(bootstrap.identity_source || '').trim() === 'attested_transport'
+    && bootstrap.attestation_verified === true
+    && String(bootstrap.client_type || '').trim() === 'chatweb'
+    && String(bootstrap.client_id || '').trim()
+    && String(bootstrap.method || '').trim() === 'tools/call'
+    && String(bootstrap.tool_name || '').trim() === 'workspace_context'
+    && bootstrap.workspace_accessed === false
+    && currentSha256
+    && String(bootstrap.contract_sha256 || '').trim() === currentSha256
+    && processInstanceId === String(census?.process_instance_id || '').trim()
+    && serverInstanceId === String(census?.server_instance_id || '').trim()
+    && String(bootstrap.process_instance_id || '').trim() === processInstanceId
+    && String(bootstrap.server_instance_id || '').trim() === serverInstanceId
+    && activationEpochId === String(census?.activation_epoch_id || '').trim()
+    && String(bootstrap.activation_epoch_id || '').trim() === activationEpochId
+    && connectorTimestampValid(bootstrapObservedAt));
+  return exactDiscovery || exactCompatibilityBootstrap;
 }
 
 /**
@@ -122,7 +150,8 @@ function exactConnectorEvidenceObserved(health, census) {
  * an ordinary Recovery Host restart adopts that epoch.  ActivationEpochStore
  * intentionally validates only the generic two-phase READY proof so it can be
  * shared by components; this boundary adds the product-specific invariant
- * that READY is admissible only after an attested current-process discovery.
+ * that READY is admissible only after one of the exact attested current-process
+ * receipt modes accepted by the full-clean connector validator.
  *
  * This is deliberately read-only.  A malformed/legacy READY record is not
  * rewritten or silently downgraded here because terminal history is immutable;
@@ -163,8 +192,9 @@ function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() }
     if (!Array.isArray(connector.reasons) || connector.reasons.length !== 0) {
       add('CONNECTOR_VALIDATION_REASONS_NON_EMPTY');
     }
-    if (connector.freshness_mode !== 'current_process_discovery') {
-      add('STRICT_CONNECTOR_REDISCOVERY_REQUIRED');
+    const freshnessMode = String(connector.freshness_mode || '').trim();
+    if (!['current_process_discovery', 'compatible_activation_bootstrap'].includes(freshnessMode)) {
+      add('CONNECTOR_FRESHNESS_MODE_INVALID');
     }
 
     const currentSha = String(connector.current_sha256 || '').trim();
@@ -190,20 +220,21 @@ function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() }
     }
 
     const rediscoveredAt = String(connector.rediscovered_at || '').trim();
-    const rediscoveredAtUnixMs = Date.parse(rediscoveredAt);
-    if (!rediscoveredAt || !Number.isFinite(rediscoveredAtUnixMs)) {
-      add('REDISCOVERY_TIMESTAMP_INVALID');
-    } else if (Number.isFinite(Number(nowUnixMs))
-      && rediscoveredAtUnixMs > Number(nowUnixMs) + READY_CONNECTOR_FUTURE_SKEW_MS) {
-      add('REDISCOVERY_TIMESTAMP_FROM_FUTURE');
-    }
-    // A compatibility acknowledgement is a separate, admission-closed
-    // continuity signal. It must never be carried alongside a strict READY
-    // proof, even if the freshness_mode field was tampered with.
-    if (connector.compatibility_acknowledged_at !== undefined
-      && connector.compatibility_acknowledged_at !== null
-      && String(connector.compatibility_acknowledged_at).trim()) {
-      add('COMPATIBILITY_RECEIPT_PRESENT');
+    const compatibilityAcknowledgedAt = String(connector.compatibility_acknowledged_at || '').trim();
+    if (freshnessMode === 'current_process_discovery') {
+      if (!rediscoveredAt || !Number.isFinite(Date.parse(rediscoveredAt))) {
+        add('REDISCOVERY_TIMESTAMP_INVALID');
+      } else if (!connectorTimestampValid(rediscoveredAt, nowUnixMs)) {
+        add('REDISCOVERY_TIMESTAMP_FROM_FUTURE');
+      }
+      if (compatibilityAcknowledgedAt) add('COMPATIBILITY_RECEIPT_PRESENT');
+    } else if (freshnessMode === 'compatible_activation_bootstrap') {
+      if (!compatibilityAcknowledgedAt || !Number.isFinite(Date.parse(compatibilityAcknowledgedAt))) {
+        add('COMPATIBILITY_TIMESTAMP_INVALID');
+      } else if (!connectorTimestampValid(compatibilityAcknowledgedAt, nowUnixMs)) {
+        add('COMPATIBILITY_TIMESTAMP_FROM_FUTURE');
+      }
+      if (rediscoveredAt) add('COMPATIBILITY_MODE_REDISCOVERY_PRESENT');
     }
     if (census.connector_acknowledged !== true) add('CONNECTOR_ACKNOWLEDGEMENT_INVALID');
 
@@ -236,7 +267,8 @@ function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() }
     server_instance_id: String(census?.server_instance_id || '').trim() || null,
     current_sha256: String(connector?.current_sha256 || '').trim() || null,
     freshness_mode: String(connector?.freshness_mode || '').trim() || null,
-    rediscovered_at: String(connector?.rediscovered_at || '').trim() || null
+    rediscovered_at: String(connector?.rediscovered_at || '').trim() || null,
+    compatibility_acknowledged_at: String(connector?.compatibility_acknowledged_at || '').trim() || null
   };
 }
 
@@ -277,6 +309,7 @@ function activationClosureProjection({
     connectorRefreshRequired: status?.connectorRefreshRequired,
     connectorAcknowledgementPending: status?.connectorAcknowledgementPending,
     connectorRediscoveredAt: status?.connectorRediscoveredAt,
+    connectorCompatibilityAcknowledgedAt: status?.connectorCompatibilityAcknowledgedAt,
     connectorCurrentSha256: status?.toolContract?.sha256,
     connectorAcknowledgedSha256: status?.connectorContractAcknowledgedSha256,
     runtimeFullyReady,
@@ -1268,9 +1301,17 @@ class RecoveryHost {
       && connectorCurrentSha256 === connectorAcknowledgedSha256
     );
     const connectorContractState = String(this.lastSupervisionStatus?.connectorContractState || 'UNAVAILABLE');
+    const connectorFreshnessMode = String(this.lastSupervisionStatus?.connectorFreshnessMode || '');
     const connectorEvidenceCurrent = Boolean(
-      connectorContractState === 'CURRENT_ACKNOWLEDGED'
-      && this.lastSupervisionStatus?.connectorRediscovered === true
+      (connectorContractState === 'CURRENT_ACKNOWLEDGED'
+        && connectorFreshnessMode === 'current_process_discovery'
+        && this.lastSupervisionStatus?.connectorRediscovered === true
+        && connectorTimestampValid(this.lastSupervisionStatus?.connectorRediscoveredAt))
+      || (connectorContractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+        && connectorFreshnessMode === 'compatible_activation_bootstrap'
+        && this.lastSupervisionStatus?.connectorRediscovered !== true
+        && this.lastSupervisionStatus?.connectorCompatibilityAcknowledged === true
+        && connectorTimestampValid(this.lastSupervisionStatus?.connectorCompatibilityAcknowledgedAt))
     );
     const connectorReady = Boolean(
       this.lastSupervisionStatus?.connectorRefreshRequired === false
@@ -1423,7 +1464,7 @@ class RecoveryHost {
     )) || this.bootstrapBlocksAdmission();
     // The aggregate runtime readiness contract is stricter than a durable
     // READY epoch: the current Recovery Host capability and exact connector
-    // rediscovery/ACK must also be current.  Project that same truth onto every
+    // freshness/ACK receipt must also be current. Project that same truth onto every
     // IPC snapshot so callers cannot observe a green top-level fullyReady next
     // to recoveryHost.runtime.update_incomplete=true.
     const aggregateReady = recoveryHost.runtime?.fully_ready === true;
@@ -1508,6 +1549,7 @@ class RecoveryHost {
         connectorAcknowledgementPending: contract.acknowledgementPending === true,
         connectorRediscovered: contract.rediscovered === true,
         connectorRediscoveredAt: contract.rediscoveredAt || null,
+        connectorBootstrapObservedAt: contract.bootstrapObservedAt || null,
         connectorCompatibilityAcknowledged: contract.compatibilityAcknowledged === true,
         connectorCompatibilityAcknowledgedAt: contract.compatibilityAcknowledgedAt || null,
         connectorFreshnessMode: contract.contractState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
@@ -1522,8 +1564,15 @@ class RecoveryHost {
       tunnelCurrent,
       censusRefreshRequired,
       componentRegression: Boolean(census.tunnel_health_verified === true && !tunnelCurrent),
-      discoveryObserved: processCurrent && exactConnectorEvidenceObserved(health, census),
-      connectorEvidenceObserved: processCurrent && exactConnectorEvidenceObserved(health, census)
+      connectorEvidenceObserved: processCurrent
+        && exactConnectorEvidenceObserved(health, census)
+        && [
+          'CHANGED_DISCOVERED_NEEDS_ACK',
+          'CURRENT_ACKNOWLEDGED',
+          'CHANGED_COMPATIBLE_NEEDS_ACK',
+          'UNCHANGED_COMPATIBLE_NEEDS_ACK',
+          'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+        ].includes(String(contract?.contractState || ''))
     };
   }
 
@@ -1789,7 +1838,7 @@ class RecoveryHost {
         || pendingObservation?.mcpCurrent !== true
         || pendingObservation?.componentRegression === true
         || pendingObservation?.censusRefreshRequired === true
-        || pendingObservation?.discoveryObserved === true;
+        || pendingObservation?.connectorEvidenceObserved === true;
       if (shouldRunFinalCensus
         && epoch
         && ['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(epoch.state)) {
@@ -2013,13 +2062,11 @@ class RecoveryHost {
     } else if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'READY') {
       // A READY epoch remains the current activation identity across an
       // ordinary host process restart only when its persisted census contains
-      // the strict current-process attested discovery receipt.  Older builds
-      // could persist a compatibility bootstrap as READY; adopting that bit
-      // would let a stale epoch appear admitted without a real tools/list /
-      // server/discover proof.  Keep the terminal record untouched, but retain
-      // the authenticated Recovery control plane so an explicit full-clean
-      // refresh can replace this terminal record.  No component/gateway
-      // admission is opened while this process-local guard is active.
+      // a valid exact current-process discovery or guarded compatibility
+      // bootstrap receipt. Keep malformed terminal records untouched, but
+      // retain the authenticated Recovery control plane so an explicit
+      // full-clean refresh can replace them. No component/gateway admission is
+      // opened while this process-local guard is active.
       const readyConnectorProof = validatePersistedReadyConnectorProof(durableEpoch);
       if (!readyConnectorProof.valid) {
         readyEpochBlocked = true;

@@ -3,11 +3,11 @@ const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
 const CLOSURE_INPUT_SCHEMA_VERSION = 1;
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
-// `UNCHANGED_ACKNOWLEDGED` is SHA continuity only.  It deliberately carries no
-// current-process discovery timestamp and must not close an accepted-to-live
-// activation after a process replacement.  Only the exact rediscovered state
-// is current for LIVE_CLOSED.
-const CONNECTOR_CURRENT_STATES = new Set(['CURRENT_ACKNOWLEDGED']);
+// `UNCHANGED_ACKNOWLEDGED` is SHA continuity only. It deliberately carries no
+// current-process receipt and must not close an accepted-to-live activation
+// after a process replacement. Both current states below require a distinct,
+// exact timestamp from their own attested receipt mode.
+const CONNECTOR_CURRENT_STATES = new Set(['CURRENT_ACKNOWLEDGED', 'CURRENT_COMPATIBLE_ACKNOWLEDGED']);
 const CONNECTOR_CONTINUITY_STATES = new Set(['UNCHANGED_ACKNOWLEDGED']);
 const ACCEPTED_RECEIPT_KINDS = new Set(['explicit_existing_file', 'task_modified_file', 'durable_wave_patch_surface']);
 const { componentOwnsPath } = require('./componentRevision');
@@ -225,6 +225,7 @@ function computeActivationClosure({
   connectorRefreshRequired = null,
   connectorAcknowledgementPending = null,
   connectorRediscoveredAt = null,
+  connectorCompatibilityAcknowledgedAt = null,
   connectorCurrentSha256 = '',
   connectorAcknowledgedSha256 = '',
   runtimeFullyReady = false,
@@ -275,8 +276,17 @@ function computeActivationClosure({
   const connectorShaCurrent = HEX64.test(currentConnectorSha)
     && currentConnectorSha === acknowledgedConnectorSha;
   const rediscoveredAt = text(connectorRediscoveredAt);
-  const connectorFreshnessCurrent = Boolean(connectorState === 'CURRENT_ACKNOWLEDGED'
-    && rediscoveredAt && Number.isFinite(Date.parse(rediscoveredAt)));
+  const compatibilityAcknowledgedAt = text(connectorCompatibilityAcknowledgedAt);
+  const connectorFreshnessCurrent = Boolean(
+    (connectorState === 'CURRENT_ACKNOWLEDGED'
+      && rediscoveredAt
+      && Number.isFinite(Date.parse(rediscoveredAt))
+      && !compatibilityAcknowledgedAt)
+    || (connectorState === 'CURRENT_COMPATIBLE_ACKNOWLEDGED'
+      && compatibilityAcknowledgedAt
+      && Number.isFinite(Date.parse(compatibilityAcknowledgedAt))
+      && !rediscoveredAt)
+  );
   const connectorCurrent = Boolean(CONNECTOR_CURRENT_STATES.has(connectorState)
     && connectorRefreshRequired === false
     && connectorAcknowledgementPending === false
@@ -314,6 +324,7 @@ function computeActivationClosure({
     connector_refresh_required: connectorRefreshRequired,
     connector_acknowledgement_pending: connectorAcknowledgementPending,
     connector_rediscovered_at: rediscoveredAt || null,
+    connector_compatibility_acknowledged_at: compatibilityAcknowledgedAt || null,
     connector_current_sha256: currentConnectorSha || null,
     connector_acknowledged_sha256: acknowledgedConnectorSha || null,
     connector_contract_current: connectorCurrent,

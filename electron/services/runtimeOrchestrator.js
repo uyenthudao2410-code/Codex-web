@@ -1660,10 +1660,9 @@ class RuntimeOrchestrator {
       && Number.isFinite(compatibilityAtUnixMs)
       && compatibilityAtUnixMs <= nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) {
       return {
-        ready: false,
+        ready: true,
         mode: 'compatible_activation_bootstrap',
-        observedAt: compatibilityAt,
-        reason: 'STRICT_CONNECTOR_REDISCOVERY_REQUIRED'
+        observedAt: compatibilityAt
       };
     }
     return { ready: false, mode: null };
@@ -2312,6 +2311,7 @@ class RuntimeOrchestrator {
       connectorAcknowledgementPending: connectorContract.acknowledgementPending,
       connectorRediscovered: connectorContract.rediscovered,
       connectorRediscoveredAt: connectorContract.rediscoveredAt,
+      connectorBootstrapObservedAt: connectorContract.bootstrapObservedAt,
       connectorCompatibilityAcknowledged: connectorContract.compatibilityAcknowledged,
       connectorCompatibilityAcknowledgedAt: connectorContract.compatibilityAcknowledgedAt,
       connectorFreshnessMode: connectorFreshness.mode,
@@ -2685,6 +2685,7 @@ class RuntimeOrchestrator {
         connectorAcknowledgementPending: connectorContract.acknowledgementPending,
         connectorRediscovered: connectorContract.rediscovered,
         connectorRediscoveredAt: connectorContract.rediscoveredAt,
+        connectorBootstrapObservedAt: connectorContract.bootstrapObservedAt,
         connectorCompatibilityAcknowledged: connectorContract.compatibilityAcknowledged,
         connectorCompatibilityAcknowledgedAt: connectorContract.compatibilityAcknowledgedAt,
         connectorFreshnessMode: connectorFreshness.mode,

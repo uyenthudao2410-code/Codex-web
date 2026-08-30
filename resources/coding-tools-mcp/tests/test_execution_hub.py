@@ -177,6 +177,66 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             raise AssertionError("live control snapshot must not execute heavyweight analytics")
 
         ledger = self.runtime.orchestration_ledger
+        source_key = os.path.normcase(os.path.abspath(str(self.runtime.workspace.root)))
+        self.runtime._orchestration_workspace_identity_cache[source_key] = {
+            "base_head": "hub-test-head",
+            "worktree_fp": "hub-test-fp",
+            "source_fingerprint": "hub-test-fp",
+            "dirty_paths": [],
+            "dirty_source_paths": [],
+            "observed_at": "2026-08-30T00:00:00+00:00",
+            "observation_source": "exact_workspace_identity",
+        }
+        ledger.append_event(
+            self.ctx.run_id,
+            wave_id=self.ctx.wave_id,
+            event_type="usage_event",
+            payload={
+                "usage_id": "live-controller-usage",
+                "turn_id": "turn-live",
+                "actor": "controller",
+                "provider_id": "openai",
+                "model": "gpt-5.6-sol",
+                "usage": {
+                    "input_total_tokens": 100,
+                    "input_cached_tokens": 30,
+                    "output_total_tokens": 20,
+                    "output_reasoning_tokens": 5,
+                    "total_tokens": 120,
+                },
+                "measurement": {"usage": "measured", "cost": "unobserved"},
+                "provenance": {"usage": "client_reported", "cost": "unobserved"},
+                "cost": {"provider_cost": None},
+            },
+        )
+        ledger.append_event(
+            self.ctx.run_id,
+            wave_id=self.ctx.wave_id,
+            event_type="usage_event",
+            payload={
+                "usage_id": "live-provider-usage",
+                "actor": "provider",
+                "provider_id": "opencode-go",
+                "model": "deepseek-v4-flash",
+                "usage": {
+                    "input_total_tokens": 80,
+                    "input_cached_tokens": 20,
+                    "output_total_tokens": 12,
+                    "output_reasoning_tokens": 3,
+                    "total_tokens": 92,
+                },
+                "measurement": {"usage": "measured", "cost": "measured"},
+                "provenance": {"usage": "provider_reported", "cost": "provider_reported"},
+                "cost": {"provider_cost": 0.003},
+            },
+        )
+        observed_usage_limits = []
+        original_list_usage_events = ledger.list_usage_events
+
+        def bounded_usage_events(run_id, *, limit=100):
+            observed_usage_limits.append(limit)
+            return original_list_usage_events(run_id, limit=limit)
+
         original_usage = ledger.usage_analytics
         original_routing = ledger.routing_evidence
         original_flight = ledger.flight_recorder
@@ -192,6 +252,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         original_list_checkpoints = ledger.list_checkpoints
         original_controller = ledger.get_controller_lease
         original_current_active = ledger.current_active_run
+        original_source_identity = self.runtime._orchestration_workspace_identity
         ledger.usage_analytics = unexpected_heavy_call
         ledger.routing_evidence = unexpected_heavy_call
         ledger.flight_recorder = unexpected_heavy_call
@@ -207,6 +268,8 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         ledger.list_checkpoints = unexpected_heavy_call
         ledger.get_controller_lease = unexpected_heavy_call
         ledger.current_active_run = unexpected_heavy_call
+        ledger.list_usage_events = bounded_usage_events
+        self.runtime._orchestration_workspace_identity = unexpected_heavy_call
         try:
             status, body = self.get_live_snapshot()
         finally:
@@ -225,12 +288,34 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             ledger.list_checkpoints = original_list_checkpoints
             ledger.get_controller_lease = original_controller
             ledger.current_active_run = original_current_active
+            ledger.list_usage_events = original_list_usage_events
+            self.runtime._orchestration_workspace_identity = original_source_identity
 
         self.assertEqual(status, 200, body)
         self.assertEqual(body["snapshot_scope"], "live_control")
         self.assertEqual(body["integrity"]["code"], "UNVERIFIED_ON_LIVE_PATH")
-        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic"):
+        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic", "runtime", "direct_usage", "truth_snapshot"):
             self.assertIn(key, body)
+        self.assertEqual(observed_usage_limits, [8])
+        self.assertEqual(body["runtime"]["tools"], list(self.runtime.exposed_tool_names()))
+        self.assertEqual(len(body["runtime"]["tools"]), 8)
+        direct = body["direct_usage"]
+        self.assertEqual(direct["source"], "bounded_recent_direct_usage_events")
+        self.assertEqual(direct["missing_measurement_policy"], "unknown_not_zero")
+        self.assertEqual(direct["controller"]["usage"]["input_total_tokens"], 100)
+        self.assertEqual(direct["controller"]["usage"]["input_cached_tokens"], 30)
+        self.assertEqual(direct["controller"]["usage"]["output_total_tokens"], 20)
+        self.assertEqual(direct["controller"]["usage"]["output_reasoning_tokens"], 5)
+        self.assertEqual(direct["controller"]["provenance"]["usage"], "client_reported")
+        self.assertEqual(direct["provider"]["usage"]["input_total_tokens"], 80)
+        self.assertEqual(direct["provider"]["cost"]["provider_cost"], 0.003)
+        self.assertEqual(direct["provider"]["provenance"]["usage"], "provider_reported")
+        truth = body["truth_snapshot"]
+        self.assertEqual(truth["source"]["git_head"], "hub-test-head")
+        self.assertEqual(truth["source"]["worktree_fp"], "hub-test-fp")
+        self.assertEqual(truth["source"]["observation_source"], "exact_workspace_identity")
+        self.assertEqual(truth["orchestration"]["run_id"], self.ctx.run_id)
+        self.assertEqual(truth["orchestration"]["wave_id"], self.ctx.wave_id)
         self.assertIn("automatic_routing", body["provider_traffic"])
         for key in ("usage_events", "usage_analytics", "operations_analytics", "routing_evidence", "flight_recorder", "history", "lanes", "resume_packet"):
             self.assertNotIn(key, body)

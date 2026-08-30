@@ -603,6 +603,16 @@ test('host status exposes durable operation binding and fails closed on incomple
 
   host.lastSupervisionStatus.connectorContractAcknowledgedSha256 = 'd'.repeat(64);
   status = host.hostStatus();
+  // An acknowledgement hash alone is not a current connector receipt.  The
+  // freshness mode and a bounded, process-bound rediscovery timestamp are
+  // required before Recovery Host can project connector readiness.
+  assert.equal(status.runtime.connector_ready, false);
+  assert.equal(status.runtime.connector_ack_sha_matches, true);
+  assert.equal(status.runtime.fully_ready, false, 'closed activation admission remains authoritative');
+
+  host.lastSupervisionStatus.connectorFreshnessMode = 'current_process_discovery';
+  host.lastSupervisionStatus.connectorRediscoveredAt = '2026-01-01T00:00:00.000Z';
+  status = host.hostStatus();
   assert.equal(status.runtime.connector_ready, true);
   assert.equal(status.runtime.connector_ack_sha_matches, true);
   assert.equal(status.runtime.fully_ready, false, 'closed activation admission remains authoritative');

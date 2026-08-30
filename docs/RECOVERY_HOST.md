@@ -36,6 +36,21 @@ user nhưng nằm ngoài process Recovery Host. `recovery:supervisor:install` co
 script + fixed manifest sang `%LOCALAPPDATA%\\WebMcpRecoverySupervisor` và đăng ký
 Scheduled Task `WebMCP Recovery Supervisor` ở logon. Supervisor xác minh bounded
 descriptor, exact owner PID và authenticated `recovery.ping` trên `127.0.0.1`.
+Scheduled Task gọi `wscript.exe //B //NoLogo` với GUI launcher cố định; launcher
+chạy Windows PowerShell bằng window style `0` và chờ supervisor thoát. PowerShell
+vẫn nhận `-NonInteractive -WindowStyle Hidden`, còn Recovery Host con tiếp tục
+dùng `CreateNoWindow` và `SW_HIDE`. Vì vậy watchdog nền không tạo console window
+trong user session. Electron UI là ngoại lệ duy nhất và vẫn được launch không có
+`SW_HIDE` để `BrowserWindow` hiện ổn định.
+
+Hai tunnel daemon cũng dùng background launch. `tunnel-client` tự khởi động cầu
+nối Codex Admin UI qua `codex app-server`; trên Windows, gọi trực tiếp shim
+`codex.cmd` có thể sinh `cmd.exe`, `conhost.exe` hoặc Windows Terminal. Runtime
+vì vậy đặt managed app-server command thành `pythonw.exe` đã bundle và fixed
+`resources/tunnel-client/codex_app_server_launcher.py`. Launcher giữ nguyên ba
+stdio pipe của bridge, nhưng tạo `cmd.exe /c codex app-server` với
+`CREATE_NO_WINDOW`. Đây chỉ là boundary cho child nền của tunnel, không thay đổi
+visibility contract của Electron operator UI.
 
 Nếu descriptor hoặc lock owner còn sống nhưng IPC không trả lời, supervisor
 fail-closed ở `blocked_live_owner` và không kill process. Chỉ khi cả hai owner đều
@@ -182,17 +197,18 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   receipt `activation=VERIFYING admission=closed fully_ready=false
   connector=pending` while the external connector has not contacted the new MCP
   process yet. Recovery Host keeps the epoch closed and re-enters final census
-  when an exact current-process `tools/list` / `server/discover` receipt arrives.
-  An activation-only compatibility bootstrap may refresh pending continuity
-  evidence, but it cannot make connector validation pass, commit the strict ACK
-  or open admission. While only that gate is pending, the supervisor refreshes
+  when either an exact current-process `tools/list` / `server/discover` receipt
+  arrives or an exact no-workspace compatibility bootstrap becomes eligible for
+  the current/declared-predecessor contract. The coordinator performs the guarded
+  ACK; only the acknowledged exact receipt can make connector validation pass and
+  open admission. While only that gate is pending, the supervisor refreshes
   its exact component projection with bounded live MCP/PID observations;
   lightweight UI status only consumes that completed projection and never starts
   a second heavy OS-identity/Tunnel census. The first
   cached-client `workspace_context` call can therefore return a retryable
-  bootstrap envelope; only a later strict discovery receipt lets the watchdog
-  commit the ACK and open admission, after which the retry performs the real
-  workspace read.
+  bootstrap envelope. If the exact SHA compatibility boundary is valid, that
+  receipt lets the watchdog run final census, guarded ACK and admission-open;
+  otherwise the breaking contract remains fail-closed until strict discovery.
 - A watchdog census may reuse the exact durable projection-rebuild receipt only
   while the epoch remains `VERIFYING`, admission remains `CLOSED`, the connector
   is the sole incomplete gate, and all recorded process, workspace, device,
@@ -392,9 +408,8 @@ checkpoint không có component cần restart.
 
 Closure cuối còn yêu cầu component running/disk revision khớp, Runtime + Tunnel
 fully ready và connector contract current. Exact `tools/list` SHA vẫn là audit
-identity; persisted SHA một mình không phải process-freshness proof. Sau process
-replacement hoặc full-clean epoch chỉ có một đường connector-freshness đủ mở
-admission: target process nhận `tools/list` hoặc `server/discover` qua managed
+identity; persisted SHA một mình không phải process-freshness proof. Với contract
+breaking, target process phải nhận `tools/list` hoặc `server/discover` qua managed
 Tunnel, tạo receipt có verified attestation bind đúng current contract SHA,
 activation epoch, process instance và server instance; trạng thái đổi từ
 `CHANGED_NEEDS_DISCOVERY` sang `CHANGED_DISCOVERED_NEEDS_ACK`, rồi Recovery Host
@@ -403,15 +418,16 @@ ACK exact current SHA thành `CURRENT_ACKNOWLEDGED`.
 Khi admission đang đóng, cached ChatWeb connector vẫn có thể gọi no-workspace
 `workspace_context` bootstrap để chứng minh continuity. Đường này không resolve
 path, không đọc workspace/ledger, không chạy tool implementation và trả
-`completed=false`, `retryable=true`, `workspace_accessed=false`. Nó có thể tạo
-trạng thái supporting `CURRENT_COMPATIBLE_ACKNOWLEDGED`, nhưng
-`connectorContractFreshness.ready` vẫn false và full-clean gate vẫn yêu cầu strict
-rediscovery. Compatibility bootstrap không ghi `connectorRediscovered=true`,
-không tạo rediscovery timestamp và không được ghi thành ordinary successful tool
-contact. Một `tools/call` bình thường sau khi admission mở cũng không thay thế
-discovery.
+`completed=false`, `retryable=true`, `workspace_accessed=false`. Chỉ khi receipt
+có managed attestation, bind đúng SHA/process/server/epoch và current SHA hoặc
+acknowledged SHA nằm trong declared compatible predecessors cùng boundary thì
+Recovery Host mới được guarded ACK thành `CURRENT_COMPATIBLE_ACKNOWLEDGED` và mở
+admission. Compatibility mode không ghi `connectorRediscovered=true`, không tạo
+rediscovery timestamp; nó dùng `compatibilityAcknowledgedAt` riêng. Một
+`tools/call` bất kỳ, raw HTTP hay textual receipt không thay thế được hai receipt
+mode chính thức này.
 
-Post-ACK strict yêu cầu `acknowledged_sha256 == tool_contract_sha256`,
+Post-ACK cho cả hai mode yêu cầu `acknowledged_sha256 == tool_contract_sha256`,
 `connectorRefreshRequired == false`, không còn acknowledgement pending, và final
 census phải bind lại đúng process/server/epoch trước khi mở admission. Trạng thái
 legacy `COMPATIBLE_ACKNOWLEDGED` vẫn bị từ chối. `LIVE_CLOSED` chỉ là local runtime

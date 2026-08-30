@@ -80,6 +80,7 @@ class RuntimePaths {
   recoveryTunnelLogFile() { return path.join(this.dataRootPath, 'logs', 'recovery-tunnel.log'); }
   tunnelExecutable() { return path.join(this.resourcesRootPath, 'tools', 'tunnel-client.exe'); }
   portablePython() { return path.join(this.resourcesRootPath, 'native-python', 'python.exe'); }
+  tunnelCodexAppServerLauncher() { return path.join(this.resourcesRootPath, 'tunnel-client', 'codex_app_server_launcher.py'); }
   recoveryMcpScript() { return path.join(this.resourcesRootPath, 'recovery-mcp', 'recovery_mcp.py'); }
 }
 

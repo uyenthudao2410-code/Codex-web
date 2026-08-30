@@ -14,6 +14,8 @@ test('required bundled runtime artifacts exist', () => {
     'resources/tools/tunnel-client.exe',
     'resources/tools/rg.exe',
     'resources/tools/fd.exe',
+    'resources/recovery-supervisor/recovery-supervisor-launcher.vbs',
+    'resources/tunnel-client/codex_app_server_launcher.py',
     'resources/coding-tools-mcp/python_vendor/pypdf/__init__.py',
     'resources/coding-tools-mcp/python_vendor/jwt/__init__.py'
   ];

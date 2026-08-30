@@ -259,6 +259,7 @@ class Runtime(
         self.workspace = Workspace(workspace, self.authorized_roots)
         self.workspace_context_registry = WorkspaceContextRegistry(self.workspace.root)
         self._workspace_component_lock = threading.RLock()
+        self._orchestration_workspace_identity_cache: dict[str, dict[str, Any]] = {}
         self._orchestration_ledgers: dict[str, OrchestrationLedger] = {}
         self._orchestration_controls: dict[str, OrchestrationControl] = {}
         self._execution_resource_governors: dict[str, ExecutionResourceGovernor] = {}
@@ -2505,7 +2506,7 @@ class Runtime(
             dirty_paths,
             extra={"head": head, "branch": status.get("branch"), "entries": entries},
         )
-        return {
+        identity = {
             "is_repo": bool(status.get("is_repo")),
             "base_head": head,
             "branch": str(status.get("branch") or ""),
@@ -2515,7 +2516,20 @@ class Runtime(
             "dirty_paths": dirty_paths,
             "dirty_source_paths": list(dirty_paths),
             "workspace_identity": workspace_identity,
+            "observed_at": datetime.now(timezone.utc).isoformat(),
+            "observation_source": "exact_workspace_identity",
         }
+        cache_key = os.path.normcase(os.path.abspath(str(scope_root)))
+        with self._workspace_component_lock:
+            self._orchestration_workspace_identity_cache[cache_key] = copy.deepcopy(identity)
+        return identity
+
+    def _cached_orchestration_workspace_identity(self) -> dict[str, Any]:
+        """Return the last exact source observation without touching Git or disk."""
+        cache_key = os.path.normcase(os.path.abspath(str(self.workspace.root)))
+        with self._workspace_component_lock:
+            identity = self._orchestration_workspace_identity_cache.get(cache_key)
+            return copy.deepcopy(identity) if isinstance(identity, dict) else {}
 
     @staticmethod
     def _orchestration_mode_for_route(route: object) -> str:

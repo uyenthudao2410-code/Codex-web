@@ -115,6 +115,51 @@
     return `${(number / 1000000).toFixed(number < 10000000 ? 2 : 1)}M`;
   }
 
+  function observedUsageNumber(usage, ...keys) {
+    for (const key of keys) {
+      if (!Object.prototype.hasOwnProperty.call(usage || {}, key)) continue;
+      const value = finiteNumber(usage[key]);
+      if (value !== null && value >= 0) return value;
+    }
+    return null;
+  }
+
+  function directUsageSummary(data) {
+    const tools = Array.isArray(data?.runtime?.tools) ? data.runtime.tools : [];
+    const contractCount = finiteNumber(data?.runtime?.tool_contract?.tool_count);
+    const toolCount = tools.length || contractCount;
+    const direct = data?.direct_usage || {};
+    const parts = [`${toolCount === null ? 'unknown' : toolCount} MCP tools`];
+    const addReceipt = (label, receipt) => {
+      if (!receipt) return;
+      const usage = receipt?.usage || {};
+      const input = observedUsageNumber(usage, 'input_total_tokens', 'input_tokens');
+      const cached = observedUsageNumber(usage, 'input_cached_tokens', 'cached_input_tokens');
+      const output = observedUsageNumber(usage, 'output_total_tokens', 'output_tokens');
+      const reasoning = observedUsageNumber(usage, 'output_reasoning_tokens', 'reasoning_output_tokens');
+      const provenance = String(receipt?.provenance?.usage || 'unobserved');
+      const measured = String(receipt?.measurement?.usage || 'unobserved') === 'measured';
+      if (!measured || (input === null && output === null)) {
+        parts.push(`${label} tokens unknown (${provenance})`);
+        return;
+      }
+      let text = `${label} ${input === null ? 'unknown' : compactNumber(input)} in / ${output === null ? 'unknown' : compactNumber(output)} out`;
+      if (cached !== null) text += ` · cached ${compactNumber(cached)}`;
+      if (reasoning !== null) text += ` · reasoning ${compactNumber(reasoning)}`;
+      text += ` · ${provenance}`;
+      const providerCost = finiteNumber(receipt?.cost?.provider_cost);
+      if (String(receipt?.measurement?.cost || 'unobserved') === 'measured' && providerCost !== null && providerCost >= 0) {
+        text += ` · $${providerCost.toFixed(6)}`;
+      }
+      parts.push(text);
+    };
+    addReceipt('Controller', direct?.controller);
+    addReceipt('Provider', direct?.provider);
+    if (!direct?.controller && !direct?.provider) parts.push('token usage unknown · no direct receipt');
+    if (String(direct?.missing_measurement_policy || '') === 'unknown_not_zero') parts.push('missing=unknown');
+    return parts.join(' · ');
+  }
+
   function appendListRow(container, titleText, metaText, pillText = '', pillState = 'offline') {
     const row = document.createElement('div');
     row.className = 'cc-list-row';
@@ -453,9 +498,11 @@
     setText('ccProofCount', `${proofs.length} proof record${proofs.length === 1 ? '' : 's'}`);
     setText('ccProofLatest', latestProof ? `${latestProof.stage_id || 'proof'} · ${latestProof.status || 'unknown'} · ${latestProof.duration_ms ?? '—'}ms` : 'No proof yet');
     setText('ccDelegationCount', `${delegations.length} delegation record${delegations.length === 1 ? '' : 's'}`);
-    setText('ccPerformance', performance?.tool_calls
-      ? `${performance.tool_calls} tool calls · local ${formatDuration(performance.local_execution_ms)} · wait ${formatDuration(performance.estimated_wait_ms)}`
-      : 'Performance telemetry not recorded yet');
+    const directLine = directUsageSummary(data);
+    const localLine = performance?.tool_calls
+      ? `local ${performance.tool_calls} calls · ${formatDuration(performance.local_execution_ms)} · wait ${formatDuration(performance.estimated_wait_ms)}`
+      : '';
+    setText('ccPerformance', [directLine, localLine].filter(Boolean).join(' · '));
     renderProviderTraffic(data);
     renderRecovery(data);
   }

@@ -54,6 +54,8 @@ def build_truth_snapshot(
             "worktree_fp": source_fp or None,
             "dirty": bool(dirty_paths),
             "dirty_path_count": len(dirty_paths),
+            "observed_at": source.get("observed_at"),
+            "observation_source": source.get("observation_source"),
         },
         "runtime": {
             "runtime_version": runtime_identity.get("runtime_version"),

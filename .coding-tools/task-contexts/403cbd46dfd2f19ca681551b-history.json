@@ -1,0 +1,877 @@
+[
+  {
+    "version": 2,
+    "task_id": "e5f023737f9b4473863d58c68aacbeb7",
+    "orchestration": {
+      "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+      "wave_id": "3a31fece922b4eefac6e793b17f97095",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "5f232e99f20873b4950d89d597989cb4c25e3404",
+      "worktree_fp": "ac12f4cbeba67e39fa47e127bb92e63b57c7f57545744b43808c31ff33b6ec89",
+      "contract_fp": ""
+    },
+    "objective": "Hoàn thiện observability trực tiếp trong E:\\DEV\\Codex-web: Operator Truth/Loaded runtime source phải dùng dữ liệu runtime thực; tool list phải phản ánh tool contract thực; token/cost phải ưu tiên số đo provider/tool-reported trực tiếp (input/output/cached/reasoning khi có), giữ unknown_not_zero khi không có; tuyệt đối không đưa Git scan/full history/analytics nặng vào fast live poll. Bảo toàn mọi dirty change concurrent, chỉ sửa causal surface và chứng minh bằng focused tests + runtime status/smoke.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-30T15:03:27.029Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-30T15:03:27.029Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-30T15:03:27.029Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-30T15:06:04.168Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+            "state": "file",
+            "sha256": "c1ec6d9934d42d9aac41edef719ffa9b2af5753ec567abab38a0759c5ec6e49a",
+            "size_bytes": 19523,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+            "wave_id": "3a31fece922b4eefac6e793b17f97095"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+            "state": "file",
+            "sha256": "ccedec95fb7b00a8efe467d04a076bdb45063ae719a01343db8961d7270ecf18",
+            "size_bytes": 48513,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+            "wave_id": "3a31fece922b4eefac6e793b17f97095"
+          },
+          {
+            "path": "renderer/control-center.js",
+            "state": "file",
+            "sha256": "74ee998bf19d644cc458ebee6972cdc85848e1391a5a3be20b60ec099571d9aa",
+            "size_bytes": 36456,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+            "wave_id": "3a31fece922b4eefac6e793b17f97095"
+          },
+          {
+            "path": "tests/control-center-manager.test.js",
+            "state": "file",
+            "sha256": "05e70a1113d4729dda6cbbaeb6a3aae7c56892a010ccf75f21d9d317b5f79e4e",
+            "size_bytes": 13545,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+            "wave_id": "3a31fece922b4eefac6e793b17f97095"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 62,
+          "head_hash": "65182ec0f35fb36243b3e47ee50846d770ec975c5326b0a1c0565f4b145b68ea"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-deb31225dc0a499ab5f47975f0ee8776\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-deb31225dc0a499ab5f47975f0ee8776\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-deb31225dc0a499ab5f47975f0ee8776\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "deb31225dc0a499ab5f47975f0ee8776",
+        "wave_id": "3a31fece922b4eefac6e793b17f97095",
+        "base_head": "5f232e99f20873b4950d89d597989cb4c25e3404",
+        "worktree_fp": "ac12f4cbeba67e39fa47e127bb92e63b57c7f57545744b43808c31ff33b6ec89",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Hoàn thiện observability trực tiếp trong E:\\DEV\\Codex-web: Operator Truth/Loaded runtime source phải dùng dữ liệu runtime thực; tool list phải phản ánh tool contract thực; token/cost phải ưu tiên số đo provider/tool-reported trực tiếp (input/output/cached/reasoning khi có), giữ unknown_not_zero khi không có; tuyệt đối không đưa Git scan/full history/analytics nặng vào fast live poll. Bảo toàn mọi dirty change concurrent, chỉ sửa causal surface và chứng minh bằng focused tests + runtime status/smoke.",
+          "objective_revision": 1,
+          "objective_sha256": "b2912f4874ee976e8527e9c8ebf7ca5aaf1ec422ce99983440bc9ae0e2eef6a8",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 3,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "8019236d949d4160999435a3116fbb26",
+            "stage_id": "check:dbd6530fc3f5cbc7",
+            "status": "passed",
+            "duration_ms": 4831,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "4a08ea031ccd41e7a8ed0438f834d23d",
+            "stage_id": "check:ab597144c5f572d9",
+            "status": "passed",
+            "duration_ms": 1913,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "5d5774d0d96343f0a34bdacf93d11e4a",
+            "stage_id": "check:466c2f308b48c766",
+            "status": "passed",
+            "duration_ms": 2294,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "54d55b3aa524aea4a1be73f783aa83101250a88c41e52e3e6f086519b20d9383",
+    "completion_report_acknowledged_id": "54d55b3aa524aea4a1be73f783aa83101250a88c41e52e3e6f086519b20d9383",
+    "completion_report_acknowledged_at": "2026-08-30T15:06:17.317Z",
+    "test_results": [
+      {
+        "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py -k live_snapshot -q\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed, 10 deselected in 2.61s'",
+        "finished_at": "2026-08-30T15:03:20.512Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "yqFWPweXBWZzGkduhUvqasPe"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "deb31225dc0a499ab5f47975f0ee8776",
+          "owner_wave": "3a31fece922b4eefac6e793b17f97095",
+          "size_bytes": 115,
+          "command_id": "yqFWPweXBWZzGkduhUvqasPe",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:yqFWPweXBWZzGkduhUvqasPe:stdout",
+              "total_stream_bytes": 115,
+              "total_retained_bytes": 115,
+              "head_retained_bytes": 115,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:yqFWPweXBWZzGkduhUvqasPe:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:03:28.009Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:03:28.009Z"
+      },
+      {
+        "path": "renderer/control-center.js",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:03:28.009Z"
+      },
+      {
+        "path": "tests/control-center-manager.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-30T15:03:28.009Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-30T14:49:42.440Z",
+    "updated_at": "2026-08-30T15:06:29.412Z",
+    "events": [
+      {
+        "time": "2026-08-30T14:49:42.440Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Hoàn thiện observability trực tiếp trong E:\\DEV\\Codex-web: Operator Truth/Loaded runtime source phải dùng dữ liệu runtime thực; tool list phải phản ánh tool contract thực; token/cost phải ưu tiên số đo provider/tool-reported trực tiếp (input/output/cached/reasoning khi có), giữ unknown_not_zero khi không có; tuyệt đối không đưa Git scan/full history/analytics nặng vào fast live poll. Bảo toàn mọi dirty change concurrent, chỉ sửa causal surface và chứng minh bằng focused tests + runtime status/smoke."
+        }
+      },
+      {
+        "time": "2026-08-30T14:49:43.637Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T14:49:45.221Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T14:49:45.228Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:51:02.696Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:51:27.454Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:52:38.982Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:53:09.744Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:54:21.117Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:54:39.662Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "session_id": "3khic08G43Sk-TyfAySvFw7M"
+        }
+      },
+      {
+        "time": "2026-08-30T14:54:40.317Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T14:55:28.570Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-08-30T14:55:43.513Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:56:04.479Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:57:06.593Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:57:54.510Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-08-30T14:58:16.473Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:59:27.927Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T14:59:58.276Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:03.062Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:21.806Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "session_id": "RMp6aJHBbOKS2GD5XK2Z3cXi"
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:22.447Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:57.170Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:58.230Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:01:58.966Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "EXISTING_FILE_ADOPTION_PATCH_CONFLICT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:02:33.183Z",
+        "event": "orchestration_replan_required",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-30T15:02:33.545Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:09.117Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:10.990Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:12.285Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:13.533Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:13.541Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:15.112Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:15.498Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:16.383Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py -k live_snapshot -q\"",
+          "session_id": "yqFWPweXBWZzGkduhUvqasPe"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:20.512Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"cd resources\\coding-tools-mcp && python -m pytest tests/test_execution_hub.py -k live_snapshot -q\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:22.319Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/control-center-manager.test.js",
+          "session_id": "EZ6L5tWDOr2ZqTHIbAqQe2aJ"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:23.103Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/control-center-manager.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:24.770Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check",
+          "session_id": "boAmKQEPm-3rm2Of8HDPpbB8"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:26.124Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:27.025Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:27.029Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:27.602Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:27.607Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:27.833Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "506889b182e42696910c2fe55b84bc1ee59d0179736394ec0512ad0d5f448f5e"
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:28.009Z",
+        "event": "files_modified",
+        "details": {
+          "count": 4
+        }
+      },
+      {
+        "time": "2026-08-30T15:03:48.664Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:03.754Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "506889b182e42696910c2fe55b84bc1ee59d0179736394ec0512ad0d5f448f5e"
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:16.370Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:18.130Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "cxEF-ucVH0bYhv-ljRPs-cAV"
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:18.807Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:37.618Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:40.136Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev",
+          "session_id": "0mQjpCHjBPtFjzbTURArW_ab"
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:40.837Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:04:59.115Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:01.236Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "session_id": "kaWWZJYUv5ZF4QgtiL6bk9wU"
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:01.859Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_execution_hub.py','renderer/control-center.js','tests/control-center-manager.test.js'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output ($p+' '+$h.Hash.ToLowerInvariant())}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:46.886Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:50.904Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:50.910Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:05:51.174Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "54d55b3aa524aea4a1be73f783aa83101250a88c41e52e3e6f086519b20d9383"
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:03.744Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:04.168Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:17.317Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "54d55b3aa524aea4a1be73f783aa83101250a88c41e52e3e6f086519b20d9383"
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:29.412Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T15:06:29.657Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "40bd9b67cab244bd8a75b64a10a31028",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "bdGjI95pkWMHRVq9qmjDB1qY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1493,
+      "finished_at": "2026-08-30T15:06:31.620Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-30T15:06:29.660Z",
+    "updated_at": "2026-08-30T15:06:31.620Z",
+    "events": [
+      {
+        "time": "2026-08-30T15:06:29.660Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:30.154Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev",
+          "session_id": "bdGjI95pkWMHRVq9qmjDB1qY"
+        }
+      },
+      {
+        "time": "2026-08-30T15:06:31.620Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-30T15:07:02.734Z",
+    "archive_reason": "finished"
+  }
+]
