@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +9,7 @@ from pathlib import Path
 from coding_tools_mcp.acceptance_receipts import passed_proof_fingerprint
 from coding_tools_mcp.ledger_analysis import open_ledger_analysis_snapshot
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
+from coding_tools_mcp.problem_lineage import problem_event_hash_material, problem_outcome_receipt_id
 from coding_tools_mcp.problem_resolution_economics import ProblemLineageFacts, problem_resolution_economics_report
 
 
@@ -58,8 +61,18 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
         ledger.problem_record_event({
             "operation": "confirm", "event_id": "confirm", "problem_id": "problem-fixture", "problem_revision": 1,
             "feedback_intent": "CONFIRM_RESOLVED", "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            "turn_id": "turn-confirm", "trace_id": "trace-confirm",
+            "outcome_receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+            "outcome_receipt_id": problem_outcome_receipt_id(
+                receipt_type="CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                event_id="confirm",
+                problem_id="problem-fixture",
+                problem_revision=1,
+                turn_id="turn-confirm",
+                trace_id="trace-confirm",
+            ),
             "occurred_at": "2026-08-25T00:01:00Z", "occurred_at_source": "EXPLICIT_USER",
-        }, now="2026-08-25T00:01:01Z", authority_context="RUNTIME_EXPLICIT_USER")
+        }, now="2026-08-25T00:01:01Z", authority_context="RUNTIME_OUTCOME_RECEIPT")
 
     def test_report_separates_resolution_from_administrative_disposition(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -68,7 +81,7 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 facts = ProblemLineageFacts.load(snapshot.reader)
                 report = problem_resolution_economics_report(snapshot.ledger, facts)
             self.assertEqual(report["status"], "DESCRIPTIVE_ONLY")
-            self.assertEqual(report["schema_version"], 3)
+            self.assertEqual(report["schema_version"], 5)
             self.assertEqual(report["denominators"]["problem_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["confirmed_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["trusted_resolution"]["true"], 1)
@@ -77,6 +90,46 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
             self.assertTrue(report["resolution_outcomes"]["administrative_disposition_is_not_resolution"])
             self.assertEqual(report["time_to_administrative_disposition"]["observed"], 0)
             self.assertIn("attested_clock_authority_mismatch", report["time_to_provisional"]["missing_or_invalid_reason_counts"])
+
+    def test_mismatched_receipt_digest_is_not_counted_even_when_event_chain_is_rehashed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            with ledger._lock, ledger._connect() as connection:
+                row = connection.execute("SELECT * FROM problem_events WHERE event_id='confirm'").fetchone()
+                assert row is not None
+                event = dict(row)
+                event["eligible_for_policy"] = bool(event["eligible_for_policy"])
+                event["outcome_receipt_id"] = "0" * 64
+                material = problem_event_hash_material(
+                    event,
+                    state_before=str(event["state_before"]),
+                    state_after=str(event["state_after"]),
+                    prev_hash=str(event["prev_hash"]),
+                )
+                rewritten_hash = hashlib.sha256(
+                    json.dumps(material, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+                ).hexdigest()
+                connection.execute(
+                    "UPDATE problem_events SET outcome_receipt_id=?,event_hash=? WHERE event_id='confirm'",
+                    (event["outcome_receipt_id"], rewritten_hash),
+                )
+                connection.execute(
+                    "UPDATE problem_threads SET latest_problem_event_hash=? WHERE problem_id='problem-fixture'",
+                    (rewritten_hash,),
+                )
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )
+            self.assertEqual(report["denominators"]["problem_chain_invalid_threads"], 0)
+            independent = report["revision_4_metrics"]["independent_outcome_evidence_coverage"]
+            self.assertEqual(independent["authoritative_confirmation_events"], 1)
+            self.assertEqual(independent["receipt_bound_confirmation_events"], 0)
+            self.assertEqual(independent["unbound_authoritative_confirmation_events"], 1)
+            self.assertEqual(independent["coverage"], 0.0)
 
     def test_v9_snapshot_is_inactive_and_writer_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -143,6 +196,11 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                     "frame_id": "frame-1",
                     "frame_revision": 1,
                     "decision_changed": True,
+                    "counterevidence_count": 1,
+                    "counterevidence_advisory_status": "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW",
+                    "frame_update_or_explanation_recommended": True,
+                    "materiality_inferred": False,
+                    "automatic_mutation_gate": False,
                 },
             )
             ledger.append_event(
@@ -188,6 +246,13 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 "shadow_attested",
             )
             self.assertFalse(before_reopen["decision_delta_shadow_attestation_rate"]["causal_value_proven"])
+            advisory = before_reopen["counterevidence_frame_update_advisory_coverage"]
+            self.assertEqual(advisory["observed_counterevidence_events"], 1)
+            self.assertEqual(advisory["events_with_update_or_explain_advisory"], 1)
+            self.assertEqual(advisory["coverage"], 1.0)
+            self.assertEqual(advisory["classification"], "descriptive_advisory_only")
+            self.assertFalse(advisory["materiality_inferred"])
+            self.assertFalse(advisory["automatic_mutation_gate"])
             self.assertEqual(before_reopen["resolution_envelope_evidence_attestation_coverage"]["coverage"], 1.0)
             self.assertEqual(
                 before_reopen["resolution_envelope_evidence_attestation_coverage"]["classification"],
@@ -203,6 +268,21 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 "descriptive_multiple_attempt_proxy",
             )
             self.assertFalse(before_reopen["multi_primary_run_revision_rate"]["semantic_sibling_linkage_proven"])
+            self.assertEqual(before_reopen["framing_regret"]["status"], "UNAVAILABLE")
+            self.assertIsNone(before_reopen["framing_regret"]["value_ms"])
+            self.assertTrue(before_reopen["framing_regret"]["unknown_is_not_zero"])
+            self.assertEqual(before_reopen["true_sibling_recurrence"]["status"], "UNAVAILABLE")
+            self.assertIsNone(before_reopen["true_sibling_recurrence"]["rate"])
+            self.assertTrue(before_reopen["true_sibling_recurrence"]["multi_primary_run_is_proxy_only"])
+            independent = before_reopen["independent_outcome_evidence_coverage"]
+            self.assertEqual(independent["status"], "AVAILABLE")
+            self.assertEqual(independent["numerator"], 1)
+            self.assertEqual(independent["denominator"], 1)
+            self.assertEqual(independent["coverage"], 1.0)
+            self.assertEqual(independent["authoritative_confirmation_events"], 1)
+            self.assertEqual(independent["receipt_bound_confirmation_events"], 1)
+            self.assertEqual(independent["unbound_authoritative_confirmation_events"], 0)
+            self.assertTrue(independent["historical_confirmations_not_backfilled"])
             self.assertNotIn("decision_changing_observation_rate", before_reopen)
             self.assertNotIn("outcome_evidence_coverage", before_reopen)
             self.assertNotIn("sibling_recurrence", before_reopen)

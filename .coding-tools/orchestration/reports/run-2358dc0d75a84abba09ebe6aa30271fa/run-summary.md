@@ -3,9 +3,9 @@
 - Run: `2358dc0d75a84abba09ebe6aa30271fa`
 - Task: `776dcfeb35244856a078c20f5970e747`
 - Objective: Repair the two operator truth surfaces in E:\DEV\Codex-web: keep Loaded runtime source truthful through the existing cached Recovery Host projection, and make Operator Truth Console receive bounded truth_snapshot data from /__control/orchestration/live without full orchestration polling, Git scans, full-history scans, lease-maintenance writes, or hash-chain verification on the high-frequency path. Preserve all unrelated dirty worktree changes.
-- Status: **active**
+- Status: **aborted**
 - Started: `2026-08-30T14:36:02.435Z`
-- Finished: `None`
+- Finished: `2026-08-31T13:58:22.520Z`
 
 ## Outcome metrics
 
@@ -21,7 +21,7 @@
 
 | # | Wave | Objective rev | Objective source | Mode | Base | Status |
 |---:|---|---:|---|---|---|---|
-| 1 | `bb7575df98374d6186b84c2e203fc128` | 1 | `run_initial_objective` | `mcp_only` | `5f232e99f20873b4950d89d597989cb4c25e3404` | active |
+| 1 | `bb7575df98374d6186b84c2e203fc128` | 1 | `run_initial_objective` | `mcp_only` | `5f232e99f20873b4950d89d597989cb4c25e3404` | aborted |
 
 ## Acceptance checkpoints
 
@@ -44,7 +44,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `35`
-- Chain head: `667ca1d3c5d94153110e2af17a04cac676909f1be24c595087113057f850e9aa`
+- Events checked: `37`
+- Chain head: `93796090b31c330c06542ca58276b4dfd30e99cc40bb45600f4782cc9ae21a5d`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

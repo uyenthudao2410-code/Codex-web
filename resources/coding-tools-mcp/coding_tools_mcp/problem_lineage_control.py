@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Trusted task-control adapter for v11 Problem Resolution Lineage events."""
+"""Trusted task-control adapter for v12 Problem Resolution Lineage events."""
 
 from datetime import datetime, timezone
 from typing import Any
@@ -11,7 +11,7 @@ from .host_correlation import (
     consume_pending_host_turn,
     restore_pending_host_turn,
 )
-from .problem_lineage import ProblemLineageError
+from .problem_lineage import ProblemLineageError, problem_outcome_receipt_id
 from .resolution_contract import ResolutionContractError, normalize_resolution_envelope
 
 
@@ -34,6 +34,7 @@ class ProblemLineageControlMixin:
     _PROBLEM_EXPLICIT_TRANSITIONS = frozenset({"open", "confirm", "reopen", "revise", "block", "abandon"})
     _PROBLEM_CALLER_AUTHORITY_FIELDS = frozenset({"provenance", "evidence_level"})
     _PROBLEM_CALLER_CLOCK_FIELDS = frozenset({"occurred_at", "occurred_at_source"})
+    _PROBLEM_CALLER_OUTCOME_RECEIPT_FIELDS = frozenset({"outcome_receipt_type", "outcome_receipt_id"})
 
     def _problem_claim_host_identity(self, event: dict[str, Any]) -> dict[str, Any]:
         claimed = claim_pending_host_turn(
@@ -161,7 +162,7 @@ class ProblemLineageControlMixin:
         if operation == "confirm":
             if intent != "CONFIRM_RESOLVED":
                 raise ToolFailure("PRL_CONFIRM_INTENT_REQUIRED", "confirm requires structured feedback_intent=CONFIRM_RESOLVED.", category="validation")
-            if provenance == "CONTROLLER_REPORTED_EXPLICIT_USER": return "RUNTIME_EXPLICIT_USER"
+            if provenance == "CONTROLLER_REPORTED_EXPLICIT_USER": return "RUNTIME_OUTCOME_RECEIPT"
         if operation == "reopen":
             if intent not in {"SAME_PROBLEM_STILL_FAILING", "PARTIAL_RESOLUTION", "CORRECT_UNDERSTANDING", "CORRECT_TARGET_OR_SCOPE", "CORRECT_TECHNICAL_RESULT", "CORRECT_PROOF_OR_VERIFICATION"}:
                 raise ToolFailure("PRL_REOPEN_INTENT_REQUIRED", "reopen requires a structured same-problem correction intent.", category="validation")
@@ -269,6 +270,8 @@ class ProblemLineageControlMixin:
             raise ToolFailure("PRL_CLOCK_FIELDS_FORBIDDEN", "Public semantic events cannot supply occurrence clock authority.", category="authorization")
         if any(name in event for name in self._PROBLEM_CALLER_AUTHORITY_FIELDS):
             raise ToolFailure("PRL_CALLER_AUTHORITY_FORBIDDEN", "Public problem events cannot supply provenance or evidence authority.", category="authorization")
+        if any(name in event for name in self._PROBLEM_CALLER_OUTCOME_RECEIPT_FIELDS):
+            raise ToolFailure("PRL_CALLER_OUTCOME_RECEIPT_FORBIDDEN", "Independent outcome receipt identity is derived only from the current one-shot ChatWeb host turn.", category="authorization")
         if not str(event.get("task_id") or "").strip():
             event["task_id"] = str(self.task_state.get().get("task_id") or "").strip()
         self._problem_validate_exact_references(event)
@@ -278,6 +281,17 @@ class ProblemLineageControlMixin:
         claimed = self._problem_claim_host_identity(event)
         event["provenance"] = "HOST_OBSERVED" if operation == "observe_feedback" else "CONTROLLER_REPORTED_EXPLICIT_USER"
         event["evidence_level"] = "OBSERVED"
+        if operation == "confirm":
+            receipt_type = "CHATWEB_EXPLICIT_USER_OUTCOME_V1"
+            event["outcome_receipt_type"] = receipt_type
+            event["outcome_receipt_id"] = problem_outcome_receipt_id(
+                receipt_type=receipt_type,
+                event_id=str(event.get("event_id") or ""),
+                problem_id=str(event.get("problem_id") or ""),
+                problem_revision=int(event.get("problem_revision") or 0),
+                turn_id=str(event.get("turn_id") or ""),
+                trace_id=str(event.get("trace_id") or ""),
+            )
         authority = self._problem_runtime_authority(event)
         try:
             result = self.orchestration_ledger.problem_record_event(event, now=_utc_now(), authority_context=authority)

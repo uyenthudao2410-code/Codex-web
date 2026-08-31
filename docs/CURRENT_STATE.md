@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-30
+> **Status date:** 2026-08-31
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -39,6 +39,60 @@ The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLE
 - P5 anchors remain terminal and the earlier A0 source-drift epoch retains its truthful zero funnel. Volatile ordinary-RUN, managed-job, and residue counts are not frozen in this maintained source document: recapture them from one immutable `report_lifecycle_census.py` snapshot before activation or stale-run reconciliation, and use only the official exact-ID path for a genuinely eligible stale RUN.
 - PRL-D and A2 remain `HOLD_NATURAL_EVIDENCE`; missing natural observations, TTPR, stage coverage, and measured money remain unknown rather than zero.
 - The isolated P0.3 packaged Recovery lane is source/package-local evidence, not an exact-frozen release candidate, installed-session, reboot/logon, connector, or production claim.
+
+### PRL v12 typed outcome-receipt source checkpoint — 2026-08-31
+
+The current uncommitted worktree advances PRL storage from schema v11 to v12
+and new problem events from schema 2 to schema 3 without changing the public
+eight-tool `smart-v3` contract. `problem.confirm` remains a semantic input: the
+runtime, not the public caller, claims the exact one-shot ChatWeb host turn and
+derives `CHATWEB_EXPLICIT_USER_OUTCOME_V1` from the event ID, Problem Revision,
+turn ID and trace ID. The resulting receipt is written under
+`RUNTIME_OUTCOME_RECEIPT`, participates in the event hash chain, and is counted
+by the read-only economics reporter only when the digest and provenance binding
+recompute exactly. Direct caller receipt fields, missing host identity, a
+mismatched digest, or tampered event bytes fail closed.
+
+The guarded v11-to-v12 path preserves historical schema-2 event hashes and
+leaves their receipt fields empty; it never backfills independent outcome
+evidence. The current focused/affected packet passes `39` tests plus `7`
+subtests, module-size validation and Python compilation, and the disk contract
+remains the exact eight-tool SHA
+`c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251`.
+The source packet was subsequently migrated under the guarded v11-to-v12 path
+and loaded by the current development process. The following current receipt
+supersedes the source-only qualification above for the live local epoch; it
+does not rewrite the historical checkpoint.
+
+### Current PRL v12 runtime and connector receipt — 2026-08-31T04:46Z
+
+The full-clean development epoch
+`activation-mtgqx4ha-2d70125bdcf3f1654d0c2de29361823a` is `READY` with admission
+`OPEN`. Recovery Host, Coding MCP and Tunnel are running; Coding MCP
+`running_revision == disk_revision ==
+e5d120eb38e89f195dd504d77e64f5081dd5737710dd088cfe71e6b0a2b3c897`; the
+Electron UI is also current. Coding-VP Live produced one managed-attested,
+no-workspace `workspace_context` compatibility bootstrap at
+`2026-08-31T04:45:19.154620+00:00`, bound to the current epoch/process/server
+and contract SHA. The guarded Recovery Host acknowledgement is
+`CURRENT_COMPATIBLE_ACKNOWLEDGED` with
+`connector_freshness_mode=compatible_activation_bootstrap`,
+`connector_refresh_required=false`, `connector_ack_pending=false`, and
+`fully_ready=true`. This is intentionally not claimed as strict
+`tools/list`/`server/discover`: `connector_rediscovered=false` remains truthful.
+
+The PRL v12 canary was read-only and returned
+`C4_SOURCE_READY_AWAITING_NATURAL_CANARY`; SQLite integrity and foreign-key
+checks passed, while no natural cohort was inferred. The PRL-D economics
+reporter returned schema version `5` against canonical PRL schema `12`, with
+zero problem revisions and `null`/unavailable outcome, TTPR and efficacy
+denominators. Missing natural evidence remains `unknown`/`null`; no synthetic
+problem, outcome receipt or policy promotion was created.
+
+This receipt closes current local runtime activation only. Full-component
+source acceptance for the entire dirty Coding MCP component, an immutable
+accepted Git baseline (P0.6), natural HR outcome evidence, commit, package,
+release, deployment and production claims remain separate open gates.
 
 ### Current local activation and UI performance receipt — 2026-08-29T20:15:03Z
 
@@ -793,3 +847,56 @@ The following are deliberate evidence/authority gates, not documentation bugs:
 ## 11. Historical WebCodex material
 
 WebCodex core documents, Rust crates, server/runner deployment material, and dated research remain useful and should not be deleted merely because the desktop product has moved further. Their scope must be explicit. When a historical plan says something is future work but current source now implements it, preserve the historical record and update this current-state document or the maintained product guide instead of rewriting chronology.
+
+## 12. Current exact-file EOCL acceptance and live recheck — 2026-08-31
+
+The bounded EOCL wave `f8bb0fcf65a94e929b600b67e0413e6a` /
+`52e3d5abc9c247ea945a9e7089ba5254` reached `CHECKPOINTED` and received final
+ChatWeb operator acceptance at checkpoint
+`95468d1606764d768151ea1b047381e3`. The checkpoint is bound to base HEAD
+`a357e1bb45a68cfaf25b8a2aa99a133ab256102c`, worktree fingerprint
+`2878151e13221a8c6c9f6f8506b25c30b29d083e9b1f5435883452e508f77413`, and
+canonical checkpoint proof fingerprint
+`a77efcee64e4503ce7ff2519b6c5c2811ef7d4ede07945b4bb6caae9897b9dc5`.
+
+The exact accepted-file receipt is complete (`schema_version=2`, `count=3`)
+and contains only these component-owned existing files:
+
+| Path | SHA-256 | Size (bytes) |
+|---|---|---:|
+| `electron/services/recoveryActionStore.js` | `18c6a2b99ed2535324f0547030c2b65c4c573d98d6d6ff1846a0002812d4bdbf` | 75717 |
+| `electron/services/recoveryHost.js` | `8ed02caf81f451c9c78c9e4cffeb8a916c8c472985b778f4e674435a9a9072d0` | 130667 |
+| `resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py` | `fd21ea595592388abb62dca6b4cb89db8dd8b52b7d25498c2c19bbb9cca53ecd` | 68738 |
+
+Five focused deterministic proof stages passed, with no source edit in this
+wave; the wave adopted exact bytes already present in the authorized worktree.
+The earlier checkpoint `9411d3aec777422c89b25ef4837da86f` remains immutable and
+is not widened retroactively. This therefore closes exact-file EOCL acceptance
+for the three listed files only. It is not a single accepted packet for every
+code-bearing file currently dirty in the Coding MCP component.
+
+A fresh read-only runtime recheck at `2026-08-31T05:19:22.575Z` reports
+Electron UI and Coding MCP `CURRENT`, `running_revision == disk_revision`,
+`components_ready=true`, `fully_ready=true`, `runtime_update_incomplete=false`,
+and `error_code=none`. The connector is
+`CURRENT_COMPATIBLE_ACKNOWLEDGED` through the managed-attested
+`compatible_activation_bootstrap` path, with
+`connector_rediscovered=false`, `connector_refresh_required=false`, and
+`connector_ack_pending=false`; no strict `tools/list` or `server/discover`
+receipt is claimed.
+
+The immutable query-only lifecycle census at `2026-08-31T05:19:30.478Z`
+reported SQLite schema `12`, `integrity_check=["ok"]`, zero foreign-key rows,
+`projection_drift=false`, `mutated_canonical_ledger=false`, zero managed jobs,
+zero unexplained active runs and zero unbound live resources. It also observed
+nine ordinary active RUN rows: seven `THRESHOLD_SENSITIVE_STALE_CANDIDATE`, one
+`GRACE_PERIOD_INACTIVE`, and one `AWAITING_ACCEPTANCE` (`275a340f190e43ffb7feeb47a0698109`).
+They have no live ownership, but the stale candidates are below the current
+86400-second threshold and the awaiting-acceptance row lacks a safe exact
+acceptance packet. None may be force-reconciled or accepted blindly.
+
+Accordingly, current local runtime readiness and the three-file EOCL checkpoint
+are closed, while the full-component accepted baseline/P0.6, natural Golden HR
+outcomes, prospective efficacy, commit, package/release, deployment and
+production gates remain open. No restart, commit, push, package, release,
+deployment or production operation occurred in this recheck.

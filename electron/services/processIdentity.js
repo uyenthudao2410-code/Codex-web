@@ -15,6 +15,8 @@ const { spawn, spawnSync } = require('node:child_process');
 
 const PROCESS_START_TOKEN_PATTERN = /^[0-9]{1,32}$/;
 const MAX_PROBE_OUTPUT_BYTES = 512;
+const MAX_BROKER_LINE_BYTES = 1_024;
+const MAX_BROKER_BUFFER_BYTES = 4_096;
 const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 5_000;
 const POWERSHELL_OBSERVE_SCRIPT = [
@@ -32,7 +34,37 @@ const POWERSHELL_OBSERVE_SCRIPT = [
   '}'
 ].join('; ');
 
+const POWERSHELL_BROKER_SCRIPT = [
+  '& {',
+  '$ErrorActionPreference = "Stop"',
+  'while ($true) {',
+  '$line = [Console]::In.ReadLine()',
+  'if ($null -eq $line) { break }',
+  '$response = $null',
+  'try {',
+  '$request = $line | ConvertFrom-Json -ErrorAction Stop',
+  '$requestId = [long]$request.id',
+  '$processId = [int]$request.pid',
+  'if ($requestId -le 0 -or $processId -le 0) { throw "invalid_request" }',
+  'try { $process = Get-Process -Id $processId -ErrorAction Stop } catch { $response = @{ id = $requestId; pid = $processId; state = "absent" } }',
+  'if ($null -eq $response) {',
+  '$creation = $process.StartTime.ToUniversalTime().ToFileTimeUtc()',
+  'if ($creation -le 0) { throw "invalid_creation" }',
+  '$creation = $creation - ($creation % 10)',
+  '$response = @{ id = $requestId; pid = $processId; state = "live"; process_start_token = $creation.ToString([Globalization.CultureInfo]::InvariantCulture) }',
+  '}',
+  '} catch {',
+  '$response = @{ id = 0; pid = 0; state = "unavailable" }',
+  '}',
+  '[Console]::Out.WriteLine(($response | ConvertTo-Json -Compress))',
+  '[Console]::Out.Flush()',
+  '}',
+  '}'
+].join('; ');
+
 let currentProcessToken = null;
+let defaultWindowsIdentityBroker = null;
+let defaultWindowsIdentityBrokerExitHookInstalled = false;
 
 function windowsProbeArgs(pid) {
   return [
@@ -171,69 +203,185 @@ function defaultWindowsProbe(pid, options = {}) {
   return token ? liveIdentity(pid, token) : unavailableIdentity(pid);
 }
 
-function defaultWindowsProbeAsync(pid, options = {}) {
-  const spawnProcess = options.spawn || spawn;
-  const timeoutMs = Math.max(100, Number(options.timeoutMs) || DEFAULT_PROBE_TIMEOUT_MS);
-  return new Promise((resolve) => {
-    let child;
-    let timer = null;
-    let settled = false;
-    let total = 0;
-    const chunks = [];
-    const finish = (value) => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      resolve(value);
-    };
+function createWindowsIdentityBroker({ spawnProcess = spawn } = {}) {
+  let child = null;
+  let outputBuffer = Buffer.alloc(0);
+  let nextRequestId = 1;
+  const pending = new Map();
+
+  const setReferenced = (referenced) => {
+    for (const handle of [child, child?.stdin, child?.stdout]) {
+      try {
+        if (referenced) handle?.ref?.();
+        else handle?.unref?.();
+      } catch {}
+    }
+  };
+
+  const settle = (requestId, value) => {
+    const entry = pending.get(requestId);
+    if (!entry) return;
+    pending.delete(requestId);
+    if (entry.timer) clearTimeout(entry.timer);
+    entry.resolve(value);
+    if (pending.size === 0) setReferenced(false);
+  };
+
+  const failBroker = (reason, details = {}) => {
+    const active = child;
+    child = null;
+    outputBuffer = Buffer.alloc(0);
+    for (const [requestId, entry] of pending) {
+      pending.delete(requestId);
+      if (entry.timer) clearTimeout(entry.timer);
+      entry.resolve(unavailableIdentity(entry.pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason, ...details }));
+    }
+    try { active?.stdin?.end?.(); } catch {}
+    try { active?.kill?.(); } catch {}
+  };
+
+  const onStdoutData = (chunk) => {
+    const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    if (outputBuffer.length + value.length > MAX_BROKER_BUFFER_BYTES) {
+      failBroker('probe_output_too_large');
+      return;
+    }
+    outputBuffer = Buffer.concat([outputBuffer, value]);
+    while (true) {
+      const newline = outputBuffer.indexOf(0x0A);
+      if (newline < 0) break;
+      const lineBuffer = outputBuffer.subarray(0, newline);
+      outputBuffer = outputBuffer.subarray(newline + 1);
+      if (lineBuffer.length === 0 || lineBuffer.length > MAX_BROKER_LINE_BYTES) {
+        failBroker(lineBuffer.length > MAX_BROKER_LINE_BYTES ? 'probe_output_too_large' : 'probe_protocol_invalid');
+        return;
+      }
+      let response;
+      try { response = JSON.parse(lineBuffer.toString('utf8').replace(/^\uFEFF/, '').trim()); }
+      catch {
+        failBroker('probe_protocol_invalid');
+        return;
+      }
+      const requestId = Number(response?.id);
+      const entry = Number.isSafeInteger(requestId) ? pending.get(requestId) : null;
+      if (!entry || normalizePid(response?.pid) !== entry.pid) {
+        failBroker('probe_protocol_invalid');
+        return;
+      }
+      settle(requestId, normalizeObservation(response, entry.pid));
+    }
+    if (outputBuffer.length > MAX_BROKER_LINE_BYTES) failBroker('probe_output_too_large');
+  };
+
+  const ensureChild = () => {
+    if (child && !child.killed && child.stdin && !child.stdin.destroyed) return { child };
+    let started;
     try {
-      child = spawnProcess('powershell.exe', windowsProbeArgs(pid), {
+      started = spawnProcess('powershell.exe', [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        POWERSHELL_BROKER_SCRIPT
+      ], {
         windowsHide: true,
         shell: false,
-        stdio: ['ignore', 'pipe', 'ignore']
+        stdio: ['pipe', 'pipe', 'ignore']
       });
     } catch (error) {
-      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }));
-      return;
+      return { error: { reason: 'broker_spawn_failed', cause_code: error?.code || '' } };
     }
-    if (!child?.stdout || typeof child.once !== 'function') {
-      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_process_invalid' }));
-      return;
+    if (!started?.stdin || typeof started.stdin.write !== 'function' || !started?.stdout || typeof started.stdout.on !== 'function' || typeof started.once !== 'function') {
+      try { started?.kill?.(); } catch {}
+      return { error: { reason: 'broker_process_invalid' } };
     }
-    child.stdout.on('data', (chunk) => {
-      if (settled) return;
-      const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-      total += value.length;
-      if (total > MAX_PROBE_OUTPUT_BYTES) {
-        try { child.kill?.(); } catch {}
-        finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_output_too_large' }));
-        return;
-      }
-      chunks.push(value);
+    child = started;
+    outputBuffer = Buffer.alloc(0);
+    started.stdout.on('data', onStdoutData);
+    started.stdout.on('error', (error) => {
+      if (child === started) failBroker('broker_stdout_error', { cause_code: error?.code || '' });
     });
-    child.once('error', (error) => {
-      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }));
+    started.stdin.on?.('error', (error) => {
+      if (child === started) failBroker('broker_stdin_error', { cause_code: error?.code || '' });
     });
-    child.once('close', (code) => {
-      if (settled) return;
-      if (Number(code) === 3) {
-        finish(absentIdentity(pid));
-        return;
-      }
-      if (Number(code) !== 0) {
-        finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { exit_code: code }));
-        return;
-      }
-      const tokenText = Buffer.concat(chunks).toString('utf8').replace(/^\uFEFF/, '').trim();
-      const token = normalizeProcessStartToken(tokenText);
-      finish(token ? liveIdentity(pid, token) : unavailableIdentity(pid));
+    started.once('error', (error) => {
+      if (child === started) failBroker('broker_process_error', { cause_code: error?.code || '' });
     });
-    timer = setTimeout(() => {
-      try { child.kill?.(); } catch {}
-      finish(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_timeout' }));
-    }, timeoutMs);
-    timer.unref?.();
-  });
+    started.once('close', (code) => {
+      if (child === started) failBroker('broker_process_closed', { exit_code: code ?? null });
+    });
+    setReferenced(false);
+    return { child: started };
+  };
+
+  const observe = (pidValue, { timeoutMs = DEFAULT_PROBE_TIMEOUT_MS } = {}) => {
+    const pid = normalizePid(pidValue);
+    if (!pid) return Promise.resolve(unavailableIdentity(null, 'PROCESS_IDENTITY_INVALID'));
+    const started = ensureChild();
+    if (!started.child) {
+      return Promise.resolve(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', started.error || { reason: 'broker_spawn_failed' }));
+    }
+    const requestId = nextRequestId;
+    nextRequestId = nextRequestId >= Number.MAX_SAFE_INTEGER ? 1 : nextRequestId + 1;
+    const payload = Buffer.from(`${JSON.stringify({ id: requestId, pid })}\n`, 'utf8');
+    return new Promise((resolve) => {
+      const entry = { pid, resolve, timer: null };
+      pending.set(requestId, entry);
+      setReferenced(true);
+      entry.timer = setTimeout(() => {
+        if (!pending.has(requestId)) return;
+        pending.delete(requestId);
+        resolve(unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { reason: 'probe_timeout' }));
+        failBroker('probe_timeout');
+      }, Math.max(100, Number(timeoutMs) || DEFAULT_PROBE_TIMEOUT_MS));
+      entry.timer.unref?.();
+      try {
+        started.child.stdin.write(payload, (error) => {
+          if (error && pending.has(requestId)) {
+            failBroker('broker_pipe_write_failed', { cause_code: error?.code || '' });
+          }
+        });
+      } catch (error) {
+        failBroker('broker_pipe_write_failed', { cause_code: error?.code || '' });
+      }
+    });
+  };
+
+  return {
+    observe,
+    close: () => failBroker('broker_closed_by_parent')
+  };
+}
+
+function defaultWindowsBroker() {
+  if (!defaultWindowsIdentityBroker) {
+    defaultWindowsIdentityBroker = createWindowsIdentityBroker();
+  }
+  if (!defaultWindowsIdentityBrokerExitHookInstalled) {
+    defaultWindowsIdentityBrokerExitHookInstalled = true;
+    process.once('exit', () => {
+      try { defaultWindowsIdentityBroker?.close?.(); } catch {}
+    });
+  }
+  return defaultWindowsIdentityBroker;
+}
+
+async function defaultWindowsProbeAsync(pid, options = {}) {
+  const timeoutMs = Math.max(100, Number(options.timeoutMs) || DEFAULT_PROBE_TIMEOUT_MS);
+  if (options.broker && typeof options.broker.observe === 'function') {
+    try { return normalizeObservation(await options.broker.observe(pid, { timeoutMs }), pid); }
+    catch (error) { return unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }); }
+  }
+  if (typeof options.spawn === 'function' && options.spawn !== spawn) {
+    const broker = createWindowsIdentityBroker({ spawnProcess: options.spawn });
+    try { return normalizeObservation(await broker.observe(pid, { timeoutMs }), pid); }
+    catch (error) { return unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }); }
+    finally { broker.close(); }
+  }
+  try { return normalizeObservation(await defaultWindowsBroker().observe(pid, { timeoutMs }), pid); }
+  catch (error) { return unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', { cause_code: error?.code || '' }); }
 }
 
 /**
@@ -450,6 +598,8 @@ async function waitForProcessExit(value, options = {}) {
 module.exports = {
   PROCESS_START_TOKEN_PATTERN,
   POWERSHELL_OBSERVE_SCRIPT,
+  POWERSHELL_BROKER_SCRIPT,
+  createWindowsIdentityBroker,
   normalizePid,
   normalizeProcessStartToken,
   processIdentityFrom,

@@ -411,7 +411,7 @@ async function gitStatus(workspace, forceUntracked = false) {
   return { ...parsed, head };
 }
 
-async function gitChangedPaths(workspace, fromHead, toHead) {
+async function gitChangedPaths(workspace, fromHead, toHead, pathFilter = null) {
   const from = String(fromHead || '').toLowerCase();
   const to = String(toHead || '').toLowerCase();
   if (!GIT_OBJECT_ID.test(from) || !GIT_OBJECT_ID.test(to)) {
@@ -424,7 +424,8 @@ async function gitChangedPaths(workspace, fromHead, toHead) {
   } catch {
     throw actionError('BASE_HEAD_CHANGED', 'Component baseline Git identity is no longer available.');
   }
-  const files = [...new Set(stdout.split(/\r?\n/).map(normalizeRelative).filter(Boolean))];
+  const files = [...new Set(stdout.split(/\r?\n/).map(normalizeRelative).filter(Boolean))]
+    .filter((relative) => typeof pathFilter !== 'function' || pathFilter(relative));
   if (files.length > MAX_DIRTY_ENTRIES) {
     throw actionError('AUTO_ACTIVATION_GIT_TOO_LARGE', 'Committed Git delta exceeded the bounded activation limit.');
   }
@@ -1063,7 +1064,7 @@ class AcceptedCodeActivationController {
         continue;
       }
       let committed;
-      try { committed = (await gitChangedPaths(workspace, rowHead, currentHead)).filter((relative) => componentOwnsPath(component, relative)); }
+      try { committed = await gitChangedPaths(workspace, rowHead, currentHead, (relative) => componentOwnsPath(component, relative)); }
       catch { continue; }
       const currentReceipts = this.captureComponentReceipts(workspace, component, [...forced.entries, ...committed]);
       const baselineMap = receiptMap(row.receipts || []);
@@ -1087,7 +1088,9 @@ class AcceptedCodeActivationController {
     const row = baseline?.components?.[component] || {};
     const baselineHead = String(row.head || baseline?.head || '');
     const currentHead = String(forced?.head || '');
-    const committed = baselineHead === currentHead ? [] : (await gitChangedPaths(workspace, baselineHead, currentHead)).filter((relative) => componentOwnsPath(component, relative));
+    const committed = baselineHead === currentHead
+      ? []
+      : await gitChangedPaths(workspace, baselineHead, currentHead, (relative) => componentOwnsPath(component, relative));
     const currentReceipts = this.captureComponentReceipts(workspace, component, [...(forced?.entries || []), ...committed]);
     const baselineMap = receiptMap(row.receipts || []);
     const untrusted = currentReceipts.filter((current) => !receiptMatches(current, baselineMap.get(current.path)) && !receiptMatches(current, accepted.get(current.path)));
@@ -1159,12 +1162,17 @@ class AcceptedCodeActivationController {
     const headDrift = this.supersedeStaleActiveIntents(state, forced.head);
     if (headDrift.awaiting_operation) return false;
     if (headDrift.changed && state.active_checkpoint_id && !this.markActiveProcessed(state)) return false;
-    await this.ensureBaseline(workspace, state, forced);
+    let baselineEnsured = false;
     if (state.active_checkpoint_id) {
+      await this.ensureBaseline(workspace, state, forced);
+      baselineEnsured = true;
       if (!this.markActiveProcessed(state)) return false;
     }
     const checkpoints = this.acceptedCheckpointProvider(workspace, MAX_ACCEPTED_CHECKPOINTS);
     const candidate = this.candidate(checkpoints, state, workspace, forced.head);
+    if (!baselineEnsured && (!state.baseline || candidate)) {
+      await this.ensureBaseline(workspace, state, forced);
+    }
     if (!candidate) return false;
     const checkpointId = String(candidate.checkpoint.checkpoint_id);
     state.closure_input = this.newClosureInput(candidate.evaluation);

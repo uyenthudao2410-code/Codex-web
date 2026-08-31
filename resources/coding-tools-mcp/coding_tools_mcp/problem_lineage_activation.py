@@ -69,6 +69,10 @@ def _snapshot_projection(workspace: Path, *, observed_at: float) -> dict[str, An
                 "ORDER BY name"
             )
         ]
+        problem_event_columns = [
+            str(row[1])
+            for row in reader.rows("PRAGMA table_info(problem_events)")
+        ] if "problem_events" in tables else []
         event_chain_failures = [
             str(run_id)
             for run_id in sorted(snapshot.facts._runs)
@@ -94,6 +98,7 @@ def _snapshot_projection(workspace: Path, *, observed_at: float) -> dict[str, An
                 "user_version": int((snapshot.snapshot_metadata or {}).get("schema_version") or 0),
                 "problem_tables": tables,
                 "problem_indexes": indexes,
+                "problem_event_columns": problem_event_columns,
             },
             "event_chain": {
                 "checked_runs": len(snapshot.facts._runs),
@@ -130,12 +135,12 @@ def _assert_preflight(preflight: dict[str, Any], *, activation_preflight: bool) 
     current_schema = int(schema.get("user_version") or 0)
     tables, indexes = set(schema.get("problem_tables") or []), set(schema.get("problem_indexes") or [])
     if activation_preflight:
-        if current_schema not in {9, 10}:
+        if current_schema not in {9, 10, 11}:
             blockers.append(f"unexpected_schema_version_{current_schema}")
         elif current_schema == 9:
             if tables:
-                blockers.append("problem_tables_present_before_v11_activation")
-        else:
+                blockers.append("problem_tables_present_before_prl_activation")
+        elif current_schema == 10:
             expected_v10_tables = {"problem_threads", "problem_events"}
             expected_v10_indexes = {
                 "idx_problem_events_problem_seq",
@@ -147,6 +152,22 @@ def _assert_preflight(preflight: dict[str, Any], *, activation_preflight: bool) 
                 blockers.append("v10_problem_tables_incomplete")
             if indexes != expected_v10_indexes:
                 blockers.append("v10_problem_indexes_incomplete")
+        else:
+            expected_v11_tables = {"problem_threads", "problem_revisions", "problem_events"}
+            expected_v11_indexes = {
+                "idx_problem_events_problem_seq",
+                "idx_problem_events_problem_revision_seq",
+                "idx_problem_events_task_turn",
+                "idx_problem_events_run_wave",
+                "idx_problem_events_one_primary_run_binding",
+            }
+            if tables != expected_v11_tables:
+                blockers.append("v11_problem_tables_incomplete")
+            if indexes != expected_v11_indexes:
+                blockers.append("v11_problem_indexes_incomplete")
+            receipt_columns = {"outcome_receipt_type", "outcome_receipt_id"}
+            if receipt_columns.intersection(set(schema.get("problem_event_columns") or [])):
+                blockers.append("v11_outcome_receipt_columns_already_present")
     else:
         if current_schema != PROBLEM_SCHEMA_VERSION:
             blockers.append(f"unexpected_schema_version_{current_schema}")
@@ -162,6 +183,9 @@ def _assert_preflight(preflight: dict[str, Any], *, activation_preflight: bool) 
             blockers.append("problem_tables_incomplete")
         if indexes != expected_indexes:
             blockers.append("problem_indexes_incomplete")
+        receipt_columns = {"outcome_receipt_type", "outcome_receipt_id"}
+        if not receipt_columns.issubset(set(schema.get("problem_event_columns") or [])):
+            blockers.append("outcome_receipt_columns_missing")
     if blockers:
         raise ProblemLineageActivationError("PRL activation preflight failed: " + ",".join(blockers))
 
@@ -207,7 +231,7 @@ def activate_problem_lineage_schema(
     expected_logical_sha256: str,
     runtime_stopped: bool,
 ) -> ProblemLineageActivationReceipt:
-    """Run the supported one-way v9/v10→v11 migration after exact preflight.
+    """Run the supported one-way v9/v10/v11→v12 migration after exact preflight.
 
     The caller must stop the authoritative runtime through its owning Recovery
     Host before passing ``runtime_stopped=True``.  This function never starts,

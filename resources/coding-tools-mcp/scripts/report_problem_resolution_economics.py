@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Emit a content-free PRL-D descriptive report from one immutable v10 snapshot."""
+"""Emit a content-free PRL-D descriptive report from one immutable PRL snapshot.
+
+The reporter reads the current canonical ledger schema (currently PRL v12) via
+the read-only Backup-API path; it does not create workload or mutate the
+ledger. The emitted economics report carries its own schema version (currently
+version 5), so the CLI help remains accurate across guarded migrations.
+"""
 
 from __future__ import annotations
 

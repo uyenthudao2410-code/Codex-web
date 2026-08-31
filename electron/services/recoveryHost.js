@@ -1780,6 +1780,17 @@ class RecoveryHost {
     };
   }
 
+  ensureAutoActivationStarted(epoch = null) {
+    if (!this.running || this.bootstrapBlocksAdmission() || this.readyAdoptionBlocksAdmission()) return false;
+    if (epoch && (epoch.state !== 'READY' || epoch.admission_state !== 'OPEN')) return false;
+    let alreadyRunning = false;
+    try { alreadyRunning = this.autoActivation?.status?.()?.running === true; } catch {}
+    if (alreadyRunning) return true;
+    if (typeof this.autoActivation?.start !== 'function') return false;
+    this.autoActivation.start();
+    return true;
+  }
+
   async superviseOnce() {
     if (!this.running || this.handoffStarted) return this.lastSupervisionStatus;
     if (this.supervisionInFlight) return this.supervisionInFlight;
@@ -1865,10 +1876,12 @@ class RecoveryHost {
             this.recordSupervisionStatus({ ...(this.lastSupervisionStatus || {}), fullCleanActivation: completed }, {
               activationConnectorPending: connectorPending
             });
-            this.recordBootstrapEpoch(this.activationEpochStore.current(), {
+            const finalizedEpoch = this.activationEpochStore.current();
+            this.recordBootstrapEpoch(finalizedEpoch, {
               replacement_host_instance_id: this.instanceId,
               replacement_host_pid: process.pid
             });
+            epoch = finalizedEpoch;
           } else if (typeof this.fullCleanActivation.recordPendingCensus === 'function') {
             // A transient cold-start probe can be negative even though the
             // exact Tunnel/Recovery processes become healthy a few seconds
@@ -1903,6 +1916,7 @@ class RecoveryHost {
         await this.ensureRecoveryPlane();
         await this.superviseElectronUi();
       }
+      this.ensureAutoActivationStarted(epoch);
       return runtime;
     })();
     this.supervisionInFlight = operation;
@@ -2363,7 +2377,7 @@ class RecoveryHost {
         }
       }
       const postStartEpoch = this.fullCleanActivation.current?.();
-      if ((!postStartEpoch || postStartEpoch.state === 'READY') && !readyEpochBlocked) this.autoActivation?.start?.();
+      this.ensureAutoActivationStarted(postStartEpoch);
       return this.hostStatus();
     } catch (error) {
       const beforeCleanupEpoch = this.activationEpochStore.current();

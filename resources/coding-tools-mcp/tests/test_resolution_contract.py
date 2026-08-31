@@ -6,6 +6,7 @@ import unittest
 from coding_tools_mcp.resolution_contract import (
     ResolutionContractError,
     contract_sha256,
+    counterevidence_frame_update_advisory,
     normalize_problem_frame,
     normalize_resolution_envelope,
 )
@@ -64,6 +65,35 @@ class ResolutionContractTests(unittest.TestCase):
             with self.subTest(encoding=encoding):
                 with self.assertRaises(ResolutionContractError):
                     normalize_problem_frame({**FRAME, "observation": value})
+
+    def test_counterevidence_advisory_is_content_free_and_never_authority(self) -> None:
+        empty = counterevidence_frame_update_advisory(normalize_problem_frame(FRAME))
+        self.assertEqual(empty["status"], "NO_COUNTEREVIDENCE_RECORDED")
+        self.assertFalse(empty["frame_update_or_explanation_recommended"])
+        self.assertFalse(empty["automatic_mutation_gate"])
+
+        normalized = normalize_problem_frame({
+            **FRAME,
+            "counterevidence": [{
+                "observation_id": "observation-2",
+                "summary": "A fresh runtime remains stale",
+                "impact": "The current causal frame may not explain the observation",
+            }],
+            "decision_delta": {
+                **FRAME["decision_delta"],
+                "changed_decision": False,
+                "next_action": "Review whether the frame must change",
+            },
+        })
+        advisory = counterevidence_frame_update_advisory(normalized)
+        self.assertEqual(advisory["status"], "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW")
+        self.assertEqual(advisory["counterevidence_count"], 1)
+        self.assertTrue(advisory["frame_update_or_explanation_recommended"])
+        self.assertTrue(advisory["same_family_retry_materiality_review_recommended"])
+        self.assertFalse(advisory["decision_changed_attested"])
+        self.assertFalse(advisory["materiality_inferred"])
+        self.assertEqual(advisory["authority"], "ADVISORY_ONLY")
+        self.assertFalse(advisory["automatic_mutation_gate"])
 
     def test_envelope_requires_passed_closure_falsifier(self) -> None:
         normalized = normalize_resolution_envelope(ENVELOPE)

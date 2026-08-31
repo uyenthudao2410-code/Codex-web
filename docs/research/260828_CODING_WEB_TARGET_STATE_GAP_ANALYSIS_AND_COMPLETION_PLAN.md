@@ -3561,3 +3561,100 @@ synthetic enrollment/workload và không suy causal outcome từ technical PASS.
 
 Không commit, push, package, release, deploy hoặc production operation xảy ra
 trong checkpoint này.
+
+## 42. Current PRL v12 runtime closure and evidence boundary — 2026-08-31T04:53Z
+
+The guarded PRL v11-to-v12 migration has now completed on the canonical ledger:
+schema `12`, SQLite integrity `ok`, zero foreign-key violations, and no
+projection drift. The current full-clean development epoch
+`activation-mtgqx4ha-2d70125bdcf3f1654d0c2de29361823a` is `READY` with admission
+`OPEN`; Coding MCP running/disk revision is equal at
+`e5d120eb38e89f195dd504d77e64f5081dd5737710dd088cfe71e6b0a2b3c897`.
+
+Coding-VP Live made one managed-attested, no-workspace `workspace_context` call
+for this epoch and produced a compatibility bootstrap observed at
+`2026-08-31T04:45:19.154620+00:00`. Recovery Host accepted that exact
+epoch/process/server/SHA receipt and reports
+`CURRENT_COMPATIBLE_ACKNOWLEDGED`, `compatible_activation_bootstrap`,
+`connector_refresh_required=false`, `connector_ack_pending=false`, and
+`fully_ready=true`. The process has not emitted a strict `tools/list` or
+`server/discover` receipt in this wave, so `connector_rediscovered=false` is
+preserved and no strict-discovery claim is made.
+
+Read-only PRL evidence is intentionally bounded. The canary reporter returned
+`C4_SOURCE_READY_AWAITING_NATURAL_CANARY`; the economics reporter returned
+reporter schema `5` against canonical PRL schema `12`, with zero problem
+revisions and null/unavailable natural outcome, TTPR and efficacy denominators.
+No synthetic problem, outcome receipt, treatment assignment or policy
+promotion was created.
+
+This closes the local runtime activation gate for the exact development epoch,
+not the full target-state program. The remaining evidence/authority gates are:
+
+1. obtain a complete, exact-file EOCL source acceptance for the full current
+   Coding MCP component (the earlier checkpoint `9411d3ae...` attests only its
+   seven PRL files and cannot be widened retroactively);
+2. create an immutable accepted Git/P0.6 baseline under scoped commit authority;
+3. collect natural Golden HR outcome receipts and prospective causal evidence;
+4. keep package/release/deployment/production claims closed until their own
+   gates are run.
+
+No commit, push, package, release, deployment or production operation occurred
+in this checkpoint.
+
+## 43. Exact-file EOCL acceptance and current lifecycle recapture — 2026-08-31T05:19Z
+
+The bounded operative wave `f8bb0fcf65a94e929b600b67e0413e6a` /
+`52e3d5abc9c247ea945a9e7089ba5254` completed its required proof and was
+accepted by ChatWeb at checkpoint
+`95468d1606764d768151ea1b047381e3`. The accepted checkpoint is bound to HEAD
+`a357e1bb45a68cfaf25b8a2aa99a133ab256102c`, worktree fingerprint
+`2878151e13221a8c6c9f6f8506b25c30b29d083e9b1f5435883452e508f77413`, and
+checkpoint proof fingerprint
+`a77efcee64e4503ce7ff2519b6c5c2811ef7d4ede07945b4bb6caae9897b9dc5`.
+
+The canonical `accepted_files` receipt is complete (`schema_version=2`,
+`count=3`) and is limited to exact existing bytes in the component-owned
+scope:
+
+| Path | SHA-256 | Size (bytes) |
+|---|---|---:|
+| `electron/services/recoveryActionStore.js` | `18c6a2b99ed2535324f0547030c2b65c4c573d98d6d6ff1846a0002812d4bdbf` | 75717 |
+| `electron/services/recoveryHost.js` | `8ed02caf81f451c9c78c9e4cffeb8a916c8c472985b778f4e674435a9a9072d0` | 130667 |
+| `resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py` | `fd21ea595592388abb62dca6b4cb89db8dd8b52b7d25498c2c19bbb9cca53ecd` | 68738 |
+
+All five focused deterministic proof stages passed. The wave performed no
+source edit; it adopted bytes that were already present and verified in the
+authorized worktree. The historical checkpoint
+`9411d3aec777422c89b25ef4837da86f` remains unchanged and cannot be widened
+retroactively. This closes exact-file EOCL acceptance for the three listed
+files, not a full accepted packet for every dirty Coding MCP source file.
+
+The fresh `npm run dev:status` receipt at `2026-08-31T05:19:22.575Z` reports
+`state=CURRENT`, `host=available`, `components_ready=true`, `fully_ready=true`,
+`runtime_update_incomplete=false`, `running_revision == disk_revision` for
+Electron UI and Coding MCP, and `error_code=none`. Connector continuity is
+`CURRENT_COMPATIBLE_ACKNOWLEDGED` via the managed-attested
+`compatible_activation_bootstrap` path. It truthfully remains
+`connector_rediscovered=false`, with `connector_refresh_required=false` and
+`connector_ack_pending=false`; no strict `tools/list` or `server/discover`
+receipt is inferred.
+
+The immutable query-only lifecycle census at
+`2026-08-31T05:19:30.478Z` reports schema `12`, SQLite integrity `ok`, zero
+foreign-key rows, `projection_drift=false`, `mutated_canonical_ledger=false`,
+zero managed jobs, zero unexplained active runs and zero unbound live
+resources. It classifies nine ordinary active RUN rows as seven
+`THRESHOLD_SENSITIVE_STALE_CANDIDATE`, one `GRACE_PERIOD_INACTIVE`, and one
+`AWAITING_ACCEPTANCE` (`275a340f190e43ffb7feeb47a0698109`). The stale candidates
+are below the current 86400-second threshold; the awaiting row has no safe
+exact acceptance packet. Because none has live ownership, they remain visible
+for the supported exact-ID path, but no force-reconciliation or blind
+acceptance is authorized.
+
+The resulting target-state classification is therefore: current local runtime
+activation `READY/OPEN` and the three-file EOCL checkpoint **closed**; full
+current Coding MCP component acceptance/P0.6 immutable baseline, natural Golden
+HR outcome evidence, prospective efficacy, commit, package/release,
+deployment and production **open**. No restart, commit, push, package,
+release, deployment or production operation occurred in this checkpoint.

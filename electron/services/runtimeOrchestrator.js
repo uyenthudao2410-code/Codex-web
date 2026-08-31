@@ -440,6 +440,8 @@ class RuntimeOrchestrator {
     this.gitStatusCache = null;
     this.gitStatusCacheAt = 0;
     this.gitStatusWorkspace = '';
+    this.gitStatusRefreshInFlight = null;
+    this.gitStatusRefreshWorkspace = '';
     this.busy = false;
     this.snapshotCache = null;
     this.snapshotCacheAt = 0;
@@ -903,20 +905,50 @@ class RuntimeOrchestrator {
     };
   }
 
-  async gitStatus(workspace) {
-    const target = String(workspace || '').trim();
-    if (!target) return { available: false, branch: null, head: null, head_short: null, dirty: null };
-    if (this.gitStatusCache && this.gitStatusWorkspace === target && Date.now() - this.gitStatusCacheAt < 10_000) return this.gitStatusCache;
+  async _probeGitStatus(target) {
     let status = { available: false, branch: null, head: null, head_short: null, dirty: null };
     try {
       const git = process.platform === 'win32' ? 'git.exe' : 'git';
       const result = await run(git, ['-C', target, 'status', '--porcelain=v2', '--branch', '--untracked-files=normal'], { allowFailure: true, timeoutMs: 2000 });
       if (result.code === 0) status = parseGitStatusPorcelainV2(result.stdout);
     } catch {}
-    this.gitStatusCache = status;
-    this.gitStatusCacheAt = Date.now();
-    this.gitStatusWorkspace = target;
     return status;
+  }
+
+  _refreshGitStatus(target) {
+    if (this.gitStatusRefreshInFlight && this.gitStatusRefreshWorkspace === target) {
+      return this.gitStatusRefreshInFlight;
+    }
+    let refresh;
+    refresh = this._probeGitStatus(target)
+      .catch(() => ({ available: false, branch: null, head: null, head_short: null, dirty: null }))
+      .then((status) => {
+        if (this.gitStatusRefreshInFlight === refresh && this.gitStatusRefreshWorkspace === target) {
+          this.gitStatusCache = status;
+          this.gitStatusCacheAt = Date.now();
+          this.gitStatusWorkspace = target;
+        }
+        return status;
+      })
+      .finally(() => {
+        if (this.gitStatusRefreshInFlight === refresh) {
+          this.gitStatusRefreshInFlight = null;
+          this.gitStatusRefreshWorkspace = '';
+        }
+      });
+    this.gitStatusRefreshInFlight = refresh;
+    this.gitStatusRefreshWorkspace = target;
+    return refresh;
+  }
+
+  async gitStatus(workspace) {
+    const target = String(workspace || '').trim();
+    if (!target) return { available: false, branch: null, head: null, head_short: null, dirty: null };
+    if (this.gitStatusCache && this.gitStatusWorkspace === target) {
+      if (Date.now() - this.gitStatusCacheAt >= 10_000) void this._refreshGitStatus(target);
+      return this.gitStatusCache;
+    }
+    return this._refreshGitStatus(target);
   }
 
   deviceProjection(settings, { mcpHealth = null, nativeAlive = false, tunnelRunning = false, git = null } = {}) {

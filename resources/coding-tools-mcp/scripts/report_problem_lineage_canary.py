@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit the read-only C4 PRL v11 canary readiness receipt for one snapshot."""
+"""Emit the read-only C4 PRL v12 canary readiness receipt for one snapshot."""
 
 from __future__ import annotations
 

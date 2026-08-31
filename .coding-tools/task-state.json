@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "037b642a187e4f098dc66e6dd1c9b3c1",
     "wave_id": "0742b3e58f714d6faac3835471840b1b",
-    "orchestration_state": "PREFLIGHT",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
@@ -16,11 +16,19 @@
     "contract_fp": ""
   },
   "objective": "Read-only validate the user's technical diagnosis about MCP protocol discovery versus callable business tools, Coding-VP/Coding-VP Live client exposure, tunnel-client polling, connector_tool_discovery receipts, and whether current LIVE blockers are host/transport or client-binding related. Do not modify files, create RUN/WAVE, restart services, or run destructive commands.",
-  "status": "idle",
+  "status": "stopped",
   "steps": [],
-  "current_step": "",
+  "current_step": "Aborted - operator report required",
   "current_command": null,
-  "last_command_result": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-08-31T08:46:02.424Z"
+  },
   "completion_report": null,
   "completion_report_id": "",
   "completion_report_acknowledged_id": "",
@@ -30,9 +38,9 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-30T03:30:56.457Z",
-  "updated_at": "2026-08-30T03:30:56.457Z",
+  "updated_at": "2026-08-31T08:46:02.424Z",
   "events": [
     {
       "time": "2026-08-30T03:30:56.457Z",
@@ -40,6 +48,27 @@
       "details": {
         "source": "canonical_ledger",
         "run_id": "037b642a187e4f098dc66e6dd1c9b3c1"
+      }
+    },
+    {
+      "time": "2026-08-31T04:31:43.533Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:46:02.424Z",
+      "event": "command_finished",
+      "details": {
+        "command": "curl -s -L \"https://proxy5.net/vi/free-proxy/vietnam\" | Select-String -Pattern \"api|fetch|proxy|json\" | Select-Object -First 50",
+        "status": "failed"
       }
     }
   ]

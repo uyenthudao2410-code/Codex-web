@@ -1,4 +1,4 @@
-"""Read-only C4 readiness receipt for the PRL v11 measurement instrument."""
+"""Read-only C4 readiness receipt for the PRL v12 measurement instrument."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ from typing import Any
 
 from .acceptance_receipts import passed_proof_fingerprint
 from .ledger_analysis import LedgerFacts
-from .problem_lineage import PROBLEM_EVENT_SCHEMA_CURRENT, PROBLEM_SCHEMA_VERSION, ProblemLineageError, _capsule
+from .problem_lineage import PROBLEM_EVENT_SCHEMA_V11, PROBLEM_SCHEMA_VERSION, ProblemLineageError, _capsule
 from .problem_resolution_economics import ProblemLineageFacts
 
 
 PROBLEM_LINEAGE_CANARY_SCHEMA_VERSION = 2
 PRL_V11_CODEBOOK_VERSION = "1.0.0"
 PRL_V11_COHORT_RULES_VERSION = "1.0.0"
-_AUTHORITATIVE_CONFIRMATION_AUTHORITIES = frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"})
+_AUTHORITATIVE_CONFIRMATION_AUTHORITIES = frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_OUTCOME_RECEIPT", "RUNTIME_HUMAN_REVIEW"})
 
 
 def _text(value: Any) -> str:
@@ -25,7 +25,7 @@ def _text(value: Any) -> str:
 
 
 def _current(event: dict[str, Any]) -> bool:
-    return int(event.get("event_schema_version") or 1) == PROBLEM_EVENT_SCHEMA_CURRENT
+    return int(event.get("event_schema_version") or 1) >= PROBLEM_EVENT_SCHEMA_V11
 
 
 def _sha(value: Any) -> str:
@@ -211,7 +211,7 @@ def problem_lineage_canary_report(ledger: LedgerFacts, problems: ProblemLineageF
     return {
         "schema_version": PROBLEM_LINEAGE_CANARY_SCHEMA_VERSION, "status": status,
         "codebook": {"problem_identity_version": PRL_V11_CODEBOOK_VERSION, "action_kind_version": PRL_V11_CODEBOOK_VERSION, "cohort_rules_version": PRL_V11_COHORT_RULES_VERSION, "semantic_change_rule": "bump_version_and_start_or_stratify_a_new_cohort"},
-        "natural_evidence": {"attested": False, "observed_current_v11_events": len(current_events), "natural_event_count": None, "reason": "the_ledger_does_not_classify_records_as_natural_and_this_report_never_fabricates_a_cohort"},
+        "natural_evidence": {"attested": False, "observed_policy_schema_events": len(current_events), "natural_event_count": None, "reason": "the_ledger_does_not_classify_records_as_natural_and_this_report_never_fabricates_a_cohort"},
         "integrity": {"sqlite_integrity_check": _text(integrity_check) or "unknown", "foreign_key_violations": foreign_key_violations, "problem_chain_invalid_threads": invalid_chains, "revision_contract_invalid_revisions": sum(revision_reasons.values()), "current_revision_projection_invalid_threads": sum(projection_reasons.values()), "orphan_or_noncontiguous_revision_rows": revision_reasons.get("orphan_revision_row", 0) + projection_reasons.get("revision_sequence_noncontiguous", 0), "revision_integrity_reason_counts": dict(sorted((revision_reasons + projection_reasons).items())), "all_observed_checks_pass": integrity_ok},
         "mechanics": {"exact_revision_binding": _coverage(len(exact_attempts), len(attempts)), "criterion_to_proof_structural_coverage": full_claims, "authoritative_confirmation": _coverage(len(authoritative), len(confirmations)), "attested_occurrence_clock": _coverage(len(trusted_clocks), len(clock_events))},
         "manual_review_queue": {"problem_identity_units": len(problems.revisions), "action_kind_events": len(current_events), "transition_authority_events": len(current_events), "timestamp_authority_events": len(clock_events), "capsule_privacy_review_units": len(problems.revisions), "criterion_proof_attribution_units": full_claims["denominator"], "ambiguous_or_unlinked_events": sum(1 for event in current_events if _text(event.get("link_status")) != "EXACT"), "false_split_merge": "manual_double_annotation_required;_not_inferred_from_aggregate_ledger_data", "reliability": "not_observed_until_independent_annotation_is_recorded"},

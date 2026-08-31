@@ -10,7 +10,7 @@
 - Base HEAD: `5f232e99f20873b4950d89d597989cb4c25e3404`
 - Worktree fingerprint: `da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -57,6 +57,8 @@
 | 32807 | 2026-08-30T16:31:03.477Z | failure_observed | ACCEPTING | ACCEPTING | reason=Reject to REPLAN because the only proof is bound to Base HEAD 5f232e99f20873b4950d89d597989cb4c25e3404 and worktree fingerprint da10672940aac133ba75cec2b00c5689d2cdca791f273f80fdbdb2170d3a76f0, while current HEAD is 9b766f241432b9b5bfa8aa75ae2f1816709a2c2d and later accepted work changed overlapping Control Center/live_control/test files. Proof is no longer exact-current and must not be reused. Preserve committed source; do not create a new RUN/WAVE.; failure_class=SOL_REJECTED |
 | 32808 | 2026-08-30T16:31:03.698Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
 | 32809 | 2026-08-30T16:31:03.910Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 33402 | 2026-08-31T13:58:22.133Z | state_transition | REPLAN | ABORTED | reason=operator_authorized_superseded_inactive_run_p0_6 |
+| 33403 | 2026-08-31T13:58:22.711Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -73,5 +75,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `35`
-- Chain head: `667ca1d3c5d94153110e2af17a04cac676909f1be24c595087113057f850e9aa`
+- Events checked: `37`
+- Chain head: `93796090b31c330c06542ca58276b4dfd30e99cc40bb45600f4782cc9ae21a5d`

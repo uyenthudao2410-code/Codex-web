@@ -427,6 +427,32 @@ test('controller status identifies the V2 baseline and accepted-receipt trust mo
   assert.equal(controller.status().continuity_mode, 'detached_runtime_children_v1');
 });
 
+test('idle controller with an established baseline skips component revision identity probes until accepted work appears', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  let diskReads = 0;
+  let runningReads = 0;
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { throw new Error('idle controller must not enter preflight'); },
+    activate: async () => { throw new Error('idle controller must not activate'); },
+    status: () => null
+  }, {
+    acceptedCheckpointProvider: () => [],
+    diskRevision: () => { diskReads += 1; return 'b'.repeat(64); },
+    runningRevision: () => { runningReads += 1; return 'b'.repeat(64); }
+  });
+  const state = controller.loadState();
+  await controller.ensureBaseline(workspace, state, await gitStatus(workspace, true));
+  const baselineDiskReads = diskReads;
+  const baselineRunningReads = runningReads;
+  assert.ok(baselineDiskReads > 0);
+  assert.ok(baselineRunningReads > 0);
+
+  await controller.tick();
+
+  assert.equal(diskReads, baselineDiskReads);
+  assert.equal(runningReads, baselineRunningReads);
+});
+
 test('Recovery Host worktree fingerprint is byte-compatible with canonical Python acceptance fingerprint', async (t) => {
   const { workspace } = await fixture(t);
   const identity = await workspaceIdentity(workspace);
@@ -745,6 +771,51 @@ test('accepted committed recovery-host bytes on a new Git HEAD activate from the
   assert.deepEqual(activations, ['b'.repeat(64), 'c'.repeat(64)]);
   assert.equal(state.baseline.components.recovery_host.head, newHead);
   assert.equal(state.baseline.components.recovery_host.revision, 'c'.repeat(64));
+});
+
+test('component activation bounds the committed delta after ownership filtering', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  let diskRevision = 'b'.repeat(64);
+  let runningRevision = diskRevision;
+  const activations = [];
+  const activation = {
+    preflight: async () => ({ safe: true, code: 'READY' }),
+    activate: async (request) => {
+      activations.push(request.expected_disk_revision);
+      runningRevision = request.expected_disk_revision;
+      return { state: 'completed', result: { activated: true } };
+    },
+    status: () => null
+  };
+  const controller = controllerFor(paths, workspace, activation, {
+    diskRevision: () => diskRevision,
+    runningRevision: () => runningRevision
+  });
+  await controller.tick();
+
+  write(path.join(workspace, 'electron', 'services', 'recoveryHost.js'), 'module.exports = { version: 3 };\n');
+  for (let index = 0; index < 2001; index += 1) {
+    write(path.join(workspace, 'docs', 'history', `entry-${String(index).padStart(4, '0')}.txt`), 'historical non-component path\n');
+  }
+  git(workspace, ['add', '.']);
+  git(workspace, ['commit', '-m', 'large repository delta with one recovery-host change']);
+  const newHead = git(workspace, ['rev-parse', 'HEAD']).trim();
+  diskRevision = 'c'.repeat(64);
+  insertAcceptedCheckpoint(workspace, {
+    checkpointId: 'checkpoint-auto-activation-component-filter',
+    runId: 'run-auto-activation-component-filter',
+    waveId: 'wave-auto-activation-component-filter',
+    head: newHead,
+    files: ['electron/services/recoveryHost.js'],
+    createdAt: '2026-01-01T00:00:02.500Z'
+  });
+
+  await controller.tick();
+  const state = controller.loadState();
+  const intent = state.intents.find((item) => item.checkpoint_id === 'checkpoint-auto-activation-component-filter');
+  assert.deepEqual(activations, ['b'.repeat(64), 'c'.repeat(64)]);
+  assert.equal(intent.state, 'completed');
+  assert.equal(controller.status().last_error, null);
 });
 
 test('unaccepted committed component delta blocks a new-HEAD checkpoint', async (t) => {

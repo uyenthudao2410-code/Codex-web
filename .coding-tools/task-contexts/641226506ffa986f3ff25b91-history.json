@@ -1,0 +1,478 @@
+[
+  {
+    "version": 2,
+    "task_id": "d5ef24f5e97245548d67f15c90951585",
+    "orchestration": {
+      "run_id": "c9b8093f3667445192b82c814f973bbe",
+      "wave_id": "e038f84dd2ef4b5a8bba6f7470abab74",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+      "worktree_fp": "23b313da58a0126af1b40a0f0ccd95543d797491fd2d7cf211994e24855e38d1",
+      "contract_fp": ""
+    },
+    "objective": "Eliminate the steady-state Windows PowerShell process-identity spawn storm in E:\\DEV\\Codex-web without weakening exact process identity or destructive termination authority. Scope is strictly electron/services/processIdentity.js and tests/process-identity.test.js. Prefer the smallest causal solution: reuse a hidden persistent asynchronous Windows process-identity broker with structured stdin/stdout for repeated async observations, accept only normalized numeric PIDs, bound output and timeouts, fail closed on spawn/pipe/protocol/output/timeout errors, avoid shell text interpolation, ensure the broker does not keep the parent alive or survive parent exit, while preserving exact fresh synchronous/destructive observation before taskkill. Preserve all concurrent dirty worktree changes. No restart, reset, restore, clean, commit, push, package, release, or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-31T09:08:11.710Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-31T09:08:11.710Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-31T09:08:11.710Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "O7E-pkbmKthuMKbFQUAfvx0O",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 893,
+      "finished_at": "2026-08-31T09:08:58.828Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "electron/services/processIdentity.js",
+            "state": "file",
+            "sha256": "c6b4548eaf59ce44702fd76f306624f00c3adb2c1329dd674536ab24f5f4cf45",
+            "size_bytes": 26393,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "c9b8093f3667445192b82c814f973bbe",
+            "wave_id": "e038f84dd2ef4b5a8bba6f7470abab74"
+          },
+          {
+            "path": "tests/process-identity.test.js",
+            "state": "file",
+            "sha256": "ade9007a25ca4c666f88168f8a5f4f444cbdf90dfab25576e9eceb1be0bbc78d",
+            "size_bytes": 14361,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "c9b8093f3667445192b82c814f973bbe",
+            "wave_id": "e038f84dd2ef4b5a8bba6f7470abab74"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 38,
+          "head_hash": "8bb41d92bb979c830deb862ba740d8dd266962d6c7da8f7a89f5cd3f397426fe"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c9b8093f3667445192b82c814f973bbe\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c9b8093f3667445192b82c814f973bbe\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "c9b8093f3667445192b82c814f973bbe",
+        "wave_id": "e038f84dd2ef4b5a8bba6f7470abab74",
+        "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+        "worktree_fp": "23b313da58a0126af1b40a0f0ccd95543d797491fd2d7cf211994e24855e38d1",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Eliminate the steady-state Windows PowerShell process-identity spawn storm in E:\\DEV\\Codex-web without weakening exact process identity or destructive termination authority. Scope is strictly electron/services/processIdentity.js and tests/process-identity.test.js. Prefer the smallest causal solution: reuse a hidden persistent asynchronous Windows process-identity broker with structured stdin/stdout for repeated async observations, accept only normalized numeric PIDs, bound output and timeouts, fail closed on spawn/pipe/protocol/output/timeout errors, avoid shell text interpolation, ensure the broker does not keep the parent alive or survive parent exit, while preserving exact fresh synchronous/destructive observation before taskkill. Preserve all concurrent dirty worktree changes. No restart, reset, restore, clean, commit, push, package, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "3919d1ad7bb469c1abe43a59bfafa5f02bfb82225fd5694b11ba017e2edcf7fe",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "9b51b09d1f2543268ac4c40647049afd",
+            "stage_id": "check:cb56b3d4601807f5",
+            "status": "passed",
+            "duration_ms": 10610,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "f1575cb169c647edb8cca6fa5891a4ff",
+            "stage_id": "check:6afc07a7bc0d94f2",
+            "status": "passed",
+            "duration_ms": 1246,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "6a70de7f2205e7befc6bf5029b4cd15b40ffd67495561661fe0f8c841a783ac5",
+    "completion_report_acknowledged_id": "6a70de7f2205e7befc6bf5029b4cd15b40ffd67495561661fe0f8c841a783ac5",
+    "completion_report_acknowledged_at": "2026-08-31T09:09:49.107Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "electron/services/processIdentity.js",
+        "operation": "update",
+        "updated_at": "2026-08-31T09:08:12.496Z"
+      },
+      {
+        "path": "tests/process-identity.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-31T09:08:12.496Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-31T09:05:23.824Z",
+    "updated_at": "2026-08-31T09:09:56.712Z",
+    "events": [
+      {
+        "time": "2026-08-31T09:05:23.824Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Eliminate the steady-state Windows PowerShell process-identity spawn storm in E:\\DEV\\Codex-web without weakening exact process identity or destructive termination authority. Scope is strictly electron/services/processIdentity.js and tests/process-identity.test.js. Prefer the smallest causal solution: reuse a hidden persistent asynchronous Windows process-identity broker with structured stdin/stdout for repeated async observations, accept only normalized numeric PIDs, bound output and timeouts, fail closed on spawn/pipe/protocol/output/timeout errors, avoid shell text interpolation, ensure the broker does not keep the parent alive or survive parent exit, while preserving exact fresh synchronous/destructive observation before taskkill. Preserve all concurrent dirty worktree changes. No restart, reset, restore, clean, commit, push, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-08-31T09:05:25.196Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T09:05:27.559Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T09:05:27.565Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:52.720Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:53.673Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:55.276Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:55.286Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:57.159Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:57.842Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:07:58.919Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/process-identity.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js",
+          "session_id": "l0pR5n-2G-ehhQsNu1fWRrUn"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:08.860Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/process-identity.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:10.194Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- electron/services/processIdentity.js tests/process-identity.test.js",
+          "session_id": "rJDe60H0_z55C_gYpld7KjTF"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:10.647Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- electron/services/processIdentity.js tests/process-identity.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:11.707Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:11.710Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:12.168Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:12.172Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:12.316Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "ec956b87d31c28ede782043e5267f5a886fa1e99f73e012b20b0b844ea2941de"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:12.496Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:36.180Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:49.807Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile electron/services/processIdentity.js SHA256",
+          "session_id": "B6sgS-vXLziJ-eDV-eu9IcIM"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:50.276Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile electron/services/processIdentity.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:56.917Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:58.311Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile tests/process-identity.test.js SHA256",
+          "session_id": "O7E-pkbmKthuMKbFQUAfvx0O"
+        }
+      },
+      {
+        "time": "2026-08-31T09:08:58.828Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile tests/process-identity.test.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:13.862Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:16.427Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:16.429Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:16.570Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "6a70de7f2205e7befc6bf5029b4cd15b40ffd67495561661fe0f8c841a783ac5"
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:31.789Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:49.107Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "6a70de7f2205e7befc6bf5029b4cd15b40ffd67495561661fe0f8c841a783ac5"
+        }
+      },
+      {
+        "time": "2026-08-31T09:09:56.712Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T09:10:08.749Z",
+    "archive_reason": "finished"
+  }
+]

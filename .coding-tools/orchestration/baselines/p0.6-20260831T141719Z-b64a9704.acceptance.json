@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "kind": "p0_6_immutable_accepted_baseline_receipt",
+  "status": "accepted",
+  "accepted_at": "2026-08-31T14:52:07.035Z",
+  "workspace": {
+    "root": "E:\\DEV\\Codex-web",
+    "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251",
+    "workspace_generation": 1,
+    "task_context_id": "ctx_7f1c3ea0b529dc506980c168bda0f818"
+  },
+  "candidate": {
+    "path": ".coding-tools/orchestration/baselines/p0.6-20260831T141719Z-b64a9704.candidate.json",
+    "sha256": "714381989e9f91ad8b60d337f989aeb7505cc412113a347d501ea3e6829398be",
+    "size_bytes": 11425,
+    "binding": "protected_evidence_bound_by_sha256_not_source_adopted",
+    "json_parse_verified": true
+  },
+  "source_packet": {
+    "schema_version": 1,
+    "sha256": "b64a9704a73ea78fd3f330f12712b03090f8082765b3befd4b52eaa849d8d739",
+    "file_count": 27,
+    "all_candidate_file_hashes_reverified_before_acceptance": true,
+    "mismatch_count": 0
+  },
+  "git": {
+    "branch": "main",
+    "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "origin_main_at_candidate_time": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "source_worktree_fingerprint_excluding_runtime_evidence": "2878151e13221a8c6c9f6f8506b25c30b29d083e9b1f5435883452e508f77413",
+    "eocl_worktree_fingerprint": "7b56eba3f74369a432af97275b156aab369018d7b1378af5fb4c6f8ad9995c5a",
+    "runtime_evidence_excluded_from_source_fingerprint": true
+  },
+  "eocl_acceptance": {
+    "run_id": "6536b6c605a44678977c2e3e088de2c6",
+    "wave_id": "88202f359cf24063a2f622c0136205c1",
+    "checkpoint_id": "e3b6c1a07b3f4524af8d0bef967fc7d5",
+    "orchestration_state": "CHECKPOINTED",
+    "run_status": "accepted",
+    "wave_status": "accepted",
+    "task_status": "completed",
+    "accepted_by": "chatweb",
+    "proof_fingerprint": "702139edffa332d62604af2b57e63c9ca65828207f92c589608f2c83df546fba",
+    "proofs": [
+      {
+        "stage_id": "check:216be7cafe7ddc20",
+        "proof_id": "59cc6345d60247f09c283cae8ea6ee47",
+        "input_fingerprint": "549b7e730b0c183f035714775b57ec66e7194c31f9ad0f0c413efd1b55c036a5",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 46772,
+        "cache_hit": false,
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js"
+      },
+      {
+        "stage_id": "check:466c2f308b48c766",
+        "proof_id": "24718863f6f1476487d0e4cab1cf23ea",
+        "input_fingerprint": "ede33781a9dac4cbee22d11ed85e6e1c0da8f8aa45865bab845572598a46090c",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1750,
+        "cache_hit": false,
+        "command": "git diff --check"
+      }
+    ],
+    "accepted_file_receipts": {
+      "source": "accepted_checkpoint_file_attestations",
+      "receipt_kind": "explicit_existing_file",
+      "count": 27,
+      "complete": true
+    },
+    "audit_integrity": {
+      "ok": true,
+      "events_checked": 75,
+      "chain_head": "07bf488dd2c638fd867456565aaa858df0de60f9867d53fbd07b3b7963bb4c5f"
+    },
+    "replans": [
+      {
+        "failure_class": "PROTECTED_PATH_WRITE",
+        "resolution": "Removed the protected .coding-tools candidate from source adoption and retained its independent content-addressed proof."
+      },
+      {
+        "failure_class": "PERMISSION_REQUIRED",
+        "resolution": "Removed the redundant inline interpreter proof that the current client could not authorize; retained exact file adoption, focused tests, and diff proof."
+      }
+    ]
+  },
+  "completion_report": {
+    "report_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c",
+    "accepted_or_not": "ACCEPTED",
+    "operator_visible_required": true,
+    "acknowledged": true,
+    "acknowledged_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c",
+    "acknowledged_at": "2026-08-31T14:54:53.925Z"
+  },
+  "final_lifecycle_census": {
+    "observed_at": "2026-08-31T14:58:43.315Z",
+    "canonical_ledger_schema_version": 12,
+    "snapshot_sha256": "f29ea8520aa0256d67a5159703484a02f4e64f7f304162e385195b91a99880c5",
+    "logical_sha256": "9fa0857d54e84f7bebc997546e3ac3f216a7b3a917b7713602af1218d92b7ad2",
+    "backup_api_copy": true,
+    "immutable": true,
+    "query_only": true,
+    "integrity_check": [
+      "ok"
+    ],
+    "foreign_key_check_rows": 0,
+    "ordinary_active_runs": 0,
+    "projection_drift": false,
+    "stale_background_operation_residues": 0,
+    "unbound_live_resource_residues": 0,
+    "unexplained_active_runs": 0,
+    "managed_jobs": [],
+    "p5_epoch_anchors_preserved": 6,
+    "source_checkpoint_verified": true,
+    "mutated_canonical_ledger": false
+  },
+  "runtime_binding": {
+    "activation_epoch_id": "activation-mthb7jt0-69ca22ed7963cff81e99b7a959782e8e",
+    "activation_state": "READY",
+    "admission": "OPEN",
+    "components_ready": true,
+    "fully_ready": true,
+    "runtime_update_incomplete": false,
+    "coding_mcp_process_instance_id": "GsH642_ouQ4cSIkD",
+    "coding_mcp_server_instance_id": "h8WMB7oCVtzNeEqn",
+    "connector_state": "CURRENT_COMPATIBLE_ACKNOWLEDGED",
+    "connector_freshness_mode": "compatible_activation_bootstrap",
+    "connector_rediscovered": false,
+    "strict_discovery_claimed": false,
+    "tool_contract_sha256": "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251"
+  },
+  "claim_boundary": {
+    "local_source_acceptance": "ACCEPTED",
+    "local_runtime": "READY_OPEN",
+    "local_delivery_commit": "BOUND_BY_CONTAINING_COMMIT",
+    "release_state": "NOT_RELEASED",
+    "production_state": "NOT_CLAIMED",
+    "push_performed": false,
+    "package_performed": false,
+    "publish_performed": false,
+    "tag_performed": false,
+    "release_performed": false,
+    "deploy_performed": false
+  }
+}

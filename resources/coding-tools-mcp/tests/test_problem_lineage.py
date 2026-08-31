@@ -11,7 +11,13 @@ from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
-from coding_tools_mcp.problem_lineage import PROBLEM_SCHEMA_VERSION, ProblemLineageError, problem_event_hash_material
+from coding_tools_mcp.problem_lineage import (
+    PROBLEM_EVENT_SCHEMA_CURRENT,
+    PROBLEM_SCHEMA_VERSION,
+    ProblemLineageError,
+    problem_event_hash_material,
+    problem_outcome_receipt_id,
+)
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.tool_schema import input_schemas, validate_arguments
 
@@ -182,6 +188,87 @@ class ProblemLineageTests(unittest.TestCase):
                     "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
                 }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
             self.assertTrue(ledger.problem_verify_chain(problem_id)["ok"])
+        finally:
+            temporary.cleanup()
+
+    def test_receipt_tamper_breaks_the_problem_event_hash_chain(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(open_event("receipt-chain-open"), now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+            problem_id = str(opened["event"]["problem_id"])
+            ledger.problem_record_event({
+                "operation": "provisional_resolve",
+                "event_id": "receipt-chain-provisional",
+                "problem_id": problem_id,
+                "problem_revision": 1,
+                "provenance": "DETERMINISTIC_EVIDENCE",
+                "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EOCL")
+            receipt_type = "CHATWEB_EXPLICIT_USER_OUTCOME_V1"
+            with self.assertRaisesRegex(ProblemLineageError, "exact host turn and trace"):
+                ledger.problem_record_event({
+                    "operation": "confirm",
+                    "event_id": "receipt-chain-hostless",
+                    "problem_id": problem_id,
+                    "problem_revision": 1,
+                    "feedback_intent": "CONFIRM_RESOLVED",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                    "evidence_level": "OBSERVED",
+                    "outcome_receipt_type": receipt_type,
+                    "outcome_receipt_id": problem_outcome_receipt_id(
+                        receipt_type=receipt_type,
+                        event_id="receipt-chain-hostless",
+                        problem_id=problem_id,
+                        problem_revision=1,
+                        turn_id="",
+                        trace_id="",
+                    ),
+                }, now=NOW, authority_context="RUNTIME_OUTCOME_RECEIPT")
+            with self.assertRaisesRegex(ProblemLineageError, "does not match the exact problem revision and host turn binding"):
+                ledger.problem_record_event({
+                    "operation": "confirm",
+                    "event_id": "receipt-chain-mismatched",
+                    "problem_id": problem_id,
+                    "problem_revision": 1,
+                    "turn_id": "turn-receipt-chain",
+                    "trace_id": "trace-receipt-chain",
+                    "feedback_intent": "CONFIRM_RESOLVED",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                    "evidence_level": "OBSERVED",
+                    "outcome_receipt_type": receipt_type,
+                    "outcome_receipt_id": "0" * 64,
+                }, now=NOW, authority_context="RUNTIME_OUTCOME_RECEIPT")
+            receipt_id = problem_outcome_receipt_id(
+                receipt_type=receipt_type,
+                event_id="receipt-chain-confirm",
+                problem_id=problem_id,
+                problem_revision=1,
+                turn_id="turn-receipt-chain",
+                trace_id="trace-receipt-chain",
+            )
+            confirmed = ledger.problem_record_event({
+                "operation": "confirm",
+                "event_id": "receipt-chain-confirm",
+                "problem_id": problem_id,
+                "problem_revision": 1,
+                "turn_id": "turn-receipt-chain",
+                "trace_id": "trace-receipt-chain",
+                "feedback_intent": "CONFIRM_RESOLVED",
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                "evidence_level": "OBSERVED",
+                "outcome_receipt_type": receipt_type,
+                "outcome_receipt_id": receipt_id,
+            }, now=NOW, authority_context="RUNTIME_OUTCOME_RECEIPT")
+            self.assertTrue(ledger.problem_verify_chain(problem_id)["ok"])
+            self.assertEqual(confirmed["event"]["outcome_receipt_id"], receipt_id)
+            with ledger._lock, ledger._connect() as connection:
+                connection.execute(
+                    "UPDATE problem_events SET outcome_receipt_id=? WHERE event_id=?",
+                    ("0" * 64, "receipt-chain-confirm"),
+                )
+            verification = ledger.problem_verify_chain(problem_id)
+            self.assertFalse(verification["ok"])
+            self.assertEqual(verification["reason"], "event_hash_mismatch")
         finally:
             temporary.cleanup()
 
@@ -386,7 +473,12 @@ class ProblemLineageTests(unittest.TestCase):
                             "observation": "The bounded fixture value is incorrect",
                             "a_star": {"domains": ["source"], "phenomena": ["incorrect value"], "ownership_boundaries": [], "relations": []},
                             "governing_invariants": [{"invariant_id": "invariant-1", "summary": "Preserve the existing public contract"}],
-                            "ownership": [], "hypotheses": [], "counterevidence": [],
+                            "ownership": [], "hypotheses": [],
+                            "counterevidence": [{
+                                "observation_id": "observation-runtime-c3",
+                                "summary": "A prior bounded intervention did not change the value",
+                                "impact": "Review whether the current frame explains the unchanged observation",
+                            }],
                             "decision_delta": {"tested_observation": "Focused fixture read", "changed_decision": True, "next_action": "Apply the bounded patch", "rationale": "The exact value is the selected cause"},
                             "closure_falsifier": "A focused read still shows the old value",
                         },
@@ -396,7 +488,15 @@ class ProblemLineageTests(unittest.TestCase):
                 wave_id = str(workflow["orchestration"]["wave_id"])
                 wave_metadata = runtime.orchestration_ledger.list_waves(run_id)[0]["metadata"]
                 self.assertEqual(wave_metadata["problem_resolution"]["problem_frame"]["frame_id"], "frame-runtime-c3")
-                self.assertTrue(any(item["event_type"] == "problem_frame_shadow" for item in runtime.orchestration_ledger.list_events(run_id, wave_id=wave_id)))
+                advisory = wave_metadata["problem_resolution"]["counterevidence_frame_update_advisory"]
+                self.assertEqual(advisory["status"], "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW")
+                self.assertTrue(advisory["frame_update_or_explanation_recommended"])
+                self.assertFalse(advisory["automatic_mutation_gate"])
+                frame_event = next(item for item in runtime.orchestration_ledger.list_events(run_id, wave_id=wave_id) if item["event_type"] == "problem_frame_shadow")
+                self.assertEqual(frame_event["payload"]["counterevidence_advisory_status"], "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW")
+                self.assertTrue(frame_event["payload"]["frame_update_or_explanation_recommended"])
+                self.assertFalse(frame_event["payload"]["materiality_inferred"])
+                self.assertFalse(frame_event["payload"]["automatic_mutation_gate"])
                 proof_id = runtime.orchestration_ledger.record_proof(
                     run_id=run_id,
                     wave_id=wave_id,
@@ -477,7 +577,25 @@ class ProblemLineageTests(unittest.TestCase):
                     "operation": "confirm", "event_id": "runtime-c3-confirm", "problem_id": problem_id,
                     "problem_revision": 1, "feedback_intent": "CONFIRM_RESOLVED",
                 }})
-                self.assertEqual(confirmed["problem"]["event"]["reason_code"], "user_confirmation")
+                confirmation = confirmed["problem"]["event"]
+                self.assertEqual(confirmation["reason_code"], "user_confirmation")
+                self.assertEqual(confirmation["event_schema_version"], PROBLEM_EVENT_SCHEMA_CURRENT)
+                self.assertEqual(confirmation["turn_id"], "turn-runtime-c3-confirm")
+                self.assertEqual(confirmation["trace_id"], "trace-runtime-c3-confirm")
+                self.assertEqual(confirmation["transition_authority"], "RUNTIME_OUTCOME_RECEIPT")
+                self.assertEqual(confirmation["outcome_receipt_type"], "CHATWEB_EXPLICIT_USER_OUTCOME_V1")
+                self.assertEqual(
+                    confirmation["outcome_receipt_id"],
+                    problem_outcome_receipt_id(
+                        receipt_type="CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                        event_id="runtime-c3-confirm",
+                        problem_id=problem_id,
+                        problem_revision=1,
+                        turn_id="turn-runtime-c3-confirm",
+                        trace_id="trace-runtime-c3-confirm",
+                    ),
+                )
+                self.assertTrue(runtime.orchestration_ledger.problem_verify_chain(problem_id)["ok"])
                 stage_host_turn(root, "runtime-c3-reopen")
                 reopened = runtime.task_control({"action": "problem", "problem_event": {
                     "operation": "reopen", "event_id": "runtime-c3-reopen", "problem_id": problem_id,
@@ -578,6 +696,17 @@ class ProblemLineageTests(unittest.TestCase):
                 with self.assertRaises(ToolFailure) as clock:
                     runtime.task_control({"action": "problem", "problem_event": {**public_event(open_event("clock")), "occurred_at": NOW, "occurred_at_source": "EXPLICIT_USER"}})
                 self.assertEqual(clock.exception.code, "PRL_CLOCK_FIELDS_FORBIDDEN")
+                with self.assertRaises(ToolFailure) as outcome_receipt:
+                    runtime.task_control({"action": "problem", "problem_event": {
+                        "operation": "confirm",
+                        "event_id": "caller-receipt",
+                        "problem_id": "caller-problem",
+                        "problem_revision": 1,
+                        "feedback_intent": "CONFIRM_RESOLVED",
+                        "outcome_receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                        "outcome_receipt_id": "0" * 64,
+                    }})
+                self.assertEqual(outcome_receipt.exception.code, "PRL_CALLER_OUTCOME_RECEIPT_FORBIDDEN")
 
                 pending = stage_host_turn(root, "restore")
                 with patch.object(runtime.orchestration_ledger, "problem_record_event", side_effect=ProblemLineageError("injected append failure")):
@@ -744,6 +873,8 @@ class ProblemLineageTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["action"]["enum"].count("problem"), 1)
         self.assertNotIn("eligible_for_policy", event_schema["properties"])
         self.assertNotIn("state", event_schema["properties"])
+        self.assertNotIn("outcome_receipt_type", event_schema["properties"])
+        self.assertNotIn("outcome_receipt_id", event_schema["properties"])
         self.assertIn("reconcile_provisional", event_schema["properties"]["operation"]["enum"])
         self.assertEqual(
             schema["properties"]["problem_criterion_dispositions"]["additionalProperties"]["enum"],
@@ -751,6 +882,13 @@ class ProblemLineageTests(unittest.TestCase):
         )
         with self.assertRaises(Exception):
             validate_arguments("task_control", {"action": "problem", "problem_event": {"operation": "open", "event_id": "bad", "eligible_for_policy": True}})
+        with self.assertRaises(Exception):
+            validate_arguments("task_control", {"action": "problem", "problem_event": {
+                "operation": "confirm",
+                "event_id": "bad-receipt",
+                "outcome_receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                "outcome_receipt_id": "0" * 64,
+            }})
 
 
 if __name__ == "__main__":

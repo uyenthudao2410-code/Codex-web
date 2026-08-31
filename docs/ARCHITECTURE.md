@@ -1,6 +1,6 @@
 # Architecture
 
-> **Current product scope (2026-08-16):** the operated Tools-Codex-web product is the Windows Electron **Execution Hub + Recovery Host + one Coding Tools MCP Runtime**. The detailed WebCodex server/runner architecture below remains valid for its core subsystem. For cross-product precedence and current operational status, read [`CURRENT_STATE.md`](CURRENT_STATE.md) first.
+> **Current product scope (2026-08-31):** the operated Tools-Codex-web product is the Windows Electron **Execution Hub + Recovery Host + one Coding Tools MCP Runtime**. The detailed WebCodex server/runner architecture below remains valid for its core subsystem. For cross-product precedence and current operational status, read [`CURRENT_STATE.md`](CURRENT_STATE.md) first.
 
 ## Current Desktop product boundary
 
@@ -37,6 +37,42 @@ Secondary Codex/OpenCode lanes are bounded candidate/review/provider lanes; they
 WebCodex is a self-hosted tool runtime that lets online AI clients operate private code through a server and a local execution agent. This document starts with the product architecture, then maps that architecture to the main Rust modules.
 
 For vocabulary, read [CONCEPTS.md](CONCEPTS.md). For setup, read [QUICK_START.md](QUICK_START.md).
+
+## Problem resolution contract — Revision 4
+
+The current Desktop product separates the user's problem contract from the
+engineering attempts used to satisfy it:
+
+```text
+Problem Revision = stable user job / desired-outcome contract
+Problem Frame    = revisable A* boundary + governing invariants G + causal hypotheses H
+RUN / WAVE       = one or more governed engineering attempts
+Technical proof = evidence about an attempt, not independent user-outcome confirmation
+```
+
+`Problem Revision` changes only when the user-level contract changes. Material
+feedback that the same contract is still failing reopens that revision and
+preserves prior technical proof; it does not manufacture a new problem merely
+to make an earlier acceptance appear final. A bounded shadow frame may record
+the minimal sufficient boundary `A*`, invariants `G`, hypotheses `H`, ownership,
+counterevidence, a Decision Delta attestation and a falsifier. Shadow state has
+no mutation, routing or acceptance authority.
+
+EOCL technical acceptance produces at most a provisional resolution. A
+`full_problem` claim must carry a bounded Resolution Envelope with direct
+outcomes, relevant invariants and truth domains, required evidence, excluded
+scope, representative adjacent risks and a credible closure-falsification
+probe. Trusted resolution additionally requires authoritative outcome evidence;
+proof-derived quality events cannot independently confirm the user job. The
+implementation remains inside the existing `agent_workflow` and
+`task_control` surfaces and does not add a ninth `smart-v3` tool or another
+resolution database.
+
+These source semantics are implemented and focused-tested. Golden HR case
+backfill, independent natural outcome coverage, Framing Regret, true semantic
+sibling recurrence, controlled methodology comparison and causal micro-policy
+promotion remain evidence gates. Missing natural observations stay
+`unknown`/`null`; they are never imputed as success or zero cost.
 
 ## Runtime Recovery Plane
 

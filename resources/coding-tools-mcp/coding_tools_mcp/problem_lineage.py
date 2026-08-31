@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Authority-safe Problem Resolution Lineage in the canonical SQLite ledger.
 
-V11 separates opaque identity, authority to change canonical state and later
+V12 separates opaque identity, authority to change canonical state and later
 policy eligibility.  It records a small typed contract revision, never raw
 prompts, transcripts, command output, source content, or arbitrary JSON.
 """
@@ -22,9 +22,10 @@ from urllib.parse import unquote
 from .resolution_contract import ResolutionContractError, contract_sha256, normalize_resolution_envelope
 
 
-PROBLEM_SCHEMA_VERSION = 11
+PROBLEM_SCHEMA_VERSION = 12
 PROBLEM_EVENT_SCHEMA_LEGACY = 1
-PROBLEM_EVENT_SCHEMA_CURRENT = 2
+PROBLEM_EVENT_SCHEMA_V11 = 2
+PROBLEM_EVENT_SCHEMA_CURRENT = 3
 PROBLEM_CAPSULE_MAX_BYTES = 8_192
 PROBLEM_OUTCOME_CLAIM_MAX_BYTES = 131_072
 _ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
@@ -55,6 +56,7 @@ PROBLEM_ECONOMIC_CLASSES = frozenset({"AVOIDABLE_CORRECTION", "PRODUCTIVE_CLARIF
 PROBLEM_PROVENANCE = frozenset({"HOST_OBSERVED", "CONTROLLER_REPORTED_EXPLICIT_USER", "DETERMINISTIC_EVIDENCE", "HUMAN_ANNOTATED", "SHADOW_MODEL_INFERRED", "UNKNOWN"})
 PROBLEM_EVIDENCE_LEVELS = frozenset({"OBSERVED", "DERIVED_HIGH_CONFIDENCE", "INFERRED", "UNKNOWN"})
 PROBLEM_OCCURRED_AT_SOURCES = frozenset({"RUNTIME", "HOST", "EXPLICIT_USER", "HUMAN_REVIEW", "EXTERNAL"})
+PROBLEM_OUTCOME_RECEIPT_TYPES = frozenset({"CHATWEB_EXPLICIT_USER_OUTCOME_V1"})
 PROBLEM_REASON_CODES = frozenset({"none", "user_confirmation", "explicit_same_problem_correction", "explicit_contract_revision", "blocked_external_dependency", "blocked_missing_problem_context", "abandoned_by_user", "no_run_created", "engineering_attempt_bound", "ambiguous_relation", "unlinked_relation"})
 
 _CLOSED_STATES = frozenset({"RESOLVED_CONFIRMED", "ABANDONED"})
@@ -63,7 +65,7 @@ _AUTHORITY = {
     "link": frozenset({"RUNTIME_BINDING", "RUNTIME_OBSERVATION"}),
     "observe_feedback": frozenset({"RUNTIME_OBSERVATION", "RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "provisional_resolve": frozenset({"RUNTIME_EOCL", "RUNTIME_RECONCILIATION"}),
-    "confirm": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
+    "confirm": frozenset({"RUNTIME_OUTCOME_RECEIPT", "RUNTIME_HUMAN_REVIEW"}),
     "reopen": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "revise": frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
     "block": frozenset({"RUNTIME_GUARD", "RUNTIME_OPERATOR", "RUNTIME_EXPLICIT_USER", "RUNTIME_HUMAN_REVIEW"}),
@@ -71,6 +73,7 @@ _AUTHORITY = {
 }
 _ELIGIBLE_AUTHORITY_PROVENANCE = frozenset({
     ("RUNTIME_EXPLICIT_USER", "CONTROLLER_REPORTED_EXPLICIT_USER"),
+    ("RUNTIME_OUTCOME_RECEIPT", "CONTROLLER_REPORTED_EXPLICIT_USER"),
     ("RUNTIME_HUMAN_REVIEW", "HUMAN_ANNOTATED"),
     ("RUNTIME_BINDING", "DETERMINISTIC_EVIDENCE"),
     ("RUNTIME_GUARD", "DETERMINISTIC_EVIDENCE"),
@@ -278,6 +281,28 @@ def _fingerprints(capsule: dict[str, Any]) -> tuple[str, str]:
     return _sha(_json(capsule)), _sha(_json(capsule["acceptance_criteria"]))
 
 
+def problem_outcome_receipt_id(
+    *,
+    receipt_type: str,
+    event_id: str,
+    problem_id: str,
+    problem_revision: int,
+    turn_id: str,
+    trace_id: str,
+) -> str:
+    """Derive the content-free exact binding for one host-attested outcome turn."""
+
+    return _sha(_json({
+        "schema_version": 1,
+        "receipt_type": receipt_type,
+        "event_id": event_id,
+        "problem_id": problem_id,
+        "problem_revision": problem_revision,
+        "turn_id": turn_id,
+        "trace_id": trace_id,
+    }))
+
+
 def _normalize(event: Any) -> dict[str, Any]:
     if not isinstance(event, dict):
         raise ProblemLineageError("problem_event must be an object")
@@ -286,7 +311,7 @@ def _normalize(event: Any) -> dict[str, Any]:
         "task_id", "turn_id", "trace_id", "run_id", "wave_id", "capsule_id", "conversation_epoch",
         "task_class", "engineering_floor", "relation_type", "link_status", "link_role", "feedback_intent",
         "causal_mechanism", "economic_class", "provenance", "evidence_level", "reason_code",
-        "contract_capsule", "occurred_at", "occurred_at_source",
+        "contract_capsule", "occurred_at", "occurred_at_source", "outcome_receipt_type", "outcome_receipt_id",
     }
     if set(event) - allowed:
         raise ProblemLineageError("problem_event contains disallowed fields")
@@ -349,6 +374,18 @@ def _normalize(event: Any) -> dict[str, Any]:
         submitted_reason = derived_reason
     elif operation == "block" and submitted_reason not in {"blocked_external_dependency", "blocked_missing_problem_context"}:
         raise ProblemLineageError("block requires a typed blocked reason_code")
+    outcome_receipt_type = _text(event.get("outcome_receipt_type"), "outcome_receipt_type").upper()
+    outcome_receipt_id = _text(event.get("outcome_receipt_id"), "outcome_receipt_id", limit=64).lower()
+    if outcome_receipt_type and outcome_receipt_type not in PROBLEM_OUTCOME_RECEIPT_TYPES:
+        raise ProblemLineageError("outcome_receipt_type is invalid")
+    if bool(outcome_receipt_type) != bool(outcome_receipt_id):
+        raise ProblemLineageError("outcome receipt type and id must be supplied together")
+    if outcome_receipt_id and not _FP_RE.fullmatch(outcome_receipt_id):
+        raise ProblemLineageError("outcome_receipt_id must be a SHA-256 digest")
+    if operation == "confirm" and not outcome_receipt_id:
+        raise ProblemLineageError("confirm requires a runtime-derived independent outcome receipt")
+    if operation != "confirm" and outcome_receipt_id:
+        raise ProblemLineageError("only confirm may bind an independent outcome receipt")
     return {
         "operation": operation, "event_id": event_id, "problem_id": problem_id, "problem_revision": revision,
         "expected_revision": _integer(event.get("expected_revision"), "expected_revision", required=operation == "revise"), "expected_contract_fingerprint": expected_fp,
@@ -358,6 +395,7 @@ def _normalize(event: Any) -> dict[str, Any]:
         "feedback_intent": _upper(event.get("feedback_intent"), "feedback_intent", PROBLEM_FEEDBACK_INTENTS, "UNKNOWN"), "causal_mechanism": _upper(event.get("causal_mechanism"), "causal_mechanism", PROBLEM_CAUSAL_MECHANISMS, "UNKNOWN"), "economic_class": _upper(event.get("economic_class"), "economic_class", PROBLEM_ECONOMIC_CLASSES, "UNKNOWN"),
         "provenance": _upper(event.get("provenance"), "provenance", PROBLEM_PROVENANCE, "UNKNOWN"), "evidence_level": _upper(event.get("evidence_level"), "evidence_level", PROBLEM_EVIDENCE_LEVELS, "UNKNOWN"), "reason_code": submitted_reason,
         "contract_capsule": _capsule(event.get("contract_capsule"), required=operation in {"open", "revise"}), "occurred_at": occurred_at, "occurred_at_source": occurred_source,
+        "outcome_receipt_type": outcome_receipt_type, "outcome_receipt_id": outcome_receipt_id,
     }
 
 
@@ -366,7 +404,7 @@ def _event(row: sqlite3.Row) -> dict[str, Any]:
     def get(key: str, default: Any = "") -> Any: return row[key] if key in keys else default
     schema = int(get("event_schema_version", 1))
     raw_eligible = bool(get("eligible_for_policy", 0))
-    return {"seq": int(get("seq", 0)), "event_id": str(get("event_id")), "event_schema_version": schema, "problem_id": get("problem_id") or None, "problem_revision": int(get("problem_revision", 0) or 0) or None, "task_id": str(get("task_id")), "turn_id": str(get("turn_id")), "trace_id": str(get("trace_id")), "run_id": str(get("run_id")), "wave_id": str(get("wave_id")), "capsule_id": str(get("capsule_id")), "conversation_epoch": int(get("conversation_epoch", 0) or 0), "relation_type": str(get("relation_type")), "link_status": str(get("link_status")), "link_role": str(get("link_role")), "feedback_intent": str(get("feedback_intent")), "causal_mechanism": str(get("causal_mechanism")), "economic_class": str(get("economic_class")), "provenance": str(get("provenance")), "evidence_level": str(get("evidence_level")), "eligible_for_policy": raw_eligible if schema > 1 else False, "legacy_eligible_for_policy": raw_eligible if schema == 1 else False, "transition_authority": str(get("transition_authority")), "state_before": str(get("state_before")), "state_after": str(get("state_after")), "reason_code": str(get("reason_code")), "criteria_count": int(get("criteria_count", 0) or 0), "criteria_fingerprint": str(get("criteria_fingerprint")), "contract_fingerprint": str(get("contract_fingerprint")), "recorded_at": str(get("recorded_at")), "occurred_at": str(get("occurred_at")), "occurred_at_source": str(get("occurred_at_source")), "clock_authority": str(get("clock_authority")), "event_time": str(get("event_time")), "prev_hash": str(get("prev_hash")), "event_hash": str(get("event_hash"))}
+    return {"seq": int(get("seq", 0)), "event_id": str(get("event_id")), "event_schema_version": schema, "problem_id": get("problem_id") or None, "problem_revision": int(get("problem_revision", 0) or 0) or None, "task_id": str(get("task_id")), "turn_id": str(get("turn_id")), "trace_id": str(get("trace_id")), "run_id": str(get("run_id")), "wave_id": str(get("wave_id")), "capsule_id": str(get("capsule_id")), "conversation_epoch": int(get("conversation_epoch", 0) or 0), "relation_type": str(get("relation_type")), "link_status": str(get("link_status")), "link_role": str(get("link_role")), "feedback_intent": str(get("feedback_intent")), "causal_mechanism": str(get("causal_mechanism")), "economic_class": str(get("economic_class")), "provenance": str(get("provenance")), "evidence_level": str(get("evidence_level")), "eligible_for_policy": raw_eligible if schema > 1 else False, "legacy_eligible_for_policy": raw_eligible if schema == 1 else False, "transition_authority": str(get("transition_authority")), "state_before": str(get("state_before")), "state_after": str(get("state_after")), "reason_code": str(get("reason_code")), "criteria_count": int(get("criteria_count", 0) or 0), "criteria_fingerprint": str(get("criteria_fingerprint")), "contract_fingerprint": str(get("contract_fingerprint")), "outcome_receipt_type": str(get("outcome_receipt_type")), "outcome_receipt_id": str(get("outcome_receipt_id")), "recorded_at": str(get("recorded_at")), "occurred_at": str(get("occurred_at")), "occurred_at_source": str(get("occurred_at_source")), "clock_authority": str(get("clock_authority")), "event_time": str(get("event_time")), "prev_hash": str(get("prev_hash")), "event_hash": str(get("event_hash"))}
 
 
 def _revision(row: sqlite3.Row) -> dict[str, Any]:
@@ -383,6 +421,8 @@ def problem_event_hash_material(value: dict[str, Any], *, state_before: str, sta
         material["eligible_for_policy"] = value.get("legacy_eligible_for_policy", value.get("eligible_for_policy"))
         return {**material, "state_before": state_before, "state_after": state_after, "prev_hash": prev_hash}
     names = ("event_schema_version", "event_id", "problem_id", "problem_revision", "task_id", "turn_id", "trace_id", "run_id", "wave_id", "capsule_id", "conversation_epoch", "relation_type", "link_status", "link_role", "feedback_intent", "causal_mechanism", "economic_class", "provenance", "evidence_level", "eligible_for_policy", "transition_authority", "reason_code", "criteria_count", "criteria_fingerprint", "contract_fingerprint", "recorded_at", "occurred_at", "occurred_at_source", "clock_authority")
+    if int(value.get("event_schema_version") or 1) >= PROBLEM_EVENT_SCHEMA_CURRENT:
+        names += ("outcome_receipt_type", "outcome_receipt_id")
     return {**{name: value.get(name) for name in names}, "state_before": state_before, "state_after": state_after, "prev_hash": prev_hash}
 
 
@@ -400,10 +440,11 @@ class ProblemLineageLedgerMixin:
                 problem_id TEXT NOT NULL REFERENCES problem_threads(problem_id) ON DELETE RESTRICT,revision INTEGER NOT NULL CHECK(revision>=1),contract_fingerprint TEXT NOT NULL,criteria_fingerprint TEXT NOT NULL,criteria_count INTEGER NOT NULL,typed_contract_capsule TEXT NOT NULL,task_class TEXT NOT NULL,engineering_floor TEXT NOT NULL,created_event_seq INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,creation_authority TEXT NOT NULL,PRIMARY KEY(problem_id,revision)
             );
             CREATE TABLE IF NOT EXISTS problem_events (
-                seq INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,event_schema_version INTEGER NOT NULL DEFAULT 2,problem_id TEXT REFERENCES problem_threads(problem_id) ON DELETE RESTRICT,problem_revision INTEGER,task_id TEXT NOT NULL DEFAULT '',turn_id TEXT NOT NULL DEFAULT '',trace_id TEXT NOT NULL DEFAULT '',run_id TEXT NOT NULL DEFAULT '',wave_id TEXT NOT NULL DEFAULT '',capsule_id TEXT NOT NULL DEFAULT '',conversation_epoch INTEGER NOT NULL DEFAULT 0,relation_type TEXT NOT NULL,link_status TEXT NOT NULL,link_role TEXT NOT NULL,feedback_intent TEXT NOT NULL,causal_mechanism TEXT NOT NULL,economic_class TEXT NOT NULL,provenance TEXT NOT NULL,evidence_level TEXT NOT NULL,eligible_for_policy INTEGER NOT NULL DEFAULT 0,transition_authority TEXT NOT NULL DEFAULT '',state_before TEXT NOT NULL DEFAULT '',state_after TEXT NOT NULL DEFAULT '',reason_code TEXT NOT NULL DEFAULT 'none',criteria_count INTEGER NOT NULL DEFAULT 0,criteria_fingerprint TEXT NOT NULL DEFAULT '',contract_fingerprint TEXT NOT NULL DEFAULT '',request_hash TEXT NOT NULL,recorded_at TEXT,occurred_at TEXT NOT NULL DEFAULT '',occurred_at_source TEXT NOT NULL DEFAULT '',clock_authority TEXT NOT NULL DEFAULT '',event_time TEXT NOT NULL DEFAULT '',prev_hash TEXT NOT NULL DEFAULT '',event_hash TEXT NOT NULL,
-                CHECK((event_schema_version=1) OR (event_schema_version=2 AND recorded_at IS NOT NULL AND recorded_at<>'')),
+                seq INTEGER PRIMARY KEY AUTOINCREMENT,event_id TEXT NOT NULL UNIQUE,event_schema_version INTEGER NOT NULL DEFAULT 3,problem_id TEXT REFERENCES problem_threads(problem_id) ON DELETE RESTRICT,problem_revision INTEGER,task_id TEXT NOT NULL DEFAULT '',turn_id TEXT NOT NULL DEFAULT '',trace_id TEXT NOT NULL DEFAULT '',run_id TEXT NOT NULL DEFAULT '',wave_id TEXT NOT NULL DEFAULT '',capsule_id TEXT NOT NULL DEFAULT '',conversation_epoch INTEGER NOT NULL DEFAULT 0,relation_type TEXT NOT NULL,link_status TEXT NOT NULL,link_role TEXT NOT NULL,feedback_intent TEXT NOT NULL,causal_mechanism TEXT NOT NULL,economic_class TEXT NOT NULL,provenance TEXT NOT NULL,evidence_level TEXT NOT NULL,eligible_for_policy INTEGER NOT NULL DEFAULT 0,transition_authority TEXT NOT NULL DEFAULT '',state_before TEXT NOT NULL DEFAULT '',state_after TEXT NOT NULL DEFAULT '',reason_code TEXT NOT NULL DEFAULT 'none',criteria_count INTEGER NOT NULL DEFAULT 0,criteria_fingerprint TEXT NOT NULL DEFAULT '',contract_fingerprint TEXT NOT NULL DEFAULT '',outcome_receipt_type TEXT NOT NULL DEFAULT '',outcome_receipt_id TEXT NOT NULL DEFAULT '',request_hash TEXT NOT NULL,recorded_at TEXT,occurred_at TEXT NOT NULL DEFAULT '',occurred_at_source TEXT NOT NULL DEFAULT '',clock_authority TEXT NOT NULL DEFAULT '',event_time TEXT NOT NULL DEFAULT '',prev_hash TEXT NOT NULL DEFAULT '',event_hash TEXT NOT NULL,
+                CHECK((event_schema_version=1) OR (event_schema_version>=2 AND recorded_at IS NOT NULL AND recorded_at<>'')),
                 CHECK((event_schema_version=1) OR ((occurred_at='' AND occurred_at_source='' AND clock_authority='') OR (occurred_at<>'' AND occurred_at_source<>'' AND clock_authority<>''))),
                 CHECK((event_schema_version=1) OR ((link_status='EXACT' AND problem_id IS NOT NULL AND problem_revision IS NOT NULL) OR (link_status<>'EXACT' AND problem_id IS NULL AND problem_revision IS NULL))),
+                CHECK((event_schema_version<3) OR ((relation_type='CONFIRMED_RESOLUTION' AND outcome_receipt_type='CHATWEB_EXPLICIT_USER_OUTCOME_V1' AND length(outcome_receipt_id)=64) OR (relation_type<>'CONFIRMED_RESOLUTION' AND outcome_receipt_type='' AND outcome_receipt_id=''))),
                 FOREIGN KEY(problem_id,problem_revision) REFERENCES problem_revisions(problem_id,revision) ON DELETE RESTRICT
             );
             CREATE INDEX IF NOT EXISTS idx_problem_events_problem_seq ON problem_events(problem_id,seq);
@@ -427,9 +468,19 @@ class ProblemLineageLedgerMixin:
             SELECT seq,event_id,1,problem_id,NULL,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,'',state_before,state_after,reason_code,criteria_count,criteria_fingerprint,'',request_hash,NULL,'','','',event_time,prev_hash,event_hash FROM problem_events_v10_legacy ORDER BY seq""")
         connection.execute("DROP TABLE problem_events_v10_legacy")
 
+    @classmethod
+    def _upgrade_v11(cls, connection: sqlite3.Connection) -> None:
+        for name in ("idx_problem_events_problem_seq", "idx_problem_events_problem_revision_seq", "idx_problem_events_task_turn", "idx_problem_events_run_wave", "idx_problem_events_one_primary_run_binding"):
+            connection.execute(f"DROP INDEX IF EXISTS {name}")
+        connection.execute("ALTER TABLE problem_events RENAME TO problem_events_v11_legacy")
+        cls._problem_ensure_schema(connection)
+        connection.execute("""INSERT INTO problem_events(seq,event_id,event_schema_version,problem_id,problem_revision,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,transition_authority,state_before,state_after,reason_code,criteria_count,criteria_fingerprint,contract_fingerprint,outcome_receipt_type,outcome_receipt_id,request_hash,recorded_at,occurred_at,occurred_at_source,clock_authority,event_time,prev_hash,event_hash)
+            SELECT seq,event_id,event_schema_version,problem_id,problem_revision,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,transition_authority,state_before,state_after,reason_code,criteria_count,criteria_fingerprint,contract_fingerprint,'','',request_hash,recorded_at,occurred_at,occurred_at_source,clock_authority,event_time,prev_hash,event_hash FROM problem_events_v11_legacy ORDER BY seq""")
+        connection.execute("DROP TABLE problem_events_v11_legacy")
+
     def migrate_problem_lineage_schema(self, *, expected_schema_version: int = 9) -> dict[str, Any]:
-        if expected_schema_version not in {9, 10}:
-            raise ProblemLineageError("PRL migration requires explicit expected schema version 9 or 10")
+        if expected_schema_version not in {9, 10, 11}:
+            raise ProblemLineageError("PRL migration requires explicit expected schema version 9, 10, or 11")
         with self._lock, self._connect() as connection:
             current = int(connection.execute("PRAGMA user_version").fetchone()[0])
             if current == PROBLEM_SCHEMA_VERSION:
@@ -437,14 +488,15 @@ class ProblemLineageLedgerMixin:
             if current != expected_schema_version:
                 raise ProblemLineageError(f"PRL migration requires schema v{expected_schema_version}, found v{current}")
             connection.execute("BEGIN IMMEDIATE")
-            if current == 10: self._upgrade_v10(connection)
+            if current == 11: self._upgrade_v11(connection)
+            elif current == 10: self._upgrade_v10(connection)
             else: self._problem_ensure_schema(connection)
             connection.execute(f"PRAGMA user_version={PROBLEM_SCHEMA_VERSION}")
         return {"migrated": True, "schema_version": PROBLEM_SCHEMA_VERSION, "legacy_events_preserved": True}
 
     def _require_problem_schema(self, connection: sqlite3.Connection) -> None:
         if int(connection.execute("PRAGMA user_version").fetchone()[0]) != PROBLEM_SCHEMA_VERSION:
-            raise ProblemLineageError("PRL schema is not activated; supported v9/v10-to-v11 migration authority is required")
+            raise ProblemLineageError("PRL schema is not activated; supported v9/v10/v11-to-v12 migration authority is required")
 
     @staticmethod
     def _revision_row(connection: sqlite3.Connection, problem_id: str, revision: int) -> sqlite3.Row | None:
@@ -454,7 +506,7 @@ class ProblemLineageLedgerMixin:
     def _clock_authority(event: dict[str, Any], authority: str) -> str:
         if not event["occurred_at"]: return ""
         source = event["occurred_at_source"]
-        allowed = {("RUNTIME", "RUNTIME_EOCL"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_RECONCILIATION"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_GUARD"): "RUNTIME_OWNED", ("HOST", "RUNTIME_BINDING"): "HOST_ATTESTED", ("HOST", "RUNTIME_OBSERVATION"): "HOST_ATTESTED", ("EXPLICIT_USER", "RUNTIME_EXPLICIT_USER"): "EXPLICIT_USER_ATTESTED", ("HUMAN_REVIEW", "RUNTIME_HUMAN_REVIEW"): "HUMAN_REVIEWED", ("EXTERNAL", "RUNTIME_HUMAN_REVIEW"): "AUTHORIZED_EXTERNAL", ("EXTERNAL", "RUNTIME_OPERATOR"): "AUTHORIZED_EXTERNAL"}
+        allowed = {("RUNTIME", "RUNTIME_EOCL"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_RECONCILIATION"): "RUNTIME_OWNED", ("RUNTIME", "RUNTIME_GUARD"): "RUNTIME_OWNED", ("HOST", "RUNTIME_BINDING"): "HOST_ATTESTED", ("HOST", "RUNTIME_OBSERVATION"): "HOST_ATTESTED", ("EXPLICIT_USER", "RUNTIME_EXPLICIT_USER"): "EXPLICIT_USER_ATTESTED", ("EXPLICIT_USER", "RUNTIME_OUTCOME_RECEIPT"): "EXPLICIT_USER_ATTESTED", ("HUMAN_REVIEW", "RUNTIME_HUMAN_REVIEW"): "HUMAN_REVIEWED", ("EXTERNAL", "RUNTIME_HUMAN_REVIEW"): "AUTHORIZED_EXTERNAL", ("EXTERNAL", "RUNTIME_OPERATOR"): "AUTHORIZED_EXTERNAL"}
         result = allowed.get((source, authority))
         if not result: raise ProblemLineageError("occurred_at is not trusted by the supplied runtime authority")
         return result
@@ -536,6 +588,19 @@ class ProblemLineageLedgerMixin:
                     if normalized["operation"] not in {"link", "observe_feedback"} and event_revision != int(thread["current_revision"]): raise ProblemLineageError("canonical transition must target the exact current problem revision")
                     after = self._after(normalized["operation"], before); contract_fp = str(revision_row["contract_fingerprint"]); criteria_fp = str(revision_row["criteria_fingerprint"]); criteria_count = int(revision_row["criteria_count"])
                 if not self._allowed_transition(before, after, normalized["operation"]): raise ProblemLineageError("problem state transition is invalid")
+            if normalized["operation"] == "confirm":
+                if not normalized["turn_id"] or not normalized["trace_id"]:
+                    raise ProblemLineageError("confirm requires an exact host turn and trace receipt binding")
+                expected_receipt_id = problem_outcome_receipt_id(
+                    receipt_type=normalized["outcome_receipt_type"],
+                    event_id=normalized["event_id"],
+                    problem_id=normalized["problem_id"],
+                    problem_revision=event_revision,
+                    turn_id=normalized["turn_id"],
+                    trace_id=normalized["trace_id"],
+                )
+                if normalized["outcome_receipt_id"] != expected_receipt_id:
+                    raise ProblemLineageError("outcome receipt does not match the exact problem revision and host turn binding")
             if normalized["run_id"] and normalized["link_status"] == "EXACT" and normalized["link_role"] == "PRIMARY" and normalized["relation_type"] in {"LINK", "ENGINEERING_ATTEMPT_BOUND"}:
                 prior = connection.execute("SELECT problem_id,problem_revision FROM problem_events WHERE run_id=? AND link_status='EXACT' AND link_role='PRIMARY' AND relation_type IN ('LINK','ENGINEERING_ATTEMPT_BOUND')", (normalized["run_id"],)).fetchone()
                 if prior is not None:
@@ -544,9 +609,9 @@ class ProblemLineageLedgerMixin:
             eligible = self._record_eligible(connection, normalized, authority_context, revision_row, clock)
             previous = connection.execute("SELECT event_hash FROM problem_events WHERE problem_id=? ORDER BY seq DESC LIMIT 1", (normalized["problem_id"],)).fetchone() if normalized["problem_id"] else None
             prev_hash = str(previous["event_hash"] or "") if previous is not None else ""
-            hash_material = problem_event_hash_material({**normalized, "event_schema_version": 2, "problem_revision": event_revision or None, "eligible_for_policy": eligible, "transition_authority": authority_context, "criteria_count": criteria_count, "criteria_fingerprint": criteria_fp, "contract_fingerprint": contract_fp, "recorded_at": recorded_at, "clock_authority": clock}, state_before=before, state_after=after, prev_hash=prev_hash)
+            hash_material = problem_event_hash_material({**normalized, "event_schema_version": PROBLEM_EVENT_SCHEMA_CURRENT, "problem_revision": event_revision or None, "eligible_for_policy": eligible, "transition_authority": authority_context, "criteria_count": criteria_count, "criteria_fingerprint": criteria_fp, "contract_fingerprint": contract_fp, "recorded_at": recorded_at, "clock_authority": clock}, state_before=before, state_after=after, prev_hash=prev_hash)
             event_hash = _sha(_json(hash_material))
-            connection.execute("""INSERT INTO problem_events(event_id,event_schema_version,problem_id,problem_revision,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,transition_authority,state_before,state_after,reason_code,criteria_count,criteria_fingerprint,contract_fingerprint,request_hash,recorded_at,occurred_at,occurred_at_source,clock_authority,event_time,prev_hash,event_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (normalized["event_id"], 2, normalized["problem_id"] or None, event_revision or None, normalized["task_id"], normalized["turn_id"], normalized["trace_id"], normalized["run_id"], normalized["wave_id"], normalized["capsule_id"], normalized["conversation_epoch"], normalized["relation_type"], normalized["link_status"], normalized["link_role"], normalized["feedback_intent"], normalized["causal_mechanism"], normalized["economic_class"], normalized["provenance"], normalized["evidence_level"], int(eligible), authority_context, before, after, normalized["reason_code"], criteria_count, criteria_fp, contract_fp, request_hash, recorded_at, normalized["occurred_at"], normalized["occurred_at_source"], clock, "", prev_hash, event_hash))
+            connection.execute("""INSERT INTO problem_events(event_id,event_schema_version,problem_id,problem_revision,task_id,turn_id,trace_id,run_id,wave_id,capsule_id,conversation_epoch,relation_type,link_status,link_role,feedback_intent,causal_mechanism,economic_class,provenance,evidence_level,eligible_for_policy,transition_authority,state_before,state_after,reason_code,criteria_count,criteria_fingerprint,contract_fingerprint,outcome_receipt_type,outcome_receipt_id,request_hash,recorded_at,occurred_at,occurred_at_source,clock_authority,event_time,prev_hash,event_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (normalized["event_id"], PROBLEM_EVENT_SCHEMA_CURRENT, normalized["problem_id"] or None, event_revision or None, normalized["task_id"], normalized["turn_id"], normalized["trace_id"], normalized["run_id"], normalized["wave_id"], normalized["capsule_id"], normalized["conversation_epoch"], normalized["relation_type"], normalized["link_status"], normalized["link_role"], normalized["feedback_intent"], normalized["causal_mechanism"], normalized["economic_class"], normalized["provenance"], normalized["evidence_level"], int(eligible), authority_context, before, after, normalized["reason_code"], criteria_count, criteria_fp, contract_fp, normalized["outcome_receipt_type"], normalized["outcome_receipt_id"], request_hash, recorded_at, normalized["occurred_at"], normalized["occurred_at_source"], clock, "", prev_hash, event_hash))
             stored = connection.execute("SELECT * FROM problem_events WHERE event_id=?", (normalized["event_id"],)).fetchone(); assert stored is not None
             stored_event = _event(stored)
             if normalized["problem_id"]:
@@ -587,7 +652,7 @@ class ProblemLineageLedgerMixin:
         turn_id = _opaque(turn_id, "turn_id", required=True); trace_id = _opaque(trace_id, "trace_id", required=True)
         with self._lock, self._connect() as connection:
             if int(connection.execute("PRAGMA user_version").fetchone()[0]) != PROBLEM_SCHEMA_VERSION: return {"status": "schema_inactive", "problem_id": None, "problem_revision": None}
-            rows = connection.execute("SELECT DISTINCT problem_id,problem_revision FROM problem_events WHERE turn_id=? AND trace_id=? AND link_status='EXACT' AND event_schema_version=2 AND problem_id IS NOT NULL AND problem_revision IS NOT NULL ORDER BY problem_id,problem_revision", (turn_id, trace_id)).fetchall()
+            rows = connection.execute("SELECT DISTINCT problem_id,problem_revision FROM problem_events WHERE turn_id=? AND trace_id=? AND link_status='EXACT' AND event_schema_version>=? AND problem_id IS NOT NULL AND problem_revision IS NOT NULL ORDER BY problem_id,problem_revision", (turn_id, trace_id, PROBLEM_EVENT_SCHEMA_V11)).fetchall()
         if len(rows) == 1: return {"status": "exact", "problem_id": str(rows[0]["problem_id"]), "problem_revision": int(rows[0]["problem_revision"])}
         if len(rows) > 1: return {"status": "ambiguous", "problem_id": None, "problem_revision": None, "candidate_count": len(rows)}
         return {"status": "unlinked", "problem_id": None, "problem_revision": None}
@@ -596,7 +661,7 @@ class ProblemLineageLedgerMixin:
         run_id = _opaque(run_id, "run_id", required=True)
         with self._lock, self._connect() as connection:
             if int(connection.execute("PRAGMA user_version").fetchone()[0]) != PROBLEM_SCHEMA_VERSION: return None
-            rows = connection.execute("SELECT DISTINCT problem_id,problem_revision FROM problem_events WHERE run_id=? AND link_status='EXACT' AND link_role='PRIMARY' AND relation_type IN ('LINK','ENGINEERING_ATTEMPT_BOUND') AND event_schema_version=2 AND problem_id IS NOT NULL AND problem_revision IS NOT NULL ORDER BY problem_id,problem_revision", (run_id,)).fetchall()
+            rows = connection.execute("SELECT DISTINCT problem_id,problem_revision FROM problem_events WHERE run_id=? AND link_status='EXACT' AND link_role='PRIMARY' AND relation_type IN ('LINK','ENGINEERING_ATTEMPT_BOUND') AND event_schema_version>=? AND problem_id IS NOT NULL AND problem_revision IS NOT NULL ORDER BY problem_id,problem_revision", (run_id, PROBLEM_EVENT_SCHEMA_V11)).fetchall()
             if len(rows) != 1: return None
             problem_id, revision = str(rows[0]["problem_id"]), int(rows[0]["problem_revision"]); revision_row = self._revision_row(connection, problem_id, revision); thread = connection.execute("SELECT * FROM problem_threads WHERE problem_id=?", (problem_id,)).fetchone()
             if revision_row is None or thread is None: return {"active_problem_id": problem_id, "problem_revision": revision, "context_status": "BLOCKED_MISSING_PROBLEM_CONTEXT", "policy_eligible": False}

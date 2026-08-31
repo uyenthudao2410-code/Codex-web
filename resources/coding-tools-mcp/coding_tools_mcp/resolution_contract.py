@@ -262,6 +262,32 @@ def normalize_problem_frame(value: Any) -> dict[str, Any]:
     return normalized
 
 
+def counterevidence_frame_update_advisory(frame: dict[str, Any]) -> dict[str, Any]:
+    """Project a content-free frame-review advisory without granting authority.
+
+    The frame contract does not infer whether an observation is materially
+    contradictory.  When the caller records counterevidence, this projection
+    therefore recommends an explicit materiality review and a frame update or
+    explanation before a same-family mutation retry.  It never blocks a route,
+    grants mutation authority, or claims that the frame was actually updated.
+    """
+
+    counterevidence_count = len(frame.get("counterevidence") or [])
+    decision_changed = bool((frame.get("decision_delta") or {}).get("changed_decision"))
+    review_recommended = counterevidence_count > 0
+    return {
+        "schema_version": 1,
+        "status": "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW" if review_recommended else "NO_COUNTEREVIDENCE_RECORDED",
+        "counterevidence_count": counterevidence_count,
+        "decision_changed_attested": decision_changed,
+        "frame_update_or_explanation_recommended": review_recommended,
+        "same_family_retry_materiality_review_recommended": review_recommended,
+        "materiality_inferred": False,
+        "authority": "ADVISORY_ONLY",
+        "automatic_mutation_gate": False,
+    }
+
+
 def normalize_resolution_envelope(value: Any) -> dict[str, Any]:
     """Canonicalize a bounded closure envelope for an exact accepted claim."""
     raw = _object(value, "resolution_envelope")

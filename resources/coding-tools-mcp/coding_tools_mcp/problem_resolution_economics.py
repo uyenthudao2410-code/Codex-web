@@ -1,4 +1,4 @@
-"""Read-only, revision-scoped PRL v11 measurement over one immutable snapshot.
+"""Read-only, revision-scoped PRL v12 measurement over one immutable snapshot.
 
 The reporter is deliberately descriptive. It never turns a thread projection
 into an outcome for an older revision, silently sums incompatible clocks, or
@@ -15,10 +15,16 @@ from datetime import datetime
 from typing import Any
 
 from .ledger_analysis import LedgerFacts, LedgerReadSession
-from .problem_lineage import PROBLEM_EVENT_SCHEMA_CURRENT, PROBLEM_SCHEMA_VERSION, problem_event_hash_material
+from .problem_lineage import (
+    PROBLEM_EVENT_SCHEMA_CURRENT,
+    PROBLEM_EVENT_SCHEMA_V11,
+    PROBLEM_SCHEMA_VERSION,
+    problem_event_hash_material,
+    problem_outcome_receipt_id,
+)
 
 
-PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 3
+PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 5
 _ACTIVE_STAGES = frozenset({"preflight", "localization", "routing", "execution", "replan", "proof", "acceptance"})
 _ADMINISTRATIVE_RELATIONS = frozenset({"BLOCK", "ABANDON"})
 
@@ -79,7 +85,7 @@ class ProblemLineageFacts:
             if problem_id:
                 self._events_by_problem[problem_id].append(event)
             revision = event.get("problem_revision")
-            if int(event.get("event_schema_version") or 1) == PROBLEM_EVENT_SCHEMA_CURRENT and problem_id and isinstance(revision, int) and not isinstance(revision, bool) and revision > 0:
+            if int(event.get("event_schema_version") or 1) >= PROBLEM_EVENT_SCHEMA_V11 and problem_id and isinstance(revision, int) and not isinstance(revision, bool) and revision > 0:
                 self._events_by_revision[(problem_id, revision)].append(event)
         for revision in revisions:
             problem_id = _text(revision.get("problem_id"))
@@ -130,7 +136,33 @@ class ProblemLineageFacts:
 
 
 def _current_eligible(event: dict[str, Any]) -> bool:
-    return int(event.get("event_schema_version") or 1) == PROBLEM_EVENT_SCHEMA_CURRENT and bool(event.get("eligible_for_policy"))
+    return int(event.get("event_schema_version") or 1) >= PROBLEM_EVENT_SCHEMA_V11 and bool(event.get("eligible_for_policy"))
+
+
+def _independent_outcome_receipt_bound(event: dict[str, Any]) -> bool:
+    if int(event.get("event_schema_version") or 1) < PROBLEM_EVENT_SCHEMA_CURRENT:
+        return False
+    receipt_type = _text(event.get("outcome_receipt_type"))
+    receipt_id = _text(event.get("outcome_receipt_id")).lower()
+    if (
+        receipt_type != "CHATWEB_EXPLICIT_USER_OUTCOME_V1"
+        or _text(event.get("relation_type")) != "CONFIRMED_RESOLUTION"
+        or _text(event.get("transition_authority")) != "RUNTIME_OUTCOME_RECEIPT"
+        or _text(event.get("provenance")) != "CONTROLLER_REPORTED_EXPLICIT_USER"
+        or _text(event.get("evidence_level")) != "OBSERVED"
+        or not _text(event.get("turn_id"))
+        or not _text(event.get("trace_id"))
+    ):
+        return False
+    expected = problem_outcome_receipt_id(
+        receipt_type=receipt_type,
+        event_id=_text(event.get("event_id")),
+        problem_id=_text(event.get("problem_id")),
+        problem_revision=int(event.get("problem_revision") or 0),
+        turn_id=_text(event.get("turn_id")),
+        trace_id=_text(event.get("trace_id")),
+    )
+    return receipt_id == expected
 
 
 def _attested_clock(event: dict[str, Any]) -> tuple[datetime, str] | None:
@@ -261,7 +293,7 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
     missing: dict[str, Counter[str]] = {key: Counter() for key in values}
     censored: Counter[str] = Counter(); competing: Counter[str] = Counter(); revision_outcomes = Counter()
     intervals: list[dict[str, float]] = []; wall_intervals: list[dict[str, float]] = []
-    chain_invalid = exact_links = coverage_complete = 0
+    chain_invalid = exact_links = coverage_complete = receipt_bound_confirmations = 0
     thread_states = Counter(_text(thread.get("resolution_state")) or "UNKNOWN" for thread in problems.threads)
 
     for revision in problems.revisions:
@@ -285,6 +317,8 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
             else: missing[key][reason or start_reason or "unknown"] += 1
         if provisional is not None: revision_outcomes["technical_full_pass_observed"] += 1
         if confirmed is not None: revision_outcomes["authoritative_confirmation_observed"] += 1
+        if confirmed is not None and _independent_outcome_receipt_bound(confirmed):
+            receipt_bound_confirmations += 1
         if provisional is not None and confirmed is not None: revision_outcomes["trusted_resolution_observed"] += 1
         if disposition is not None: revision_outcomes["administrative_disposition_observed"] += 1
         if confirmed is not None:
@@ -314,7 +348,7 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
         for run_id in run_ids:
             coverage_complete += sum(1 for wave in ledger.list_waves(run_id) if isinstance(wave.get("metadata"), dict) and isinstance(wave["metadata"].get("problem_resolution"), dict) and isinstance(wave["metadata"]["problem_resolution"].get("coverage_manifest"), dict))
 
-    current_events = sum(1 for event in problems.events if int(event.get("event_schema_version") or 1) == PROBLEM_EVENT_SCHEMA_CURRENT)
+    current_events = sum(1 for event in problems.events if int(event.get("event_schema_version") or 1) >= PROBLEM_EVENT_SCHEMA_V11)
     legacy_events, revision_count = len(problems.events) - current_events, len(problems.revisions)
     metrics = {
         "time_to_provisional": _metric(values["provisional"], missing["provisional"], metric_name="TTFP", definition="attested revision start to deterministic provisional resolution", eligible=revision_count, censored=censored["provisional"], competing=competing["provisional"]),
@@ -328,6 +362,7 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
     # technical checkpoint or from a silent interval.
     first_pass = false_closure = 0
     frame_events = decision_changed = 0
+    counterevidence_frame_events = counterevidence_advisory_events = 0
     frame_revisions: set[tuple[str, int, str, int]] = set()
     envelope_claims = envelope_with_observed_evidence = 0
     run_counts_by_revision: Counter[tuple[str, int]] = Counter()
@@ -351,6 +386,15 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
                         frame_events += 1
                         frame_revisions.add((problem_id, number, str(payload.get("frame_id") or ""), int(payload.get("frame_revision") or 0)))
                         decision_changed += int(bool(payload.get("decision_changed")))
+                        if int(payload.get("counterevidence_count") or 0) > 0:
+                            counterevidence_frame_events += 1
+                            if (
+                                str(payload.get("counterevidence_advisory_status") or "") == "COUNTEREVIDENCE_REQUIRES_FRAME_REVIEW"
+                                and bool(payload.get("frame_update_or_explanation_recommended"))
+                                and not bool(payload.get("materiality_inferred"))
+                                and not bool(payload.get("automatic_mutation_gate"))
+                            ):
+                                counterevidence_advisory_events += 1
             for wave in ledger.list_waves(run_id):
                 metadata = wave.get("metadata") if isinstance(wave.get("metadata"), dict) else {}
                 context = metadata.get("problem_resolution") if isinstance(metadata.get("problem_resolution"), dict) else {}
@@ -372,21 +416,38 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
         "false_closure": {"unit": "problem_revision", "numerator": false_closure, "denominator": revision_count, "rate": round(false_closure / revision_count, 6) if revision_count else None, "definition": "provisional technical closure followed by same-revision reopen", "unknown_is_not_zero": True},
         "frame_revisions": {"unit": "problem_revision", "observed_frame_events": frame_events, "distinct_frame_revisions": len(frame_revisions), "mean_per_revision": round(len(frame_revisions) / revision_count, 6) if revision_count else None},
         "decision_delta_shadow_attestation_rate": {"unit": "problem_frame_shadow_event", "changed_decision_attestations": decision_changed, "observed_shadow_events": frame_events, "rate": round(decision_changed / frame_events, 6) if frame_events else None, "classification": "shadow_attested", "causal_value_proven": False},
+        "counterevidence_frame_update_advisory_coverage": {"unit": "problem_frame_shadow_with_counterevidence", "observed_counterevidence_events": counterevidence_frame_events, "events_with_update_or_explain_advisory": counterevidence_advisory_events, "coverage": round(counterevidence_advisory_events / counterevidence_frame_events, 6) if counterevidence_frame_events else None, "classification": "descriptive_advisory_only", "materiality_inferred": False, "automatic_mutation_gate": False},
         "resolution_envelope_evidence_attestation_coverage": {"unit": "full_problem_claim", "claims": envelope_claims, "claims_with_observed_attestation": envelope_with_observed_evidence, "coverage": round(envelope_with_observed_evidence / envelope_claims, 6) if envelope_claims else None, "classification": "descriptive_attested_not_independent_confirmation", "receipt_bound": False, "technical_proof_is_not_user_outcome": True},
         "multi_primary_run_revision_rate": {"unit": "problem_revision", "revisions_with_multiple_primary_runs": multi_primary_run_revisions, "denominator": revision_count, "rate": round(multi_primary_run_revisions / revision_count, 6) if revision_count else None, "classification": "descriptive_multiple_attempt_proxy", "semantic_sibling_linkage_proven": False, "timestamp_or_keyword_inference_forbidden": True},
+        "framing_regret": {"unit": "avoidable_work_after_material_counterevidence", "status": "UNAVAILABLE", "value_ms": None, "missing_reason": "material_counterevidence_availability_clock_and_avoidable_work_attribution_not_recorded", "timestamp_or_keyword_inference_forbidden": True, "unknown_is_not_zero": True},
+        "true_sibling_recurrence": {"unit": "problem_revision", "status": "UNAVAILABLE", "rate": None, "missing_reason": "explicit_semantic_sibling_linkage_not_recorded", "multi_primary_run_is_proxy_only": True, "unknown_is_not_zero": True},
+        "independent_outcome_evidence_coverage": {
+            "unit": "problem_revision",
+            "status": "AVAILABLE",
+            "numerator": receipt_bound_confirmations,
+            "denominator": revision_count,
+            "coverage": round(receipt_bound_confirmations / revision_count, 6) if revision_count else None,
+            "authoritative_confirmation_events": int(revision_outcomes["authoritative_confirmation_observed"]),
+            "receipt_bound_confirmation_events": receipt_bound_confirmations,
+            "unbound_authoritative_confirmation_events": max(0, int(revision_outcomes["authoritative_confirmation_observed"]) - receipt_bound_confirmations),
+            "receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+            "independence_definition": "host_attested_explicit_user_outcome_not_derived_from_technical_proof",
+            "historical_confirmations_not_backfilled": True,
+            "unknown_is_not_zero": True,
+        },
         "control_friction_decomposition": {"unit": "wave_replanned_event", "counts": dict(sorted(control_friction.items())), "classification": "descriptive_structured_reason_only", "unknown_is_not_zero": True},
     }
     return {
         "schema_version": PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION, "problem_schema_version": problems.schema_version,
         "status": "DESCRIPTIVE_ONLY" if current_events else "NO_CURRENT_PRL_EVENTS",
         "analysis_unit": {"primary": "problem_revision", "key_fields": ["problem_id", "revision"], "thread_state_is_compatibility_projection_only": True},
-        "denominators": {"problem_threads": len(problems.threads), "problem_revisions": revision_count, "analysis_problem_revisions": revision_count, "problem_events": len(problems.events), "current_v11_events": current_events, "legacy_events_excluded_from_policy": legacy_events, "exact_revision_link_events": exact_links, "problem_chain_invalid_threads": chain_invalid, "right_censored_unconfirmed_revisions": censored["confirmed"], "competing_administrative_revision_dispositions": competing["confirmed"]},
+        "denominators": {"problem_threads": len(problems.threads), "problem_revisions": revision_count, "analysis_problem_revisions": revision_count, "problem_events": len(problems.events), "current_policy_schema_events": current_events, "legacy_events_excluded_from_policy": legacy_events, "exact_revision_link_events": exact_links, "problem_chain_invalid_threads": chain_invalid, "right_censored_unconfirmed_revisions": censored["confirmed"], "competing_administrative_revision_dispositions": competing["confirmed"]},
         "resolution_outcomes": {"state_counts": dict(sorted(thread_states.items())), "thread_projection_state_counts": dict(sorted(thread_states.items())), "provisional_threads": int(thread_states.get("PROVISIONALLY_RESOLVED", 0)), "confirmed_threads": int(thread_states.get("RESOLVED_CONFIRMED", 0)), "reopened_ever_threads": sum(1 for thread in problems.threads if any(_text(event.get("relation_type")) == "REOPEN" for event in problems.events_for_problem(_text(thread.get("problem_id"))))), "revision_outcomes": dict(sorted(revision_outcomes.items())), "trusted_resolution": {"unit": "problem_revision", "true": trusted, "unknown_or_untrusted": max(0, revision_count - trusted), "user_confirmation_does_not_accept_eocl_run": True}, "administrative_disposition_is_not_resolution": True},
         **metrics,
         "resolution_interval": {"unit": "problem_revision", "definition": "[latest valid technical full pass before confirmation, observed confirmation]; interval-censored real-world resolution", "observed_intervals": len(values["interval_width"]), "right_censored": censored["interval_width"], "competing_disposition": competing["interval_width"], "missing_or_invalid_reason_counts": dict(sorted(missing["interval_width"].items())), "ordered_exact_intervals_ms_when_n_le_20": intervals if 0 < len(intervals) <= 20 else None, "confirmation_is_not_exact_resolution_time": True},
         "ttpr_wall_ms": {"unit": "problem_revision", "definition": "attested authoritative start to interval-censored resolution", "point_estimate_status": "UNAVAILABLE_INTERVAL_CENSORED", "observed_intervals": len(wall_intervals), "ordered_exact_intervals_ms_when_n_le_20": wall_intervals if 0 < len(wall_intervals) <= 20 else None, "point_p50": None, "point_p90": None, "same_attested_clock_authority_required": True, "confirmation_is_not_exact_resolution_time": True},
         "restricted_ttpr_ms": {"definition": "union_of_active_stage_intervals_for_exact_primary_runs_of_one_problem_revision", "unit": "problem_revision", "active_stages": sorted(_ACTIVE_STAGES), "observed_revisions": len(values["active"]), "observed_threads": len(values["active"]), "missing_reason_counts": dict(sorted(missing["active"].items())), "ordered_exact_values_ms_when_n_le_20": _ordered(values["active"]), "p50": _percentile(values["active"], 50), "p90": _percentile(values["active"], 90), "cross_clock_domains_are_not_summed": True},
-        "mechanics_coverage": {"exact_revision_binding_events": exact_links, "full_claim_waves_with_structural_manifest": coverage_complete, "outcome_observation_requires_authoritative_transition": True, "legacy_schema_events_policy_ineligible": True},
+        "mechanics_coverage": {"exact_revision_binding_events": exact_links, "full_claim_waves_with_structural_manifest": coverage_complete, "receipt_bound_outcome_confirmations": receipt_bound_confirmations, "outcome_observation_requires_authoritative_transition": True, "legacy_schema_events_policy_ineligible": True},
         "policy": {"read_only_immutable_snapshot_required": True, "no_writer_or_schema_mutation": True, "no_raw_prompt_response_or_transcript": True, "no_timestamp_proximity_link": True, "no_historical_causal_backfill": True, "silence_is_censored": True, "administrative_disposition_not_success": True, "automatic_policy_promotion": False},
         "revision_4_metrics": revision_metrics,
     }

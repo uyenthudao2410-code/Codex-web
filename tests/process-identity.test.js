@@ -6,7 +6,9 @@ const { EventEmitter } = require('node:events');
 const { PassThrough } = require('node:stream');
 
 const {
+  POWERSHELL_BROKER_SCRIPT,
   POWERSHELL_OBSERVE_SCRIPT,
+  createWindowsIdentityBroker,
   normalizeProcessStartToken,
   observeProcessIdentity,
   observeProcessIdentityAsync,
@@ -21,6 +23,56 @@ const REPLACEMENT_TOKEN = '133801234567890999';
 
 function live(processStartToken = START_TOKEN) {
   return { state: 'live', pid: PID, process_start_token: processStartToken };
+}
+
+function brokerHarness({ responseFor, writeError = null } = {}) {
+  const calls = [];
+  const writes = [];
+  const children = [];
+  const spawn = (command, args, options) => {
+    calls.push({ command, args, options });
+    const child = new EventEmitter();
+    child.killed = false;
+    child.killCalls = 0;
+    child.refCalls = 0;
+    child.unrefCalls = 0;
+    child.stdout = new PassThrough();
+    child.stdout.refCalls = 0;
+    child.stdout.unrefCalls = 0;
+    child.stdout.ref = () => { child.stdout.refCalls += 1; };
+    child.stdout.unref = () => { child.stdout.unrefCalls += 1; };
+    child.stdin = new EventEmitter();
+    child.stdin.destroyed = false;
+    child.stdin.refCalls = 0;
+    child.stdin.unrefCalls = 0;
+    child.stdin.ref = () => { child.stdin.refCalls += 1; };
+    child.stdin.unref = () => { child.stdin.unrefCalls += 1; };
+    child.stdin.end = () => { child.stdin.destroyed = true; };
+    child.stdin.write = (chunk, callback) => {
+      if (writeError) throw writeError;
+      const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+      writes.push(text.trim());
+      const request = JSON.parse(text);
+      queueMicrotask(() => {
+        const response = responseFor?.(request);
+        if (response === null || response === undefined) return;
+        const output = typeof response === 'string' ? response : JSON.stringify(response);
+        child.stdout.write(`${output}\n`);
+      });
+      callback?.(null);
+      return true;
+    };
+    child.ref = () => { child.refCalls += 1; };
+    child.unref = () => { child.unrefCalls += 1; };
+    child.kill = () => {
+      child.killCalls += 1;
+      child.killed = true;
+      return true;
+    };
+    children.push(child);
+    return child;
+  };
+  return { calls, writes, children, spawn };
 }
 
 test('process start tokens wider than Number.MAX_SAFE_INTEGER remain canonical strings', () => {
@@ -222,28 +274,25 @@ test('Windows observation uses fixed PowerShell command, structured argv, and bo
   assert.deepEqual(options.stdio, ['ignore', 'pipe', 'ignore']);
 });
 
-test('asynchronous Windows observation preserves the exact structured probe without blocking spawnSync', async () => {
-  const calls = [];
+test('asynchronous Windows observation uses a fixed hidden broker command and structured PID frame', async () => {
+  const harness = brokerHarness({
+    responseFor: (request) => ({
+      id: request.id,
+      pid: request.pid,
+      state: 'live',
+      process_start_token: START_TOKEN
+    })
+  });
   const observed = await observeProcessIdentityAsync(PID, {
     platform: 'win32',
     noCache: true,
     timeoutMs: 1_234,
-    spawn: (command, args, options) => {
-      calls.push({ command, args, options });
-      const child = new EventEmitter();
-      child.stdout = new PassThrough();
-      child.kill = () => true;
-      queueMicrotask(() => {
-        child.stdout.end(START_TOKEN);
-        child.emit('close', 0);
-      });
-      return child;
-    }
+    spawn: harness.spawn
   });
 
   assert.deepEqual(observed, live());
-  assert.equal(calls.length, 1);
-  const [{ command, args, options }] = calls;
+  assert.equal(harness.calls.length, 1);
+  const [{ command, args, options }] = harness.calls;
   assert.equal(command, 'powershell.exe');
   assert.deepEqual(args.slice(0, 6), [
     '-NoLogo',
@@ -253,9 +302,110 @@ test('asynchronous Windows observation preserves the exact structured probe with
     'Bypass',
     '-Command'
   ]);
-  assert.equal(args[6], POWERSHELL_OBSERVE_SCRIPT);
-  assert.equal(args[7], String(PID));
+  assert.equal(args[6], POWERSHELL_BROKER_SCRIPT);
+  assert.equal(args.length, 7);
+  assert.doesNotMatch(args.join(' '), new RegExp(String(PID)));
+  assert.match(POWERSHELL_BROKER_SCRIPT, /ReadLine/);
+  assert.match(POWERSHELL_BROKER_SCRIPT, /ConvertFrom-Json/);
   assert.equal(options.shell, false);
   assert.equal(options.windowsHide, true);
-  assert.deepEqual(options.stdio, ['ignore', 'pipe', 'ignore']);
+  assert.deepEqual(options.stdio, ['pipe', 'pipe', 'ignore']);
+  assert.deepEqual(JSON.parse(harness.writes[0]), { id: 1, pid: PID });
+});
+
+test('persistent Windows identity broker reuses one child and unreferences idle handles', async () => {
+  const harness = brokerHarness({
+    responseFor: (request) => ({
+      id: request.id,
+      pid: request.pid,
+      state: 'live',
+      process_start_token: START_TOKEN
+    })
+  });
+  const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+  try {
+    const first = await observeProcessIdentityAsync(PID, { platform: 'win32', noCache: true, broker });
+    const second = await observeProcessIdentityAsync(PID, { platform: 'win32', noCache: true, broker });
+    assert.deepEqual(first, live());
+    assert.deepEqual(second, live());
+    assert.equal(harness.calls.length, 1);
+    assert.deepEqual(harness.writes.map((item) => JSON.parse(item)), [
+      { id: 1, pid: PID },
+      { id: 2, pid: PID }
+    ]);
+    const child = harness.children[0];
+    assert.ok(child.unrefCalls > 0);
+    assert.ok(child.stdin.unrefCalls > 0);
+    assert.ok(child.stdout.unrefCalls > 0);
+  } finally {
+    broker.close();
+  }
+});
+
+test('persistent Windows identity broker fails closed on spawn, pipe, output, and timeout failures', async (t) => {
+  await t.test('spawn failure', async () => {
+    const broker = createWindowsIdentityBroker({
+      spawnProcess: () => { throw Object.assign(new Error('missing broker'), { code: 'ENOENT' }); }
+    });
+    const observed = await broker.observe(PID, { timeoutMs: 100 });
+    assert.equal(observed.state, 'unavailable');
+    assert.equal(observed.details.reason, 'broker_spawn_failed');
+    assert.equal(observed.details.cause_code, 'ENOENT');
+  });
+
+  await t.test('pipe failure', async () => {
+    const harness = brokerHarness({
+      responseFor: () => null,
+      writeError: Object.assign(new Error('broken pipe'), { code: 'EPIPE' })
+    });
+    const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+    try {
+      const observed = await broker.observe(PID, { timeoutMs: 100 });
+      assert.equal(observed.state, 'unavailable');
+      assert.equal(observed.details.reason, 'broker_pipe_write_failed');
+      assert.equal(observed.details.cause_code, 'EPIPE');
+      assert.equal(harness.children[0].killCalls, 1);
+    } finally {
+      broker.close();
+    }
+  });
+
+  await t.test('malformed output', async () => {
+    const harness = brokerHarness({ responseFor: () => 'not-json' });
+    const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+    try {
+      const observed = await broker.observe(PID, { timeoutMs: 100 });
+      assert.equal(observed.state, 'unavailable');
+      assert.equal(observed.details.reason, 'probe_protocol_invalid');
+      assert.equal(harness.children[0].killCalls, 1);
+    } finally {
+      broker.close();
+    }
+  });
+
+  await t.test('oversized output', async () => {
+    const harness = brokerHarness({ responseFor: () => '9'.repeat(5_000) });
+    const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+    try {
+      const observed = await broker.observe(PID, { timeoutMs: 100 });
+      assert.equal(observed.state, 'unavailable');
+      assert.equal(observed.details.reason, 'probe_output_too_large');
+      assert.equal(harness.children[0].killCalls, 1);
+    } finally {
+      broker.close();
+    }
+  });
+
+  await t.test('timeout', async () => {
+    const harness = brokerHarness({ responseFor: () => null });
+    const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+    try {
+      const observed = await broker.observe(PID, { timeoutMs: 100 });
+      assert.equal(observed.state, 'unavailable');
+      assert.equal(observed.details.reason, 'probe_timeout');
+      assert.equal(harness.children[0].killCalls, 1);
+    } finally {
+      broker.close();
+    }
+  });
 });

@@ -354,6 +354,48 @@ test('Git and persistent-device ownership helpers project exact local identity s
   assert.equal(parseLoopbackListenerPid('  TCP    127.0.0.1:18766    0.0.0.0:0    LISTENING    4321\r\n  TCP    127.0.0.1:18766    0.0.0.0:0    LISTENING    9999\r\n', 18766), null);
 });
 
+test('lightweight Git telemetry serves stale cache while one slow refresh runs in background', { timeout: 2_000 }, async () => {
+  const orchestrator = Object.create(RuntimeOrchestrator.prototype);
+  const workspace = 'C:\\work\\one';
+  const otherWorkspace = 'C:\\work\\two';
+  const cached = { available: true, branch: 'main', head: 'a'.repeat(40), head_short: 'aaaaaaaa', dirty: false };
+  const refreshed = { available: true, branch: 'main', head: 'b'.repeat(40), head_short: 'bbbbbbbb', dirty: true };
+  Object.assign(orchestrator, {
+    gitStatusCache: cached,
+    gitStatusCacheAt: Date.now() - 10_001,
+    gitStatusWorkspace: workspace,
+    gitStatusRefreshInFlight: null,
+    gitStatusRefreshWorkspace: ''
+  });
+  let probes = 0;
+  let resolveRefresh;
+  orchestrator._probeGitStatus = async (target) => {
+    assert.equal(target, workspace);
+    probes += 1;
+    return new Promise((resolve) => { resolveRefresh = resolve; });
+  };
+
+  assert.strictEqual(await orchestrator.gitStatus(workspace), cached);
+  const refresh = orchestrator.gitStatusRefreshInFlight;
+  assert.ok(refresh);
+  assert.strictEqual(await orchestrator.gitStatus(workspace), cached);
+  assert.equal(probes, 1);
+
+  resolveRefresh(refreshed);
+  assert.strictEqual(await refresh, refreshed);
+  assert.strictEqual(await orchestrator.gitStatus(workspace), refreshed);
+  assert.equal(orchestrator.gitStatusRefreshInFlight, null);
+
+  const other = { available: true, branch: 'feature', head: 'c'.repeat(40), head_short: 'cccccccc', dirty: false };
+  orchestrator._probeGitStatus = async (target) => {
+    assert.equal(target, otherWorkspace);
+    probes += 1;
+    return other;
+  };
+  assert.strictEqual(await orchestrator.gitStatus(otherWorkspace), other);
+  assert.equal(probes, 2);
+});
+
 test('device-aware process services keep legacy or foreign live owners fail-closed in source contract', () => {
   const nativeSource = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'nativeService.js'), 'utf8');
   const tunnelSource = fs.readFileSync(path.join(__dirname, '..', 'electron', 'services', 'tunnelService.js'), 'utf8');

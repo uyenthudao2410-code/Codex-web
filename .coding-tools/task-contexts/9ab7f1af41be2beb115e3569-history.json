@@ -1,0 +1,482 @@
+[
+  {
+    "version": 2,
+    "task_id": "be82741aa2bb45f4bef44f8d3cf9e8c1",
+    "orchestration": {
+      "run_id": "dfdba9f2671a4650be62388be22653db",
+      "wave_id": "5ab88632b5e34cd68f477f098007d09f",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+      "worktree_fp": "9f0de7a7684514ee770cc58d3e8ca4b1e4af621123a8ea03599a9784c926e145",
+      "contract_fp": "baa44dc13a7c69d1ccb86e052fe750b99c909830b09b2617827276be81a86afa"
+    },
+    "objective": "Remove the periodic blocking Git status probe from Electron lightweight snapshot while preserving bounded fail-closed device Git telemetry: serve the existing same-workspace cache immediately after its 10-second freshness window, refresh it once in the background with singleflight, block only for the initial observation or a different workspace, and prove the behavior with a focused regression test.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-08-31T07:15:52.874Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-08-31T07:15:52.874Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-08-31T07:15:52.874Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "nF1INaWwYMOz2l37Fxvye0ur",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 726,
+      "finished_at": "2026-08-31T07:15:51.518Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "electron/services/runtimeOrchestrator.js",
+            "state": "file",
+            "sha256": "7d0546a533c8cd27ca3f8a0a5d18b23eb411cbc633706c078f346744718a694c",
+            "size_bytes": 135178,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "dfdba9f2671a4650be62388be22653db",
+            "wave_id": "5ab88632b5e34cd68f477f098007d09f"
+          },
+          {
+            "path": "tests/runtime-lifecycle.test.js",
+            "state": "file",
+            "sha256": "00807c8983cf2075996cbd897392a429f47b36928e8140df66f3084a3c38bfd6",
+            "size_bytes": 117037,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "dfdba9f2671a4650be62388be22653db",
+            "wave_id": "5ab88632b5e34cd68f477f098007d09f"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 32,
+          "head_hash": "a3e173b18a8083990793a01bc046419bb307dc717b2bb1fbabbf25dc169746a8"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dfdba9f2671a4650be62388be22653db\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dfdba9f2671a4650be62388be22653db\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "dfdba9f2671a4650be62388be22653db",
+        "wave_id": "5ab88632b5e34cd68f477f098007d09f",
+        "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+        "worktree_fp": "9f0de7a7684514ee770cc58d3e8ca4b1e4af621123a8ea03599a9784c926e145",
+        "contract_fp": "baa44dc13a7c69d1ccb86e052fe750b99c909830b09b2617827276be81a86afa",
+        "objective_provenance": {
+          "effective_objective": "Remove the periodic blocking Git status probe from Electron lightweight snapshot while preserving bounded fail-closed device Git telemetry: serve the existing same-workspace cache immediately after its 10-second freshness window, refresh it once in the background with singleflight, block only for the initial observation or a different workspace, and prove the behavior with a focused regression test.",
+          "objective_revision": 1,
+          "objective_sha256": "5c15947d12fed153625bbb32f8d79244650906bba7ca659f48c23b964d6b1d7a",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "959ce595c67a4ebda911cda3d75f9727",
+            "stage_id": "check:bca10c4982d91b0e",
+            "status": "passed",
+            "duration_ms": 10903,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "95a1afba5c774bb5832c49b6bf20b976",
+            "stage_id": "check:94e824a3884457f8",
+            "status": "passed",
+            "duration_ms": 1276,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "1d5483f6b02f2b5abd23cdb0cae0bf354c8f900f3ac01878fb0f28217b1c54d8",
+    "completion_report_acknowledged_id": "1d5483f6b02f2b5abd23cdb0cae0bf354c8f900f3ac01878fb0f28217b1c54d8",
+    "completion_report_acknowledged_at": "2026-08-31T07:20:43.713Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "electron/services/runtimeOrchestrator.js",
+        "operation": "update",
+        "updated_at": "2026-08-31T07:15:53.391Z"
+      },
+      {
+        "path": "tests/runtime-lifecycle.test.js",
+        "operation": "update",
+        "updated_at": "2026-08-31T07:15:53.391Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-31T07:10:33.502Z",
+    "updated_at": "2026-08-31T07:27:07.294Z",
+    "events": [
+      {
+        "time": "2026-08-31T07:10:33.502Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Remove the periodic blocking Git status probe from Electron lightweight snapshot while preserving bounded fail-closed device Git telemetry: serve the existing same-workspace cache immediately after its 10-second freshness window, refresh it once in the background with singleflight, block only for the initial observation or a different workspace, and prove the behavior with a focused regression test."
+        }
+      },
+      {
+        "time": "2026-08-31T07:10:35.066Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T07:10:35.284Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:31.850Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:34.128Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:35.540Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:35.546Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:37.498Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:38.500Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:39.397Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/runtime-lifecycle.test.js tests/control-center-manager.test.js tests/ui-performance-metrics.test.js",
+          "session_id": "YxFTztMbZYSZ3GjOtn8jgkjp"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:49.645Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/runtime-lifecycle.test.js tests/control-center-manager.test.js tests/ui-performance-metrics.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:50.981Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js",
+          "session_id": "nF1INaWwYMOz2l37Fxvye0ur"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:51.518Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:52.871Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:52.874Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:53.243Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:53.247Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:53.384Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "f9c17897ee48d991d78e6577e3f837704660a8fd629bfd508d3b8a3572935d0a"
+        }
+      },
+      {
+        "time": "2026-08-31T07:15:53.391Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-08-31T07:17:43.787Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:17:46.824Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-31T07:17:46.833Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:17:46.967Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "1d5483f6b02f2b5abd23cdb0cae0bf354c8f900f3ac01878fb0f28217b1c54d8"
+        }
+      },
+      {
+        "time": "2026-08-31T07:20:43.356Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T07:20:43.713Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "1d5483f6b02f2b5abd23cdb0cae0bf354c8f900f3ac01878fb0f28217b1c54d8"
+        }
+      },
+      {
+        "time": "2026-08-31T07:27:07.294Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T08:04:49.705Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "734d3bfce7754b1c8828054faadc530d",
+    "orchestration": {
+      "run_id": "32850f4e4931407b8a2f849039bf1e86",
+      "wave_id": "2b2f429a5fb54d0b93cfc2dea685ae14",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+      "worktree_fp": "c29ee2bb310ac3d8ebaea221a9a69504b735cbcc6f54e95514e1891d4fac1b7c",
+      "contract_fp": "e3ea0340218fa55274ddb092c5d1964a882a10a8c2bd6029c212d3623d581f45"
+    },
+    "objective": "Create a new EOCL-controlled source wave for E:\\DEV\\Codex-web to remove the idle AcceptedCodeActivationController auto-activation synchronous process-identity probe storm without weakening fail-closed activation authority. Current causal evidence: main HEAD a357e1bb45a68cfaf25b8a2aa99a133ab256102c with intentional dirty worktree; AUTO_ACTIVATION_INTERVAL_MS=3000; discover() calls ensureBaseline() before knowing whether accepted work exists; ensureBaseline() force-hashes recovery_host/coding_mcp/electron_ui and runtimeRevisionStatus(), where coding_mcp and electron_ui can trigger synchronous Windows process-identity probes; 120 cached recovery.ping samples show paired ~357-438 ms outliers every ~3 seconds; a 12-second read-only process census observed 34 powershell.exe children under current Recovery Host PID 29992; direct component hashing is only a few to low tens of milliseconds. Smallest causal solution: in electron/services/recoveryActionStore.js, after preserving forced Git/checkpoint discovery, if an established baseline exists and there is neither an active checkpoint nor an unprocessed accepted candidate, return before ensureBaseline(); still run ensureBaseline() when baseline is missing, an active checkpoint exists, or a candidate exists. Do not bypass preflight, revalidation, source-checkpoint authority, or exact activation checks. Add a focused regression in tests/accepted-code-activation.test.js proving the established-baseline/no-candidate idle path does not call disk/running revision providers while existing candidate/activation tests continue to protect the work-present path. Production behavior must remain unchanged until exact acceptance and a supported full-clean activation. Planned validation after mutation: node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js; git diff --check -- electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js. No commit, push, package, release, deploy, restart, raw HTTP, or mutation outside EOCL write authority.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T08:04:49.707Z",
+    "updated_at": "2026-08-31T08:04:53.152Z",
+    "events": [
+      {
+        "time": "2026-08-31T08:04:49.707Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Create a new EOCL-controlled source wave for E:\\DEV\\Codex-web to remove the idle AcceptedCodeActivationController auto-activation synchronous process-identity probe storm without weakening fail-closed activation authority. Current causal evidence: main HEAD a357e1bb45a68cfaf25b8a2aa99a133ab256102c with intentional dirty worktree; AUTO_ACTIVATION_INTERVAL_MS=3000; discover() calls ensureBaseline() before knowing whether accepted work exists; ensureBaseline() force-hashes recovery_host/coding_mcp/electron_ui and runtimeRevisionStatus(), where coding_mcp and electron_ui can trigger synchronous Windows process-identity probes; 120 cached recovery.ping samples show paired ~357-438 ms outliers every ~3 seconds; a 12-second read-only process census observed 34 powershell.exe children under current Recovery Host PID 29992; direct component hashing is only a few to low tens of milliseconds. Smallest causal solution: in electron/services/recoveryActionStore.js, after preserving forced Git/checkpoint discovery, if an established baseline exists and there is neither an active checkpoint nor an unprocessed accepted candidate, return before ensureBaseline(); still run ensureBaseline() when baseline is missing, an active checkpoint exists, or a candidate exists. Do not bypass preflight, revalidation, source-checkpoint authority, or exact activation checks. Add a focused regression in tests/accepted-code-activation.test.js proving the established-baseline/no-candidate idle path does not call disk/running revision providers while existing candidate/activation tests continue to protect the work-present path. Production behavior must remain unchanged until exact acceptance and a supported full-clean activation. Planned validation after mutation: node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js; git diff --check -- electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js. No commit, push, package, release, deploy, restart, raw HTTP, or mutation outside EOCL write authority."
+        }
+      },
+      {
+        "time": "2026-08-31T08:04:51.146Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T08:04:53.146Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T08:04:53.152Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T08:06:16.282Z",
+    "archive_reason": "superseded"
+  }
+]

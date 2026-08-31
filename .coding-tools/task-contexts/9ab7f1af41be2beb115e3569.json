@@ -1,0 +1,508 @@
+{
+  "version": 2,
+  "task_id": "5f0dc4ac20404cdebe80223e0d94ff5e",
+  "orchestration": {
+    "run_id": "8d82b639cc8846439b9ffa8414381a48",
+    "wave_id": "14a235d37900406783a6a9b4f0047832",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "worktree_fp": "c29ee2bb310ac3d8ebaea221a9a69504b735cbcc6f54e95514e1891d4fac1b7c",
+    "contract_fp": "e3ea0340218fa55274ddb092c5d1964a882a10a8c2bd6029c212d3623d581f45"
+  },
+  "objective": "Continue the existing EOCL RUN 32850f4e4931407b8a2f849039bf1e86 / WAVE 2b2f429a5fb54d0b93cfc2dea685ae14 only far enough to complete PREFLIGHT and establish exact write authority/fencing over exactly electron/services/recoveryActionStore.js and tests/accepted-code-activation.test.js. Do not modify any source, do not run mutation commands, tests, restart, commit, push, package, release, or deploy in this call. Preserve the recorded solution shadow p0.6-auto-activation-idle-fast-path-v1. If this current wave/mode cannot legally grant the requested Desktop write owner without an explicit ownership/mode transition or new wave, fail closed with the typed blocker rather than changing mode, owner, RUN, WAVE, or source implicitly.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-31T08:26:49.833Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-31T08:26:49.833Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-31T08:26:49.833Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "R2cdt2FmOr5z4bPAorGXkHbt",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 718,
+    "finished_at": "2026-08-31T08:26:48.764Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/services/recoveryActionStore.js",
+          "state": "file",
+          "sha256": "9163948a46e10354daa6c0fb1b9ff4aa81875a6bfe11d8f01749ace1821a4bda",
+          "size_bytes": 75914,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "8d82b639cc8846439b9ffa8414381a48",
+          "wave_id": "14a235d37900406783a6a9b4f0047832"
+        },
+        {
+          "path": "tests/accepted-code-activation.test.js",
+          "state": "file",
+          "sha256": "c8bf68031e09567ff5f76066f99ef9869ed44612359c8364e45764a254e02259",
+          "size_bytes": 51293,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "8d82b639cc8846439b9ffa8414381a48",
+          "wave_id": "14a235d37900406783a6a9b4f0047832"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 47,
+        "head_hash": "034069a93b53a56a52238e574a738ef72294ce41331de7231e777e876e52877c"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8d82b639cc8846439b9ffa8414381a48\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8d82b639cc8846439b9ffa8414381a48\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8d82b639cc8846439b9ffa8414381a48\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "8d82b639cc8846439b9ffa8414381a48",
+      "wave_id": "14a235d37900406783a6a9b4f0047832",
+      "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+      "worktree_fp": "c29ee2bb310ac3d8ebaea221a9a69504b735cbcc6f54e95514e1891d4fac1b7c",
+      "contract_fp": "e3ea0340218fa55274ddb092c5d1964a882a10a8c2bd6029c212d3623d581f45",
+      "objective_provenance": {
+        "effective_objective": "Create a new EOCL-controlled source wave for E:\\DEV\\Codex-web to remove the idle AcceptedCodeActivationController auto-activation synchronous process-identity probe storm without weakening fail-closed activation authority. Current causal evidence: main HEAD a357e1bb45a68cfaf25b8a2aa99a133ab256102c with intentional dirty worktree; AUTO_ACTIVATION_INTERVAL_MS=3000; discover() calls ensureBaseline() before knowing whether accepted work exists; ensureBaseline() force-hashes recovery_host/coding_mcp/electron_ui and runtimeRevisionStatus(), where coding_mcp and electron_ui can trigger synchronous Windows process-identity probes; 120 cached recovery.ping samples show paired ~357-438 ms outliers every ~3 seconds; a 12-second read-only process census observed 34 powershell.exe children under current Recovery Host PID 29992; direct component hashing is only a few to low tens of milliseconds. Smallest causal solution: in electron/services/recoveryActionStore.js, after preserving forced Git/checkpoint discovery, if an established baseline exists and there is neither an active checkpoint nor an unprocessed accepted candidate, return before ensureBaseline(); still run ensureBaseline() when baseline is missing, an active checkpoint exists, or a candidate exists. Do not bypass preflight, revalidation, source-checkpoint authority, or exact activation checks. Add a focused regression in tests/accepted-code-activation.test.js proving the established-baseline/no-candidate idle path does not call disk/running revision providers while existing candidate/activation tests continue to protect the work-present path. Production behavior must remain unchanged until exact acceptance and a supported full-clean activation. Planned validation after mutation: node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js; git diff --check -- electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js. No commit, push, package, release, deploy, restart, raw HTTP, or mutation outside EOCL write authority.",
+        "objective_revision": 2,
+        "objective_sha256": "90d42cf685ce50d8874b8f836d8846514d99c32bdc83adf28e267357f3abea78",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "8d30d5c814e9438f96cf689986a3d709",
+          "stage_id": "check:7c4507e17de4a4fe",
+          "status": "passed",
+          "duration_ms": 46915,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "95fd573b570341ae9ad7e008fede9b62",
+          "stage_id": "check:a66b2f6b14d25aac",
+          "status": "passed",
+          "duration_ms": 1144,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "9908468e0d160b1a3cf3b7c5f3d9fbe9947baf09500cb9a83b25c29163de778f",
+  "completion_report_acknowledged_id": "9908468e0d160b1a3cf3b7c5f3d9fbe9947baf09500cb9a83b25c29163de778f",
+  "completion_report_acknowledged_at": "2026-08-31T08:33:08.224Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "electron/services/recoveryActionStore.js",
+      "operation": "update",
+      "updated_at": "2026-08-31T08:26:50.552Z"
+    },
+    {
+      "path": "tests/accepted-code-activation.test.js",
+      "operation": "update",
+      "updated_at": "2026-08-31T08:26:50.552Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-31T08:06:16.285Z",
+  "updated_at": "2026-08-31T09:05:04.207Z",
+  "events": [
+    {
+      "time": "2026-08-31T08:06:16.285Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:17.052Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:18.281Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:19.633Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:20.781Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:20.783Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:06:20.928Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:08:49.504Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:08:50.305Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-08-31T08:15:01.667Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:15:03.069Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:15:03.075Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-31T08:20:07.371Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:20:07.574Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:54.607Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:55.745Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:57.356Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:57.364Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:58.935Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-31T08:25:59.597Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:00.800Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js",
+        "session_id": "TBWDJRRYqomVfcyyOyWIpBv2"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:46.936Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:48.348Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js",
+        "session_id": "R2cdt2FmOr5z4bPAorGXkHbt"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:48.764Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- electron/services/recoveryActionStore.js tests/accepted-code-activation.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:49.831Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:49.833Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:50.282Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:50.282Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:50.422Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "8235a36ec17af54c9bbccfaac74f29e63aaa51f7e0379466c83fa50d86527339"
+      }
+    },
+    {
+      "time": "2026-08-31T08:26:50.552Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-08-31T08:29:06.741Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:29:09.459Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-31T08:29:09.461Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:29:09.595Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "9908468e0d160b1a3cf3b7c5f3d9fbe9947baf09500cb9a83b25c29163de778f"
+      }
+    },
+    {
+      "time": "2026-08-31T08:30:23.836Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T08:33:08.224Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "9908468e0d160b1a3cf3b7c5f3d9fbe9947baf09500cb9a83b25c29163de778f"
+      }
+    },
+    {
+      "time": "2026-08-31T09:05:04.207Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

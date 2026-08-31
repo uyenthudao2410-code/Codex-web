@@ -1,0 +1,301 @@
+{
+  "schema_version": 1,
+  "kind": "p0_6_immutable_accepted_baseline_candidate",
+  "status": "candidate_pending_eocl_acceptance",
+  "observed_at": "2026-08-31T14:17:19.562Z",
+  "workspace": {
+    "root": "E:\\DEV\\Codex-web",
+    "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251",
+    "workspace_generation": 1,
+    "task_context_id": "ctx_7f1c3ea0b529dc506980c168bda0f818"
+  },
+  "git": {
+    "branch": "main",
+    "head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "origin_main": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "source_worktree_fingerprint": "2878151e13221a8c6c9f6f8506b25c30b29d083e9b1f5435883452e508f77413",
+    "runtime_evidence_excluded_from_source_fingerprint": true
+  },
+  "source_packet": {
+    "schema_version": 1,
+    "canonicalization": "UTF-8 minified JSON object with keys schema_version then files; file keys path,sha256,size_bytes; files sorted by path",
+    "sha256": "b64a9704a73ea78fd3f330f12712b03090f8082765b3befd4b52eaa849d8d739",
+    "count": 27,
+    "files": [
+      {
+        "path": "docs/ARCHITECTURE.md",
+        "sha256": "b15afc4b56c45fc52b9be67aa732eb2bc85342677699b673c47fadb20107367c",
+        "size_bytes": 40785
+      },
+      {
+        "path": "docs/CURRENT_STATE.md",
+        "sha256": "3baf1495661657b0112b99a97ce7be8d83ac1306b6ef676781eb43b543b9a670",
+        "size_bytes": 81130
+      },
+      {
+        "path": "docs/ROADMAP.md",
+        "sha256": "4aee6a8b57db4b8f4820ca6195e71c8c4429774513a84cc34ef4a7f96537cdce",
+        "size_bytes": 25969
+      },
+      {
+        "path": "docs/research/260828_CODING_WEB_TARGET_STATE_GAP_ANALYSIS_AND_COMPLETION_PLAN.md",
+        "sha256": "a907145b106f5cf5df6d4ae64044a81ff0265dc9d8e667e8d85feb6828eda2ef",
+        "size_bytes": 137545
+      },
+      {
+        "path": "docs/research/260831_CODING_WEB_GOLDEN_HR_RESOLUTION_CASES_CALIBRATION_V1.md",
+        "sha256": "35f6060c50cb7cb22b6a0bce7a3edc06a0e9545448460628b6b3bb6db952e8e7",
+        "size_bytes": 32399
+      },
+      {
+        "path": "electron/services/processIdentity.js",
+        "sha256": "c6b4548eaf59ce44702fd76f306624f00c3adb2c1329dd674536ab24f5f4cf45",
+        "size_bytes": 26393
+      },
+      {
+        "path": "electron/services/recoveryActionStore.js",
+        "sha256": "9163948a46e10354daa6c0fb1b9ff4aa81875a6bfe11d8f01749ace1821a4bda",
+        "size_bytes": 75914
+      },
+      {
+        "path": "electron/services/recoveryHost.js",
+        "sha256": "8ed02caf81f451c9c78c9e4cffeb8a916c8c472985b778f4e674435a9a9072d0",
+        "size_bytes": 130667
+      },
+      {
+        "path": "electron/services/runtimeOrchestrator.js",
+        "sha256": "7d0546a533c8cd27ca3f8a0a5d18b23eb411cbc633706c078f346744718a694c",
+        "size_bytes": 135178
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+        "sha256": "a16d7c575117742975ef77000171c3880933ba2992d582fbe21bb91bc6e4d69c",
+        "size_bytes": 87600
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py",
+        "sha256": "e04a6b72a4820659fe32de91e3e0145227584eff0be601ddac860f16d03d3507",
+        "size_bytes": 12517
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_canary.py",
+        "sha256": "a50943d893978d0f0761ebfb6a4124d71c166257f799b346aad5f7c714c98307",
+        "size_bytes": 16884
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+        "sha256": "998a36c125b2eee03f0717d275933a788d164f5d549b19c8ccf259410cffa8d7",
+        "size_bytes": 17766
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
+        "sha256": "ca5e1ad43c225bb552325569d8f4e89f315a5b00f9cd54587e55be003261b31e",
+        "size_bytes": 33710
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/resolution_contract.py",
+        "sha256": "58be8225cb0d0ed768e60ae77d2c5567fe88a83074a7ad322d5eecd345d4d75c",
+        "size_bytes": 18683
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "sha256": "71a71e94969b4d28ef30b4fa8d0c50be3e5a51d9dc4ff5b1ef6c0154684b6750",
+        "size_bytes": 84568
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/activate_problem_lineage.py",
+        "sha256": "482d002b9bb653eb9eba5d74c83917cc627852e39af1cb3bb7b9e17cdabc5d37",
+        "size_bytes": 2037
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py",
+        "sha256": "140d7e21c254e9b82d9171d98a65a36f11fe5f37ff3d2ee2d97639fadda4993d",
+        "size_bytes": 4312
+      },
+      {
+        "path": "resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py",
+        "sha256": "e31581d3097acc6ba5e7e5f071b49d2dd47ed44c579f8ed3fedbc430bb24c730",
+        "size_bytes": 2694
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+        "sha256": "3cb63f8ad3df09a11c194987c2aabf22a44546042af0109dd48d577db6300c88",
+        "size_bytes": 57489
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_problem_lineage_activation.py",
+        "sha256": "f049ae8a7d32eb7e5db628b8a21993f88ae4e1e148ed990c84f9a82e1529fd8b",
+        "size_bytes": 17952
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_problem_resolution_economics.py",
+        "sha256": "0e245d5638662365fbb39e6c87a4a0cbcc87c324edac487230304b808bd5e14e",
+        "size_bytes": 20791
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_resolution_contract.py",
+        "sha256": "3438c7d1a34a7f617240dece3382c11fc6566dd931df9777d8a0dab12e87e5f2",
+        "size_bytes": 5875
+      },
+      {
+        "path": "tests/accepted-code-activation.test.js",
+        "sha256": "c8bf68031e09567ff5f76066f99ef9869ed44612359c8364e45764a254e02259",
+        "size_bytes": 51293
+      },
+      {
+        "path": "tests/process-identity.test.js",
+        "sha256": "ade9007a25ca4c666f88168f8a5f4f444cbdf90dfab25576e9eceb1be0bbc78d",
+        "size_bytes": 14361
+      },
+      {
+        "path": "tests/recovery-host.test.js",
+        "sha256": "c562ab507961213d8e032f805c74e94088953e66d9c6d5972eb4ba07e87f836c",
+        "size_bytes": 79150
+      },
+      {
+        "path": "tests/runtime-lifecycle.test.js",
+        "sha256": "00807c8983cf2075996cbd897392a429f47b36928e8140df66f3084a3c38bfd6",
+        "size_bytes": 117037
+      }
+    ]
+  },
+  "runtime": {
+    "activation_epoch_id": "activation-mthb7jt0-69ca22ed7963cff81e99b7a959782e8e",
+    "activation_state": "READY",
+    "admission": "OPEN",
+    "components_ready": true,
+    "fully_ready": true,
+    "runtime_update_incomplete": false,
+    "electron_ui": {
+      "pid": 5204,
+      "instance_id": "80f849632f4d23d093a7beda19be7569",
+      "running_revision": "5f7d213506ebc5f263edc408af0b1260fc7bef8f4e110d006af3d5d7f90c9d2d",
+      "disk_revision": "5f7d213506ebc5f263edc408af0b1260fc7bef8f4e110d006af3d5d7f90c9d2d"
+    },
+    "recovery_host": {
+      "pid": 2104,
+      "instance_id": "9a4e9db14457429f3c858304db2c03d3"
+    },
+    "coding_mcp": {
+      "pid": 6500,
+      "process_instance_id": "GsH642_ouQ4cSIkD",
+      "server_instance_id": "h8WMB7oCVtzNeEqn",
+      "running_revision": "e5d120eb38e89f195dd504d77e64f5081dd5737710dd088cfe71e6b0a2b3c897",
+      "disk_revision": "e5d120eb38e89f195dd504d77e64f5081dd5737710dd088cfe71e6b0a2b3c897"
+    },
+    "coding_tunnel": {
+      "pid": 1892
+    },
+    "connector": {
+      "state": "CURRENT_COMPATIBLE_ACKNOWLEDGED",
+      "freshness_mode": "compatible_activation_bootstrap",
+      "tool_contract_sha256": "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251",
+      "acknowledged_sha256": "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251",
+      "compatibility_acknowledged_at": "2026-08-31T14:05:37.696645+00:00",
+      "connector_rediscovered": false,
+      "connector_refresh_required": false,
+      "connector_ack_pending": false,
+      "strict_discovery_claimed": false
+    }
+  },
+  "lifecycle": {
+    "observed_at": "2026-08-31T14:17:19.562Z",
+    "canonical_ledger_schema_version": 12,
+    "snapshot_sha256": "9f5c187e3f42a676ca122af27cb10fac9917fcd9d75efa2333726a5f489ebe43",
+    "logical_sha256": "56f46712f996fb185619bbf144a971f24ace3afb4771fd2dda3ae1f54c6b66ea",
+    "backup_api_copy": true,
+    "immutable": true,
+    "query_only": true,
+    "integrity_check": [
+      "ok"
+    ],
+    "foreign_key_check_rows": 0,
+    "ordinary_active_runs": 0,
+    "projection_drift": false,
+    "stale_background_operation_residues": 0,
+    "unbound_live_resource_residues": 0,
+    "unexplained_active_runs": 0,
+    "p5_epoch_anchors_preserved": 6
+  },
+  "focused_proof_bundle": {
+    "node_test": {
+      "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js",
+      "exit_code": 0,
+      "tests": 150,
+      "passed": 150,
+      "failed": 0,
+      "duration_ms": 44110.0265
+    },
+    "git_diff_check": {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    "lifecycle_census": {
+      "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace E:\\DEV\\Codex-web",
+      "exit_code": 0
+    },
+    "development_status": {
+      "command": "npm run dev:status",
+      "exit_code": 0,
+      "state": "CURRENT",
+      "host": "available",
+      "error_code": "none"
+    },
+    "recovery_supervisor": {
+      "installed": true,
+      "task_state": "Running",
+      "state": "healthy",
+      "consecutive_failures": 0,
+      "restart_attempt_count": 0,
+      "last_error_code": null
+    }
+  },
+  "ui_latency_baseline": {
+    "source_kind": "electron_ui_real_machine_performance_window",
+    "activation_epoch_id": "activation-mthb7jt0-69ca22ed7963cff81e99b7a959782e8e",
+    "ui_instance_id": "80f849632f4d23d093a7beda19be7569",
+    "pid": 5204,
+    "window_started_at": "2026-08-31T14:04:50.072Z",
+    "window_ended_at": "2026-08-31T14:12:16.150Z",
+    "renderer_sample_count": 11,
+    "main_sample_count": 22,
+    "event_loop_sample_count": 215,
+    "readiness": "pass",
+    "event_loop_p95_ms": 14.9,
+    "normal_ipc_p95_ms": 71.7,
+    "snapshot_apply_p95_ms": 0.1,
+    "dashboard_refresh_p95_ms": 252.8,
+    "all_required_budgets_pass": true
+  },
+  "windows_visibility_proof": {
+    "observed_at": "2026-08-31T14:12:16Z",
+    "duration_seconds": 30.27,
+    "samples": 103,
+    "new_console_children": 0,
+    "persistent_background_powershell_pid": 22456,
+    "persistent_background_powershell_main_window_handle": 0,
+    "electron_ui_main_window_handle": 2491982,
+    "electron_ui_visible_window_verified": true,
+    "terminal_flicker_observed": false
+  },
+  "claim_boundary": {
+    "local_runtime": "READY_OPEN",
+    "release_state": "NOT_RELEASED",
+    "production_state": "NOT_CLAIMED",
+    "push_performed": false,
+    "package_performed": false,
+    "publish_performed": false,
+    "tag_performed": false,
+    "release_performed": false,
+    "deploy_performed": false
+  },
+  "acceptance": {
+    "status": "pending",
+    "required_authority": "ChatWeb/Coding-VP Live EOCL exact-file acceptance",
+    "run_id": null,
+    "wave_id": null,
+    "checkpoint_id": null,
+    "proof_fingerprint": null,
+    "accepted_at": null
+  }
+}

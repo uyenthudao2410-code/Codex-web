@@ -24,7 +24,12 @@ from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .p5_experiment import P5ExperimentError
 from .problem_lineage import ProblemLineageError
-from .resolution_contract import ResolutionContractError, contract_sha256, normalize_problem_frame
+from .resolution_contract import (
+    ResolutionContractError,
+    contract_sha256,
+    counterevidence_frame_update_advisory,
+    normalize_problem_frame,
+)
 from .solution_economics import ELIGIBLE_WORKFLOWS, SOLUTION_SHADOW_EVENT, record_solution_shadow
 from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
@@ -100,6 +105,7 @@ class AgentWorkflowMixin:
                 raise ToolFailure("PRL_FRAME_INVALID", str(exc), category="validation") from exc
             normalized_context["problem_frame"] = frame
             normalized_context["problem_frame_sha256"] = contract_sha256(frame)
+            normalized_context["counterevidence_frame_update_advisory"] = counterevidence_frame_update_advisory(frame)
         return normalized_context
 
     def _record_claimed_host_problem_relation(
@@ -527,6 +533,7 @@ class AgentWorkflowMixin:
                 )
             frame = problem_resolution.get("problem_frame") if isinstance(problem_resolution, dict) else None
             if isinstance(frame, dict):
+                advisory = problem_resolution.get("counterevidence_frame_update_advisory") or counterevidence_frame_update_advisory(frame)
                 # Shadow-only evidence: the durable event carries identity and
                 # hashes, never the frame prose or private reasoning.
                 self.orchestration_ledger.append_event(
@@ -544,7 +551,11 @@ class AgentWorkflowMixin:
                         "problem_revision": int(problem_resolution.get("problem_revision") or 0),
                         "decision_changed": bool(((frame.get("decision_delta") or {}).get("changed_decision"))),
                         "counterevidence_count": len(frame.get("counterevidence") or []),
+                        "counterevidence_advisory_status": str(advisory.get("status") or ""),
+                        "frame_update_or_explanation_recommended": bool(advisory.get("frame_update_or_explanation_recommended")),
+                        "materiality_inferred": False,
                         "authority_side_effects": False,
+                        "automatic_mutation_gate": False,
                     },
                 )
 

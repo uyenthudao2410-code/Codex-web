@@ -863,6 +863,107 @@ test('connector-pending supervision wakes final census for an exact compatible b
   assert.equal(lightweightCalls, 0);
 });
 
+test('Recovery Host supervision arms accepted-code activation only after the durable epoch becomes READY and OPEN', async (t) => {
+  const paths = fixture(t);
+  const revision = 'a'.repeat(64);
+  let epoch = {
+    operation_id: 'full-clean-auto-activation-arm-0001',
+    activation_epoch_id: 'activation-auto-activation-arm-0001',
+    state: 'VERIFYING',
+    admission_state: 'CLOSED',
+    verification: null
+  };
+  let censusPass = false;
+  let controllerRunning = false;
+  const calls = { start: 0, stop: 0, supervise: 0 };
+  const host = new RecoveryHost({
+    paths,
+    settings: { load: () => ({ workspace: paths.appRoot(), autoStartServices: false }) },
+    secrets: {},
+    environment: {},
+    log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
+    orchestrator: {
+      lightweightSnapshot: async () => ({ mcpRunning: true, tunnelRunning: true, fullyReady: false }),
+      supervise: async () => {
+        calls.supervise += 1;
+        return { mcpRunning: true, tunnelRunning: true, fullyReady: true };
+      },
+      codingMcpRevisionStatus: () => ({
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    healthService: {},
+    gateway: { stop: async () => true },
+    revisionTracker: {
+      captureRunning: () => revision,
+      status: () => ({
+        running_revision: revision,
+        disk_revision: revision,
+        update_pending: false,
+        state: 'current'
+      })
+    },
+    recoveryPlaneService: { setActivationEpoch() {} },
+    autoActivationController: {
+      status: () => ({ running: controllerRunning, closure_input: null }),
+      start: () => {
+        calls.start += 1;
+        controllerRunning = true;
+        return { running: true };
+      },
+      stop: () => {
+        calls.stop += 1;
+        controllerRunning = false;
+        return true;
+      }
+    }
+  });
+  host.fullCleanActivation = {
+    current: () => epoch,
+    enforceCurrentExpiry: () => epoch,
+    finalCensus: async () => ({
+      pass: censusPass,
+      verified: censusPass,
+      activation_epoch_id: epoch.activation_epoch_id
+    }),
+    recordPendingCensus: () => epoch,
+    finalize: async () => {
+      epoch = { ...epoch, state: 'READY', admission_state: 'OPEN' };
+      return { state: 'READY', admission_open: true, fully_ready: true };
+    }
+  };
+  host.activationEpochStore.current = () => epoch;
+  host.recordSupervisionStatus = (value) => {
+    host.lastSupervisionStatus = value;
+    return value;
+  };
+  host.ensureRecoveryPlane = async () => null;
+  host.superviseElectronUi = async () => null;
+  host.running = true;
+
+  await host.superviseOnce();
+  assert.equal(epoch.state, 'VERIFYING');
+  assert.equal(calls.start, 0, 'VERIFYING must not arm accepted-code activation early');
+
+  censusPass = true;
+  await host.superviseOnce();
+  assert.equal(epoch.state, 'READY');
+  assert.equal(epoch.admission_state, 'OPEN');
+  assert.equal(calls.start, 1, 'the supervised READY/OPEN transition must arm the controller once');
+  assert.equal(controllerRunning, true);
+
+  await host.superviseOnce();
+  assert.equal(calls.start, 1, 'later READY supervision ticks must not call start again');
+  assert.equal(calls.supervise, 1, 'ordinary runtime supervision resumes only after READY/OPEN');
+
+  await host.stop();
+  assert.equal(calls.stop, 1, 'Recovery Host stop must continue stopping accepted-code activation');
+  assert.equal(controllerRunning, false);
+});
+
 test('Recovery Host lightweight IPC serves one fresh supervision projection without duplicate live probes', async (t) => {
   const { host, revision } = uiRecoveryFixture(t);
   let directProbeCalls = 0;

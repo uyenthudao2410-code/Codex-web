@@ -1,0 +1,782 @@
+{
+  "version": 2,
+  "task_id": "20d01ffb1ec2432a83fd2d2c8835fbfc",
+  "orchestration": {
+    "run_id": "6536b6c605a44678977c2e3e088de2c6",
+    "wave_id": "88202f359cf24063a2f622c0136205c1",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+    "worktree_fp": "7b56eba3f74369a432af97275b156aab369018d7b1378af5fb4c6f8ad9995c5a",
+    "contract_fp": ""
+  },
+  "objective": "Adopt the exact 27-file P0.6 source packet and deterministically prove the protected immutable baseline candidate without editing source; stop at ACCEPTING for ChatWeb final acceptance.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-08-31T14:47:08.695Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-08-31T14:47:08.695Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-08-31T14:47:08.695Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "8SN7XiLSO6JCR-XgPQ2PM8WZ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-08-31T14:47:08.306Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "docs/ARCHITECTURE.md",
+          "state": "file",
+          "sha256": "b15afc4b56c45fc52b9be67aa732eb2bc85342677699b673c47fadb20107367c",
+          "size_bytes": 40785,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "docs/CURRENT_STATE.md",
+          "state": "file",
+          "sha256": "3baf1495661657b0112b99a97ce7be8d83ac1306b6ef676781eb43b543b9a670",
+          "size_bytes": 81130,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "docs/ROADMAP.md",
+          "state": "file",
+          "sha256": "4aee6a8b57db4b8f4820ca6195e71c8c4429774513a84cc34ef4a7f96537cdce",
+          "size_bytes": 25969,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "docs/research/260828_CODING_WEB_TARGET_STATE_GAP_ANALYSIS_AND_COMPLETION_PLAN.md",
+          "state": "file",
+          "sha256": "a907145b106f5cf5df6d4ae64044a81ff0265dc9d8e667e8d85feb6828eda2ef",
+          "size_bytes": 137545,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "docs/research/260831_CODING_WEB_GOLDEN_HR_RESOLUTION_CASES_CALIBRATION_V1.md",
+          "state": "file",
+          "sha256": "35f6060c50cb7cb22b6a0bce7a3edc06a0e9545448460628b6b3bb6db952e8e7",
+          "size_bytes": 32399,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "electron/services/processIdentity.js",
+          "state": "file",
+          "sha256": "c6b4548eaf59ce44702fd76f306624f00c3adb2c1329dd674536ab24f5f4cf45",
+          "size_bytes": 26393,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "electron/services/recoveryActionStore.js",
+          "state": "file",
+          "sha256": "9163948a46e10354daa6c0fb1b9ff4aa81875a6bfe11d8f01749ace1821a4bda",
+          "size_bytes": 75914,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "electron/services/recoveryHost.js",
+          "state": "file",
+          "sha256": "8ed02caf81f451c9c78c9e4cffeb8a916c8c472985b778f4e674435a9a9072d0",
+          "size_bytes": 130667,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "electron/services/runtimeOrchestrator.js",
+          "state": "file",
+          "sha256": "7d0546a533c8cd27ca3f8a0a5d18b23eb411cbc633706c078f346744718a694c",
+          "size_bytes": 135178,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+          "state": "file",
+          "sha256": "a16d7c575117742975ef77000171c3880933ba2992d582fbe21bb91bc6e4d69c",
+          "size_bytes": 87600,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py",
+          "state": "file",
+          "sha256": "e04a6b72a4820659fe32de91e3e0145227584eff0be601ddac860f16d03d3507",
+          "size_bytes": 12517,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_canary.py",
+          "state": "file",
+          "sha256": "a50943d893978d0f0761ebfb6a4124d71c166257f799b346aad5f7c714c98307",
+          "size_bytes": 16884,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "state": "file",
+          "sha256": "998a36c125b2eee03f0717d275933a788d164f5d549b19c8ccf259410cffa8d7",
+          "size_bytes": 17766,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
+          "state": "file",
+          "sha256": "ca5e1ad43c225bb552325569d8f4e89f315a5b00f9cd54587e55be003261b31e",
+          "size_bytes": 33710,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/resolution_contract.py",
+          "state": "file",
+          "sha256": "58be8225cb0d0ed768e60ae77d2c5567fe88a83074a7ad322d5eecd345d4d75c",
+          "size_bytes": 18683,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "state": "file",
+          "sha256": "71a71e94969b4d28ef30b4fa8d0c50be3e5a51d9dc4ff5b1ef6c0154684b6750",
+          "size_bytes": 84568,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/scripts/activate_problem_lineage.py",
+          "state": "file",
+          "sha256": "482d002b9bb653eb9eba5d74c83917cc627852e39af1cb3bb7b9e17cdabc5d37",
+          "size_bytes": 2037,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py",
+          "state": "file",
+          "sha256": "140d7e21c254e9b82d9171d98a65a36f11fe5f37ff3d2ee2d97639fadda4993d",
+          "size_bytes": 4312,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py",
+          "state": "file",
+          "sha256": "e31581d3097acc6ba5e7e5f071b49d2dd47ed44c579f8ed3fedbc430bb24c730",
+          "size_bytes": 2694,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "state": "file",
+          "sha256": "3cb63f8ad3df09a11c194987c2aabf22a44546042af0109dd48d577db6300c88",
+          "size_bytes": 57489,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_problem_lineage_activation.py",
+          "state": "file",
+          "sha256": "f049ae8a7d32eb7e5db628b8a21993f88ae4e1e148ed990c84f9a82e1529fd8b",
+          "size_bytes": 17952,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_problem_resolution_economics.py",
+          "state": "file",
+          "sha256": "0e245d5638662365fbb39e6c87a4a0cbcc87c324edac487230304b808bd5e14e",
+          "size_bytes": 20791,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_resolution_contract.py",
+          "state": "file",
+          "sha256": "3438c7d1a34a7f617240dece3382c11fc6566dd931df9777d8a0dab12e87e5f2",
+          "size_bytes": 5875,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "tests/accepted-code-activation.test.js",
+          "state": "file",
+          "sha256": "c8bf68031e09567ff5f76066f99ef9869ed44612359c8364e45764a254e02259",
+          "size_bytes": 51293,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "tests/process-identity.test.js",
+          "state": "file",
+          "sha256": "ade9007a25ca4c666f88168f8a5f4f444cbdf90dfab25576e9eceb1be0bbc78d",
+          "size_bytes": 14361,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "tests/recovery-host.test.js",
+          "state": "file",
+          "sha256": "c562ab507961213d8e032f805c74e94088953e66d9c6d5972eb4ba07e87f836c",
+          "size_bytes": 79150,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        },
+        {
+          "path": "tests/runtime-lifecycle.test.js",
+          "state": "file",
+          "sha256": "00807c8983cf2075996cbd897392a429f47b36928e8140df66f3084a3c38bfd6",
+          "size_bytes": 117037,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "6536b6c605a44678977c2e3e088de2c6",
+          "wave_id": "88202f359cf24063a2f622c0136205c1"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 75,
+        "head_hash": "07bf488dd2c638fd867456565aaa858df0de60f9867d53fbd07b3b7963bb4c5f"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6536b6c605a44678977c2e3e088de2c6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6536b6c605a44678977c2e3e088de2c6\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6536b6c605a44678977c2e3e088de2c6\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6536b6c605a44678977c2e3e088de2c6\\wave-003.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "6536b6c605a44678977c2e3e088de2c6",
+      "wave_id": "88202f359cf24063a2f622c0136205c1",
+      "base_head": "a357e1bb45a68cfaf25b8a2aa99a133ab256102c",
+      "worktree_fp": "7b56eba3f74369a432af97275b156aab369018d7b1378af5fb4c6f8ad9995c5a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Adopt the exact 27-file P0.6 source packet and deterministically prove the protected immutable baseline candidate without editing source; stop at ACCEPTING for ChatWeb final acceptance.",
+        "objective_revision": 2,
+        "objective_sha256": "46b236d131aacc3dbc653695ea9cde7b8844eeb5c5677938bd39db8134d80f16",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "59cc6345d60247f09c283cae8ea6ee47",
+          "stage_id": "check:216be7cafe7ddc20",
+          "status": "passed",
+          "duration_ms": 46772,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "24718863f6f1476487d0e4cab1cf23ea",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1750,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c",
+  "completion_report_acknowledged_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c",
+  "completion_report_acknowledged_at": "2026-08-31T14:54:53.925Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-31T14:34:22.762Z",
+  "updated_at": "2026-08-31T14:54:53.930Z",
+  "events": [
+    {
+      "time": "2026-08-31T14:34:22.762Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Adopt and prove the exact P0.6 immutable baseline candidate and complete 27-file current source packet without editing source; stop at ACCEPTING for ChatWeb final acceptance."
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:24.402Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:26.560Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:27.971Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:28.970Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:28.970Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:34:29.077Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-08-31T14:37:10.614Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:37:11.225Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "IDEMPOTENCY_CONFLICT"
+      }
+    },
+    {
+      "time": "2026-08-31T14:39:31.342Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:05.432Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:07.855Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:09.146Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:09.156Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:10.694Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:11.237Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:12.085Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js",
+        "session_id": "iyhKZZyHJJKZTC3jIT1Quq9D"
+      }
+    },
+    {
+      "time": "2026-08-31T14:42:58.828Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T14:43:00.261Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-08-31T14:43:00.269Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:43:00.410Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PERMISSION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:11.398Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:13.265Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:15.618Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:16.873Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:16.882Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:18.414Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:19.018Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:46:19.814Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js",
+        "session_id": "gGgaZe4J4hZSM_e4ketIeQwT"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:05.978Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:07.269Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "8SN7XiLSO6JCR-XgPQ2PM8WZ"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:08.306Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:08.688Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:08.695Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:09.095Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:09.104Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:09.306Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "ab521285d4cd4dd7825d75b07958eb9756abac781328b88a0660723f50ff2213"
+      }
+    },
+    {
+      "time": "2026-08-31T14:47:09.463Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-08-31T14:52:03.962Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:52:07.035Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-31T14:52:07.038Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:52:07.278Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c"
+      }
+    },
+    {
+      "time": "2026-08-31T14:53:28.765Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T14:54:53.925Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c"
+      }
+    }
+  ]
+}

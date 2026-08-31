@@ -4,7 +4,7 @@ This roadmap describes the current **Tools-Codex-web Windows Desktop Execution H
 
 ## Current baseline
 
-The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; an isolated packaged-Windows Recovery acceptance lane; accepted explicit validation compute-placement control for `local_only` and `server_preferred`; protocol-level ExceptionGroup normalization; and source-side semantic MCP health supervision that distinguishes control-health success from a broken tool plane.
+The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; PRL Revision 4 problem/outcome semantics; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; an isolated packaged-Windows Recovery acceptance lane; accepted explicit validation compute-placement control for `local_only` and `server_preferred`; protocol-level ExceptionGroup normalization; and source-side semantic MCP health supervision that distinguishes control-health success from a broken tool plane.
 
 ## Policy already decided
 
@@ -17,30 +17,86 @@ The maintained product boundary now includes Electron Execution Control Center; 
 7. **Automatic global server-first stays off** until representative compute-placement evidence supports promotion.
 8. **No fabricated observability.** Unknown quota, billing, ChatGPT context percentage or host state stays unknown.
 
-### Operational recency override — 2026-08-25
+## Revision 4 problem-resolution roadmap
 
-The current operational evidence is tracked in [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md). A `2026-08-25T03:33:57.999131Z` connector acknowledgement remains a historical `VERIFIED_SNAPSHOT`, but the newest forced Recovery Host snapshot for the current Codex-web process is `BLOCKED_EXTERNAL_DISCOVERY`: it is healthy and target-matched while `connectorRediscovered=false`, its timestamp is absent, and `connectorRefreshRequired=true`. Fresh real-client `workspace_context` and scoped `task_control(problem.get)` calls prove usability only; they cannot substitute for `tools/list` or `server/discover`. Source-closed P0–P3 architecture remains closed; connector freshness alone does not enable routing, P5, or promotion policy, and only a current-process discovery receipt may permit another official acknowledgement.
+The methodology roadmap follows the problem outcome rather than counting
+accepted executions as final success:
 
-### Current reconciliation — 2026-08-26
+```text
+stable Problem Revision contract
+-> revisable bounded Problem Frame (A* / G / H)
+-> EOCL-governed RUN/WAVE attempts
+-> technical acceptance / provisional resolution
+-> Resolution Envelope + closure falsification
+-> authoritative outcome confirmation or same-revision reopen
+```
 
-The later pasted assessment that reports “8 tools” together with `ExceptionGroup` failures is retained as an observation of that ChatGPT conversation, not as current runtime authority. The current Recovery Host snapshot for this checkout (captured `2026-08-26T02:06:12Z`) is `E:\DEV\Codex-web @ main 0557afa6c3aa3e02c2664d312b860973f28d3fc5`, `fullyReady=true`, with Coding MCP `running_revision == disk_revision == cbcab4d0e5382431d1193724c7e13c128de319bceea7baae2e617a05decc3db5`. The exact current contract is the eight-tool `smart-v3` surface and its SHA `fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585`; its `task_control` schema includes the source-gated `problem` and `p5` actions. Focused transport/stateless/fault tests pass `22/22`, the SDK contract/exception boundary passes `8/8`, and the HTTP-level tools/call regression passes `6/6`; the server normalizes async failures and treats a client-aborted response as a transport disconnect rather than an MCP process fault. A transient semantic-probe timeout caused one automatic MCP restart; the probe deadline is now bounded at 10 seconds to avoid restarting a healthy dirty checkout solely because Git/ledger reads exceed 2.5 seconds. None of this changes the connector gate: the current authoritative receipt remains `connectorRediscovered=false`, `connectorRediscoveredAt=null`, `connectorRefreshRequired=true`, so no acknowledgement or `LIVE_CLOSED` claim is allowed until the real Coding-VP process produces a fresh `tools/list`/`server/discover` receipt.
+The source bridge is closed for Problem Revision/RUN separation, provisional
+resolution, same-contract reopen, bounded shadow frames, full-problem Resolution
+Envelopes, provenance-preserving descriptive metrics and the unchanged eight-tool
+public surface. These are implementation claims, not evidence that the
+methodology improves real outcomes.
+
+The current worktree also implements the bounded independent-outcome receipt
+bridge in PRL schema v12. A public caller still submits only the semantic
+`problem.confirm` intent; the runtime must claim the exact one-shot ChatWeb host
+turn, derive the content-free receipt from the exact event/problem/revision/
+turn/trace tuple, and record it under `RUNTIME_OUTCOME_RECEIPT`. Receipt fields
+are part of the v3 problem-event hash chain and remain absent from the public
+tool input. Historical v2 confirmations survive v11-to-v12 migration byte-for-
+byte with empty receipt fields and do not count as independent coverage. This
+source path and its focused proof do not manufacture historical outcomes:
+natural receipt collection, full-component EOCL source acceptance and causal
+methodology evidence remain open gates. Current local runtime activation is
+closed for the exact development epoch recorded in `CURRENT_STATE.md` through
+the compatible bootstrap path; that receipt is process-bound and does not
+promote natural evidence or change release/production state.
+
+The current evidence roadmap remains open in this order:
+
+1. curate 5–10 natural Golden HR Resolution Cases with explicit outcome oracle
+   and enough provenance to preserve `AMBIGUOUS` when a historical link cannot
+   be defended. The first seven-case calibration packet is recorded in
+   [`research/260831_CODING_WEB_GOLDEN_HR_RESOLUTION_CASES_CALIBRATION_V1.md`](research/260831_CODING_WEB_GOLDEN_HR_RESOLUTION_CASES_CALIBRATION_V1.md): it closes selection, bounded lineage annotation, failure classification and qualitative governance/friction calibration, while leaving quantitative Framing Regret and independent user outcomes open;
+2. bind Problem Revision -> Frame revisions -> exact RUN/WAVE lineage and collect
+   independent outcome confirmations, reopens and false-closure observations;
+3. measure Framing Regret, true semantic sibling recurrence and independent
+   outcome-evidence coverage without turning missing observations into zero;
+4. run a prospective control/treatment cohort with model, route, compute and
+   proof policy held constant so the methodology contribution can be measured;
+5. promote or remove individual micro-policies only after material TTPR/rework
+   benefit is observed. Automatic policy promotion remains off.
+
+No new Problem Governance Engine, Resolution Compiler brain, public framing
+tool, second PRL database or universal invariant store is authorized merely to
+make the roadmap look complete. Natural evidence, EOCL acceptance, current
+runtime activation, package/release and production outcome remain separate
+gates.
+
+### Historical operational snapshot — 2026-08-25
+
+The operational evidence for that window is tracked in [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md). A `2026-08-25T03:33:57.999131Z` connector acknowledgement remains a historical `VERIFIED_SNAPSHOT`, while the later forced Recovery Host snapshot was `BLOCKED_EXTERNAL_DISCOVERY`: it was healthy and target-matched with `connectorRediscovered=false`, no timestamp and `connectorRefreshRequired=true`. Under the contract at that time, ordinary business-tool calls could not replace `tools/list` or `server/discover`. This paragraph records that process-bound incident; current connector acceptance follows [`CURRENT_STATE.md`](CURRENT_STATE.md): a breaking contract requires attested current-process discovery, while an exact current SHA or declared compatible predecessor may use an attested admission-closed `workspace_context` bootstrap bound to the exact epoch/process/server/SHA and a guarded Recovery Host acknowledgement. Neither path enables routing, P5 or promotion policy by itself.
+
+### Historical reconciliation — 2026-08-26
+
+The later pasted assessment that reports “8 tools” together with `ExceptionGroup` failures is retained as an observation of that ChatGPT conversation, not as current runtime authority. The Recovery Host snapshot captured `2026-08-26T02:06:12Z` was `E:\DEV\Codex-web @ main 0557afa6c3aa3e02c2664d312b860973f28d3fc5`, `fullyReady=true`, with Coding MCP `running_revision == disk_revision == cbcab4d0e5382431d1193724c7e13c128de319bceea7baae2e617a05decc3db5`. The exact contract in that snapshot was the eight-tool `smart-v3` surface and SHA `fb159d403ef490caeb29b1b54111c2b0353a7544bb2ecad564cfec3b2f878585`; its `task_control` schema included the source-gated `problem` and `p5` actions. Focused transport/stateless/fault tests passed `22/22`, the SDK contract/exception boundary passed `8/8`, and the HTTP-level tools/call regression passed `6/6`; the server normalized async failures and treated a client-aborted response as a transport disconnect rather than an MCP process fault. A transient semantic-probe timeout caused one automatic MCP restart; the probe deadline was then bounded at 10 seconds. These are historical identities and do not state current connector authority. Current exact/compatible versus breaking-contract acceptance uses the two-path rule in [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
 ## P0-P3 closure boundary before the next engineering phase
 
 P0-P3 engineering/control work is not to be expanded merely to fill representative evidence gaps. The remaining gates are classified explicitly:
 
-- **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. The 2026-08-18 P0 live activation and the later acknowledgement are `VERIFIED_SNAPSHOT`; the current target process is healthy but awaits its own real-client discovery receipt. This connector gate is process-bound and must be re-proven after a runtime-affecting restart.
+- **P0 engineering/source: CLOSED.** Protocol ExceptionGroup normalization and semantic tool-plane self-recovery are implemented. The 2026-08-18 P0 live activation and its later acknowledgement remain `VERIFIED_SNAPSHOT`. Every later runtime-affecting activation must independently close the connector gate under the current exact/compatible-versus-breaking rule; no old receipt is inherited as process authority.
 - **P1 measurement integrity: CLOSED.** Controlled measurement plumbing is sufficient for experiments. Economics remains an evidence program; missing usage/cost is unknown, never zero.
 - **P2 diagnostic phase: CLOSED.** Prospective, content-free detail now distinguishes generic check and build-verification observations without attributing historic rows to a causal repair cause. Incomplete historical causal/oracle coverage is a measurement limitation for subsequent intervention studies, not a reason to keep extending P2 architecture.
 - **P3 engineering/control plane: CLOSED / ACCEPTED.** Representative efficacy remains deferred; global server-first remains OFF.
 
-The prior P0 live-activation blocker was cleared for its 2026-08-18 instance. That accepted receipt covered process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage, and no stale/orphan/conflicting write authority. It remains evidence for source architecture, while each later process requires its own activation and connector receipt. A new engineering phase is therefore governed by task-specific gates rather than by unfinished P0-P3 architecture.
+The prior P0 live-activation blocker was cleared for its 2026-08-18 instance. That accepted receipt covered process/source identity, `workspace_context`, `agent_workflow` prepare, `task_control` audit, exactly 8 `smart-v3` public tools, no raw ExceptionGroup leakage, and no stale/orphan/conflicting write authority. It remains evidence for source architecture, while each later process requires its own activation and either an authoritative exact/compatible bootstrap acknowledgement or a strict discovery receipt, as applicable. A new engineering phase is therefore governed by task-specific gates rather than by unfinished P0-P3 architecture.
 
 ## P4 — Solution Economics Shadow — source accepted, evidence collection active
 
 P4 is shadow-only. For `feature` and `bugfix` tasks, record a structured recommendation before the first write and compare it later with durable accepted-result outcomes. The pre-mutation predictors are candidate solution scope, estimated touched surface, root-cause confidence, oracle strength, expected repair risk, and smallest causal solution scope. Outcome evidence includes first-pass acceptance, repair/replan count, TTAR, accepted file receipts, proof duration, explicitly observed local/wait spans, and explicit manual-fix outcome when present.
 
-**Engineering/source is accepted.** Evidence collection and live activation are separate gates. The 2026-08-19 ChatWeb/Coding-VP receipt for `task_control.solution_shadow` is `VERIFIED_SNAPSHOT`; the current connector/contract awaits real-client discovery in the tracker, and even a connector pass would not be a current `solution_shadow` outcome. Do not backfill a recommendation after the first write merely to manufacture a sample, and re-prove connector discovery after future runtime-affecting changes.
+**Engineering/source is accepted.** Evidence collection and live activation are separate gates. The 2026-08-19 ChatWeb/Coding-VP receipt for `task_control.solution_shadow` is `VERIFIED_SNAPSHOT`; even a current connector pass would not be a current `solution_shadow` outcome. Do not backfill a recommendation after the first write merely to manufacture a sample, and re-prove connector authority under the current exact/compatible-versus-breaking rule after future runtime-affecting changes.
 
 The P4 analysis is descriptive until predictive validity is established. Reports separate `representative` evidence from benchmark/synthetic/unlabeled rows; missing observations remain unknown, LOC is explanatory rather than a target, and no shadow recommendation can change production behavior. The gate stays open until representative data contains enough real repair/non-repair outcome variation to validate which pre-change signals predict repair. No sample-size threshold is invented in advance merely to close the phase.
 
@@ -146,7 +202,7 @@ The efficacy pilot is intentionally **DEFERRED**, not an implementation blocker.
 
 An earlier connected ChatWeb Coding MCP instance returned a raw `ExceptionGroup: unhandled errors in a TaskGroup`. Current source contains both protocol normalization and a Recovery Host semantic tool-plane watchdog for that HTTP-green/tool-plane-broken failure mode. The 2026-08-18 post-fix process demonstrated accepted behavior through its real connector, including the live truth/orchestration smoke and eight-tool contract; that receipt is not substituted for the current process.
 
-Therefore P0 source architecture is frozen as **CLOSED**, with historical `VERIFIED_SNAPSHOT` live acceptance. The current target connector remains fail-closed pending a new discovery receipt in the tracker; a later connector receipt would not reopen P0 engineering, prove P1/P2/P3 efficacy or economics, or enable automatic routing/global server-first.
+Therefore P0 source architecture is frozen as **CLOSED**, with historical `VERIFIED_SNAPSHOT` live acceptance. Current connector authority is process-bound and fail-closed under the exact/compatible-versus-breaking rule in [`CURRENT_STATE.md`](CURRENT_STATE.md). A compatible bootstrap acknowledgement or strict discovery receipt, whichever applies, does not reopen P0 engineering, prove P1/P2/P3 efficacy or economics, or enable automatic routing/global server-first.
 
 Credential snapshots under `docs/ac/` are local-only and must never be tracked. They have been removed from current `main` and `/docs/ac/` is ignored. Any credential that previously entered Git history must be treated as exposed and rotated; a history rewrite is a separate destructive maintenance action and requires explicit authorization.
 
@@ -164,4 +220,4 @@ Credential snapshots under `docs/ac/` are local-only and must never be tracked. 
 
 ## Completion criteria
 
-A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. For P0-P3, the prior connector acceptance remains a historical receipt; any current connector-health claim requires current-process `tools/list` rediscovery and official acknowledgement. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
+A semantic engineering item is complete when its relevant source contract, focused/affected-boundary proof and EOCL final acceptance are satisfied. Live activation, packaging/release, and representative efficacy are separate gates and must be reported separately rather than being used to reopen an already accepted implementation wave. For P0-P3, the prior connector acceptance remains a historical receipt; any current connector-health claim requires exact current-process authority under the maintained two-path connector rule and official Recovery Host acknowledgement. Tool count, raw test count, LOC or model-call count are not completion metrics by themselves.
