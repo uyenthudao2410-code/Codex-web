@@ -1,0 +1,401 @@
+[
+  {
+    "version": 2,
+    "task_id": "2ba95b1fb287428bb96048f04582d418",
+    "orchestration": {
+      "run_id": "9f686c0058f743c0a15d866922983ac2",
+      "wave_id": "26cdb21ffdbf4e2aa62fd68c3631c2f7",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "4aa3be3274016326301b0aabe4496c5918aac1b8b50d0cb28572873b07a6945c",
+      "contract_fp": ""
+    },
+    "objective": "W8 only: implement the budget/reservation control defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W7. Preserve unknown_not_zero, never convert bytes to tokens, never treat estimates as observed spend, preserve exact 8-tool smart-v3 public MCP contract, fail closed on missing/stale reservation authority, and keep controller/provider/tool-card accounting planes distinct. Exclude W9 history analytics and W10 representative E2E closure. Do not commit, push, restart, package, release, or deploy. First localize the exact W8 contract, existing budget/credit/routing admission surfaces, reservation lifecycle authority, smallest causal change set, and focused deterministic proof plan while preserving unrelated dirty work.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T22:49:12.495Z",
+    "updated_at": "2026-09-01T22:49:18.210Z",
+    "events": [
+      {
+        "time": "2026-09-01T22:49:12.495Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "W8 only: implement the budget/reservation control defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W7. Preserve unknown_not_zero, never convert bytes to tokens, never treat estimates as observed spend, preserve exact 8-tool smart-v3 public MCP contract, fail closed on missing/stale reservation authority, and keep controller/provider/tool-card accounting planes distinct. Exclude W9 history analytics and W10 representative E2E closure. Do not commit, push, restart, package, release, or deploy. First localize the exact W8 contract, existing budget/credit/routing admission surfaces, reservation lifecycle authority, smallest causal change set, and focused deterministic proof plan while preserving unrelated dirty work."
+        }
+      },
+      {
+        "time": "2026-09-01T22:49:13.766Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T22:49:18.205Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T22:49:18.210Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T23:01:24.579Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c2a984e0f345415ea73d7a914f31f6ee",
+    "orchestration": {
+      "run_id": "422398edef4e40f78a1089893e6eaf95",
+      "wave_id": "bb0bb68d407e4761910147101d5a63d0",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "4aa3be3274016326301b0aabe4496c5918aac1b8b50d0cb28572873b07a6945c",
+      "contract_fp": ""
+    },
+    "objective": "Continue existing W8 only. Localize the exact UsageReservation -> actual UsageEvent reconciliation contract and the smallest causal implementation surface. Inspect the W8 master-plan contract, workflow_tools estimated-credit admission, budget_control token/credit budget authority, provider_traffic token_budget/ProviderTrafficGovernor dispatch admission, and the durable OrchestrationLedger reservation/idempotency patterns. Preserve unknown_not_zero; bytes are never tokens; estimates are never observed spend; exact 8-tool smart-v3 public MCP contract must not change; missing/stale reservation authority fails closed; controller/provider/tool-card accounting remain distinct. Exclude W9/W10. No mutation in this call.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 6,
+          "head_hash": "850f92bc96536f1758df712f2cb9674a3e8f030e2a85820549a0d5b020a746bd"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-422398edef4e40f78a1089893e6eaf95\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-422398edef4e40f78a1089893e6eaf95\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "422398edef4e40f78a1089893e6eaf95",
+        "wave_id": "bb0bb68d407e4761910147101d5a63d0",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "4aa3be3274016326301b0aabe4496c5918aac1b8b50d0cb28572873b07a6945c",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continue existing W8 only. Localize the exact UsageReservation -> actual UsageEvent reconciliation contract and the smallest causal implementation surface. Inspect the W8 master-plan contract, workflow_tools estimated-credit admission, budget_control token/credit budget authority, provider_traffic token_budget/ProviderTrafficGovernor dispatch admission, and the durable OrchestrationLedger reservation/idempotency patterns. Preserve unknown_not_zero; bytes are never tokens; estimates are never observed spend; exact 8-tool smart-v3 public MCP contract must not change; missing/stale reservation authority fails closed; controller/provider/tool-card accounting remain distinct. Exclude W9/W10. No mutation in this call.",
+          "objective_revision": 1,
+          "objective_sha256": "0aadb18fd899b63147d01e2ae95afb424ab042fea5890dd062a633e539f0f366",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "fb57781692a3ea0ac086c130c02ca5c7889f322b134df2baf6095a33ef157ee3",
+    "completion_report_acknowledged_id": "fb57781692a3ea0ac086c130c02ca5c7889f322b134df2baf6095a33ef157ee3",
+    "completion_report_acknowledged_at": "2026-09-01T23:02:04.748Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-01T23:01:24.580Z",
+    "updated_at": "2026-09-01T23:02:48.353Z",
+    "events": [
+      {
+        "time": "2026-09-01T23:01:24.580Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T23:01:25.551Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T23:01:27.597Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T23:01:27.601Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T23:01:42.609Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "fb57781692a3ea0ac086c130c02ca5c7889f322b134df2baf6095a33ef157ee3"
+        }
+      },
+      {
+        "time": "2026-09-01T23:01:48.873Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T23:02:04.748Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "fb57781692a3ea0ac086c130c02ca5c7889f322b134df2baf6095a33ef157ee3"
+        }
+      },
+      {
+        "time": "2026-09-01T23:02:48.353Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T23:02:48.877Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "2ba95b1fb287428bb96048f04582d418",
+    "orchestration": {
+      "run_id": "9f686c0058f743c0a15d866922983ac2",
+      "wave_id": "26cdb21ffdbf4e2aa62fd68c3631c2f7",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "4aa3be3274016326301b0aabe4496c5918aac1b8b50d0cb28572873b07a6945c",
+      "contract_fp": ""
+    },
+    "objective": "W8 only: implement the budget/reservation control defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W7. Preserve unknown_not_zero, never convert bytes to tokens, never treat estimates as observed spend, preserve exact 8-tool smart-v3 public MCP contract, fail closed on missing/stale reservation authority, and keep controller/provider/tool-card accounting planes distinct. Exclude W9 history analytics and W10 representative E2E closure. Do not commit, push, restart, package, release, or deploy. First localize the exact W8 contract, existing budget/credit/routing admission surfaces, reservation lifecycle authority, smallest causal change set, and focused deterministic proof plan while preserving unrelated dirty work.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "hTowmVIHIFrTVEonQQjvaa2G",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 726,
+      "finished_at": "2026-09-01T23:03:14.058Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T23:02:48.877Z",
+    "updated_at": "2026-09-01T23:03:14.058Z",
+    "events": [
+      {
+        "time": "2026-09-01T23:02:48.877Z",
+        "event": "orchestration_projection_exact_run_restored",
+        "details": {
+          "source": "canonical_ledger",
+          "run_id": "9f686c0058f743c0a15d866922983ac2"
+        }
+      },
+      {
+        "time": "2026-09-01T23:02:58.075Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T23:03:13.516Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 300 -B 50 \"def _provider_dispatch\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n -A 220 -B 40 \"def _provider_observe\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "hTowmVIHIFrTVEonQQjvaa2G"
+        }
+      },
+      {
+        "time": "2026-09-01T23:03:14.058Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 300 -B 50 \"def _provider_dispatch\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py && git grep -n -A 220 -B 40 \"def _provider_observe\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T23:03:20.441Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3acd07209e7444eaa166dbd27aa3b7bd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "NHMKxSM-lN_A14Hob5hcu6d9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 822,
+      "finished_at": "2026-09-01T23:03:21.684Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-09-01T23:03:20.441Z",
+    "updated_at": "2026-09-01T23:05:02.899Z",
+    "events": [
+      {
+        "time": "2026-09-01T23:03:20.441Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T23:03:21.250Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 260 -B 60 \"provider_dispatch\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "NHMKxSM-lN_A14Hob5hcu6d9"
+        }
+      },
+      {
+        "time": "2026-09-01T23:03:21.684Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 260 -B 60 \"provider_dispatch\" -- resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T23:04:41.207Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T23:05:02.891Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T23:05:11.407Z",
+    "archive_reason": "cleared"
+  }
+]

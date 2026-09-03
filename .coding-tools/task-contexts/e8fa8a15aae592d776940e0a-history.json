@@ -1,0 +1,139 @@
+[
+  {
+    "version": 2,
+    "task_id": "76562dcf976b4072ba07c24e1f2d14b9",
+    "orchestration": {
+      "run_id": "8583f73b99a248bc9274d81fa551f5b7",
+      "wave_id": "0572aba16538495ab6fa5d4f373bc4cc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": ""
+    },
+    "objective": "Repair the stateless exact-RUN recovery control plane that currently loses a canonical ChatWeb RUN when the scoped TaskState projection is archived/replaced by an auto-started command or a terminal accidental RUN. The canonical orchestration ledger remains authority. Exact task_control continuation with run_id and no task_context_id must be able to recover the original registered task context from an archived exact run projection only when canonical task identity matches, the current conflicting task/projection is terminal with no pending operator report, and the current ChatWeb controller owner still matches; it must then rebuild only the compact TaskState projection from the exact canonical ledger before returning. It must refuse recovery for an active conflicting task/RUN, foreign controller ownership, ambiguous multiple contexts, missing history identity, or pending report. Preserve workspace isolation, 8-tool contract, ledger immutability and unrelated dirty bytes. This is a narrow blocker repair needed to resume canonical Token W4; do not implement W4 itself, do not edit accounting, do not restart/commit/push/release/deploy.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:49:39.528Z",
+    "updated_at": "2026-09-01T01:50:50.152Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:49:39.528Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Repair the stateless exact-RUN recovery control plane that currently loses a canonical ChatWeb RUN when the scoped TaskState projection is archived/replaced by an auto-started command or a terminal accidental RUN. The canonical orchestration ledger remains authority. Exact task_control continuation with run_id and no task_context_id must be able to recover the original registered task context from an archived exact run projection only when canonical task identity matches, the current conflicting task/projection is terminal with no pending operator report, and the current ChatWeb controller owner still matches; it must then rebuild only the compact TaskState projection from the exact canonical ledger before returning. It must refuse recovery for an active conflicting task/RUN, foreign controller ownership, ambiguous multiple contexts, missing history identity, or pending report. Preserve workspace isolation, 8-tool contract, ledger immutability and unrelated dirty bytes. This is a narrow blocker repair needed to resume canonical Token W4; do not implement W4 itself, do not edit accounting, do not restart/commit/push/release/deploy."
+        }
+      },
+      {
+        "time": "2026-09-01T01:49:40.756Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:49:42.281Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:49:42.286Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:51:03.707Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "f442ec932ac34e20b67e03240b6599ca",
+    "orchestration": {
+      "run_id": "47fe870795d1499cb7d1e0782593192c",
+      "wave_id": "a8af6d54526b4363a465986616860b85",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": ""
+    },
+    "objective": "Implement the prepared exact-RUN archived-projection recovery repair only. The canonical orchestration ledger remains authority. Extend stateless exact-run lookup so a registered context may be recovered from bounded TaskState history when the archived row matches both requested run_id and the canonical ledger task_id, while retaining the existing exact current-projection path and controller-owner check. Fail closed if more than one context matches, the current scoped task has a pending completion report, the current conflicting task/run is nonterminal or active, history identity is missing/mismatched, workspace binding is invalid, or current ChatWeb controller ownership mismatches. Extend projection reconciliation with an explicit requested_run_id path: only after the same archived exact identity and safe-replacement checks, archive/clear the terminal polluted compact task projection using TaskStateStore APIs and restore the canonical task_id/objective plus current orchestration projection from the exact ledger; never modify the orchestration ledger. Pass requested_run_id from task_control into reconciliation before dispatch. Keep default reconciliation behavior unchanged when no exact run is requested. Add regression tests reproducing the real failure: canonical context/run archived/replaced by a failed auto-start-like task, then task_control get/audit with run_id and no task_context recovers the original context and canonical task; also prove active conflicting current task and pending operator report refuse history recovery. Preserve 8-tool contract, workspace isolation, unrelated dirty bytes and all token/accounting code. No W4 source, no restart, commit, push, release or deploy.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Orchestration preflight",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:51:03.708Z",
+    "updated_at": "2026-09-01T01:51:28.541Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:51:03.708Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T01:51:04.398Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:51:04.770Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:51:41.000Z",
+    "archive_reason": "superseded"
+  }
+]

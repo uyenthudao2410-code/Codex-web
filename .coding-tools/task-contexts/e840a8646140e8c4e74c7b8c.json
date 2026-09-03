@@ -1,0 +1,398 @@
+{
+  "version": 2,
+  "task_id": "d96d0232822a48bea5ee283ec62df5a7",
+  "orchestration": {
+    "run_id": "5fb19f6e2cae45759f5f4df3b8878b4e",
+    "wave_id": "24825002adaf43cd9343af512dfc05b1",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "636a8dc110c5e5f8895e23e27381b4a608427c2fc908f4a7b3041b3b86863902",
+    "contract_fp": "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1"
+  },
+  "objective": "Restore the HTTP handler metadata compatibility re-exports while keeping Ruff clean",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-03T06:18:30.143Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-03T06:18:30.143Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-03T06:18:30.143Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "D9_cYq9F3qZsrCdGpJUutVxT",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-03T06:18:27.996Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "state": "file",
+          "sha256": "23991df1f4ad6b3308a2905f70ee1a5272cd3c7f01f711dd5b22abe80c2db64b",
+          "size_bytes": 82310,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "5fb19f6e2cae45759f5f4df3b8878b4e",
+          "wave_id": "24825002adaf43cd9343af512dfc05b1"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 32,
+        "head_hash": "0bc391a80a0ec2e3c555282fad1705c3c978f8e93db0862f750b02faabdb0006"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5fb19f6e2cae45759f5f4df3b8878b4e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5fb19f6e2cae45759f5f4df3b8878b4e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "5fb19f6e2cae45759f5f4df3b8878b4e",
+      "wave_id": "24825002adaf43cd9343af512dfc05b1",
+      "checkpoint_id": "f2c45a779aa648c48c02abf42c8f595b",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "636a8dc110c5e5f8895e23e27381b4a608427c2fc908f4a7b3041b3b86863902",
+      "contract_fp": "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1",
+      "objective_provenance": {
+        "effective_objective": "Restore the HTTP handler metadata compatibility re-exports while keeping Ruff clean",
+        "objective_revision": 1,
+        "objective_sha256": "cd19bcfb45be186e0d1dcf4ac7899d59e574c5a703e2ed5c2f83567f7bc71a20",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "c894d9bc549349a9a95034d466fc5727",
+          "stage_id": "check:77f5ed58487efcea",
+          "status": "passed",
+          "duration_ms": 1448,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d86bb5de0bd94090bbbf40ef3b87624e",
+          "stage_id": "check:7ec691b1eda131d2",
+          "status": "passed",
+          "duration_ms": 48669,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "2257335e62642ca6f7a5042c9f159d2eebb3d0a6fe4b2791d15e07c3143ba000",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '42 passed in 46.18s'",
+      "finished_at": "2026-09-03T06:18:27.996Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "D9_cYq9F3qZsrCdGpJUutVxT"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "5fb19f6e2cae45759f5f4df3b8878b4e",
+        "owner_wave": "24825002adaf43cd9343af512dfc05b1",
+        "size_bytes": 102,
+        "command_id": "D9_cYq9F3qZsrCdGpJUutVxT",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:D9_cYq9F3qZsrCdGpJUutVxT:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:D9_cYq9F3qZsrCdGpJUutVxT:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T06:18:30.991Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-03T06:17:26.942Z",
+  "updated_at": "2026-09-03T06:19:55.812Z",
+  "events": [
+    {
+      "time": "2026-09-03T06:17:26.942Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Restore the HTTP handler metadata compatibility re-exports while keeping Ruff clean"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:28.928Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:31.853Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:33.699Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:33.711Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:35.960Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:37.128Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:38.194Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m ruff check coding_tools_mcp/mcp_http_handler.py",
+        "session_id": "IOpzM3siXIDVG5qmXE0Wrh0Q"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:38.757Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m ruff check coding_tools_mcp/mcp_http_handler.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:40.110Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "session_id": "D9_cYq9F3qZsrCdGpJUutVxT"
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:27.996Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.137Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.143Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.597Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.600Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.779Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "751ef1e1b1b2bb69b4680048508b8ab151b47b6ed37261835cd4169fef70d295"
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:30.991Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-03T06:18:34.652Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:19:55.612Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-03T06:19:55.617Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:19:55.808Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "2257335e62642ca6f7a5042c9f159d2eebb3d0a6fe4b2791d15e07c3143ba000"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "8f71ed3d76c240ab856e4eebfc54dd14",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "wlowJqrNRUiY0e33BfM8iPdJ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 550,
+    "finished_at": "2026-09-01T16:06:46.755Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T16:06:45.888Z",
+  "updated_at": "2026-09-01T16:06:46.755Z",
+  "events": [
+    {
+      "time": "2026-09-01T16:06:45.888Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T16:06:46.301Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"(Get-Content 'tests/full-clean-activation.test.js')[1170..1210]\"",
+        "session_id": "wlowJqrNRUiY0e33BfM8iPdJ"
+      }
+    },
+    {
+      "time": "2026-09-01T16:06:46.755Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"(Get-Content 'tests/full-clean-activation.test.js')[1170..1210]\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

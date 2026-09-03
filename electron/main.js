@@ -533,6 +533,65 @@ async function recordHostObservationSpan(event) {
   return true;
 }
 
+async function recordControllerUsageReceipt(event) {
+  if (!event || event.event_type !== 'controller_usage' || !event.run_id || !event.wave_id || !event.turn_id || !event.trace_id) return false;
+  const tokenFields = ['input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_output_tokens'];
+  if (tokenFields.some((key) => !Number.isSafeInteger(event[key]) || event[key] < 0)) return false;
+  if (event.cached_input_tokens > event.input_tokens || event.reasoning_output_tokens > event.output_tokens) return false;
+  const current = settings.load();
+  const token = secrets.get('mcpAuthToken');
+  if (!token) return false;
+  const controllerUsage = {
+    schema_version: 1,
+    run_id: event.run_id,
+    wave_id: event.wave_id,
+    turn_id: event.turn_id,
+    trace_id: event.trace_id,
+    accounting_profile: event.accounting_profile || 'openai_compatible',
+    provider_id: event.provider_id || 'openai',
+    ...(event.model_id ? { model_id: event.model_id } : {}),
+    source: event.source || 'client_reported',
+    input_tokens: event.input_tokens,
+    cached_input_tokens: event.cached_input_tokens,
+    output_tokens: event.output_tokens,
+    reasoning_output_tokens: event.reasoning_output_tokens
+  };
+  const request = {
+    jsonrpc: '2.0',
+    id: `controller-usage-${Date.now()}`,
+    method: 'tools/call',
+    params: {
+      name: 'task_control',
+      arguments: { action: 'audit', run_id: event.run_id, wave_id: event.wave_id, limit: 1 },
+      _meta: {
+        'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+        'io.modelcontextprotocol/clientCapabilities': {},
+        'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-chatweb-usage-bridge', version: app.getVersion() },
+        'io.coding-tools/controllerUsage': controllerUsage
+      }
+    }
+  };
+  const response = await httpRequestJson({
+    port: current.mcpPort,
+    path: '/mcp',
+    method: 'POST',
+    token,
+    body: request,
+    headers: {
+      'MCP-Protocol-Version': '2026-07-28',
+      'Mcp-Method': 'tools/call',
+      'Mcp-Name': 'task_control',
+      'X-Coding-Tools-Client-Id': 'chatweb',
+      'X-Coding-Tools-Client-Type': 'chatweb'
+    },
+    timeout: 5000
+  });
+  if (response?.error || response?.result?.isError) {
+    throw new Error(response?.error?.message || response?.result?.structuredContent?.error?.message || 'MCP rejected ChatWeb controller usage.');
+  }
+  return true;
+}
+
 function layoutViews() {
   if (!chatWindow || chatWindow.isDestroyed()) return;
   const [width, height] = chatWindow.getContentSize();
@@ -667,11 +726,15 @@ function createChatWindow() {
         log.warn('Không thể ghi host-visible evaluation telemetry', { error: safeMessage(error) });
         return;
       }
-      for (const event of correlated.filter((item) => item?.event_type === 'host_turn_span')) {
+      for (const event of correlated.filter((item) => ['host_turn_span', 'controller_usage'].includes(item?.event_type))) {
         try {
-          if (event.run_id && event.wave_id) await recordHostObservationSpan(event);
+          if (event.run_id && event.wave_id && event.event_type === 'host_turn_span') await recordHostObservationSpan(event);
+          if (event.run_id && event.wave_id && event.event_type === 'controller_usage') await recordControllerUsageReceipt(event);
         } catch (error) {
-          log.warn('Không thể ghi explicit host observation vào EOCL ledger', { error: safeMessage(error) });
+          log.warn('Không thể ghi ChatWeb host/controller telemetry vào EOCL ledger', {
+            event_type: event.event_type,
+            error: safeMessage(error)
+          });
         } finally {
           chatEvaluationJournal.finalizeCorrelation(workspace, event);
         }

@@ -1,0 +1,1470 @@
+[
+  {
+    "version": 2,
+    "task_id": "396def5b25f44826ab5c175816bb8516",
+    "orchestration": {
+      "run_id": "a9a729561eb048ca94aa6f5e44da585f",
+      "wave_id": "5a837dd8c1c14fb3bad7fef758cab96c",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "db9f1f472815d07791ce1199f13a9b805aa4fd71ed82c5e6ebbe036ac0ba7e57",
+      "contract_fp": ""
+    },
+    "objective": "Fix the post-activation exact-RUN continuity defect that blocks canonical W4. Live reproduction: task_control audit with only run_id=393c55bf91c743988d65cb42ffffda9b resolves the correct durable RUN/WAVE and returns task_context_id ctx_18c5f68da722f4789844de4ff18c5c7c, but the TaskState projection in that context remains bound to the already-aborted duplicate RUN 825b0d02075a4d5294e441bfceead65b. task_control resume changes only that stale task status, agent_workflow phase=resume still returns TASK_STOPPED, and a fresh exact task_control get(run_id=393c...) fails EXACT_RUN_RECOVERY_REFUSED. The archived history contains canonical task_id 6bf9cd89463f4f3a8024502ae7f5b37f with RUN 393c... and current WAVE a4f5bf9b89074d55b6cb399fb0a23ee3. Localize the smallest fail-closed repair so successful exact-RUN stateless recovery rehydrates/persists the canonical TaskState projection (or otherwise makes the returned task_context immediately usable by agent_workflow) only when the conflicting projection is safely terminal and the run/task/controller/workspace binding is exact. Preserve refusal on active conflicts, foreign controller/workspace, ambiguous archive matches, pending operator reports, or mismatched task_id. Add focused regression covering audit recovery followed immediately by resume/agent workflow eligibility or the equivalent TaskState contract. No W4 instrumentation changes, no commit/push/restart/release/deploy.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "hRVdcHUVRTXgpJLWKkAzzbVA",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 647,
+      "finished_at": "2026-09-01T07:27:03.631Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T07:22:42.792Z",
+    "updated_at": "2026-09-01T07:27:03.631Z",
+    "events": [
+      {
+        "time": "2026-09-01T07:22:42.792Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Fix the post-activation exact-RUN continuity defect that blocks canonical W4. Live reproduction: task_control audit with only run_id=393c55bf91c743988d65cb42ffffda9b resolves the correct durable RUN/WAVE and returns task_context_id ctx_18c5f68da722f4789844de4ff18c5c7c, but the TaskState projection in that context remains bound to the already-aborted duplicate RUN 825b0d02075a4d5294e441bfceead65b. task_control resume changes only that stale task status, agent_workflow phase=resume still returns TASK_STOPPED, and a fresh exact task_control get(run_id=393c...) fails EXACT_RUN_RECOVERY_REFUSED. The archived history contains canonical task_id 6bf9cd89463f4f3a8024502ae7f5b37f with RUN 393c... and current WAVE a4f5bf9b89074d55b6cb399fb0a23ee3. Localize the smallest fail-closed repair so successful exact-RUN stateless recovery rehydrates/persists the canonical TaskState projection (or otherwise makes the returned task_context immediately usable by agent_workflow) only when the conflicting projection is safely terminal and the run/task/controller/workspace binding is exact. Preserve refusal on active conflicts, foreign controller/workspace, ambiguous archive matches, pending operator reports, or mismatched task_id. Add focused regression covering audit recovery followed immediately by resume/agent workflow eligibility or the equivalent TaskState contract. No W4 instrumentation changes, no commit/push/restart/release/deploy."
+        }
+      },
+      {
+        "time": "2026-09-01T07:22:44.202Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:22:46.224Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:22:46.237Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T07:25:32.580Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 90 \"projection_recovery_run|action == \\\"audit\\\"|action == \\\"get\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "iEi_TMDVx1Y85Ze1dg6HZ-Ex"
+        }
+      },
+      {
+        "time": "2026-09-01T07:25:33.070Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 90 \"projection_recovery_run|action == \\\"audit\\\"|action == \\\"get\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T07:25:51.698Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"resolve_stateless_task_context|recover_exact_run_context|stateless_task_context_id|TASK_CONTROL_CONTINUATION_ACTIONS\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "J4vPJ2T-CHI5sjEF8VK0U3V3"
+        }
+      },
+      {
+        "time": "2026-09-01T07:25:52.299Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"resolve_stateless_task_context|recover_exact_run_context|stateless_task_context_id|TASK_CONTROL_CONTINUATION_ACTIONS\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:03.213Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"resolve_stateless_task_context\\(\" resources/coding-tools-mcp",
+          "session_id": "hRVdcHUVRTXgpJLWKkAzzbVA"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:03.631Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"resolve_stateless_task_context\\(\" resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T07:27:19.056Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "a38834f5d7f942b08dc4b067d6e0dacf",
+    "orchestration": {
+      "run_id": "ecb8c6114bd6497aa47ce6f5e84fa780",
+      "wave_id": "9d5a6438e1b34970a2e03a76644c73db",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "db9f1f472815d07791ce1199f13a9b805aa4fd71ed82c5e6ebbe036ac0ba7e57",
+      "contract_fp": ""
+    },
+    "objective": "Implement the smallest fail-closed repair for post-activation exact-RUN stateless continuity. Change resolve_stateless_task_context so it reports request-scoped provenance only when an omitted task_context_id is successfully resolved from an exact ChatWeb task_control run selector; thread that provenance through MCPHandler into Runtime.request_context for the current request and clear it in finally; then in task_control allow _reconcile_task_orchestration_projection(requested_run_id=...) not only for action=get but also when the request-scoped exact-recovery provenance exactly equals the requested run_id. Direct historical audit/runtime calls without this provenance must keep their current semantics and must not rehydrate or replace the current operator-report latch. Explicit task_context_id calls must not be treated as transport recovery. Preserve all existing fail-closed projection_rebuild guards. Add a focused stateless HTTP regression: an archived canonical run whose context is polluted by a safely terminal duplicate must be recoverable by run-id-only task_control audit, must return/persist canonical TaskState in the exact recovered context, and the existing historical-audit operator-report isolation test must remain green. Do not touch W4 instrumentation or any unrelated source. No restart/commit/push/release/deploy.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-01T07:27:54.169Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-01T07:27:54.169Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": {
+      "command": "python -m unittest discover -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s tests -p \"test_operator_report_isolation.py\"",
+      "kind": "command",
+      "session_id": "-ANm-qy7B42e3khiMiSpy0ou",
+      "workdir": "resources/coding-tools-mcp",
+      "status": "running",
+      "started_at": "2026-09-01T07:27:25.074Z",
+      "owner_run": "ecb8c6114bd6497aa47ce6f5e84fa780",
+      "owner_wave": "eefc74b46b86435eaafdb3de5e377ff1"
+    },
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 24,
+          "head_hash": "739e6f214d313055fe14e8a2276cf2537f5f2479535fd571bccb90380d729b5d"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ecb8c6114bd6497aa47ce6f5e84fa780\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ecb8c6114bd6497aa47ce6f5e84fa780\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "ecb8c6114bd6497aa47ce6f5e84fa780",
+        "wave_id": "eefc74b46b86435eaafdb3de5e377ff1",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "db9f1f472815d07791ce1199f13a9b805aa4fd71ed82c5e6ebbe036ac0ba7e57",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the smallest fail-closed repair for post-activation exact-RUN stateless continuity. Change resolve_stateless_task_context so it reports request-scoped provenance only when an omitted task_context_id is successfully resolved from an exact ChatWeb task_control run selector; thread that provenance through MCPHandler into Runtime.request_context for the current request and clear it in finally; then in task_control allow _reconcile_task_orchestration_projection(requested_run_id=...) not only for action=get but also when the request-scoped exact-recovery provenance exactly equals the requested run_id. Direct historical audit/runtime calls without this provenance must keep their current semantics and must not rehydrate or replace the current operator-report latch. Explicit task_context_id calls must not be treated as transport recovery. Preserve all existing fail-closed projection_rebuild guards. Add a focused stateless HTTP regression: an archived canonical run whose context is polluted by a safely terminal duplicate must be recoverable by run-id-only task_control audit, must return/persist canonical TaskState in the exact recovered context, and the existing historical-audit operator-report isolation test must remain green. Do not touch W4 instrumentation or any unrelated source. No restart/commit/push/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "c73eae58957059b2d45ca5489ba37f9c86a70ae31af276e6252ec929e1b40606",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "18e292bdbf7140a5ace2279c373f9dbf",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 29577,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "SOL_REJECTED",
+        "reason": "Reject no-change wave: proof only reran existing tests, affected_files/modified_files are empty, so it does not prove the exact-run stateless continuity defect was repaired. Replan on the same bugfix RUN with an actual bounded source patch and focused regression; preserve W4 untouched.",
+        "event_seq": 34315
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "d50ffe44a17c04eb0d7c476d0c46404f7bd1d9f0fd7970ba40642274e33b95b7",
+    "completion_report_acknowledged_id": "d50ffe44a17c04eb0d7c476d0c46404f7bd1d9f0fd7970ba40642274e33b95b7",
+    "completion_report_acknowledged_at": "2026-09-01T07:28:56.730Z",
+    "test_results": [
+      {
+        "command": "python -m unittest discover -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s tests -p \"test_operator_report_isolation.py\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 29575,
+        "summary": "exit 0 | 29.1s | 70 lines | tail: 'OK'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "python",
+        "name": "coding-tools-mcp",
+        "version": "0.4.1",
+        "package_manager": "pip",
+        "test_command": "python -m pytest",
+        "build_command": "python -m build",
+        "artifact_paths": [
+          "dist"
+        ]
+      },
+      "commands": {
+        "test": "python -m unittest discover -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s tests -p \"test_operator_report_isolation.py\"",
+        "build": "python -m build"
+      },
+      "test_result": {
+        "command": "python -m unittest discover -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s tests -p \"test_operator_report_isolation.py\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 29575,
+        "summary": "exit 0 | 29.1s | 70 lines | tail: 'OK'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-09-01T07:27:53.830Z"
+    },
+    "modified_files": [],
+    "failure": "Path not found: coding_tools_mcp/stateless_context.py",
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-09-01T07:27:19.057Z",
+    "updated_at": "2026-09-01T07:31:18.973Z",
+    "events": [
+      {
+        "time": "2026-09-01T07:27:19.057Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:19.697Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:20.923Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:21.939Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:22.113Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:23.403Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:24.021Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:25.074Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s tests -p \"test_operator_report_isolation.py\"",
+          "session_id": "-ANm-qy7B42e3khiMiSpy0ou"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:53.831Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.168Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.169Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.609Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.611Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.697Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "1f63706ea6daa4722bb553d8c5c0bd41de71563f995aecb056f949d3a691512a"
+        }
+      },
+      {
+        "time": "2026-09-01T07:27:54.828Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:17.243Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:18.952Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:18.954Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:19.031Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "d50ffe44a17c04eb0d7c476d0c46404f7bd1d9f0fd7970ba40642274e33b95b7"
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:33.167Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:33.591Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "MESSAGE_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-01T07:28:56.730Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "d50ffe44a17c04eb0d7c476d0c46404f7bd1d9f0fd7970ba40642274e33b95b7"
+        }
+      },
+      {
+        "time": "2026-09-01T07:29:09.737Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:30:36.058Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:30:37.399Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:30:37.407Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:18.973Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "NOT_FOUND"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T07:31:45.694Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "4c9ee947c7f24dabac5a70aa0ddd085b",
+    "orchestration": {
+      "run_id": "6f3f0174db504d7b9e9d3ab28cc47132",
+      "wave_id": "99ef95aeaf734f7f84f16ed509cb2d13",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "c6e0aefd6e4e031ee24b2d9b75b98faea2c9695cde92dbd5546c7bde02bcd001",
+      "contract_fp": ""
+    },
+    "objective": "Implement the bounded exact-RUN stateless continuity repair on the current replan wave only. A stateless ChatWeb task_control call that omits task_context_id and successfully resolves an exact archived run context must carry request-scoped exact-run recovery provenance into Runtime.request_context. task_control may rehydrate the selected TaskState projection when and only when requested_run exactly matches that marker, while preserving existing action=get behavior. Direct historical runtime audit without transport provenance and explicit task_context_id calls must retain current semantics. Preserve all projection_rebuild fail-closed guards. Add regression proving run-id-only audit returns and persists canonical TaskState after safely terminal duplicate pollution. Do not touch W4 instrumentation or unrelated source. No restart/commit/push/release/deploy.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-01T07:31:52.895Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "failed",
+        "updated_at": "2026-09-01T07:31:52.895Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-01T07:31:52.895Z"
+      }
+    ],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "40fYoqOs7d7mNeWnSv4EAKRy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 594,
+      "finished_at": "2026-09-01T08:02:34.014Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 23,
+          "head_hash": "108641681e0c701f102112a8861df7a32c8435b95a80be3e1b589dfdfebe312b"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6f3f0174db504d7b9e9d3ab28cc47132\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6f3f0174db504d7b9e9d3ab28cc47132\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "6f3f0174db504d7b9e9d3ab28cc47132",
+        "wave_id": "f146f13834764b4d80670d4b2a04f940",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "db9f1f472815d07791ce1199f13a9b805aa4fd71ed82c5e6ebbe036ac0ba7e57",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the bounded exact-RUN stateless continuity repair on the current replan wave only. A stateless ChatWeb task_control call that omits task_context_id and successfully resolves an exact archived run context must carry request-scoped exact-run recovery provenance into Runtime.request_context. task_control may rehydrate the selected TaskState projection when and only when requested_run exactly matches that marker, while preserving existing action=get behavior. Direct historical runtime audit without transport provenance and explicit task_context_id calls must retain current semantics. Preserve all projection_rebuild fail-closed guards. Add regression proving run-id-only audit returns and persists canonical TaskState after safely terminal duplicate pollution. Do not touch W4 instrumentation or unrelated source. No restart/commit/push/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "67ab018d0c348602978a39b6ff980da57cd96273a9a98249beca65a905204936",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "ac106554875b48e08581318cd40ad031",
+            "stage_id": "verify:tests",
+            "status": "failed",
+            "duration_ms": 1156,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "BUILD_VERIFICATION_FAILED",
+        "reason": null,
+        "event_seq": 34342
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "227d3851ded02f969d8cebef44592d3705a2e099ce887d062975e5d74769fffb",
+    "completion_report_acknowledged_id": "227d3851ded02f969d8cebef44592d3705a2e099ce887d062975e5d74769fffb",
+    "completion_report_acknowledged_at": "2026-09-01T08:01:58.712Z",
+    "test_results": [
+      {
+        "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_operator_report_isolation.py\"",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 1146,
+        "summary": "exit 1 | 0.8s | 21 lines | tail: 'FAILED (errors=1)'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "coding-tools-mcp",
+        "version": "1.0.0",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_operator_report_isolation.py\"",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_operator_report_isolation.py\"",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 1146,
+        "summary": "exit 1 | 0.8s | 21 lines | tail: 'FAILED (errors=1)'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "failed",
+      "failure": "Tests failed.",
+      "report_generated_at": "2026-09-01T07:31:52.558Z"
+    },
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+        "operation": "update",
+        "updated_at": "2026-09-01T07:31:53.942Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+        "operation": "update",
+        "updated_at": "2026-09-01T07:31:53.942Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "operation": "update",
+        "updated_at": "2026-09-01T07:31:53.942Z"
+      },
+      {
+        "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "operation": "update",
+        "updated_at": "2026-09-01T07:31:53.942Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-09-01T07:31:45.696Z",
+    "updated_at": "2026-09-01T08:02:34.014Z",
+    "events": [
+      {
+        "time": "2026-09-01T07:31:45.696Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:46.676Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:47.865Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:49.192Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:49.197Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:50.756Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:51.255Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:52.168Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_operator_report_isolation.py\"",
+          "session_id": "vr8v_lVaIHHJhvj4w9ttlFSJ"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:52.559Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:52.895Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:53.701Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:53.703Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:53.704Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:53.790Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "227d3851ded02f969d8cebef44592d3705a2e099ce887d062975e5d74769fffb"
+        }
+      },
+      {
+        "time": "2026-09-01T07:31:53.942Z",
+        "event": "files_modified",
+        "details": {
+          "count": 4
+        }
+      },
+      {
+        "time": "2026-09-01T07:32:10.177Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:32:10.608Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:59:24.133Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-01T07:59:33.966Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -s resources/coding-tools-mcp/tests -p \"test_operator_report_isolation.py\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-01T07:59:33.966Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "COMMAND_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-01T08:00:47.645Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:01:58.712Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "227d3851ded02f969d8cebef44592d3705a2e099ce887d062975e5d74769fffb"
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:18.082Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:19.472Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:20.773Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:20.779Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:33.590Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -v -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\"",
+          "session_id": "40fYoqOs7d7mNeWnSv4EAKRy"
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:34.014Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest discover -v -s resources/coding-tools-mcp/tests -p \"test_stateless_http_2026.py\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T08:02:49.790Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "95db8fd4be144d44a5ef61d2f6ab92f4",
+    "orchestration": {
+      "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+      "wave_id": "ca8a134f9d194c738e6bc5ec609a5289",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "c6e0aefd6e4e031ee24b2d9b75b98faea2c9695cde92dbd5546c7bde02bcd001",
+      "contract_fp": ""
+    },
+    "objective": "Close the exact-RUN stateless continuity repair without further source edits. Adopt the already-applied four-file patch by exact SHA-256 on the current replan wave and prove the repaired semantics from the coding-tools-mcp package root. Acceptance criteria: run-id-only stateless audit after safely terminal duplicate pollution rehydrates and persists the canonical TaskState; direct historical audit still preserves current operator-report isolation; explicit task_context_id is not transport recovery; all fail-closed projection-rebuild guards remain intact. Do not touch W4 instrumentation or unrelated source. No restart/commit/push/release/deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-01T08:04:30.207Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-01T08:04:30.207Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-01T08:04:30.207Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ECQyipfGNELkyQLXjags1AV6",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 804,
+      "finished_at": "2026-09-01T08:05:29.057Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+            "state": "file",
+            "sha256": "c46a06ff7808065fea8f370e4ca497a5bb67349f34f033cdb5a65697255e3dc0",
+            "size_bytes": 3252,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+            "wave_id": "ca8a134f9d194c738e6bc5ec609a5289"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+            "state": "file",
+            "sha256": "d994d6110ce47ebe30a543f00b48b02e629d91247f4e0a1bb75ac965ed56e390",
+            "size_bytes": 81402,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+            "wave_id": "ca8a134f9d194c738e6bc5ec609a5289"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+            "state": "file",
+            "sha256": "598bae629b6cd7950fc3f9db20f73c312046a2c5a5ac4cadeff645a8b3dc9bd6",
+            "size_bytes": 88419,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+            "wave_id": "ca8a134f9d194c738e6bc5ec609a5289"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+            "state": "file",
+            "sha256": "fee68cd4d37143138085585ddeba29fc4b2475ed924f5206fa11bf5530d79536",
+            "size_bytes": 53448,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+            "wave_id": "ca8a134f9d194c738e6bc5ec609a5289"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 27,
+          "head_hash": "b0ce0438b6ff60ebe55439e6141810d72a468e0de478bd7c1e67722ba33aa157"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-502330f7f14c4606a1b354cc6710ddc6\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-502330f7f14c4606a1b354cc6710ddc6\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "502330f7f14c4606a1b354cc6710ddc6",
+        "wave_id": "ca8a134f9d194c738e6bc5ec609a5289",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "c6e0aefd6e4e031ee24b2d9b75b98faea2c9695cde92dbd5546c7bde02bcd001",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Close the exact-RUN stateless continuity repair without further source edits. Adopt the already-applied four-file patch by exact SHA-256 on the current replan wave and prove the repaired semantics from the coding-tools-mcp package root. Acceptance criteria: run-id-only stateless audit after safely terminal duplicate pollution rehydrates and persists the canonical TaskState; direct historical audit still preserves current operator-report isolation; explicit task_context_id is not transport recovery; all fail-closed projection-rebuild guards remain intact. Do not touch W4 instrumentation or unrelated source. No restart/commit/push/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "43af38159c985d6c43c43b5a679ac9416a6c9c03e985bd6ac8dfe88103de4f69",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "e176d009391944b4a368b6a81d96b1b1",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 29485,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "ca6fe745e305fb1f786db6aad154b02edd8983bef9d74557d2da1d8683a32283",
+    "completion_report_acknowledged_id": "ca6fe745e305fb1f786db6aad154b02edd8983bef9d74557d2da1d8683a32283",
+    "completion_report_acknowledged_at": "2026-09-01T08:06:11.157Z",
+    "test_results": [
+      {
+        "command": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 29464,
+        "summary": "exit 0 | 29.0s | 105 lines | tail: 'OK'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "python",
+        "name": "coding-tools-mcp",
+        "version": "0.4.1",
+        "package_manager": "pip",
+        "test_command": "python -m pytest",
+        "build_command": "python -m build",
+        "artifact_paths": [
+          "dist"
+        ]
+      },
+      "commands": {
+        "test": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+        "build": "python -m build"
+      },
+      "test_result": {
+        "command": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 29464,
+        "summary": "exit 0 | 29.0s | 105 lines | tail: 'OK'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-09-01T08:04:29.806Z"
+    },
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-01T08:02:49.792Z",
+    "updated_at": "2026-09-01T08:08:12.057Z",
+    "events": [
+      {
+        "time": "2026-09-01T08:02:49.792Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T08:02:50.455Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+          "session_id": "M3muPrUK-BKIGqLgWVW0xdXm"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:19.231Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:33.481Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py'); foreach($f in $files){$h=Get-FileHash -Algorithm SHA256 $f; Write-Output ($h.Hash.ToLower()+'  '+$f)}\"",
+          "session_id": "q3oItm2oxqX9DZ1dWBIDT5ON"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:34.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py'); foreach($f in $files){$h=Get-FileHash -Algorithm SHA256 $f; Write-Output ($h.Hash.ToLower()+'  '+$f)}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:55.640Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:56.718Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:58.040Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:58.045Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:03:59.523Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:00.162Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:00.939Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest discover -v -s tests -p \"test_stateless_http_2026.py\" && python -m unittest discover -v -s tests -p \"test_operator_report_isolation.py\"",
+          "session_id": "psnNXHQ-emoFRx_QWZIZxHLW"
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:29.807Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.205Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.207Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.577Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.579Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.656Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "17d6c25869347b4ffd8076f730a4f755b55830c53a4a71023d5a2d2948bba940"
+        }
+      },
+      {
+        "time": "2026-09-01T08:04:30.808Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:18.688Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:28.583Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "ECQyipfGNELkyQLXjags1AV6"
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:29.057Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:44.430Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:46.841Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:46.843Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:05:46.932Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "ca6fe745e305fb1f786db6aad154b02edd8983bef9d74557d2da1d8683a32283"
+        }
+      },
+      {
+        "time": "2026-09-01T08:06:00.021Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:06:11.157Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "ca6fe745e305fb1f786db6aad154b02edd8983bef9d74557d2da1d8683a32283"
+        }
+      },
+      {
+        "time": "2026-09-01T08:06:19.183Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T08:10:29.109Z",
+    "archive_reason": "finished"
+  }
+]

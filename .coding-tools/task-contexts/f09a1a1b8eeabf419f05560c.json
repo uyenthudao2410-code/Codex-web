@@ -1,0 +1,132 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "e10a55eab39c4d9cbfddc37a48b58f8e",
+    "wave_id": "c40ff646a8004a5fbf2382a12603cf28",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "c52d8fe6c3e03ae24f1cd1553f722a4fe6f2d5e887e4f47b3ad70035ece849e1",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 30,
+        "head_hash": "827a4bcb9170d81d053ebf089c03112db1c64fcca1f404a32ffbd2cdbec217c1"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e10a55eab39c4d9cbfddc37a48b58f8e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e10a55eab39c4d9cbfddc37a48b58f8e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "e10a55eab39c4d9cbfddc37a48b58f8e",
+      "wave_id": "c40ff646a8004a5fbf2382a12603cf28",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "c52d8fe6c3e03ae24f1cd1553f722a4fe6f2d5e887e4f47b3ad70035ece849e1",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "W3 Provider UsageEvent Hardening: adopt the exact pre-existing W3 source bytes only; prove pricing_revision provenance, attribution status exact/partial/unassigned, provider-reported cost precedence, and exact fixture-to-ledger-to-analytics round trip. Do not alter any file bytes. Preserve unrelated dirty state. No commit/push/release/deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "24eb59d05686da1e48ae74162a51d243762d7cfe2a26a7caebda30f0e3a2a854",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "0c7e9cf177364a2eb3eedf9d5b85dec1",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 2641,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "PROVENANCE_ATTRIBUTION_FAIL_OPEN — build_usage_event accepts attribution_status=exact while run_id, wave_id and delegation_id are all empty; completion report does not prove the required mismatch cases.",
+      "event_seq": 33833
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "422b4a946f18e92c049ebabdbdb062965c20062debd06dfd9bbbff95b8ae94ce",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
+  "created_at": "2026-09-01T00:09:35.396Z",
+  "updated_at": "2026-09-01T00:09:35.501Z",
+  "events": [
+    {
+      "time": "2026-09-01T00:09:35.396Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T00:09:35.499Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "422b4a946f18e92c049ebabdbdb062965c20062debd06dfd9bbbff95b8ae94ce"
+      }
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "version": 2,
+  "task_id": "477bad510ebc486c9ac76225a545e412",
+  "orchestration": {
+    "run_id": "d00a609a5678478eb26075b57822a5ca",
+    "wave_id": "60c68c95f6d0480eb581a37d4a9a79f9",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "fe2fded7e50a8c6a6046ad20026531ae01c63face4d9c1b9c57b4e577e8f2a37",
+    "contract_fp": ""
+  },
+  "objective": "Build a repository-grounded implementation plan for complete token/cost/context observability in Codex-web: canonical provider/model usage, controller usage when client-reported, tool-call/tool-result context contribution, tools/list contract inventory, per-invocation provenance, session/run/wave aggregation, dashboard KPIs, cost/efficiency ratios, and fail-closed unknown semantics. Do not mutate source. Identify existing telemetry paths, gaps, canonical data model, ingestion boundaries, projections, tests, migration needs, and phased acceptance criteria.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 7,
+        "head_hash": "beab70a13e2eaa38684d0b375648e600bc7ce1d3620c6102a27bb2ebecaf6a6b"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d00a609a5678478eb26075b57822a5ca\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d00a609a5678478eb26075b57822a5ca\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d00a609a5678478eb26075b57822a5ca",
+      "wave_id": "60c68c95f6d0480eb581a37d4a9a79f9",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "fe2fded7e50a8c6a6046ad20026531ae01c63face4d9c1b9c57b4e577e8f2a37",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Build a repository-grounded implementation plan for complete token/cost/context observability in Codex-web: canonical provider/model usage, controller usage when client-reported, tool-call/tool-result context contribution, tools/list contract inventory, per-invocation provenance, session/run/wave aggregation, dashboard KPIs, cost/efficiency ratios, and fail-closed unknown semantics. Do not mutate source. Identify existing telemetry paths, gaps, canonical data model, ingestion boundaries, projections, tests, migration needs, and phased acceptance criteria.",
+        "objective_revision": 1,
+        "objective_sha256": "457278513eea6ea46c7cd66387e1ec31d76917e90c048f0b2b5a459adca43f94",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "27ecc33e72079749e65d86d8b5e21c3f3f0923123b6b26343fb6b8eb91590e0d",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-31T17:27:45.776Z",
+  "updated_at": "2026-08-31T17:29:22.407Z",
+  "events": [
+    {
+      "time": "2026-08-31T17:27:45.776Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Build a repository-grounded implementation plan for complete token/cost/context observability in Codex-web: canonical provider/model usage, controller usage when client-reported, tool-call/tool-result context contribution, tools/list contract inventory, per-invocation provenance, session/run/wave aggregation, dashboard KPIs, cost/efficiency ratios, and fail-closed unknown semantics. Do not mutate source. Identify existing telemetry paths, gaps, canonical data model, ingestion boundaries, projections, tests, migration needs, and phased acceptance criteria."
+      }
+    },
+    {
+      "time": "2026-08-31T17:27:47.188Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T17:27:49.986Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T17:28:01.711Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T17:28:02.578Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T17:29:22.403Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "27ecc33e72079749e65d86d8b5e21c3f3f0923123b6b26343fb6b8eb91590e0d"
+      }
+    }
+  ]
+}

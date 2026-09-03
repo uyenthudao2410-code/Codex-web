@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "task_id": "a870ff305bd047ed8fed55f180912a4d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "40qulXx2FNlpvCOcpV8DvhoM",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 355,
+    "finished_at": "2026-09-01T00:08:47.907Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T00:08:27.925Z",
+  "updated_at": "2026-09-01T00:08:47.907Z",
+  "events": [
+    {
+      "time": "2026-09-01T00:08:27.925Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:28.273Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo control",
+        "session_id": "s5SqyyKK2Z_Bke5Gh7xKDl3j"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:28.537Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo control",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:40.015Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"attribution_status|_attribution_status|attribution\" resources/coding-tools-mcp/coding_tools_mcp/usage_events.py resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+        "session_id": "JWKawrpQj4rYaMeAXoYMncjv"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:40.291Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"attribution_status|_attribution_status|attribution\" resources/coding-tools-mcp/coding_tools_mcp/usage_events.py resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:47.662Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 58 -B 5 \"test_provider_fixture_round_trips_exact_values_cost_provenance_and_attribution\" resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+        "session_id": "40qulXx2FNlpvCOcpV8DvhoM"
+      }
+    },
+    {
+      "time": "2026-09-01T00:08:47.907Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 58 -B 5 \"test_provider_fixture_round_trips_exact_values_cost_provenance_and_attribution\" resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

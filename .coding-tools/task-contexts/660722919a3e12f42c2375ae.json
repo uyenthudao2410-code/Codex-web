@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "f08934097f5f491f91abde5ca02f3407",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "JiDfXbP-wijE_JL96Cg5XrKn",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 651,
+    "finished_at": "2026-09-02T06:57:54.619Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-02T06:57:53.671Z",
+  "updated_at": "2026-09-02T06:57:54.619Z",
+  "events": [
+    {
+      "time": "2026-09-02T06:57:53.671Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-02T06:57:53.999Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(!(Test-Path -LiteralPath $p)){Write-Error 'accepted-code-activation.json missing'; exit 3}; $s=Get-Content -LiteralPath $p -Raw | ConvertFrom-Json; [pscustomobject]@{path=$p;version=$s.version;active_checkpoint_id=$s.active_checkpoint_id;baseline=$s.baseline;closure_input=$s.closure_input} | ConvertTo-Json -Depth 12\"",
+        "session_id": "JiDfXbP-wijE_JL96Cg5XrKn"
+      }
+    },
+    {
+      "time": "2026-09-02T06:57:54.619Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(!(Test-Path -LiteralPath $p)){Write-Error 'accepted-code-activation.json missing'; exit 3}; $s=Get-Content -LiteralPath $p -Raw | ConvertFrom-Json; [pscustomobject]@{path=$p;version=$s.version;active_checkpoint_id=$s.active_checkpoint_id;baseline=$s.baseline;closure_input=$s.closure_input} | ConvertTo-Json -Depth 12\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

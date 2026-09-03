@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "5941db2a4eaa4a28a10ebb9dfcf7c0da",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "O8NGfrGfHALYROxRslTqMcmX",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 671,
+    "finished_at": "2026-09-02T06:17:49.072Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-02T06:17:48.172Z",
+  "updated_at": "2026-09-02T06:17:49.072Z",
+  "events": [
+    {
+      "time": "2026-09-02T06:17:48.172Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-02T06:17:48.521Z",
+      "event": "command_started",
+      "details": {
+        "command": "git -c core.fsmonitor=false status --porcelain=v1 --untracked-files=all && git rev-parse HEAD",
+        "session_id": "O8NGfrGfHALYROxRslTqMcmX"
+      }
+    },
+    {
+      "time": "2026-09-02T06:17:49.072Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git -c core.fsmonitor=false status --porcelain=v1 --untracked-files=all && git rev-parse HEAD",
+        "status": "passed"
+      }
+    }
+  ]
+}

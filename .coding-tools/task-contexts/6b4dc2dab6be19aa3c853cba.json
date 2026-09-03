@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "task_id": "9accb70ed40649c8835e8662c4e6f63c",
+  "orchestration": {
+    "run_id": "9b4b674ad034420ca10ad32d1ae7a14b",
+    "wave_id": "622c0427c62d43178c0436f4c6005499",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "9a9114af87fabb22bdb388af4b201cabde995d56603d51af54c96f14c8db4750",
+    "contract_fp": ""
+  },
+  "objective": "Stage the exact TG1-TG12 V4 patch artifact only; do not apply Stage B source changes.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Path '.coding-tools/orchestration/application-packets/tg1-tg12-exact-write-v4.patch' is protected from source mutation.",
+  "next_step": "Provide replan_reason after correcting the failure cause.",
+  "created_at": "2026-09-03T04:14:09.808Z",
+  "updated_at": "2026-09-03T04:14:15.819Z",
+  "events": [
+    {
+      "time": "2026-09-03T04:14:09.808Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Stage the exact TG1-TG12 V4 patch artifact only; do not apply Stage B source changes."
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:11.163Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:13.132Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:14.494Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:15.673Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:15.675Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T04:14:15.819Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    }
+  ]
+}

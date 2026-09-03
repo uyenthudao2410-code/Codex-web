@@ -1,0 +1,1379 @@
+[
+  {
+    "version": 2,
+    "task_id": "9c44ef1c42754498a9e1cc929d3c6ee8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-31T17:47:44.719Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Shell command substitution and parameter expansion require explicit permission.",
+    "next_step": "",
+    "created_at": "2026-08-31T17:46:57.716Z",
+    "updated_at": "2026-08-31T17:47:44.720Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:46:57.716Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:46:58.027Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== NIC IDENTITY ==='; Get-NetAdapter -Name 'Ethernet 3' | Select-Object Name,InterfaceDescription,Status,LinkSpeed,DriverFileName,DriverVersion,DriverDate,NdisVersion | Format-List; Write-Output '=== NIC POWER MANAGEMENT ==='; Get-NetAdapterPowerManagement -Name 'Ethernet 3' | Format-List *; Write-Output '=== NIC WAKE-RELATED ADVANCED PROPERTIES ==='; Get-NetAdapterAdvancedProperty -Name 'Ethernet 3' | ",
+          "session_id": "QWHaLFoxIIAUTQ2PSMf11M-7"
+        }
+      },
+      {
+        "time": "2026-08-31T17:47:00.883Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== NIC IDENTITY ==='; Get-NetAdapter -Name 'Ethernet 3' | Select-Object Name,InterfaceDescription,Status,LinkSpeed,DriverFileName,DriverVersion,DriverDate,NdisVersion | Format-List; Write-Output '=== NIC POWER MANAGEMENT ==='; Get-NetAdapterPowerManagement -Name 'Ethernet 3' | Format-List *; Write-Output '=== NIC WAKE-RELATED ADVANCED PROPERTIES ==='; Get-NetAdapterAdvancedProperty -Name 'Ethernet 3' | ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:47:17.511Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; $nic=Get-NetAdapter -Name 'Ethernet 3'; Write-Output '=== NIC PNP ==='; $nic | Select-Object Name,InterfaceGuid,PnPDeviceID,DriverVersion,DriverDate | Format-List; $pnp=$nic.PnPDeviceID; Write-Output '=== ROOT WMI WAKE FLAGS ==='; Get-CimInstance -Namespace root\\wmi -ClassName MSPower_DeviceWakeEnable | Where-Object { $_.InstanceName -like '*VEN_8086*' -or $_.InstanceName -like '*I219*' } | Select-Object InstanceName,",
+          "session_id": "cB6w_jfo8uH4aY2cTbqUiU3A"
+        }
+      },
+      {
+        "time": "2026-08-31T17:47:19.466Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; $nic=Get-NetAdapter -Name 'Ethernet 3'; Write-Output '=== NIC PNP ==='; $nic | Select-Object Name,InterfaceGuid,PnPDeviceID,DriverVersion,DriverDate | Format-List; $pnp=$nic.PnPDeviceID; Write-Output '=== ROOT WMI WAKE FLAGS ==='; Get-CimInstance -Namespace root\\wmi -ClassName MSPower_DeviceWakeEnable | Where-Object { $_.InstanceName -like '*VEN_8086*' -or $_.InstanceName -like '*I219*' } | Select-Object InstanceName,",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:47:44.720Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== TEAMVIEWER DEVICE MANAGEMENT STATE ==='; $k='HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2'; if(Test-Path $k){ $p=Get-ItemProperty $k; Write-Output ('DeviceManagementKey=True'); Write-Output ('ManagementIdPresent=' + [bool]($null -ne $p.ManagementId)); Write-Output ('DeviceState=' + $p.DeviceState) } else { Write-Output 'DeviceManagementKey=False' }; Write-Output '=== TEAMVIEWER WOL LOG SIGNALS ==='; ",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:47:44.720Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:48:18.643Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "43b1b27da6e74809b587124ffb6920e1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-31T17:48:38.301Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Network access is denied by default.",
+    "next_step": "",
+    "created_at": "2026-08-31T17:48:18.645Z",
+    "updated_at": "2026-08-31T17:48:38.301Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:48:18.645Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:18.957Z",
+        "event": "command_started",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\TeamViewer\\DeviceManagementV2\" /v DeviceState",
+          "session_id": "Bdm0RU8mc7M3FfCQLTzXxPKK"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:19.260Z",
+        "event": "command_finished",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\TeamViewer\\DeviceManagementV2\" /v DeviceState",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:30.098Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output ('ManagementIdPresent=' + [bool]((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').ManagementId)); Write-Output ('DeviceStateMentionsEasyAccess=' + ([Text.Encoding]::ASCII.GetString((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').DeviceState) -match 'control/easyaccess')); Write-Output ('DeviceStateMentionsWake=' + ([Text.Encoding]::ASCII.GetString((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').",
+          "session_id": "8KTO5pqAHGB72U1YY7Q7r7Bd"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:30.707Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output ('ManagementIdPresent=' + [bool]((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').ManagementId)); Write-Output ('DeviceStateMentionsEasyAccess=' + ([Text.Encoding]::ASCII.GetString((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').DeviceState) -match 'control/easyaccess')); Write-Output ('DeviceStateMentionsWake=' + ([Text.Encoding]::ASCII.GetString((Get-ItemProperty 'HKLM:\\SOFTWARE\\TeamViewer\\DeviceManagementV2').",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:38.301Z",
+        "event": "command_finished",
+        "details": {
+          "command": "curl.exe -I --max-time 4 http://192.168.10.1",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:38.301Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:48:56.067Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f3eb0561a00c424780de8b662d782089",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "E-ku2nnmot9pDzlGb1h_BE3n",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 306,
+      "finished_at": "2026-08-31T17:48:56.656Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:48:56.069Z",
+    "updated_at": "2026-08-31T17:48:56.656Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:48:56.069Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:56.382Z",
+        "event": "command_started",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\TeamViewer\" /f Wake /s",
+          "session_id": "E-ku2nnmot9pDzlGb1h_BE3n"
+        }
+      },
+      {
+        "time": "2026-08-31T17:48:56.656Z",
+        "event": "command_finished",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\TeamViewer\" /f Wake /s",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:49:00.317Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "41470b3e07814c2b974a182e3da23a9b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "u9C0SBWiGGkA4z_coFIhEoMc",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 341,
+      "finished_at": "2026-08-31T17:49:00.866Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:49:00.319Z",
+    "updated_at": "2026-08-31T17:49:00.866Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:49:00.319Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:00.669Z",
+        "event": "command_started",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\Policies\\TeamViewer\" /f Wake /s",
+          "session_id": "u9C0SBWiGGkA4z_coFIhEoMc"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:00.866Z",
+        "event": "command_finished",
+        "details": {
+          "command": "reg query \"HKLM\\SOFTWARE\\Policies\\TeamViewer\" /f Wake /s",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:49:14.991Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "84cc7c0f212d4c979b07fbaf4ca89353",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "jaxyCCohcpnCFe1HNzaShI5J",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 301,
+      "finished_at": "2026-08-31T17:49:15.575Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:49:14.992Z",
+    "updated_at": "2026-08-31T17:49:15.575Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:49:14.992Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:15.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /i /m /c:\"WakeOnLan\" /c:\"Wake-on-LAN\" \"C:\\ProgramData\\TeamViewer\\*\" \"C:\\Program Files\\TeamViewer\\*\"",
+          "session_id": "jaxyCCohcpnCFe1HNzaShI5J"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:15.575Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /i /m /c:\"WakeOnLan\" /c:\"Wake-on-LAN\" \"C:\\ProgramData\\TeamViewer\\*\" \"C:\\Program Files\\TeamViewer\\*\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:49:42.086Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4fdd4d5778ea4e05bc3ed2e8a979f6c1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "PVyal0HV6jYfjZYokQlL93wM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1060,
+      "duration_ms": 356,
+      "finished_at": "2026-08-31T17:49:42.702Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:49:42.089Z",
+    "updated_at": "2026-08-31T17:49:42.702Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:49:42.089Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:42.451Z",
+        "event": "command_started",
+        "details": {
+          "command": "sc query LMS",
+          "session_id": "PVyal0HV6jYfjZYokQlL93wM"
+        }
+      },
+      {
+        "time": "2026-08-31T17:49:42.702Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sc query LMS",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:52:09.438Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e4dd375f4a1640a1acd32ac78d646e44",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-31T17:52:59.661Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "I2w0_Jj8q9pvO4dlRPS1zmWn",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "failed",
+        "command": {
+          "command_id": "I2w0_Jj8q9pvO4dlRPS1zmWn",
+          "kind": "command",
+          "status": "timeout",
+          "result_status": "failed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+          "branch": "main",
+          "worktree_fp": "7ba43efd6a45d73634764b8240f634252e2031bec9c2e25d35513b9325678569",
+          "dirty_paths": [
+            "docs/CURRENT_STATE.md",
+            "docs/ROADMAP.md",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+            "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+            "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_BREAKTHROUGH_METHODOLOGY_AND_IMPLEMENTATION_PROGRAM.md",
+            "docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "e4dd375f4a1640a1acd32ac78d646e44",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_TERMINATED",
+      "blocker_or_failure": {
+        "failure_class": "COMMAND_TERMINATED",
+        "reason": "The command reached a terminal non-success state.",
+        "exit_code": 0
+      },
+      "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+    },
+    "completion_report_id": "cfc2c0d54dece6ac53ff63960fdc7178a2238868add04fd7be0ffe0bc6305ea2",
+    "completion_report_acknowledged_id": "cfc2c0d54dece6ac53ff63960fdc7178a2238868add04fd7be0ffe0bc6305ea2",
+    "completion_report_acknowledged_at": "2026-08-31T17:53:08.417Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+    "created_at": "2026-08-31T17:52:09.441Z",
+    "updated_at": "2026-08-31T17:53:08.420Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:52:09.441Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:09.766Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Program Files\\TeamViewer\\TeamViewer15_Logfile.log\\\" (findstr /i /c:\\\"WakeOnLan\\\" /c:\\\"Wake-on-LAN\\\" /c:\\\"easyaccess\\\" \\\"C:\\Program Files\\TeamViewer\\TeamViewer15_Logfile.log\\\") else (echo PROGRAMFILES_LOG_NOT_FOUND)\"",
+          "session_id": "2H5Dhi4zdciWKUl7VckxCRqz"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:10.044Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Program Files\\TeamViewer\\TeamViewer15_Logfile.log\\\" (findstr /i /c:\\\"WakeOnLan\\\" /c:\\\"Wake-on-LAN\\\" /c:\\\"easyaccess\\\" \\\"C:\\Program Files\\TeamViewer\\TeamViewer15_Logfile.log\\\") else (echo PROGRAMFILES_LOG_NOT_FOUND)\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:18.418Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"set APPDATA&set LOCALAPPDATA\"",
+          "session_id": "HWTvwjg4XTGnSgxUc1ZAdjN_"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:18.684Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"set APPDATA&set LOCALAPPDATA\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:23.699Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer\\TeamViewer15_Logfile.log\\\" (findstr /i /c:\\\"WakeOnLan\\\" /c:\\\"Wake-on-LAN\\\" /c:\\\"easyaccess\\\" /c:\\\"wake\\\" \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer\\TeamViewer15_Logfile.log\\\") else (echo APPDATA_LOG_NOT_FOUND)\"",
+          "session_id": "QwWX7mNk4ntUHplAD9OfjUjp"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:24.066Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer\\TeamViewer15_Logfile.log\\\" (findstr /i /c:\\\"WakeOnLan\\\" /c:\\\"Wake-on-LAN\\\" /c:\\\"easyaccess\\\" /c:\\\"wake\\\" \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer\\TeamViewer15_Logfile.log\\\") else (echo APPDATA_LOG_NOT_FOUND)\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:32.076Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"where /r C:\\Users\\Admin\\AppData TeamViewer15_Logfile.log 2>nul & where /r C:\\ProgramData\\TeamViewer *.log 2>nul & where /r C:\\ProgramData\\TeamViewer *.txt 2>nul\"",
+          "session_id": "I2w0_Jj8q9pvO4dlRPS1zmWn"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:47.999Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"where /r C:\\Users\\Admin\\AppData TeamViewer15_Logfile.log 2>nul & where /r C:\\ProgramData\\TeamViewer *.log 2>nul & where /r C:\\ProgramData\\TeamViewer *.txt 2>nul\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:48.530Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "I2w0_Jj8q9pvO4dlRPS1zmWn",
+          "accepted_or_not": "COMMAND_TERMINATED",
+          "report_id": "cfc2c0d54dece6ac53ff63960fdc7178a2238868add04fd7be0ffe0bc6305ea2"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:59.661Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist C:\\ProgramData\\TeamViewer (where /r C:\\ProgramData\\TeamViewer TeamViewer15_Logfile.log 2>nul) else echo PROGRAMDATA_TEAMVIEWER_DIR_NOT_FOUND\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:52:59.661Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:08.417Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "cfc2c0d54dece6ac53ff63960fdc7178a2238868add04fd7be0ffe0bc6305ea2"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:53:13.709Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "19de846b0efd49438aed83b8ceeb696c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "G9prjqxZChNlZboSCI0gMbeD",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 634,
+      "finished_at": "2026-08-31T17:53:28.184Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:53:13.712Z",
+    "updated_at": "2026-08-31T17:53:28.184Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:53:13.712Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:14.077Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"if exist C:\\ProgramData\\TeamViewer (where /r C:\\ProgramData\\TeamViewer TeamViewer15_Logfile.log 2>nul) else echo PROGRAMDATA_TEAMVIEWER_DIR_NOT_FOUND\"",
+          "session_id": "Fi9KxWli9wKlE3CpaQIoC1ZB"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:14.334Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist C:\\ProgramData\\TeamViewer (where /r C:\\ProgramData\\TeamViewer TeamViewer15_Logfile.log 2>nul) else echo PROGRAMDATA_TEAMVIEWER_DIR_NOT_FOUND\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:20.435Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"if exist C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer (where /r C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer TeamViewer15_Logfile.log 2>nul) else echo ROAMING_TEAMVIEWER_DIR_NOT_FOUND\"",
+          "session_id": "RCL96L9WNsbj7CkfsYtSDIdx"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:20.693Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer (where /r C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer TeamViewer15_Logfile.log 2>nul) else echo ROAMING_TEAMVIEWER_DIR_NOT_FOUND\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:27.683Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"(reg query HKLM\\SOFTWARE\\TeamViewer /s 2>nul & reg query HKCU\\SOFTWARE\\TeamViewer /s 2>nul) | findstr /i \\\"Wake Log EasyAccess\\\"\"",
+          "session_id": "G9prjqxZChNlZboSCI0gMbeD"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:28.184Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"(reg query HKLM\\SOFTWARE\\TeamViewer /s 2>nul & reg query HKCU\\SOFTWARE\\TeamViewer /s 2>nul) | findstr /i \\\"Wake Log EasyAccess\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:53:32.720Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "25cdf1567abd4dbcbed15f3f3805b7a0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "xgpCfM4p427d3iFO-09fsGzC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 667,
+      "finished_at": "2026-08-31T17:53:33.692Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:53:32.724Z",
+    "updated_at": "2026-08-31T17:53:33.692Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:53:32.724Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:33.058Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"(reg query HKLM\\SOFTWARE\\TeamViewer /s 2>nul & reg query HKCU\\SOFTWARE\\TeamViewer /s 2>nul) | findstr /i /c:\\\"Wake\\\" /c:\\\"EasyAccess\\\" /c:\\\"Log\\\"\"",
+          "session_id": "xgpCfM4p427d3iFO-09fsGzC"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:33.692Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"(reg query HKLM\\SOFTWARE\\TeamViewer /s 2>nul & reg query HKCU\\SOFTWARE\\TeamViewer /s 2>nul) | findstr /i /c:\\\"Wake\\\" /c:\\\"EasyAccess\\\" /c:\\\"Log\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:53:41.095Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "39caf7a26eec4b3eaaddc113e556e55e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "0hWyjYFS628Lb2OOkqJ4luaG",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 2154,
+      "finished_at": "2026-08-31T17:54:27.156Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:53:41.097Z",
+    "updated_at": "2026-08-31T17:54:27.156Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:53:41.097Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:41.433Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Users\\Admin\\AppData\\Local\\TeamViewer\\\" echo LOCAL_TEAMVIEWER=YES & if exist \\\"C:\\Users\\Admin\\AppData\\Local\\TeamViewer Remote\\\" echo LOCAL_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer Remote\\\" echo ROAMING_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\ProgramData\\TeamViewer Remote\\\" echo PROGRAMDATA_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\ProgramData\\TeamViewer\\\" echo PROGRAMDATA_TEAMVIEWER=YES\"",
+          "session_id": "zbRLOQZ7REq9NKT2XiyMKD4i"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:41.734Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"if exist \\\"C:\\Users\\Admin\\AppData\\Local\\TeamViewer\\\" echo LOCAL_TEAMVIEWER=YES & if exist \\\"C:\\Users\\Admin\\AppData\\Local\\TeamViewer Remote\\\" echo LOCAL_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\Users\\Admin\\AppData\\Roaming\\TeamViewer Remote\\\" echo ROAMING_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\ProgramData\\TeamViewer Remote\\\" echo PROGRAMDATA_TEAMVIEWER_REMOTE=YES & if exist \\\"C:\\ProgramData\\TeamViewer\\\" echo PROGRAMDATA_TEAMVIEWER=YES\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:49.110Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimClass -Namespace root\\wmi | Where-Object CimClassName -Match 'ASRock|BIOS|UEFI|Firmware' | Select-Object -ExpandProperty CimClassName\"",
+          "session_id": "YR5wNk4mSL3FA4RJFcJFbLCn"
+        }
+      },
+      {
+        "time": "2026-08-31T17:53:50.290Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimClass -Namespace root\\wmi | Where-Object CimClassName -Match 'ASRock|BIOS|UEFI|Firmware' | Select-Object -ExpandProperty CimClassName\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:25.098Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetAdapterPowerManagement -Name 'Ethernet 3' | Format-List *\"",
+          "session_id": "0hWyjYFS628Lb2OOkqJ4luaG"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:27.156Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetAdapterPowerManagement -Name 'Ethernet 3' | Format-List *\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:54:32.063Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f29a34de26f64b16b33b3179bf5e715c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "vFlhkgPixlwCFLM-98Ldp9tB",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 391,
+      "finished_at": "2026-08-31T17:54:32.768Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:54:32.065Z",
+    "updated_at": "2026-08-31T17:54:32.768Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:54:32.065Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:32.465Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318} /s /f \\\"PCI\\\\VEN_8086&DEV_15FA&SUBSYS_15FA1849&REV_11\\\"\"",
+          "session_id": "vFlhkgPixlwCFLM-98Ldp9tB"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:32.768Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318} /s /f \\\"PCI\\\\VEN_8086&DEV_15FA&SUBSYS_15FA1849&REV_11\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:54:37.948Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "57414d07102e40949e38624055ca266d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "tKrz-BNsk5Hs1D73Fc511PaH",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 390,
+      "finished_at": "2026-08-31T17:54:38.656Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:54:37.953Z",
+    "updated_at": "2026-08-31T17:54:38.656Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:54:37.953Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:38.347Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318} /s /f \\\"Intel(R) Ethernet Connection (14) I219-V\\\"\"",
+          "session_id": "tKrz-BNsk5Hs1D73Fc511PaH"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:38.656Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318} /s /f \\\"Intel(R) Ethernet Connection (14) I219-V\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:54:46.814Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "cf153404655b4805b2a9b3b0e200e596",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "kog7YClQQpKWH8DMNcsx01Oa",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 842,
+      "finished_at": "2026-08-31T17:54:47.990Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:54:46.818Z",
+    "updated_at": "2026-08-31T17:54:47.990Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:54:46.818Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:47.219Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}' | Get-ItemProperty | Where-Object DriverDesc -EQ 'Intel(R) Ethernet Connection (14) I219-V' | Select-Object PSChildName,DriverDesc,PnPCapabilities,EnablePME,'*WakeOnMagicPacket','*WakeOnPattern',WakeOnLink,ULPMode,ReduceSpeedOnPowerDown | Format-List\"",
+          "session_id": "kog7YClQQpKWH8DMNcsx01Oa"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:47.990Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}' | Get-ItemProperty | Where-Object DriverDesc -EQ 'Intel(R) Ethernet Connection (14) I219-V' | Select-Object PSChildName,DriverDesc,PnPCapabilities,EnablePME,'*WakeOnMagicPacket','*WakeOnPattern',WakeOnLink,ULPMode,ReduceSpeedOnPowerDown | Format-List\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:54:53.615Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8f86acf677cb4eaeb283aa028dc9f03a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "jglIJev_TqxeS_uKtWmkH1Dw",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 317,
+      "finished_at": "2026-08-31T17:54:54.236Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:54:53.617Z",
+    "updated_at": "2026-08-31T17:54:54.236Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:54:53.617Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:53.945Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\0006 | findstr /i /c:\\\"Wake\\\" /c:\\\"PME\\\" /c:\\\"ULP\\\" /c:\\\"Power\\\" /c:\\\"Shutdown\\\"\"",
+          "session_id": "jglIJev_TqxeS_uKtWmkH1Dw"
+        }
+      },
+      {
+        "time": "2026-08-31T17:54:54.236Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"reg query HKLM\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e972-e325-11ce-bfc1-08002be10318}\\0006 | findstr /i /c:\\\"Wake\\\" /c:\\\"PME\\\" /c:\\\"ULP\\\" /c:\\\"Power\\\" /c:\\\"Shutdown\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:55:04.872Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "67aaea000515418fb2d0b7b7213f2c17",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-31T17:55:38.596Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Network access is denied by default.",
+    "next_step": "",
+    "created_at": "2026-08-31T17:55:04.874Z",
+    "updated_at": "2026-08-31T17:55:38.596Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:55:04.874Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:55:05.251Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"arp -a\"",
+          "session_id": "BoSBANEqNmR2PneN-JB_Kp0v"
+        }
+      },
+      {
+        "time": "2026-08-31T17:55:05.553Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"arp -a\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:55:38.596Z",
+        "event": "command_finished",
+        "details": {
+          "command": "curl.exe -sS -I --connect-timeout 2 --max-time 4 http://192.168.10.1/",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:55:38.596Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:56:15.476Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2fbde8b6d2664252bac974b116aa8c5e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "y1yXUQCNYX7GVAtm3L22f_AY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 361,
+      "finished_at": "2026-08-31T17:56:16.134Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:56:15.479Z",
+    "updated_at": "2026-08-31T17:56:16.134Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:56:15.479Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:15.847Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"wevtutil ep | findstr /i TeamViewer\"",
+          "session_id": "y1yXUQCNYX7GVAtm3L22f_AY"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:16.134Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"wevtutil ep | findstr /i TeamViewer\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:56:22.075Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3d52e00d49d24e73838673b03e92316a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Z4UEYn-w_2JJrVVerP9BThsz",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 357,
+      "finished_at": "2026-08-31T17:56:22.754Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:56:22.078Z",
+    "updated_at": "2026-08-31T17:56:22.754Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:56:22.078Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:22.442Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"tasklist /fi \\\"IMAGENAME eq TeamViewer.exe\\\" & tasklist /svc /fi \\\"SERVICES eq TeamViewer\\\"\"",
+          "session_id": "Z4UEYn-w_2JJrVVerP9BThsz"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:22.754Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"tasklist /fi \\\"IMAGENAME eq TeamViewer.exe\\\" & tasklist /svc /fi \\\"SERVICES eq TeamViewer\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:56:27.456Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "befee5a88cb74b7dbefa60003cf4a8e7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "t3e8IadRbi2rb5v92c-W6iAI",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2147749891,
+      "duration_ms": 5343,
+      "finished_at": "2026-08-31T17:57:01.337Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T17:56:27.458Z",
+    "updated_at": "2026-08-31T17:57:01.337Z",
+    "events": [
+      {
+        "time": "2026-08-31T17:56:27.458Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:27.840Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Process -Name TeamViewer -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,SessionId,Path | Format-Table -AutoSize\"",
+          "session_id": "CduQ8nEqE010bvv9_Qc2Y7ll"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:28.435Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Process -Name TeamViewer -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,SessionId,Path | Format-Table -AutoSize\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:34.084Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Process -Name TeamViewer_Service -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,SessionId,Path | Format-Table -AutoSize\"",
+          "session_id": "H_CbWH4BNpNKTkKypb4YMtGH"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:34.807Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Process -Name TeamViewer_Service -ErrorAction SilentlyContinue | Select-Object Id,ProcessName,SessionId,Path | Format-Table -AutoSize\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:41.885Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetTCPConnection -OwningProcess 1784 -State Established -ErrorAction SilentlyContinue | Select-Object RemoteAddress,RemotePort,State | Format-Table -AutoSize\"",
+          "session_id": "y5guK7G8Mc5XziMV8owi-qOw"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:43.702Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetTCPConnection -OwningProcess 1784 -State Established -ErrorAction SilentlyContinue | Select-Object RemoteAddress,RemotePort,State | Format-Table -AutoSize\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T17:56:56.152Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"manage-bde -status C:\"",
+          "session_id": "t3e8IadRbi2rb5v92c-W6iAI"
+        }
+      },
+      {
+        "time": "2026-08-31T17:57:01.337Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"manage-bde -status C:\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T17:57:39.127Z",
+    "archive_reason": "finished"
+  }
+]

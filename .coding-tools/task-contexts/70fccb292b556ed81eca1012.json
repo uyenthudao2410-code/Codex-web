@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "f55c85b06acc4d7b874936aa5dbb20e4",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "6vI5TINtHI4MgtERn26_SwAR",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": 362,
+    "finished_at": "2026-09-01T01:45:25.970Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T01:45:25.321Z",
+  "updated_at": "2026-09-01T01:45:25.970Z",
+  "events": [
+    {
+      "time": "2026-09-01T01:45:25.321Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T01:45:25.669Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 45 \"action == \\\"update\\\"|action == \\\"resume\\\"|handoff_action\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/coding_tools_mcp/task_control.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "session_id": "6vI5TINtHI4MgtERn26_SwAR"
+      }
+    },
+    {
+      "time": "2026-09-01T01:45:25.970Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 45 \"action == \\\"update\\\"|action == \\\"resume\\\"|handoff_action\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/coding_tools_mcp/task_control.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "status": "failed"
+      }
+    }
+  ]
+}

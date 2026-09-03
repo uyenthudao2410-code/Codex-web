@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "411c0bdb6a2940ae94e733b5de2e7547",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Jnka4xRc2tm1kxEHLyaRT40i",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 434,
+    "finished_at": "2026-09-01T01:48:33.988Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T01:48:33.306Z",
+  "updated_at": "2026-09-01T01:48:33.988Z",
+  "events": [
+    {
+      "time": "2026-09-01T01:48:33.306Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T01:48:33.721Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 130 -B 20 \"recover\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "session_id": "Jnka4xRc2tm1kxEHLyaRT40i"
+      }
+    },
+    {
+      "time": "2026-09-01T01:48:33.988Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 130 -B 20 \"recover\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

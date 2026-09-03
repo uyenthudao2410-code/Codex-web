@@ -1,0 +1,377 @@
+[
+  {
+    "version": 2,
+    "task_id": "43267f8ec27d4bcf97646bd6f5b59d7b",
+    "orchestration": {
+      "run_id": "06a666f5d9fa4b4287614e599bc3f354",
+      "wave_id": "a4acc6d8ee2a4bb68ee1fb6b87bccc78",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "5fb47a6de78e4d1088f13bb7521af79aca493eb1c1a8c5bb2700e969c8811bde",
+      "contract_fp": ""
+    },
+    "objective": "Complete a workspace task",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "rbDiDXIacTsnlRCuzIYuUgKi",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 851,
+      "finished_at": "2026-08-31T18:32:47.393Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+            "state": "file",
+            "sha256": "8744b0aa4071755e6150662b6e8f4dabb68031a02861d68e9f44410d943e6999",
+            "size_bytes": 24435,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "06a666f5d9fa4b4287614e599bc3f354",
+            "wave_id": "a4acc6d8ee2a4bb68ee1fb6b87bccc78"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+            "state": "file",
+            "sha256": "4dce0f389eaa8979fe0f164eeebe07674e044d9d315771155a517133748998c1",
+            "size_bytes": 50836,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "06a666f5d9fa4b4287614e599bc3f354",
+            "wave_id": "a4acc6d8ee2a4bb68ee1fb6b87bccc78"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 45,
+          "head_hash": "92c009ef671e23a81cc7362a83581cbe3471a8c4c7296b951e1e1212844adf5a"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-06a666f5d9fa4b4287614e599bc3f354\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-06a666f5d9fa4b4287614e599bc3f354\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "06a666f5d9fa4b4287614e599bc3f354",
+        "wave_id": "a4acc6d8ee2a4bb68ee1fb6b87bccc78",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "5fb47a6de78e4d1088f13bb7521af79aca493eb1c1a8c5bb2700e969c8811bde",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the Token Usage, Cost, Context Observability and Accepted-Result Efficiency Master Plan end-to-end in E:\\DEV\\Codex-web, with ChatWeb/controller measurement completeness as a P0 gate. Preserve unknown_not_zero; never treat bytes/heuristics as canonical tokens; correlate exact provider/controller/tool usage to task/RUN/WAVE and accepted outcomes; keep fast/live paths bounded; update the existing docs/research master plan after each material wave with DONE/PARTIAL/BLOCKED status and proof identities; preserve unrelated dirty worktree changes; do not commit/push/release unless explicitly required. Start by localizing the exact current source and strongest existing oracles for W0-W2 (truth contract, ChatWeb measurement bridge feasibility, controller usage ingestion), then return the smallest coherent first implementation wave and its proof plan.",
+          "objective_revision": 1,
+          "objective_sha256": "ee83bcd5bf840c5534749395a0808e9651a6ac99b3dc2e680168c71aa43346ef",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "d0cc70e5474344ca9d9e7530a0a45187",
+            "stage_id": "check:76fe7fac40a867b9",
+            "status": "passed",
+            "duration_ms": 1427,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "6a3889cc24654429a0372139ee0ad0c6",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 10329,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "9e72f00bc94d084420bd217b13b0b022e63d66f126743940819470bf0fb61f79",
+    "completion_report_acknowledged_id": "9e72f00bc94d084420bd217b13b0b022e63d66f126743940819470bf0fb61f79",
+    "completion_report_acknowledged_at": "2026-08-31T18:33:33.250Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-31T18:26:07.656Z",
+    "updated_at": "2026-08-31T18:33:39.448Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:26:07.656Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-31T18:26:07.662Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:34.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --no-ext-diff --unified=24 -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "session_id": "MrYz6v41OudCoLlmS22YqK9r"
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:34.778Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --no-ext-diff --unified=24 -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:41.286Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\live_control.py SHA256",
+          "session_id": "E1_fHuKE6cIYJgMfAvfkbpsw"
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:41.776Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\live_control.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:46.896Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_execution_hub.py SHA256",
+          "session_id": "rbDiDXIacTsnlRCuzIYuUgKi"
+        }
+      },
+      {
+        "time": "2026-08-31T18:32:47.393Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_execution_hub.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:04.011Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:04.014Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:04.173Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "9e72f00bc94d084420bd217b13b0b022e63d66f126743940819470bf0fb61f79"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:23.725Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:33.250Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "9e72f00bc94d084420bd217b13b0b022e63d66f126743940819470bf0fb61f79"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:39.448Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:33:39.646Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "698286c2931442178de4911f2f4a05c3",
+    "orchestration": {
+      "run_id": "ca8f608559bf413b9a696be5b70e903c",
+      "wave_id": "ab7065918f9f41c484b0fb5d30961ddd",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+      "contract_fp": ""
+    },
+    "objective": "Continue implementation of docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md after the accepted/checkpointed first wave. Preserve unknown_not_zero and strict separation of controller/provider/tool-card planes. Localize the exact current implementation state for W1/W2: ChatWeb structured controller usage ingress, _meta normalization/validation, durable UsageEvent persistence, turn/trace/task/run/wave correlation, dedupe/idempotency/reconnect behavior, measurement coverage, and bounded live projection. Determine the smallest coherent next implementation wave that advances W2 without fabricating unsupported host/tool-card usage. Preserve every unrelated dirty worktree change. Do not commit, push, restart, package, release, or deploy. Return exact source gaps, strongest existing oracles, protected paths, proposed write scope, and proof plan; no mutation in this prepare call.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Xf65u--BEpSpWw_yY2MYm8P2",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 838,
+      "finished_at": "2026-08-31T18:35:09.779Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:33:39.648Z",
+    "updated_at": "2026-08-31T18:35:09.779Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:33:39.648Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Continue implementation of docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md after the accepted/checkpointed first wave. Preserve unknown_not_zero and strict separation of controller/provider/tool-card planes. Localize the exact current implementation state for W1/W2: ChatWeb structured controller usage ingress, _meta normalization/validation, durable UsageEvent persistence, turn/trace/task/run/wave correlation, dedupe/idempotency/reconnect behavior, measurement coverage, and bounded live projection. Determine the smallest coherent next implementation wave that advances W2 without fabricating unsupported host/tool-card usage. Preserve every unrelated dirty worktree change. Do not commit, push, restart, package, release, or deploy. Return exact source gaps, strongest existing oracles, protected paths, proposed write scope, and proof plan; no mutation in this prepare call."
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:41.195Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:44.054Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T18:33:44.062Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T18:34:58.776Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 220 -B 30 \"CONTROLLER_USAGE_META_KEY\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "0vboAt_AkYTfE7NJ6e4aaXUk"
+        }
+      },
+      {
+        "time": "2026-08-31T18:34:59.363Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 220 -B 30 \"CONTROLLER_USAGE_META_KEY\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:09.279Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 180 -B 30 \"controller usage\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "Xf65u--BEpSpWw_yY2MYm8P2"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:09.779Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 180 -B 30 \"controller usage\" -- resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:35:15.619Z",
+    "archive_reason": "finished"
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "4f2dc8722aff44f59daaa692b9e7f598",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "2Ksi7j0uejqSrcYoK05CO6a4",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 388,
+    "finished_at": "2026-09-01T01:48:25.903Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T01:48:25.244Z",
+  "updated_at": "2026-09-01T01:48:25.903Z",
+  "events": [
+    {
+      "time": "2026-09-01T01:48:25.244Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T01:48:25.615Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 25 \"exact run maps|TASK_CONTROL_CONTINUATION_ACTIONS|recover_exact_run_context|taskContextId\" resources/coding-tools-mcp/tests",
+        "session_id": "2Ksi7j0uejqSrcYoK05CO6a4"
+      }
+    },
+    {
+      "time": "2026-09-01T01:48:25.903Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 25 \"exact run maps|TASK_CONTROL_CONTINUATION_ACTIONS|recover_exact_run_context|taskContextId\" resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    }
+  ]
+}

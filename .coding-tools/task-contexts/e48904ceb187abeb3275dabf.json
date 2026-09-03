@@ -1,0 +1,136 @@
+{
+  "version": 2,
+  "task_id": "b41b7b8a16af4d199fee21c72f82b31c",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Zj1J1ZPpgGgvRKzfWgJboGtk",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 3193,
+    "finished_at": "2026-09-03T10:39:26.033Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T10:37:28.016Z",
+  "updated_at": "2026-09-03T10:39:26.033Z",
+  "events": [
+    {
+      "time": "2026-09-03T10:37:28.016Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:28.372Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "964U_3hv7YxGGBxVbeacvQrk"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:29.183Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:41.055Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run",
+        "session_id": "P3-pQz6BysiwkF0CQncgXgrJ"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:41.640Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:50.724Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "session_id": "VwAPPo6MKOhjCA1uHfn_bLvk"
+      }
+    },
+    {
+      "time": "2026-09-03T10:37:54.591Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T10:38:18.732Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "Hzw9XOl451WpL569H1RCFl6r"
+      }
+    },
+    {
+      "time": "2026-09-03T10:38:19.448Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T10:39:03.036Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "iiqTxtJ5IZwtt5Ew3Boryzvf"
+      }
+    },
+    {
+      "time": "2026-09-03T10:39:03.735Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T10:39:22.795Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "session_id": "Zj1J1ZPpgGgvRKzfWgJboGtk"
+      }
+    },
+    {
+      "time": "2026-09-03T10:39:26.033Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "status": "passed"
+      }
+    }
+  ]
+}

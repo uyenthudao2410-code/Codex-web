@@ -1,12 +1,12 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const HOST_OBSERVATION_SCHEMA_VERSION = 5;
+const HOST_OBSERVATION_SCHEMA_VERSION = 6;
 const HOST_OBSERVATION_MAX_BUFFER = 256;
 const HOST_OBSERVATION_MAX_JOURNAL_BYTES = 2 * 1024 * 1024;
 const HOST_CORRELATION_SCHEMA_VERSION = 1;
 const HOST_CORRELATION_BINDING_TTL_MS = 60 * 60 * 1000;
-const EVENT_TYPES = new Set(['user_turn_visible', 'assistant_response_first_visible', 'host_turn_span']);
+const EVENT_TYPES = new Set(['user_turn_visible', 'assistant_response_first_visible', 'host_turn_span', 'controller_usage']);
 
 function boundedText(value, maxLength, required = false) {
   const text = String(value ?? '').trim();
@@ -18,15 +18,27 @@ function finiteNonNegative(value) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+function exactNonNegativeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
 function normalizeHostObservation(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const allowed = new Set([
     'schema_version', 'event_type', 'observation_id', 'span_id', 'navigation_epoch', 'clock_domain',
     'monotonic_ms', 'wall_time_ms', 'start_ms', 'end_ms', 'duration_ms', 'user_observation_id',
-    'assistant_observation_id', 'observer_plane', 'measurement', 'trace_id', 'turn_id', 'run_id', 'wave_id'
+    'assistant_observation_id', 'observer_plane', 'measurement', 'trace_id', 'turn_id', 'run_id', 'wave_id',
+    'accounting_profile', 'provider_id', 'model_id', 'source', 'input_tokens', 'cached_input_tokens',
+    'output_tokens', 'reasoning_output_tokens'
   ]);
   if (Object.keys(value).some((key) => !allowed.has(key))) return null;
   if (value.schema_version !== HOST_OBSERVATION_SCHEMA_VERSION || !EVENT_TYPES.has(value.event_type)) return null;
+
+  const controllerOnlyKeys = [
+    'accounting_profile', 'provider_id', 'model_id', 'source', 'input_tokens', 'cached_input_tokens',
+    'output_tokens', 'reasoning_output_tokens'
+  ];
+  if (value.event_type !== 'controller_usage' && controllerOnlyKeys.some((key) => Object.hasOwn(value, key))) return null;
 
   const navigationEpoch = value.navigation_epoch;
   const clockDomain = boundedText(value.clock_domain, 160, true);
@@ -50,6 +62,37 @@ function normalizeHostObservation(value) {
     turn_id: turnId,
     ...(runId && waveId ? { run_id: runId, wave_id: waveId } : {})
   };
+
+  if (value.event_type === 'controller_usage') {
+    const observationId = boundedText(value.observation_id, 128, true);
+    const monotonicMs = finiteNonNegative(value.monotonic_ms);
+    const wallTimeMs = finiteNonNegative(value.wall_time_ms);
+    const accountingProfile = boundedText(value.accounting_profile, 32, true);
+    const source = boundedText(value.source, 32, true);
+    const providerId = boundedText(value.provider_id, 160, false);
+    const modelId = boundedText(value.model_id, 200, false);
+    const inputTokens = exactNonNegativeInteger(value.input_tokens);
+    const cachedInputTokens = exactNonNegativeInteger(value.cached_input_tokens);
+    const outputTokens = exactNonNegativeInteger(value.output_tokens);
+    const reasoningOutputTokens = exactNonNegativeInteger(value.reasoning_output_tokens);
+    if (!observationId || monotonicMs === null || wallTimeMs === null || !accountingProfile || !source
+      || inputTokens === null || cachedInputTokens === null || outputTokens === null || reasoningOutputTokens === null
+      || cachedInputTokens > inputTokens || reasoningOutputTokens > outputTokens) return null;
+    return {
+      ...common,
+      observation_id: observationId,
+      monotonic_ms: monotonicMs,
+      wall_time_ms: wallTimeMs,
+      accounting_profile: accountingProfile,
+      source,
+      ...(providerId ? { provider_id: providerId } : {}),
+      ...(modelId ? { model_id: modelId } : {}),
+      input_tokens: inputTokens,
+      cached_input_tokens: cachedInputTokens,
+      output_tokens: outputTokens,
+      reasoning_output_tokens: reasoningOutputTokens
+    };
+  }
 
   if (value.event_type === 'host_turn_span') {
     const spanId = boundedText(value.span_id, 128, true);
@@ -139,6 +182,7 @@ function normalizedBinding(workspace) {
 class ChatEvaluationJournal {
   constructor({ maxBytes = HOST_OBSERVATION_MAX_JOURNAL_BYTES } = {}) {
     this.maxBytes = Math.max(4096, Number(maxBytes) || HOST_OBSERVATION_MAX_JOURNAL_BYTES);
+    this.correlationCompletion = new Map();
   }
 
   append(workspace, observations) {
@@ -205,12 +249,26 @@ class ChatEvaluationJournal {
 
   finalizeCorrelation(workspace, observation) {
     const event = normalizeHostObservation(observation);
-    if (!event || event.event_type !== 'host_turn_span') {
+    if (!event || !['host_turn_span', 'controller_usage'].includes(event.event_type)) {
       return { pending_cleared: false, binding_consumed: false };
     }
+    const key = `${path.resolve(workspace)}\u0000${event.turn_id}\u0000${event.trace_id}`;
+    const phases = this.correlationCompletion.get(key) || { host_span: false, controller_usage: false };
+    if (event.event_type === 'host_turn_span') phases.host_span = true;
+    if (event.event_type === 'controller_usage' && event.run_id && event.wave_id) phases.controller_usage = true;
+    this.correlationCompletion.set(key, phases);
+    if (this.correlationCompletion.size > 64) {
+      const oldest = this.correlationCompletion.keys().next().value;
+      if (oldest) this.correlationCompletion.delete(oldest);
+    }
+    const pendingCleared = event.event_type === 'host_turn_span' ? this.clearPendingTurn(workspace, event) : false;
+    const bindingConsumed = phases.host_span && phases.controller_usage && event.run_id && event.wave_id
+      ? this.consumeBinding(workspace, event)
+      : false;
+    if (bindingConsumed) this.correlationCompletion.delete(key);
     return {
-      pending_cleared: this.clearPendingTurn(workspace, event),
-      binding_consumed: Boolean(event.run_id && event.wave_id) && this.consumeBinding(workspace, event)
+      pending_cleared: pendingCleared,
+      binding_consumed: Boolean(bindingConsumed)
     };
   }
 }
@@ -232,10 +290,12 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       observer: null,
       seenKeys: new Set(),
       seenNodes: new WeakSet(),
+      controllerUsageSeen: new Set(),
       buffer: [],
       sequence: 0,
       pendingUser: null,
       pendingIntentIdentity: null,
+      lastTurn: null,
       armed: false,
       primeQuietTimer: null,
       primeDeadlineTimer: null,
@@ -292,6 +352,113 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       state.buffer.push(event);
       if (state.buffer.length > ${HOST_OBSERVATION_MAX_BUFFER}) state.buffer.splice(0, state.buffer.length - ${HOST_OBSERVATION_MAX_BUFFER});
     };
+    const exactInteger = (value) => Number.isSafeInteger(value) && value >= 0 ? value : null;
+    const structuredResponseUsage = (node) => {
+      if (!node || typeof node !== 'object' || Array.isArray(node)) return null;
+      let response = null;
+      if (node.type === 'response.completed' && node.response && typeof node.response === 'object' && !Array.isArray(node.response)) {
+        response = node.response;
+      } else if (node.object === 'response' && node.status === 'completed') {
+        response = node;
+      } else if (node.status === 'completed' && /^resp[_-]/.test(String(node.id || '')) && node.usage) {
+        response = node;
+      }
+      const usage = response?.usage;
+      if (!usage || typeof usage !== 'object' || Array.isArray(usage)) return null;
+      const inputTokens = exactInteger(usage.input_tokens);
+      const cachedInputTokens = exactInteger(usage.input_tokens_details?.cached_tokens);
+      const outputTokens = exactInteger(usage.output_tokens);
+      const reasoningOutputTokens = exactInteger(usage.output_tokens_details?.reasoning_tokens);
+      if (inputTokens === null || cachedInputTokens === null || outputTokens === null || reasoningOutputTokens === null
+        || cachedInputTokens > inputTokens || reasoningOutputTokens > outputTokens) return null;
+      const modelId = typeof response.model === 'string' && response.model.length <= 200 ? response.model : '';
+      return { inputTokens, cachedInputTokens, outputTokens, reasoningOutputTokens, modelId };
+    };
+    const currentUsageIdentity = () => {
+      if (state.pendingUser) return { turnId: state.pendingUser.turnId, traceId: state.pendingUser.traceId };
+      if (state.pendingIntentIdentity && (state.awaitingUserVisible || performance.now() <= state.intentDeadlineMs)) {
+        return state.pendingIntentIdentity;
+      }
+      if (state.lastTurn && performance.now() - state.lastTurn.completedAtMs <= 120000) {
+        return { turnId: state.lastTurn.turnId, traceId: state.lastTurn.traceId };
+      }
+      return null;
+    };
+    const emitControllerUsage = (usage) => {
+      const identity = currentUsageIdentity();
+      if (!identity) return;
+      const fingerprint = [identity.turnId, usage.inputTokens, usage.cachedInputTokens, usage.outputTokens, usage.reasoningOutputTokens].join(':');
+      if (state.controllerUsageSeen.has(fingerprint)) return;
+      state.controllerUsageSeen.add(fingerprint);
+      const at = sample();
+      push({
+        schema_version: ${HOST_OBSERVATION_SCHEMA_VERSION},
+        event_type: 'controller_usage',
+        observation_id: epoch + ':controller_usage:' + (++state.sequence),
+        navigation_epoch: epoch,
+        clock_domain: clockDomain,
+        monotonic_ms: at.monotonic_ms,
+        wall_time_ms: at.wall_time_ms,
+        turn_id: identity.turnId,
+        trace_id: identity.traceId,
+        observer_plane: 'electron_chatgpt_structured_response',
+        measurement: 'structured_response_usage_exact',
+        accounting_profile: 'openai_compatible',
+        provider_id: 'openai',
+        ...(usage.modelId ? { model_id: usage.modelId } : {}),
+        source: 'client_reported',
+        input_tokens: usage.inputTokens,
+        cached_input_tokens: usage.cachedInputTokens,
+        output_tokens: usage.outputTokens,
+        reasoning_output_tokens: usage.reasoningOutputTokens
+      });
+    };
+    const structuredUsageEnvelopeChildren = (node) => {
+      if (!node || typeof node !== 'object' || Array.isArray(node)) return [];
+      const children = [];
+      for (const key of ['data', 'event']) {
+        const child = node[key];
+        if (child && typeof child === 'object' && !Array.isArray(child)) children.push(child);
+      }
+      return children;
+    };
+    const inspectStructuredUsage = (value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+      const queue = [{ value, depth: 0 }];
+      let inspected = 0;
+      while (queue.length && inspected < 8) {
+        const item = queue.shift();
+        const current = item?.value;
+        if (!current || typeof current !== 'object' || Array.isArray(current)) continue;
+        inspected += 1;
+        const usage = structuredResponseUsage(current);
+        if (usage) {
+          emitControllerUsage(usage);
+          return;
+        }
+        if (item.depth >= 2) continue;
+        for (const child of structuredUsageEnvelopeChildren(current)) {
+          queue.push({ value: child, depth: item.depth + 1 });
+        }
+      }
+    };
+    const originalJsonParse = JSON.parse;
+    const parseWithUsageObservation = function (...args) {
+      const parsed = originalJsonParse.apply(this, args);
+      try { inspectStructuredUsage(parsed); } catch {}
+      return parsed;
+    };
+    JSON.parse = parseWithUsageObservation;
+    const originalResponseJson = globalThis.Response?.prototype?.json;
+    let responseJsonWithUsageObservation = null;
+    if (typeof originalResponseJson === 'function') {
+      responseJsonWithUsageObservation = async function (...args) {
+        const parsed = await originalResponseJson.apply(this, args);
+        try { inspectStructuredUsage(parsed); } catch {}
+        return parsed;
+      };
+      globalThis.Response.prototype.json = responseJsonWithUsageObservation;
+    }
     const visibleTurns = () => turnNodes().map((node) => {
       const described = describeTurn(node);
       return { node, role: described.role, roleNode: described.roleNode, ordinal: turnOrdinal(node) };
@@ -372,6 +539,7 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
           observer_plane: 'electron_chatgpt_dom',
           measurement: 'observed_user_visible_to_first_assistant_visible'
         });
+        state.lastTurn = { ...identity, completedAtMs: at.monotonic_ms };
         state.pendingUser = null;
         return;
       }
@@ -439,9 +607,16 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       try { state.observer?.disconnect(); } catch {}
       if (state.primeQuietTimer) clearTimeout(state.primeQuietTimer);
       if (state.primeDeadlineTimer) clearTimeout(state.primeDeadlineTimer);
+      if (JSON.parse === parseWithUsageObservation) JSON.parse = originalJsonParse;
+      if (responseJsonWithUsageObservation && globalThis.Response?.prototype?.json === responseJsonWithUsageObservation) {
+        globalThis.Response.prototype.json = originalResponseJson;
+      }
       document.removeEventListener('submit', onSubmit, true);
       document.removeEventListener('click', onClick, true);
       document.removeEventListener('keydown', onKeyDown, true);
+      if (window[KEY] === state) {
+        try { delete window[KEY]; } catch { window[KEY] = null; }
+      }
     };
     schedulePriming();
     window[KEY] = state;

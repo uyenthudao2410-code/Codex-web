@@ -1,0 +1,370 @@
+{
+  "version": 2,
+  "task_id": "b4e7cd528874449fb9b96fe94cbacace",
+  "orchestration": {
+    "run_id": "922d3d323a83404897daf81819b3601a",
+    "wave_id": "2ffd78f37c8c456b914b70eb35bdc114",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "08031548f27ba4382af7e685a5e0ccf22b8096ea745e8c15e3824b1857b14fc5",
+    "contract_fp": ""
+  },
+  "objective": "Provenance-only adoption and exact-source proof for BASELINE ROLL-FORWARD RECOVERY. Do not change file contents. Ownership/lease exactly resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py at SHA-256 3f7e9889c21758c80490a4c6e7216a1b6e9d467d55c8d775a6a38c7ff58b9de2. Run all specified proofs. No restart/refresh, commit, push, release, deploy, or TG1-TG12 work.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-01T16:53:18.567Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-01T16:53:18.567Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "pending",
+      "updated_at": "2026-09-01T16:53:18.567Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-01T16:53:18.567Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "0sb9UjZDtzBksZYOgoWou7zW",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-01T16:53:18.209Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 27,
+        "head_hash": "945ba9a74b775c740808695f65c1abe6067ee46399f8da919a76c5bda4cc30ec"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-922d3d323a83404897daf81819b3601a\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-922d3d323a83404897daf81819b3601a\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "922d3d323a83404897daf81819b3601a",
+      "wave_id": "2ffd78f37c8c456b914b70eb35bdc114",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "08031548f27ba4382af7e685a5e0ccf22b8096ea745e8c15e3824b1857b14fc5",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Provenance-only adoption and exact-source proof for BASELINE ROLL-FORWARD RECOVERY. Do not change file contents. Ownership/lease exactly resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py at SHA-256 3f7e9889c21758c80490a4c6e7216a1b6e9d467d55c8d775a6a38c7ff58b9de2. Run all specified proofs. No restart/refresh, commit, push, release, deploy, or TG1-TG12 work.",
+        "objective_revision": 1,
+        "objective_sha256": "65e8a88dea9612c3ee4eb71feb3e0b6b09dd385b7f4371728b852c0c41b37401",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "c0da40d1b22549978767fd0b6dd16245",
+          "stage_id": "check:b8b2ca0805408b75",
+          "status": "passed",
+          "duration_ms": 11768,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "c6963be5636543fe8fcf53beb03ccd48",
+          "stage_id": "check:60a11fb0bb201c3b",
+          "status": "failed",
+          "duration_ms": 333478,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 34767
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "c324f690728442d9a7efbc0ab728837b79c3db203d529739f1d94d4461eaca1c",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "cd resources/coding-tools-mcp && python -m pytest tests/test_problem_lineage.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 11 lines | tail: '============================= 17 passed in 10.03s ============================='",
+      "finished_at": "2026-09-01T16:47:44.036Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "jOQ9s6rwIszv-uRWrocShTTR"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "922d3d323a83404897daf81819b3601a",
+        "owner_wave": "2ffd78f37c8c456b914b70eb35bdc114",
+        "size_bytes": 433,
+        "command_id": "jOQ9s6rwIszv-uRWrocShTTR",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:jOQ9s6rwIszv-uRWrocShTTR:stdout",
+            "total_stream_bytes": 433,
+            "total_retained_bytes": 433,
+            "head_retained_bytes": 433,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:jOQ9s6rwIszv-uRWrocShTTR:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-01T16:47:26.676Z",
+  "updated_at": "2026-09-01T16:53:50.079Z",
+  "events": [
+    {
+      "time": "2026-09-01T16:47:26.676Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:27.421Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:28.528Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:29.878Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:29.882Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:31.481Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:32.077Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:33.012Z",
+      "event": "command_started",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m pytest tests/test_problem_lineage.py",
+        "session_id": "jOQ9s6rwIszv-uRWrocShTTR"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:44.036Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cd resources/coding-tools-mcp && python -m pytest tests/test_problem_lineage.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T16:47:45.569Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run test:mcp",
+        "session_id": "0sb9UjZDtzBksZYOgoWou7zW"
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:18.209Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run test:mcp",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:18.567Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:19.542Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:19.544Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:19.545Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:19.637Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "c324f690728442d9a7efbc0ab728837b79c3db203d529739f1d94d4461eaca1c"
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:19.807Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:34.750Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T16:53:41.729Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+[
+  {
+    "version": 2,
+    "task_id": "812ab5ea90e647f39c8fbb8bcb6718fc",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "EpNtC8IVK3Oj0nE1IY50Fwxn",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 340,
+      "finished_at": "2026-09-01T16:00:21.460Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T16:00:18.373Z",
+    "updated_at": "2026-09-01T16:00:21.460Z",
+    "events": [
+      {
+        "time": "2026-09-01T16:00:18.373Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:18.771Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"recordPendingCensus|STARTING|VERIFYING|HANDOFF|FROZEN|STOPPING|ADMISSION_CLOSED|PREPARING|finalCensus\" electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "session_id": "tvp2zDJC02HmDjRcpyxLMEoq"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:19.090Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"recordPendingCensus|STARTING|VERIFYING|HANDOFF|FROZEN|STOPPING|ADMISSION_CLOSED|PREPARING|finalCensus\" electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:21.202Z",
+        "event": "command_started",
+        "details": {
+          "command": "Get-Content -Raw AGENTS.md",
+          "session_id": "EpNtC8IVK3Oj0nE1IY50Fwxn"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:21.460Z",
+        "event": "command_finished",
+        "details": {
+          "command": "Get-Content -Raw AGENTS.md",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T16:00:22.547Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5bad44ea4e7d46a6b8c4ddeb27a765cc",
+    "orchestration": {
+      "run_id": "4ccf77eee93d4cfba07e46609157d04e",
+      "wave_id": "3e272c3da8884263bbd6f2147a25e04b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "7573c9037fbba39777f4190f8c36d72b39ae76215e3e88b786f80e097ad4a3a2",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ejBrpW8Y2NCoO5VK7xn46r_0",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 585,
+      "finished_at": "2026-09-01T16:00:42.474Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T16:00:22.549Z",
+    "updated_at": "2026-09-01T16:01:15.421Z",
+    "events": [
+      {
+        "time": "2026-09-01T16:00:22.549Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:22.918Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "session_id": "LsycQ81EgIH5ncQvK12hqYwq"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:23.215Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:36.072Z",
+        "event": "command_started",
+        "details": {
+          "command": "type AGENTS.md",
+          "session_id": "B9fZ04S-5hxSAcNV7Z5RHdyS"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:36.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type AGENTS.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:38.045Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-Content 'electron/services/fullCleanActivation.js')[870..930]\"",
+          "session_id": "9yoJr6TkyHCfm909GCuCIvEn"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:38.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-Content 'electron/services/fullCleanActivation.js')[870..930]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:39.939Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"superviseOnce|watchdog|recordPendingCensus|final census|duplicate|finalize\" tests/recovery-host.test.js tests/full-clean-activation.test.js",
+          "session_id": "1Tp38vCQ89sBgKV4CNVLHvsF"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:40.224Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"superviseOnce|watchdog|recordPendingCensus|final census|duplicate|finalize\" tests/recovery-host.test.js tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:41.907Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-Content 'electron/services/recoveryHost.js')[1835..1910]\"",
+          "session_id": "ejBrpW8Y2NCoO5VK7xn46r_0"
+        }
+      },
+      {
+        "time": "2026-09-01T16:00:42.474Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"(Get-Content 'electron/services/recoveryHost.js')[1835..1910]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T16:01:01.929Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T16:01:02.321Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T16:01:30.969Z",
+    "archive_reason": "superseded"
+  }
+]

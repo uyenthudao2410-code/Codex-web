@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "task_id": "53cded6e206e4520b99c930e83f225b0",
+  "orchestration": {
+    "run_id": "56da798b0f47436f9af3fdc487c1bcba",
+    "wave_id": "46484a0aa51e4ac18f0fcac5406cc553",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+    "contract_fp": ""
+  },
+  "objective": "Implement the exact-RUN archived-projection recovery repair in this current RUN/WAVE only. Canonical orchestration ledger remains authority. Extend stateless exact-run lookup to recover a registered task context from bounded TaskState history only when the archived row matches both requested run_id and canonical ledger task_id, preserving current-projection exact match and controller-owner checks. Fail closed for multiple matches, current pending completion report, active/nonterminal conflicting task or run, history/task identity mismatch, workspace mismatch, or foreign controller ownership. Extend projection reconciliation with requested_run_id so a safely replaceable terminal polluted compact projection can be archived/cleared through TaskStateStore APIs and restored from exact canonical ledger task identity without mutating the orchestration ledger. Pass requested_run_id from task_control into reconciliation. Keep default behavior unchanged without requested run. Add regression tests reproducing archived canonical projection replaced by failed auto-start-like task and exact run recovery with no task_context; prove active conflicting task and pending report refuse recovery. Preserve 8-tool contract, token/accounting code, unrelated dirty bytes. No W4 implementation, restart, commit, push, release or deploy.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Orchestration preflight",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+  "next_step": "",
+  "created_at": "2026-09-01T01:51:41.001Z",
+  "updated_at": "2026-09-01T01:51:42.174Z",
+  "events": [
+    {
+      "time": "2026-09-01T01:51:41.002Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T01:51:41.749Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T01:51:42.174Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "46ef731da70b4cec89c7651d831240ca",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Of59V1TL4BJrlbI3sFxOq-GI",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 387,
+    "finished_at": "2026-09-01T01:45:17.185Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T01:45:16.536Z",
+  "updated_at": "2026-09-01T01:45:17.185Z",
+  "events": [
+    {
+      "time": "2026-09-01T01:45:16.536Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T01:45:16.927Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 260 -B 30 \"def task_control\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "session_id": "Of59V1TL4BJrlbI3sFxOq-GI"
+      }
+    },
+    {
+      "time": "2026-09-01T01:45:17.185Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 260 -B 30 \"def task_control\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+        "status": "failed"
+      }
+    }
+  ]
+}

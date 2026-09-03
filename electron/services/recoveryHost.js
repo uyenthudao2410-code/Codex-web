@@ -1821,8 +1821,9 @@ class RecoveryHost {
           return this.lastSupervisionStatus;
         }
       }
-      const admissionBlocked = this.readyAdoptionBlocksAdmission()
-        || Boolean(epoch && epoch.state !== 'READY');
+      const readyAdoptionBlocked = this.readyAdoptionBlocksAdmission();
+      const epochBlocked = Boolean(epoch && epoch.state !== 'READY');
+      const admissionBlocked = readyAdoptionBlocked || epochBlocked;
       const connectorPending = activationAwaitsTunnelOrConnector(epoch);
       let pendingObservation = null;
       try {
@@ -1836,9 +1837,21 @@ class RecoveryHost {
         pendingObservation = connectorPending
           ? await this.connectorPendingObservation(epoch)
           : null;
+        // An invalid terminal READY adoption intentionally blocks ordinary
+        // watchdog mutation until a replacement epoch is created.  The one
+        // exception is an explicit task_control restart_runtime ticket: its
+        // consumer resolves the current accepted source checkpoint and enters
+        // FullCleanActivation, which is precisely the authority that can
+        // replace this blocked READY epoch.  Never consume a ticket while a
+        // non-READY epoch already owns the activation transaction.
+        const supervisorRequest = readyAdoptionBlocked && !epochBlocked
+          && typeof this.orchestrator.serviceSupervisorRestartRequest === 'function'
+          ? await this.orchestrator.serviceSupervisorRestartRequest()
+          : null;
         runtime = admissionBlocked
           ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
           : await this.orchestrator.supervise();
+        if (supervisorRequest) runtime = { ...runtime, supervisorRequest };
         this.recordSupervisionStatus(runtime, {
           activationConnectorPending: connectorPending
         });
@@ -1850,9 +1863,11 @@ class RecoveryHost {
         || pendingObservation?.componentRegression === true
         || pendingObservation?.censusRefreshRequired === true
         || pendingObservation?.connectorEvidenceObserved === true;
+      // Only the replacement host assembly phase owns this watchdog census.
+      // Pre-handoff and teardown states remain coordinator-owned and immutable here.
       if (shouldRunFinalCensus
         && epoch
-        && ['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(epoch.state)) {
+        && ['STARTING', 'VERIFYING'].includes(epoch.state)) {
         try {
           const census = await this.fullCleanActivation.finalCensus(epoch.activation_epoch_id, {
             expectedOldInstanceId: this.replacement?.expectedOldInstanceId || '',

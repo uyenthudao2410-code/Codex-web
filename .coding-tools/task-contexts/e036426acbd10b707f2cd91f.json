@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "4e64e3eb3b984d5ab494f389c4416da6",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tXPBV0u0DTWeCMccdDpn6Nxd",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 504,
+    "finished_at": "2026-09-02T06:54:52.421Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-02T06:54:51.661Z",
+  "updated_at": "2026-09-02T06:54:52.421Z",
+  "events": [
+    {
+      "time": "2026-09-02T06:54:51.661Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-02T06:54:52.024Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F -A 90 -B 15 \"constructor({ paths, settings\" electron/services/recoveryActionStore.js && rg -n -F -A 140 -B 20 \"function componentOwners\" electron/services/componentRevision.js && rg -n -F -A 80 -B 15 \"const COMPONENT_ORDER\" electron/services/componentRevision.js",
+        "session_id": "tXPBV0u0DTWeCMccdDpn6Nxd"
+      }
+    },
+    {
+      "time": "2026-09-02T06:54:52.421Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F -A 90 -B 15 \"constructor({ paths, settings\" electron/services/recoveryActionStore.js && rg -n -F -A 140 -B 20 \"function componentOwners\" electron/services/componentRevision.js && rg -n -F -A 80 -B 15 \"const COMPONENT_ORDER\" electron/services/componentRevision.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "task_id": "c7d36418ee5a4f24952c4e2557cac171",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "f1a0pIaodgGjfJvR94RJnuqF",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 4686,
+    "finished_at": "2026-08-31T17:41:51.701Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-31T17:41:21.686Z",
+  "updated_at": "2026-08-31T17:41:51.701Z",
+  "events": [
+    {
+      "time": "2026-08-31T17:41:21.686Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-31T17:41:22.034Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== SYSTEM ==='; Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,SystemType | Format-List; Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,ReleaseDate | Format-List; Write-Output '=== ACTIVE NIC ==='; Get-NetAdapter -Physical | Where-Object {$_.Status -eq 'Up'} | Select-Object Name,InterfaceDescription,Status,LinkSpeed,MacAddress | Format-List; Write-Outp",
+        "session_id": "TYrFzazkMdZhENQVpF7Xzo7T"
+      }
+    },
+    {
+      "time": "2026-08-31T17:41:24.968Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"$ErrorActionPreference='SilentlyContinue'; Write-Output '=== SYSTEM ==='; Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,SystemType | Format-List; Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,ReleaseDate | Format-List; Write-Output '=== ACTIVE NIC ==='; Get-NetAdapter -Physical | Where-Object {$_.Status -eq 'Up'} | Select-Object Name,InterfaceDescription,Status,LinkSpeed,MacAddress | Format-List; Write-Outp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T17:41:47.092Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Write-Output '=== POWER STATES ==='; powercfg /a; Write-Output '=== TEAMVIEWER WOL-RELATED CONFIG NAMES ==='; $paths=@('HKLM:\\SOFTWARE\\TeamViewer','HKLM:\\SOFTWARE\\WOW6432Node\\TeamViewer'); foreach($p in $paths){ if(Test-Path $p){ Write-Output ('KEY=' + $p); $obj=Get-ItemProperty $p; $obj.PSObject.Properties | Where-Object {$_.Name -match 'Wake|WOL|Lan|LAN'} | ForEach-Object { Write-Output ($_.Name + '=' + [string]$_.Value) } } }; Write-Output '=== IPv4/GATEWAY",
+        "session_id": "f1a0pIaodgGjfJvR94RJnuqF"
+      }
+    },
+    {
+      "time": "2026-08-31T17:41:51.701Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Write-Output '=== POWER STATES ==='; powercfg /a; Write-Output '=== TEAMVIEWER WOL-RELATED CONFIG NAMES ==='; $paths=@('HKLM:\\SOFTWARE\\TeamViewer','HKLM:\\SOFTWARE\\WOW6432Node\\TeamViewer'); foreach($p in $paths){ if(Test-Path $p){ Write-Output ('KEY=' + $p); $obj=Get-ItemProperty $p; $obj.PSObject.Properties | Where-Object {$_.Name -match 'Wake|WOL|Lan|LAN'} | ForEach-Object { Write-Output ($_.Name + '=' + [string]$_.Value) } } }; Write-Output '=== IPv4/GATEWAY",
+        "status": "passed"
+      }
+    }
+  ]
+}

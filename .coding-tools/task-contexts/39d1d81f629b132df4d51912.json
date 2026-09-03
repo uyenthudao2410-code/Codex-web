@@ -1,0 +1,180 @@
+{
+  "version": 2,
+  "task_id": "56499b50b3694ab58cffa877268ced58",
+  "orchestration": {
+    "run_id": "1d885be697f84a98bafc407a92ce8bee",
+    "wave_id": "d14b4b38fbab4c969cac9ec3527a7ffe",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+    "contract_fp": ""
+  },
+  "objective": "W2 repair after the no-mutation broad-suite failure. Implement exact cross-wave idempotency for ChatWeb controller usage within one RUN. Controller economic usage_id must be derived from RUN + turn_id, independent of wave_id, while controller delegation_id remains wave-bound attribution. The ledger must treat wave_id/delegation_id as non-economic attribution only when comparing duplicate controller events, preserving the first stored attribution event. Same exact controller receipt replayed in a later wave must deduplicate; changed economic evidence for the same RUN+turn must fail closed. Generic/provider build_usage_event identity and provider dedupe semantics must remain unchanged. Add a focused unit oracle covering cross-wave controller duplicate, first-attribution preservation, conflict rejection, and provider wave-bound identity. Preserve unknown_not_zero and unrelated dirty work. No commit/push/restart/package/release/deploy.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "active",
+      "integrity": {
+        "ok": true,
+        "checked": 4,
+        "head_hash": "96d5cf59d4464d0565e5ed646bb28ac12cfff9a7e527e67aa0cf23b39c9c46e0"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1d885be697f84a98bafc407a92ce8bee\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1d885be697f84a98bafc407a92ce8bee\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "1d885be697f84a98bafc407a92ce8bee",
+      "wave_id": "d14b4b38fbab4c969cac9ec3527a7ffe",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "W2 repair after the no-mutation broad-suite failure. Implement exact cross-wave idempotency for ChatWeb controller usage within one RUN. Controller economic usage_id must be derived from RUN + turn_id, independent of wave_id, while controller delegation_id remains wave-bound attribution. The ledger must treat wave_id/delegation_id as non-economic attribution only when comparing duplicate controller events, preserving the first stored attribution event. Same exact controller receipt replayed in a later wave must deduplicate; changed economic evidence for the same RUN+turn must fail closed. Generic/provider build_usage_event identity and provider dedupe semantics must remain unchanged. Add a focused unit oracle covering cross-wave controller duplicate, first-attribution preservation, conflict rejection, and provider wave-bound identity. Preserve unknown_not_zero and unrelated dirty work. No commit/push/restart/package/release/deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "5bef1134618a0a467731ef9d8a708af8f400d7b1a53906479bbb5cb7c1b949bb",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": null,
+      "reason": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+      "event_seq": null
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "89577db2e313a1f636898d84e63e5cf5385521265d71173e68319a5eaca4c9d5",
+  "completion_report_acknowledged_id": "89577db2e313a1f636898d84e63e5cf5385521265d71173e68319a5eaca4c9d5",
+  "completion_report_acknowledged_at": "2026-08-31T19:03:01.762Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-08-31T19:01:32.749Z",
+  "updated_at": "2026-08-31T19:03:07.542Z",
+  "events": [
+    {
+      "time": "2026-08-31T19:01:32.749Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T19:01:33.484Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T19:01:33.724Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-08-31T19:01:59.260Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "89577db2e313a1f636898d84e63e5cf5385521265d71173e68319a5eaca4c9d5"
+      }
+    },
+    {
+      "time": "2026-08-31T19:02:51.822Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T19:03:01.762Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "89577db2e313a1f636898d84e63e5cf5385521265d71173e68319a5eaca4c9d5"
+      }
+    },
+    {
+      "time": "2026-08-31T19:03:07.374Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T19:03:07.540Z",
+      "event": "task_resumed",
+      "details": {
+        "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+      }
+    }
+  ],
+  "pause_reason": ""
+}

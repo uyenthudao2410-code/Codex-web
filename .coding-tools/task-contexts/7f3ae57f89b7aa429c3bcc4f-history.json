@@ -1,0 +1,67 @@
+[
+  {
+    "version": 2,
+    "task_id": "efed069a6ea3499eb48a9bb1756d09d1",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "jCUgQDiQdM8Cpw13VVrRhEbQ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 261,
+      "finished_at": "2026-08-31T19:14:28.147Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-31T19:11:02.155Z",
+    "updated_at": "2026-08-31T19:14:28.147Z",
+    "events": [
+      {
+        "time": "2026-08-31T19:11:02.156Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-31T19:11:02.160Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T19:14:27.881Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"PROBLEM_|state_after|OPEN|CONFIRMED|REOPEN|BLOCK|ABANDON|acceptance_criteria|problem_resolution_envelope|engineering_floor\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py | Select-Object -First 180",
+          "session_id": "jCUgQDiQdM8Cpw13VVrRhEbQ"
+        }
+      },
+      {
+        "time": "2026-08-31T19:14:28.147Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"PROBLEM_|state_after|OPEN|CONFIRMED|REOPEN|BLOCK|ABANDON|acceptance_criteria|problem_resolution_envelope|engineering_floor\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py | Select-Object -First 180",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T19:14:35.212Z",
+    "archive_reason": "finished"
+  }
+]

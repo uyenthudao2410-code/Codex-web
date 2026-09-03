@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "task_id": "26a720977bda45df81fa296d9f6bb865",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "m8aujhIjajUfePiTQzRIfB18",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 4126,
+    "finished_at": "2026-08-31T18:35:58.693Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-31T18:35:45.141Z",
+  "updated_at": "2026-08-31T18:35:58.693Z",
+  "events": [
+    {
+      "time": "2026-08-31T18:35:45.141Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-31T18:35:45.547Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -ErrorAction SilentlyContinue | Select-Object TaskName,TaskPath,State | Format-List\"",
+        "session_id": "p_fmVoDxkJ8Jr7VhUL9hobIV"
+      }
+    },
+    {
+      "time": "2026-08-31T18:35:48.095Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -ErrorAction SilentlyContinue | Select-Object TaskName,TaskPath,State | Format-List\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T18:35:54.640Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Unregister-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -Confirm:$false -ErrorAction Stop; if (Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -ErrorAction SilentlyContinue) { 'STILL_PRESENT' } else { 'REMOVED' }\"",
+        "session_id": "m8aujhIjajUfePiTQzRIfB18"
+      }
+    },
+    {
+      "time": "2026-08-31T18:35:58.693Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -Command \"Unregister-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -Confirm:$false -ErrorAction Stop; if (Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' -ErrorAction SilentlyContinue) { 'STILL_PRESENT' } else { 'REMOVED' }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

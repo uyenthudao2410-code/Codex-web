@@ -1,0 +1,365 @@
+[
+  {
+    "version": 2,
+    "task_id": "e1a85d67fbc24396b0880b56a766e9a1",
+    "orchestration": {
+      "run_id": "b3273e736aad4928a0631dcad65af8c2",
+      "wave_id": "8ea0be9cb8d2498d8661bda24d157fc4",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+      "contract_fp": ""
+    },
+    "objective": "Complete a workspace task",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/usage_events.py",
+            "state": "file",
+            "sha256": "8043cdf10582dbbdfc0d37e8108249007d9bdefae9ebd13f8e0508512c89081e",
+            "size_bytes": 18570,
+            "receipt_kind": "durable_wave_patch_surface",
+            "run_id": "b3273e736aad4928a0631dcad65af8c2",
+            "wave_id": "8ea0be9cb8d2498d8661bda24d157fc4"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py",
+            "state": "file",
+            "sha256": "10e12b565b2022806261ca3aaab418603cac0619c370a2528bb1661fb9be8a7e",
+            "size_bytes": 12259,
+            "receipt_kind": "durable_wave_patch_surface",
+            "run_id": "b3273e736aad4928a0631dcad65af8c2",
+            "wave_id": "8ea0be9cb8d2498d8661bda24d157fc4"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+            "state": "file",
+            "sha256": "6c5afa72b1afdab0b45e3876795c134fc580de817df91df24514319ac7829bc3",
+            "size_bytes": 16667,
+            "receipt_kind": "durable_wave_patch_surface",
+            "run_id": "b3273e736aad4928a0631dcad65af8c2",
+            "wave_id": "8ea0be9cb8d2498d8661bda24d157fc4"
+          }
+        ],
+        "source": "accepted_checkpoint_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 27,
+          "head_hash": "1cb3f7580c257dbc2b3c6d3c37af0fd8e8f964f15fa040b2f549408cf466cc60"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b3273e736aad4928a0631dcad65af8c2\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b3273e736aad4928a0631dcad65af8c2\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "b3273e736aad4928a0631dcad65af8c2",
+        "wave_id": "8ea0be9cb8d2498d8661bda24d157fc4",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Replacement W2 after durable control-plane context loss terminalized prior RUN 03fd5fbb0cc34177972b6065150c8f73 without Wave-3 writes. Implement exact cross-wave idempotency for ChatWeb controller usage. Controller economic usage_id must be stable for RUN + turn_id across reconnect/REPLAN waves; wave_id/delegation_id remain first-attribution metadata. Same exact controller receipt in a later wave must deduplicate without double-counting. Conflicting economic evidence for the same RUN+turn must fail closed. Generic/provider build_usage_event identity and provider dedupe semantics must remain unchanged. Preserve unknown_not_zero and unrelated dirty work. Add focused regression proof. Do not reuse prior stale proof. No commit/push/restart/package/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "dd4208ba4e446e50864cbf4cc2113f37cce8071e430436a2c0a01ffef41ed89a",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "f1b0b0ce50714e869f38c5886c5c480c",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 2796,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "c669f6b31d43b066461a33b06608e4d665e3d0baff716808f8e92ba12e30c42b",
+    "completion_report_acknowledged_id": "c669f6b31d43b066461a33b06608e4d665e3d0baff716808f8e92ba12e30c42b",
+    "completion_report_acknowledged_at": "2026-08-31T19:10:32.933Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-08-31T19:09:55.806Z",
+    "updated_at": "2026-08-31T19:10:37.939Z",
+    "events": [
+      {
+        "time": "2026-08-31T19:09:55.807Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-31T19:09:55.812Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:01.237Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:15.575Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:15.578Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:15.784Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "c669f6b31d43b066461a33b06608e4d665e3d0baff716808f8e92ba12e30c42b"
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:25.881Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:32.933Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "c669f6b31d43b066461a33b06608e4d665e3d0baff716808f8e92ba12e30c42b"
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:37.939Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T19:10:38.149Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4db385576bc34da689913624ddd3602a",
+    "orchestration": {
+      "run_id": "52b566900b4649c289b043c97a258346",
+      "wave_id": "40a293c5910245d29209f1e7cea9f9db",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "a98758a32322b8feb3ffa70d439eb2ce391e9292e6bb0c93bf89efc3c0228647",
+      "contract_fp": ""
+    },
+    "objective": "Complete a workspace task",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-31T19:10:38.151Z",
+    "updated_at": "2026-08-31T19:11:03.942Z",
+    "events": [
+      {
+        "time": "2026-08-31T19:10:38.151Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-31T19:10:38.157Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T19:11:01.785Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T19:11:03.937Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T19:11:03.942Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T19:12:37.587Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "6ac93ad3a822422e8fef42b9314a30e7",
+    "orchestration": {
+      "run_id": "6420bef7d4b54d38a7b4ea7db6120583",
+      "wave_id": "76a64f11cdee487b9ab8d5b24a08f1cb",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "a98758a32322b8feb3ffa70d439eb2ce391e9292e6bb0c93bf89efc3c0228647",
+      "contract_fp": ""
+    },
+    "objective": "Continue W3 Provider UsageEvent Hardening on the prepared exact-current RUN/WAVE. Apply only the smallest missing causal changes: version derived-pricing provenance, make attribution status explicit, and add a known provider fixture that round-trips exact provider values/cost/provenance through the durable ledger and bounded analytics. Preserve all existing normalization, W2 controller RUN+turn identity, provider terminal dedupe, unknown_not_zero, public 8-tool contract, and unrelated dirty work. No commit/push/restart/package/release/deploy.",
+    "status": "active",
+    "steps": [],
+    "current_step": "Orchestration preflight",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+    "next_step": "",
+    "created_at": "2026-08-31T19:12:37.588Z",
+    "updated_at": "2026-08-31T19:12:38.707Z",
+    "events": [
+      {
+        "time": "2026-08-31T19:12:37.589Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T19:12:38.333Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T19:12:38.707Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T19:13:13.051Z",
+    "archive_reason": "superseded"
+  }
+]

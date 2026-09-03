@@ -86,7 +86,7 @@ class EvidenceCompletenessTests(unittest.TestCase):
             ledger.finish_wave(wave_id, status='accepted')
             ledger.finish_run(run_id, status='accepted')
             host_event = {
-                'schema_version': 5,
+                'schema_version': 6,
                 'event_type': 'host_turn_span',
                 'span_id': 'host-span',
                 'measurement': 'observed_user_visible_to_first_assistant_visible',

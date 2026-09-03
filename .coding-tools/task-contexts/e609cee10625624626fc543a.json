@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "e9ed1b7382414d37ad4d0aac9668343b",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "FNSUum3m1F2V1z8K1ImG4WEV",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 363,
+    "finished_at": "2026-09-01T00:07:28.016Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-01T00:07:27.405Z",
+  "updated_at": "2026-09-01T00:07:28.016Z",
+  "events": [
+    {
+      "time": "2026-09-01T00:07:27.405Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-01T00:07:27.773Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"current_state|accepted_or_not|proof_actually_run|what_changed|next_critical_action\" .coding-tools/orchestration/reports/run-e10a55eab39c4d9cbfddc37a48b58f8e/run-summary.md",
+        "session_id": "FNSUum3m1F2V1z8K1ImG4WEV"
+      }
+    },
+    {
+      "time": "2026-09-01T00:07:28.016Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"current_state|accepted_or_not|proof_actually_run|what_changed|next_critical_action\" .coding-tools/orchestration/reports/run-e10a55eab39c4d9cbfddc37a48b58f8e/run-summary.md",
+        "status": "failed"
+      }
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import re
 import secrets
 import sys
 import time
+import urllib.parse
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -40,9 +41,9 @@ from .protocol import (
     response_id,
     validate_rpc_envelope,
 )
-from .controller_usage_ingress import active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
+from .controller_usage_ingress import CONTROLLER_USAGE_META_KEY, active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
 from .live_control import control_presence_projection, live_control_snapshot
-from .mcp_metadata import MCP_ENDPOINT_PATH, SERVER_NAME, SERVER_TITLE, server_card_payload
+from .mcp_metadata import MCP_ENDPOINT_PATH, SERVER_NAME, SERVER_TITLE, server_card_payload  # noqa: F401  # compatibility re-export
 from .operations_analytics import operations_analytics
 from .trace_context import parse_trace_context
 from .truth_snapshot import build_truth_snapshot
@@ -61,6 +62,7 @@ from .transport_http import (
 )
 from .http_hub_identity import HTTPHubIdentityMixin
 from .stateless_context import STATELESS_TASK_CONTEXT_META_KEY, resolve_stateless_task_context
+from .task_state import TaskStateStore
 
 if TYPE_CHECKING:
     from .server import Runtime
@@ -217,6 +219,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             # their ordinary blocking locks.
             connector_discovery = runtime.connector_tool_discovery(blocking=False)
             connector_contact = runtime.connector_client_contact(blocking=False)
+            controller_usage_envelope = runtime.connector_controller_usage_envelope(blocking=False)
             connector_activation_bootstrap = runtime.connector_activation_bootstrap(blocking=False)
             http_sessions = self.server.sessions.stats(blocking=False)
             activation = runtime.activation_admission_snapshot(blocking=False)
@@ -225,6 +228,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 or activation.get("snapshot_busy") is True
                 or connector_discovery.get("snapshot_busy") is True
                 or connector_contact.get("snapshot_busy") is True
+                or controller_usage_envelope.get("snapshot_busy") is True
                 or connector_activation_bootstrap.get("snapshot_busy") is True
                 or http_sessions.get("snapshot_busy") is True
             )
@@ -247,6 +251,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "tool_contract": dict(runtime.tool_contract),
                 "connector_tool_discovery": connector_discovery,
                 "connector_client_contact": connector_contact,
+                "connector_controller_usage_envelope": controller_usage_envelope,
                 "connector_activation_bootstrap": connector_activation_bootstrap,
                 "projection_rebuild": runtime.projection_rebuild_snapshot(),
                 "workspace_generation": runtime.workspace_generation,
@@ -967,7 +972,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             # therefore keeps the exact context used by the tool execution.
             if not str(getattr(self, "_stateless_task_context_id", "") or ""):
                 try:
-                    _, seeded_task_context_id, _ = self._stateless_task_context(request)
+                    _, seeded_task_context_id, _, _ = self._stateless_task_context(request)
                     self._stateless_task_context_id = seeded_task_context_id
                 except ValueError:
                     # Preserve the typed JSON-RPC validation boundary in
@@ -1118,12 +1123,22 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             dispatch_request = request
             task_context_id = ""
             execution_context_id = ""
+            exact_run_recovery_id = ""
             if stateless_2026:
-                dispatch_request, task_context_id, execution_context_id = self._stateless_task_context(request)
+                dispatch_request, task_context_id, execution_context_id, exact_run_recovery_id = self._stateless_task_context(request)
             identity = self._hub_identity_from_request(request)
             if stateless_2026:
                 identity["execution_context_id"] = execution_context_id
                 runtime.request_context.stateless_task_context_id = task_context_id
+                if exact_run_recovery_id:
+                    runtime.request_context.stateless_exact_run_recovery_id = exact_run_recovery_id
+            if dispatch_request.get("method") == "tools/call":
+                envelope_params = dispatch_request.get("params") if isinstance(dispatch_request.get("params"), dict) else {}
+                envelope_meta = envelope_params.get("_meta") if isinstance(envelope_params.get("_meta"), dict) else {}
+                self.server.control_runtime._record_controller_usage_envelope_observation(  # type: ignore[attr-defined]
+                    identity,
+                    meta_present=CONTROLLER_USAGE_META_KEY in envelope_meta,
+                )
             dispatch_request, controller_usage = controller_usage_request(dispatch_request, identity)
             runtime.request_context.hub_client = identity
             # Resolve the requested workspace before registering the controller
@@ -1142,10 +1157,34 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                         # this pre-registration hint must never turn it into a raw
                         # HTTP/JSON-RPC failure.
                         pass
+            # Stateless MCP task contexts are isolation/selection boundaries,
+            # not orchestration authority by themselves. Read the exact
+            # request-local store explicitly so a RUN projected in another
+            # ChatWeb context can never make a fresh context look owned.
+            if stateless_2026 and task_context_id:
+                predispatch_state = TaskStateStore(
+                    runtime._current_request_workspace_root(),
+                    scope_id=f"mcp2026:{task_context_id}",
+                ).get()
+            else:
+                predispatch_state = runtime.task_state.get()
+            predispatch_projection = (
+                predispatch_state.get("orchestration")
+                if isinstance(predispatch_state.get("orchestration"), dict)
+                else {}
+            )
+            predispatch_run_id = str(predispatch_projection.get("run_id") or "").strip()
+            predispatch_wave_id = str(predispatch_projection.get("wave_id") or "").strip()
+            predispatch_orchestration_authority = bool(predispatch_run_id or predispatch_wave_id)
             runtime._touch_hub_client(identity)
             usage_receipt = None
             deferred_controller_usage = False
             if controller_usage is not None:
+                report_run_id = str(controller_usage.get("run_id") or "").strip()
+                if predispatch_orchestration_authority and not report_run_id:
+                    raise ValueError(
+                        "controller usage run_id and wave_id are required when orchestration authority already exists"
+                    )
                 usage_context = active_controller_usage_context(runtime)
                 if usage_context is not None:
                     usage_receipt = record_controller_usage(runtime, controller_usage, usage_context)
@@ -1162,8 +1201,24 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             )
             if controller_usage is not None and deferred_controller_usage:
                 usage_context = active_controller_usage_context(runtime)
-                if usage_context is not None:
-                    usage_receipt = record_controller_usage(runtime, controller_usage, usage_context)
+                if usage_context is None:
+                    raise ValueError(
+                        "deferred controller usage requires agent_workflow to create an exact orchestration run and wave"
+                    )
+                result = response.get("result") if isinstance(response, dict) else None
+                structured = result.get("structuredContent") if isinstance(result, dict) else None
+                response_orchestration = (
+                    structured.get("orchestration")
+                    if isinstance(structured, dict) and isinstance(structured.get("orchestration"), dict)
+                    else {}
+                )
+                response_run_id = str(response_orchestration.get("run_id") or "").strip()
+                response_wave_id = str(response_orchestration.get("wave_id") or "").strip()
+                if (response_run_id, response_wave_id) != usage_context:
+                    raise ValueError(
+                        "deferred controller usage requires the same agent_workflow request to create the exact orchestration run and wave"
+                    )
+                usage_receipt = record_controller_usage(runtime, controller_usage, usage_context)
             if response is not None and usage_receipt is not None:
                 decorate_controller_usage_status(response, usage_receipt)
             if stateless_2026 and response is not None:
@@ -1195,10 +1250,12 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 delattr(runtime.request_context, "workspace_root")
             if hasattr(runtime.request_context, "stateless_task_context_id"):
                 delattr(runtime.request_context, "stateless_task_context_id")
+            if hasattr(runtime.request_context, "stateless_exact_run_recovery_id"):
+                delattr(runtime.request_context, "stateless_exact_run_recovery_id")
 
-    def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str]:
+    def _stateless_task_context(self, request: dict[str, Any]) -> tuple[dict[str, Any], str, str, str]:
         """Return a request copy plus an isolated MCP-2026 application-state context."""
-        dispatch_request, task_context_id, execution_context_id = resolve_stateless_task_context(
+        dispatch_request, task_context_id, execution_context_id, exact_run_recovery_id = resolve_stateless_task_context(
             request,
             identity_from_request=self._hub_identity_from_request,
             recover_exact_run_context=lambda run_id, client_id: self.runtime.stateless_task_context_for_run(
@@ -1206,7 +1263,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             ),
         )
         self._stateless_task_context_id = task_context_id
-        return dispatch_request, task_context_id, execution_context_id
+        return dispatch_request, task_context_id, execution_context_id, exact_run_recovery_id
 
     @staticmethod
     def _decorate_stateless_task_context(response: dict[str, Any], task_context_id: str) -> None:

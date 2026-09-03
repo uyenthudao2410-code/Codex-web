@@ -1,0 +1,208 @@
+[
+  {
+    "version": 2,
+    "task_id": "36358640878444e687ca47bf4606b2e2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "V6y6hKXvnGaBmQbkUYwHEAbF",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 365,
+      "finished_at": "2026-08-31T18:57:51.505Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:56:07.424Z",
+    "updated_at": "2026-08-31T18:57:51.505Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:56:07.424Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:56:07.828Z",
+        "event": "command_started",
+        "details": {
+          "command": "git remote -v && git branch -vv && git log -1 --format=\"%H %cI %s\"",
+          "session_id": "q7fjDXusJgZbZTpRB3LA5-KF"
+        }
+      },
+      {
+        "time": "2026-08-31T18:56:08.058Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git remote -v && git branch -vv && git log -1 --format=\"%H %cI %s\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:51.254Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope|diff_review_handoff|git_diff_hunks|ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract|AgentTask|TaskAttempt|agent_task_attempt|call_runtime_tool|tool_manifest|mcp_tool|recovery_kind|recovery_tool|committed_review|continuation\" resources/coding-tools-mcp/coding_tools_mcp src electron renderer | head -n 400",
+          "session_id": "V6y6hKXvnGaBmQbkUYwHEAbF"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:51.505Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope|diff_review_handoff|git_diff_hunks|ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract|AgentTask|TaskAttempt|agent_task_attempt|call_runtime_tool|tool_manifest|mcp_tool|recovery_kind|recovery_tool|committed_review|continuation\" resources/coding-tools-mcp/coding_tools_mcp src electron renderer | head -n 400",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:57:58.399Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e48f455206624e4ab247f31721af634d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "SfF6rRxvHp9baY698XZG1zVt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 382,
+      "finished_at": "2026-08-31T18:58:07.940Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:57:58.400Z",
+    "updated_at": "2026-08-31T18:58:07.940Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:57:58.401Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:58.796Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope|diff_review_handoff|git_diff_hunks|ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract|AgentTask|TaskAttempt|agent_task_attempt|call_runtime_tool|tool_manifest|mcp_tool|recovery_kind|recovery_tool|committed_review|continuation\" resources/coding-tools-mcp/coding_tools_mcp src electron renderer",
+          "session_id": "890RBGJBfqjyuUuephHLW0gu"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:59.067Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope|diff_review_handoff|git_diff_hunks|ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract|AgentTask|TaskAttempt|agent_task_attempt|call_runtime_tool|tool_manifest|mcp_tool|recovery_kind|recovery_tool|committed_review|continuation\" resources/coding-tools-mcp/coding_tools_mcp src electron renderer",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:07.713Z",
+        "event": "command_started",
+        "details": {
+          "command": "echo ===EDIT_SCOPE=== && rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===SEMANTICS=== && rg -n -S \"ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===AGENT_TASK=== && rg -n -S \"AgentTask|TaskAttempt|agent_task_attempt\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===DIFF_HANDOFF=== && rg -n -S \"diff_review_handoff|show_changes_diff_",
+          "session_id": "SfF6rRxvHp9baY698XZG1zVt"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:07.940Z",
+        "event": "command_finished",
+        "details": {
+          "command": "echo ===EDIT_SCOPE=== && rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===SEMANTICS=== && rg -n -S \"ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===AGENT_TASK=== && rg -n -S \"AgentTask|TaskAttempt|agent_task_attempt\" resources/coding-tools-mcp/coding_tools_mcp src && echo ===DIFF_HANDOFF=== && rg -n -S \"diff_review_handoff|show_changes_diff_",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:58:15.215Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "01d39efc75964e5d8d84407b89980c66",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YMYYsfycj7rtBkZZEcd73Jvt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 616,
+      "finished_at": "2026-08-31T18:58:16.273Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:58:15.216Z",
+    "updated_at": "2026-08-31T18:58:16.273Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:58:15.216Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:15.789Z",
+        "event": "command_started",
+        "details": {
+          "command": "echo ===EDIT_SCOPE=== & rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===SEMANTICS=== & rg -n -S \"ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===AGENT_TASK=== & rg -n -S \"AgentTask|TaskAttempt|agent_task_attempt\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===DIFF_HANDOFF=== & rg -n -S \"diff_review_handoff|show_changes_diff_truncat",
+          "session_id": "YMYYsfycj7rtBkZZEcd73Jvt"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:16.273Z",
+        "event": "command_finished",
+        "details": {
+          "command": "echo ===EDIT_SCOPE=== & rg -n -S \"line_scope|OccurrenceOutsideLineScope|ApplyTextLineScope\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===SEMANTICS=== & rg -n -S \"ToolEffect|ToolApprovalPolicy|ToolIdempotency|ToolSemanticContract\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===AGENT_TASK=== & rg -n -S \"AgentTask|TaskAttempt|agent_task_attempt\" resources/coding-tools-mcp/coding_tools_mcp src & echo ===DIFF_HANDOFF=== & rg -n -S \"diff_review_handoff|show_changes_diff_truncat",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:58:22.734Z",
+    "archive_reason": "finished"
+  }
+]

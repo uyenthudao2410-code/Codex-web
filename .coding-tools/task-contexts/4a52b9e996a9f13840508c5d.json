@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "9583bf3525424682b43b45a1d4d11e1d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "w_c0UchWyOUAJSC8Nr7Tq0K2",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 425,
+    "finished_at": "2026-09-02T07:57:51.356Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-02T07:57:50.712Z",
+  "updated_at": "2026-09-02T07:57:51.356Z",
+  "events": [
+    {
+      "time": "2026-09-02T07:57:50.712Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-02T07:57:51.120Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 3 \"321da27a9dd24556abd9e7da8632d0eb|ctx_5b2b257d7cfed62c2ff226791b358e87\" .coding-tools\\task-contexts",
+        "session_id": "w_c0UchWyOUAJSC8Nr7Tq0K2"
+      }
+    },
+    {
+      "time": "2026-09-02T07:57:51.356Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 3 \"321da27a9dd24556abd9e7da8632d0eb|ctx_5b2b257d7cfed62c2ff226791b358e87\" .coding-tools\\task-contexts",
+        "status": "passed"
+      }
+    }
+  ]
+}

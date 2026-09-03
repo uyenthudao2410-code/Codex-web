@@ -1,0 +1,1223 @@
+[
+  {
+    "version": 2,
+    "task_id": "6bf9cd89463f4f3a8024502ae7f5b37f",
+    "orchestration": {
+      "run_id": "393c55bf91c743988d65cb42ffffda9b",
+      "wave_id": "a4f5bf9b89074d55b6cb399fb0a23ee3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": ""
+    },
+    "objective": "Implement W4 ToolInvocationEvent Instrumentation from the existing Token Usage, Cost, Context Observability and Accepted-Result Efficiency Master Plan in E:\\DEV\\Codex-web. First localize the existing common public-tool execution/performance tracing seam and reuse it rather than adding per-tool duplicate instrumentation. Finish line: every supported invocation of all 8 public MCP tools (workspace_context, agent_workflow, task_control, document_workflow, exec_command, command_control, request_permissions, view_image) yields exactly one bounded invocation telemetry record with stable invocation identity and available session/turn/task/RUN/WAVE/trace correlation, runtime-measured timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed error outcome; image/binary payloads must never be converted to exact token counts. Preserve unknown_not_zero, W1-W3 accounting semantics, public tool count=8, existing dirty work, and fast-path boundedness. Prefer extending the existing performance trace/common runtime wrapper and existing focused tests. Do not implement W5 tool-card tokens, dashboard, budgets, migration, or broad refactors. No commit, push, restart, package, release or deploy. Run the smallest focused deterministic proof that verifies an 8-tool matrix has exactly one invocation record per call plus git diff --check on touched source.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "-8SvkUGnO_nPRkJfMwJGETxg",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 888,
+      "finished_at": "2026-09-01T01:34:00.552Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 18,
+          "head_hash": "f3363f54cea598f2805aacb41e585b7e63ea353458edc7a8d3995eb61602989c"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-393c55bf91c743988d65cb42ffffda9b\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-393c55bf91c743988d65cb42ffffda9b\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "393c55bf91c743988d65cb42ffffda9b",
+        "wave_id": "e98609c8f23d4c6a8248b99ddf961183",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "75e77f071829587c036c38dc7b97986397b6ff75712a9bf26a91bdbc3168c700",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement W4 ToolInvocationEvent Instrumentation from the existing Token Usage, Cost, Context Observability and Accepted-Result Efficiency Master Plan in E:\\DEV\\Codex-web. First localize the existing common public-tool execution/performance tracing seam and reuse it rather than adding per-tool duplicate instrumentation. Finish line: every supported invocation of all 8 public MCP tools (workspace_context, agent_workflow, task_control, document_workflow, exec_command, command_control, request_permissions, view_image) yields exactly one bounded invocation telemetry record with stable invocation identity and available session/turn/task/RUN/WAVE/trace correlation, runtime-measured timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed error outcome; image/binary payloads must never be converted to exact token counts. Preserve unknown_not_zero, W1-W3 accounting semantics, public tool count=8, existing dirty work, and fast-path boundedness. Prefer extending the existing performance trace/common runtime wrapper and existing focused tests. Do not implement W5 tool-card tokens, dashboard, budgets, migration, or broad refactors. No commit, push, restart, package, release or deploy. Run the smallest focused deterministic proof that verifies an 8-tool matrix has exactly one invocation record per call plus git diff --check on touched source.",
+          "objective_revision": 1,
+          "objective_sha256": "35b3b1a7f9b0ecaadfca74301bfd4aecb2b5cc76e9e2f1b39ea88c507c3e1dc8",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "CANDIDATE_MODEL_NOT_COMPLETED",
+        "reason": null,
+        "event_seq": 33830
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "e366467d15b6fee154c89ac1197daf78748f7406270d87a43981ac2107fbbd1d",
+    "completion_report_acknowledged_id": "e366467d15b6fee154c89ac1197daf78748f7406270d87a43981ac2107fbbd1d",
+    "completion_report_acknowledged_at": "2026-08-31T23:58:18.604Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-31T23:57:15.171Z",
+    "updated_at": "2026-09-01T01:34:00.552Z",
+    "events": [
+      {
+        "time": "2026-08-31T23:57:15.171Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Implement W4 ToolInvocationEvent Instrumentation from the existing Token Usage, Cost, Context Observability and Accepted-Result Efficiency Master Plan in E:\\DEV\\Codex-web. First localize the existing common public-tool execution/performance tracing seam and reuse it rather than adding per-tool duplicate instrumentation. Finish line: every supported invocation of all 8 public MCP tools (workspace_context, agent_workflow, task_control, document_workflow, exec_command, command_control, request_permissions, view_image) yields exactly one bounded invocation telemetry record with stable invocation identity and available session/turn/task/RUN/WAVE/trace correlation, runtime-measured timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed error outcome; image/binary payloads must never be converted to exact token counts. Preserve unknown_not_zero, W1-W3 accounting semantics, public tool count=8, existing dirty work, and fast-path boundedness. Prefer extending the existing performance trace/common runtime wrapper and existing focused tests. Do not implement W5 tool-card tokens, dashboard, budgets, migration, or broad refactors. No commit, push, restart, package, release or deploy. Run the smallest focused deterministic proof that verifies an 8-tool matrix has exactly one invocation record per call plus git diff --check on touched source."
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:16.533Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:19.523Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:52.595Z",
+        "event": "candidate_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:52.596Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:52.966Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "e366467d15b6fee154c89ac1197daf78748f7406270d87a43981ac2107fbbd1d"
+        }
+      },
+      {
+        "time": "2026-08-31T23:57:53.110Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:07.229Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:18.604Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "e366467d15b6fee154c89ac1197daf78748f7406270d87a43981ac2107fbbd1d"
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:20.341Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:39.982Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:40.230Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:51.697Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:52.918Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:32:52.924Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T01:33:45.526Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:00.064Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 500 -B 10 \"def call_tool\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py; rg -n -A 170 -B 10 \"def emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "-8SvkUGnO_nPRkJfMwJGETxg"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:00.552Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 500 -B 10 \"def call_tool\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py; rg -n -A 170 -B 10 \"def emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:34:08.939Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0fc53651acc84431b9cd6033910ab9f1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "MN-T7LLvGwrjwGRIv0eOuy3k",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 861,
+      "finished_at": "2026-09-01T01:35:40.057Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:34:08.940Z",
+    "updated_at": "2026-09-01T01:35:40.057Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:34:08.940Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:09.810Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 220 -B 20 \"def _call_tool_dispatch\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "Jrpg1aNScSKgOJE0QJ5ZFk5j"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:10.287Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 220 -B 20 \"def _call_tool_dispatch\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:17.601Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 190 -B 20 \"def emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "_JEOIFDIqNYPrDTvEa6tMKXd"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:18.436Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 190 -B 20 \"def emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:25.736Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"performance_trace|tool_calls|model_visible_bytes|deduplicated_calls|emit_tool_trace\" resources/coding-tools-mcp/tests",
+          "session_id": "vgIBTa9vXZD_8VVI5r9Zja0c"
+        }
+      },
+      {
+        "time": "2026-09-01T01:34:26.244Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"performance_trace|tool_calls|model_visible_bytes|deduplicated_calls|emit_tool_trace\" resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:39.537Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"trace_context_metadata|_current_hub_client|task_context_id|turn_id|trace_id|session_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/execution_hub.py resources/coding-tools-mcp/coding_tools_mcp/trace_context.py",
+          "session_id": "MN-T7LLvGwrjwGRIv0eOuy3k"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:40.057Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"trace_context_metadata|_current_hub_client|task_context_id|turn_id|trace_id|session_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/execution_hub.py resources/coding-tools-mcp/coding_tools_mcp/trace_context.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:35:47.185Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "abb2441819f74aaa93c6dfa19f7ad225",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Kk8n1nG35hKd_0-2TWWt0MH6",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 839,
+      "finished_at": "2026-09-01T01:35:57.624Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:35:47.187Z",
+    "updated_at": "2026-09-01T01:35:57.624Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:35:47.188Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:48.024Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 22 \"hub_client|trace_context|stateless_task_context_id|execution_context_id\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/transport_http.py",
+          "session_id": "E-mcqHcWOte7NR81zHRxjB2W"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:48.502Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 22 \"hub_client|trace_context|stateless_task_context_id|execution_context_id\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/transport_http.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:57.185Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"call_tool\\(|request_id|turn_id|conversation|message_id\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py; rg -n \"performance_trace_version|version.?[=: ].?6|VERSION = 6|performance.json\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp | head -n 160",
+          "session_id": "Kk8n1nG35hKd_0-2TWWt0MH6"
+        }
+      },
+      {
+        "time": "2026-09-01T01:35:57.624Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"call_tool\\(|request_id|turn_id|conversation|message_id\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py; rg -n \"performance_trace_version|version.?[=: ].?6|VERSION = 6|performance.json\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp | head -n 160",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:36:04.555Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8d7632687f124150a51806fd973e97cc",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "q6ZSEqKvdGCyrgN9SNVF4uT6",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 848,
+      "finished_at": "2026-09-01T01:36:40.168Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:36:04.556Z",
+    "updated_at": "2026-09-01T01:36:40.168Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:36:04.556Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:05.361Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"call_tool\\(|request_id|turn_id|conversation|message_id\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "session_id": "G4Guefl9YsA5449wR0bpUYoR"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:05.826Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"call_tool\\(|request_id|turn_id|conversation|message_id\" resources/coding-tools-mcp/coding_tools_mcp/protocol.py resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:14.866Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"performance_trace_version|VERSION = 6|\\[\\\"version\\\"\\].*6|version.?[:=].?6\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "pvJ9n4YoXfOqkFOuHvyWk4-J"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:15.327Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"performance_trace_version|VERSION = 6|\\[\\\"version\\\"\\].*6|version.?[:=].?6\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py resources/coding-tools-mcp/tests/test_runtime_activation.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:23.983Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 470 -B 20 \"class PerformanceTraceStore\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "session_id": "cwXiRVJFC_AEsRdB338aJQGd"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:24.461Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 470 -B 20 \"class PerformanceTraceStore\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:39.718Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py; rg -n -A 80 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "session_id": "q6ZSEqKvdGCyrgN9SNVF4uT6"
+        }
+      },
+      {
+        "time": "2026-09-01T01:36:40.168Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py; rg -n -A 80 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:37:17.958Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ec799a3f6bfa4da9acf4c7a07b1c1e5b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "RW83nxNmiVQhpvN2VjaDciPT",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 927,
+      "finished_at": "2026-09-01T01:37:19.374Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:37:17.960Z",
+    "updated_at": "2026-09-01T01:37:19.374Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:37:17.960Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:18.891Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 70 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py; rg -n -A 90 -B 15 \"def usage_event_from_controller_report\" resources/coding-tools-mcp/coding_tools_mcp/usage_events.py",
+          "session_id": "RW83nxNmiVQhpvN2VjaDciPT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:19.374Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py; rg -n -A 90 -B 15 \"def usage_event_from_controller_report\" resources/coding-tools-mcp/coding_tools_mcp/usage_events.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:37:29.805Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5de6ea4e313f43a28fcdb2f5285e941e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3sfo7EbWxN3MDzhuNvXIQIXI",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 863,
+      "finished_at": "2026-09-01T01:38:46.441Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T01:37:29.807Z",
+    "updated_at": "2026-09-01T01:38:46.441Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:37:29.807Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:30.649Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 80 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "session_id": "hbn9XWkjqzaBGKdlLsNo6Gy8"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:31.099Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 80 -B 10 \"def controller_usage_request\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:40.318Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 175 -B 5 \"    def call_tool\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "PJrkugTiOYrj8iz0-f67LRZE"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:40.824Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 175 -B 5 \"    def call_tool\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:52.669Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"test_runtime_trace_counts_only_model_facing_text_as_model_visible_bytes\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "0UJHarL8XLtqDC_FHvJTlwrF"
+        }
+      },
+      {
+        "time": "2026-09-01T01:37:53.218Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"test_runtime_trace_counts_only_model_facing_text_as_model_visible_bytes\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:26.177Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 55 -B 0 \"^from|^import|class Efficiency\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "J4mfAVymK5XCk97FC3d7YCvZ"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:26.702Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 55 -B 0 \"^from|^import|class Efficiency\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:45.968Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"controllerUsage|controller_usage|turn_id\" resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_http_server.py resources/coding-tools-mcp/tests/test_runtime_http.py",
+          "session_id": "3sfo7EbWxN3MDzhuNvXIQIXI"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:46.441Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"controllerUsage|controller_usage|turn_id\" resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_http_server.py resources/coding-tools-mcp/tests/test_runtime_http.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T01:38:53.735Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "1c994ee0f9534d188d599a3fbaa129a8",
+    "orchestration": {
+      "run_id": "825b0d02075a4d5294e441bfceead65b",
+      "wave_id": "446ddd10870e48f5934dfe894e067c66",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "pCBj4HcBQuoIyV-UubgEVBVp",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 819,
+      "finished_at": "2026-09-01T01:40:34.852Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 4,
+          "head_hash": "1689dc5e2fb6f9e285e2d2f62cfba53cb1aecf4ed589378a3be7c73393b3798d"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-825b0d02075a4d5294e441bfceead65b\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-825b0d02075a4d5294e441bfceead65b\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "825b0d02075a4d5294e441bfceead65b",
+        "wave_id": "446ddd10870e48f5934dfe894e067c66",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the already-localized W4 design in the current wave only. Refactor Runtime.call_tool into the single exactly-once ToolInvocationEvent tracing boundary, covering early bootstrap/preflight/activation returns, idempotency replay, success, structured failures, background handoff and escaped exceptions; remove distributed internal emit_tool_trace calls. Extend PerformanceTraceStore v6 additively with bounded tool_invocation_v1 per-event identity/correlation/status/error/truncation/continuation fields; do not add or infer token counts. Propagate only validated controller turn_id into HTTP request_context during dispatch and clear it in finally. Add focused tests in test_efficiency_runtime proving the exact 8 public tools each create exactly one invocation event, invocation IDs are stable for the same transport request and distinct across calls, correlation fields use only existing content-free request/runtime identities, token fields are absent, and an activation-bootstrap early return is traced exactly once. Preserve W1-W3 accounting, smart-v3 tool_count=8, performance schema version 6, unrelated dirty bytes, and all public behavior outside W4. Do not touch W5/dashboard/budget/history, do not restart, commit, push, release or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "25c2a70a481c0bef4dc4f63ccb1ccfe87226d9e7f40fecfb4df91a1531dc8af7",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": null,
+        "reason": "Run is in PREFLIGHT, not ACCEPTING.",
+        "event_seq": null
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "f811fd2f7b0438a159a9a64c943f16de28d652a695466ab72d7e0aa4a7d53f00",
+    "completion_report_acknowledged_id": "f811fd2f7b0438a159a9a64c943f16de28d652a695466ab72d7e0aa4a7d53f00",
+    "completion_report_acknowledged_at": "2026-09-01T01:44:11.364Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-01T01:38:53.738Z",
+    "updated_at": "2026-09-01T07:21:56.405Z",
+    "events": [
+      {
+        "time": "2026-09-01T01:38:53.738Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:54.551Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"self\\.emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "nAr2QC7sQ7NzpksgSjdsjTn8"
+        }
+      },
+      {
+        "time": "2026-09-01T01:38:55.052Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"self\\.emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:39:45.553Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-01T01:40:25.135Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-01T01:40:34.304Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 150 -B 12 \"def emit_tool_trace\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "pCBj4HcBQuoIyV-UubgEVBVp"
+        }
+      },
+      {
+        "time": "2026-09-01T01:40:34.852Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 150 -B 12 \"def emit_tool_trace\" resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T01:42:40.323Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T01:42:40.669Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-01T01:43:28.418Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "FINAL_ACCEPTANCE_NOT_READY"
+        }
+      },
+      {
+        "time": "2026-09-01T01:43:42.290Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "f811fd2f7b0438a159a9a64c943f16de28d652a695466ab72d7e0aa4a7d53f00"
+        }
+      },
+      {
+        "time": "2026-09-01T01:43:53.864Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T01:44:11.364Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "f811fd2f7b0438a159a9a64c943f16de28d652a695466ab72d7e0aa4a7d53f00"
+        }
+      },
+      {
+        "time": "2026-09-01T01:44:21.343Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T01:44:31.929Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+        }
+      },
+      {
+        "time": "2026-09-01T01:48:45.497Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T07:20:54.676Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+        }
+      },
+      {
+        "time": "2026-09-01T07:21:56.220Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-01T08:20:34.364Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "6bf9cd89463f4f3a8024502ae7f5b37f",
+    "orchestration": {
+      "run_id": "393c55bf91c743988d65cb42ffffda9b",
+      "wave_id": "a4f5bf9b89074d55b6cb399fb0a23ee3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": ""
+    },
+    "objective": "Implement W4 ToolInvocationEvent Instrumentation from the existing Token Usage, Cost, Context Observability and Accepted-Result Efficiency Master Plan in E:\\DEV\\Codex-web. First localize the existing common public-tool execution/performance tracing seam and reuse it rather than adding per-tool duplicate instrumentation. Finish line: every supported invocation of all 8 public MCP tools (workspace_context, agent_workflow, task_control, document_workflow, exec_command, command_control, request_permissions, view_image) yields exactly one bounded invocation telemetry record with stable invocation identity and available session/turn/task/RUN/WAVE/trace correlation, runtime-measured timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed error outcome; image/binary payloads must never be converted to exact token counts. Preserve unknown_not_zero, W1-W3 accounting semantics, public tool count=8, existing dirty work, and fast-path boundedness. Prefer extending the existing performance trace/common runtime wrapper and existing focused tests. Do not implement W5 tool-card tokens, dashboard, budgets, migration, or broad refactors. No commit, push, restart, package, release or deploy. Run the smallest focused deterministic proof that verifies an 8-tool matrix has exactly one invocation record per call plus git diff --check on touched source.",
+    "status": "idle",
+    "steps": [],
+    "current_step": "",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T08:20:34.367Z",
+    "updated_at": "2026-09-01T08:20:34.367Z",
+    "events": [
+      {
+        "time": "2026-09-01T08:20:34.367Z",
+        "event": "orchestration_projection_exact_run_restored",
+        "details": {
+          "source": "canonical_ledger",
+          "run_id": "393c55bf91c743988d65cb42ffffda9b"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T08:20:53.955Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ffbce1cb00c64060bc5cce6d9194854b",
+    "orchestration": {
+      "run_id": "62a1b6e5521f4260859689133746242c",
+      "wave_id": "86c546d1ece741a38dd2f5b0a226c684",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "c6e0aefd6e4e031ee24b2d9b75b98faea2c9695cde92dbd5546c7bde02bcd001",
+      "contract_fp": ""
+    },
+    "objective": "Resume canonical W4 ToolInvocationEvent instrumentation on the live-loaded current source. Preserve the existing canonical RUN 393c55bf91c743988d65cb42ffffda9b and W4 objective. Re-localize the common public-tool dispatch/performance-trace seam after the accepted stateless continuity repair changed overlapping runtime files. Do not write in this prepare phase. Finish line remains: all 8 public MCP tools emit exactly one bounded invocation telemetry record per supported call with stable invocation identity, available session/turn/task/RUN/WAVE/W3C correlation, runtime timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed outcome; never infer exact token counts from bytes or image/binary payloads; preserve W1-W3 accounting, unknown_not_zero, and tool_count=8. No W5/dashboard/budget/history work. No commit/push/restart/release/deploy.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 6,
+          "head_hash": "d91e3a01d78c7a0a8abe7525f50e02f848d31567739e697d2db64387fc1bb8bf"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-62a1b6e5521f4260859689133746242c\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-62a1b6e5521f4260859689133746242c\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "62a1b6e5521f4260859689133746242c",
+        "wave_id": "86c546d1ece741a38dd2f5b0a226c684",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "c6e0aefd6e4e031ee24b2d9b75b98faea2c9695cde92dbd5546c7bde02bcd001",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Resume canonical W4 ToolInvocationEvent instrumentation on the live-loaded current source. Preserve the existing canonical RUN 393c55bf91c743988d65cb42ffffda9b and W4 objective. Re-localize the common public-tool dispatch/performance-trace seam after the accepted stateless continuity repair changed overlapping runtime files. Do not write in this prepare phase. Finish line remains: all 8 public MCP tools emit exactly one bounded invocation telemetry record per supported call with stable invocation identity, available session/turn/task/RUN/WAVE/W3C correlation, runtime timing, request/response/model-visible bytes, cache/dedup/truncation/continuation state when available, and typed outcome; never infer exact token counts from bytes or image/binary payloads; preserve W1-W3 accounting, unknown_not_zero, and tool_count=8. No W5/dashboard/budget/history work. No commit/push/restart/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "49d15f6be38865b6c2183e304a703548d674918192300039ef9f40eb0780f6e3",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "0b4139bd867f67e60a9bcfe228608d7c86d219b70714178d5bb648fea115ea12",
+    "completion_report_acknowledged_id": "0b4139bd867f67e60a9bcfe228608d7c86d219b70714178d5bb648fea115ea12",
+    "completion_report_acknowledged_at": "2026-09-01T08:23:04.734Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-01T08:20:53.957Z",
+    "updated_at": "2026-09-01T08:23:13.128Z",
+    "events": [
+      {
+        "time": "2026-09-01T08:20:53.957Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:20:54.595Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T08:20:56.086Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-01T08:20:56.092Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-01T08:21:14.610Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "0b4139bd867f67e60a9bcfe228608d7c86d219b70714178d5bb648fea115ea12"
+        }
+      },
+      {
+        "time": "2026-09-01T08:22:55.848Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-01T08:23:04.734Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0b4139bd867f67e60a9bcfe228608d7c86d219b70714178d5bb648fea115ea12"
+        }
+      },
+      {
+        "time": "2026-09-01T08:23:13.128Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T08:23:13.330Z",
+    "archive_reason": "cleared"
+  }
+]

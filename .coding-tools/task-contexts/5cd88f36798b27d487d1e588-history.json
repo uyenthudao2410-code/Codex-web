@@ -1,0 +1,238 @@
+[
+  {
+    "version": 2,
+    "task_id": "0cac36429b834619b693a8b78c1012fd",
+    "orchestration": {
+      "run_id": "8f404c8ff5a34f138c285dd7c6eecf96",
+      "wave_id": "94bc21bbc06a4849935d84d2fe565266",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "a15108b4a6fe95b05859a095ed994274be0902826bc8b85cc1e68fbec7c6a0c9",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "lTplP6KHrSL8sO04PkTse4hY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 829,
+      "finished_at": "2026-09-02T03:01:31.278Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+            "state": "file",
+            "sha256": "bc90e73fb882ca3711395b461082e7e2842dd8eade64f8b81aba7b424c5fef40",
+            "size_bytes": 27461,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8f404c8ff5a34f138c285dd7c6eecf96",
+            "wave_id": "94bc21bbc06a4849935d84d2fe565266"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "state": "file",
+            "sha256": "b5d38235e87eb5cfa0306fa77dfe8f2ffcb9794aa316ef83a51271d1451326f1",
+            "size_bytes": 55030,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8f404c8ff5a34f138c285dd7c6eecf96",
+            "wave_id": "94bc21bbc06a4849935d84d2fe565266"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "f50359ef69a75af177b5bdec509b5f4030eb8c7a5a63d38add28a10d2b22d477"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8f404c8ff5a34f138c285dd7c6eecf96\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8f404c8ff5a34f138c285dd7c6eecf96\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "8f404c8ff5a34f138c285dd7c6eecf96",
+        "wave_id": "94bc21bbc06a4849935d84d2fe565266",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "a15108b4a6fe95b05859a095ed994274be0902826bc8b85cc1e68fbec7c6a0c9",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continuation of TG1-TG12 bootstrap activation-authority correction after accidental source-free abort of RUN f9668f4260614d52aaba3f4022053699. Apply only the proven two-file smart-v3 compatibility/test correction, adopt every other fresh dirty Coding MCP path exactly, prove the exact prior 16-module oracle, then checkpoint activation authority without Stage B/TG completion claim.",
+          "objective_revision": 1,
+          "objective_sha256": "39ae877a0b8c82c82343eb908ab9c68dac067b42f14d9355ee280e8b17b6354f",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "e1d663a9b4364f07bea7876e6be5b955",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 73764,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "6c165591f3a9306d614bc6cd0f464e7edd68f9bea0831c0b761488a2b5953778",
+    "completion_report_acknowledged_id": "6c165591f3a9306d614bc6cd0f464e7edd68f9bea0831c0b761488a2b5953778",
+    "completion_report_acknowledged_at": "2026-09-02T03:02:16.934Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-02T03:01:18.126Z",
+    "updated_at": "2026-09-02T03:02:27.177Z",
+    "events": [
+      {
+        "time": "2026-09-02T03:01:18.126Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:19.193Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py SHA256",
+          "session_id": "A6FvPBXDh1yaBXbryOvpVq0z"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:19.952Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:30.828Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256",
+          "session_id": "lTplP6KHrSL8sO04PkTse4hY"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:31.278Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:44.343Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:44.343Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:44.488Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "6c165591f3a9306d614bc6cd0f464e7edd68f9bea0831c0b761488a2b5953778"
+        }
+      },
+      {
+        "time": "2026-09-02T03:01:57.823Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-02T03:02:16.934Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "6c165591f3a9306d614bc6cd0f464e7edd68f9bea0831c0b761488a2b5953778"
+        }
+      },
+      {
+        "time": "2026-09-02T03:02:27.177Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-02T03:02:39.028Z",
+    "archive_reason": "finished"
+  }
+]

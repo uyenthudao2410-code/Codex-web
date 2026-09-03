@@ -5,7 +5,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .evidence_completeness import evidence_completeness_population_report, evidence_completeness_run_report
+from .evidence_completeness import (
+    CURRENT_HOST_OBSERVATION_SCHEMA_VERSION,
+    LEGACY_HOST_OBSERVATION_SCHEMA_VERSIONS,
+    evidence_completeness_population_report,
+    evidence_completeness_run_report,
+)
 from .ledger_access import open_existing_ledger, open_existing_ledger_analysis
 from .orchestration_ledger import OrchestrationLedger
 from .rework_diagnosis import stratified_rework_diagnosis
@@ -13,8 +18,6 @@ from .solution_economics import solution_shadow_population_report, solution_shad
 
 
 HOST_JOURNAL_RELATIVE = Path('.coding-tools') / 'evaluation' / 'chatweb-host-observations.jsonl'
-CURRENT_HOST_OBSERVATION_SCHEMA_VERSION = 5
-LEGACY_HOST_OBSERVATION_SCHEMA_VERSIONS = {1, 2, 3, 4}
 
 
 def _percentile(values: list[float], percentile: int) -> float | None:

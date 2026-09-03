@@ -1,0 +1,218 @@
+{
+  "version": 2,
+  "task_id": "4d14ece654d945a5a72859a8c3ec5114",
+  "orchestration": {
+    "run_id": "79bac85860294886a9e12e022a5d7bd0",
+    "wave_id": "9b3501fb6ffe48b8aa4e0a828ee45d60",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "a98758a32322b8feb3ffa70d439eb2ce391e9292e6bb0c93bf89efc3c0228647",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "KK5OIrdodXEDQBYaMrEBtl5o",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1153,
+    "finished_at": "2026-08-31T19:36:44.294Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/usage_events.py",
+          "state": "file",
+          "sha256": "21ce96b29d0748cf9fe9f544767af684849524b8c128d4e3e307b7db8d5d907a",
+          "size_bytes": 19548,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "79bac85860294886a9e12e022a5d7bd0",
+          "wave_id": "9b3501fb6ffe48b8aa4e0a828ee45d60"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py",
+          "state": "file",
+          "sha256": "7521b595a952d2bed229ef9ec904864e7545bf94f49b2775331aad8187b48327",
+          "size_bytes": 4186,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "79bac85860294886a9e12e022a5d7bd0",
+          "wave_id": "9b3501fb6ffe48b8aa4e0a828ee45d60"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+          "state": "file",
+          "sha256": "fc35e854efd04f53840bd571a348554d75ff3a78b5a029f0005f2d87d1f96267",
+          "size_bytes": 20943,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "79bac85860294886a9e12e022a5d7bd0",
+          "wave_id": "9b3501fb6ffe48b8aa4e0a828ee45d60"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 36,
+        "head_hash": "e8ca129be8d0b8829c7d9a9bafc6b07152c457274c3b14d5091c2448ced14c25"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-79bac85860294886a9e12e022a5d7bd0\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-79bac85860294886a9e12e022a5d7bd0\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "79bac85860294886a9e12e022a5d7bd0",
+      "wave_id": "9b3501fb6ffe48b8aa4e0a828ee45d60",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "a98758a32322b8feb3ffa70d439eb2ce391e9292e6bb0c93bf89efc3c0228647",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Continue W3 Provider UsageEvent Hardening on the exact active RUN/WAVE after the pre-write solution-shadow gate. Apply only the smallest missing causal changes: version derived-pricing provenance, make attribution status explicit, and add a known provider fixture that round-trips exact provider values/cost/provenance through the durable ledger and bounded analytics. Preserve existing normalization, W2 controller RUN+turn identity, provider terminal dedupe, unknown_not_zero, public 8-tool contract, and unrelated dirty work. No commit/push/restart/package/release/deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "f108e72252e9599666620a32f81c0bcf3ebf851f031f78c7b8b735b4bfec037f",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "772abfbaf24244e5b8548b897bae0700",
+          "stage_id": "check:e9684cc762e4cc9f",
+          "status": "passed",
+          "duration_ms": 1104,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d10142501ad34a1e917a138637b4c42b",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 2702,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "9f3dcffb3c3648d72d1b0340aedcbca1054263468e15b244e649b21871c0d6c8",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-08-31T19:36:33.357Z",
+  "updated_at": "2026-08-31T19:36:59.859Z",
+  "events": [
+    {
+      "time": "2026-08-31T19:36:33.357Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:34.159Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/usage_events.py','resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py','resources/coding-tools-mcp/tests/test_usage_accounting_v2.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+' '+$h)}\"",
+        "session_id": "WNLI-RTTY0vGrmnO2_Bcov_d"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:34.765Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/usage_events.py','resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py','resources/coding-tools-mcp/tests/test_usage_accounting_v2.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+' '+$h)}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:42.682Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest discover -s tests -p \"test_usage_accounting_v2.py\"",
+        "session_id": "KK5OIrdodXEDQBYaMrEBtl5o"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:44.294Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest discover -s tests -p \"test_usage_accounting_v2.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:59.729Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:59.731Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-08-31T19:36:59.857Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "9f3dcffb3c3648d72d1b0340aedcbca1054263468e15b244e649b21871c0d6c8"
+      }
+    }
+  ]
+}

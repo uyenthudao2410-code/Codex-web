@@ -1,0 +1,161 @@
+{
+  "version": 2,
+  "task_id": "64b99615c5e2483d9ab2ea6414e5e55b",
+  "orchestration": {
+    "run_id": "da627c13298f494bbbd3883e0093ef61",
+    "wave_id": "59fcb5ebad4a404a85bf63252f184ecb",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "93befc20d8890354a207bba1587caace1d0bc41b74d68ba2117cf38f5b6cc3b0",
+    "contract_fp": ""
+  },
+  "objective": "Diagnose why the explicitly accepted runtime restart ticket restart-YidtyWQ_ZDf5m2aR for E:\\DEV\\Codex-web has not changed process_instance_id/server_instance_id after its execution window. Inspect only the supported restart/Recovery Host/full-clean activation lifecycle and canonical status surfaces. Determine whether the ticket is pending, consumed, blocked, expired, or failed, and identify the smallest supported correction needed to activate the already accepted H0/H1 and H4 source. Do not mutate files, do not enqueue another restart, do not clean/reset/commit/push/deploy/release.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "eCktsb-U9Z-IBwc_hUXR98lA",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1761,
+    "finished_at": "2026-09-03T06:26:54.179Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T05:18:29.938Z",
+  "updated_at": "2026-09-03T06:26:54.179Z",
+  "events": [
+    {
+      "time": "2026-09-03T05:18:29.938Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose why the explicitly accepted runtime restart ticket restart-YidtyWQ_ZDf5m2aR for E:\\DEV\\Codex-web has not changed process_instance_id/server_instance_id after its execution window. Inspect only the supported restart/Recovery Host/full-clean activation lifecycle and canonical status surfaces. Determine whether the ticket is pending, consumed, blocked, expired, or failed, and identify the smallest supported correction needed to activate the already accepted H0/H1 and H4 source. Do not mutate files, do not enqueue another restart, do not clean/reset/commit/push/deploy/release."
+      }
+    },
+    {
+      "time": "2026-09-03T05:18:31.800Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T05:18:32.029Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-03T05:18:41.315Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T05:18:43.620Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T05:18:43.631Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T05:19:51.070Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "jXgnTtu7VQxN6IsTVnrMh6KP"
+      }
+    },
+    {
+      "time": "2026-09-03T05:19:55.848Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T05:20:26.953Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm start",
+        "session_id": "RngTT7PF3x8Aw64qqIrAzQ4Z"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:01.204Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "PdQcgPPHkCGroZp4_C6WJYe_"
+      }
+    },
+    {
+      "time": "2026-09-03T06:17:03.613Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:22:23.285Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "eKoI2894EOml-T5VigGHuX8B"
+      }
+    },
+    {
+      "time": "2026-09-03T06:22:24.630Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:26:52.628Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "eCktsb-U9Z-IBwc_hUXR98lA"
+      }
+    },
+    {
+      "time": "2026-09-03T06:26:54.179Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    }
+  ]
+}

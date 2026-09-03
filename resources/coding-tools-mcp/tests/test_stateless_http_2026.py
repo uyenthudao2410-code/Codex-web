@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from coding_tools_mcp.controller_usage_ingress import CONTROLLER_USAGE_META_KEY, CONTROLLER_USAGE_STATUS_META_KEY
 from coding_tools_mcp.connector_attestation import CONNECTOR_ATTESTATION_HEADER, build_connector_attestation
+from coding_tools_mcp.host_correlation import HOST_CORRELATION_PENDING_RELATIVE, HOST_CORRELATION_SCHEMA_VERSION
 from coding_tools_mcp.protocol import STATELESS_PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 from coding_tools_mcp.task_state import TaskStateStore
@@ -125,8 +126,8 @@ class StatelessHttp2026Tests(unittest.TestCase):
         )
 
     @staticmethod
-    def controller_usage(turn_id: str, *, output_tokens: int = 20) -> dict:
-        return {
+    def controller_usage(turn_id: str, *, output_tokens: int = 20, run_id: str = "", wave_id: str = "") -> dict:
+        report = {
             "schema_version": 1,
             "turn_id": turn_id,
             "trace_id": "trace-controller-usage",
@@ -139,6 +140,19 @@ class StatelessHttp2026Tests(unittest.TestCase):
             "output_tokens": output_tokens,
             "reasoning_output_tokens": 5,
         }
+        if run_id and wave_id:
+            report.update({"run_id": run_id, "wave_id": wave_id})
+        return report
+
+    def stage_host_turn(self, turn_id: str, trace_id: str = "trace-controller-usage") -> None:
+        target = Path(self.temp.name) / HOST_CORRELATION_PENDING_RELATIVE
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps({
+            "schema_version": HOST_CORRELATION_SCHEMA_VERSION,
+            "turn_id": turn_id,
+            "trace_id": trace_id,
+            "staged_at_unix_ms": int(time.time() * 1000),
+        }), encoding="utf-8")
 
     def test_discover_and_tools_list_are_stateless_and_self_describing(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
@@ -321,6 +335,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
     def test_tools_call_records_current_contact_without_fabricating_discovery(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
         self.assertFalse(self.runtime.connector_client_contact()["observed"])
+        self.assertEqual(self.runtime.connector_controller_usage_envelope()["classification"], "unobserved")
 
         status, _, body = self.tool_call(
             "workspace_context",
@@ -338,6 +353,15 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(contact["client_id"], "chatweb")
         self.assertEqual(contact["process_instance_id"], self.runtime.process_instance_id)
         self.assertEqual(contact["server_instance_id"], self.runtime.server_instance_id)
+        envelope = self.runtime.connector_controller_usage_envelope()
+        self.assertTrue(envelope["current_process_observed"])
+        self.assertEqual(envelope["classification"], "absent_so_far")
+        self.assertEqual(envelope["call_count"], 1)
+        self.assertEqual(envelope["meta_present_count"], 0)
+        self.assertEqual(envelope["meta_absent_count"], 1)
+        self.assertFalse(envelope["latest_meta_present"])
+        self.assertEqual(envelope["identity_source"], "attested_transport")
+        self.assertTrue(envelope["attestation_verified"])
 
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
@@ -349,6 +373,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertFalse(health["connector_tool_discovery"]["observed"])
         self.assertTrue(health["connector_client_contact"]["current_contract_contact"])
+        self.assertEqual(health["connector_controller_usage_envelope"]["classification"], "absent_so_far")
 
     def test_activation_pending_tool_error_does_not_record_connector_contact(self) -> None:
         self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
@@ -594,6 +619,146 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertNotEqual(foreign_owned["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
 
+    def test_task_control_recovers_exact_run_from_archived_context_after_terminal_pollution(self) -> None:
+        context_id = "archived-continuity-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "archived-stateless-continuity",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=127,
+        )
+        self.assertEqual(status, 200)
+        prepared_result = prepared["result"]["structuredContent"]
+        run_id = prepared_result["orchestration"]["run_id"]
+        store = TaskStateStore(Path(self.temp.name), scope_id=f"mcp2026:{context_id}")
+        canonical = store.get()
+        canonical_task_id = canonical["task_id"]
+        canonical_objective = canonical["objective"]
+
+        store.update({"status": "failed", "failure": "archive canonical projection"})
+        store.ensure_started("polluting-auto-start-like-task")
+        polluted_task_id = store.get()["task_id"]
+        self.assertNotEqual(polluted_task_id, canonical_task_id)
+        store.update({"status": "failed", "failure": "terminal pollution"})
+
+        status, _, recovered = self.tool_call(
+            "task_control",
+            {"action": "audit", "run_id": run_id},
+            request_id=128,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(recovered["result"]["isError"], recovered)
+        self.assertEqual(recovered["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        recovered_state = recovered["result"]["structuredContent"]["state"]
+        self.assertEqual(recovered_state["task_id"], canonical_task_id)
+        self.assertEqual(recovered_state["objective"], canonical_objective)
+        self.assertEqual(recovered_state["orchestration"]["run_id"], run_id)
+        persisted_state = store.get()
+        self.assertEqual(persisted_state["task_id"], canonical_task_id)
+        self.assertEqual(persisted_state["objective"], canonical_objective)
+        self.assertEqual(persisted_state["orchestration"]["run_id"], run_id)
+
+        status, _, resumed = self.tool_call(
+            "task_control",
+            {"action": "get", "task_context_id": context_id},
+            request_id=1281,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(resumed["result"]["isError"], resumed)
+        self.assertEqual(resumed["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        resumed_state = resumed["result"]["structuredContent"]["state"]
+        self.assertEqual(resumed_state["task_id"], canonical_task_id)
+        self.assertEqual(resumed_state["orchestration"]["run_id"], run_id)
+        self.assertTrue(any(item.get("task_id") == polluted_task_id for item in store.history(100)))
+
+    def test_task_control_exact_run_recovery_refuses_active_conflicting_task(self) -> None:
+        context_id = "active-conflict-continuity-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "active-conflict-canonical",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=129,
+        )
+        self.assertEqual(status, 200)
+        run_id = prepared["result"]["structuredContent"]["orchestration"]["run_id"]
+        store = TaskStateStore(Path(self.temp.name), scope_id=f"mcp2026:{context_id}")
+        store.update({"status": "failed", "failure": "archive canonical projection"})
+        store.ensure_started("active-conflicting-task")
+
+        status, _, refused = self.tool_call(
+            "task_control",
+            {"action": "get", "run_id": run_id},
+            request_id=130,
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(refused["result"]["isError"], refused)
+        error = refused["result"]["structuredContent"]["error"]
+        self.assertEqual(error["code"], "EXACT_RUN_RECOVERY_REFUSED")
+        self.assertNotEqual(refused["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        self.assertEqual(store.get()["objective"], "active-conflicting-task")
+
+    def test_task_control_exact_run_recovery_refuses_pending_operator_report(self) -> None:
+        context_id = "pending-report-continuity-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "pending-report-canonical",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=131,
+        )
+        self.assertEqual(status, 200)
+        run_id = prepared["result"]["structuredContent"]["orchestration"]["run_id"]
+        store = TaskStateStore(Path(self.temp.name), scope_id=f"mcp2026:{context_id}")
+        store.update({"status": "failed", "failure": "archive canonical projection"})
+        store.ensure_started("terminal-task-with-pending-report")
+        store.update({"status": "failed"})
+        store.set_completion_report({
+            "schema_version": 1,
+            "operator_visible_required": True,
+            "accepted_or_not": "COMMAND_FAILED",
+            "current_state": {},
+            "next_critical_action": "operator must acknowledge before replacement",
+        })
+        pending = store.pending_completion_report()
+        self.assertIsNotNone(pending)
+
+        status, _, refused = self.tool_call(
+            "task_control",
+            {"action": "get", "run_id": run_id},
+            request_id=132,
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(refused["result"]["isError"], refused)
+        self.assertEqual(
+            refused["result"]["structuredContent"]["error"]["code"],
+            "EXACT_RUN_RECOVERY_REFUSED",
+        )
+        self.assertNotEqual(refused["result"]["_meta"][TASK_CONTEXT_META_KEY], context_id)
+        self.assertEqual(store.pending_completion_report()["report_id"], pending["report_id"])
+
     def test_workspace_context_returns_the_minted_task_context_id(self) -> None:
         status, _, response = self.tool_call(
             "workspace_context",
@@ -645,6 +810,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
 
     def test_controller_usage_binds_to_scoped_run_and_deduplicates_before_dispatch(self) -> None:
         context_id = "usage-context"
+        self.stage_host_turn("controller-turn-1")
         status, _, prepared = self.tool_call(
             "agent_workflow",
             {
@@ -660,9 +826,11 @@ class StatelessHttp2026Tests(unittest.TestCase):
             request_id=30,
         )
         self.assertEqual(status, 200)
-        run_id = prepared["result"]["structuredContent"]["orchestration"]["run_id"]
+        orchestration = prepared["result"]["structuredContent"]["orchestration"]
+        run_id = orchestration["run_id"]
+        wave_id = orchestration["wave_id"]
 
-        usage = self.controller_usage("controller-turn-1")
+        usage = self.controller_usage("controller-turn-1", run_id=run_id, wave_id=wave_id)
         status, _, recorded = self.tool_call(
             "task_control",
             {"action": "get", "task_context_id": context_id},
@@ -674,6 +842,10 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(receipt["status"], "recorded")
         self.assertEqual(receipt["turn_id"], "controller-turn-1")
         self.assertTrue(receipt["usage_id"])
+        envelope = self.runtime.connector_controller_usage_envelope()
+        self.assertEqual(envelope["classification"], "present")
+        self.assertGreaterEqual(envelope["meta_present_count"], 1)
+        self.assertGreaterEqual(envelope["meta_absent_count"], 1)
 
         events = self.runtime.orchestration_ledger.list_usage_events(run_id, limit=None)
         controller_events = [item for item in events if item.get("actor") == "controller"]
@@ -697,7 +869,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
             if item.get("actor") == "controller"
         ]), 1)
 
-        conflict = self.controller_usage("controller-turn-1", output_tokens=21)
+        conflict = self.controller_usage("controller-turn-1", output_tokens=21, run_id=run_id, wave_id=wave_id)
         status, _, rejected = self.tool_call(
             "task_control",
             {"action": "get", "task_context_id": context_id},
@@ -709,6 +881,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertIn("different evidence", rejected["error"]["message"])
 
     def test_first_agent_workflow_usage_is_prevalidated_then_bound_after_run_creation(self) -> None:
+        self.stage_host_turn("controller-first-turn")
         usage = self.controller_usage("controller-first-turn")
         status, _, body = self.tool_call(
             "agent_workflow",
@@ -737,6 +910,127 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(events[0]["wave_id"], wave_id)
         self.assertEqual(events[0]["actor"], "controller")
         self.assertEqual(events[0]["turn_id"], "controller-first-turn")
+
+    def test_existing_agent_workflow_rejects_deferred_usage_before_dispatch(self) -> None:
+        context_id = "usage-existing-agent-context"
+        self.stage_host_turn("controller-existing-agent-turn")
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "controller-usage-existing-agent-run",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=341,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(prepared["result"]["isError"], prepared)
+        orchestration = prepared["result"]["structuredContent"]["orchestration"]
+        run_id = orchestration["run_id"]
+        wave_id = orchestration["wave_id"]
+        waves_before = len(self.runtime.orchestration_ledger.export_summary(run_id)["waves"])
+
+        status, _, rejected = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=342,
+            controller_usage=self.controller_usage("controller-existing-agent-turn"),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["error"]["code"], -32602)
+        self.assertIn("run_id and wave_id are required", rejected["error"]["message"])
+        events = self.runtime.orchestration_ledger.list_usage_events(run_id, limit=None)
+        self.assertEqual([item for item in events if item.get("actor") == "controller"], [])
+        summary = self.runtime.orchestration_ledger.export_summary(run_id)
+        self.assertEqual(len(summary["waves"]), waves_before)
+        self.assertEqual(summary["waves"][-1]["wave_id"], wave_id)
+
+    def test_fresh_context_does_not_inherit_another_context_controller_usage_authority(self) -> None:
+        status, _, context_a = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": "usage-cross-context-a",
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "controller-usage-cross-context-a",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=343,
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(context_a["result"]["isError"], context_a)
+        run_a = context_a["result"]["structuredContent"]["orchestration"]["run_id"]
+
+        self.stage_host_turn("controller-cross-context-b-turn")
+        status, _, context_b = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": "usage-cross-context-b",
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "controller-usage-cross-context-b",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=344,
+            controller_usage=self.controller_usage("controller-cross-context-b-turn"),
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(context_b["result"]["isError"], context_b)
+        structured_b = context_b["result"]["structuredContent"]
+        run_b = structured_b["orchestration"]["run_id"]
+        wave_b = structured_b["orchestration"]["wave_id"]
+        self.assertNotEqual(run_b, run_a)
+        receipt = context_b["result"]["_meta"][CONTROLLER_USAGE_STATUS_META_KEY]
+        self.assertEqual(receipt["status"], "recorded")
+        controller_b = [
+            item for item in self.runtime.orchestration_ledger.list_usage_events(run_b, limit=None)
+            if item.get("actor") == "controller"
+        ]
+        self.assertEqual(len(controller_b), 1)
+        self.assertEqual(controller_b[0]["wave_id"], wave_b)
+        self.assertEqual(controller_b[0]["turn_id"], "controller-cross-context-b-turn")
+        self.assertEqual([
+            item for item in self.runtime.orchestration_ledger.list_usage_events(run_a, limit=None)
+            if item.get("actor") == "controller"
+        ], [])
+
+        self.stage_host_turn("controller-cross-context-b-second")
+        status, _, rejected = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": "usage-cross-context-b",
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=345,
+            controller_usage=self.controller_usage("controller-cross-context-b-second"),
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["error"]["code"], -32602)
+        self.assertIn("run_id and wave_id are required", rejected["error"]["message"])
 
     def test_controller_usage_rejects_invalid_or_non_chatweb_reports_before_first_run(self) -> None:
         invalid = self.controller_usage("invalid-first-turn")

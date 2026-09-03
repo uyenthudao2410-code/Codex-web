@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "task_id": "981fb515484e43a4a4115834de85b2f8",
+  "orchestration": {
+    "run_id": "3b5fc197a9b74d03844ef586891bbcd9",
+    "wave_id": "c458da652abf4b049f5cbb82a3ab7d4d",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "93befc20d8890354a207bba1587caace1d0bc41b74d68ba2117cf38f5b6cc3b0",
+    "contract_fp": "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1"
+  },
+  "objective": "Fix the accepted HTTP handler Ruff defects without changing behavior",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+  "next_step": "",
+  "created_at": "2026-09-03T06:13:09.622Z",
+  "updated_at": "2026-09-03T06:13:11.616Z",
+  "events": [
+    {
+      "time": "2026-09-03T06:13:09.622Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix the accepted HTTP handler Ruff defects without changing behavior"
+      }
+    },
+    {
+      "time": "2026-09-03T06:13:11.235Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T06:13:11.616Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    }
+  ]
+}

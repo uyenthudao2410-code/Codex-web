@@ -1,0 +1,198 @@
+[
+  {
+    "version": 2,
+    "task_id": "c9e8173871244934b403817dae41a224",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "78qXrQWl9ofvweBc2un81I3x",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 420,
+      "finished_at": "2026-08-31T18:35:20.344Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:24:03.157Z",
+    "updated_at": "2026-08-31T18:35:20.344Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:24:03.157Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:24:03.572Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output '=== CPU ==='; Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,DeviceID | Format-List; Write-Output '=== BOARD ==='; Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version | Format-List; Write-Output '=== ME/AMT DEVICES ==='; Get-PnpDevice -PresentOnly | Where-Object { $_.FriendlyName -match 'Management Engine|AMT|Active Management|MEI' -or $_.InstanceId -match 'VEN_8086.*(1C3A|A13A|A360|43E0|7AE8)' } | Sele",
+          "session_id": "PYAf14Mkk-5K-3TGG33M1YBs"
+        }
+      },
+      {
+        "time": "2026-08-31T18:24:08.449Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output '=== CPU ==='; Get-CimInstance Win32_Processor | Select-Object Name,Manufacturer,DeviceID | Format-List; Write-Output '=== BOARD ==='; Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,Version | Format-List; Write-Output '=== ME/AMT DEVICES ==='; Get-PnpDevice -PresentOnly | Where-Object { $_.FriendlyName -match 'Management Engine|AMT|Active Management|MEI' -or $_.InstanceId -match 'VEN_8086.*(1C3A|A13A|A360|43E0|7AE8)' } | Sele",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:30:37.948Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output '=== POWER STATES ==='; powercfg /a; Write-Output '=== WAKE TIMERS ==='; powercfg /waketimers; Write-Output '=== ACTIVE SCHEME ==='; powercfg /getactivescheme; Write-Output '=== WAKE TIMER SETTING ==='; powercfg /q SCHEME_CURRENT SUB_SLEEP RTCWAKE\"",
+          "session_id": "TrUCLHCz18nI7zcpTGCi5_gU"
+        }
+      },
+      {
+        "time": "2026-08-31T18:30:38.690Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output '=== POWER STATES ==='; powercfg /a; Write-Output '=== WAKE TIMERS ==='; powercfg /waketimers; Write-Output '=== ACTIVE SCHEME ==='; powercfg /getactivescheme; Write-Output '=== WAKE TIMER SETTING ==='; powercfg /q SCHEME_CURRENT SUB_SLEEP RTCWAKE\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:30:48.602Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output ('NOW=' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')); Write-Output ('USER=' + [System.Security.Principal.WindowsIdentity]::GetCurrent().Name); Write-Output ('ADMIN=' + ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)); Get-Command Register-ScheduledTask,New-ScheduledTaskSettingsSet,New-ScheduledTaskTrigger -ErrorAction SilentlyContinue | Select",
+          "session_id": "fkhpwAc9ERnpCcwS01CRUgl8"
+        }
+      },
+      {
+        "time": "2026-08-31T18:30:49.711Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Write-Output ('NOW=' + (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')); Write-Output ('USER=' + [System.Security.Principal.WindowsIdentity]::GetCurrent().Name); Write-Output ('ADMIN=' + ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)); Get-Command Register-ScheduledTask,New-ScheduledTaskSettingsSet,New-ScheduledTaskTrigger -ErrorAction SilentlyContinue | Select",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:31:07.066Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$name='ChatGPT-Wake-20260901-0830'; $when=Get-Date '2026-09-01 08:30:00'; $action=New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit 0'; $trigger=New-ScheduledTaskTrigger -Once -At $when; $settings=New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries; Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Settings $settings -Description 'One-time wake timer for remote TeamViewer access' -Force | Out",
+          "session_id": "f_RnPfMZ332XLsngB7q13Npy"
+        }
+      },
+      {
+        "time": "2026-08-31T18:31:08.698Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$name='ChatGPT-Wake-20260901-0830'; $when=Get-Date '2026-09-01 08:30:00'; $action=New-ScheduledTaskAction -Execute 'cmd.exe' -Argument '/c exit 0'; $trigger=New-ScheduledTaskTrigger -Once -At $when; $settings=New-ScheduledTaskSettingsSet -WakeToRun -StartWhenAvailable -AllowStartIfOnBatteries; Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Settings $settings -Description 'One-time wake timer for remote TeamViewer access' -Force | Out",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:31:28.474Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"powercfg /q SCHEME_CURRENT SUB_SLEEP STANDBYIDLE; Get-Service Schedule | Select-Object Name,Status,StartType | Format-List; Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' | Select-Object TaskName,State,@{N='WakeToRun';E={$_.Settings.WakeToRun}},@{N='StartWhenAvailable';E={$_.Settings.StartWhenAvailable}} | Format-List\"",
+          "session_id": "Ag8aM_wFKwi0mT4MQ6B-KZpk"
+        }
+      },
+      {
+        "time": "2026-08-31T18:31:30.702Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"powercfg /q SCHEME_CURRENT SUB_SLEEP STANDBYIDLE; Get-Service Schedule | Select-Object Name,Status,StartType | Format-List; Get-ScheduledTask -TaskName 'ChatGPT-Wake-20260901-0830' | Select-Object TaskName,State,@{N='WakeToRun';E={$_.Settings.WakeToRun}},@{N='StartWhenAvailable';E={$_.Settings.StartWhenAvailable}} | Format-List\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:19.870Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"schtasks /Delete /TN \\\"ChatGPT-Wake-20260901-0830\\\" /F && (schtasks /Query /TN \\\"ChatGPT-Wake-20260901-0830\\\" >nul 2>&1 && echo STILL_PRESENT || echo REMOVED)\"",
+          "session_id": "78qXrQWl9ofvweBc2un81I3x"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:20.344Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"schtasks /Delete /TN \\\"ChatGPT-Wake-20260901-0830\\\" /F && (schtasks /Query /TN \\\"ChatGPT-Wake-20260901-0830\\\" >nul 2>&1 && echo STILL_PRESENT || echo REMOVED)\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:35:30.851Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e6cfdf6f6d59422781041096e90c09e0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "5zrWWC9GKDdXO0OOOAdXMZX3",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 4271,
+      "finished_at": "2026-08-31T18:35:35.518Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:35:30.857Z",
+    "updated_at": "2026-08-31T18:35:35.518Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:35:30.857Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:31.313Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd /d /c \"schtasks /Query /FO LIST /V | findstr /I /C:\\\"ChatGPT-Wake\\\"\"",
+          "session_id": "5zrWWC9GKDdXO0OOOAdXMZX3"
+        }
+      },
+      {
+        "time": "2026-08-31T18:35:35.518Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd /d /c \"schtasks /Query /FO LIST /V | findstr /I /C:\\\"ChatGPT-Wake\\\"\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:35:45.138Z",
+    "archive_reason": "finished"
+  }
+]

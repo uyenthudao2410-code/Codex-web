@@ -1,0 +1,548 @@
+[
+  {
+    "version": 2,
+    "task_id": "7c9cecf29e9a4c7da90a9991855aabbb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YHVV3RqLqjFvdrBMGatW_YPL",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 996,
+      "finished_at": "2026-08-31T18:57:33.963Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-08-31T18:57:24.473Z",
+    "updated_at": "2026-08-31T18:57:33.963Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:57:24.473Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:25.385Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --unified=30 -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "session_id": "1Neg2K5JLiJIlKp998FFc2Tc"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:25.888Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --unified=30 -- resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:33.520Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"CONTROLLER_USAGE_META_KEY\\|controller_usage\\|usage_id\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -n 250",
+          "session_id": "YHVV3RqLqjFvdrBMGatW_YPL"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:33.963Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"CONTROLLER_USAGE_META_KEY\\|controller_usage\\|usage_id\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | head -n 250",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T18:57:39.712Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "66b3c9c51562408083b2f5ed74231267",
+    "orchestration": {
+      "run_id": "03fd5fbb0cc34177972b6065150c8f73",
+      "wave_id": "26734c18978f4c99b0766be318f1252a",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+      "contract_fp": ""
+    },
+    "objective": "Continue W2 in the existing RUN after SOL_REJECTED acceptance. Implement the smallest causal cross-wave controller-usage idempotency fix. The economic identity of an exact ChatWeb controller receipt must be stable for the same RUN + turn_id across reconnect/REPLAN wave boundaries; wave_id/delegation_id remain attribution metadata and the first exact attribution event must be preserved. Replaying the same exact controller receipt in a later wave of the same RUN must return duplicate/not-recorded and must not double-count economics. Replaying the same RUN+turn identity with any conflicting economic evidence must fail closed with the existing different-evidence behavior. Provider UsageEvent identity and provider dedupe semantics must remain unchanged. Preserve unknown_not_zero, exact token semantics, current dirty unrelated files, and current W1 live-control changes. Add or strengthen a discriminating test that creates two waves in one RUN and proves same-receipt dedupe plus conflicting-receipt rejection; include an assertion that provider usage identity still changes across waves as before. No database/framework, no heuristic token inference, no commit/push/restart/package/release/deploy.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "failed",
+        "updated_at": "2026-08-31T18:59:49.729Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-08-31T18:59:49.729Z"
+      }
+    ],
+    "current_step": "Replan required - operator report required",
+    "current_command": {
+      "command": "npm run test",
+      "kind": "test",
+      "session_id": "ot7HnQayCSY9p2fQjEL-PnWg",
+      "workdir": ".",
+      "status": "running",
+      "started_at": "2026-08-31T18:59:06.090Z",
+      "owner_run": "03fd5fbb0cc34177972b6065150c8f73",
+      "owner_wave": "14ecacaeb4784d2492fae7a9a5dbf363"
+    },
+    "last_command_result": {
+      "command_id": "YmK-aSBWwNQ1sGN82wmv4mD9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 812,
+      "finished_at": "2026-08-31T18:58:00.597Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 62,
+          "head_hash": "2623d28f4a3fd631d40cadae282b7d87d0528394bdad5060069dfdc9bc2d341a"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03fd5fbb0cc34177972b6065150c8f73\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03fd5fbb0cc34177972b6065150c8f73\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03fd5fbb0cc34177972b6065150c8f73\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "03fd5fbb0cc34177972b6065150c8f73",
+        "wave_id": "14ecacaeb4784d2492fae7a9a5dbf363",
+        "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continue W2 in the existing RUN after SOL_REJECTED acceptance. Implement the smallest causal cross-wave controller-usage idempotency fix. The economic identity of an exact ChatWeb controller receipt must be stable for the same RUN + turn_id across reconnect/REPLAN wave boundaries; wave_id/delegation_id remain attribution metadata and the first exact attribution event must be preserved. Replaying the same exact controller receipt in a later wave of the same RUN must return duplicate/not-recorded and must not double-count economics. Replaying the same RUN+turn identity with any conflicting economic evidence must fail closed with the existing different-evidence behavior. Provider UsageEvent identity and provider dedupe semantics must remain unchanged. Preserve unknown_not_zero, exact token semantics, current dirty unrelated files, and current W1 live-control changes. Add or strengthen a discriminating test that creates two waves in one RUN and proves same-receipt dedupe plus conflicting-receipt rejection; include an assertion that provider usage identity still changes across waves as before. No database/framework, no heuristic token inference, no commit/push/restart/package/release/deploy.",
+          "objective_revision": 2,
+          "objective_sha256": "187bb5c203b7326b05ac913827aa89368cbd7160c80d87e078c770f9f2aac99e",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "61fccf42c39a4b46b1d87ca31a12d1e1",
+            "stage_id": "verify:tests",
+            "status": "failed",
+            "duration_ms": 43890,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "BUILD_VERIFICATION_FAILED",
+        "reason": null,
+        "event_seq": 33627
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "c810b355ae1728bc5995b8b9fb7e983bc691d168b7c47b2826e2fa164174dc8b",
+    "completion_report_acknowledged_id": "c810b355ae1728bc5995b8b9fb7e983bc691d168b7c47b2826e2fa164174dc8b",
+    "completion_report_acknowledged_at": "2026-08-31T19:00:40.330Z",
+    "test_results": [
+      {
+        "command": "npm run test",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 43886,
+        "summary": "exit 1 | 0.0s | 2674 lines | tail: '}'"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "electron",
+        "name": "coding-tools-mcp",
+        "version": "1.0.0",
+        "package_manager": "npm",
+        "test_command": "npm run test",
+        "build_command": "npm run dist",
+        "artifact_paths": [
+          "dist",
+          "build"
+        ]
+      },
+      "commands": {
+        "test": "npm run test",
+        "build": "npm run dist"
+      },
+      "test_result": {
+        "command": "npm run test",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 43886,
+        "summary": "exit 1 | 0.0s | 2674 lines | tail: '}'"
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "failed",
+      "failure": "Tests failed.",
+      "report_generated_at": "2026-08-31T18:59:49.036Z"
+    },
+    "modified_files": [],
+    "failure": "a task-level solution shadow recommendation is already recorded for this run",
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-08-31T18:57:39.713Z",
+    "updated_at": "2026-08-31T19:01:11.938Z",
+    "events": [
+      {
+        "time": "2026-08-31T18:57:39.713Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:40.485Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"CONTROLLER_USAGE_META_KEY|controller_usage|usage_id\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "UQAmQs7wR5QVFkkLqCo7KO9R"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:40.973Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"CONTROLLER_USAGE_META_KEY|controller_usage|usage_id\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:49.268Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --unified=40 -- resources/coding-tools-mcp/coding_tools_mcp/usage_events.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "mt5GUo5BJcV3aLYWHEiunLzR"
+        }
+      },
+      {
+        "time": "2026-08-31T18:57:49.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --unified=40 -- resources/coding-tools-mcp/coding_tools_mcp/usage_events.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:00.046Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/usage_events.py'; $c=Get-Content $p; $c[80..320]\"",
+          "session_id": "YmK-aSBWwNQ1sGN82wmv4mD9"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:00.597Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/usage_events.py'; $c=Get-Content $p; $c[80..320]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:15.421Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:15.424Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:15.888Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "8e69ada2a2d1f0832bc444ce38f39e0ac79cfdcf143c02e8ba3cc87c7956354b"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:40.373Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:40.915Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:48.939Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "8e69ada2a2d1f0832bc444ce38f39e0ac79cfdcf143c02e8ba3cc87c7956354b"
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:57.242Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:58:58.807Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:01.853Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:03.129Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:03.135Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:04.416Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:04.942Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:06.090Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run test",
+          "session_id": "ot7HnQayCSY9p2fQjEL-PnWg"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:49.038Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:49.729Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:50.632Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:50.634Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:50.636Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:50.767Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "c810b355ae1728bc5995b8b9fb7e983bc691d168b7c47b2826e2fa164174dc8b"
+        }
+      },
+      {
+        "time": "2026-08-31T18:59:50.770Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T19:00:39.775Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T19:00:40.330Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "c810b355ae1728bc5995b8b9fb7e983bc691d168b7c47b2826e2fa164174dc8b"
+        }
+      },
+      {
+        "time": "2026-08-31T19:01:09.816Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-08-31T19:01:11.691Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-08-31T19:01:11.938Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T19:01:32.747Z",
+    "archive_reason": "superseded"
+  }
+]

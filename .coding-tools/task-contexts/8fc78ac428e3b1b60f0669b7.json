@@ -1,0 +1,428 @@
+{
+  "version": 2,
+  "task_id": "56faf9f9112741d3bc2fb18b05f756f6",
+  "orchestration": {
+    "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+    "wave_id": "cc059b9735c7419a9b80f77129510790",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "67e483cebe04c03788e5376d5c309751029a51ed47a15a9a74cc2a2a16fa2ee1",
+    "contract_fp": ""
+  },
+  "objective": "Complete a workspace task",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-03T05:01:49.061Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-09-03T05:01:49.061Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-03T05:01:49.061Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "160vZ1bk8aZ21aiNE87T7aqm",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1218,
+    "finished_at": "2026-09-03T05:03:27.429Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "state": "file",
+          "sha256": "41386215dc9d84b848bfb560895ac56af93c44363b2e2d10c6804d36810fd514",
+          "size_bytes": 152152,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "state": "file",
+          "sha256": "060a522347862c8656c04bbe4d31df4bc914413a3024c3e475fd398448f753a9",
+          "size_bytes": 28793,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "state": "file",
+          "sha256": "5d94e76452d47b43aed8e82344ea5ba1328a6ad8233a1e0f0dc528e252ec40b9",
+          "size_bytes": 82248,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "state": "file",
+          "sha256": "bfd45c8ec94f2cd09dc4d32251b2d7aa2af98d3ab2e9bf992cd7fbef0c936990",
+          "size_bytes": 35124,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "state": "file",
+          "sha256": "dac39c80e721205bf04ad20467cc70ba67a1bc6f193bd4e9aaea16f090501ab6",
+          "size_bytes": 54511,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "state": "file",
+          "sha256": "da91ef93172431ade406d98fb2fb22e3eebcabb22262aee297d7a5ec9f47f253",
+          "size_bytes": 62735,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+          "wave_id": "cc059b9735c7419a9b80f77129510790"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 41,
+        "head_hash": "2753f63a47fcafff15213b8a3aa8b83fb318aa46355e7674dbb37363652ac235"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3e373f0a22414388be48d9fdf61a2f28\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3e373f0a22414388be48d9fdf61a2f28\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3e373f0a22414388be48d9fdf61a2f28\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "3e373f0a22414388be48d9fdf61a2f28",
+      "wave_id": "cc059b9735c7419a9b80f77129510790",
+      "checkpoint_id": "4c26c8e0db9448399d6acc0b0e0275e4",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "67e483cebe04c03788e5376d5c309751029a51ed47a15a9a74cc2a2a16fa2ee1",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Close H0/H1 for ChatWeb controller token measurement with content-free attested envelope evidence. Reuse the existing connector/runtime observation plane; do not add a public tool or infer tokens. Record only whether the exact io.coding-tools/controllerUsage key was present on attested ChatWeb tools/call envelopes, aggregate current-process present/absent counts, expose this in authenticated health and live ChatWeb measurement projection, and explicitly report that no supported post-turn controller-usage sideband exists yet. Preserve existing exact controller UsageEvent ingress and all unrelated dirty hunks. Add focused regressions proving absent envelopes remain unknown/not-zero, present envelopes are observed alongside existing exact usage ingestion, and live projection stays fail-closed.",
+        "objective_revision": 1,
+        "objective_sha256": "2c7bbba402f23976c453a6a2254b457d743dbd162bc428dd322fae3085e98352",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "0b5b38a747b5457ab38d5890608cfb7e",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 56343,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "55216f5af7b383ada5f4df0bde821cb524d4175acf9687a03600efe4027f38bd",
+  "completion_report_acknowledged_id": "55216f5af7b383ada5f4df0bde821cb524d4175acf9687a03600efe4027f38bd",
+  "completion_report_acknowledged_at": "2026-09-03T05:04:18.652Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_execution_hub.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T05:01:50.066Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-03T05:01:48.075Z",
+  "updated_at": "2026-09-03T05:04:18.657Z",
+  "events": [
+    {
+      "time": "2026-09-03T05:01:48.076Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:49.058Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:49.061Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:49.501Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:49.506Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:49.932Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "a7f5d87f7b4cbb230502caf70fc97324d02bde338c2fb5d9da3d76c15d61f5e4"
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:50.066Z",
+      "event": "files_modified",
+      "details": {
+        "count": 6
+      }
+    },
+    {
+      "time": "2026-09-03T05:01:55.397Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:02:17.537Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_execution_hub.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_a",
+        "session_id": "I-UtH0ghjkcagIbtAVNg1RwF"
+      }
+    },
+    {
+      "time": "2026-09-03T05:02:18.200Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/live_control.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_execution_hub.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_a",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T05:02:39.206Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:02:42.663Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:25.276Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:26.393Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py','resources/coding-tools-mcp/tests/test_execution_hub.py'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output (",
+        "session_id": "160vZ1bk8aZ21aiNE87T7aqm"
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:27.429Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','resources/coding-tools-mcp/coding_tools_mcp/live_control.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py','resources/coding-tools-mcp/tests/test_execution_hub.py'); foreach($p in $paths){$h=Get-FileHash -Algorithm SHA256 -LiteralPath $p; Write-Output (",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:36.904Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:40.379Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:40.384Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:03:40.738Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "55216f5af7b383ada5f4df0bde821cb524d4175acf9687a03600efe4027f38bd"
+      }
+    },
+    {
+      "time": "2026-09-03T05:04:07.579Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T05:04:18.652Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "55216f5af7b383ada5f4df0bde821cb524d4175acf9687a03600efe4027f38bd"
+      }
+    }
+  ]
+}

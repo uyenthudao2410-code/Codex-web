@@ -1,0 +1,375 @@
+[
+  {
+    "version": 2,
+    "task_id": "b382ae0a5b2544bbb7de60a1a75ca536",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-08-31T23:58:40.338Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-08-31T23:56:35.447Z",
+    "updated_at": "2026-08-31T23:58:40.338Z",
+    "events": [
+      {
+        "time": "2026-08-31T23:56:35.447Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-08-31T23:56:35.450Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:33.898Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"model_visible_bytes|request_bytes|response_bytes|performance_trace|tool_calls|deduplicated_calls|continuation\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "p_Am55C62rB94KOY5TF5yCV7"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:34.195Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"model_visible_bytes|request_bytes|response_bytes|performance_trace|tool_calls|deduplicated_calls|continuation\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:40.338Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 3 \"def .*tool|record_tool|tool_call|model_visible_bytes|result_continuation|deduplicated|request_bytes|response_bytes\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/*.py resources/coding-tools-mcp/tests/*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:40.338Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-08-31T23:58:48.642Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fdf7058918f2413b86a487fbfc172fc1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-01T00:00:09.161Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-08-31T23:58:48.643Z",
+    "updated_at": "2026-09-01T00:00:09.161Z",
+    "events": [
+      {
+        "time": "2026-08-31T23:58:48.643Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:48.995Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 model_visible_bytes resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests",
+          "session_id": "-HSAHAIS2kfVuqMWYb4MNcKO"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:49.297Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 model_visible_bytes resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:56.574Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"class PerformanceTrace\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "session_id": "LcDP48MKEqfF05HEm4vMurEI"
+        }
+      },
+      {
+        "time": "2026-08-31T23:58:56.769Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"class PerformanceTrace\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:03.512Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py' | Select-Object -Skip 57 -First 125\"",
+          "session_id": "6ikkoDLIdFVUspPZ1KwNuVuL"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:04.052Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py' | Select-Object -Skip 57 -First 125\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:09.856Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"performance_trace.record\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "HCUbKnzrKZu3PcdSGTlaBfn-"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:10.170Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"performance_trace.record\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:16.945Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/server.py' | Select-Object -Skip 2690 -First 125\"",
+          "session_id": "HC9c06HrhKwmMouRRORFHcM9"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:17.473Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/server.py' | Select-Object -Skip 2690 -First 125\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:24.889Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 \"emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests",
+          "session_id": "mt2tHRwD7Xeqcgn8OZd7AMwy"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:25.147Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 \"emit_tool_trace\\(\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:35.189Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/server.py' | Select-Object -Skip 2000 -First 90\"",
+          "session_id": "Ua_CHLUgFosNn8dXPENIMM5p"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:35.681Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/server.py' | Select-Object -Skip 2000 -First 90\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:43.965Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_efficiency_runtime.py' | Select-Object -Skip 330 -First 130\"",
+          "session_id": "ng0Bh7VPBbRx1KQBz3rgY7ms"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:44.424Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_efficiency_runtime.py' | Select-Object -Skip 330 -First 130\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:52.678Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"_normalize_result_tail\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "session_id": "SsWEVywP7Cn4pHkiQNLJC2JB"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:52.958Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"_normalize_result_tail\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:59.399Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py' | Select-Object -Skip 118 -First 125\"",
+          "session_id": "Q-gSNyXlH3mXCiecBWo9MEM2"
+        }
+      },
+      {
+        "time": "2026-08-31T23:59:59.988Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py' | Select-Object -Skip 118 -First 125\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:09.161Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"recent.*append|state\\[\\\"recent\\\"\\]\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:09.161Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T00:00:16.982Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2944a7d988a14522b807e3414f2f31d1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Vj2PE-ZqW6CYiMcGEqOdHvme",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 438,
+      "finished_at": "2026-09-01T00:00:27.313Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-01T00:00:16.984Z",
+    "updated_at": "2026-09-01T00:00:27.313Z",
+    "events": [
+      {
+        "time": "2026-09-01T00:00:16.984Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:17.315Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"recent\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "session_id": "BrdL6uXHRDyIdM4qi56CIZzK"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:17.608Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"recent\" resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:27.065Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"task_context_id|session_id|trace_id|turn_id|request_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py | Select-Object -First 120",
+          "session_id": "Vj2PE-ZqW6CYiMcGEqOdHvme"
+        }
+      },
+      {
+        "time": "2026-09-01T00:00:27.313Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"task_context_id|session_id|trace_id|turn_id|request_id\" resources/coding-tools-mcp/coding_tools_mcp/server.py | Select-Object -First 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-01T00:00:33.323Z",
+    "archive_reason": "finished"
+  }
+]

@@ -1,0 +1,127 @@
+{
+  "version": 2,
+  "task_id": "cb0173c908254c9d97e8e4a8b4f9b8ab",
+  "orchestration": {
+    "run_id": "8b5d00f5a4fc4915bafccb5265f59c4d",
+    "wave_id": "ea0b8b01440b468f83689f556e8ebbad",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+    "contract_fp": ""
+  },
+  "objective": "Read-only architectural comparison preparation. Inspect the current Codex-web source and canonical docs to identify how it currently implements: task/run/wave lifecycle and durable continuity; write/edit fencing and conflict detection; large diff/review continuation; adaptive MCP/tool surface; local/remote MCP provider gateway; long-running command/job recovery; multi-project/server-runner style topology; runtime UI/console; auth/scopes; observability and cost/token accounting. Do not modify files, do not create implementation work, and do not run destructive commands. Return exact current source paths/symbols and gaps relative to these concepts, especially features present or absent in current Codex-web.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "1ac12f554e9cf8c3197df030b2d4558c58e86e319d9a13d0a1eefc77a52bb37d"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8b5d00f5a4fc4915bafccb5265f59c4d\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8b5d00f5a4fc4915bafccb5265f59c4d\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "8b5d00f5a4fc4915bafccb5265f59c4d",
+      "wave_id": "ea0b8b01440b468f83689f556e8ebbad",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "808eed8f72b06394accf31267b8bb5211e6dca404551be197fd575a9030acbfc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only architectural comparison preparation. Inspect the current Codex-web source and canonical docs to identify how it currently implements: task/run/wave lifecycle and durable continuity; write/edit fencing and conflict detection; large diff/review continuation; adaptive MCP/tool surface; local/remote MCP provider gateway; long-running command/job recovery; multi-project/server-runner style topology; runtime UI/console; auth/scopes; observability and cost/token accounting. Do not modify files, do not create implementation work, and do not run destructive commands. Return exact current source paths/symbols and gaps relative to these concepts, especially features present or absent in current Codex-web.",
+        "objective_revision": 1,
+        "objective_sha256": "a8c361e5572fb7c0e50d9473d0630bec8c8cdf083ac94daabfc2bfed7aff7de0",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "b38dbd0c83b4b1e7043b254c1323f6ce2c9417471134f74c031330fc42316174",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-08-31T18:55:33.456Z",
+  "updated_at": "2026-08-31T18:55:48.158Z",
+  "events": [
+    {
+      "time": "2026-08-31T18:55:33.456Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only architectural comparison preparation. Inspect the current Codex-web source and canonical docs to identify how it currently implements: task/run/wave lifecycle and durable continuity; write/edit fencing and conflict detection; large diff/review continuation; adaptive MCP/tool surface; local/remote MCP provider gateway; long-running command/job recovery; multi-project/server-runner style topology; runtime UI/console; auth/scopes; observability and cost/token accounting. Do not modify files, do not create implementation work, and do not run destructive commands. Return exact current source paths/symbols and gaps relative to these concepts, especially features present or absent in current Codex-web."
+      }
+    },
+    {
+      "time": "2026-08-31T18:55:34.705Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T18:55:36.844Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-08-31T18:55:48.156Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "b38dbd0c83b4b1e7043b254c1323f6ce2c9417471134f74c031330fc42316174"
+      }
+    }
+  ]
+}

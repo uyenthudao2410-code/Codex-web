@@ -476,6 +476,55 @@ test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch wit
   assert.deepEqual(after, before, 'startup guard must not rewrite immutable READY history');
 });
 
+test('invalid READY adoption supervision services only the explicit supervisor restart ticket', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  seedReadyEpoch(host, {
+    freshnessMode: 'compatible_activation_bootstrap',
+    rediscoveredAt: null,
+    compatibilityAcknowledgedAt: null
+  });
+  let ticketCalls = 0;
+  let superviseCalls = 0;
+  let lightweightCalls = 0;
+  host.orchestrator.serviceSupervisorRestartRequest = async () => {
+    ticketCalls += 1;
+    return { ticket_id: 'restart-ready-adoption-test', expected_disconnect: true };
+  };
+  host.orchestrator.supervise = async () => {
+    superviseCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: true };
+  };
+  host.orchestrator.lightweightSnapshot = async () => {
+    lightweightCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: false };
+  };
+  host.recordSupervisionStatus = (value) => {
+    host.lastSupervisionStatus = value;
+    return value;
+  };
+
+  await host.start();
+  assert.equal(host.readyAdoptionBlocksAdmission(), true);
+  const blockedReady = await host.superviseOnce();
+  assert.equal(ticketCalls, 1, 'the explicit restart ticket must remain serviceable under the blocked READY adoption guard');
+  assert.equal(superviseCalls, 0, 'ordinary watchdog supervision must remain blocked');
+  assert.equal(lightweightCalls, 1);
+  assert.equal(blockedReady.supervisorRequest.ticket_id, 'restart-ready-adoption-test');
+
+  const replacement = host.activationEpochStore.create({
+    activation_epoch_id: 'activation-ready-adoption-0002',
+    operation_id: 'ready-adoption-operation-0002',
+    components: ['coding_mcp']
+  });
+  await host.superviseOnce();
+  assert.equal(replacement.state, 'PREPARING');
+  assert.equal(host.readyAdoptionBlocksAdmission(), false,
+    'a different durable epoch retires the old READY-adoption diagnostic');
+  assert.equal(ticketCalls, 1, 'a non-READY replacement epoch must block restart-ticket consumption');
+  assert.equal(superviseCalls, 0, 'ordinary watchdog supervision stays blocked while the replacement epoch owns activation');
+  assert.equal(lightweightCalls, 2);
+});
+
 test('invalid READY adoption guard retires only after a different durable epoch becomes current', async (t) => {
   const { host } = readyAdoptionHost(t);
   const blocked = seedReadyEpoch(host, {
@@ -861,6 +910,14 @@ test('connector-pending supervision wakes final census for an exact compatible b
   assert.equal(finalizeCalls, 1);
   assert.deepEqual(activationOrder.slice(-2), ['persist:true', 'finalize']);
   assert.equal(lightweightCalls, 0);
+
+  epoch.state = 'STOPPING';
+  const beforeStopping = structuredClone(epoch);
+  await host.superviseOnce();
+  assert.equal(censusCalls, 2, 'STOPPING must not enter the replacement watchdog final census');
+  assert.equal(persistedCensusCalls, 2, 'STOPPING must not persist VERIFYING evidence');
+  assert.equal(finalizeCalls, 1, 'STOPPING must not be finalized by the watchdog');
+  assert.deepEqual(epoch, beforeStopping, 'coordinator-owned STOPPING epoch must remain byte-for-byte unchanged');
 });
 
 test('Recovery Host supervision arms accepted-code activation only after the durable epoch becomes READY and OPEN', async (t) => {

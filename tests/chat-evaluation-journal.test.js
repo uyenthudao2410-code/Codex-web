@@ -3,11 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const vm = require('node:vm');
 
 const {
   ChatEvaluationJournal,
   normalizeHostObservation,
   buildChatEvaluationObserverScript,
+  chatEvaluationDrainScript,
   journalPath,
   pendingTurnPath,
   bindingTurnPath,
@@ -34,6 +36,37 @@ test('host observation normalization is content-free and derives span duration',
   });
   assert.equal(event.duration_ms, 25.5);
   assert.equal(normalizeHostObservation({ ...event, content: 'must not be stored' }), null);
+});
+
+test('controller usage normalization accepts only complete exact structured usage', () => {
+  const usage = normalizeHostObservation({
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION,
+    event_type: 'controller_usage',
+    observation_id: 'usage-1',
+    navigation_epoch: 1,
+    clock_domain: 'electron-renderer:1',
+    monotonic_ms: 20,
+    wall_time_ms: 1020,
+    trace_id: 'trace-1',
+    turn_id: 'turn-1',
+    observer_plane: 'electron_chatgpt_structured_response',
+    measurement: 'structured_response_usage_exact',
+    accounting_profile: 'openai_compatible',
+    provider_id: 'openai',
+    model_id: 'gpt-test',
+    source: 'client_reported',
+    input_tokens: 100,
+    cached_input_tokens: 40,
+    output_tokens: 20,
+    reasoning_output_tokens: 5
+  });
+  assert.equal(usage.input_tokens, 100);
+  assert.equal(usage.cached_input_tokens, 40);
+  assert.equal(usage.output_tokens, 20);
+  assert.equal(usage.reasoning_output_tokens, 5);
+  assert.equal(normalizeHostObservation({ ...usage, reasoning_output_tokens: undefined }), null);
+  assert.equal(normalizeHostObservation({ ...usage, cached_input_tokens: 101 }), null);
+  assert.equal(normalizeHostObservation({ ...usage, content: 'must not be stored' }), null);
 });
 
 test('host evaluation journal appends JSONL under workspace and rotates bounded evidence', () => {
@@ -126,8 +159,23 @@ test('host correlation pending identity survives until the completed host turn s
     turn_id: 'turn-1', trace_id: 'trace-1', run_id: 'run-1', wave_id: 'wave-1', bound_at_unix_ms: Date.now()
   }));
   const [linked] = journal.attachExplicitBindings(workspace, [span]);
-  assert.deepEqual(journal.finalizeCorrelation(workspace, linked), { pending_cleared: true, binding_consumed: true });
+  assert.deepEqual(journal.finalizeCorrelation(workspace, linked), { pending_cleared: true, binding_consumed: false });
   assert.equal(fs.existsSync(pendingTurnPath(workspace)), false);
+  assert.equal(fs.existsSync(bindingTurnPath(workspace)), true);
+
+  const controllerUsage = {
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION,
+    event_type: 'controller_usage', observation_id: 'usage-1', navigation_epoch: 1,
+    clock_domain: 'electron-renderer:1', monotonic_ms: 30, wall_time_ms: 1030,
+    trace_id: 'trace-1', turn_id: 'turn-1', observer_plane: 'electron_chatgpt_structured_response',
+    measurement: 'structured_response_usage_exact', accounting_profile: 'openai_compatible',
+    provider_id: 'openai', model_id: 'gpt-test', source: 'client_reported',
+    input_tokens: 100, cached_input_tokens: 40, output_tokens: 20, reasoning_output_tokens: 5
+  };
+  const [linkedUsage] = journal.attachExplicitBindings(workspace, [controllerUsage]);
+  assert.equal(linkedUsage.run_id, 'run-1');
+  assert.equal(linkedUsage.wave_id, 'wave-1');
+  assert.deepEqual(journal.finalizeCorrelation(workspace, linkedUsage), { pending_cleared: false, binding_consumed: true });
   assert.equal(fs.existsSync(bindingTurnPath(workspace)), false);
 });
 
@@ -158,6 +206,14 @@ test('ChatGPT observer uses renderer monotonic clock and never reads message con
   assert.match(script, /conversation-turn-/);
   assert.match(script, /data-message-author-role/);
   assert.match(script, /observed_user_visible_to_first_assistant_visible/);
+  assert.match(script, /response\.completed/);
+  assert.match(script, /input_tokens_details\?\.cached_tokens/);
+  assert.match(script, /output_tokens_details\?\.reasoning_tokens/);
+  assert.match(script, /structured_response_usage_exact/);
+  assert.match(script, /structuredUsageEnvelopeChildren/);
+  assert.match(script, /\['data', 'event'\]/);
+  assert.match(script, /const originalJsonParse = JSON\.parse/);
+  assert.match(script, /Response\?\.prototype\?\.json/);
   assert.match(script, /randomUUID/);
   assert.match(script, /turn_id/);
   assert.match(script, /trace_id/);
@@ -165,6 +221,80 @@ test('ChatGPT observer uses renderer monotonic clock and never reads message con
   assert.doesNotMatch(script, /textContent/);
   assert.doesNotMatch(script, /responseText/);
   assert.doesNotMatch(script, /prompt/);
+  assert.doesNotMatch(script, /Object\.values/);
+});
+
+test('structured usage observer ignores hostile content nesting, deduplicates, and restores hooks exactly', () => {
+  class FakeResponse {
+    async json() { return this.payload; }
+  }
+  const sandbox = vm.createContext({
+    window: {},
+    document: {
+      body: {},
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    },
+    MutationObserver: class { observe() {} disconnect() {} },
+    Response: FakeResponse,
+    performance: { now: () => 100, timeOrigin: 1000 },
+    crypto: {
+      randomUUID: () => 'observer-test-id',
+      getRandomValues: (bytes) => { bytes.fill(1); return bytes; }
+    },
+    requestAnimationFrame: () => 0,
+    setTimeout: () => 1,
+    clearTimeout: () => {}
+  });
+  const observer = buildChatEvaluationObserverScript({ navigationEpoch: 9, clockDomain: 'electron-renderer:9' });
+  const originalParse = vm.runInContext('JSON.parse', sandbox);
+  const originalResponseJson = vm.runInContext('Response.prototype.json', sandbox);
+  vm.runInContext(observer, sandbox);
+  const wrappedParse = vm.runInContext('JSON.parse', sandbox);
+  const wrappedResponseJson = vm.runInContext('Response.prototype.json', sandbox);
+  assert.notEqual(wrappedParse, originalParse);
+  assert.notEqual(wrappedResponseJson, originalResponseJson);
+
+  vm.runInContext(observer, sandbox);
+  assert.equal(vm.runInContext('JSON.parse', sandbox), wrappedParse, 'same-epoch install must not stack JSON.parse wrappers');
+  assert.equal(vm.runInContext('Response.prototype.json', sandbox), wrappedResponseJson, 'same-epoch install must not stack Response.json wrappers');
+  vm.runInContext("window.__mcpHostEvaluationTelemetry.lastTurn = { turnId: 'turn-9', traceId: 'trace-9', completedAtMs: 100 }", sandbox);
+
+  const exactResponse = {
+    type: 'response.completed',
+    response: {
+      id: 'resp_test', status: 'completed', model: 'gpt-test',
+      usage: {
+        input_tokens: 100,
+        input_tokens_details: { cached_tokens: 40 },
+        output_tokens: 20,
+        output_tokens_details: { reasoning_tokens: 5 }
+      }
+    }
+  };
+  const hostile = { messages: [{ content: [{ data: exactResponse }] }] };
+  vm.runInContext(`JSON.parse(${JSON.stringify(JSON.stringify(hostile))})`, sandbox);
+  let drained = vm.runInContext(chatEvaluationDrainScript(), sandbox);
+  assert.equal(drained.filter((event) => event.event_type === 'controller_usage').length, 0);
+
+  const allowedEnvelope = { data: exactResponse };
+  const encoded = JSON.stringify(JSON.stringify(allowedEnvelope));
+  vm.runInContext(`JSON.parse(${encoded})`, sandbox);
+  vm.runInContext(`JSON.parse(${encoded})`, sandbox);
+  drained = vm.runInContext(chatEvaluationDrainScript(), sandbox);
+  const usageEvents = drained.filter((event) => event.event_type === 'controller_usage');
+  assert.equal(usageEvents.length, 1, 'identical structured usage must be emitted once');
+  assert.deepEqual(
+    [usageEvents[0].input_tokens, usageEvents[0].cached_input_tokens, usageEvents[0].output_tokens, usageEvents[0].reasoning_output_tokens],
+    [100, 40, 20, 5]
+  );
+
+  vm.runInContext('window.__mcpHostEvaluationTelemetry.dispose()', sandbox);
+  assert.equal(vm.runInContext('JSON.parse', sandbox), originalParse);
+  assert.equal(vm.runInContext('Response.prototype.json', sandbox), originalResponseJson);
+  assert.equal(vm.runInContext('Boolean(window.__mcpHostEvaluationTelemetry)', sandbox), false);
 });
 
 test('ChatViewController drains host observations to a best-effort main callback', () => {
@@ -186,4 +316,10 @@ test('ChatViewController drains host observations to a best-effort main callback
   assert.match(main, /wave_id: event\.wave_id/);
   assert.match(main, /observation_span/);
   assert.match(main, /stage: 'report_visible'/);
+  assert.match(main, /recordControllerUsageReceipt/);
+  assert.match(main, /io\.coding-tools\/controllerUsage/);
+  assert.match(main, /run_id: event\.run_id/);
+  assert.match(main, /wave_id: event\.wave_id/);
+  assert.match(main, /X-Coding-Tools-Client-Id': 'chatweb'/);
+  assert.match(main, /action: 'audit'/);
 });

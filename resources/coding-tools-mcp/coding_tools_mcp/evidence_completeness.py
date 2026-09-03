@@ -7,7 +7,8 @@ from .orchestration_ledger import OrchestrationLedger
 from .solution_economics import solution_shadow_run_report
 
 
-CURRENT_HOST_OBSERVATION_SCHEMA_VERSION = 5
+CURRENT_HOST_OBSERVATION_SCHEMA_VERSION = 6
+LEGACY_HOST_OBSERVATION_SCHEMA_VERSIONS = {1, 2, 3, 4, 5}
 
 
 def _exact_host_run_correlation(

@@ -1,0 +1,713 @@
+{
+  "version": 2,
+  "task_id": "c7d02e54c3e14b60bffe5f0f9a5ac84a",
+  "orchestration": {
+    "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+    "wave_id": "b3df7fa809f64c978f5e5eae1a24425c",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "08031548f27ba4382af7e685a5e0ccf22b8096ea745e8c15e3824b1857b14fc5",
+    "contract_fp": ""
+  },
+  "objective": "W7 only: implement the observability dashboard defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W6. Preserve unknown_not_zero semantics and accounting boundaries; never infer tokens from bytes; preserve the exact 8-tool smart-v3 public MCP contract. Exclude W8 budget/reservation control, W9 history analytics, W10 representative E2E closure, and any commit/push/restart/deploy. First localize the exact W7 acceptance contract, existing dashboard/observability surfaces, smallest causal implementation scope, and focused deterministic proof plan. Preserve all unrelated dirty work.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-01T22:48:05.740Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-01T22:48:05.740Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-01T22:48:05.740Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "x5kiLAOm47HXZ-w7AdDrXUF-",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 711,
+    "finished_at": "2026-09-01T22:48:04.747Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py",
+          "state": "file",
+          "sha256": "45ec6ba6363029d93d5f83463c246aa2ee7b22f3b2032dc0859c9f6f7459d508",
+          "size_bytes": 23939,
+          "receipt_kind": "durable_wave_patch_surface",
+          "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+          "wave_id": "b3df7fa809f64c978f5e5eae1a24425c"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_operations_analytics.py",
+          "state": "file",
+          "sha256": "5650062710d0630fada4614d90b6b30c98f0d0ba513e53820a4682ddc9e2884b",
+          "size_bytes": 8070,
+          "receipt_kind": "durable_wave_patch_surface",
+          "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+          "wave_id": "b3df7fa809f64c978f5e5eae1a24425c"
+        },
+        {
+          "path": "renderer/dashboard.js",
+          "state": "file",
+          "sha256": "5d1086200c10afcf8e30da55407cf919e5f1bba49fe9a7ef53ec88390562345c",
+          "size_bytes": 86649,
+          "receipt_kind": "durable_wave_patch_surface",
+          "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+          "wave_id": "b3df7fa809f64c978f5e5eae1a24425c"
+        },
+        {
+          "path": "renderer/index.html",
+          "state": "file",
+          "sha256": "00df80de537e2511779bbecc5d699e4489dc0ffcae9102823f46b27ef8c55b9c",
+          "size_bytes": 87152,
+          "receipt_kind": "durable_wave_patch_surface",
+          "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+          "wave_id": "b3df7fa809f64c978f5e5eae1a24425c"
+        },
+        {
+          "path": "tests/dashboard-analytics.test.js",
+          "state": "file",
+          "sha256": "a95179979d81edf8e5ba85aed5a4ff0fc84c9bfaa925ac875cd8be01a0a15d5b",
+          "size_bytes": 19250,
+          "receipt_kind": "durable_wave_patch_surface",
+          "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+          "wave_id": "b3df7fa809f64c978f5e5eae1a24425c"
+        }
+      ],
+      "source": "accepted_checkpoint_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 62,
+        "head_hash": "6d9e8ac77ae7a54af8475c84da25b1d4bd46b10e239413afd94abdaff49f837a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a0553c5ccdb4517bc0b6d616a1f4036\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a0553c5ccdb4517bc0b6d616a1f4036\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a0553c5ccdb4517bc0b6d616a1f4036\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "0a0553c5ccdb4517bc0b6d616a1f4036",
+      "wave_id": "b3df7fa809f64c978f5e5eae1a24425c",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "08031548f27ba4382af7e685a5e0ccf22b8096ea745e8c15e3824b1857b14fc5",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "W7 only: implement the observability dashboard defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W6. Preserve unknown_not_zero semantics and accounting boundaries; never infer tokens from bytes; preserve the exact 8-tool smart-v3 public MCP contract. Exclude W8 budget/reservation control, W9 history analytics, W10 representative E2E closure, and any commit/push/restart/deploy. First localize the exact W7 acceptance contract, existing dashboard/observability surfaces, smallest causal implementation scope, and focused deterministic proof plan. Preserve all unrelated dirty work.",
+        "objective_revision": 1,
+        "objective_sha256": "e8bfda5508962615ffcecb83dcf975ddda1ed4fff8cc8296440505b6e41baa9c",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 3,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "f42b8029fa534f01aa1b2adea47df43a",
+          "stage_id": "check:d3e764597ea65558",
+          "status": "passed",
+          "duration_ms": 1086,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "40e19bcbe05641d5a334e06eec3f70ee",
+          "stage_id": "check:f3b53dd47009b619",
+          "status": "passed",
+          "duration_ms": 1394,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "e903479732c94ac8821275de90cb4291",
+          "stage_id": "check:c5dce81aad941823",
+          "status": "passed",
+          "duration_ms": 1202,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "953195268cc30f8aa0a3cb7dc4b459e814c5772939e603bebc5bdaacca729853",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py",
+      "operation": "update",
+      "updated_at": "2026-09-01T22:48:06.416Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_operations_analytics.py",
+      "operation": "update",
+      "updated_at": "2026-09-01T22:48:06.416Z"
+    },
+    {
+      "path": "renderer/dashboard.js",
+      "operation": "update",
+      "updated_at": "2026-09-01T22:48:06.416Z"
+    },
+    {
+      "path": "renderer/index.html",
+      "operation": "update",
+      "updated_at": "2026-09-01T22:48:06.416Z"
+    },
+    {
+      "path": "tests/dashboard-analytics.test.js",
+      "operation": "update",
+      "updated_at": "2026-09-01T22:48:06.416Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-01T22:36:35.810Z",
+  "updated_at": "2026-09-01T22:48:47.173Z",
+  "events": [
+    {
+      "time": "2026-09-01T22:36:35.810Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "W7 only: implement the observability dashboard defined by docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md on top of accepted W1-W6. Preserve unknown_not_zero semantics and accounting boundaries; never infer tokens from bytes; preserve the exact 8-tool smart-v3 public MCP contract. Exclude W8 budget/reservation control, W9 history analytics, W10 representative E2E closure, and any commit/push/restart/deploy. First localize the exact W7 acceptance contract, existing dashboard/observability surfaces, smallest causal implementation scope, and focused deterministic proof plan. Preserve all unrelated dirty work."
+      }
+    },
+    {
+      "time": "2026-09-01T22:36:37.196Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T22:36:44.518Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T22:36:44.523Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:36:59.956Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:37:47.763Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:38:13.925Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:39:21.468Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:39:33.900Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:40:28.974Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:41:06.172Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:42:03.651Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:42:27.427Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:43:35.042Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:43:50.379Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:44:51.109Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:09.825Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:10.747Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:11.939Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:11.945Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:13.204Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:13.760Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:14.843Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "session_id": "NmahOmchfNhGbFP5IQ26w5aF"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:15.236Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:15.546Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:16.292Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:16.294Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:16.297Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:16.428Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "6629b2cd4f7e07c54a2a4520965e5e3adb038336e484b14a356a983f1c780471"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:16.609Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:29.255Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:29.579Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "6629b2cd4f7e07c54a2a4520965e5e3adb038336e484b14a356a983f1c780471"
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:41.159Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:45:42.991Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:54.061Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:55.197Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:56.446Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:56.452Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:59.183Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-01T22:47:59.781Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:00.571Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "session_id": "F3-NMC0UJ07VCeZr5sRCw9ja"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:01.047Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:02.255Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c \"cd resources\\coding-tools-mcp && python -m unittest -v tests.test_operations_analytics\"",
+        "session_id": "BBiUY0NIBMl4Ocj1iZUbW42u"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:02.988Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c \"cd resources\\coding-tools-mcp && python -m unittest -v tests.test_operations_analytics\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:04.263Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py resources/coding-tools-mcp/tests/test_operations_analytics.py renderer/dashboard.js renderer/index.html tests/dashboard-analytics.test.js",
+        "session_id": "x5kiLAOm47HXZ-w7AdDrXUF-"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:04.747Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py resources/coding-tools-mcp/tests/test_operations_analytics.py renderer/dashboard.js renderer/index.html tests/dashboard-analytics.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:05.738Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:05.742Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:06.135Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:06.137Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:06.284Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "b8becf586572030a7b5df892edbd17f786917e2bced3ba09ccfcebeaa41320dd"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:06.416Z",
+      "event": "files_modified",
+      "details": {
+        "count": 7
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:18.469Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:34.013Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b8becf586572030a7b5df892edbd17f786917e2bced3ba09ccfcebeaa41320dd"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:44.332Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:47.047Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:47.049Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-01T22:48:47.170Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "953195268cc30f8aa0a3cb7dc4b459e814c5772939e603bebc5bdaacca729853"
+      }
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "task_id": "136d76d658614ff69ccc0beb563f4262",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "lNDCeMBkBdVjx2-3jNchoBZl",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 746,
+    "finished_at": "2026-08-31T17:57:48.772Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-08-31T17:57:39.130Z",
+  "updated_at": "2026-08-31T17:57:48.772Z",
+  "events": [
+    {
+      "time": "2026-08-31T17:57:39.130Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-08-31T17:57:39.460Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetIPInterface -InterfaceAlias 'Ethernet 3' -AddressFamily IPv4 | Select-Object InterfaceAlias,Dhcp,ConnectionState,NlMtu | Format-List; Get-NetIPAddress -InterfaceAlias 'Ethernet 3' -AddressFamily IPv4 | Select-Object IPAddress,PrefixLength,PrefixOrigin,SuffixOrigin,AddressState | Format-List\"",
+        "session_id": "69DHQDX_SKGCVvgKEt02oxmi"
+      }
+    },
+    {
+      "time": "2026-08-31T17:57:40.787Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-NetIPInterface -InterfaceAlias 'Ethernet 3' -AddressFamily IPv4 | Select-Object InterfaceAlias,Dhcp,ConnectionState,NlMtu | Format-List; Get-NetIPAddress -InterfaceAlias 'Ethernet 3' -AddressFamily IPv4 | Select-Object IPAddress,PrefixLength,PrefixOrigin,SuffixOrigin,AddressState | Format-List\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-08-31T17:57:48.134Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object Description -EQ 'Intel(R) Ethernet Connection (14) I219-V' | Select-Object DHCPEnabled,DHCPServer,DHCPLeaseObtained,DHCPLeaseExpires,IPAddress,DefaultIPGateway | Format-List\"",
+        "session_id": "lNDCeMBkBdVjx2-3jNchoBZl"
+      }
+    },
+    {
+      "time": "2026-08-31T17:57:48.772Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-CimInstance Win32_NetworkAdapterConfiguration | Where-Object Description -EQ 'Intel(R) Ethernet Connection (14) I219-V' | Select-Object DHCPEnabled,DHCPServer,DHCPLeaseObtained,DHCPLeaseExpires,IPAddress,DefaultIPGateway | Format-List\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

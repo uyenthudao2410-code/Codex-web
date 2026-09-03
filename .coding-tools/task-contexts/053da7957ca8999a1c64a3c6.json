@@ -1,0 +1,170 @@
+{
+  "version": 2,
+  "task_id": "b48050b95ac0467dbf40a8e530572de4",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Ma50tSrgAnkmXBu0sinmfHEX",
+    "kind": "command",
+    "status": "timeout",
+    "result_status": "failed",
+    "exit_code": 0,
+    "duration_ms": 30017,
+    "finished_at": "2026-09-02T06:57:05.319Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "Ma50tSrgAnkmXBu0sinmfHEX",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "failed",
+      "command": {
+        "command_id": "Ma50tSrgAnkmXBu0sinmfHEX",
+        "kind": "command",
+        "status": "timeout",
+        "result_status": "failed",
+        "exit_code": 0,
+        "duration_ms": 30017
+      },
+      "git": {
+        "head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+        "branch": "main",
+        "worktree_fp": "c2d3d8603062ab5dffd2a7e40987b50962830ee94841b090b99c4b454eb58d2f",
+        "dirty_paths": [
+          "docs/CURRENT_STATE.md",
+          "docs/ROADMAP.md",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/processIdentity.js",
+          "electron/services/recoveryHost.js",
+          "renderer/dashboard.js",
+          "renderer/index.html",
+          "resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_events.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "resources/coding-tools-mcp/tests/test_operations_analytics.py",
+          "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+          "scripts/execution-hub-provider-canary.js",
+          "scripts/full-clean-activation.js",
+          "tests/dashboard-analytics.test.js",
+          "tests/execution-hub-provider-canary.test.js",
+          "tests/full-clean-activation-command.test.js",
+          "tests/full-clean-activation.test.js",
+          "tests/process-identity.test.js",
+          "tests/recovery-host.test.js",
+          "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_BREAKTHROUGH_METHODOLOGY_AND_IMPLEMENTATION_PROGRAM.md",
+          "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_DETAILED_IMPLEMENTATION_PLAN.md",
+          "docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md",
+          "docs/research/260901_CODING_WEB_TRUSTED_GOAL_PURSUIT_SESSION_CONTINUITY_AND_PROBLEM_RESOLUTION_ECONOMICS_MASTER_PLAN.md",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py",
+          "resources/coding-tools-mcp/tests/test_exact_patch_write.py",
+          "resources/coding-tools-mcp/tests/test_usage_history_w9.py",
+          "resources/coding-tools-mcp/tests/test_usage_reservations.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "b48050b95ac0467dbf40a8e530572de4",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_TERMINATED",
+    "blocker_or_failure": {
+      "failure_class": "COMMAND_TERMINATED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 0
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "8d2b9ddf9c9eaa3aeb89b246b7a60b67e0e1a455144f91c375cae69ae9ef7517",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+  "created_at": "2026-09-02T06:56:34.967Z",
+  "updated_at": "2026-09-02T06:57:05.853Z",
+  "events": [
+    {
+      "time": "2026-09-02T06:56:34.967Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-02T06:56:35.369Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-ChildItem -LiteralPath $env:APPDATA -Filter accepted-code-activation.json -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 10 -ExpandProperty FullName\"",
+        "session_id": "Ma50tSrgAnkmXBu0sinmfHEX"
+      }
+    },
+    {
+      "time": "2026-09-02T06:57:05.319Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-ChildItem -LiteralPath $env:APPDATA -Filter accepted-code-activation.json -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 10 -ExpandProperty FullName\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-02T06:57:05.853Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "Ma50tSrgAnkmXBu0sinmfHEX",
+        "accepted_or_not": "COMMAND_TERMINATED",
+        "report_id": "8d2b9ddf9c9eaa3aeb89b246b7a60b67e0e1a455144f91c375cae69ae9ef7517"
+      }
+    }
+  ]
+}

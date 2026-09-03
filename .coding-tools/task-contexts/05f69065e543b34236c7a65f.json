@@ -1,0 +1,363 @@
+{
+  "version": 2,
+  "task_id": "8c72343d55544364922e6d3ad5b86364",
+  "orchestration": {
+    "run_id": "0a6f5ade7f064c72a4eb034134b65be4",
+    "wave_id": "b5beb3c86d6d44679f7cf9e5fd6444a1",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "93befc20d8890354a207bba1587caace1d0bc41b74d68ba2117cf38f5b6cc3b0",
+    "contract_fp": "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1"
+  },
+  "objective": "Fix the accepted HTTP handler Ruff defects without changing behavior",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-03T06:14:29.285Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-03T06:14:29.285Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-03T06:14:29.285Z"
+    }
+  ],
+  "current_step": "Replan report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "gr8wYIvvpckU-AT8-HF2-1iw",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": null,
+    "finished_at": "2026-09-03T06:14:28.922Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 30,
+        "head_hash": "662f547cc6ec39f502ec329081c35079b1848fb5dee8b5e9f1598aec9dc05799"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a6f5ade7f064c72a4eb034134b65be4\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0a6f5ade7f064c72a4eb034134b65be4\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "0a6f5ade7f064c72a4eb034134b65be4",
+      "wave_id": "b5beb3c86d6d44679f7cf9e5fd6444a1",
+      "checkpoint_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "93befc20d8890354a207bba1587caace1d0bc41b74d68ba2117cf38f5b6cc3b0",
+      "contract_fp": "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1",
+      "objective_provenance": {
+        "effective_objective": "Fix the accepted HTTP handler Ruff defects without changing behavior",
+        "objective_revision": 1,
+        "objective_sha256": "02a896e7f885d7073103ff045c5cc69aa38d2eeb0050f2a42789a8d0493e45a0",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "521aba7ce3134b999407b3bbd67de0ba",
+          "stage_id": "check:77f5ed58487efcea",
+          "status": "passed",
+          "duration_ms": 1319,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "fe42da64e2a142ec9183707a8ee48420",
+          "stage_id": "check:7ec691b1eda131d2",
+          "status": "failed",
+          "duration_ms": 3339,
+          "exit_code": 2,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 36409
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "b85310f738fc8909323974b3daebbe477c42aabc1367b84fbd4dcc5481bc6f96",
+  "completion_report_acknowledged_id": "b85310f738fc8909323974b3daebbe477c42aabc1367b84fbd4dcc5481bc6f96",
+  "completion_report_acknowledged_at": "2026-09-03T06:16:10.250Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+      "status": "failed",
+      "exit_code": 2,
+      "duration_ms": null,
+      "summary": "exit 2 | 0.0s | 34 lines | tail: '2 errors in 1.03s'",
+      "finished_at": "2026-09-03T06:14:28.922Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "gr8wYIvvpckU-AT8-HF2-1iw"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "0a6f5ade7f064c72a4eb034134b65be4",
+        "owner_wave": "b5beb3c86d6d44679f7cf9e5fd6444a1",
+        "size_bytes": 2867,
+        "command_id": "gr8wYIvvpckU-AT8-HF2-1iw",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:gr8wYIvvpckU-AT8-HF2-1iw:stdout",
+            "total_stream_bytes": 2867,
+            "total_retained_bytes": 2867,
+            "head_retained_bytes": 2867,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:gr8wYIvvpckU-AT8-HF2-1iw:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+      "operation": "update",
+      "updated_at": "2026-09-03T06:14:30.366Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-03T06:14:14.335Z",
+  "updated_at": "2026-09-03T06:16:10.254Z",
+  "events": [
+    {
+      "time": "2026-09-03T06:14:14.335Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix the accepted HTTP handler Ruff defects without changing behavior"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:16.189Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:18.699Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:20.498Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:20.507Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:22.748Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:23.536Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:24.499Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m ruff check coding_tools_mcp/mcp_http_handler.py",
+        "session_id": "CTy4uX7Zy0NFk1r6Mx2tl7Rj"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:25.031Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m ruff check coding_tools_mcp/mcp_http_handler.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:26.511Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "session_id": "gr8wYIvvpckU-AT8-HF2-1iw"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:28.922Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:29.285Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:30.002Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:30.005Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:30.009Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:30.199Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "b85310f738fc8909323974b3daebbe477c42aabc1367b84fbd4dcc5481bc6f96"
+      }
+    },
+    {
+      "time": "2026-09-03T06:14:30.366Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-03T06:16:09.780Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T06:16:10.250Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b85310f738fc8909323974b3daebbe477c42aabc1367b84fbd4dcc5481bc6f96"
+      }
+    }
+  ]
+}

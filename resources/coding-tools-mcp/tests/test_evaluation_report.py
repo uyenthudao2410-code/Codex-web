@@ -76,7 +76,7 @@ class EvaluationReportTests(unittest.TestCase):
             journal = root / '.coding-tools' / 'evaluation' / 'chatweb-host-observations.jsonl'
             journal.parent.mkdir(parents=True, exist_ok=True)
             journal.write_text(json.dumps({
-                'schema_version': 5, 'event_type': 'host_turn_span', 'span_id': 'host-1',
+                'schema_version': 6, 'event_type': 'host_turn_span', 'span_id': 'host-1',
                 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 25.0,
                 'run_id': run_id, 'wave_id': wave_id, 'trace_id': 'trace-1', 'turn_id': 'turn-1',
             }) + '\n', encoding='utf-8')
@@ -316,7 +316,7 @@ class EvaluationReportTests(unittest.TestCase):
             journal = root / '.coding-tools' / 'evaluation' / 'chatweb-host-observations.jsonl'
             journal.parent.mkdir(parents=True, exist_ok=True)
             journal.write_text(json.dumps({
-                'schema_version': 5, 'event_type': 'host_turn_span',
+                'schema_version': 6, 'event_type': 'host_turn_span',
                 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 10.0,
                 'run_id': run_id, 'wave_id': wave_id,
             }) + '\n', encoding='utf-8')
@@ -332,9 +332,9 @@ class EvaluationReportTests(unittest.TestCase):
             journal = root / '.coding-tools' / 'evaluation' / 'chatweb-host-observations.jsonl'
             journal.parent.mkdir(parents=True)
             events = [
-                {'schema_version': 5, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 10.0},
-                {'schema_version': 5, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 20.0},
-                {'schema_version': 5, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 30.0},
+                {'schema_version': 6, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 10.0},
+                {'schema_version': 6, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 20.0},
+                {'schema_version': 6, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 30.0},
             ]
             journal.write_text('\n'.join(json.dumps(item) for item in events) + '\n', encoding='utf-8')
             summary = host_visible_summary(root)
@@ -354,11 +354,12 @@ class EvaluationReportTests(unittest.TestCase):
                 {'schema_version': 3, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 0.0},
                 {'schema_version': 4, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 0.0},
                 {'schema_version': 5, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 25.0},
+                {'schema_version': 6, 'event_type': 'host_turn_span', 'measurement': 'observed_user_visible_to_first_assistant_visible', 'duration_ms': 25.0},
             ]
             journal.write_text('\n'.join(json.dumps(item) for item in events) + '\n', encoding='utf-8')
             summary = host_visible_summary(root)
             self.assertEqual(summary['event_count'], 1)
-            self.assertEqual(summary['ignored_legacy_event_count'], 4)
+            self.assertEqual(summary['ignored_legacy_event_count'], 5)
             self.assertEqual(summary['turn_span_count'], 1)
             self.assertEqual(summary['duration_ms']['p50'], 25.0)
 
@@ -389,7 +390,7 @@ class EvaluationReportTests(unittest.TestCase):
             journal = root / '.coding-tools' / 'evaluation' / 'chatweb-host-observations.jsonl'
             journal.parent.mkdir(parents=True)
             journal.write_text(json.dumps({
-                'schema_version': 5,
+                'schema_version': 6,
                 'event_type': 'host_turn_span',
                 'span_id': 'host',
                 'measurement': 'observed_user_visible_to_first_assistant_visible',

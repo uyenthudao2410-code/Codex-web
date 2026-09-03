@@ -4,11 +4,13 @@ import hashlib
 import math
 from typing import Any
 
-from .usage_pricing import derive_cost
+from .usage_pricing import PRICING_REVISION, derive_cost
 
 
 USAGE_EVENT_SCHEMA_VERSION = 2
+JAVASCRIPT_MAX_SAFE_INTEGER = 9_007_199_254_740_991
 ACCOUNTING_PROFILES = frozenset({"openai_compatible", "gemini", "anthropic"})
+ATTRIBUTION_STATUSES = frozenset({"exact", "partial", "unassigned"})
 
 
 def _nonnegative_number(value: Any) -> int | float | None:
@@ -22,6 +24,30 @@ def _nonnegative_number(value: Any) -> int | float | None:
 def _nonnegative_int(value: Any) -> int:
     measured = _nonnegative_number(value)
     return max(0, int(measured or 0))
+
+
+def _attribution_status(
+    run_id: str,
+    wave_id: str,
+    delegation_id: str,
+    explicit: str | None = None,
+) -> str:
+    identities = [bool(str(value or "").strip()) for value in (run_id, wave_id, delegation_id)]
+    if all(identities):
+        derived = "exact"
+    elif any(identities):
+        derived = "partial"
+    else:
+        derived = "unassigned"
+    if explicit is not None:
+        value = str(explicit).strip().lower()
+        if value not in ATTRIBUTION_STATUSES:
+            raise ValueError("attribution_status must be exact, partial, or unassigned")
+        if value != derived:
+            raise ValueError(
+                f"attribution_status={value} does not match identity-derived status={derived}"
+            )
+    return derived
 
 
 def accounting_profile_for(provider_id: str = "", model_id: str = "") -> str:
@@ -94,6 +120,11 @@ def controller_usage_delegation_id(run_id: str, wave_id: str, turn_id: str) -> s
     return f"chatweb-{digest}"
 
 
+def controller_usage_id(run_id: str, turn_id: str) -> str:
+    """Return the stable economic identity for one ChatWeb controller turn."""
+    return hashlib.sha256(f"controller-usage-v1\0{run_id}\0{turn_id}".encode("utf-8")).hexdigest()
+
+
 def classify_provider_error(error_name: str = "", *, status: str = "") -> str | None:
     if str(status).strip().lower() != "failed":
         return None
@@ -136,6 +167,7 @@ def build_usage_event(
     cost_provenance: str | None = None,
     actor: str = "provider",
     identity_key: str = "",
+    attribution_status: str | None = None,
 ) -> dict[str, Any]:
     input_count = _nonnegative_int(input_tokens)
     cached_count = min(input_count, _nonnegative_int(cached_input_tokens))
@@ -171,6 +203,7 @@ def build_usage_event(
         if derived is not None:
             derived_cost_usd, derived_components = derived
             cost_kind = "pricing_derived"
+    resolved_attribution = _attribution_status(run_id, wave_id, delegation_id, attribution_status)
     return {
         "schema_version": USAGE_EVENT_SCHEMA_VERSION,
         "usage_id": usage_id,
@@ -182,6 +215,7 @@ def build_usage_event(
         "model_id": model,
         "model": resolved_model,
         "status": str(status or "").strip().lower(),
+        "attribution": {"status": resolved_attribution},
         "provenance": {
             "source": str(source or "")[:160],
             "usage": usage_source,
@@ -203,6 +237,7 @@ def build_usage_event(
             "derived_cost_usd": derived_cost_usd,
             "derived_components": derived_components,
             "kind": cost_kind,
+            "pricing_revision": PRICING_REVISION if derived_cost_usd is not None else None,
         },
         "timing": {
             "queue_ms": queue,
@@ -223,7 +258,7 @@ def validate_controller_usage_report(report: Any) -> dict[str, Any]:
     if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version != 1:
         raise ValueError("controller usage must use schema_version=1")
     allowed = {
-        "schema_version", "turn_id", "trace_id", "accounting_profile", "provider_id", "model_id", "source",
+        "schema_version", "run_id", "wave_id", "turn_id", "trace_id", "accounting_profile", "provider_id", "model_id", "source",
         "input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens",
         "cache_read_tokens", "cache_write_tokens", "monetary_cost", "provider_cost",
     }
@@ -247,6 +282,13 @@ def validate_controller_usage_report(report: Any) -> dict[str, Any]:
         return value
 
     normalized = dict(report)
+    run_id = text("run_id", 128) if "run_id" in report else ""
+    wave_id = text("wave_id", 128) if "wave_id" in report else ""
+    if bool(run_id) != bool(wave_id):
+        raise ValueError("controller usage run_id and wave_id must be supplied together")
+    if run_id:
+        normalized["run_id"] = run_id
+        normalized["wave_id"] = wave_id
     normalized["turn_id"] = text("turn_id", 128, required=True)
     profile = text("accounting_profile", 32).lower() or "openai_compatible"
     if profile not in ACCOUNTING_PROFILES:
@@ -270,9 +312,13 @@ def validate_controller_usage_report(report: Any) -> dict[str, Any]:
         if name not in report and name not in required:
             continue
         value = report.get(name)
-        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-            raise ValueError(f"controller usage {name} must be a non-negative integer")
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0 or value > JAVASCRIPT_MAX_SAFE_INTEGER:
+            raise ValueError(f"controller usage {name} must be a JavaScript-safe non-negative integer")
         normalized[name] = value
+    if profile in {"openai_compatible", "gemini"} and normalized.get("cached_input_tokens", 0) > normalized["input_tokens"]:
+        raise ValueError("controller usage cached_input_tokens cannot exceed input_tokens")
+    if profile in {"openai_compatible", "anthropic"} and normalized["reasoning_output_tokens"] > normalized["output_tokens"]:
+        raise ValueError("controller usage reasoning_output_tokens cannot exceed output_tokens")
     for name in ("monetary_cost", "provider_cost"):
         if name in report and _nonnegative_number(report.get(name)) is None:
             raise ValueError(f"controller usage {name} must be a finite non-negative number")
@@ -284,6 +330,12 @@ def validate_controller_usage_report(report: Any) -> dict[str, Any]:
 
 def usage_event_from_controller_report(*, run_id: str, wave_id: str, report: dict[str, Any], source: str = "chatweb:mcp_meta") -> dict[str, Any]:
     report = validate_controller_usage_report(report)
+    report_run_id = str(report.get("run_id") or "").strip()
+    report_wave_id = str(report.get("wave_id") or "").strip()
+    if report_run_id and report_run_id != str(run_id):
+        raise ValueError("controller usage run_id does not match the authoritative run")
+    if report_wave_id and report_wave_id != str(wave_id):
+        raise ValueError("controller usage wave_id does not match the authoritative wave")
     turn_id = report["turn_id"]
     profile = report["accounting_profile"]
     delegation_id = controller_usage_delegation_id(run_id, wave_id, turn_id)
@@ -308,6 +360,9 @@ def usage_event_from_controller_report(*, run_id: str, wave_id: str, report: dic
         actor="controller",
         identity_key=turn_id,
     )
+    # A host turn can survive reconnect/REPLAN into a new wave. Charge its
+    # economics once per RUN+turn while keeping wave/delegation as attribution.
+    event["usage_id"] = controller_usage_id(run_id, turn_id)
     event["turn_id"] = turn_id
     trace_id = str(report.get("trace_id") or "").strip()
     if trace_id:

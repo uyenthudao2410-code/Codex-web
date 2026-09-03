@@ -1,0 +1,204 @@
+{
+  "version": 2,
+  "task_id": "013230cf016a4482ac7d0cde998abee0",
+  "orchestration": {
+    "run_id": "dc9326d8a18b436c98a43f615f4f559b",
+    "wave_id": "00b1731b2c30484899e809d1654f0bc6",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+    "worktree_fp": "208c2d60b3323fcc888c4863e37dd2c0562ef7bd59e8fc30e0e2d734344dc2f4",
+    "contract_fp": ""
+  },
+  "objective": "W10 Representative ChatWeb End-to-End Validation & Closure only. Establish the exact current representative ChatWeb evidence path required by the master plan: user turn -> structured controller usage receipt when supported -> one or more MCP tool invocations -> provider/delegated usage -> EOCL RUN/WAVE activity -> proof/acceptance -> CHECKPOINT -> ledger/read-model/Dashboard reconciliation. Determine whether the supported current environment can prove L4, or must truthfully close at L2/L3 with a typed upstream capability limitation. Do not mutate source, do not fabricate controller or tool-card tokens, do not infer tokens from bytes, do not alter public 8-tool contract, and preserve unrelated dirty work.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "a903997bdee82580ac4964e9b756465e07b872670232af5279bb8c44d62655e3"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dc9326d8a18b436c98a43f615f4f559b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dc9326d8a18b436c98a43f615f4f559b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "dc9326d8a18b436c98a43f615f4f559b",
+      "wave_id": "00b1731b2c30484899e809d1654f0bc6",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "208c2d60b3323fcc888c4863e37dd2c0562ef7bd59e8fc30e0e2d734344dc2f4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "W10 Representative ChatWeb End-to-End Validation & Closure only. Establish the exact current representative ChatWeb evidence path required by the master plan: user turn -> structured controller usage receipt when supported -> one or more MCP tool invocations -> provider/delegated usage -> EOCL RUN/WAVE activity -> proof/acceptance -> CHECKPOINT -> ledger/read-model/Dashboard reconciliation. Determine whether the supported current environment can prove L4, or must truthfully close at L2/L3 with a typed upstream capability limitation. Do not mutate source, do not fabricate controller or tool-card tokens, do not infer tokens from bytes, do not alter public 8-tool contract, and preserve unrelated dirty work.",
+        "objective_revision": 1,
+        "objective_sha256": "ab26204bf81e380dc0bdc9bd3beeab81de6e4dc6dabac06cea08c0d245129ff6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "b541053ff5133bf8fd9039f669db8c7f4423e3fa50363f1f6cd827a21b2ac769",
+  "completion_report_acknowledged_id": "b541053ff5133bf8fd9039f669db8c7f4423e3fa50363f1f6cd827a21b2ac769",
+  "completion_report_acknowledged_at": "2026-09-02T06:29:53.916Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-02T06:22:59.148Z",
+  "updated_at": "2026-09-02T06:29:53.920Z",
+  "events": [
+    {
+      "time": "2026-09-02T06:22:59.148Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "W10 Representative ChatWeb End-to-End Validation & Closure only. Establish the exact current representative ChatWeb evidence path required by the master plan: user turn -> structured controller usage receipt when supported -> one or more MCP tool invocations -> provider/delegated usage -> EOCL RUN/WAVE activity -> proof/acceptance -> CHECKPOINT -> ledger/read-model/Dashboard reconciliation. Determine whether the supported current environment can prove L4, or must truthfully close at L2/L3 with a typed upstream capability limitation. Do not mutate source, do not fabricate controller or tool-card tokens, do not infer tokens from bytes, do not alter public 8-tool contract, and preserve unrelated dirty work."
+      }
+    },
+    {
+      "time": "2026-09-02T06:23:00.786Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-02T06:23:03.221Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-02T06:23:03.228Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:24:06.892Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:25:10.845Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:25:28.683Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:26:48.068Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:27:41.503Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:28:11.284Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "FINAL_ACCEPTANCE_NOT_READY"
+      }
+    },
+    {
+      "time": "2026-09-02T06:28:30.114Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-02T06:29:16.515Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "b541053ff5133bf8fd9039f669db8c7f4423e3fa50363f1f6cd827a21b2ac769"
+      }
+    },
+    {
+      "time": "2026-09-02T06:29:28.421Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-02T06:29:53.916Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b541053ff5133bf8fd9039f669db8c7f4423e3fa50363f1f6cd827a21b2ac769"
+      }
+    }
+  ]
+}
