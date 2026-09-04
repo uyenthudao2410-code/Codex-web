@@ -1,10 +1,21 @@
 const { shell, session, WebContentsView } = require('electron');
 const { DownloadService } = require('./services/downloadService');
-const { buildChatEvaluationObserverScript, chatEvaluationDrainScript } = require('./services/chatEvaluationJournal');
+const {
+  createConversationAccessTracker,
+  ensureConversationAccessMonitor,
+  releaseConversationAccessMonitor
+} = require('./services/chatConversationAccess');
+const {
+  buildChatEvaluationBootstrapScript,
+  buildChatEvaluationObserverScript,
+  chatEvaluationDrainScript,
+  chatEvaluationDebugScript
+} = require('./services/chatEvaluationJournal');
 
 const CHAT_HOME = 'https://chatgpt.com/';
 const CHAT_PARTITION = 'persist:chatgpt-session';
 const CHAT_EVALUATION_DRAIN_INTERVAL_MS = 1000;
+const CHAT_EVALUATION_BOOTSTRAP_TIMEOUT_MS = 1500;
 const NAVIGATION_HOSTS = new Set([
   'chatgpt.com', 'www.chatgpt.com', 'openai.com', 'www.openai.com',
   'auth.openai.com', 'login.openai.com', 'accounts.google.com',
@@ -52,6 +63,15 @@ class ChatViewController {
     this.navigationEpoch = 0;
     this.evaluationDrainTimer = null;
     this.evaluationDrainInFlight = false;
+    this.evaluationDebugTick = 0;
+    this.lastEvaluationDebug = '';
+    this.evaluationDebugInFlight = false;
+    this.conversationAccessDenied = false;
+    this.conversationAccessError = '';
+    this.conversationAccessTracker = createConversationAccessTracker();
+    this.conversationAccessSubscriber = (url, statusCode) => this.observeConversationAccess(url, statusCode);
+    this.evaluationDebuggerOwned = false;
+    this.evaluationBootstrapScriptId = '';
     this.boundResize = () => this.resize();
   }
 
@@ -71,6 +91,14 @@ class ChatViewController {
       callback(mayWriteClipboard(permission, details.requestingUrl || details.securityOrigin || ''));
     });
     chatSession.setPermissionCheckHandler((_webContents, permission, origin) => mayWriteClipboard(permission, origin));
+    // Page-level conversation ACL monitor (content-free): a ChatGPT "You don't
+    // have access to this conversation" page still loads with HTTP 200, so
+    // did-fail-load never fires. The session-level dispatcher watches the
+    // backend conversation endpoints for 401/403 and routes (url, status) to
+    // the current subscriber; denial/recovery is correlated per exact
+    // endpoint pathname by the tracker. Only the numeric status is logged;
+    // request URLs carry conversation IDs and are never logged or stored.
+    ensureConversationAccessMonitor(chatSession, this.conversationAccessSubscriber);
 
     this.view = new WebContentsView({
       webPreferences: {
@@ -88,7 +116,62 @@ class ChatViewController {
     this.resize();
     this.bindWebContents();
     this.startEvaluationDrain();
-    this.loadHome();
+    this.installEvaluationBootstrapBeforeNavigation().catch(() => false).finally(() => this.loadHome());
+  }
+
+  async installEvaluationBootstrapBeforeNavigation() {
+    let timer = null;
+    let timedOut = false;
+    const timeout = new Promise((resolve) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        resolve(false);
+      }, CHAT_EVALUATION_BOOTSTRAP_TIMEOUT_MS);
+      timer.unref?.();
+    });
+    try {
+      const installed = await Promise.race([
+        this.installEvaluationBootstrap(),
+        timeout
+      ]);
+      if (timedOut) {
+        this.log.warn('Early structured-usage observer timed out; continuing ChatGPT navigation with fallback', {
+          stage: 'chat-evaluation-bootstrap-timeout',
+          timeout_ms: CHAT_EVALUATION_BOOTSTRAP_TIMEOUT_MS
+        });
+      }
+      return installed === true;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+
+  async installEvaluationBootstrap() {
+    const contents = this.view?.webContents;
+    const debuggerClient = contents?.debugger;
+    if (!contents || contents.isDestroyed() || !debuggerClient) return false;
+    try {
+      if (!debuggerClient.isAttached()) {
+        debuggerClient.attach('1.3');
+        this.evaluationDebuggerOwned = true;
+      }
+      const result = await debuggerClient.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+        source: buildChatEvaluationBootstrapScript()
+      });
+      this.evaluationBootstrapScriptId = String(result?.identifier || '');
+      return Boolean(this.evaluationBootstrapScriptId);
+    } catch (error) {
+      this.log.warn('Không thể cài early structured-usage observer; tiếp tục với observer fallback', {
+        stage: 'chat-evaluation-bootstrap',
+        error: error?.message || String(error)
+      });
+      if (this.evaluationDebuggerOwned && debuggerClient.isAttached()) {
+        try { debuggerClient.detach(); } catch { /* best effort */ }
+      }
+      this.evaluationDebuggerOwned = false;
+      this.evaluationBootstrapScriptId = '';
+      return false;
+    }
   }
 
   bindWebContents() {
@@ -145,9 +228,11 @@ class ChatViewController {
       this.scheduleChatUiEnhancements();
     });
     contents.on('did-navigate', () => {
+      this.resetConversationAccess();
       this.emitState();
     });
     contents.on('did-navigate-in-page', () => {
+      this.resetConversationAccess();
       this.emitState();
       this.suspendChatUiEnhancements();
       setTimeout(() => this.scheduleChatUiEnhancements(), 1200);
@@ -365,8 +450,25 @@ class ChatViewController {
       }).catch(() => null).finally(() => {
         this.evaluationDrainInFlight = false;
       });
+      this.evaluationDebugTick += 1;
+      if (this.evaluationDebugTick % 30 === 0) this.pollEvaluationDebug();
     }, CHAT_EVALUATION_DRAIN_INTERVAL_MS);
     this.evaluationDrainTimer.unref?.();
+  }
+
+  pollEvaluationDebug() {
+    const contents = this.view?.webContents;
+    if (!contents || contents.isDestroyed() || this.evaluationDebugInFlight) return;
+    this.evaluationDebugInFlight = true;
+    contents.executeJavaScript(chatEvaluationDebugScript(), true).then((debug) => {
+      let snapshot = '';
+      try { snapshot = JSON.stringify(debug || {}); } catch { return; }
+      if (!snapshot || snapshot === this.lastEvaluationDebug) return;
+      this.lastEvaluationDebug = snapshot;
+      this.log.info('ChatGPT structured-usage seam telemetry', { debug });
+    }).catch(() => null).finally(() => {
+      this.evaluationDebugInFlight = false;
+    });
   }
 
   resize() {
@@ -394,6 +496,37 @@ class ChatViewController {
       canGoBack: Boolean(contents && !contents.isDestroyed() && contents.canGoBack()),
       canGoForward: Boolean(contents && !contents.isDestroyed() && contents.canGoForward())
     };
+  }
+
+  observeConversationAccess(url, statusCode) {
+    const result = this.conversationAccessTracker.observe(url, statusCode);
+    if (!result || result.changed !== true) return;
+    if (result.denied) {
+      this.conversationAccessDenied = true;
+      this.conversationAccessError = result.message;
+      this.lastError = result.message;
+      this.log.warn('ChatGPT từ chối truy cập conversation', {
+        stage: 'conversation-access-denied',
+        status_code: Number(statusCode) || null,
+        endpoint: 'backend-api/conversation'
+      });
+      this.emitState();
+    } else {
+      this.conversationAccessDenied = false;
+      if (this.lastError === this.conversationAccessError) this.lastError = '';
+      this.conversationAccessError = '';
+      this.emitState();
+    }
+  }
+
+  resetConversationAccess() {
+    const wasDenied = this.conversationAccessTracker.reset();
+    if (wasDenied && this.conversationAccessDenied) {
+      this.conversationAccessDenied = false;
+      if (this.lastError === this.conversationAccessError) this.lastError = '';
+      this.conversationAccessError = '';
+      this.emitState();
+    }
   }
 
   async openUrl(url) {
@@ -449,14 +582,24 @@ class ChatViewController {
     const chatSession = session.fromPartition(CHAT_PARTITION);
     await chatSession.clearStorageData();
     await chatSession.clearCache();
+    this.resetConversationAccess();
     this.lastError = '';
     await this.loadHome();
   }
 
   dispose() {
+    try {
+      releaseConversationAccessMonitor(session.fromPartition(CHAT_PARTITION), this.conversationAccessSubscriber);
+    } catch { /* session may be gone */ }
     if (this.evaluationDrainTimer) clearInterval(this.evaluationDrainTimer);
     this.evaluationDrainTimer = null;
     this.evaluationDrainInFlight = false;
+    const debuggerClient = this.view?.webContents?.debugger;
+    if (this.evaluationDebuggerOwned && debuggerClient?.isAttached()) {
+      try { debuggerClient.detach(); } catch { /* best effort */ }
+    }
+    this.evaluationDebuggerOwned = false;
+    this.evaluationBootstrapScriptId = '';
     if (this.window && !this.window.isDestroyed()) this.window.removeListener('resize', this.boundResize);
     if (this.view && this.window && !this.window.isDestroyed()) {
       try { this.window.contentView.removeChildView(this.view); } catch { /* already detached */ }
@@ -466,4 +609,12 @@ class ChatViewController {
   }
 }
 
-module.exports = { ChatViewController, CHAT_HOME, CHAT_PARTITION, isAllowedNavigation, isAuthPopup, isChatGptNavigation };
+module.exports = {
+  ChatViewController,
+  CHAT_HOME,
+  CHAT_PARTITION,
+  CHAT_EVALUATION_BOOTSTRAP_TIMEOUT_MS,
+  isAllowedNavigation,
+  isAuthPopup,
+  isChatGptNavigation
+};

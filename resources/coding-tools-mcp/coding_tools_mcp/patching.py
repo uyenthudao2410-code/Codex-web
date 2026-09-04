@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import os
+import re
 import stat
 import tempfile
+import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -12,6 +16,7 @@ from .errors import ToolFailure
 
 PATCH_TEMP_PREFIX = ".coding-tools-patch-"
 PATCH_BACKUP_PREFIX = ".coding-tools-backup-"
+MAX_EXACT_FILE_BYTES = 8 * 1024 * 1024
 
 
 @dataclass
@@ -21,6 +26,8 @@ class PatchOperation:
     add_content: str | None = None
     hunks: list[list[str]] = field(default_factory=list)
     move_to: str | None = None
+    preimage_sha256: str | None = None
+    postimage_sha256: str | None = None
 
 
 @dataclass(frozen=True)
@@ -303,6 +310,68 @@ def parse_patch(patch: str) -> list[PatchOperation]:
                 i += 1
             operations.append(PatchOperation("add", path, add_content="\n".join(content_lines) + "\n"))
             continue
+        if line.startswith("*** Write Exact File: "):
+            path = line.removeprefix("*** Write Exact File: ").strip()
+            i += 1
+            if i >= len(lines) - 1 or not lines[i].startswith("@@ "):
+                raise ToolFailure(
+                    "PATCH_FAILED",
+                    "Exact file writes require one metadata line after the path.",
+                    category="validation",
+                )
+            metadata = _parse_exact_write_metadata(lines[i])
+            i += 1
+            encoded_lines: list[str] = []
+            while i < len(lines) - 1 and not lines[i].startswith("*** "):
+                if not lines[i].startswith("+"):
+                    raise ToolFailure(
+                        "PATCH_FAILED",
+                        "Exact file payload lines must start with '+'.",
+                        category="validation",
+                    )
+                encoded_lines.append(lines[i][1:])
+                i += 1
+            if not encoded_lines:
+                raise ToolFailure(
+                    "PATCH_FAILED",
+                    "Exact file writes require a base64 payload line.",
+                    category="validation",
+                )
+            exact_data = _decode_exact_write_payload(
+                "".join(encoded_lines),
+                path=path,
+                encoding=metadata["encoding"],
+            )
+            actual_postimage = hashlib.sha256(exact_data).hexdigest()
+            if actual_postimage != metadata["postimage_sha256"]:
+                raise ToolFailure(
+                    "PATCH_EXACT_POSTIMAGE_MISMATCH",
+                    "Exact file payload does not match its declared postimage SHA-256.",
+                    category="validation",
+                    details={
+                        "path": path,
+                        "expected_sha256": metadata["postimage_sha256"],
+                        "actual_sha256": actual_postimage,
+                    },
+                )
+            try:
+                exact_content = exact_data.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ToolFailure(
+                    "UNSUPPORTED_ENCODING",
+                    f"Exact file payload is not valid UTF-8: {path}",
+                    category="validation",
+                ) from exc
+            operations.append(
+                PatchOperation(
+                    "write_exact",
+                    path,
+                    add_content=exact_content,
+                    preimage_sha256=metadata["preimage_sha256"],
+                    postimage_sha256=metadata["postimage_sha256"],
+                )
+            )
+            continue
         if line.startswith("*** Delete File: "):
             path = line.removeprefix("*** Delete File: ").strip()
             operations.append(PatchOperation("delete", path))
@@ -331,6 +400,93 @@ def parse_patch(patch: str) -> list[PatchOperation]:
             continue
         raise ToolFailure("PATCH_FAILED", f"Unrecognized patch line: {line}", category="validation")
     return operations
+
+
+def _parse_exact_write_metadata(line: str) -> dict[str, str]:
+    fields: dict[str, str] = {}
+    for token in line.removeprefix("@@ ").split():
+        key, separator, value = token.partition("=")
+        if not separator or key in fields:
+            raise ToolFailure(
+                "PATCH_FAILED",
+                "Exact file metadata must contain unique key=value fields.",
+                category="validation",
+            )
+        fields[key] = value.lower()
+    if set(fields) != {"encoding", "preimage_sha256", "postimage_sha256"}:
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "Exact file metadata requires encoding, preimage_sha256 and postimage_sha256 only.",
+            category="validation",
+        )
+    if fields["encoding"] != "zlib-base64":
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "Exact file payload encoding must be zlib-base64.",
+            category="validation",
+        )
+    sha256_pattern = re.compile(r"[0-9a-f]{64}")
+    preimage = fields["preimage_sha256"]
+    if preimage != "absent" and sha256_pattern.fullmatch(preimage) is None:
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "preimage_sha256 must be 'absent' or a 64-character hexadecimal digest.",
+            category="validation",
+        )
+    if sha256_pattern.fullmatch(fields["postimage_sha256"]) is None:
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "postimage_sha256 must be a 64-character hexadecimal digest.",
+            category="validation",
+        )
+    return fields
+
+
+def _decode_exact_write_payload(encoded: str, *, path: str, encoding: str) -> bytes:
+    if encoding != "zlib-base64":
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "Exact file payload encoding must be zlib-base64.",
+            category="validation",
+        )
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "Exact file payload is not valid base64.",
+            category="validation",
+        ) from exc
+    try:
+        decompressor = zlib.decompressobj()
+        exact_data = decompressor.decompress(compressed, MAX_EXACT_FILE_BYTES + 1)
+        if len(exact_data) > MAX_EXACT_FILE_BYTES or decompressor.unconsumed_tail:
+            raise ToolFailure(
+                "PATCH_EXACT_PAYLOAD_TOO_LARGE",
+                "Exact file payload exceeds the decompressed size limit.",
+                category="validation",
+                details={"path": path, "max_bytes": MAX_EXACT_FILE_BYTES},
+            )
+        remaining = MAX_EXACT_FILE_BYTES + 1 - len(exact_data)
+        exact_data += decompressor.flush(remaining)
+        if len(exact_data) > MAX_EXACT_FILE_BYTES:
+            raise ToolFailure(
+                "PATCH_EXACT_PAYLOAD_TOO_LARGE",
+                "Exact file payload exceeds the decompressed size limit.",
+                category="validation",
+                details={"path": path, "max_bytes": MAX_EXACT_FILE_BYTES},
+            )
+        if not decompressor.eof or decompressor.unused_data:
+            raise zlib.error("incomplete or trailing compressed stream")
+    except ToolFailure:
+        raise
+    except zlib.error as exc:
+        raise ToolFailure(
+            "PATCH_FAILED",
+            "Exact file payload is not valid zlib data.",
+            category="validation",
+        ) from exc
+    return exact_data
 
 
 def apply_update_hunks(content: str, hunks: list[list[str]], path: str = "<patch>") -> str:

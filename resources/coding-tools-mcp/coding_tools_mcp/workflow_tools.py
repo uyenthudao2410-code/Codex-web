@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .controller_continuity import ControllerContinuityError
 from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .host_correlation import (
@@ -24,6 +25,7 @@ from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .p5_experiment import P5ExperimentError
 from .problem_lineage import ProblemLineageError
+from .product_session_receipts import record_problem_product_session
 from .resolution_contract import (
     ResolutionContractError,
     contract_sha256,
@@ -57,6 +59,36 @@ class AgentWorkflowMixin:
             run_id=ctx.run_id,
             wave_id=ctx.wave_id,
         )
+
+    def _attested_chatweb_transport_turn(self) -> dict[str, str] | None:
+        """Return a content-free host identity derived only from attested transport.
+
+        ChatWeb clients outside the integrated Electron WebContents cannot
+        produce an ``electron_pending_host_turn`` file.  The managed tunnel
+        still gives the server a stronger authority surface: attested ChatWeb
+        controller identity plus a validated W3C trace context.  A trace id is
+        stable across the tool calls made by one ChatWeb turn, so it can act as
+        the server-owned correlation identity without trusting caller-supplied
+        evaluation metadata or reading message content.
+        """
+        identity = self._current_hub_client() or {}
+        if (
+            str(identity.get("client_type") or "") != "chatweb"
+            or str(identity.get("role") or "") != "controller"
+            or str(identity.get("identity_source") or "") != "attested_transport"
+            or identity.get("attestation_verified") is not True
+        ):
+            return None
+        trace_context = getattr(self.request_context, "trace_context", None)
+        if not isinstance(trace_context, dict):
+            return None
+        trace_id = str(trace_context.get("trace_id") or "").strip().lower()
+        if len(trace_id) != 32 or any(char not in "0123456789abcdef" for char in trace_id):
+            return None
+        return {
+            "trace_id": trace_id,
+            "turn_id": f"chatweb-trace:{trace_id}",
+        }
 
     def _problem_resolution_context_for_run(
         self,
@@ -476,11 +508,32 @@ class AgentWorkflowMixin:
                         turn_id=str(claimed_host_turn["turn_id"]),
                         trace_id=str(claimed_host_turn["trace_id"]),
                     )
+                else:
+                    transport_host_turn = self._attested_chatweb_transport_turn()
+                    if transport_host_turn:
+                        evaluation["trace_id"] = transport_host_turn["trace_id"]
+                        evaluation["turn_id"] = transport_host_turn["turn_id"]
+                        run_metadata["host_correlation"] = {
+                            "schema_version": 1,
+                            "source": "attested_chatweb_transport_trace",
+                            "eligible": True,
+                            "content_free": True,
+                        }
             try:
                 problem_resolution = self._problem_resolution_context_for_run(
                     args,
                     host_identity=host_problem_identity,
                 )
+                goal_controller_precondition = None
+                if str(problem_resolution.get("work_origin") or "") == "problem":
+                    goal_controller_precondition = self._continuity_goal_controller_precondition(
+                        problem_id=str(problem_resolution["problem_id"]),
+                        problem_revision=int(problem_resolution["problem_revision"]),
+                    )
+            except ControllerContinuityError as exc:
+                if claimed_host_turn:
+                    self._restore_pending_host_turn(claimed_host_turn)
+                raise self._continuity_tool_failure(exc) from exc
             except Exception:
                 if claimed_host_turn:
                     self._restore_pending_host_turn(claimed_host_turn)
@@ -506,8 +559,13 @@ class AgentWorkflowMixin:
                     worktree_fp=str(identity.get("worktree_fp") or ""),
                     contract_fp=contract_fp,
                     metadata=run_metadata,
+                    goal_controller_precondition=goal_controller_precondition,
                 )
                 self._claim_hub_controller_for_run(current_ctx.run_id)
+            except ControllerContinuityError as exc:
+                if claimed_host_turn:
+                    self._restore_pending_host_turn(claimed_host_turn)
+                raise self._continuity_tool_failure(exc) from exc
             except Exception:
                 if claimed_host_turn:
                     self._restore_pending_host_turn(claimed_host_turn)
@@ -520,6 +578,20 @@ class AgentWorkflowMixin:
                         task_id=str(current_task.get("task_id") or ""),
                         host_identity=host_problem_identity,
                         problem_context=problem_resolution,
+                    )
+                    record_problem_product_session(
+                        self.orchestration_ledger,
+                        run_id=current_ctx.run_id,
+                        wave_id=current_ctx.wave_id,
+                        problem_resolution=problem_resolution,
+                        workspace_id=str(
+                            (run_metadata.get("workspace_identity") or {}).get(
+                                "workspace_id"
+                            )
+                            or ""
+                        ),
+                        claimed_host_turn=claimed_host_turn,
+                        hub_client=self._current_hub_client() or {},
                     )
                 except Exception:
                     self._restore_pending_host_turn(claimed_host_turn)

@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "9079257cb3bb484091e1520fb0fb7a96",
+  "orchestration": {
+    "run_id": "409edff570cc4d90a38adea18352c783",
+    "wave_id": "ca4f21d32c77475ab24454b93d7584aa",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "ce5e0119b3d0b8796fb1c6988df9d6e82539ab4a496753e7a8694e3445d31376",
+    "contract_fp": ""
+  },
+  "objective": "Determine the current exact supported path for authoritative external ChatWeb controller token usage in Codex-web. Read only. Prove whether the current connector/runtime has any automatic or post-turn hook that can supply exact controller usage to the existing controller-usage ingress/reconciliation machinery. Distinguish: (A) authoritative automatic source exists and is unwired/mishandled in repo, (B) only caller-supplied/manual numeric evaluation fields exist and therefore are not an authoritative automatic source, (C) no host/client usage surface exists. Identify the smallest supported next action that can actually close L3 without guessing tokens. Do not modify files, restart runtime, open network/raw MCP/HTTP/stdio, commit, push, release, or deploy.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "25688007994296175271fd1a084176586673cf8fd8e90b334f0165a73b618aac"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-409edff570cc4d90a38adea18352c783\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-409edff570cc4d90a38adea18352c783\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "409edff570cc4d90a38adea18352c783",
+      "wave_id": "ca4f21d32c77475ab24454b93d7584aa",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "ce5e0119b3d0b8796fb1c6988df9d6e82539ab4a496753e7a8694e3445d31376",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Determine the current exact supported path for authoritative external ChatWeb controller token usage in Codex-web. Read only. Prove whether the current connector/runtime has any automatic or post-turn hook that can supply exact controller usage to the existing controller-usage ingress/reconciliation machinery. Distinguish: (A) authoritative automatic source exists and is unwired/mishandled in repo, (B) only caller-supplied/manual numeric evaluation fields exist and therefore are not an authoritative automatic source, (C) no host/client usage surface exists. Identify the smallest supported next action that can actually close L3 without guessing tokens. Do not modify files, restart runtime, open network/raw MCP/HTTP/stdio, commit, push, release, or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "55fa3542dba1f270909eb2c37bcaaa12c5c95152f0723b218409041849280ec9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "4445bca308f673a876b31aaebfb0c6cfa7cc545332e2663e0323635d101e9e7e",
+  "completion_report_acknowledged_id": "4445bca308f673a876b31aaebfb0c6cfa7cc545332e2663e0323635d101e9e7e",
+  "completion_report_acknowledged_at": "2026-09-03T23:40:47.180Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T23:39:16.388Z",
+  "updated_at": "2026-09-03T23:40:47.184Z",
+  "events": [
+    {
+      "time": "2026-09-03T23:39:16.388Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Determine the current exact supported path for authoritative external ChatWeb controller token usage in Codex-web. Read only. Prove whether the current connector/runtime has any automatic or post-turn hook that can supply exact controller usage to the existing controller-usage ingress/reconciliation machinery. Distinguish: (A) authoritative automatic source exists and is unwired/mishandled in repo, (B) only caller-supplied/manual numeric evaluation fields exist and therefore are not an authoritative automatic source, (C) no host/client usage surface exists. Identify the smallest supported next action that can actually close L3 without guessing tokens. Do not modify files, restart runtime, open network/raw MCP/HTTP/stdio, commit, push, release, or deploy."
+      }
+    },
+    {
+      "time": "2026-09-03T23:39:17.792Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T23:39:24.393Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T23:40:34.389Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "4445bca308f673a876b31aaebfb0c6cfa7cc545332e2663e0323635d101e9e7e"
+      }
+    },
+    {
+      "time": "2026-09-03T23:40:39.944Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T23:40:47.180Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "4445bca308f673a876b31aaebfb0c6cfa7cc545332e2663e0323635d101e9e7e"
+      }
+    }
+  ]
+}

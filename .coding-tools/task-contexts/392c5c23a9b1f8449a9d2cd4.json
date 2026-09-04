@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "249beac0cd2c46739a5605918bb2004f",
+  "orchestration": {
+    "run_id": "10eb561f23f24f73a596ec03b4978d5b",
+    "wave_id": "e6fe71150f5748acb8d2860b5c343727",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+    "contract_fp": ""
+  },
+  "objective": "G5 real ChatWeb observability turn 2; inspect controller-usage ingress without source mutation.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "0948c188f6423acc4e5375b91917c3a694dd1965ca1b4b3c2c942e21200f861e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-10eb561f23f24f73a596ec03b4978d5b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-10eb561f23f24f73a596ec03b4978d5b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "10eb561f23f24f73a596ec03b4978d5b",
+      "wave_id": "e6fe71150f5748acb8d2860b5c343727",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G5 real ChatWeb observability turn 2; inspect controller-usage ingress without source mutation.",
+        "objective_revision": 1,
+        "objective_sha256": "2222cf3f33eed6f337a3f24955a67bf50088ff0aa2e5336c132c92989f788f40",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "2531ce0b16bbbfb576c21d9013507ec094c7810769eccd82ce5a3d39c676c1c9",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T22:22:24.273Z",
+  "updated_at": "2026-09-03T22:25:32.082Z",
+  "events": [
+    {
+      "time": "2026-09-03T22:22:24.273Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G5 real ChatWeb observability turn 2; inspect controller-usage ingress without source mutation."
+      }
+    },
+    {
+      "time": "2026-09-03T22:22:25.634Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:22:31.515Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:22:31.520Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T22:25:28.089Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "2531ce0b16bbbfb576c21d9013507ec094c7810769eccd82ce5a3d39c676c1c9"
+      }
+    },
+    {
+      "time": "2026-09-03T22:25:32.082Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

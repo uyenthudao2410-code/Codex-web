@@ -1,0 +1,142 @@
+{
+  "version": 2,
+  "task_id": "78cf6b5a0a2c4a609468fafbcf436f53",
+  "orchestration": {
+    "run_id": "ba277a72100c4d75aa8c5c58445dedf3",
+    "wave_id": "fc2acdc9fcb440dfa4e02b0061502e45",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+    "contract_fp": ""
+  },
+  "objective": "Prove the remaining L3 controller-usage transport gap on the current post-activation runtime without modifying source. Determine, from current repository contracts/tests and durable evidence only, whether exact ChatWeb controller usage can be produced or forwarded by any supported Codex-web surface after an attested ChatWeb tools/call, whether missing controllerUsage metadata is explicitly classified, whether a received-but-invalid controllerUsage envelope leaves a durable rejection signal, and whether there is any legitimate repo-side corrective change left. Do not fabricate token values and do not broaden into correlation code already proven live.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "d6f995ee70d1eb9262c805b752db705e86fa47993383e23503d5107cfdbfc35e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ba277a72100c4d75aa8c5c58445dedf3\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ba277a72100c4d75aa8c5c58445dedf3\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "ba277a72100c4d75aa8c5c58445dedf3",
+      "wave_id": "fc2acdc9fcb440dfa4e02b0061502e45",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Prove the remaining L3 controller-usage transport gap on the current post-activation runtime without modifying source. Determine, from current repository contracts/tests and durable evidence only, whether exact ChatWeb controller usage can be produced or forwarded by any supported Codex-web surface after an attested ChatWeb tools/call, whether missing controllerUsage metadata is explicitly classified, whether a received-but-invalid controllerUsage envelope leaves a durable rejection signal, and whether there is any legitimate repo-side corrective change left. Do not fabricate token values and do not broaden into correlation code already proven live.",
+        "objective_revision": 1,
+        "objective_sha256": "74dcf3a21ae6f8667263f94b99a25d3b134aeab6a5968bf39a90cad245c8653e",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "bde03fcf160779b918c73b1b21627f8dd2bead809985119ab59e4d2aa316f40b",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-03T17:03:53.962Z",
+  "updated_at": "2026-09-03T17:05:37.303Z",
+  "events": [
+    {
+      "time": "2026-09-03T17:03:53.962Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Prove the remaining L3 controller-usage transport gap on the current post-activation runtime without modifying source. Determine, from current repository contracts/tests and durable evidence only, whether exact ChatWeb controller usage can be produced or forwarded by any supported Codex-web surface after an attested ChatWeb tools/call, whether missing controllerUsage metadata is explicitly classified, whether a received-but-invalid controllerUsage envelope leaves a durable rejection signal, and whether there is any legitimate repo-side corrective change left. Do not fabricate token values and do not broaden into correlation code already proven live."
+      }
+    },
+    {
+      "time": "2026-09-03T17:03:55.463Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T17:03:58.508Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T17:03:58.514Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T17:04:27.013Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T17:05:37.301Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "bde03fcf160779b918c73b1b21627f8dd2bead809985119ab59e4d2aa316f40b"
+      }
+    }
+  ]
+}

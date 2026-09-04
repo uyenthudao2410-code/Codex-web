@@ -5,6 +5,7 @@ from typing import Any
 
 
 PRICING_COMPONENTS = ("input", "output", "cached", "cache_creation", "reasoning")
+PRICING_REVISION = "coding-tools-usage-pricing-2026-09-01-v1"
 
 
 def _price(input_usd: float, output_usd: float, **extra: float) -> dict[str, float]:

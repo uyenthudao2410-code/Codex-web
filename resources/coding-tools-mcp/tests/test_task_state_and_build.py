@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# The package path is intentionally inserted before local imports.
+# ruff: noqa: E402
+
 import json
 import subprocess
 import sys
@@ -393,6 +396,35 @@ class TaskStateTests(unittest.TestCase):
             self.assertTrue(recovered["operator_visible_required"])
             self.assertEqual(recovered["completion_report"]["command_id"], "command-delivery")
             runtime.close()
+
+    def test_command_control_recovers_exact_terminal_managed_job_without_live_handle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            try:
+                admission = runtime.execution_resource_governor.admit(
+                    command="git rev-parse HEAD",
+                    command_id="durable-only-command",
+                    resource_class="LIGHT",
+                )
+                runtime.execution_resource_governor.complete(
+                    admission.job_id,
+                    lifecycle_state="exited",
+                    exit_code=0,
+                )
+
+                recovered = runtime.command_control(
+                    {"action": "poll", "command_id": "durable-only-command"}
+                )
+                self.assertEqual(recovered["status"], "reconciled_terminal")
+                self.assertEqual(recovered["job_id"], admission.job_id)
+                self.assertEqual(recovered["exit_code"], 0)
+                self.assertEqual(recovered["result_status"], "succeeded")
+                self.assertEqual(
+                    recovered["reconciled_sources"], ["managed_process_job"]
+                )
+                self.assertNotIn("completion_report", recovered)
+            finally:
+                runtime.close()
 
     def test_failed_plain_exec_requires_operator_report_but_active_eocl_does_not(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -1569,10 +1601,18 @@ class ToolModeTests(unittest.TestCase):
                 "phase": "prepare",
                 "objective": "fix login crash",
                 "queries": ["login", "RuntimeError"],
+                "max_files": 1,
+                "max_entries": 10,
+                "max_matches_per_query": 2,
+                "max_total_bytes": 4096,
             })
             self.assertEqual(result["phase"], "prepare")
             self.assertEqual(result["context"]["files"][0]["path"], "app.py")
             self.assertEqual(len(result["context"]["searches"]), 2)
+            limits = result["context"]["composite_read"]["plan"]["limits"]
+            self.assertEqual(limits["max_files"], 1)
+            self.assertEqual(limits["max_total_bytes"], 4096)
+            self.assertEqual(limits["max_matches_per_query"], 2)
 
     def test_task_lifecycle_aborts_only_linked_nonterminal_orchestration(self) -> None:
         def link_run(runtime: Runtime, label: str):
@@ -1668,13 +1708,35 @@ class ToolModeTests(unittest.TestCase):
 
     def test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool(self) -> None:
         schemas = server_module.input_schemas()
-        route_schema = schemas["agent_workflow"]["properties"]["execution_route"]
+        agent_schema = schemas["agent_workflow"]
+        agent_properties = agent_schema["properties"]
+        route_schema = agent_properties["execution_route"]
         self.assertEqual(
             route_schema["enum"],
             ["auto", "deterministic", "mini", "luna", "terra", "sol_xhigh", "sol_max", "sol_ultra"],
         )
-        self.assertIn("allow_high_cost", schemas["agent_workflow"]["properties"])
-        adoption_schema = schemas["agent_workflow"]["properties"]["adopt_existing_files"]
+        self.assertFalse(agent_schema["additionalProperties"])
+        self.assertIn("allow_high_cost", agent_properties)
+        prepare_properties = schemas["prepare_coding_context"]["properties"]
+        for field in (
+            "path",
+            "queries",
+            "paths",
+            "regex",
+            "case_sensitive",
+            "include_globs",
+            "exclude_globs",
+            "max_files",
+            "max_entries",
+            "max_matches_per_query",
+            "max_total_bytes",
+            "force_refresh",
+        ):
+            self.assertIn(field, agent_properties)
+            for key in ("type", "items", "default", "minimum", "maximum", "maxItems"):
+                if key in prepare_properties[field]:
+                    self.assertEqual(agent_properties[field].get(key), prepare_properties[field][key])
+        adoption_schema = agent_properties["adopt_existing_files"]
         self.assertEqual(adoption_schema["maxItems"], 64)
         self.assertEqual(adoption_schema["items"]["required"], ["path", "sha256"])
         evaluation_schema = schemas["agent_workflow"]["properties"]["evaluation"]
@@ -1871,7 +1933,20 @@ class ToolModeTests(unittest.TestCase):
                     }),
                     "route": {"profile": "candidate_mini", "model": "gpt-5.4-mini", "effort": "low"},
                     "wall_time_ms": 100,
-                    "economics": {"estimated_credits": 0.1},
+                    "economics": {
+                        "model": "gpt-5.4-mini",
+                        "input_tokens": 1000,
+                        "cached_input_tokens": 800,
+                        "uncached_input_tokens": 200,
+                        "output_tokens": 100,
+                        "reasoning_output_tokens": 20,
+                        "estimated_credits": 0.1,
+                        "estimated": True,
+                        "measured": True,
+                        "usage_provenance": "provider_reported",
+                        "usage_source": "codex_app_server:thread/tokenUsage/updated",
+                        "accounting_profile": "openai_compatible",
+                    },
                     "deadline_hit": False,
                 },
             }
@@ -1896,6 +1971,22 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(bridge_run.call_args.kwargs["profile"], "candidate_mini")
             self.assertIn("preflight_test", bridge_run.call_args.args[0])
             self.assertIn("expected VALUE = 2", bridge_run.call_args.args[0])
+            usage_events = runtime.orchestration_ledger.list_usage_events(result["orchestration"]["run_id"], limit=None)
+            self.assertEqual(len(usage_events), 1)
+            usage = usage_events[0]
+            self.assertEqual(usage["actor"], "provider")
+            self.assertEqual(usage["provider_id"], "openai")
+            self.assertEqual(usage["model_id"], "gpt-5.4-mini")
+            self.assertEqual(usage["attribution"]["status"], "exact")
+            self.assertEqual(usage["provenance"]["source"], "codex_app_server:thread/tokenUsage/updated")
+            self.assertEqual(usage["provenance"]["usage"], "provider_reported")
+            self.assertEqual(usage["measurement"]["usage"], "measured")
+            self.assertNotEqual(usage["measurement"]["cost"], "measured")
+            self.assertEqual(usage["usage"]["input_total_tokens"], 1000)
+            self.assertEqual(usage["usage"]["input_cached_tokens"], 800)
+            self.assertEqual(usage["usage"]["input_uncached_tokens"], 200)
+            self.assertEqual(usage["usage"]["output_total_tokens"], 100)
+            self.assertEqual(usage["usage"]["output_reasoning_tokens"], 20)
             runtime.close()
 
     def test_agent_workflow_explicit_packet_review_uses_hidden_bridge(self) -> None:
@@ -2096,6 +2187,23 @@ class SourceFencedContinuationTests(unittest.TestCase):
                 self.assertFalse(full["truncated"])
                 first = runtime.git_diff({"paths": ["app.py"], "max_bytes": 1024})
                 self.assertTrue(first["truncated"])
+                handoff = first["large_result_handoff"]
+                self.assertEqual(handoff["kind"], "DIFF_PAGE")
+                self.assertEqual(
+                    handoff["source_identity"]["source_fingerprint"],
+                    first["source_fingerprint"],
+                )
+                self.assertEqual(
+                    handoff["scope_identity"]["scope_fingerprint"],
+                    first["scope_fingerprint"],
+                )
+                self.assertEqual(handoff["continuation"], first["continuation"])
+                self.assertEqual(handoff["next_operation"]["tool"], "agent_workflow")
+                self.assertTrue(
+                    handoff["recoverability"][
+                        "continuation_recovers_all_omitted_data"
+                    ]
+                )
                 expected_first = truncate_text_head(full["diff"], max_lines=DEFAULT_MAX_LINES, max_bytes=1024)
                 self.assertEqual(first["diff"], expected_first.content)
                 token = first["continuation"]

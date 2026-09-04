@@ -14306,5 +14306,1151 @@
     ],
     "archived_at": "2026-09-03T10:37:28.000Z",
     "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b41b7b8a16af4d199fee21c72f82b31c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YTA27MxtgN7HobVIbjZtVbA3",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 354,
+      "finished_at": "2026-09-03T12:11:48.447Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T10:37:28.016Z",
+    "updated_at": "2026-09-03T12:11:48.447Z",
+    "events": [
+      {
+        "time": "2026-09-03T10:37:28.016Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:28.372Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "964U_3hv7YxGGBxVbeacvQrk"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:29.183Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:41.055Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run",
+          "session_id": "P3-pQz6BysiwkF0CQncgXgrJ"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:41.640Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:50.724Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run recovery:supervisor:status",
+          "session_id": "VwAPPo6MKOhjCA1uHfn_bLvk"
+        }
+      },
+      {
+        "time": "2026-09-03T10:37:54.591Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run recovery:supervisor:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T10:38:18.732Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "Hzw9XOl451WpL569H1RCFl6r"
+        }
+      },
+      {
+        "time": "2026-09-03T10:38:19.448Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T10:39:03.036Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "iiqTxtJ5IZwtt5Ew3Boryzvf"
+        }
+      },
+      {
+        "time": "2026-09-03T10:39:03.735Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T10:39:22.795Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run recovery:supervisor:status",
+          "session_id": "Zj1J1ZPpgGgvRKzfWgJboGtk"
+        }
+      },
+      {
+        "time": "2026-09-03T10:39:26.033Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run recovery:supervisor:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:08:51.297Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "AIylpyXaJbVDFFuyeXVI5YCG"
+        }
+      },
+      {
+        "time": "2026-09-03T12:08:54.222Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:11.254Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --porcelain=v1 -uall",
+          "session_id": "ch6s7N47oCtSD89efS0E80ka"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:12.244Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --porcelain=v1 -uall",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:34.633Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile docs\\CURRENT_STATE.md SHA256 & certutil -hashfile docs\\ROADMAP.md SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_problem_lineage.py SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_usage_reservations.py SHA256 & certutil -hashfile scripts\\execution-hub-provider-canary.js SHA256 & certutil -hashfile tests\\execution-hub-provider-canary.test.js SHA256",
+          "session_id": "zBK9viLSW-LKyq_bpSVUnnsI"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:35.219Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile docs\\CURRENT_STATE.md SHA256 & certutil -hashfile docs\\ROADMAP.md SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_problem_lineage.py SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_usage_reservations.py SHA256 & certutil -hashfile scripts\\execution-hub-provider-canary.js SHA256 & certutil -hashfile tests\\execution-hub-provider-canary.test.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:48.144Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 \"file:.coding-tools/orchestration/ledger.sqlite3?mode=ro\" \".tables\"",
+          "session_id": "YTA27MxtgN7HobVIbjZtVbA3"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:48.447Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 \"file:.coding-tools/orchestration/ledger.sqlite3?mode=ro\" \".tables\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:11:58.691Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "aa16ec5451c8444f9054661820a95124",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:13:55.607Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "Dz-mPOFRPOWlU3XyHwoMJ2eH",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "failed",
+        "command": {
+          "command_id": "Dz-mPOFRPOWlU3XyHwoMJ2eH",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "failed",
+          "exit_code": 1,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "80aceb583202ad381c25687969fb48adbf74622c",
+          "branch": "main",
+          "worktree_fp": "588169faf814c2430fe3fd1e2769c402bb05b1b24fe56d6c967c236f9a97f2cd",
+          "dirty_paths": [
+            "docs/CURRENT_STATE.md",
+            "docs/ROADMAP.md",
+            "electron/chatViewController.js",
+            "electron/services/chatEvaluationJournal.js",
+            "electron/services/componentRevision.js",
+            "electron/services/fullCleanActivation.js",
+            "electron/services/processIdentity.js",
+            "electron/services/recoveryActionStore.js",
+            "electron/services/recoveryActivation.js",
+            "renderer/control-center.css",
+            "renderer/control-center.js",
+            "renderer/dashboard.js",
+            "renderer/index.html",
+            "resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/agent_candidate.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/observation_spans.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/session_control.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/task_state.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+            "resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py",
+            "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+            "resources/coding-tools-mcp/tests/test_committed_review.py",
+            "resources/coding-tools-mcp/tests/test_durable_coordination_runtime.py",
+            "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "resources/coding-tools-mcp/tests/test_execution_hub.py",
+            "resources/coding-tools-mcp/tests/test_operations_analytics.py",
+            "resources/coding-tools-mcp/tests/test_operator_report_isolation.py",
+            "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+            "resources/coding-tools-mcp/tests/test_problem_resolution_economics.py",
+            "resources/coding-tools-mcp/tests/test_system_capability_suite.py",
+            "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+            "resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+            "scripts/execution-hub-provider-canary.js",
+            "scripts/full-clean-activation.js",
+            "tests/accepted-code-activation.test.js",
+            "tests/chat-evaluation-journal.test.js",
+            "tests/control-panel.test.js",
+            "tests/dashboard-analytics.test.js",
+            "tests/execution-hub-provider-canary.test.js",
+            "tests/full-clean-activation-command.test.js",
+            "tests/full-clean-activation.test.js",
+            "tests/process-identity.test.js",
+            "tests/recovery-activation.test.js",
+            "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_BREAKTHROUGH_METHODOLOGY_AND_IMPLEMENTATION_PROGRAM.md",
+            "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_DETAILED_IMPLEMENTATION_PLAN.md",
+            "docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md",
+            "docs/research/260901_CODING_WEB_TRUSTED_GOAL_PURSUIT_SESSION_CONTINUITY_AND_PROBLEM_RESOLUTION_ECONOMICS_MASTER_PLAN.md",
+            "resources/coding-tools-mcp/coding_tools_mcp/context_observability.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/egri_p5_continuity_readiness.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/natural_problem_cohort.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_journey.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/provider_runtime.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/result_handoff.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/rotation_advisory_study.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/trusted_resolution_decision_gate.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py",
+            "resources/coding-tools-mcp/scripts/report_cross_session_continuity.py",
+            "resources/coding-tools-mcp/scripts/report_egri_p5_continuity_readiness.py",
+            "resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py",
+            "resources/coding-tools-mcp/scripts/report_rotation_advisory_readiness.py",
+            "resources/coding-tools-mcp/scripts/report_trusted_resolution_decision.py",
+            "resources/coding-tools-mcp/tests/test_controller_continuity.py",
+            "resources/coding-tools-mcp/tests/test_controller_reattach.py",
+            "resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+            "resources/coding-tools-mcp/tests/test_egri_p5_continuity_readiness.py",
+            "resources/coding-tools-mcp/tests/test_exact_patch_write.py",
+            "resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+            "resources/coding-tools-mcp/tests/test_natural_problem_cohort.py",
+            "resources/coding-tools-mcp/tests/test_rotation_advisory_study.py",
+            "resources/coding-tools-mcp/tests/test_tg4_result_handoff.py",
+            "resources/coding-tools-mcp/tests/test_trusted_resolution_decision_gate.py",
+            "resources/coding-tools-mcp/tests/test_usage_history_w9.py",
+            "resources/coding-tools-mcp/tests/test_usage_reservations.py"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "aa16ec5451c8444f9054661820a95124",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_FAILED",
+      "blocker_or_failure": {
+        "failure_class": "EXECUTION_COMMAND_FAILED",
+        "reason": "The command reached a terminal non-success state.",
+        "exit_code": 1
+      },
+      "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+    },
+    "completion_report_id": "38b898762bb8c49d9bcc8867d0493bc105a11c6646326b7b7f2fbab1a1fb0ddd",
+    "completion_report_acknowledged_id": "38b898762bb8c49d9bcc8867d0493bc105a11c6646326b7b7f2fbab1a1fb0ddd",
+    "completion_report_acknowledged_at": "2026-09-03T12:32:20.675Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+    "created_at": "2026-09-03T12:11:58.711Z",
+    "updated_at": "2026-09-03T12:32:20.678Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:11:58.711Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:11:59.095Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /m /i /c:\"docs/CURRENT_STATE.md\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"docs/ROADMAP.md\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"test_problem_lineage.py\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"test_usage_reservations.py\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"execution-hub-provider-canary.js\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"execution-hub-provider-canary.te",
+          "session_id": "Dz-mPOFRPOWlU3XyHwoMJ2eH"
+        }
+      },
+      {
+        "time": "2026-09-03T12:12:18.947Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /m /i /c:\"docs/CURRENT_STATE.md\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"docs/ROADMAP.md\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"test_problem_lineage.py\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"test_usage_reservations.py\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"execution-hub-provider-canary.js\" .coding-tools\\orchestration\\reports\\*.md & findstr /s /m /i /c:\"execution-hub-provider-canary.te",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:12:19.645Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "Dz-mPOFRPOWlU3XyHwoMJ2eH",
+          "accepted_or_not": "COMMAND_FAILED",
+          "report_id": "38b898762bb8c49d9bcc8867d0493bc105a11c6646326b7b7f2fbab1a1fb0ddd"
+        }
+      },
+      {
+        "time": "2026-09-03T12:13:55.607Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /i /c:\"test_problem_lineage.py\" /c:\"checkpoint\" /c:\"accepted\" .coding-tools\\orchestration\\reports\\run-f4236e604b274f28a25bda2bddc1bf90\\run-summary.md .coding-tools\\orchestration\\reports\\run-f4236e604b274f28a25bda2bddc1bf90\\wave-*.md",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:13:55.607Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-03T12:14:16.114Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "document_workflow",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-03T12:21:30.231Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-03T12:32:20.675Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "38b898762bb8c49d9bcc8867d0493bc105a11c6646326b7b7f2fbab1a1fb0ddd"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:32:29.865Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fa8910789dfa4bdb91cc3e88920a84f6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:32:29.886Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:32:29.883Z",
+    "updated_at": "2026-09-03T12:32:29.886Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:32:29.884Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:32:29.886Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$paths = @('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py','resources/coding-tools-mcp/tests/test_problem_lineage.py'); Get-FileHash -Algorithm SHA256 -LiteralPath $paths | Select-Object Path,Hash,Algorithm | Format-List\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:32:29.886Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:32:43.152Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9b29e8ed65ad47c797e599f57614f674",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "completed",
+    "steps": [],
+    "current_step": "G1 raw-byte SHA256 evidence captured",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "rkvLKrdcU9Dq2i9FJKNtvKKn",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 658,
+      "finished_at": "2026-09-03T12:32:44.101Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T12:32:43.175Z",
+    "updated_at": "2026-09-03T12:33:49.072Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:32:43.176Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:32:43.455Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$paths = @('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py','resources/coding-tools-mcp/tests/test_problem_lineage.py'); Get-FileHash -Algorithm SHA256 -LiteralPath $paths | Select-Object Path,Hash,Algorithm | Format-List\"",
+          "session_id": "rkvLKrdcU9Dq2i9FJKNtvKKn"
+        }
+      },
+      {
+        "time": "2026-09-03T12:32:44.101Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$paths = @('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py','resources/coding-tools-mcp/tests/test_problem_lineage.py'); Get-FileHash -Algorithm SHA256 -LiteralPath $paths | Select-Object Path,Hash,Algorithm | Format-List\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:33:49.070Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:36:12.386Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "34edc98a6db843a0af6ce8935e2e0f0a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:36:32.797Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:36:12.403Z",
+    "updated_at": "2026-09-03T12:36:32.797Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:36:12.403Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:12.834Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $items=@(); foreach($line in $lines){ if([string]::IsNullOrWhiteSpace($line)){continue}; $xy=$line.Substring(0,2); $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $h=$null; if($cls -ne 'runtime_evidence'){ $full",
+          "session_id": "Qt5MvyYr9r-MO9hlmgGYSnRv"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:14.235Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $items=@(); foreach($line in $lines){ if([string]::IsNullOrWhiteSpace($line)){continue}; $xy=$line.Substring(0,2); $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $h=$null; if($cls -ne 'runtime_evidence'){ $full",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:32.797Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import sqlite3,json; p=r'.coding-tools/orchestration/ledger.sqlite3'; c=sqlite3.connect('file:'+p+'?mode=ro',uri=True); print(json.dumps(c.execute(\\\"select name,sql from sqlite_master where type='table' order by name\\\").fetchall()))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:32.797Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:36:47.850Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d5788f6507424a65af01c3579e1a2d5a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "HvDd7XkkzQ0_JU_-7OMOBkLe",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 566,
+      "finished_at": "2026-09-03T12:51:19.762Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T12:36:47.869Z",
+    "updated_at": "2026-09-03T12:51:19.762Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:36:47.869Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:48.216Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$db='.coding-tools/orchestration/ledger.sqlite3'; Add-Type -AssemblyName System.Data; Write-Output 'skip'\"",
+          "session_id": "nzzQ2J_Cy_30Lv02u4tf-1QD"
+        }
+      },
+      {
+        "time": "2026-09-03T12:36:48.736Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$db='.coding-tools/orchestration/ledger.sqlite3'; Add-Type -AssemblyName System.Data; Write-Output 'skip'\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:48:35.668Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "session_id": "foFeXDjRfncJwu-QlHmS3AWH"
+        }
+      },
+      {
+        "time": "2026-09-03T12:48:41.366Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:49:24.848Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$dirs=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Directory -Filter 'run-*' -ErrorAction SilentlyContinue); [pscustomobject]@{count=$dirs.Count;runs=@($dirs.Name -replace '^run-','' | Sort-Object)}|ConvertTo-Json -Depth 3 -Compress\"",
+          "session_id": "o9XYx4nq4Q22adwHnP90lxj7"
+        }
+      },
+      {
+        "time": "2026-09-03T12:49:25.515Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$dirs=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Directory -Filter 'run-*' -ErrorAction SilentlyContinue); [pscustomobject]@{count=$dirs.Count;runs=@($dirs.Name -replace '^run-','' | Sort-Object)}|ConvertTo-Json -Depth 3 -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:49:42.827Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "session_id": "QRi7R6yYsH8t7f1qK_ooHmSl"
+        }
+      },
+      {
+        "time": "2026-09-03T12:49:48.411Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:50:04.766Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('docs/CURRENT_STATE.md','docs/ROADMAP.md','resources/coding-tools-mcp/tests/test_usage_reservations.py','scripts/execution-hub-provider-canary.js','tests/execution-hub-provider-canary.test.js'); $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $out=@(); foreach($p in $targets){$",
+          "session_id": "KciieKaXDcx_exFMF83hjUyi"
+        }
+      },
+      {
+        "time": "2026-09-03T12:50:06.285Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('docs/CURRENT_STATE.md','docs/ROADMAP.md','resources/coding-tools-mcp/tests/test_usage_reservations.py','scripts/execution-hub-provider-canary.js','tests/execution-hub-provider-canary.test.js'); $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $out=@(); foreach($p in $targets){$",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:50:42.620Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $set=New-Object 'System.Collections.Generic.HashSet[string]'; $map=@(); foreach($line in @(git status --porcelain=v1 -uall)){if([string]::IsNullOrWhiteSpace($line)){continue};$p=$line.Substring(3).Trim();if($p -like '.coding-tools/*' -or $p ",
+          "session_id": "HKCnBk3NY3VyLpRKhXz7tSzJ"
+        }
+      },
+      {
+        "time": "2026-09-03T12:50:48.082Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $set=New-Object 'System.Collections.Generic.HashSet[string]'; $map=@(); foreach($line in @(git status --porcelain=v1 -uall)){if([string]::IsNullOrWhiteSpace($line)){continue};$p=$line.Substring(3).Trim();if($p -like '.coding-tools/*' -or $p ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:19.428Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
+          "session_id": "HvDd7XkkzQ0_JU_-7OMOBkLe"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:19.762Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:51:39.311Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "16cbaa52d8844068bdea0bd4d728f0c9",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:51:56.363Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:51:39.331Z",
+    "updated_at": "2026-09-03T12:51:56.363Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:51:39.331Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:39.631Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py'; Select-String -LiteralPath $p -Pattern '__main__','argparse','def main','accepted_files','checkpoint' | Select-Object -First 80 LineNumber,Line | Format-Table -AutoSize; exit 0\"",
+          "session_id": "iTFy5jye3INnTY9q80OVR4nl"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:40.132Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py'; Select-String -LiteralPath $p -Pattern '__main__','argparse','def main','accepted_files','checkpoint' | Select-Object -First 80 LineNumber,Line | Format-Table -AutoSize; exit 0\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:56.363Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:51:56.363Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:52:18.749Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "67e54994518b459da6c5f9f2fea28d3c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:57:53.490Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Shell command substitution and parameter expansion require explicit permission.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:52:18.763Z",
+    "updated_at": "2026-09-03T12:57:53.490Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:52:18.763Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:52:19.149Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Time=$_.LastWriteTimeUtc;Text=[IO.File]::ReadAllText($_.FullName)} }); $out=@(); foreach($line in @(git status --porcelain=v1 -uall)){if([string]::IsNullOrWhiteSpace($line)){continue};$p=$line.Substring(3).Trim();if($p -like '.coding-tools/*' -or $p -like 'docs/research/260901_*'){conti",
+          "session_id": "Unl8RMpA2gH9EnI8Vxgas0fJ"
+        }
+      },
+      {
+        "time": "2026-09-03T12:52:24.645Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | % { [pscustomobject]@{FullName=$_.FullName;Time=$_.LastWriteTimeUtc;Text=[IO.File]::ReadAllText($_.FullName)} }); $out=@(); foreach($line in @(git status --porcelain=v1 -uall)){if([string]::IsNullOrWhiteSpace($line)){continue};$p=$line.Substring(3).Trim();if($p -like '.coding-tools/*' -or $p -like 'docs/research/260901_*'){conti",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:57:29.074Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-03T12:57:38.226Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "SESSION_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-03T12:57:53.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $items=@(); foreach($line in $lines){if([string]::IsNullOrWhiteSpace($line)){continue};$xy=$",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:57:53.490Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:58:11.754Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "aa44df5bea8c48f28631c976e9db5c4e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T12:58:11.776Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Shell command substitution and parameter expansion require explicit permission.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:58:11.772Z",
+    "updated_at": "2026-09-03T12:58:11.776Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:58:11.772Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:11.776Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName;Text=[IO.File]::ReadAllText($_.FullName)} }); $items=@(); foreach($line in $lines){if([string]::IsNullOrWhiteSpace($line)){continue};$xy=$",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:11.776Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T12:58:29.560Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6016c6d0c6044959af3d1b89dadc8a03",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T16:07:34.601Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "The idempotency_key was already used for a different exec_command request.",
+    "next_step": "",
+    "created_at": "2026-09-03T12:58:29.579Z",
+    "updated_at": "2026-09-03T16:07:34.601Z",
+    "events": [
+      {
+        "time": "2026-09-03T12:58:29.580Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:29.895Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $items=@(); foreach($line in $lines){ if([string]::IsNullOrWhiteSpace($line)){continue}; $xy=$line.Substring(0,2); $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $h=$null; if($cls -ne 'runtime_evidence'){ $full",
+          "session_id": "dzknAVMgxFIMGLytzvo6Fzqw"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:31.329Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $head=(git rev-parse HEAD).Trim(); $lines=@(git status --porcelain=v1 -uall); $items=@(); foreach($line in $lines){ if([string]::IsNullOrWhiteSpace($line)){continue}; $xy=$line.Substring(0,2); $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $h=$null; if($cls -ne 'runtime_evidence'){ $full",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:46.642Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "session_id": "98DnnpWo4e_nOlJIBAwPZrgu"
+        }
+      },
+      {
+        "time": "2026-09-03T12:58:52.479Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $reports=@(Get-ChildItem -LiteralPath '.coding-tools/orchestration/reports' -Recurse -File -Filter '*.md' -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{FullName=$_.FullName; Text=[IO.File]::ReadAllText($_.FullName)} }); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); if($p -like '.coding-to",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T16:07:22.329Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $head=(git rev-parse HEAD).Trim(); $origin=(git rev-parse origin/main).Trim(); $branch=(git branch --show-current).Trim(); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $sha=''; if($cls -ne 'runtime",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T16:07:22.329Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:07:34.601Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $head=(git rev-parse HEAD).Trim(); $origin=(git rev-parse origin/main).Trim(); $branch=(git branch --show-current).Trim(); $rows=@(); foreach($line in @(git status --porcelain=v1 -uall)){ if([string]::IsNullOrWhiteSpace($line)){continue}; $p=$line.Substring(3).Trim(); $cls=if($p -like '.coding-tools/*'){'runtime_evidence'}elseif($p -like 'docs/research/260901_*'){'research_260901'}else{'product_source'}; $sha=''; if($cls -ne 'runtime",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T16:07:34.601Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "IDEMPOTENCY_CONFLICT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T16:10:39.558Z",
+    "archive_reason": "finished"
   }
 ]

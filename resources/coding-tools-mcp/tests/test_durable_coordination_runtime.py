@@ -110,6 +110,10 @@ class DurableCoordinationRuntimeTests(unittest.TestCase):
                     operation["summary"]["orphan_reason"],
                     "mcp_runtime_restarted",
                 )
+                terminal = operation["summary"]["terminal_snapshot"]
+                self.assertEqual(terminal["status"], "orphaned")
+                self.assertFalse(terminal["worker_terminalized"])
+                self.assertFalse(terminal["restart_safe"])
             finally:
                 runtime.close()
 
@@ -136,6 +140,21 @@ class DurableCoordinationRuntimeTests(unittest.TestCase):
                 self.assertTrue(durable["summary"]["result_available_in_memory"])
                 self.assertEqual(durable["summary"]["result_status"], "completed")
                 self.assertNotIn("structuredContent", durable["summary"])
+                durability = durable["summary"]["durability"]
+                self.assertEqual(durability["handle_durability"], "ledger")
+                self.assertEqual(durability["execution_durability"], "mcp_process")
+                self.assertEqual(
+                    durability["boundaries"]["same_process_reconnect"], "survive"
+                )
+                self.assertEqual(
+                    durability["boundaries"]["mcp_process_restart"],
+                    "reconcile_or_orphan",
+                )
+                terminal = durable["summary"]["terminal_snapshot"]
+                self.assertEqual(terminal["status"], "completed")
+                self.assertTrue(terminal["worker_terminalized"])
+                self.assertTrue(terminal["result_available_at_terminalization"])
+                self.assertFalse(terminal["restart_safe"])
             finally:
                 runtime.close()
 
@@ -166,6 +185,10 @@ class DurableCoordinationRuntimeTests(unittest.TestCase):
                 )["background_operation"]
                 self.assertEqual(polled["status"], "running")
                 self.assertFalse(polled.get("durable_only", False))
+                self.assertEqual(
+                    polled["durability"]["boundaries"]["same_process_reconnect"],
+                    "survive",
+                )
                 gate.set()
                 self.assertTrue(done.wait(2))
                 completed = second.task_control(

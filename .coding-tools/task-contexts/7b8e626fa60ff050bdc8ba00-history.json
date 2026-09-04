@@ -1,0 +1,340 @@
+[
+  {
+    "version": 2,
+    "task_id": "2c3cd47b2cc64743bb1d1e7b2996f643",
+    "orchestration": {
+      "run_id": "41970794950d4183aa09b0e0b063fec1",
+      "wave_id": "6efc6cda64044c829525eadc446c70e8",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": ""
+    },
+    "objective": "Post-activation live L3 token-observability canary only. Run exactly the read-only runtime oracle npm run dev:status on E:\\DEV\\Codex-web under the current attested ChatWeb transport. Do not mutate source, do not trust or accept caller-supplied evaluation turn_id/trace_id, do not commit/push/release/deploy. The purpose is to let the runtime derive authoritative content-free host correlation from the current attested ChatWeb transport trace and later verify exact controller usage if a valid receipt arrives.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-03T16:47:50.377Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-03T16:47:50.377Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "lgrds8VtWQI9-L2WIdcV2JR_",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1334,
+      "finished_at": "2026-09-03T16:47:50.001Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 26,
+          "head_hash": "0b76c2e3aabec1a5213cbc2493b2e04db9d2f2f3e6dc6fe5b4575afb82715f3b"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-41970794950d4183aa09b0e0b063fec1\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-41970794950d4183aa09b0e0b063fec1\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "41970794950d4183aa09b0e0b063fec1",
+        "wave_id": "6efc6cda64044c829525eadc446c70e8",
+        "checkpoint_id": "2ee99c6523b746feb64bdcaa80993aeb",
+        "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+        "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Post-activation live L3 token-observability canary only. Run exactly the read-only runtime oracle npm run dev:status on E:\\DEV\\Codex-web under the current attested ChatWeb transport. Do not mutate source, do not trust or accept caller-supplied evaluation turn_id/trace_id, do not commit/push/release/deploy. The purpose is to let the runtime derive authoritative content-free host correlation from the current attested ChatWeb transport trace and later verify exact controller usage if a valid receipt arrives.",
+          "objective_revision": 1,
+          "objective_sha256": "7c4ef9082adbbd9efd6959b48caa93f0e6d34fd480deb8fe421f754b0288eb33",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "92a9017688d441d4bad576a96d630b26",
+            "stage_id": "check:385f51573288f6e6",
+            "status": "passed",
+            "duration_ms": 2880,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "dc4466b8f86f2a81d985ccea3db00fa602692275e04026b0ea8fda37ff096f55",
+    "completion_report_acknowledged_id": "dc4466b8f86f2a81d985ccea3db00fa602692275e04026b0ea8fda37ff096f55",
+    "completion_report_acknowledged_at": "2026-09-03T16:50:10.271Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-03T16:47:35.964Z",
+    "updated_at": "2026-09-03T16:51:37.332Z",
+    "events": [
+      {
+        "time": "2026-09-03T16:47:35.964Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Post-activation live L3 token-observability canary only. Run exactly the read-only runtime oracle npm run dev:status on E:\\DEV\\Codex-web under the current attested ChatWeb transport. Do not mutate source, do not trust or accept caller-supplied evaluation turn_id/trace_id, do not commit/push/release/deploy. The purpose is to let the runtime derive authoritative content-free host correlation from the current attested ChatWeb transport trace and later verify exact controller usage if a valid receipt arrives."
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:37.966Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:41.481Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:43.501Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:43.658Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:46.075Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:46.713Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:48.471Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "lgrds8VtWQI9-L2WIdcV2JR_"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:50.001Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:50.375Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:50.377Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:51.066Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:51.069Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:53.826Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "16c7dc5c773f7fc21e2a7d7df6a5088fabc3c73d847105c9524bc0d2819c7932"
+        }
+      },
+      {
+        "time": "2026-09-03T16:47:53.829Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-03T16:48:02.320Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:48:20.421Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-03T16:48:20.423Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:48:20.537Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "dc4466b8f86f2a81d985ccea3db00fa602692275e04026b0ea8fda37ff096f55"
+        }
+      },
+      {
+        "time": "2026-09-03T16:49:59.885Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:10.271Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "dc4466b8f86f2a81d985ccea3db00fa602692275e04026b0ea8fda37ff096f55"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:31.248Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T17:05:53.248Z",
+    "archive_reason": "finished"
+  }
+]

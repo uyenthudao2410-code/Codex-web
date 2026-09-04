@@ -1,0 +1,246 @@
+[
+  {
+    "version": 2,
+    "task_id": "b009be9ae9cf43828c68abacc2aaa52c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T01:54:31.884Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-04T01:54:31.882Z",
+    "updated_at": "2026-09-04T01:54:31.884Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:54:31.882Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:31.884Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1 resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:31.884Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:54:42.578Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "39a0562ffef949afaf55c8c3df4ebcd9",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "2YQ2QCCa_Vy6Klf_zZvhVday",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 393,
+      "finished_at": "2026-09-04T01:56:10.006Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T01:54:42.579Z",
+    "updated_at": "2026-09-04T01:56:10.006Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:54:42.579Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:42.946Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1 resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py",
+          "session_id": "v-B-Ue66npfdSGtDLx1DfoXt"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:43.255Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1 resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:55.369Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 _touch_hub_client resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py",
+          "session_id": "hQJ6xfXxnuEpJjiPxGxmKaOT"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:55.650Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 _touch_hub_client resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:05.727Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"self.server\" resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py",
+          "session_id": "4obVytzAWduAnjdl_oQfLbyT"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:06.050Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"self.server\" resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:23.183Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 durable_idempotency resources\\coding-tools-mcp\\coding_tools_mcp\\session_control.py resources\\coding-tools-mcp\\coding_tools_mcp\\execution_resources.py resources\\coding-tools-mcp\\tests\\test_live_restart_reconcile.py",
+          "session_id": "PlpJM2iCwnuvAIy36e6jtZM9"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:23.466Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 durable_idempotency resources\\coding-tools-mcp\\coding_tools_mcp\\session_control.py resources\\coding-tools-mcp\\coding_tools_mcp\\execution_resources.py resources\\coding-tools-mcp\\tests\\test_live_restart_reconcile.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:30.780Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def command_control\" resources\\coding-tools-mcp\\coding_tools_mcp",
+          "session_id": "UJEYpLQZicFGxCYYOVDAtT8s"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:31.089Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def command_control\" resources\\coding-tools-mcp\\coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:37.912Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"def command_control\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "session_id": "x9RQ7Q0FwmW1nrmZ6Iwfi-fQ"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:38.247Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"def command_control\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:45.455Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 reconciled_terminal resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "session_id": "q_0PUezsdodX0xzjau_V3Ha_"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:45.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 reconciled_terminal resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:58.122Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 reconciled_terminal resources\\coding-tools-mcp\\tests resources\\coding-tools-mcp\\coding_tools_mcp",
+          "session_id": "pnc7682msyzKfZzJ-nI45Xc7"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:58.456Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 reconciled_terminal resources\\coding-tools-mcp\\tests resources\\coding-tools-mcp\\coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:09.697Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"object.__new__(ExceptionSafeMCPHandler)\" resources\\coding-tools-mcp\\tests",
+          "session_id": "2YQ2QCCa_Vy6Klf_zZvhVday"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:10.006Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"object.__new__(ExceptionSafeMCPHandler)\" resources\\coding-tools-mcp\\tests",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:56:19.238Z",
+    "archive_reason": "finished"
+  }
+]

@@ -895,8 +895,10 @@ class FullCleanActivation {
     if (!current || String(current.activation_epoch_id || '') !== epochId) {
       throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Pending activation census must target the current durable epoch.');
     }
-    if (!['STARTING', 'VERIFYING', 'HANDOFF', 'FROZEN', 'STOPPING', 'ADMISSION_CLOSED', 'PREPARING'].includes(String(current.state || ''))) {
-      throw epochError('ACTIVATION_EPOCH_TERMINAL', 'Pending activation census cannot mutate a terminal epoch.', {
+    // Evidence refresh is legal only after handoff begins replacement assembly.
+    // In particular, never regress coordinator-owned STOPPING back to VERIFYING.
+    if (!['STARTING', 'VERIFYING'].includes(String(current.state || ''))) {
+      throw epochError('ACTIVATION_EPOCH_STATE_INVALID', 'Pending activation census requires a post-handoff assembly state.', {
         activation_epoch_id: epochId,
         state: current.state || null
       });

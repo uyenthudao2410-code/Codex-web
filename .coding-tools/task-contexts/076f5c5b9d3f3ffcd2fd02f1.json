@@ -1,0 +1,142 @@
+{
+  "version": 2,
+  "task_id": "37607b2ce9764ddea949e37290f63f6a",
+  "orchestration": {
+    "run_id": "a2061847787a49f798b028ae85bc4668",
+    "wave_id": "5c292823f5be4b9989a85d31697dc974",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+    "contract_fp": ""
+  },
+  "objective": "Final bounded read-only feasibility check for the canonical P0 Outcome C decision. On E:\\DEV\\Codex-web, locate any maintained supported local command, public Coding-VP tool projection, connector/tunnel callback, or non-raw internal bridge that can expose or forward exact ChatWeb controller usage/controllerUsage metadata from the current external ChatWeb topology into Coding Tools MCP. Search only package scripts, current connector/tunnel/Electron integration, and live-control/status command implementation. Distinguish Electron WebContents-only response.completed usage observation from the external ChatWeb connector transport. If none exists, return evidence for CHATWEB_CONTROLLER_USAGE_UNAVAILABLE; do not propose estimates, DOM/OCR scraping, raw HTTP/MCP/stdio, or source mutation.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "7ce677537a7cabe3c7272cb5a9ccc69bff98142f748de093cb895791a0a73e74"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a2061847787a49f798b028ae85bc4668\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a2061847787a49f798b028ae85bc4668\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "a2061847787a49f798b028ae85bc4668",
+      "wave_id": "5c292823f5be4b9989a85d31697dc974",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Final bounded read-only feasibility check for the canonical P0 Outcome C decision. On E:\\DEV\\Codex-web, locate any maintained supported local command, public Coding-VP tool projection, connector/tunnel callback, or non-raw internal bridge that can expose or forward exact ChatWeb controller usage/controllerUsage metadata from the current external ChatWeb topology into Coding Tools MCP. Search only package scripts, current connector/tunnel/Electron integration, and live-control/status command implementation. Distinguish Electron WebContents-only response.completed usage observation from the external ChatWeb connector transport. If none exists, return evidence for CHATWEB_CONTROLLER_USAGE_UNAVAILABLE; do not propose estimates, DOM/OCR scraping, raw HTTP/MCP/stdio, or source mutation.",
+        "objective_revision": 1,
+        "objective_sha256": "81d9c81ff73f81565908b92afbb2d89c781ba5781983458d4d63570103837e5d",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "a5a6c48c1c3a18525f4779d02420afa92bf09d08f213aac4ca88f08626bafec9",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-03T17:06:16.044Z",
+  "updated_at": "2026-09-03T17:07:45.176Z",
+  "events": [
+    {
+      "time": "2026-09-03T17:06:16.044Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Final bounded read-only feasibility check for the canonical P0 Outcome C decision. On E:\\DEV\\Codex-web, locate any maintained supported local command, public Coding-VP tool projection, connector/tunnel callback, or non-raw internal bridge that can expose or forward exact ChatWeb controller usage/controllerUsage metadata from the current external ChatWeb topology into Coding Tools MCP. Search only package scripts, current connector/tunnel/Electron integration, and live-control/status command implementation. Distinguish Electron WebContents-only response.completed usage observation from the external ChatWeb connector transport. If none exists, return evidence for CHATWEB_CONTROLLER_USAGE_UNAVAILABLE; do not propose estimates, DOM/OCR scraping, raw HTTP/MCP/stdio, or source mutation."
+      }
+    },
+    {
+      "time": "2026-09-03T17:06:17.496Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T17:06:19.570Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T17:06:19.575Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T17:07:28.251Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T17:07:45.175Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "a5a6c48c1c3a18525f4779d02420afa92bf09d08f213aac4ca88f08626bafec9"
+      }
+    }
+  ]
+}

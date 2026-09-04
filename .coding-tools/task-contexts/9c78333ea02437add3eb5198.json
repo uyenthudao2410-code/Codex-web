@@ -1,0 +1,2656 @@
+{
+  "version": 2,
+  "task_id": "c188d6ac52544bfb99aa3cbe07179250",
+  "orchestration": {
+    "run_id": "f211467f7bc34e58945da71d58a12f92",
+    "wave_id": "efe5370263c644a28266a1a8fec93e30",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+    "contract_fp": ""
+  },
+  "objective": "G2-P2 provenance closure only for the exact current untracked usage reservation packet. Adopt, without changing source bytes, exactly resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py at SHA-256 8f0f9abfa28d623303bc15ea0412054f6421b9f62f9edddeec5d9f87c4734f1e and resources/coding-tools-mcp/tests/test_usage_reservations.py at SHA-256 02dd380ecb49f021eea7065eb0d07e1124ca53140b2a2b2ecb854db62744dc74. Prove the reservation lifecycle is durable on the canonical event ledger: estimates never become actual usage; absent exact usage remains indeterminate/unobserved rather than zero; reserve/reconcile are idempotent; conflicting or expired authority fails closed; late exact reconciliation is valid; abort is terminal for dispatch. provider_runtime.py, server.py, and test_execution_hub.py are ACCEPTED_CURRENT context only and must not be adopted or modified. Preserve all concurrent WIP and all paths outside this two-file scope. No bulk adoption, direct SQLite access/mutation, fake outcome/cohort data, process/lease manipulation, reconcile of stale runs, restart, reset, restore, clean, rebase, commit, push, tag, release, publish, or deploy. ChatWeb Sol remains controller and final-acceptance owner.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:31:27.793Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:31:27.793Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:31:27.793Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:31:27.793Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": {
+    "command": "python -m pytest -q tests/test_usage_reservations.py",
+    "kind": "test",
+    "session_id": "vZw-cnFAEwefy4bepwxhTf3P",
+    "workdir": "resources/coding-tools-mcp",
+    "status": "running",
+    "started_at": "2026-09-03T16:31:25.404Z",
+    "owner_run": "f211467f7bc34e58945da71d58a12f92",
+    "owner_wave": "efe5370263c644a28266a1a8fec93e30"
+  },
+  "last_command_result": {
+    "command_id": "3awclLY5-Iggw_PQOGCwaqYP",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 853,
+    "finished_at": "2026-09-03T16:31:23.874Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py",
+          "state": "file",
+          "sha256": "8f0f9abfa28d623303bc15ea0412054f6421b9f62f9edddeec5d9f87c4734f1e",
+          "size_bytes": 13904,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "f211467f7bc34e58945da71d58a12f92",
+          "wave_id": "efe5370263c644a28266a1a8fec93e30"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_usage_reservations.py",
+          "state": "file",
+          "sha256": "02dd380ecb49f021eea7065eb0d07e1124ca53140b2a2b2ecb854db62744dc74",
+          "size_bytes": 5993,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "f211467f7bc34e58945da71d58a12f92",
+          "wave_id": "efe5370263c644a28266a1a8fec93e30"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 35,
+        "head_hash": "a32a99624da29da9b74f754aa4bc04a546554ff5c2f2204531849b90f7412cb8"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f211467f7bc34e58945da71d58a12f92\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f211467f7bc34e58945da71d58a12f92\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "f211467f7bc34e58945da71d58a12f92",
+      "wave_id": "efe5370263c644a28266a1a8fec93e30",
+      "checkpoint_id": "5264626e664149179121ae4bef212e24",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G2-P2 provenance closure only for the exact current untracked usage reservation packet. Adopt, without changing source bytes, exactly resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py at SHA-256 8f0f9abfa28d623303bc15ea0412054f6421b9f62f9edddeec5d9f87c4734f1e and resources/coding-tools-mcp/tests/test_usage_reservations.py at SHA-256 02dd380ecb49f021eea7065eb0d07e1124ca53140b2a2b2ecb854db62744dc74. Prove the reservation lifecycle is durable on the canonical event ledger: estimates never become actual usage; absent exact usage remains indeterminate/unobserved rather than zero; reserve/reconcile are idempotent; conflicting or expired authority fails closed; late exact reconciliation is valid; abort is terminal for dispatch. provider_runtime.py, server.py, and test_execution_hub.py are ACCEPTED_CURRENT context only and must not be adopted or modified. Preserve all concurrent WIP and all paths outside this two-file scope. No bulk adoption, direct SQLite access/mutation, fake outcome/cohort data, process/lease manipulation, reconcile of stale runs, restart, reset, restore, clean, rebase, commit, push, tag, release, publish, or deploy. ChatWeb Sol remains controller and final-acceptance owner.",
+        "objective_revision": 1,
+        "objective_sha256": "a37d907fa25830654fa8be368ebd23739d78535766fbb8c876ee6a58ef0f4028",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d109c092b3ef44f7931cb0810b1ef30c",
+          "stage_id": "check:0093b92a450e4e35",
+          "status": "passed",
+          "duration_ms": 1383,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "be99a4c8b83c4fb6b69528144660ba22",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 2563,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "15be76cd3108693427eb832389f354d4a99d2945aed7212be083079f374b038b",
+  "completion_report_acknowledged_id": "15be76cd3108693427eb832389f354d4a99d2945aed7212be083079f374b038b",
+  "completion_report_acknowledged_at": "2026-09-03T16:33:01.936Z",
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_usage_reservations.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed in 0.80s'",
+      "finished_at": "2026-09-03T16:31:17.140Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "YiqCn5kQ1PT3VEkeXqTm25cl"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "f211467f7bc34e58945da71d58a12f92",
+        "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+        "size_bytes": 100,
+        "command_id": "YiqCn5kQ1PT3VEkeXqTm25cl",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:YiqCn5kQ1PT3VEkeXqTm25cl:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:YiqCn5kQ1PT3VEkeXqTm25cl:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest -q tests/test_usage_reservations.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2088,
+      "summary": "exit 0 | 1.6s | 3 lines | tail: '3 passed in 0.44s'"
+    }
+  ],
+  "build_results": [],
+  "last_build_report": {
+    "project": {
+      "type": "electron",
+      "name": "coding-tools-mcp",
+      "version": "1.0.0",
+      "package_manager": "npm",
+      "test_command": "npm run test",
+      "build_command": "npm run dist",
+      "artifact_paths": [
+        "dist",
+        "build"
+      ]
+    },
+    "commands": {
+      "test": "python -m pytest -q tests/test_usage_reservations.py",
+      "build": "npm run dist"
+    },
+    "test_result": {
+      "command": "python -m pytest -q tests/test_usage_reservations.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2088,
+      "summary": "exit 0 | 1.6s | 3 lines | tail: '3 passed in 0.44s'"
+    },
+    "build_result": null,
+    "artifacts": [
+      {
+        "path": "dist/win-unpacked/Coding Tools MCP.exe",
+        "size": 225613824,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "8593DB40C0C6E5E3C4B6B0A225B1DC9A549ECDF10F6CF2010CF5B6CE869CE07F",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/Coding Tools MCP.exe"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/Coding Tools MCP.exe"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 225613824,
+          "sha256": "8593DB40C0C6E5E3C4B6B0A225B1DC9A549ECDF10F6CF2010CF5B6CE869CE07F",
+          "hash_algorithm": "sha256",
+          "content_hash": "8593DB40C0C6E5E3C4B6B0A225B1DC9A549ECDF10F6CF2010CF5B6CE869CE07F"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/LICENSE.electron.txt",
+        "size": 1096,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "5154E165BD6C2CC0CFBCD8916498C7ABAB0497923BAFCD5CB07673FE8480087D",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/LICENSE.electron.txt"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/LICENSE.electron.txt"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1096,
+          "sha256": "5154E165BD6C2CC0CFBCD8916498C7ABAB0497923BAFCD5CB07673FE8480087D",
+          "hash_algorithm": "sha256",
+          "content_hash": "5154E165BD6C2CC0CFBCD8916498C7ABAB0497923BAFCD5CB07673FE8480087D"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/LICENSES.chromium.html",
+        "size": 20313957,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "B911161E6594EC76B872498B423C54406168F2974E0D407A847F7DE1E5FF94DD",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/LICENSES.chromium.html"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/LICENSES.chromium.html"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 20313957,
+          "sha256": "B911161E6594EC76B872498B423C54406168F2974E0D407A847F7DE1E5FF94DD",
+          "hash_algorithm": "sha256",
+          "content_hash": "B911161E6594EC76B872498B423C54406168F2974E0D407A847F7DE1E5FF94DD"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/chrome_100_percent.pak",
+        "size": 119905,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "D76FE8FA3A14CD73E4C858746E2AB2D2FA6F2DF38A906FA5814B50A8A895FC96",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/chrome_100_percent.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/chrome_100_percent.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 119905,
+          "sha256": "D76FE8FA3A14CD73E4C858746E2AB2D2FA6F2DF38A906FA5814B50A8A895FC96",
+          "hash_algorithm": "sha256",
+          "content_hash": "D76FE8FA3A14CD73E4C858746E2AB2D2FA6F2DF38A906FA5814B50A8A895FC96"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/chrome_200_percent.pak",
+        "size": 197089,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "B74AD439F3D3762657F3BA533A6AF3AC63315C838ED46519891366F43D834A0E",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/chrome_200_percent.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/chrome_200_percent.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 197089,
+          "sha256": "B74AD439F3D3762657F3BA533A6AF3AC63315C838ED46519891366F43D834A0E",
+          "hash_algorithm": "sha256",
+          "content_hash": "B74AD439F3D3762657F3BA533A6AF3AC63315C838ED46519891366F43D834A0E"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/d3dcompiler_47.dll",
+        "size": 4741488,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "A05F99734F7C4822FEFC12B367AF21FD0976ED6608752FB1E1E80B6ECE7ECBBB",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/d3dcompiler_47.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/d3dcompiler_47.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 4741488,
+          "sha256": "A05F99734F7C4822FEFC12B367AF21FD0976ED6608752FB1E1E80B6ECE7ECBBB",
+          "hash_algorithm": "sha256",
+          "content_hash": "A05F99734F7C4822FEFC12B367AF21FD0976ED6608752FB1E1E80B6ECE7ECBBB"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/dxcompiler.dll",
+        "size": 25616896,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "41004DBF82DA5DD2F70C92DEFE2F0E0FCE030DAF85C072BD7922917EC90A6C28",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/dxcompiler.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/dxcompiler.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 25616896,
+          "sha256": "41004DBF82DA5DD2F70C92DEFE2F0E0FCE030DAF85C072BD7922917EC90A6C28",
+          "hash_algorithm": "sha256",
+          "content_hash": "41004DBF82DA5DD2F70C92DEFE2F0E0FCE030DAF85C072BD7922917EC90A6C28"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/dxil.dll",
+        "size": 1509760,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "77E039C905030A641E53658A008B74E90635A5EA9B6B79EABD0F2003BDFCA59A",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/dxil.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/dxil.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1509760,
+          "sha256": "77E039C905030A641E53658A008B74E90635A5EA9B6B79EABD0F2003BDFCA59A",
+          "hash_algorithm": "sha256",
+          "content_hash": "77E039C905030A641E53658A008B74E90635A5EA9B6B79EABD0F2003BDFCA59A"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/ffmpeg.dll",
+        "size": 3067904,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "D17C2A0EA5683FF02006676845B84EF2AFE18B8F75A5FDCCE2B364F85C37A34E",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/ffmpeg.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/ffmpeg.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 3067904,
+          "sha256": "D17C2A0EA5683FF02006676845B84EF2AFE18B8F75A5FDCCE2B364F85C37A34E",
+          "hash_algorithm": "sha256",
+          "content_hash": "D17C2A0EA5683FF02006676845B84EF2AFE18B8F75A5FDCCE2B364F85C37A34E"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/icudtl.dat",
+        "size": 10876560,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "BD8C145ABDF3F8383276CE01DFA4AE48709BEF9FEF1C0711EB7C3FAB4F6EB7C2",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/icudtl.dat"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/icudtl.dat"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 10876560,
+          "sha256": "BD8C145ABDF3F8383276CE01DFA4AE48709BEF9FEF1C0711EB7C3FAB4F6EB7C2",
+          "hash_algorithm": "sha256",
+          "content_hash": "BD8C145ABDF3F8383276CE01DFA4AE48709BEF9FEF1C0711EB7C3FAB4F6EB7C2"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/libEGL.dll",
+        "size": 474624,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "7D6F4957A6C4D4CAD4D717EBEBBC9738ACF4BFDF2D4EA1C0403D2C9A0661DC5D",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/libEGL.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/libEGL.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 474624,
+          "sha256": "7D6F4957A6C4D4CAD4D717EBEBBC9738ACF4BFDF2D4EA1C0403D2C9A0661DC5D",
+          "hash_algorithm": "sha256",
+          "content_hash": "7D6F4957A6C4D4CAD4D717EBEBBC9738ACF4BFDF2D4EA1C0403D2C9A0661DC5D"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/libGLESv2.dll",
+        "size": 8024064,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "5D6C94812CA1F6DC414D6166DA1ED95E4F072A151C7E16952B0FD9A450192D8B",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/libGLESv2.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/libGLESv2.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 8024064,
+          "sha256": "5D6C94812CA1F6DC414D6166DA1ED95E4F072A151C7E16952B0FD9A450192D8B",
+          "hash_algorithm": "sha256",
+          "content_hash": "5D6C94812CA1F6DC414D6166DA1ED95E4F072A151C7E16952B0FD9A450192D8B"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/af.pak",
+        "size": 614017,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "DCF39C3EDBB6B0A625BAEE0263A9B426EADD1A6D1BFBF03A209501A18BC4B0E4",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/af.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/af.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 614017,
+          "sha256": "DCF39C3EDBB6B0A625BAEE0263A9B426EADD1A6D1BFBF03A209501A18BC4B0E4",
+          "hash_algorithm": "sha256",
+          "content_hash": "DCF39C3EDBB6B0A625BAEE0263A9B426EADD1A6D1BFBF03A209501A18BC4B0E4"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/am.pak",
+        "size": 994699,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "B1D444F2346105A6E15F9B14FC5653E1EDAA2B435290FB8F1238347A4D4CA8F9",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/am.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/am.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 994699,
+          "sha256": "B1D444F2346105A6E15F9B14FC5653E1EDAA2B435290FB8F1238347A4D4CA8F9",
+          "hash_algorithm": "sha256",
+          "content_hash": "B1D444F2346105A6E15F9B14FC5653E1EDAA2B435290FB8F1238347A4D4CA8F9"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ar.pak",
+        "size": 1096193,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "36F46452C3BECB64E1034A6E69286CB5E91F98593C81511C79176F1CC560E159",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ar.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ar.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1096193,
+          "sha256": "36F46452C3BECB64E1034A6E69286CB5E91F98593C81511C79176F1CC560E159",
+          "hash_algorithm": "sha256",
+          "content_hash": "36F46452C3BECB64E1034A6E69286CB5E91F98593C81511C79176F1CC560E159"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/bg.pak",
+        "size": 1138139,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "E4A5BEA23A26A06AF611A7CB518B22A1D53EC5DF45A6322F0E264B99C7318441",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/bg.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/bg.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1138139,
+          "sha256": "E4A5BEA23A26A06AF611A7CB518B22A1D53EC5DF45A6322F0E264B99C7318441",
+          "hash_algorithm": "sha256",
+          "content_hash": "E4A5BEA23A26A06AF611A7CB518B22A1D53EC5DF45A6322F0E264B99C7318441"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/bn.pak",
+        "size": 1461088,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "137CF9CDBA13EA7286584C5CAC05DD34C6394F89036E367AA032FFB34F17DCC9",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/bn.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/bn.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1461088,
+          "sha256": "137CF9CDBA13EA7286584C5CAC05DD34C6394F89036E367AA032FFB34F17DCC9",
+          "hash_algorithm": "sha256",
+          "content_hash": "137CF9CDBA13EA7286584C5CAC05DD34C6394F89036E367AA032FFB34F17DCC9"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ca.pak",
+        "size": 692237,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "94B2082CC585CC7F0E18839664683D97B45F9C15D0B027BA789902100FB029AA",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ca.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ca.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 692237,
+          "sha256": "94B2082CC585CC7F0E18839664683D97B45F9C15D0B027BA789902100FB029AA",
+          "hash_algorithm": "sha256",
+          "content_hash": "94B2082CC585CC7F0E18839664683D97B45F9C15D0B027BA789902100FB029AA"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/cs.pak",
+        "size": 718691,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "5804BA5B76974B48B15922CF91C3E9DBBF549E2D88218DC767E4650520503135",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/cs.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/cs.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 718691,
+          "sha256": "5804BA5B76974B48B15922CF91C3E9DBBF549E2D88218DC767E4650520503135",
+          "hash_algorithm": "sha256",
+          "content_hash": "5804BA5B76974B48B15922CF91C3E9DBBF549E2D88218DC767E4650520503135"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/da.pak",
+        "size": 644715,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "57F4637094DE41122DA569415C16C5524794BC90AA3AF226DA14703D04981DB0",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/da.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/da.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 644715,
+          "sha256": "57F4637094DE41122DA569415C16C5524794BC90AA3AF226DA14703D04981DB0",
+          "hash_algorithm": "sha256",
+          "content_hash": "57F4637094DE41122DA569415C16C5524794BC90AA3AF226DA14703D04981DB0"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/de.pak",
+        "size": 693302,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "9B3218EEBD6E5BFDFCC50436FF0CEF02B92FB9454C4BC9F78093408651E325D4",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/de.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/de.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 693302,
+          "sha256": "9B3218EEBD6E5BFDFCC50436FF0CEF02B92FB9454C4BC9F78093408651E325D4",
+          "hash_algorithm": "sha256",
+          "content_hash": "9B3218EEBD6E5BFDFCC50436FF0CEF02B92FB9454C4BC9F78093408651E325D4"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/el.pak",
+        "size": 1251081,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "A687E7166636CC78AFB903429C7B62AED48FE4A1E20057D5DD192E7806721D52",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/el.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/el.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1251081,
+          "sha256": "A687E7166636CC78AFB903429C7B62AED48FE4A1E20057D5DD192E7806721D52",
+          "hash_algorithm": "sha256",
+          "content_hash": "A687E7166636CC78AFB903429C7B62AED48FE4A1E20057D5DD192E7806721D52"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/en-GB.pak",
+        "size": 559913,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "DF40BCAED92AC89C6EB379A4053F9F44CD466F7E51268367F8D72E9508143A88",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/en-GB.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/en-GB.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 559913,
+          "sha256": "DF40BCAED92AC89C6EB379A4053F9F44CD466F7E51268367F8D72E9508143A88",
+          "hash_algorithm": "sha256",
+          "content_hash": "DF40BCAED92AC89C6EB379A4053F9F44CD466F7E51268367F8D72E9508143A88"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/en-US.pak",
+        "size": 566095,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "74404352908184E834397DF60B238F23462E77D69AC4136B4F20AF2DB6191436",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/en-US.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/en-US.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 566095,
+          "sha256": "74404352908184E834397DF60B238F23462E77D69AC4136B4F20AF2DB6191436",
+          "hash_algorithm": "sha256",
+          "content_hash": "74404352908184E834397DF60B238F23462E77D69AC4136B4F20AF2DB6191436"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/es-419.pak",
+        "size": 683108,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "55A36991FA1E523FCDBC49E4227D66BB83D28BFDC7D08DCC659837D1BEDA3281",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/es-419.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/es-419.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 683108,
+          "sha256": "55A36991FA1E523FCDBC49E4227D66BB83D28BFDC7D08DCC659837D1BEDA3281",
+          "hash_algorithm": "sha256",
+          "content_hash": "55A36991FA1E523FCDBC49E4227D66BB83D28BFDC7D08DCC659837D1BEDA3281"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/es.pak",
+        "size": 679701,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "9FF88EABACAB95F8BBEF9E95F63D3619FA8D640EC03523D80ABB26243B059A65",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/es.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/es.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 679701,
+          "sha256": "9FF88EABACAB95F8BBEF9E95F63D3619FA8D640EC03523D80ABB26243B059A65",
+          "hash_algorithm": "sha256",
+          "content_hash": "9FF88EABACAB95F8BBEF9E95F63D3619FA8D640EC03523D80ABB26243B059A65"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/et.pak",
+        "size": 620420,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "0292298736847491828465A3DCF04CF4A0D9BD63D4B1A9D183C7EEB389343D26",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/et.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/et.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 620420,
+          "sha256": "0292298736847491828465A3DCF04CF4A0D9BD63D4B1A9D183C7EEB389343D26",
+          "hash_algorithm": "sha256",
+          "content_hash": "0292298736847491828465A3DCF04CF4A0D9BD63D4B1A9D183C7EEB389343D26"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/fa.pak",
+        "size": 1026920,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "59A08AAD82255E6574E187CF39BFE2523DCBE5CC27421711CCC42C45AD00DA4D",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/fa.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/fa.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1026920,
+          "sha256": "59A08AAD82255E6574E187CF39BFE2523DCBE5CC27421711CCC42C45AD00DA4D",
+          "hash_algorithm": "sha256",
+          "content_hash": "59A08AAD82255E6574E187CF39BFE2523DCBE5CC27421711CCC42C45AD00DA4D"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/fi.pak",
+        "size": 632436,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "0535E2ACD4517CE8099AA0A4A3E562AF37CA6A699FACA1DE3B348B8BFACF2A8B",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/fi.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/fi.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 632436,
+          "sha256": "0535E2ACD4517CE8099AA0A4A3E562AF37CA6A699FACA1DE3B348B8BFACF2A8B",
+          "hash_algorithm": "sha256",
+          "content_hash": "0535E2ACD4517CE8099AA0A4A3E562AF37CA6A699FACA1DE3B348B8BFACF2A8B"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/fil.pak",
+        "size": 715769,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "F9E86324DEEE168D160A51402588DA9987646C8C5899B76B6255D7E3A46A7BB5",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/fil.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/fil.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 715769,
+          "sha256": "F9E86324DEEE168D160A51402588DA9987646C8C5899B76B6255D7E3A46A7BB5",
+          "hash_algorithm": "sha256",
+          "content_hash": "F9E86324DEEE168D160A51402588DA9987646C8C5899B76B6255D7E3A46A7BB5"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/fr.pak",
+        "size": 738341,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "C2C7639EBDD3F50779DED050AC94C24773BF5E348984FF7CE53F0B386B2EEC27",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/fr.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/fr.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 738341,
+          "sha256": "C2C7639EBDD3F50779DED050AC94C24773BF5E348984FF7CE53F0B386B2EEC27",
+          "hash_algorithm": "sha256",
+          "content_hash": "C2C7639EBDD3F50779DED050AC94C24773BF5E348984FF7CE53F0B386B2EEC27"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/gu.pak",
+        "size": 1443762,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "34E4D54D66A0B0471542EE76C55CC9D3B27FCAF15CDF63C3D7E7B46CFDFB3F4F",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/gu.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/gu.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1443762,
+          "sha256": "34E4D54D66A0B0471542EE76C55CC9D3B27FCAF15CDF63C3D7E7B46CFDFB3F4F",
+          "hash_algorithm": "sha256",
+          "content_hash": "34E4D54D66A0B0471542EE76C55CC9D3B27FCAF15CDF63C3D7E7B46CFDFB3F4F"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/he.pak",
+        "size": 898811,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "F149893EC79D46937CCAAACEFA2BEA4179C79F45B4DDB4D215D7E7756B4101CD",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/he.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/he.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 898811,
+          "sha256": "F149893EC79D46937CCAAACEFA2BEA4179C79F45B4DDB4D215D7E7756B4101CD",
+          "hash_algorithm": "sha256",
+          "content_hash": "F149893EC79D46937CCAAACEFA2BEA4179C79F45B4DDB4D215D7E7756B4101CD"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/hi.pak",
+        "size": 1529643,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "57432F987CD26251065245E62B9EC47C1A90BD6AB2F2C4227C3C9BECCA3994F6",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/hi.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/hi.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1529643,
+          "sha256": "57432F987CD26251065245E62B9EC47C1A90BD6AB2F2C4227C3C9BECCA3994F6",
+          "hash_algorithm": "sha256",
+          "content_hash": "57432F987CD26251065245E62B9EC47C1A90BD6AB2F2C4227C3C9BECCA3994F6"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/hr.pak",
+        "size": 691185,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "9EF77921560C91E5D6E42DF6504589B8B7EFB84C9B5119AC51E9A10D8C83A089",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/hr.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/hr.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 691185,
+          "sha256": "9EF77921560C91E5D6E42DF6504589B8B7EFB84C9B5119AC51E9A10D8C83A089",
+          "hash_algorithm": "sha256",
+          "content_hash": "9EF77921560C91E5D6E42DF6504589B8B7EFB84C9B5119AC51E9A10D8C83A089"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/hu.pak",
+        "size": 738546,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "31E407F43BBD0CD0692755F961BB39D10AF1F9F0AF205455DD70FB4C7EEB85A5",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/hu.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/hu.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 738546,
+          "sha256": "31E407F43BBD0CD0692755F961BB39D10AF1F9F0AF205455DD70FB4C7EEB85A5",
+          "hash_algorithm": "sha256",
+          "content_hash": "31E407F43BBD0CD0692755F961BB39D10AF1F9F0AF205455DD70FB4C7EEB85A5"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/id.pak",
+        "size": 612462,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "E7957C9C58F890B5D053EA50C5FCB4B66CBC3C47478C42A5962810CB15814249",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/id.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/id.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 612462,
+          "sha256": "E7957C9C58F890B5D053EA50C5FCB4B66CBC3C47478C42A5962810CB15814249",
+          "hash_algorithm": "sha256",
+          "content_hash": "E7957C9C58F890B5D053EA50C5FCB4B66CBC3C47478C42A5962810CB15814249"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/it.pak",
+        "size": 669218,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "88220058E902F05D7A2E61EC21667A5CA44C543AD0042FE530D698AA55836AA4",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/it.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/it.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 669218,
+          "sha256": "88220058E902F05D7A2E61EC21667A5CA44C543AD0042FE530D698AA55836AA4",
+          "hash_algorithm": "sha256",
+          "content_hash": "88220058E902F05D7A2E61EC21667A5CA44C543AD0042FE530D698AA55836AA4"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ja.pak",
+        "size": 815554,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "916884DA7606A990ACEB82C0CD4B3480C054E5D0562684DF40767310BA9D4DAB",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ja.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ja.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 815554,
+          "sha256": "916884DA7606A990ACEB82C0CD4B3480C054E5D0562684DF40767310BA9D4DAB",
+          "hash_algorithm": "sha256",
+          "content_hash": "916884DA7606A990ACEB82C0CD4B3480C054E5D0562684DF40767310BA9D4DAB"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/kn.pak",
+        "size": 1661701,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "9744DBADBB7C31CC6393A0682DAF91045BE270BAB934DFF7DBAD79B76287616E",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/kn.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/kn.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1661701,
+          "sha256": "9744DBADBB7C31CC6393A0682DAF91045BE270BAB934DFF7DBAD79B76287616E",
+          "hash_algorithm": "sha256",
+          "content_hash": "9744DBADBB7C31CC6393A0682DAF91045BE270BAB934DFF7DBAD79B76287616E"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ko.pak",
+        "size": 694027,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "EE01AF13E4E4B804E48D7126A38A059E210C7F4FBA0C37FD2DFA9EF4C106B9D3",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ko.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ko.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 694027,
+          "sha256": "EE01AF13E4E4B804E48D7126A38A059E210C7F4FBA0C37FD2DFA9EF4C106B9D3",
+          "hash_algorithm": "sha256",
+          "content_hash": "EE01AF13E4E4B804E48D7126A38A059E210C7F4FBA0C37FD2DFA9EF4C106B9D3"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/lt.pak",
+        "size": 752001,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "BC5D99751F1B252ED074BFC4BF6DC94321B3F785A0A0D4300209ACAE40220F74",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/lt.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/lt.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 752001,
+          "sha256": "BC5D99751F1B252ED074BFC4BF6DC94321B3F785A0A0D4300209ACAE40220F74",
+          "hash_algorithm": "sha256",
+          "content_hash": "BC5D99751F1B252ED074BFC4BF6DC94321B3F785A0A0D4300209ACAE40220F74"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/lv.pak",
+        "size": 749059,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "4A47F56C40B16B261CB8BF29A0B16BE9638A88B8A5DF4D8BB1D13C39271E2B58",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/lv.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/lv.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 749059,
+          "sha256": "4A47F56C40B16B261CB8BF29A0B16BE9638A88B8A5DF4D8BB1D13C39271E2B58",
+          "hash_algorithm": "sha256",
+          "content_hash": "4A47F56C40B16B261CB8BF29A0B16BE9638A88B8A5DF4D8BB1D13C39271E2B58"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ml.pak",
+        "size": 1705542,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "A45BCEBCF69244BDBCA6C0A4FE68C89430C6531E9D3CBDDAA85758385B877934",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ml.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ml.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1705542,
+          "sha256": "A45BCEBCF69244BDBCA6C0A4FE68C89430C6531E9D3CBDDAA85758385B877934",
+          "hash_algorithm": "sha256",
+          "content_hash": "A45BCEBCF69244BDBCA6C0A4FE68C89430C6531E9D3CBDDAA85758385B877934"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/mr.pak",
+        "size": 1415199,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "FA87D519A8545B2748C52CCD7704B320877B2D03385991CEABE75C2745200331",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/mr.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/mr.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1415199,
+          "sha256": "FA87D519A8545B2748C52CCD7704B320877B2D03385991CEABE75C2745200331",
+          "hash_algorithm": "sha256",
+          "content_hash": "FA87D519A8545B2748C52CCD7704B320877B2D03385991CEABE75C2745200331"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ms.pak",
+        "size": 644669,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "2AB44645C1ED7B68C9121EE0AB9CDF8C7B9D1721D131B08F258B8A85B8ED0AF0",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ms.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ms.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 644669,
+          "sha256": "2AB44645C1ED7B68C9121EE0AB9CDF8C7B9D1721D131B08F258B8A85B8ED0AF0",
+          "hash_algorithm": "sha256",
+          "content_hash": "2AB44645C1ED7B68C9121EE0AB9CDF8C7B9D1721D131B08F258B8A85B8ED0AF0"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/nb.pak",
+        "size": 616327,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "8EAA23C418A3FAFB9E85B5445E73FB2F5E13BE1F033FF2487C4081148AAA2F4E",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/nb.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/nb.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 616327,
+          "sha256": "8EAA23C418A3FAFB9E85B5445E73FB2F5E13BE1F033FF2487C4081148AAA2F4E",
+          "hash_algorithm": "sha256",
+          "content_hash": "8EAA23C418A3FAFB9E85B5445E73FB2F5E13BE1F033FF2487C4081148AAA2F4E"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/nl.pak",
+        "size": 642150,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "43A15F2DFDA6CE1C908E9913EB02ABA9602E3F24C6C96F7FED7852D61A1263F6",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/nl.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/nl.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 642150,
+          "sha256": "43A15F2DFDA6CE1C908E9913EB02ABA9602E3F24C6C96F7FED7852D61A1263F6",
+          "hash_algorithm": "sha256",
+          "content_hash": "43A15F2DFDA6CE1C908E9913EB02ABA9602E3F24C6C96F7FED7852D61A1263F6"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/pl.pak",
+        "size": 717729,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "5E47475490D1514E3670C44F55A2061672C8E7F6219211B3D907BACBE5AA0A5C",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/pl.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/pl.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 717729,
+          "sha256": "5E47475490D1514E3670C44F55A2061672C8E7F6219211B3D907BACBE5AA0A5C",
+          "hash_algorithm": "sha256",
+          "content_hash": "5E47475490D1514E3670C44F55A2061672C8E7F6219211B3D907BACBE5AA0A5C"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/pt-BR.pak",
+        "size": 673126,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "2C48CFAD589795774DC2DBD5D7717F8695F3C02D85ACC0076AD7A02666E60968",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/pt-BR.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/pt-BR.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 673126,
+          "sha256": "2C48CFAD589795774DC2DBD5D7717F8695F3C02D85ACC0076AD7A02666E60968",
+          "hash_algorithm": "sha256",
+          "content_hash": "2C48CFAD589795774DC2DBD5D7717F8695F3C02D85ACC0076AD7A02666E60968"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/pt-PT.pak",
+        "size": 676987,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "E613F2149CB23DE02296E8524981D594CD1BAC34360D83BC1682FF37ECCC55C3",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/pt-PT.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/pt-PT.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 676987,
+          "sha256": "E613F2149CB23DE02296E8524981D594CD1BAC34360D83BC1682FF37ECCC55C3",
+          "hash_algorithm": "sha256",
+          "content_hash": "E613F2149CB23DE02296E8524981D594CD1BAC34360D83BC1682FF37ECCC55C3"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ro.pak",
+        "size": 702573,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "909FADC1BB8B1BDA780D182B823A98FD3B8F9FA362BFFC95B3EBF2B270AD0698",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ro.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ro.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 702573,
+          "sha256": "909FADC1BB8B1BDA780D182B823A98FD3B8F9FA362BFFC95B3EBF2B270AD0698",
+          "hash_algorithm": "sha256",
+          "content_hash": "909FADC1BB8B1BDA780D182B823A98FD3B8F9FA362BFFC95B3EBF2B270AD0698"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ru.pak",
+        "size": 1163520,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "B0977B6A115C6836189200423B44202C1329FF702B68AB9A72F996FE42C6EC81",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ru.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ru.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1163520,
+          "sha256": "B0977B6A115C6836189200423B44202C1329FF702B68AB9A72F996FE42C6EC81",
+          "hash_algorithm": "sha256",
+          "content_hash": "B0977B6A115C6836189200423B44202C1329FF702B68AB9A72F996FE42C6EC81"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/sk.pak",
+        "size": 730194,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "9A2B0ED5CF2E1C8E1D18ABC136AF82867469A2503B76E3A9F848EE723B7A0102",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/sk.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/sk.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 730194,
+          "sha256": "9A2B0ED5CF2E1C8E1D18ABC136AF82867469A2503B76E3A9F848EE723B7A0102",
+          "hash_algorithm": "sha256",
+          "content_hash": "9A2B0ED5CF2E1C8E1D18ABC136AF82867469A2503B76E3A9F848EE723B7A0102"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/sl.pak",
+        "size": 699179,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "2BC385D457DC844794F9396458C4090E6233AFEC5A08B4A5A92E45EF31E07B78",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/sl.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/sl.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 699179,
+          "sha256": "2BC385D457DC844794F9396458C4090E6233AFEC5A08B4A5A92E45EF31E07B78",
+          "hash_algorithm": "sha256",
+          "content_hash": "2BC385D457DC844794F9396458C4090E6233AFEC5A08B4A5A92E45EF31E07B78"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/sr.pak",
+        "size": 1075897,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "AA3A70C23A149E1EF9FEA6DB95D5CC0084A85477BD772F6D0629601F35F0E65E",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/sr.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/sr.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1075897,
+          "sha256": "AA3A70C23A149E1EF9FEA6DB95D5CC0084A85477BD772F6D0629601F35F0E65E",
+          "hash_algorithm": "sha256",
+          "content_hash": "AA3A70C23A149E1EF9FEA6DB95D5CC0084A85477BD772F6D0629601F35F0E65E"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/sv.pak",
+        "size": 624021,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "3AF85C15CE3E76344404C37325A60932CE53763539C8CD8B3120424F709F73DE",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/sv.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/sv.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 624021,
+          "sha256": "3AF85C15CE3E76344404C37325A60932CE53763539C8CD8B3120424F709F73DE",
+          "hash_algorithm": "sha256",
+          "content_hash": "3AF85C15CE3E76344404C37325A60932CE53763539C8CD8B3120424F709F73DE"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/sw.pak",
+        "size": 660623,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "A806D782B21930EC6243B8E5B393E7FA970CE9D297E96B02E6596FA6CE6C8A86",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/sw.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/sw.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 660623,
+          "sha256": "A806D782B21930EC6243B8E5B393E7FA970CE9D297E96B02E6596FA6CE6C8A86",
+          "hash_algorithm": "sha256",
+          "content_hash": "A806D782B21930EC6243B8E5B393E7FA970CE9D297E96B02E6596FA6CE6C8A86"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ta.pak",
+        "size": 1696711,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "516660683214C01341300FA8D15C7E39AECC38792B76FE74BDCC464024F4294F",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ta.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ta.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1696711,
+          "sha256": "516660683214C01341300FA8D15C7E39AECC38792B76FE74BDCC464024F4294F",
+          "hash_algorithm": "sha256",
+          "content_hash": "516660683214C01341300FA8D15C7E39AECC38792B76FE74BDCC464024F4294F"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/te.pak",
+        "size": 1571941,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "24E355A0B67EB09E93EE8CAFFBE34246DAD42E526E6BD4877149C5068AB03ED7",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/te.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/te.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1571941,
+          "sha256": "24E355A0B67EB09E93EE8CAFFBE34246DAD42E526E6BD4877149C5068AB03ED7",
+          "hash_algorithm": "sha256",
+          "content_hash": "24E355A0B67EB09E93EE8CAFFBE34246DAD42E526E6BD4877149C5068AB03ED7"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/th.pak",
+        "size": 1320867,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "946B4A45A9D43B15359927F33307FC35F50D7E880F02890B07BDFD1160F2DB59",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/th.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/th.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1320867,
+          "sha256": "946B4A45A9D43B15359927F33307FC35F50D7E880F02890B07BDFD1160F2DB59",
+          "hash_algorithm": "sha256",
+          "content_hash": "946B4A45A9D43B15359927F33307FC35F50D7E880F02890B07BDFD1160F2DB59"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/tr.pak",
+        "size": 672677,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "37619E7084337A839D8CCF7915381CF9975D0FFC9451BD37D210BC7322645219",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/tr.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/tr.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 672677,
+          "sha256": "37619E7084337A839D8CCF7915381CF9975D0FFC9451BD37D210BC7322645219",
+          "hash_algorithm": "sha256",
+          "content_hash": "37619E7084337A839D8CCF7915381CF9975D0FFC9451BD37D210BC7322645219"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/uk.pak",
+        "size": 1172722,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "6B58314224303E7338C44C2014259C56894BFFFE22DE46ECA6CAE1BFF4EDCFAE",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/uk.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/uk.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1172722,
+          "sha256": "6B58314224303E7338C44C2014259C56894BFFFE22DE46ECA6CAE1BFF4EDCFAE",
+          "hash_algorithm": "sha256",
+          "content_hash": "6B58314224303E7338C44C2014259C56894BFFFE22DE46ECA6CAE1BFF4EDCFAE"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/ur.pak",
+        "size": 1010270,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "D57CD219249E207D34C21A619935D0F0A7814A0CCDD36051A42400C60A599E47",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/ur.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/ur.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 1010270,
+          "sha256": "D57CD219249E207D34C21A619935D0F0A7814A0CCDD36051A42400C60A599E47",
+          "hash_algorithm": "sha256",
+          "content_hash": "D57CD219249E207D34C21A619935D0F0A7814A0CCDD36051A42400C60A599E47"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/vi.pak",
+        "size": 799770,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "37F2C01A308AD8BB93D9525D81480880F97D54191DBE7C1C1E75AA9FCF009450",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/vi.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/vi.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 799770,
+          "sha256": "37F2C01A308AD8BB93D9525D81480880F97D54191DBE7C1C1E75AA9FCF009450",
+          "hash_algorithm": "sha256",
+          "content_hash": "37F2C01A308AD8BB93D9525D81480880F97D54191DBE7C1C1E75AA9FCF009450"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/zh-CN.pak",
+        "size": 571748,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "0386EF8BF3CE4E24C604EE039273E452D12F8B1D6E5AC7E746995E8B39FAB379",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/zh-CN.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/zh-CN.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 571748,
+          "sha256": "0386EF8BF3CE4E24C604EE039273E452D12F8B1D6E5AC7E746995E8B39FAB379",
+          "hash_algorithm": "sha256",
+          "content_hash": "0386EF8BF3CE4E24C604EE039273E452D12F8B1D6E5AC7E746995E8B39FAB379"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/locales/zh-TW.pak",
+        "size": 564377,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "740C2DA1EEDFF44B57D8700B6F81F1ACF17E67BDF534220553B448DA42F62B66",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/locales/zh-TW.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/locales/zh-TW.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 564377,
+          "sha256": "740C2DA1EEDFF44B57D8700B6F81F1ACF17E67BDF534220553B448DA42F62B66",
+          "hash_algorithm": "sha256",
+          "content_hash": "740C2DA1EEDFF44B57D8700B6F81F1ACF17E67BDF534220553B448DA42F62B66"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/resources.pak",
+        "size": 7148145,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "77F82C006CA57145A385188E67F06C8A1136C0D86DE10DC5889F0DBD6117B061",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/resources.pak"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/resources.pak"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 7148145,
+          "sha256": "77F82C006CA57145A385188E67F06C8A1136C0D86DE10DC5889F0DBD6117B061",
+          "hash_algorithm": "sha256",
+          "content_hash": "77F82C006CA57145A385188E67F06C8A1136C0D86DE10DC5889F0DBD6117B061"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/resources/app.asar",
+        "size": 6149506,
+        "modified_at": "2026-09-03T08:51:00.953256Z",
+        "sha256": "A9F2055882318849EF12CDBFE66F31293EBF385E51D800C8C301A115F4E74353",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/resources/app.asar"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/resources/app.asar"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 6149506,
+          "sha256": "A9F2055882318849EF12CDBFE66F31293EBF385E51D800C8C301A115F4E74353",
+          "hash_algorithm": "sha256",
+          "content_hash": "A9F2055882318849EF12CDBFE66F31293EBF385E51D800C8C301A115F4E74353"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/resources/default_app.asar",
+        "size": 111073,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "06D4A28BE095A80EFF94DBD18EDCFAC5B5805E1B5538E0FB7CEE7C7AE81DB76A",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/resources/default_app.asar"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/resources/default_app.asar"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 111073,
+          "sha256": "06D4A28BE095A80EFF94DBD18EDCFAC5B5805E1B5538E0FB7CEE7C7AE81DB76A",
+          "hash_algorithm": "sha256",
+          "content_hash": "06D4A28BE095A80EFF94DBD18EDCFAC5B5805E1B5538E0FB7CEE7C7AE81DB76A"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/snapshot_blob.bin",
+        "size": 365488,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "01E68A60B8838BE376B202607DEFADAABDB61B5907DC6CAF2CFAF8E915229532",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/snapshot_blob.bin"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/snapshot_blob.bin"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 365488,
+          "sha256": "01E68A60B8838BE376B202607DEFADAABDB61B5907DC6CAF2CFAF8E915229532",
+          "hash_algorithm": "sha256",
+          "content_hash": "01E68A60B8838BE376B202607DEFADAABDB61B5907DC6CAF2CFAF8E915229532"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/v8_context_snapshot.bin",
+        "size": 740048,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "8B01D2EB0FC5324E0FF3879A30EFCA0EB7F5DFE35F829721AEBC98B0BFFBB4C3",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/v8_context_snapshot.bin"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/v8_context_snapshot.bin"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 740048,
+          "sha256": "8B01D2EB0FC5324E0FF3879A30EFCA0EB7F5DFE35F829721AEBC98B0BFFBB4C3",
+          "hash_algorithm": "sha256",
+          "content_hash": "8B01D2EB0FC5324E0FF3879A30EFCA0EB7F5DFE35F829721AEBC98B0BFFBB4C3"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/version",
+        "size": 6,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "15580716D6EAFEC8531854DE4888DFA45C4A56E8D1649BB56DC3AB058BE22BB7",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/version"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/version"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 6,
+          "sha256": "15580716D6EAFEC8531854DE4888DFA45C4A56E8D1649BB56DC3AB058BE22BB7",
+          "hash_algorithm": "sha256",
+          "content_hash": "15580716D6EAFEC8531854DE4888DFA45C4A56E8D1649BB56DC3AB058BE22BB7"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/vk_swiftshader.dll",
+        "size": 5502464,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "A0F117801DB7C874CAFCA765AAC0EDDC4E07F422AF5A38D6E673635AC5BB8A75",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/vk_swiftshader.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/vk_swiftshader.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 5502464,
+          "sha256": "A0F117801DB7C874CAFCA765AAC0EDDC4E07F422AF5A38D6E673635AC5BB8A75",
+          "hash_algorithm": "sha256",
+          "content_hash": "A0F117801DB7C874CAFCA765AAC0EDDC4E07F422AF5A38D6E673635AC5BB8A75"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/vk_swiftshader_icd.json",
+        "size": 106,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "32D83FF113FEF532A9F97E0D2831F8656628AB1C99E9060F0332B1532839AFD9",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/vk_swiftshader_icd.json"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/vk_swiftshader_icd.json"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 106,
+          "sha256": "32D83FF113FEF532A9F97E0D2831F8656628AB1C99E9060F0332B1532839AFD9",
+          "hash_algorithm": "sha256",
+          "content_hash": "32D83FF113FEF532A9F97E0D2831F8656628AB1C99E9060F0332B1532839AFD9"
+        }
+      },
+      {
+        "path": "dist/win-unpacked/vulkan-1.dll",
+        "size": 930304,
+        "modified_at": "1980-01-01T00:00:00Z",
+        "sha256": "58349DE6C50157AA78500D383910DBC7B40A8A4A022AFF9CC3EEEF8915C9B3ED",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "build_artifact",
+          "scope": "workspace_file",
+          "source": "build_verify",
+          "locator": {
+            "path": "dist/win-unpacked/vulkan-1.dll"
+          },
+          "durability": "workspace_file",
+          "restart_safe": true,
+          "content_addressed": true,
+          "retrieval": {
+            "scheme": "workspace_path",
+            "path": "dist/win-unpacked/vulkan-1.dll"
+          },
+          "owner_run": "f211467f7bc34e58945da71d58a12f92",
+          "owner_wave": "efe5370263c644a28266a1a8fec93e30",
+          "size_bytes": 930304,
+          "sha256": "58349DE6C50157AA78500D383910DBC7B40A8A4A022AFF9CC3EEEF8915C9B3ED",
+          "hash_algorithm": "sha256",
+          "content_hash": "58349DE6C50157AA78500D383910DBC7B40A8A4A022AFF9CC3EEEF8915C9B3ED"
+        }
+      }
+    ],
+    "hash_algorithm": "sha256",
+    "overall_status": "passed",
+    "failure": null,
+    "report_generated_at": "2026-09-03T16:31:27.100Z"
+  },
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-03T16:30:51.546Z",
+  "updated_at": "2026-09-03T16:33:46.936Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:30:51.546Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T16:30:51.902Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $paths=@('resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py','resources/coding-tools-mcp/tests/test_usage_reservations.py'); Write-Output '===IDENTITY==='; Write-Output ('branch=' + (git branch --show-current).Trim()); Write-Output ('head=' + (git rev-parse HEAD).Trim()); Write-Output ('upstream=' + (git rev-parse --abbrev-ref '@{upstream}').Trim()); Write-Output ('upstream_head=' + (git rev-parse '@{upstream}').Trim(",
+        "session_id": "3AHuLMm88upy9C3DqM61Z4or"
+      }
+    },
+    {
+      "time": "2026-09-03T16:30:52.735Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$ErrorActionPreference='Stop'; $paths=@('resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py','resources/coding-tools-mcp/tests/test_usage_reservations.py'); Write-Output '===IDENTITY==='; Write-Output ('branch=' + (git branch --show-current).Trim()); Write-Output ('head=' + (git rev-parse HEAD).Trim()); Write-Output ('upstream=' + (git rev-parse --abbrev-ref '@{upstream}').Trim()); Write-Output ('upstream_head=' + (git rev-parse '@{upstream}').Trim(",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:12.631Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:14.988Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_usage_reservations.py",
+        "session_id": "YiqCn5kQ1PT3VEkeXqTm25cl"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:17.140Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_usage_reservations.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:18.125Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:19.684Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:19.690Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:21.585Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:22.245Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:23.354Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m py_compile coding_tools_mcp/usage_reservations.py tests/test_usage_reservations.py",
+        "session_id": "3awclLY5-Iggw_PQOGCwaqYP"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:23.874Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m py_compile coding_tools_mcp/usage_reservations.py tests/test_usage_reservations.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:24.288Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:25.404Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_usage_reservations.py",
+        "session_id": "vZw-cnFAEwefy4bepwxhTf3P"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:27.102Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:27.788Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:27.793Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:28.316Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:28.322Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:28.410Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "6414d7fc2c234f811575631383008e020452f07ebde07ab642795103e3bae646"
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:28.419Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T16:31:43.851Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:32:27.657Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-03T16:32:27.663Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:32:27.770Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "15be76cd3108693427eb832389f354d4a99d2945aed7212be083079f374b038b"
+      }
+    },
+    {
+      "time": "2026-09-03T16:32:38.912Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:33:01.936Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "15be76cd3108693427eb832389f354d4a99d2945aed7212be083079f374b038b"
+      }
+    },
+    {
+      "time": "2026-09-03T16:33:46.936Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

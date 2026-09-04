@@ -23,6 +23,23 @@ def _server_constant(name: str, default: float | int) -> float | int:
     return getattr(server, name, default) if server is not None else default
 
 
+def background_operation_durability() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "handle_durability": "ledger",
+        "execution_durability": "mcp_process",
+        "result_durability": "process_runtime",
+        "boundaries": {
+            "card_or_transport_loss": "survive",
+            "same_process_reconnect": "survive",
+            "mcp_process_restart": "reconcile_or_orphan",
+            "recovery_host_replacement": "lost_or_orphan",
+        },
+        "restart_safe": False,
+        "content_addressed": False,
+    }
+
+
 class BackgroundOperationsMixin:
     """Bounded background tool lifecycle and durable operation receipts."""
 
@@ -38,6 +55,7 @@ class BackgroundOperationsMixin:
             "status": "completed" if finished else "running",
             "elapsed_seconds": max(0, int(observed_monotonic - operation["started_monotonic"])),
             "requires_progress_report": not finished,
+            "durability": background_operation_durability(),
         }
         if finished and operation.get("finished_at"):
             payload["finished_at"] = operation["finished_at"]
@@ -114,6 +132,7 @@ class BackgroundOperationsMixin:
                 "phase": str(arguments.get("phase") or ""),
                 "objective": str(arguments.get("objective") or "")[:1_000],
                 "request_id": str(request_id or ""),
+                "durability": background_operation_durability(),
                 **trace_metadata,
             },
         )

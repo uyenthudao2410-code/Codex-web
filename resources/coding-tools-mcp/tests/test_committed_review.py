@@ -66,6 +66,25 @@ class CommittedReviewTests(unittest.TestCase):
                 self.assertEqual(result["range"]["head_commit"], head)
                 self.assertEqual(result["range"]["effective_base_commit"], base)
                 self.assertTrue(result["result_tail"]["truncated"])
+                handoff = result["large_result_handoff"]
+                self.assertEqual(handoff["kind"], "DIFF_PAGE")
+                self.assertEqual(
+                    handoff["source_identity"]["source_sha256"],
+                    result["integrity"]["source_diff_sha256"],
+                )
+                self.assertEqual(handoff["continuation"], result["continuation"])
+                self.assertTrue(handoff["has_more"])
+                self.assertTrue(
+                    handoff["recoverability"][
+                        "continuation_recovers_all_omitted_data"
+                    ]
+                )
+                next_operation = handoff["next_operation"]
+                self.assertEqual(next_operation["tool"], "agent_workflow")
+                self.assertEqual(
+                    next_operation["arguments"]["committed_review"]["continuation"],
+                    result["continuation"],
+                )
                 self.assertIn("sensitive values redacted from diff output", result["warnings"])
                 self.assertNotIn("actual-secret-value", result["diff"])
                 self.assertNotIn("quoted-secret-value", result["diff"])
@@ -93,6 +112,7 @@ class CommittedReviewTests(unittest.TestCase):
                 self.assertEqual("".join(pages), full["diff"])
                 self.assertEqual(full["summary"]["file_count"], 1)
                 self.assertEqual(full["files"][0]["path"], "app.py")
+                self.assertNotIn("large_result_handoff", full)
             finally:
                 runtime.close()
 

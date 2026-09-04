@@ -360,6 +360,163 @@ test('durable action store replays the same operation and rejects payload confli
   assert.equal(store.begin(expiring).record.error.code, 'ACTIVATION_REQUEST_EXPIRED');
 });
 
+test('durable Full Clean epoch binding extends only the action monitor lifetime', (t) => {
+  const paths = fixture(t);
+  let now = 1_700_000_000_000;
+  const store = new RecoveryActionStore({ paths, now: () => now });
+  const activation = request('coding_mcp', now, 'operation-epoch-bound-0001');
+  activation.expires_at_unix_ms = now + 45_000;
+  assert.equal(store.begin(activation).created, true);
+  const epochId = 'activation-epoch-bound-0001';
+  const epochExpiry = now + 10 * 60_000;
+  const bound = store.bindDurableEpoch(activation.operation_id, {
+    operation_id: activation.operation_id,
+    activation_epoch_id: epochId,
+    expires_at_unix_ms: epochExpiry
+  });
+  assert.equal(bound.expires_at_unix_ms, activation.expires_at_unix_ms, 'authenticated request expiry must remain immutable audit data');
+  assert.deepEqual(bound.durable_epoch_binding, {
+    operation_id: activation.operation_id,
+    activation_epoch_id: epochId,
+    expires_at_unix_ms: epochExpiry
+  });
+
+  now = activation.expires_at_unix_ms + 1;
+  const reloaded = new RecoveryActionStore({ paths, now: () => now });
+  assert.equal(reloaded.get(activation.operation_id).state, 'accepted');
+  assert.equal(reloaded.replay(activation).state, 'accepted');
+  assert.equal(reloaded.active('operation-excluded-0001').operation_id, activation.operation_id);
+
+  now = epochExpiry;
+  const expired = reloaded.get(activation.operation_id);
+  assert.equal(expired.state, 'failed');
+  assert.equal(expired.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+  assert.match(expired.error.message, /durable activation epoch expired/i);
+});
+
+test('tampered over-bound durable epoch binding is non-authoritative after reload', (t) => {
+  const paths = fixture(t);
+  let now = 1_700_000_000_000;
+  const store = new RecoveryActionStore({ paths, now: () => now });
+  const activation = request('coding_mcp', now, 'operation-epoch-tampered-0001');
+  activation.expires_at_unix_ms = now + 45_000;
+  assert.equal(store.begin(activation).created, true);
+
+  const persisted = JSON.parse(fs.readFileSync(paths.recoveryActionsFile(), 'utf8'));
+  const record = persisted.actions.find((item) => item.operation_id === activation.operation_id);
+  assert.ok(record);
+  record.activation_epoch_id = 'activation-epoch-tampered-0001';
+  record.activation_mode = 'full_clean_activation';
+  record.durable_epoch_binding = {
+    operation_id: activation.operation_id,
+    activation_epoch_id: record.activation_epoch_id,
+    expires_at_unix_ms: record.created_at_unix_ms + 11 * 60_000 + 1
+  };
+  fs.writeFileSync(paths.recoveryActionsFile(), JSON.stringify(persisted));
+
+  now = activation.expires_at_unix_ms - 1;
+  const reloaded = new RecoveryActionStore({ paths, now: () => now });
+  assert.equal(reloaded.get(activation.operation_id).state, 'accepted');
+  assert.equal(reloaded.replay(activation).state, 'accepted');
+  assert.equal(reloaded.active('operation-excluded-0002').operation_id, activation.operation_id);
+
+  now = activation.expires_at_unix_ms;
+  const expired = reloaded.get(activation.operation_id);
+  assert.equal(expired.state, 'failed');
+  assert.equal(expired.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+  assert.match(expired.error.message, /activation request expired before completion/i);
+});
+
+test('durable Full Clean epoch binding rejects malformed and mismatched authority', (t) => {
+  const paths = fixture(t);
+  const now = 1_700_000_000_000;
+  const store = new RecoveryActionStore({ paths, now: () => now });
+  const activation = request('coding_mcp', now, 'operation-epoch-guard-0001');
+  store.begin(activation);
+  assert.throws(() => store.bindDurableEpoch(activation.operation_id, {
+    operation_id: activation.operation_id,
+    activation_epoch_id: 'bad',
+    expires_at_unix_ms: now + 10 * 60_000
+  }), { code: 'ACTIVATION_EPOCH_BINDING_INVALID' });
+  assert.throws(() => store.bindDurableEpoch(activation.operation_id, {
+    operation_id: 'operation-epoch-other-0001',
+    activation_epoch_id: 'activation-epoch-guard-0001',
+    expires_at_unix_ms: now + 10 * 60_000
+  }), { code: 'ACTIVATION_EPOCH_OPERATION_MISMATCH' });
+  store.bindDurableEpoch(activation.operation_id, {
+    operation_id: activation.operation_id,
+    activation_epoch_id: 'activation-epoch-guard-0001',
+    expires_at_unix_ms: now + 10 * 60_000
+  });
+  assert.throws(() => store.bindDurableEpoch(activation.operation_id, {
+    operation_id: activation.operation_id,
+    activation_epoch_id: 'activation-epoch-guard-0002',
+    expires_at_unix_ms: now + 10 * 60_000
+  }), { code: 'ACTIVATION_EPOCH_ID_MISMATCH' });
+});
+
+test('Full Clean activation separates request admission expiry from durable epoch expiry', async (t) => {
+  const paths = fixture(t);
+  let now = 1_700_000_000_000;
+  const activation = request('coding_mcp', now, 'operation-full-clean-0001');
+  activation.expires_at_unix_ms = now + 45_000;
+  activation.full_clean_required = true;
+  activation.activation_mode = 'full_clean_activation';
+  const epochId = 'activation-full-clean-0001';
+  const epochExpiry = now + 10 * 60_000;
+  const restartCalls = [];
+  const fullCleanActivation = {
+    restart: async (options) => {
+      restartCalls.push({ ...options });
+      return {
+        operation_id: activation.operation_id,
+        activation_epoch_id: epochId,
+        state: 'HANDOFF',
+        admission_open: false,
+        fully_ready: false
+      };
+    },
+    current: () => ({
+      operation_id: activation.operation_id,
+      activation_epoch_id: epochId,
+      expires_at_unix_ms: epochExpiry,
+      state: 'HANDOFF',
+      admission_state: 'CLOSED'
+    })
+  };
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator({ completeActivationEpoch: async () => true }),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD,
+    fullCleanActivation,
+    now: () => now
+  });
+
+  const first = await manager.activate(activation);
+  assert.equal(first.state, 'accepted');
+  assert.equal(first.expires_at_unix_ms, activation.expires_at_unix_ms);
+  assert.equal(first.durable_epoch_binding.expires_at_unix_ms, epochExpiry);
+  assert.equal(Object.hasOwn(restartCalls[0], 'expiresAtUnixMs'), false, 'request deadline must not replace the Full Clean durable TTL');
+
+  now = activation.expires_at_unix_ms + 1;
+  const status = manager.status(activation.operation_id);
+  assert.equal(status.state, 'accepted');
+  assert.equal(status.activation_epoch.activation_epoch_id, epochId);
+  const replay = await manager.activate(activation);
+  assert.equal(replay.state, 'accepted');
+  assert.equal(replay.deduplicated, true);
+  assert.equal(restartCalls[1].activationEpochId, epochId);
+  assert.equal(Object.hasOwn(restartCalls[1], 'expiresAtUnixMs'), false);
+
+  now = epochExpiry;
+  const expired = manager.status(activation.operation_id);
+  assert.equal(expired.state, 'failed');
+  assert.equal(expired.error.code, 'ACTIVATION_REQUEST_EXPIRED');
+});
+
 test('completed activation replays its durable result after request expiry', async (t) => {
   const paths = fixture(t);
   let now = Date.now();

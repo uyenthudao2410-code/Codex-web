@@ -565,6 +565,7 @@ async function waitForDeferredParentExit({
   parentPid,
   parentMarker,
   parentMarkerNonce,
+  parentOperationId,
   timeoutMs = DEFERRED_PARENT_WAIT_MAX_MS,
   pollMs = DEFERRED_PARENT_POLL_MS,
   graceMs = DEFERRED_PARENT_GRACE_MS,
@@ -577,7 +578,13 @@ async function waitForDeferredParentExit({
     const alive = processAlive(parentPid, isAlive);
     const marker = parentMarker ? readFile(parentMarker) : null;
     const markerPresent = Boolean(marker);
-    const markerMatches = !markerPresent || !parentMarkerNonce || marker?.nonce === parentMarkerNonce;
+    const markerMatches = !markerPresent || (
+      (!parentMarkerNonce || marker?.nonce === parentMarkerNonce)
+      && (!parentOperationId || (
+        marker?.operation_id === parentOperationId
+        && Number(marker?.pid) === Number(parentPid)
+      ))
+    );
     if (!markerMatches) {
       throw activationCommandError('DEFERRED_PARENT_MARKER_INVALID', 'Deferred activation parent marker changed unexpectedly.');
     }
@@ -1427,7 +1434,8 @@ async function runDeferredWorker(requestPath, {
   runActivation = run,
   claimWorker = claimDeferredWorker,
   releaseWorker = releaseDeferredWorkerClaim,
-  waitRetry = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+  waitRetry = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  isAlive = null
 } = {}) {
   const runtimePaths = paths || createDevelopmentPaths({});
   let envelope;
@@ -1481,15 +1489,25 @@ async function runDeferredWorker(requestPath, {
       });
     }
     const marker = readJson(envelope.parent_marker, null);
-    if (!marker || marker.operation_id !== envelope.operation_id || marker.nonce !== envelope.parent_marker_nonce
-      || Number(marker.pid) !== envelope.parent_pid) {
+    if (marker && (marker.operation_id !== envelope.operation_id || marker.nonce !== envelope.parent_marker_nonce
+      || Number(marker.pid) !== envelope.parent_pid)) {
       throw activationCommandError('DEFERRED_PARENT_MARKER_INVALID', 'Deferred activation parent marker is missing or does not match the request.');
+    }
+    // The parent owns marker cleanup on process exit. On Windows a detached
+    // worker can be scheduled only after that exit handler has already removed
+    // the marker. Accept the already-closed boundary only when the exact parent
+    // PID is also gone; a missing marker while the parent is alive remains a
+    // fail-closed integrity error.
+    if (!marker && processAlive(envelope.parent_pid, isAlive)) {
+      throw activationCommandError('DEFERRED_PARENT_MARKER_INVALID', 'Deferred activation parent marker disappeared before the parent process exited.');
     }
     await waitParent({
       parentPid: envelope.parent_pid,
       parentMarker: envelope.parent_marker,
       parentMarkerNonce: envelope.parent_marker_nonce,
-      timeoutMs: Math.min(DEFERRED_PARENT_WAIT_MAX_MS, remaining)
+      parentOperationId: envelope.operation_id,
+      timeoutMs: Math.min(DEFERRED_PARENT_WAIT_MAX_MS, remaining),
+      isAlive
     });
     if (readJson(envelope.parent_marker, null)) {
       throw activationCommandError(

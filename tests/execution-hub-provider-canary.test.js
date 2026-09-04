@@ -4,6 +4,7 @@ const test = require('node:test');
 
 const {
   FLASH_MODEL,
+  CANARY_TOKEN_BUDGET,
   CanaryError,
   configureElectronAppContext,
   deriveRequestId,
@@ -162,6 +163,7 @@ test('flash canary dispatches once, polls terminal state and correlates measured
   assert.equal(dispatchedBody.client_id, 'electron-panel');
   assert.equal(dispatchedBody.client_type, 'electron');
   assert.equal(dispatchedBody.model, FLASH_MODEL);
+  assert.equal(dispatchedBody.token_budget, CANARY_TOKEN_BUDGET);
   assert.equal(dispatchedBody.request_id, deriveRequestId('run-a', 'wave-a'));
   assert.equal(summary.status, 'completed');
   assert.equal(summary.cost.provider_cost, 0.0025);

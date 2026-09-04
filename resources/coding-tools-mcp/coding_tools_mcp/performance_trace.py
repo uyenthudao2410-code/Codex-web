@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import threading
@@ -8,6 +9,8 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from .trace_context import trace_context_metadata
 
 
 MAX_RECENT = 100
@@ -37,6 +40,64 @@ PHASE_TIMING_KEYS = (
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def build_tool_invocation_context(
+    *,
+    tool: str,
+    args: dict[str, Any],
+    request_id: str | int | None,
+    started_wall_utc: str,
+    hub: dict[str, Any],
+    task: dict[str, Any],
+    trace_context: dict[str, Any],
+    task_context_id: str,
+    process_instance_id: str,
+) -> dict[str, Any]:
+    """Build bounded, content-free correlation for one public tool invocation."""
+    orchestration = task.get("orchestration") if isinstance(task.get("orchestration"), dict) else {}
+    trace = trace_context_metadata(trace_context)
+    request_identity = str(request_id if request_id is not None else "")[:128]
+    bounded_task_context_id = str(task_context_id or "")[:128]
+    argument_fingerprint = hashlib.sha256(
+        json.dumps(args, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str).encode(
+            "utf-8", errors="replace"
+        )
+    ).hexdigest()
+    identity_source = "transport_request_id" if request_identity else "runtime_boundary"
+    basis = {
+        "tool": tool,
+        "request_id": request_identity,
+        "task_context_id": bounded_task_context_id,
+        "session_instance": str(hub.get("session_instance") or "")[:128],
+        "execution_context_id": str(hub.get("execution_context_id") or "")[:128],
+        "trace_id": str(trace.get("trace_id") or "")[:128],
+        "parent_span_id": str(trace.get("parent_span_id") or "")[:128],
+        "argument_fingerprint": argument_fingerprint,
+    }
+    if not request_identity:
+        basis.update({
+            "process_instance_id": process_instance_id,
+            "started_wall_utc": started_wall_utc,
+            "thread_id": threading.get_ident(),
+        })
+    invocation_id = hashlib.sha256(
+        json.dumps(basis, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema_version": 1,
+        "invocation_id": invocation_id,
+        "identity_source": identity_source,
+        "request_id": request_identity,
+        "task_context_id": bounded_task_context_id,
+        "task_id": str(task.get("task_id") or "")[:128],
+        "session_instance": str(hub.get("session_instance") or "")[:128],
+        "execution_context_id": str(hub.get("execution_context_id") or "")[:128],
+        "client_id": str(hub.get("client_id") or "")[:64],
+        "client_type": str(hub.get("client_type") or "")[:32],
+        "turn_id": str(hub.get("turn_id") or orchestration.get("turn_id") or "")[:128],
+        "trace_context": trace,
+    }
 
 
 class PerformanceTraceStore:
@@ -85,6 +146,9 @@ class PerformanceTraceStore:
         phase_timing: dict[str, Any] | None = None,
         localization: dict[str, Any] | None = None,
         result_tail: dict[str, Any] | None = None,
+        invocation: dict[str, Any] | None = None,
+        outcome: dict[str, Any] | None = None,
+        truncated: bool = False,
     ) -> dict[str, Any]:
         with self._lock:
             wait_before_ms = 0
@@ -102,6 +166,8 @@ class PerformanceTraceStore:
             measured_phase_timing = self._normalize_phase_timing(phase_timing)
             measured_localization = self._normalize_localization(localization)
             measured_result_tail = self._normalize_result_tail(result_tail)
+            measured_invocation = self._normalize_invocation(invocation)
+            measured_outcome = self._normalize_outcome(outcome, ok=ok)
             measured_miss_reasons = self._normalize_count_map(proof_cache_miss_reasons)
             measured_policy = str(idempotency_policy or "none").strip().lower()
             if measured_policy not in IDEMPOTENCY_POLICIES:
@@ -131,6 +197,9 @@ class PerformanceTraceStore:
                 "request_bytes": max(0, int(request_bytes)),
                 "response_bytes": max(0, int(response_bytes)),
                 "model_visible_bytes": max(0, int(model_visible_bytes)),
+                "invocation": measured_invocation,
+                "outcome": measured_outcome,
+                "truncated": bool(truncated),
                 "cache_hit": bool(cache_hit),
                 "deduplicated": bool(deduplicated),
                 "idempotency_eligible": bool(idempotency_eligible),
@@ -629,6 +698,54 @@ class PerformanceTraceStore:
     def _normalize_error_class(value: Any) -> str:
         normalized = str(value or "").strip().upper()
         return normalized if normalized in ERROR_CLASSES else "UNKNOWN"
+
+    @staticmethod
+    def _normalize_invocation(value: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            return {}
+        result: dict[str, Any] = {"schema_version": 1}
+        for key, limit in (
+            ("invocation_id", 128),
+            ("identity_source", 64),
+            ("request_id", 128),
+            ("task_context_id", 128),
+            ("task_id", 128),
+            ("session_instance", 128),
+            ("execution_context_id", 128),
+            ("client_id", 64),
+            ("client_type", 32),
+            ("turn_id", 128),
+        ):
+            measured = str(value.get(key) or "").strip()[:limit]
+            if measured:
+                result[key] = measured
+        trace = value.get("trace_context") if isinstance(value.get("trace_context"), dict) else {}
+        normalized_trace: dict[str, Any] = {}
+        for key, limit in (("trace_id", 128), ("parent_span_id", 128), ("trace_flags", 8)):
+            measured = str(trace.get(key) or "").strip()[:limit]
+            if measured:
+                normalized_trace[key] = measured
+        if trace:
+            normalized_trace["trace_context_schema_version"] = 1
+            normalized_trace["tracestate_present"] = bool(trace.get("tracestate_present"))
+        if normalized_trace:
+            result["trace_context"] = normalized_trace
+        return result if result.get("invocation_id") else {}
+
+    @staticmethod
+    def _normalize_outcome(value: dict[str, Any] | None, *, ok: bool) -> dict[str, Any]:
+        raw = value if isinstance(value, dict) else {}
+        result: dict[str, Any] = {"status": "ok" if ok else "error"}
+        if ok:
+            return result
+        error_code = str(raw.get("error_code") or "TOOL_ERROR").strip()[:128] or "TOOL_ERROR"
+        error_category = str(raw.get("error_category") or "runtime").strip()[:64] or "runtime"
+        result.update({
+            "error_code": error_code,
+            "error_category": error_category,
+            "retryable": bool(raw.get("retryable", False)),
+        })
+        return result
 
     @staticmethod
     def _normalize_localization(value: dict[str, Any] | None) -> dict[str, Any]:

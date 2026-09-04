@@ -129,6 +129,80 @@ body[data-theme="dark"] {
   max-width: 920px;
 }
 
+/* Basic-user Overview: token economics first. Technical telemetry remains
+   bound in the DOM/state for diagnostics, but does not compete with the
+   quantitative token view. */
+.da-basic-token-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 2px;
+}
+.da-basic-token-head h2 {
+  margin: 0;
+  color: var(--da-text);
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.4px;
+}
+.da-basic-token-head p {
+  margin: 5px 0 0;
+  color: var(--da-muted);
+  font-size: 11.5px;
+  line-height: 1.55;
+  max-width: 860px;
+}
+
+.da-technical-only,
+#runtimeSourceStatusCard,
+.cc-goal-continuity-grid,
+#daTicker,
+article[aria-labelledby="daOperationsTitle"],
+article[aria-labelledby="daCoverageTitle"],
+#ccRestartButton,
+.cc-bottom-grid,
+.da-sub-card:has(#daRealtimeTpm),
+.da-sub-card:has(#daAlertsList) {
+  display: none !important;
+}
+
+.da-token-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--da-border);
+  border-radius: 10px;
+  background: var(--da-surface-card);
+  box-shadow: var(--da-shadow);
+}
+.da-token-trust-strip span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.da-token-trust-strip small {
+  color: var(--da-muted);
+  font-size: 9.5px;
+  font-weight: 750;
+}
+.da-token-trust-strip b {
+  color: var(--da-text);
+  font-size: 10.5px;
+  font-weight: 850;
+  text-align: right;
+}
+
+/* Technical fleet cells still render for diagnostics, but the basic-user
+   table stops after model, token total, share and cost. */
+.da-model-card .da-fleet-table th:nth-child(n + 5),
+.da-model-card .da-fleet-table td:nth-child(n + 5) {
+  display: none;
+}
+
 /* ==========================================================================
    1. Top Filter & Action Header
    ========================================================================== */
@@ -745,7 +819,7 @@ body[data-theme="dark"] {
    ========================================================================== */
 .da-sub-grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1231,4 +1305,5 @@ body[data-theme="dark"] {
   .da-grid-tiles { grid-template-columns: repeat(3, 1fr); }
   .da-main-charts-row, .da-charts { grid-template-columns: 1fr; }
   .da-sub-grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .da-token-trust-strip { grid-template-columns: 1fr; }
 }

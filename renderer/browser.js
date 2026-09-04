@@ -43,13 +43,20 @@ function renderChatState(state) {
   if (!state) return;
   $('#backButton').disabled = !state.canGoBack;
   $('#forwardButton').disabled = !state.canGoForward;
+  const hasDocument = Boolean(String(state.url || '').trim());
+  const pending = Boolean(state.loading) || (!state.error && !hasDocument);
   const element = $('#pageState');
-  element.classList.toggle('loading', Boolean(state.loading));
-  element.classList.toggle('ready', !state.loading && !state.error);
+  element.classList.toggle('loading', pending);
+  element.classList.toggle('ready', !pending && !state.error);
   element.classList.toggle('error', Boolean(state.error));
   element.querySelector('span').textContent = state.error
     ? `Tải thất bại: ${state.error}`
-    : state.loading ? 'Đang chuyển trang…' : 'ChatGPT đã sẵn sàng';
+    : pending ? (hasDocument ? 'Đang chuyển trang…' : 'Đang mở ChatGPT…') : 'ChatGPT đã sẵn sàng';
+  const loadingStage = $('.loading-stage');
+  if (loadingStage) {
+    loadingStage.hidden = !pending;
+    loadingStage.setAttribute('aria-hidden', String(!pending));
+  }
 }
 
 function renderServiceState(state) {
@@ -292,6 +299,15 @@ document.addEventListener('click', (event) => {
   }
 });
 $('#managerButton').onclick = () => api.openManager();
+$('#resetSessionButton').onclick = async () => {
+  if (!window.confirm('Xóa session đăng nhập ChatGPT riêng của app và đăng nhập lại? Bạn sẽ phải đăng nhập lại trong cửa sổ tích hợp.')) return;
+  try {
+    unwrap(await api.clearChatSession());
+    $('#switchState').textContent = 'Đã xóa session, đang mở lại ChatGPT…';
+  } catch (error) {
+    $('#switchState').textContent = error.message;
+  }
+};
 $('#deviceState').onclick = () => api.openManager();
 $('#workspaceSelect').onchange = () => { const workspace = $('#workspaceSelect').value; $('#workspaceSelect').value = ''; if (workspace) switchWorkspace(workspace, true); };
 $('#pauseTask').onclick = async () => { try { unwrap(await api.pauseTask()); await refreshTask(); } catch (error) { $('#switchState').textContent = error.message; } };

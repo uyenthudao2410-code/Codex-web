@@ -106,6 +106,50 @@ test('MCP exposes an authorized orchestration snapshot endpoint', () => {
   assert.doesNotMatch(liveControl, /usage_analytics|operations_analytics|routing_evidence|flight_recorder|export_summary/);
 });
 
+test('primary Control Center renders bounded Goal, Knowledge and Continuity truth', () => {
+  const html = read('renderer/index.html');
+  for (const id of [
+    'ccGoalCard', 'ccGoalStatus', 'ccGoalProblem', 'ccGoalRevision', 'ccGoalCriteria',
+    'ccGoalCoverage', 'ccGoalRun', 'ccGoalWave', 'ccGoalController', 'ccGoalExecution',
+    'ccGoalGap', 'ccGoalAction', 'ccContinuityCard', 'ccKnowledgeStatus',
+    'ccKnowledgeRevision', 'ccKnowledgeAck', 'ccKnowledgeRecovery', 'ccCapsuleStatus',
+    'ccRotateStatus', 'ccRotateReasons', 'ccExactContext', 'ccRotationSignals',
+    'ccProblemEconomics', 'ccProblemEconomicsMeta'
+  ]) assert.match(html, new RegExp(`id="${id}"`), `manager Goal UI thiếu ${id}`);
+  assert.match(html, /id="ccGoalStatus"[^>]*>UNAVAILABLE</);
+  assert.match(html, /id="ccGoalCriteria"[^>]*>UNKNOWN</);
+  assert.match(html, /id="ccKnowledgeRevision"[^>]*>UNKNOWN</);
+  assert.match(html, /id="ccRotateStatus"[^>]*>UNKNOWN</);
+  assert.match(html, /HEURISTIC · signals unavailable · not authority/);
+
+  const js = read('renderer/control-center.js');
+  assert.match(js, /function renderGoalPursuit\(data\)/);
+  assert.match(js, /completion\.status === 'observed'/);
+  assert.match(js, /criteriaProven !== null/);
+  assert.match(js, /const rotationSafe = rotationObserved \? continuity\.safe_to_rotate_chatweb : null;/);
+  assert.match(js, /HEURISTIC · \$\{signalSummary \|\| 'signals unavailable'\} · not authority/);
+  assert.match(js, /UNKNOWN \/ UNOBSERVED/);
+  assert.match(js, /analytics_available_off_fast_path/);
+  assert.doesNotMatch(js, /rotationSafe\s*=.*heuristic|safe_to_rotate_chatweb\s*=.*signal/i);
+
+  const liveControl = read('resources/coding-tools-mcp/coding_tools_mcp/live_control.py');
+  assert.match(liveControl, /goal_pursuit_live_summary\(run_id=run_id\)/);
+  assert.match(liveControl, /"goal_pursuit": goal_pursuit/);
+  assert.match(liveControl, /"problem_economics": _problem_economics_fast_path_capability/);
+  assert.doesNotMatch(liveControl, /\.goal_pursuit_projection\(/);
+  assert.doesNotMatch(liveControl, /problem_resolution_economics_report/);
+  const goalPursuit = read('resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py');
+  assert.match(goalPursuit, /def goal_pursuit_live_summary/);
+  assert.match(goalPursuit, /WITH bound\(run_id,wave_id\) AS \(VALUES/);
+  assert.match(goalPursuit, /GOAL_PURSUIT_LIVE_MAX_PROOF_REFS = 300/);
+
+  const css = read('renderer/control-center.css');
+  assert.match(css, /\.cc-goal-continuity-grid/);
+  assert.match(css, /\.cc-goal-summary-grid/);
+  assert.match(css, /\.cc-goal-next/);
+  assert.match(css, /\.cc-continuity-facts/);
+});
+
 test('control panel renders task plus multi-client authority and continuity controls', () => {
   const html = read('renderer/panel.html');
   const tagById = (id) => {
@@ -140,9 +184,10 @@ test('control panel renders task plus multi-client authority and continuity cont
   assert.doesNotMatch(tagById('closeButton'), /\bdisabled\b/);
   assert.match(html, /Operator Control Panel/);
   assert.match(html, /Executive Summary/);
-  assert.match(html, /id="truthConsole"/);
-  assert.match(html, /id="truthRuntimeMatch"[^>]*data-state="UNKNOWN"/);
-  assert.match(html, /id="truthWaveWorktreeMatch"[^>]*data-state="UNKNOWN"/);
+  assert.doesNotMatch(html, /id="truthConsole"/);
+  assert.doesNotMatch(html, /Operator Truth Console/);
+  assert.doesNotMatch(html, /id="truthRuntimeMatch"/);
+  assert.doesNotMatch(html, /id="truthWaveWorktreeMatch"/);
   assert.match(html, /class="dashboard-card executive-card hero-summary"/);
   assert.match(html, /class="hero-kpi-grid"/);
   assert.equal((html.match(/class="summary-kpi-card /g) || []).length, 3, 'Executive Summary phải có đúng ba KPI hero cards');
@@ -309,4 +354,20 @@ test('browser toolbar offers the control panel toggle', () => {
   assert.match(preload, /liveOrchestration: \(\) => ipcRenderer\.invoke\('panel:live-control'\)/);
   const css = read('renderer/browser.css');
   assert.match(css, /manager-button\.active/);
+});
+
+test('browser loading placeholder follows the authoritative chat state', () => {
+  const html = read('renderer/browser.html');
+  assert.match(html, /<main class="loading-stage">/);
+  const browser = read('renderer/browser.js');
+  const start = browser.indexOf('function renderChatState(state)');
+  const end = browser.indexOf('function renderServiceState(state)');
+  assert.ok(start >= 0 && end > start, 'renderChatState must remain a bounded renderer function');
+  const renderChatState = browser.slice(start, end);
+  assert.match(renderChatState, /const hasDocument = Boolean\(String\(state\.url \|\| ''\)\.trim\(\)\);/);
+  assert.match(renderChatState, /const pending = Boolean\(state\.loading\) \|\| \(!state\.error && !hasDocument\);/);
+  assert.match(renderChatState, /const loadingStage = \$\('\.loading-stage'\);/);
+  assert.match(renderChatState, /loadingStage\.hidden = !pending;/);
+  assert.match(renderChatState, /loadingStage\.setAttribute\('aria-hidden', String\(!pending\)\);/);
+  assert.doesNotMatch(renderChatState, /classList\.toggle\('ready', !state\.loading && !state\.error\)/);
 });

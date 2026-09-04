@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "b30b32b638954fe1aa07b10e6ec9f5e1",
+    "orchestration": {
+      "run_id": "e20bfdf0a55b48bf8e5fbfb5244ecf29",
+      "wave_id": "8cdf73e440d840c5898fdaf5b8b6a3db",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "23f482fdcbfae84b1efea73265219cab637177867437174bc38e7cba06ef7fb1",
+      "contract_fp": ""
+    },
+    "objective": "Correct exactly three stale regression tests without changing production behavior: update the smart-v3 contract SHA/predecessor oracle in tests/test_efficiency_runtime.py while preserving all concurrent WIP; add only the minimal handler.server.control_runtime no-op fixture needed by test_http_pre_dispatch_boundary_never_stringifies_exception_group in tests/test_exception_group_boundary.py; update the restart-poll oracle in tests/test_live_restart_reconcile.py to the durable reconciled_terminal contract while preserving the kill-on-close assertion. Do not mutate any file in prepare. Preserve all pre-existing dirty worktree content and stop on source/base/contract drift.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:06:18.255Z",
+    "updated_at": "2026-09-04T11:06:25.766Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:06:18.255Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Correct exactly three stale regression tests without changing production behavior: update the smart-v3 contract SHA/predecessor oracle in tests/test_efficiency_runtime.py while preserving all concurrent WIP; add only the minimal handler.server.control_runtime no-op fixture needed by test_http_pre_dispatch_boundary_never_stringifies_exception_group in tests/test_exception_group_boundary.py; update the restart-poll oracle in tests/test_live_restart_reconcile.py to the durable reconciled_terminal contract while preserving the kill-on-close assertion. Do not mutate any file in prepare. Preserve all pre-existing dirty worktree content and stop on source/base/contract drift."
+        }
+      },
+      {
+        "time": "2026-09-04T11:06:19.801Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:06:25.755Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:06:25.766Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:06:57.928Z",
+    "archive_reason": "superseded"
+  }
+]

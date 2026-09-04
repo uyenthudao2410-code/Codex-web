@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "81ee307be36047e78b74f6124f25ffb5",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "TW4Wzn8mec4rDmSzhnn8wzwH",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 779,
+    "finished_at": "2026-09-03T20:44:36.825Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T20:44:35.767Z",
+  "updated_at": "2026-09-03T20:44:36.825Z",
+  "events": [
+    {
+      "time": "2026-09-03T20:44:35.767Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T20:44:36.150Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "TW4Wzn8mec4rDmSzhnn8wzwH"
+      }
+    },
+    {
+      "time": "2026-09-03T20:44:36.825Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    }
+  ]
+}

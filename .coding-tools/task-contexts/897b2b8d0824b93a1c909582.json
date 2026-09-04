@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "e7f416e4a2fe492591dcd0df8c01bcef",
+  "orchestration": {
+    "run_id": "6b166d8397024ed29b50cd75417218c7",
+    "wave_id": "94e2df511f8b433083cfab78616c4a0b",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "2958f95d19dccc9f996b1a1d00c392cb3eb0adbcafbd576616731547dbca98d2",
+    "contract_fp": ""
+  },
+  "objective": "Determine the smallest repository-side implementation, if any, for authoritative post-turn ChatWeb controller-usage receipt plus deferred causal reconciliation. Preserve content-free correlation and unknown_not_zero; do not estimate tokens. Inspect current accepted implementation and tests for controllerUsage ingress, recordControllerUsageReceipt, ChatEvaluationJournal/onEvaluation, attested ChatWeb transport metadata, post_turn_sideband capability, and the token-observability master plan. Prove whether a supported host-side completion-usage source can be wired from the current external ChatWeb connector using only existing repository/runtime contracts. If no supported authoritative source exists, return a typed external capability blocker and no source-change plan.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "cbe0196fd836a8f2dfde038d34d13cc7275eec393e130691b086747e96f3d5db"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6b166d8397024ed29b50cd75417218c7\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6b166d8397024ed29b50cd75417218c7\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "6b166d8397024ed29b50cd75417218c7",
+      "wave_id": "94e2df511f8b433083cfab78616c4a0b",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "2958f95d19dccc9f996b1a1d00c392cb3eb0adbcafbd576616731547dbca98d2",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Determine the smallest repository-side implementation, if any, for authoritative post-turn ChatWeb controller-usage receipt plus deferred causal reconciliation. Preserve content-free correlation and unknown_not_zero; do not estimate tokens. Inspect current accepted implementation and tests for controllerUsage ingress, recordControllerUsageReceipt, ChatEvaluationJournal/onEvaluation, attested ChatWeb transport metadata, post_turn_sideband capability, and the token-observability master plan. Prove whether a supported host-side completion-usage source can be wired from the current external ChatWeb connector using only existing repository/runtime contracts. If no supported authoritative source exists, return a typed external capability blocker and no source-change plan.",
+        "objective_revision": 1,
+        "objective_sha256": "eca1ed81c92f52483efe54e596aa305110b0d77498a3214697f507c94b52d9b0",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "d45f3266aa109fe830f104e32dd814ab606c95beb68bb9917d88b2eaf0e221a6",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T23:11:54.917Z",
+  "updated_at": "2026-09-03T23:13:24.026Z",
+  "events": [
+    {
+      "time": "2026-09-03T23:11:54.917Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Determine the smallest repository-side implementation, if any, for authoritative post-turn ChatWeb controller-usage receipt plus deferred causal reconciliation. Preserve content-free correlation and unknown_not_zero; do not estimate tokens. Inspect current accepted implementation and tests for controllerUsage ingress, recordControllerUsageReceipt, ChatEvaluationJournal/onEvaluation, attested ChatWeb transport metadata, post_turn_sideband capability, and the token-observability master plan. Prove whether a supported host-side completion-usage source can be wired from the current external ChatWeb connector using only existing repository/runtime contracts. If no supported authoritative source exists, return a typed external capability blocker and no source-change plan."
+      }
+    },
+    {
+      "time": "2026-09-03T23:11:56.321Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T23:12:03.396Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T23:12:03.402Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T23:13:19.372Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "d45f3266aa109fe830f104e32dd814ab606c95beb68bb9917d88b2eaf0e221a6"
+      }
+    },
+    {
+      "time": "2026-09-03T23:13:23.879Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

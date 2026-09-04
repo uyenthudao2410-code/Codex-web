@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "7211572add7b4d0c8db3a13c7047911d",
+  "orchestration": {
+    "run_id": "5dd486373faf4abf8dd42c1e46f4f7ad",
+    "wave_id": "648bbf0262e74ca084f990d66e9f15f5",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "8a39eb38e7f881a5ba3d8d531313501cd03c76a7e11611a944f489a590c67be4",
+    "contract_fp": ""
+  },
+  "objective": "G4 read-only semantic-then-text-fallback measurement only. Localize the three exact-text identifiers terminateExactProcessTree, captureSpawnedProcessIdentity, serviceSupervisorRestartRequest. No regex. Keep localization/materialization bounded to at most 5 files, at most 120000 total source bytes, and at most 10 matches per query. Do not mutate files, do not create or execute an EOCL RUN/WAVE, do not run proofs/tests/builds, do not create Problems/outcomes. Return observed semantic-localization attempt/handling/fallback engine and timing/read/materialization/truncation metadata when available; missing metrics remain unknown.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "02778b1032fbcb5ee7715895c8c1c540605ca4fa92d98c464ebf275e919493ba"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5dd486373faf4abf8dd42c1e46f4f7ad\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5dd486373faf4abf8dd42c1e46f4f7ad\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "5dd486373faf4abf8dd42c1e46f4f7ad",
+      "wave_id": "648bbf0262e74ca084f990d66e9f15f5",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "8a39eb38e7f881a5ba3d8d531313501cd03c76a7e11611a944f489a590c67be4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G4 read-only semantic-then-text-fallback measurement only. Localize the three exact-text identifiers terminateExactProcessTree, captureSpawnedProcessIdentity, serviceSupervisorRestartRequest. No regex. Keep localization/materialization bounded to at most 5 files, at most 120000 total source bytes, and at most 10 matches per query. Do not mutate files, do not create or execute an EOCL RUN/WAVE, do not run proofs/tests/builds, do not create Problems/outcomes. Return observed semantic-localization attempt/handling/fallback engine and timing/read/materialization/truncation metadata when available; missing metrics remain unknown.",
+        "objective_revision": 1,
+        "objective_sha256": "f7dd3e0c3769f9b1166b7ea26c16f3ae4c1fbc602ed489610c72dd490b5bafb9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "e3aed262c750ad730a2c0e843a18f83b7014c2538d8fb23d8e55346493e0132b",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T21:05:13.758Z",
+  "updated_at": "2026-09-03T21:09:02.832Z",
+  "events": [
+    {
+      "time": "2026-09-03T21:05:13.758Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G4 read-only semantic-then-text-fallback measurement only. Localize the three exact-text identifiers terminateExactProcessTree, captureSpawnedProcessIdentity, serviceSupervisorRestartRequest. No regex. Keep localization/materialization bounded to at most 5 files, at most 120000 total source bytes, and at most 10 matches per query. Do not mutate files, do not create or execute an EOCL RUN/WAVE, do not run proofs/tests/builds, do not create Problems/outcomes. Return observed semantic-localization attempt/handling/fallback engine and timing/read/materialization/truncation metadata when available; missing metrics remain unknown."
+      }
+    },
+    {
+      "time": "2026-09-03T21:05:15.314Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T21:05:21.373Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T21:05:21.379Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T21:08:51.680Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "e3aed262c750ad730a2c0e843a18f83b7014c2538d8fb23d8e55346493e0132b"
+      }
+    },
+    {
+      "time": "2026-09-03T21:09:02.832Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

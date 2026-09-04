@@ -1,0 +1,294 @@
+[
+  {
+    "version": 2,
+    "task_id": "2bb32c08ff5d4d33a7c7fdc6e86ea2fb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "9eR4IYupFuk9Mze6RBltbfsx",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 485,
+      "finished_at": "2026-09-03T20:50:11.281Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T20:49:20.800Z",
+    "updated_at": "2026-09-03T20:50:11.281Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:49:20.800Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:21.184Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"dev:(status|start|stop|restart|refresh|activate)|lifecycle\" package.json scripts/dev-ui-lifecycle.js",
+          "session_id": "RxUH7OYcIyES4-NyTIEto1O3"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:21.471Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"dev:(status|start|stop|restart|refresh|activate)|lifecycle\" package.json scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:33.380Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/dev-ui-lifecycle.js' | Select-Object -Skip 1600 -First 135\"",
+          "session_id": "TmMjzLUqNzlrpJsXK_L2zXmY"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:33.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/dev-ui-lifecycle.js' | Select-Object -Skip 1600 -First 135\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:44.022Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 90 -B 10 \"async function (replaceLifecycle|refreshLifecycle|stopLifecycle|startLifecycle)\" scripts/dev-ui-lifecycle.js",
+          "session_id": "G4nr1Z97vqBMK4q9mWz_QU9y"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:44.380Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 90 -B 10 \"async function (replaceLifecycle|refreshLifecycle|stopLifecycle|startLifecycle)\" scripts/dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:55.197Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/dev-ui-lifecycle.js' | Select-Object -Skip 1200 -First 155\"",
+          "session_id": "kSA5e657GRMXTxuyQCwxWBi0"
+        }
+      },
+      {
+        "time": "2026-09-03T20:49:55.773Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/dev-ui-lifecycle.js' | Select-Object -Skip 1200 -First 155\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:10.966Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 4 --fixed-strings \"restart-beb-n0sgI03uBonq\" \"%APPDATA%\\web-mcp-assistant\\logs\\recovery-mcp.log\" \"%APPDATA%\\web-mcp-assistant\\logs\\recovery-tunnel.log\"",
+          "session_id": "9eR4IYupFuk9Mze6RBltbfsx"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:11.281Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 4 --fixed-strings \"restart-beb-n0sgI03uBonq\" \"%APPDATA%\\web-mcp-assistant\\logs\\recovery-mcp.log\" \"%APPDATA%\\web-mcp-assistant\\logs\\recovery-tunnel.log\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:50:19.255Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "493edc907d1a44f8ae525e956202e805",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "mtQgniHFPR8RyHkTqCQ6X2xZ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 434,
+      "finished_at": "2026-09-03T20:51:56.704Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T20:50:19.257Z",
+    "updated_at": "2026-09-03T20:51:56.704Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:50:19.257Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:19.599Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 --fixed-strings \"The accepted-code closure checkpoint is not eligible for the requested component.\" electron scripts resources",
+          "session_id": "ePIzDSP-7F717EK0nUUdYYlo"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:19.832Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 --fixed-strings \"The accepted-code closure checkpoint is not eligible for the requested component.\" electron scripts resources",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:31.457Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(-not(Test-Path -LiteralPath $p)){Write-Output 'ACCEPTED_CODE_ACTIVATION=missing'; exit 0}; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; Write-Output ('SCHEMA='+$j.schema_version+' CHECKPOINT='+$j.source_checkpoint_id+' RUN='+$j.run_id+' WAVE='+$j.wave_id+' SOURCE_ACCEPTED='+$j.source_accepted+' RECEIPTS_COMPLETE='+$j.accepted_receipts_complete+' COMPONENT_RECEIPTS_VALID=",
+          "session_id": "W7k2orD09pE79L_bwa02AUx-"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:32.078Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(-not(Test-Path -LiteralPath $p)){Write-Output 'ACCEPTED_CODE_ACTIVATION=missing'; exit 0}; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; Write-Output ('SCHEMA='+$j.schema_version+' CHECKPOINT='+$j.source_checkpoint_id+' RUN='+$j.run_id+' WAVE='+$j.wave_id+' SOURCE_ACCEPTED='+$j.source_accepted+' RECEIPTS_COMPLETE='+$j.accepted_receipts_complete+' COMPONENT_RECEIPTS_VALID=",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:43.599Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(Test-Path -LiteralPath $p){$j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; Write-Output ('TOP_KEYS='+([string]::Join(',',@($j.PSObject.Properties.Name))))}\"",
+          "session_id": "IW0yde2rbL0G0nzxXIAAXKZ-"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:44.190Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if(Test-Path -LiteralPath $p){$j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; Write-Output ('TOP_KEYS='+([string]::Join(',',@($j.PSObject.Properties.Name))))}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:51.950Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $c=$j.closure_input; Write-Output ('ACTIVE_CHECKPOINT='+$j.active_checkpoint_id+' CLOSURE_KEYS='+([string]::Join(',',@($c.PSObject.Properties.Name)))); Write-Output ('CLOSURE_SCHEMA='+$c.schema_version+' CHECKPOINT='+$c.source_checkpoint_id+' RUN='+$c.run_id+' WAVE='+$c.wave_id+' SOURCE_ACCEPTED='+$c.source_accepted+' RECEIPTS_CO",
+          "session_id": "Hf3UMTBJP_sr5_T7GOMYaFG8"
+        }
+      },
+      {
+        "time": "2026-09-03T20:50:52.584Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $c=$j.closure_input; Write-Output ('ACTIVE_CHECKPOINT='+$j.active_checkpoint_id+' CLOSURE_KEYS='+([string]::Join(',',@($c.PSObject.Properties.Name)))); Write-Output ('CLOSURE_SCHEMA='+$c.schema_version+' CHECKPOINT='+$c.source_checkpoint_id+' RUN='+$c.run_id+' WAVE='+$c.wave_id+' SOURCE_ACCEPTED='+$c.source_accepted+' RECEIPTS_CO",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:07.734Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 90 -B 12 -e \"Usage\" -e \"restart\" -e \"controlled\" -e \"main\\(\" scripts/mcp_controlled_restart.js",
+          "session_id": "QiO0h9-f8w1AfV4h-vDeNtkD"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:08.030Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 90 -B 12 -e \"Usage\" -e \"restart\" -e \"controlled\" -e \"main\\(\" scripts/mcp_controlled_restart.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:19.320Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/mcp_controlled_restart.js' | Select-Object -First 125\"",
+          "session_id": "n__MpMweirMLxdkJXuFDDj-o"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:19.903Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"Get-Content -LiteralPath 'scripts/mcp_controlled_restart.js' | Select-Object -First 125\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:48.038Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --fixed-strings \"mcp_controlled_restart.js\" package.json scripts tests .coding-tools/orchestration/reports --glob \"*.md\" --glob \"*.json\" --glob \"*.js\"",
+          "session_id": "dBr4YkBOYhX_U_bUE3Ts7-6G"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:48.320Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --fixed-strings \"mcp_controlled_restart.js\" package.json scripts tests .coding-tools/orchestration/reports --glob \"*.md\" --glob \"*.json\" --glob \"*.js\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:56.429Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 -e \"controlled_restart\" -e \"mcp_controlled_restart\" resources/coding-tools-mcp/benchmarks/runtime_activation.py resources/coding-tools-mcp/tests/test_runtime_activation.py package.json",
+          "session_id": "mtQgniHFPR8RyHkTqCQ6X2xZ"
+        }
+      },
+      {
+        "time": "2026-09-03T20:51:56.704Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 -e \"controlled_restart\" -e \"mcp_controlled_restart\" resources/coding-tools-mcp/benchmarks/runtime_activation.py resources/coding-tools-mcp/tests/test_runtime_activation.py package.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:52:07.637Z",
+    "archive_reason": "finished"
+  }
+]

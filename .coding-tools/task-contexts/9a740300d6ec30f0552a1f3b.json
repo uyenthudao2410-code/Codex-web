@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "a3fef64d1fe44d0d863938efb1d9dc41",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "3qjBVimCd1T2w5vn-7Z0c8Mn",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 536,
+    "finished_at": "2026-09-03T20:07:49.996Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T20:07:49.211Z",
+  "updated_at": "2026-09-03T20:09:35.427Z",
+  "events": [
+    {
+      "time": "2026-09-03T20:07:49.211Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T20:07:49.607Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/reports/run-51782d652f084183a5e473dd1c493bba/wave-001.md'\"",
+        "session_id": "3qjBVimCd1T2w5vn-7Z0c8Mn"
+      }
+    },
+    {
+      "time": "2026-09-03T20:07:49.996Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/reports/run-51782d652f084183a5e473dd1c493bba/wave-001.md'\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

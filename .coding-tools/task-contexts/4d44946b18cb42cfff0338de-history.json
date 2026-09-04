@@ -1,0 +1,628 @@
+[
+  {
+    "version": 2,
+    "task_id": "d5118c4a50314b21a07da7343337f26a",
+    "orchestration": {
+      "run_id": "5ee8825a820e4c569c53175459b9b16d",
+      "wave_id": "0a260ae9a77440a8b8ebb134aa51d74a",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": ""
+    },
+    "objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine the smallest causal reason exact controller usage is not durably recorded. Inspect only trusted controller-usage ingress, HTTP/transport metadata plumbing, workflow evaluation correlation, usage ledger/event construction, and focused tests. Do not mutate source, do not fabricate usage, do not restart, commit, push, release, or deploy. Distinguish client-not-supplying-usage / unsupported ChatWeb transport capability from a server-side correlation or ingestion defect.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T16:50:30.931Z",
+    "updated_at": "2026-09-03T16:50:34.240Z",
+    "events": [
+      {
+        "time": "2026-09-03T16:50:30.931Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine the smallest causal reason exact controller usage is not durably recorded. Inspect only trusted controller-usage ingress, HTTP/transport metadata plumbing, workflow evaluation correlation, usage ledger/event construction, and focused tests. Do not mutate source, do not fabricate usage, do not restart, commit, push, release, or deploy. Distinguish client-not-supplying-usage / unsupported ChatWeb transport capability from a server-side correlation or ingestion defect."
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:32.315Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:34.234Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:34.240Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T16:50:56.048Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "a0124d1c3e274b23bb53e89f42b234d4",
+    "orchestration": {
+      "run_id": "585b5d230547457583f32356772814e9",
+      "wave_id": "800e3b9b23fe42098184c2e073a24988",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": ""
+    },
+    "objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine the smallest causal reason exact controller usage is not durably recorded. Inspect only trusted controller-usage ingress, HTTP/transport metadata plumbing, workflow evaluation correlation, usage ledger/event construction, and content-free connector/controller-usage observations. Do not mutate source, do not fabricate usage, do not restart, commit, push, release, or deploy. Distinguish client-not-supplying-usage / unsupported ChatWeb transport capability from a server-side correlation or ingestion defect.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T16:50:56.049Z",
+    "updated_at": "2026-09-03T16:50:58.446Z",
+    "events": [
+      {
+        "time": "2026-09-03T16:50:56.049Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:56.816Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:58.440Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:50:58.446Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T16:51:47.291Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "d83063c2b158486d9f9790c391945db1",
+    "orchestration": {
+      "run_id": "9f395601a38244b7bfbf428bb01165a5",
+      "wave_id": "37ad25af8f8f4b389d60745debb1dd34",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": ""
+    },
+    "objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine the smallest causal reason exact controller usage is not durably recorded. Inspect only supported read-only surfaces that expose the current-process controller-usage-envelope classification. Do not mutate source, do not fabricate usage, do not restart, commit, push, release, or deploy. Distinguish client-not-supplying-usage from server-side ingestion rejection.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T16:51:47.292Z",
+    "updated_at": "2026-09-03T16:51:49.929Z",
+    "events": [
+      {
+        "time": "2026-09-03T16:51:47.292Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:48.056Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:49.923Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:49.929Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T16:51:52.060Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "66557183cd5d46a5aec87473d8b7c7c9",
+    "orchestration": {
+      "run_id": "4137f74024e3466fa7cfbffaf4ffd381",
+      "wave_id": "b71161d1388347548e40d1ec6c52ff76",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": ""
+    },
+    "objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine whether the current attested ChatWeb client is actually supplying exact controller usage metadata or whether the server is rejecting it. Use only the supported read-only runtime status oracle and existing content-free evidence; do not mutate source, restart, commit, push, release, or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-03T16:51:59.420Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-03T16:51:59.420Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "-wtXcONqzieJY6w4Zb6fvdP1",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 982,
+      "finished_at": "2026-09-03T16:51:59.017Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 23,
+          "head_hash": "f00fcabfb72fc8646fd1abae2779c0a76ddf1e0f67ec4b27180626fb02b907f6"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4137f74024e3466fa7cfbffaf4ffd381\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4137f74024e3466fa7cfbffaf4ffd381\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "4137f74024e3466fa7cfbffaf4ffd381",
+        "wave_id": "b71161d1388347548e40d1ec6c52ff76",
+        "checkpoint_id": "61b73275b225419aa1aa061e7051f039",
+        "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+        "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Read-only causal diagnosis of the remaining live L3 blocker after accepted post-activation canary RUN 41970794950d4183aa09b0e0b063fec1 / WAVE 6efc6cda64044c829525eadc446c70e8. Live evidence proves authoritative host correlation source attested_chatweb_transport_trace with trace_id 6a99a477000000008c206aff40665b8c and turn_id chatweb-trace:6a99a477000000008c206aff40665b8c, but accepted audit still has usage_event_count=0. Determine whether the current attested ChatWeb client is actually supplying exact controller usage metadata or whether the server is rejecting it. Use only the supported read-only runtime status oracle and existing content-free evidence; do not mutate source, restart, commit, push, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "79357404661574be77a190eb80cb2e0b96ee8062bc22386c6bdc157cd88b571d",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "d4308a298eec4eb19ce8aeafdb9bfbce",
+            "stage_id": "check:385f51573288f6e6",
+            "status": "passed",
+            "duration_ms": 1485,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "aa2fd00d3e8472b86efd478ad2c0e651177637312a715dec42027dd52d2e0dea",
+    "completion_report_acknowledged_id": "aa2fd00d3e8472b86efd478ad2c0e651177637312a715dec42027dd52d2e0dea",
+    "completion_report_acknowledged_at": "2026-09-03T16:52:49.771Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-03T16:51:52.061Z",
+    "updated_at": "2026-09-03T16:52:58.810Z",
+    "events": [
+      {
+        "time": "2026-09-03T16:51:52.061Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:52.731Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:53.825Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:55.222Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:55.227Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:56.650Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:57.317Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:58.396Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "-wtXcONqzieJY6w4Zb6fvdP1"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:59.017Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:59.417Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:59.420Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:59.901Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-03T16:51:59.903Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:00.028Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "e2bf49e4319e6ceec669a0d85f704877f1ea5d655013ec27e27f8967a5d52c2f"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:00.254Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:02.631Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:03.119Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:06.553Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:06.943Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:08.709Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:16.121Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:20.229Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:37.743Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:37.745Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:37.842Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "aa2fd00d3e8472b86efd478ad2c0e651177637312a715dec42027dd52d2e0dea"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:42.725Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:49.771Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "aa2fd00d3e8472b86efd478ad2c0e651177637312a715dec42027dd52d2e0dea"
+        }
+      },
+      {
+        "time": "2026-09-03T16:52:57.006Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T16:52:59.302Z",
+    "archive_reason": "finished"
+  }
+]

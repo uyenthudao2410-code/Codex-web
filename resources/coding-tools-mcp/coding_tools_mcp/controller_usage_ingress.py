@@ -11,6 +11,10 @@ CONTROLLER_USAGE_META_KEY = "io.coding-tools/controllerUsage"
 CONTROLLER_USAGE_STATUS_META_KEY = "io.coding-tools/controllerUsageStatus"
 _TRUSTED_CONTROLLER_USAGE_IDENTITY_SOURCES = frozenset({"explicit_headers", "attested_transport"})
 _DEFERRED_AGENT_WORKFLOW_BINDING_KEY = "_deferred_agent_workflow_binding"
+_SERVER_OWNED_HOST_CORRELATION_SOURCES = frozenset({
+    "electron_pending_host_turn",
+    "attested_chatweb_transport_trace",
+})
 
 
 def tool_call_name(request: dict[str, Any]) -> str:
@@ -112,12 +116,28 @@ def record_controller_usage(
     evaluation = metadata.get("evaluation") if isinstance(metadata.get("evaluation"), dict) else {}
     authoritative_turn_id = str(evaluation.get("turn_id") or "").strip()
     authoritative_trace_id = str(evaluation.get("trace_id") or "").strip()
-    if host_marker.get("eligible") is not True or str(host_marker.get("source") or "") != "electron_pending_host_turn":
+    host_source = str(host_marker.get("source") or "").strip()
+    if host_marker.get("eligible") is not True or host_source not in _SERVER_OWNED_HOST_CORRELATION_SOURCES:
         raise ValueError("controller usage requires a server-owned host-turn correlation marker")
     if not authoritative_turn_id or not authoritative_trace_id:
         raise ValueError("controller usage requires authoritative turn_id and trace_id")
     if str(normalized.get("turn_id") or "") != authoritative_turn_id or str(normalized.get("trace_id") or "") != authoritative_trace_id:
         raise ValueError("controller usage turn_id/trace_id do not match the authoritative host turn")
+    if host_source == "attested_chatweb_transport_trace":
+        identity = runtime._current_hub_client() or {}
+        if (
+            str(identity.get("client_type") or "") != "chatweb"
+            or str(identity.get("role") or "") != "controller"
+            or str(identity.get("identity_source") or "") != "attested_transport"
+            or identity.get("attestation_verified") is not True
+        ):
+            raise ValueError("transport-correlated controller usage requires attested ChatWeb transport provenance")
+        request_trace = getattr(runtime.request_context, "trace_context", None)
+        current_trace_id = str(request_trace.get("trace_id") or "").strip().lower() if isinstance(request_trace, dict) else ""
+        if current_trace_id != authoritative_trace_id:
+            raise ValueError("transport-correlated controller usage requires the authoritative request trace")
+        if authoritative_turn_id != f"chatweb-trace:{authoritative_trace_id}":
+            raise ValueError("transport-correlated controller usage has an invalid server-owned turn identity")
 
     run_status = str(run.get("status") or "").strip().lower()
     orchestration_state = str(getattr(ctx, "state", "") or "").strip().upper()

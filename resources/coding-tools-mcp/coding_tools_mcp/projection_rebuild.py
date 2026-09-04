@@ -17,6 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
+from .task_state import TaskStateStore
+
 
 PROJECTION_REBUILD_SCHEMA_VERSION = 2
 PROJECTION_REBUILD_KIND = "coding_tools_mcp_projection_rebuild"
@@ -385,14 +387,59 @@ def validate_projection_rebuild_receipt(
     }
 
 
-def reconcile_task_orchestration_projection(runtime: Any) -> bool:
+def reconcile_task_orchestration_projection(runtime: Any, *, requested_run_id: object = "") -> bool:
     """Repair the compact task projection from current canonical ledger facts."""
     state = runtime.task_state.get()
     projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     run_id = str(projection.get("run_id") or "").strip()
     task_id = str(state.get("task_id") or "").strip()
     objective = str(state.get("objective") or "").strip()
+    requested_run = str(requested_run_id or "").strip()
     restoring_empty_state = False
+    restoring_exact_run = False
+    restoration_source = state
+
+    if requested_run and run_id != requested_run:
+        canonical_run = runtime.orchestration_ledger.get_run(requested_run)
+        if not isinstance(canonical_run, dict):
+            raise RuntimeError("requested exact run is not present in the canonical orchestration ledger")
+        canonical_task_id = str(canonical_run.get("task_id") or "").strip()
+        canonical_objective = str(canonical_run.get("objective") or "").strip()
+        if not canonical_task_id or not canonical_objective:
+            raise RuntimeError("requested exact run is missing canonical task identity")
+        if runtime.task_state.pending_completion_report() is not None:
+            raise RuntimeError("current compact task projection has a pending operator completion report")
+
+        has_task = TaskStateStore._has_task(state)
+        current_status = str(state.get("status") or "").strip().lower()
+        if has_task and current_status not in {"completed", "failed", "stopped"}:
+            raise RuntimeError("current compact task projection is not terminal and cannot be replaced")
+        projected_state = str(projection.get("orchestration_state") or "").strip().upper()
+        if projected_state and projected_state not in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+            raise RuntimeError("current compact orchestration projection is not terminal and cannot be replaced")
+        if run_id:
+            conflicting_run = runtime.orchestration_ledger.get_run(run_id)
+            if not isinstance(conflicting_run, dict) or str(conflicting_run.get("status") or "") == "active":
+                raise RuntimeError("current compact projection points at a nonterminal orchestration run")
+
+        archived_matches = []
+        for item in runtime.task_state.history(100):
+            if not isinstance(item, dict):
+                continue
+            archived_projection = item.get("orchestration") if isinstance(item.get("orchestration"), dict) else {}
+            if (
+                str(item.get("task_id") or "").strip() == canonical_task_id
+                and str(archived_projection.get("run_id") or "").strip() == requested_run
+                and TaskStateStore._pending_completion_report_from_state(item) is None
+            ):
+                archived_matches.append(item)
+        if not archived_matches:
+            raise RuntimeError("requested exact run is not bound to this task context by acknowledged archived history")
+        restoration_source = archived_matches[0]
+        run_id = requested_run
+        task_id = canonical_task_id
+        objective = canonical_objective
+        restoring_exact_run = True
     if not run_id and task_id:
         matches = [
             item for item in runtime.orchestration_ledger.list_runs(limit=100, status="active")
@@ -440,6 +487,7 @@ def reconcile_task_orchestration_projection(runtime: Any) -> bool:
         repaired["write_owner"] = ""
 
     canonical_state = str(repaired.get("orchestration_state") or "").upper()
+    recovery_failure = restoration_source.get("failure")
     desired_task: dict[str, Any] = {"orchestration": repaired}
     if canonical_state == "ACCEPTING":
         desired_task.update({
@@ -463,21 +511,21 @@ def reconcile_task_orchestration_projection(runtime: Any) -> bool:
             "status": "waiting",
             "current_step": "Replan required - operator report required",
             "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-            "failure": state.get("failure"),
+            "failure": recovery_failure,
         })
     elif canonical_state == "BLOCKED":
         desired_task.update({
             "status": "failed",
             "current_step": "Blocked - operator report required",
             "next_step": "Present orchestration.completion_report to the operator, then resolve the durable blocker before another execution wave.",
-            "failure": state.get("failure"),
+            "failure": recovery_failure,
         })
     elif canonical_state == "ABORTED":
         desired_task.update({
             "status": "stopped",
             "current_step": "Aborted - operator report required",
             "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
-            "failure": state.get("failure"),
+            "failure": recovery_failure,
         })
     current_projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     projection_changed = any(current_projection.get(key) != repaired.get(key) for key in repaired)
@@ -486,9 +534,17 @@ def reconcile_task_orchestration_projection(runtime: Any) -> bool:
         for key in ("status", "current_step", "next_step", "failure")
         if key in desired_task
     )
-    if not projection_changed and not task_changed:
+    if not restoring_exact_run and not projection_changed and not task_changed:
         return False
-    if restoring_empty_state:
+    if restoring_exact_run:
+        runtime.task_state.clear()
+        runtime.task_state.restore_from_ledger(
+            task_id=str(run.get("task_id") or ""),
+            objective=str(run.get("objective") or ""),
+            changes=desired_task,
+            event="orchestration_projection_exact_run_restored",
+        )
+    elif restoring_empty_state:
         runtime.task_state.restore_from_ledger(
             task_id=str(run.get("task_id") or ""),
             objective=str(run.get("objective") or ""),

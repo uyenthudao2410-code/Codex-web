@@ -135,6 +135,27 @@ class TaskStateStore:
             self.history_path = self.state_dir / "task-history.json"
         self._lock = threading.RLock()
 
+    @classmethod
+    def _from_context_projection_path(
+        cls, workspace: Path, projection_path: Path
+    ) -> "TaskStateStore":
+        """Open one validated workspace-local context projection by exact path."""
+        root = workspace.resolve()
+        context_dir = (root / ".coding-tools" / "task-contexts").resolve()
+        target = projection_path.resolve(strict=False)
+        if (
+            target.parent != context_dir
+            or target.suffix.lower() != ".json"
+            or target.name.endswith("-history.json")
+        ):
+            raise ValueError("task context projection path is outside the current workspace")
+        store = cls(root)
+        store.scope_id = f"context-projection:{target.stem}"
+        store.state_dir = context_dir
+        store.path = target
+        store.history_path = context_dir / f"{target.stem}-history.json"
+        return store
+
     @property
     def state_file_display(self) -> str:
         try:
@@ -148,7 +169,14 @@ class TaskStateStore:
 
     @staticmethod
     def _completion_report_id(report: dict[str, Any]) -> str:
-        encoded = json.dumps(report, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+        identity_report = copy.deepcopy(report)
+        current_state = identity_report.get("current_state")
+        if isinstance(current_state, dict):
+            # Keep live audit/presentation metadata visible to the operator, but do
+            # not let report materialization rotate the opaque semantic identity.
+            current_state.pop("integrity", None)
+            current_state.pop("reports", None)
+        encoded = json.dumps(identity_report, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
             "utf-8", errors="surrogatepass"
         )
         return hashlib.sha256(encoded).hexdigest()
@@ -398,10 +426,11 @@ class TaskStateStore:
             })
             return self._write(state)
 
-    def find_command_completion(self, command_id: str) -> dict[str, Any] | None:
+    def command_completion_candidates(self, command_id: str) -> list[dict[str, Any]]:
         needle = str(command_id or "").strip()
         if not needle:
-            return None
+            return []
+        matches: dict[str, dict[str, Any]] = {}
         with self._lock:
             candidates = [self._read()]
             history = self._read_json(self.history_path, [])
@@ -412,8 +441,13 @@ class TaskStateStore:
                     continue
                 report = state.get("completion_report")
                 if isinstance(report, dict) and str(report.get("command_id") or "") == needle:
-                    return copy.deepcopy(report)
-        return None
+                    report_id = self._completion_report_id(report)
+                    matches.setdefault(report_id, copy.deepcopy(report))
+        return list(matches.values())
+
+    def find_command_completion(self, command_id: str) -> dict[str, Any] | None:
+        matches = self.command_completion_candidates(command_id)
+        return matches[0] if matches else None
 
     def record_tool_result(self, name: str, args: dict[str, Any], payload: dict[str, Any]) -> None:
         if name.startswith("task_state_") or name == "task_history_list":
@@ -864,6 +898,77 @@ class ContextualTaskStateStore:
     @property
     def state_file_display(self) -> str:
         return self._current_store().state_file_display
+
+    def _current_workspace_projection_stores(self) -> list[TaskStateStore]:
+        """Return exact projection stores from only the request's current workspace."""
+        workspace = self.current_workspace().resolve()
+        current = self._current_store()
+        by_path: dict[str, TaskStateStore] = {}
+
+        def add(store: TaskStateStore) -> None:
+            if store.workspace.resolve() != workspace:
+                return
+            key = os.path.normcase(str(store.path.resolve(strict=False)))
+            by_path.setdefault(key, store)
+
+        with self._lock:
+            add(current)
+            workspace_store = self._workspace_stores.get(str(workspace))
+            if workspace_store is not None:
+                add(workspace_store)
+            for (workspace_key, _scope_id), store in self._stores.items():
+                if os.path.normcase(workspace_key) == os.path.normcase(str(workspace)):
+                    add(store)
+
+            context_dir = workspace / ".coding-tools" / "task-contexts"
+            if context_dir.exists():
+                for path in context_dir.glob("*.json"):
+                    if path.name.endswith("-history.json"):
+                        continue
+                    key = os.path.normcase(str(path.resolve(strict=False)))
+                    if key not in by_path:
+                        by_path[key] = TaskStateStore._from_context_projection_path(
+                            workspace, path
+                        )
+        return list(by_path.values())
+
+    def find_command_completion(self, command_id: str) -> dict[str, Any] | None:
+        """Resolve one durable command report across this workspace, or fail closed."""
+        matches: dict[str, dict[str, Any]] = {}
+        for store in self._current_workspace_projection_stores():
+            for report in store.command_completion_candidates(command_id):
+                report_id = TaskStateStore._completion_report_id(report)
+                matches.setdefault(report_id, report)
+        if len(matches) > 1:
+            raise ValueError(
+                "command completion is ambiguous across task contexts in the current workspace"
+            )
+        return next(iter(matches.values()), None)
+
+    def ack_completion_report(self, report_id: str) -> dict[str, Any]:
+        """Acknowledge one exact current report latch across this workspace."""
+        expected = str(report_id or "").strip()
+        if not expected:
+            raise ValueError("completion report id is required")
+        matches: list[TaskStateStore] = []
+        for store in self._current_workspace_projection_stores():
+            state = store.get()
+            report = state.get("completion_report")
+            if not isinstance(report, dict) or report.get("operator_visible_required") is not True:
+                continue
+            current_id = str(
+                state.get("completion_report_id")
+                or TaskStateStore._completion_report_id(report)
+            ).strip()
+            if current_id == expected:
+                matches.append(store)
+        if not matches:
+            raise ValueError("No matching operator completion report exists in the current workspace.")
+        if len(matches) > 1:
+            raise ValueError(
+                "completion report id is ambiguous across task contexts in the current workspace"
+            )
+        return matches[0].ack_completion_report(expected)
 
     def contexts(self, limit: int = 20) -> list[dict[str, Any]]:
         candidates: list[tuple[float, Path, dict[str, Any]]] = []

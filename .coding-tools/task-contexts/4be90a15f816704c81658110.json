@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "53b030f3244443ddac33a4d38d50a575",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "o-9Nuw5M6rq9sVW-vrkzOAho",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 780,
+    "finished_at": "2026-09-03T16:48:13.379Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T16:48:12.028Z",
+  "updated_at": "2026-09-03T16:48:13.379Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:48:12.028Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T16:48:12.370Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "o-9Nuw5M6rq9sVW-vrkzOAho"
+      }
+    },
+    {
+      "time": "2026-09-03T16:48:13.379Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    }
+  ]
+}

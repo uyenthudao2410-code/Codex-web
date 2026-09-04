@@ -6,9 +6,16 @@ from collections import Counter
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from .usage_ledger import canonical_usage_payload
+from .token_measurements import summarize_workspace as summarize_chat_turn_measurements
+
 
 MEASUREMENT = "accepted_result_operations_v1"
 MISSING_POLICY = "unknown_not_zero"
+CONTROLLER_CALIBRATION_MIN_SAMPLES = 5
+CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P10 = 6.0
+CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P50 = 4.0
+CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P90 = 2.0
 
 
 def _parse_time(value: Any) -> datetime | None:
@@ -41,6 +48,152 @@ def _nearest_rank(values: list[int], percentile: int) -> int | None:
     ordered = sorted(max(0, int(value)) for value in values)
     rank = max(1, min(len(ordered), math.ceil(len(ordered) * max(1, min(percentile, 100)) / 100)))
     return ordered[rank - 1]
+
+
+def _nearest_rank_float(values: list[float], percentile: int) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(max(0.0, float(value)) for value in values if math.isfinite(float(value)))
+    if not ordered:
+        return None
+    rank = max(1, min(len(ordered), math.ceil(len(ordered) * max(1, min(percentile, 100)) / 100)))
+    return ordered[rank - 1]
+
+
+def _observed_nonnegative_int(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    measured = float(value)
+    if not math.isfinite(measured) or measured < 0:
+        return None
+    return int(measured)
+
+
+def _controller_token_estimate(
+    *,
+    accepted_runs: int,
+    exact_runs: int,
+    missing_exact_runs: int,
+    eligible_missing_runs: int,
+    missing_model_visible_bytes: int,
+    calibration_ratios: list[float],
+) -> dict[str, Any]:
+    base = {
+        "scope": "accepted_runs_finished_in_window_missing_exact_controller_only",
+        "accepted_runs": accepted_runs,
+        "exact_runs": exact_runs,
+        "missing_exact_runs": missing_exact_runs,
+        "eligible_missing_runs": eligible_missing_runs,
+        "calibration_samples": len(calibration_ratios),
+        "calibration_min_samples": CONTROLLER_CALIBRATION_MIN_SAMPLES,
+        "missing_measurement_policy": MISSING_POLICY,
+        "content_free": True,
+    }
+    if accepted_runs <= 0:
+        return {
+            **base,
+            "status": "unknown",
+            "measurement": "UNKNOWN",
+            "confidence": "unknown",
+            "method": None,
+            "estimate": None,
+            "missing_reason": "no_accepted_runs_in_window",
+        }
+    if missing_exact_runs <= 0:
+        return {
+            **base,
+            "status": "exact",
+            "measurement": "EXACT",
+            "confidence": "exact",
+            "method": "exact_controller_usage_event",
+            "estimate": None,
+            "missing_reason": None,
+        }
+    if eligible_missing_runs <= 0 or missing_model_visible_bytes <= 0:
+        return {
+            **base,
+            "status": "unknown",
+            "measurement": "UNKNOWN",
+            "confidence": "unknown",
+            "method": None,
+            "estimate": None,
+            "missing_reason": "model_visible_bytes_unobserved_for_missing_controller_runs",
+        }
+
+    if len(calibration_ratios) >= CONTROLLER_CALIBRATION_MIN_SAMPLES:
+        p10_ratio = _nearest_rank_float(calibration_ratios, 10)
+        p50_ratio = _nearest_rank_float(calibration_ratios, 50)
+        p90_ratio = _nearest_rank_float(calibration_ratios, 90)
+        if p10_ratio is not None and p50_ratio is not None and p90_ratio is not None:
+            confidence = "high" if len(calibration_ratios) >= 30 else "medium" if len(calibration_ratios) >= 12 else "low"
+            return {
+                **base,
+                "status": "calibrated_estimate",
+                "measurement": "CALIBRATED_ESTIMATE",
+                "confidence": confidence,
+                "method": "exact_controller_tokens_per_model_visible_byte_v1",
+                "estimate": {
+                    "p10_total_tokens": max(0, round(missing_model_visible_bytes * p10_ratio)),
+                    "p50_total_tokens": max(0, round(missing_model_visible_bytes * p50_ratio)),
+                    "p90_total_tokens": max(0, round(missing_model_visible_bytes * p90_ratio)),
+                },
+                "provenance": "exact_controller_usage_event+performance_trace.run_metrics.model_visible_bytes",
+                "missing_reason": None,
+            }
+
+    return {
+        **base,
+        "status": "context_estimate",
+        "measurement": "CONTEXT_ESTIMATE",
+        "confidence": "low",
+        "method": "model_visible_bytes_context_prior_v1",
+        "estimate": {
+            "p10_context_tokens": max(0, round(missing_model_visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P10)),
+            "p50_context_tokens": max(0, round(missing_model_visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P50)),
+            "p90_context_tokens": max(0, round(missing_model_visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P90)),
+            "not_controller_total": True,
+        },
+        "prior": {
+            "p10_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P10,
+            "p50_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P50,
+            "p90_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P90,
+        },
+        "provenance": "performance_trace.run_metrics.model_visible_bytes; explicit context estimate only",
+        "missing_reason": "exact_calibration_below_minimum",
+    }
+
+
+def _chat_turn_measurements(ledger: Any) -> dict[str, Any]:
+    """Session per-turn token summary from the Electron host journal.
+
+    The orchestration ledger only holds EOCL-bound exact usage; casual
+    ChatWeb turns live in the host observation journal instead. This
+    projection is best-effort and fail-closed: any unreadable journal
+    yields journal_available False with null totals (unknown, never zero)
+    and never breaks the analytics payload.
+    """
+    try:
+        workspace = getattr(ledger, "workspace", None)
+        if workspace is None:
+            raise ValueError("ledger workspace unavailable")
+        return summarize_chat_turn_measurements(workspace)
+    except Exception:
+        return {
+            "schema_version": 1,
+            "measurement": "chat_turn_measurements_v1",
+            "missing_measurement_policy": MISSING_POLICY,
+            "method": "structural-chars-v1",
+            "content_free": True,
+            "journal_available": False,
+            "turns_total": 0,
+            "turns_exact": 0,
+            "turns_estimated": 0,
+            "turns_unknown": 0,
+            "session_total": {"point": None, "lower": None, "upper": None},
+            "latest_turn": None,
+            "blend": "unknown",
+            "missing_reason": "chat_journal_unavailable",
+        }
 
 
 def _json_object(value: Any) -> dict[str, Any]:
@@ -181,6 +334,18 @@ def operations_analytics(
     provider_cost_samples = 0
     system_cost_total = 0.0
     system_cost_samples = 0
+    accepted_run_ids: set[str] = set()
+    controller_usage_observed = 0
+    controller_usage_exact = 0
+    controller_exact_runs = 0
+    controller_missing_exact_runs = 0
+    controller_estimate_eligible_missing_runs = 0
+    controller_missing_model_visible_bytes = 0
+    controller_calibration_ratios: list[float] = []
+    provider_usage_observed = 0
+    provider_usage_exact = 0
+    usage_observed = 0
+    usage_exact = 0
     status_counts: Counter[str] = Counter()
     result_rows: list[dict[str, Any]] = []
 
@@ -223,10 +388,45 @@ def operations_analytics(
 
         if status == "accepted":
             accepted_count += 1
+            accepted_run_ids.add(run_id)
             if hour_key in hourly:
                 hourly[hour_key]["accepted"] += 1
             evidence = window_metrics.get(run_id) or {}
             events = evidence.get("events") if isinstance(evidence.get("events"), list) else []
+            all_usage_events = [
+                event.get("payload") or {}
+                for event in events
+                if event.get("event_type") == "usage_event"
+                and isinstance(event.get("payload"), dict)
+            ]
+            exact_controller_events = 0
+            exact_controller_tokens = 0
+            for usage_event in all_usage_events:
+                actor = str(usage_event.get("actor") or "provider").strip().lower()
+                measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
+                attribution = usage_event.get("attribution") if isinstance(usage_event.get("attribution"), dict) else {}
+                exact = str(attribution.get("status") or "").strip().lower() == "exact" and str(measurement.get("usage") or "").strip().lower() == "measured"
+                usage_observed += 1
+                usage_exact += int(exact)
+                if actor == "controller":
+                    controller_usage_observed += 1
+                    controller_usage_exact += int(exact)
+                    if exact:
+                        exact_controller_events += 1
+                        exact_controller_tokens += max(0, int(canonical_usage_payload(usage_event).get("total_tokens") or 0))
+                else:
+                    provider_usage_observed += 1
+                    provider_usage_exact += int(exact)
+            model_visible_bytes = _observed_nonnegative_int(perf_metric.get("model_visible_bytes")) if isinstance(perf_metric, dict) else None
+            if exact_controller_events > 0:
+                controller_exact_runs += 1
+                if exact_controller_tokens > 0 and model_visible_bytes is not None and model_visible_bytes > 0:
+                    controller_calibration_ratios.append(exact_controller_tokens / model_visible_bytes)
+            else:
+                controller_missing_exact_runs += 1
+                if model_visible_bytes is not None and model_visible_bytes > 0:
+                    controller_estimate_eligible_missing_runs += 1
+                    controller_missing_model_visible_bytes += model_visible_bytes
             replan_count = max(0, int(evidence.get("replan_count") or 0))
             first_pass = replan_count == 0
             row_result["first_pass"] = first_pass
@@ -257,12 +457,7 @@ def operations_analytics(
                 tool_call_samples += 1
                 tool_calls_total += observed_tool_calls
 
-            usage_events = [
-                event.get("payload") or {}
-                for event in events
-                if event.get("event_type") == "usage_event"
-                and str((event.get("payload") or {}).get("actor") or "provider").strip().lower() != "controller"
-            ]
+            usage_events = [usage_event for usage_event in all_usage_events if str(usage_event.get("actor") or "provider").strip().lower() != "controller"]
             measured_costs: list[float] = []
             attribution_complete = bool(usage_events)
             for usage_event in usage_events:
@@ -306,12 +501,43 @@ def operations_analytics(
     tool_missing = max(0, accepted_count - tool_call_samples)
     provider_missing = max(0, accepted_count - provider_cost_samples)
     system_missing = max(0, accepted_count - system_cost_samples)
+    recent = performance.get("recent") if isinstance(performance, dict) else []
+    if not isinstance(recent, list):
+        recent = []
+    retained_invocation_ids: set[str] = set()
+    for event in recent:
+        if not isinstance(event, dict) or str(event.get("run_id") or "") not in accepted_run_ids:
+            continue
+        invocation = event.get("invocation") if isinstance(event.get("invocation"), dict) else {}
+        invocation_id = str(invocation.get("invocation_id") or "").strip()
+        if invocation_id:
+            retained_invocation_ids.add(invocation_id)
+    expected_tool_invocations = tool_calls_total if tool_call_samples and tool_calls_total > 0 else None
+    retained_tool_invocations = len(retained_invocation_ids) if expected_tool_invocations is not None else None
+    tool_invocation_coverage = (
+        round(min(retained_tool_invocations, expected_tool_invocations) / expected_tool_invocations, 6)
+        if retained_tool_invocations is not None and expected_tool_invocations
+        else None
+    )
+    controller_coverage = round(controller_usage_exact / controller_usage_observed, 6) if controller_usage_observed else None
+    provider_coverage = round(provider_usage_exact / provider_usage_observed, 6) if provider_usage_observed else None
+    exact_run_attribution = round(usage_exact / usage_observed, 6) if usage_observed else None
+    cost_coverage = round(system_cost_samples / accepted_count, 6) if accepted_count else None
     hourly_rows = [{"hour": _iso(datetime.fromtimestamp(hour * 3600, tz=timezone.utc)), **hourly[hour]} for hour in range(first_hour, current_hour + 1)]
 
     phase_p50 = None
     if phase_coverage_values:
         ranked = _nearest_rank([round(value * 1_000_000) for value in phase_coverage_values], 50)
         phase_p50 = round((ranked or 0) / 1_000_000, 6)
+
+    controller_token_estimate = _controller_token_estimate(
+        accepted_runs=accepted_count,
+        exact_runs=controller_exact_runs,
+        missing_exact_runs=controller_missing_exact_runs,
+        eligible_missing_runs=controller_estimate_eligible_missing_runs,
+        missing_model_visible_bytes=controller_missing_model_visible_bytes,
+        calibration_ratios=controller_calibration_ratios,
+    )
 
     return {
         "schema_version": 1,
@@ -376,6 +602,57 @@ def operations_analytics(
                 "mean_per_complete_accepted_usd": round(system_cost_total / system_cost_samples, 12) if system_cost_samples else None,
                 "measurement": "controller_plus_attributed_provider_complete_only",
                 "missing_measurement_policy": MISSING_POLICY,
+            },
+        },
+        "controller_token_estimate": controller_token_estimate,
+        "turn_token_measurements": _chat_turn_measurements(ledger),
+        "measurement_coverage": {
+            "missing_measurement_policy": MISSING_POLICY,
+            "controller_usage": {
+                "observed": controller_usage_observed,
+                "exact": controller_usage_exact,
+                "coverage": controller_coverage,
+                "measurement": "exact_usage_event_attribution",
+                "provenance": "orchestration_ledger.usage_event",
+                "missing_reason": None if controller_usage_observed else "no_controller_usage_event_in_window",
+            },
+            "provider_usage": {
+                "observed": provider_usage_observed,
+                "exact": provider_usage_exact,
+                "coverage": provider_coverage,
+                "measurement": "exact_usage_event_attribution",
+                "provenance": "orchestration_ledger.usage_event",
+                "missing_reason": None if provider_usage_observed else "no_provider_usage_event_in_window",
+            },
+            "tool_invocation": {
+                "observed": retained_tool_invocations,
+                "expected": expected_tool_invocations,
+                "coverage": tool_invocation_coverage,
+                "measurement": "retained_tool_invocation_event_over_expected_tool_calls",
+                "provenance": "performance_trace.recent+run_metrics",
+                "missing_reason": None if expected_tool_invocations is not None else "expected_tool_call_denominator_unobserved",
+            },
+            "tool_card_tokens": {
+                "coverage": None,
+                "measurement": "unobserved",
+                "provenance": "client_receipt_required",
+                "missing_reason": "client_receipt_not_exposed_by_mcp_transport",
+            },
+            "cost": {
+                "observed": system_cost_samples,
+                "expected": accepted_count if accepted_count else None,
+                "coverage": cost_coverage,
+                "measurement": "controller_plus_attributed_provider_complete_only",
+                "provenance": "accepted_result_operations.cost.total_system",
+                "missing_reason": None if accepted_count and system_cost_samples == accepted_count else "accepted_result_cost_incomplete_or_unobserved",
+            },
+            "exact_run_attribution": {
+                "observed": usage_observed,
+                "exact": usage_exact,
+                "coverage": exact_run_attribution,
+                "measurement": "exact_usage_event_attribution",
+                "provenance": "orchestration_ledger.usage_event.attribution",
+                "missing_reason": None if usage_observed else "no_usage_event_in_window",
             },
         },
         "hourly": hourly_rows,

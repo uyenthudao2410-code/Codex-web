@@ -270,6 +270,7 @@ def build_operator_completion_report(
         "source_run_wave": {
             "run_id": run_id,
             "wave_id": wave_id,
+            "checkpoint_id": str(checkpoint.get("checkpoint_id") or ""),
             "base_head": str(getattr(ctx, "base_head", "") or ""),
             "worktree_fp": str(getattr(ctx, "worktree_fp", "") or ""),
             "contract_fp": str(getattr(ctx, "contract_fp", "") or ""),

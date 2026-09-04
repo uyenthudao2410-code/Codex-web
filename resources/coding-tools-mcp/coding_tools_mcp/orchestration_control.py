@@ -245,8 +245,14 @@ class OrchestrationControl:
         worktree_fp: str,
         contract_fp: str = "",
         metadata: dict[str, Any] | None = None,
+        goal_controller_precondition: dict[str, Any] | None = None,
     ) -> RunContext:
-        run_id = self.ledger.create_run(objective=objective, task_id=task_id, metadata=metadata)
+        run_id = self.ledger.create_run(
+            objective=objective,
+            task_id=task_id,
+            metadata=metadata,
+            goal_controller_precondition=goal_controller_precondition,
+        )
         wave_id = self.ledger.create_wave(
             run_id,
             execution_mode=execution_mode,

@@ -10,7 +10,7 @@
 - Base HEAD: `30b7d1b971b65034d3e4c95568c970fcc0e9380c`
 - Worktree fingerprint: `08031548f27ba4382af7e685a5e0ccf22b8096ea745e8c15e3824b1857b14fc5`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -49,6 +49,8 @@
 | 34767 | 2026-09-01T16:53:18.869Z | failure_observed | PROVING | PROVING | failure_class=CHECK_FAILED |
 | 34768 | 2026-09-01T16:53:19.086Z | state_transition | PROVING | REPLAN | reason=CHECK_FAILED; failure_class=CHECK_FAILED |
 | 34769 | 2026-09-01T16:53:19.301Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 38810 | 2026-09-03T20:02:59.821Z | state_transition | REPLAN | ABORTED | reason=G3_RECONCILE_REPLAN_ABANDONED_AFTER_CURRENT_REPORT_ACK |
+| 38811 | 2026-09-03T20:03:00.281Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -66,5 +68,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `27`
-- Chain head: `945ba9a74b775c740808695f65c1abe6067ee46399f8da919a76c5bda4cc30ec`
+- Events checked: `29`
+- Chain head: `c7e68fb3c8c90a9beacd6235587a6578e53e358463c34d9f1a7b89f6b0672273`

@@ -1,0 +1,155 @@
+{
+  "version": 2,
+  "task_id": "331c9fac9c864b7bb5c7d975cb212cd0",
+  "orchestration": {
+    "run_id": "14466a6b09744be4893d7c3312b91f6e",
+    "wave_id": "b54a40f42d80466e8c7960f3b6ef1f2e",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+    "contract_fp": ""
+  },
+  "objective": "Live post-activation L3 transport-correlation canary on the current external ChatWeb turn. Do not mutate source, restart runtime, or inspect/persist message bodies. Create only a fresh RUN/WAVE under this new task context, allowing the runtime to derive server-owned host correlation from the current attested ChatWeb transport trace when no Electron pending turn exists. Preserve controller usage as unknown_not_zero unless an exact numeric client-reported receipt is actually observed. This canary is read-only and will be terminalized after inspecting correlation/usage evidence.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "8295ba6991b9e96bfdaa156248fc28df1af29b55b7fa17ca6f84cb94c91baeea"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-14466a6b09744be4893d7c3312b91f6e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-14466a6b09744be4893d7c3312b91f6e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "14466a6b09744be4893d7c3312b91f6e",
+      "wave_id": "b54a40f42d80466e8c7960f3b6ef1f2e",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Live post-activation L3 transport-correlation canary on the current external ChatWeb turn. Do not mutate source, restart runtime, or inspect/persist message bodies. Create only a fresh RUN/WAVE under this new task context, allowing the runtime to derive server-owned host correlation from the current attested ChatWeb transport trace when no Electron pending turn exists. Preserve controller usage as unknown_not_zero unless an exact numeric client-reported receipt is actually observed. This canary is read-only and will be terminalized after inspecting correlation/usage evidence.",
+        "objective_revision": 1,
+        "objective_sha256": "b8e3b33db1186abcb3e98e6f8121130a0f0d7c7bd77e68bb2d73343985b575bd",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "3494f3efbe09dd86f0eb24fb0bd22cc49824b5dec722de952a6f1f58401bda7d",
+  "completion_report_acknowledged_id": "3494f3efbe09dd86f0eb24fb0bd22cc49824b5dec722de952a6f1f58401bda7d",
+  "completion_report_acknowledged_at": "2026-09-03T16:50:52.242Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T16:48:38.738Z",
+  "updated_at": "2026-09-03T16:50:52.245Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:48:38.738Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Live post-activation L3 transport-correlation canary on the current external ChatWeb turn. Do not mutate source, restart runtime, or inspect/persist message bodies. Create only a fresh RUN/WAVE under this new task context, allowing the runtime to derive server-owned host correlation from the current attested ChatWeb transport trace when no Electron pending turn exists. Preserve controller usage as unknown_not_zero unless an exact numeric client-reported receipt is actually observed. This canary is read-only and will be terminalized after inspecting correlation/usage evidence."
+      }
+    },
+    {
+      "time": "2026-09-03T16:48:40.249Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:48:41.638Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:48:41.646Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T16:49:34.488Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "3494f3efbe09dd86f0eb24fb0bd22cc49824b5dec722de952a6f1f58401bda7d"
+      }
+    },
+    {
+      "time": "2026-09-03T16:50:39.188Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:50:52.242Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "3494f3efbe09dd86f0eb24fb0bd22cc49824b5dec722de952a6f1f58401bda7d"
+      }
+    }
+  ]
+}

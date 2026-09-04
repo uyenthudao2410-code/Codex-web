@@ -1,0 +1,119 @@
+{
+  "version": 2,
+  "task_id": "9533277464004ad69a0757e99b447145",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "sCvK-vC9qFkca_ltn-ZqZHxG",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 446,
+    "finished_at": "2026-09-04T07:15:40.772Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_operations_analytics.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2445,
+      "summary": "exit 0 | 2.4s | 3 lines | tail: '4 passed in 1.25s'",
+      "finished_at": "2026-09-04T07:15:32.984Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "sUKnJ9wGDlrujwKbNmbMJxUn"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 100,
+        "command_id": "sUKnJ9wGDlrujwKbNmbMJxUn",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:sUKnJ9wGDlrujwKbNmbMJxUn:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:sUKnJ9wGDlrujwKbNmbMJxUn:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-04T07:15:30.171Z",
+  "updated_at": "2026-09-04T07:15:40.772Z",
+  "events": [
+    {
+      "time": "2026-09-04T07:15:30.171Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-04T07:15:30.499Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_operations_analytics.py",
+        "session_id": "sUKnJ9wGDlrujwKbNmbMJxUn"
+      }
+    },
+    {
+      "time": "2026-09-04T07:15:32.984Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_operations_analytics.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T07:15:40.375Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "session_id": "sCvK-vC9qFkca_ltn-ZqZHxG"
+      }
+    },
+    {
+      "time": "2026-09-04T07:15:40.772Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/dashboard-analytics.test.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

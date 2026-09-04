@@ -62,7 +62,18 @@ class OperationsAnalyticsTests(unittest.TestCase):
             ledger.accepted_result_economics = unexpected_n_plus_one
             ledger.accepted_result_evaluation = unexpected_n_plus_one
             ledger.list_waves = unexpected_n_plus_one
-            result = operations_analytics(ledger, performance={"run_metrics": {first: {"tool_calls": 7}}}, days=7, now="2026-08-19T08:00:00Z")
+            result = operations_analytics(
+                ledger,
+                performance={
+                    "run_metrics": {first: {"tool_calls": 7}},
+                    "recent": [
+                        {"run_id": first, "wave_id": first_wave, "invocation": {"invocation_id": f"inv-{index}"}}
+                        for index in range(7)
+                    ],
+                },
+                days=7,
+                now="2026-08-19T08:00:00Z",
+            )
             self.assertEqual(result["measurement"], "accepted_result_operations_v1")
             self.assertEqual(result["missing_measurement_policy"], "unknown_not_zero")
             self.assertEqual(result["outcomes"]["terminal_runs"], 3)
@@ -90,6 +101,18 @@ class OperationsAnalyticsTests(unittest.TestCase):
             self.assertEqual(total["complete_accepted"], 1)
             self.assertEqual(total["missing_accepted"], 1)
             self.assertEqual(total["total_usd"], 0.03)
+            coverage = result["measurement_coverage"]
+            self.assertEqual(coverage["missing_measurement_policy"], "unknown_not_zero")
+            self.assertIsNone(coverage["controller_usage"]["coverage"])
+            self.assertEqual(coverage["provider_usage"]["coverage"], 1.0)
+            self.assertEqual(coverage["tool_invocation"]["coverage"], 1.0)
+            self.assertEqual(coverage["tool_invocation"]["observed"], 7)
+            self.assertEqual(coverage["tool_invocation"]["expected"], 7)
+            self.assertEqual(coverage["tool_card_tokens"]["measurement"], "unobserved")
+            self.assertIsNone(coverage["tool_card_tokens"]["coverage"])
+            self.assertEqual(coverage["tool_card_tokens"]["missing_reason"], "client_receipt_not_exposed_by_mcp_transport")
+            self.assertEqual(coverage["cost"]["coverage"], 0.5)
+            self.assertEqual(coverage["exact_run_attribution"]["coverage"], 1.0)
             self.assertEqual(len(result["hourly"]), 168)
 
     def test_empty_window_keeps_rates_and_cost_measurements_unknown(self) -> None:
@@ -104,6 +127,98 @@ class OperationsAnalyticsTests(unittest.TestCase):
             self.assertIsNone(result["efficiency"]["tool_calls"]["total_observed"])
             self.assertIsNone(result["cost"]["provider_observed"]["total_usd"])
             self.assertIsNone(result["cost"]["total_system"]["total_usd"])
+            coverage = result["measurement_coverage"]
+            self.assertIsNone(coverage["controller_usage"]["coverage"])
+            self.assertIsNone(coverage["provider_usage"]["coverage"])
+            self.assertIsNone(coverage["tool_invocation"]["coverage"])
+            self.assertIsNone(coverage["cost"]["coverage"])
+            self.assertIsNone(coverage["exact_run_attribution"]["coverage"])
+            self.assertEqual(coverage["tool_card_tokens"]["measurement"], "unobserved")
+            estimate = result["controller_token_estimate"]
+            self.assertEqual(estimate["status"], "unknown")
+            self.assertEqual(estimate["measurement"], "UNKNOWN")
+            self.assertIsNone(estimate["estimate"])
+
+    def test_controller_token_estimate_uses_exact_calibration_for_missing_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger = OrchestrationLedger(Path(raw))
+            run_metrics = {}
+            for index in range(5):
+                run_id = ledger.create_run(objective=f"calibration-{index}")
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                ledger.record_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=f"controller-{index}",
+                    usage_event=build_usage_event(
+                        run_id=run_id,
+                        wave_id=wave_id,
+                        delegation_id=f"controller-{index}",
+                        provider_id="openai",
+                        model_id="gpt-test",
+                        status="completed",
+                        source="chatweb:controller_usage",
+                        input_tokens=300,
+                        output_tokens=100,
+                        actor="controller",
+                        usage_provenance="client_reported",
+                        attribution_status="exact",
+                    ),
+                )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+                self._set_times(ledger, run_id, "2026-08-19T07:50:00Z", "2026-08-19T07:50:10Z")
+                run_metrics[run_id] = {"tool_calls": 1, "model_visible_bytes": 1600}
+
+            missing_run = ledger.create_run(objective="missing-controller")
+            missing_wave = ledger.create_wave(missing_run, execution_mode="mcp_only")
+            ledger.finish_wave(missing_wave, status="accepted")
+            ledger.finish_run(missing_run, status="accepted")
+            self._set_times(ledger, missing_run, "2026-08-19T07:55:00Z", "2026-08-19T07:55:10Z")
+            run_metrics[missing_run] = {"tool_calls": 1, "model_visible_bytes": 4000}
+
+            result = operations_analytics(
+                ledger,
+                performance={"run_metrics": run_metrics},
+                days=7,
+                now="2026-08-19T08:00:00Z",
+            )
+            estimate = result["controller_token_estimate"]
+            self.assertEqual(estimate["status"], "calibrated_estimate")
+            self.assertEqual(estimate["measurement"], "CALIBRATED_ESTIMATE")
+            self.assertEqual(estimate["confidence"], "low")
+            self.assertEqual(estimate["calibration_samples"], 5)
+            self.assertEqual(estimate["missing_exact_runs"], 1)
+            self.assertEqual(estimate["eligible_missing_runs"], 1)
+            self.assertEqual(estimate["estimate"]["p10_total_tokens"], 1000)
+            self.assertEqual(estimate["estimate"]["p50_total_tokens"], 1000)
+            self.assertEqual(estimate["estimate"]["p90_total_tokens"], 1000)
+
+    def test_controller_token_estimate_uses_separate_context_proxy_below_calibration_floor(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger = OrchestrationLedger(Path(raw))
+            run_id = ledger.create_run(objective="context-only")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            ledger.finish_wave(wave_id, status="accepted")
+            ledger.finish_run(run_id, status="accepted")
+            self._set_times(ledger, run_id, "2026-08-19T07:55:00Z", "2026-08-19T07:55:10Z")
+
+            result = operations_analytics(
+                ledger,
+                performance={"run_metrics": {run_id: {"tool_calls": 1, "model_visible_bytes": 4000}}},
+                days=7,
+                now="2026-08-19T08:00:00Z",
+            )
+            estimate = result["controller_token_estimate"]
+            self.assertEqual(estimate["status"], "context_estimate")
+            self.assertEqual(estimate["measurement"], "CONTEXT_ESTIMATE")
+            self.assertEqual(estimate["confidence"], "low")
+            self.assertEqual(estimate["calibration_samples"], 0)
+            self.assertEqual(estimate["missing_reason"], "exact_calibration_below_minimum")
+            self.assertEqual(estimate["estimate"]["p10_context_tokens"], 667)
+            self.assertEqual(estimate["estimate"]["p50_context_tokens"], 1000)
+            self.assertEqual(estimate["estimate"]["p90_context_tokens"], 2000)
+            self.assertTrue(estimate["estimate"]["not_controller_total"])
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "f5f237d587174d82b116902f198bafcb",
     "wave_id": "ecbd770106924783bf15da630e7e755e",
-    "orchestration_state": "PREFLIGHT",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Implement W4 ToolInvocationEvent Instrumentation on the CURRENT active W4 RUN/WAVE only. Use the existing PerformanceTraceStore as the single durable measurement plane and preserve the public smart-v3 contract at exactly 8 tools. Requirements: (1) every public smart-v3 tools/call gets exactly one invocation event, including activation/bootstrap and typed early failures before _call_tool_sync; (2) normal synchronous calls must not double-record; (3) background agent_workflow must propagate the SAME invocation identity/context into its worker and still record exactly one event for that invocation; (4) add a stable per-invocation invocation_id created once at Runtime.call_tool boundary and propagated to the trace worker; (5) record only exact content-free identities that are actually available: workspace root-id after successful scope resolution, workspace generation if available, task_context_id, task_id, run_id/wave_id/delegation_id from current orchestration, hashed client session_instance, execution_context_id, client id/type/role and identity source, W3C trace_context_metadata fields, and exact controller turn_id only when a validated controller usage report supplies it; missing values must remain empty/unattributed, never guessed; (6) record tool operation/action/phase plus ToolSpec risk_class/capability/mutation_class; (7) retain exact measured request_bytes, response_bytes, model_visible_bytes, timing, cache/dedup/idempotency, typed error class, result-tail/truncation/continuation data already present; do NOT convert bytes to tokens or cost; (8) bump the additive PerformanceTrace event/state schema from v6 to v7 and preserve compatibility of aggregate metrics; (9) controller_usage_request already returns the validated report, so if mcp_http_handler needs a request-local controller_turn_id, set/clear it only around dispatch and never persist the raw usage report; (10) no raw paths, raw tracestate, secrets, request payloads, or binary image data may enter the invocation identity fields; (11) tests must prove exact 8-name smart surface remains unchanged, one trace event per each exposed smart tool in a deterministic stubbed matrix, unique non-empty invocation_id values, early typed failure still emits exactly one trace, validated turn/trace/session/task attribution is attached only when present, and background propagation does not duplicate the event. Preserve all unrelated dirty work and do not alter W1-W3 semantics.",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [
     {
       "id": "checks",
@@ -37,7 +37,7 @@
       "updated_at": "2026-08-31T19:43:13.956Z"
     }
   ],
-  "current_step": "Waiting for model",
+  "current_step": "Aborted - operator report required",
   "current_command": null,
   "last_command_result": {
     "command_id": "q-8ABY3A_SDJ7FnQ-wITuJ5J",
@@ -66,80 +66,53 @@
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "REPLAN",
-      "run_status": "active",
-      "wave_status": "active",
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 32,
-        "head_hash": "adc88ce9c6e6756fb2554b3ca7c3f7885fee597ab8e052cc3824748b7472159a"
+        "checked": 56,
+        "head_hash": "e762402a4895d769925f2b3f119caeea26ee044a7ba295c1aba7acf94fa9416a"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f5f237d587174d82b116902f198bafcb\\run-summary.md",
         "wave_reports": [
-          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f5f237d587174d82b116902f198bafcb\\wave-001.md"
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f5f237d587174d82b116902f198bafcb\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f5f237d587174d82b116902f198bafcb\\wave-002.md"
         ]
       }
     },
     "source_run_wave": {
       "run_id": "f5f237d587174d82b116902f198bafcb",
-      "wave_id": "ac5dddb5df0145a3887466c1c23adfa1",
+      "wave_id": "ecbd770106924783bf15da630e7e755e",
+      "checkpoint_id": "",
       "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
       "worktree_fp": "75e77f071829587c036c38dc7b97986397b6ff75712a9bf26a91bdbc3168c700",
       "contract_fp": "",
       "objective_provenance": {
-        "effective_objective": "Implement W4 ToolInvocationEvent Instrumentation on the CURRENT active W4 RUN/WAVE only. Use the existing PerformanceTraceStore as the single durable measurement plane and preserve the public smart-v3 contract at exactly 8 tools. Requirements: (1) every public smart-v3 tools/call gets exactly one invocation event, including activation/bootstrap and typed early failures before _call_tool_sync; (2) normal synchronous calls must not double-record; (3) background agent_workflow must propagate the SAME invocation identity/context into its worker and still record exactly one event for that invocation; (4) add a stable per-invocation invocation_id created once at Runtime.call_tool boundary and propagated to the trace worker; (5) record only exact content-free identities that are actually available: workspace root-id after successful scope resolution, workspace generation if available, task_context_id, task_id, run_id/wave_id/delegation_id from current orchestration, hashed client session_instance, execution_context_id, client id/type/role and identity source, W3C trace_context_metadata fields, and exact controller turn_id only when a validated controller usage report supplies it; missing values must remain empty/unattributed, never guessed; (6) record tool operation/action/phase plus ToolSpec risk_class/capability/mutation_class; (7) retain exact measured request_bytes, response_bytes, model_visible_bytes, timing, cache/dedup/idempotency, typed error class, result-tail/truncation/continuation data already present; do NOT convert bytes to tokens or cost; (8) bump the additive PerformanceTrace event/state schema from v6 to v7 and preserve compatibility of aggregate metrics; (9) controller_usage_request already returns the validated report, so if mcp_http_handler needs a request-local controller_turn_id, set/clear it only around dispatch and never persist the raw usage report; (10) no raw paths, raw tracestate, secrets, request payloads, or binary image data may enter the invocation identity fields; (11) tests must prove exact 8-name smart surface remains unchanged, one trace event per each exposed smart tool in a deterministic stubbed matrix, unique non-empty invocation_id values, early typed failure still emits exactly one trace, validated turn/trace/session/task attribution is attached only when present, and background propagation does not duplicate the event. Preserve all unrelated dirty work and do not alter W1-W3 semantics.",
-        "objective_revision": 1,
-        "objective_sha256": "efc85fd4450f139d138eb26e7ed953ed21d1e684935e65165d222cd419673d78",
-        "objective_source": "run_initial_objective",
-        "objective_changed_from_previous": false,
+        "effective_objective": "Continue W4 ToolInvocationEvent Instrumentation in the SAME RUN after the prior no-mutation wave. The prior wave supplied no explicit patch, therefore deterministic execution recorded zero durable file receipts; its two focused suites passed but do not prove W4 implementation. The broad npm test failure is independently localized to tests/live-supervisor-e2e.test.js temp-tree cleanup EPERM on Windows with 596/597 passing, outside W4 causal files. Changed strategy: prepare a new W4 wave for an explicit ChatWeb-authored bounded patch only; do not run broad npm verification automatically. Preserve the exact W4 contract: one trace event per public smart-v3 call, one invocation_id created at Runtime.call_tool and propagated through background worker, exact content-free attribution when available, exact validated controller turn_id only when supplied, PerformanceTrace schema v7 additive, unchanged 8-tool public surface, no bytes-to-token/cost inference. Inspect only the five causal implementation/test files and return current exact source context needed for an explicit patch; do not mutate yet.",
+        "objective_revision": 2,
+        "objective_sha256": "eed4d1786cbb34fb95461abe34b02890d99a679d4964fea07dc91341592b1309",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
         "objective_hash_valid": true,
         "legacy_fallback": false
       }
     },
     "proof_actually_run": {
-      "count": 3,
+      "count": 0,
       "all_recorded_proofs_passed": false,
-      "proofs": [
-        {
-          "proof_id": "4e1a8b24b4f245bbb388f43735ecd9f6",
-          "stage_id": "check:ab5661edd2a47b29",
-          "status": "passed",
-          "duration_ms": 1343,
-          "exit_code": 0,
-          "cache_hit": false
-        },
-        {
-          "proof_id": "cc1d0b9e42d248a788b92f4413a8576b",
-          "stage_id": "check:99070b534b86772d",
-          "status": "passed",
-          "duration_ms": 1277,
-          "exit_code": 0,
-          "cache_hit": false
-        },
-        {
-          "proof_id": "63597842377f49de8f3e9ec560248f03",
-          "stage_id": "verify:tests",
-          "status": "failed",
-          "duration_ms": 59264,
-          "exit_code": null,
-          "cache_hit": false
-        }
-      ]
+      "proofs": []
     },
-    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-    "blocker_or_failure": {
-      "failure_class": "BUILD_VERIFICATION_FAILED",
-      "reason": null,
-      "event_seq": 33790
-    },
-    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
-    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
   },
-  "completion_report_id": "77c6467dd01990ed5f6b4f787e32542ebd2dc5b501fa6d254f5e45d3cc727d95",
-  "completion_report_acknowledged_id": "77c6467dd01990ed5f6b4f787e32542ebd2dc5b501fa6d254f5e45d3cc727d95",
-  "completion_report_acknowledged_at": "2026-08-31T19:43:27.904Z",
+  "completion_report_id": "85280b76f5caeda126755d6b7e14227379a6ca93a2d355dd2e37d6cd41fe1552",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
   "test_results": [
     {
       "command": "npm run test",
@@ -231,9 +204,9 @@
   },
   "modified_files": [],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-31T19:42:04.872Z",
-  "updated_at": "2026-08-31T19:50:51.343Z",
+  "updated_at": "2026-09-03T19:57:31.179Z",
   "events": [
     {
       "time": "2026-08-31T19:42:04.872Z",
@@ -602,6 +575,28 @@
       "details": {
         "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/server.py'; $c=Get-Content $p; for($i=1948;$i -le 2110;$i++){Write-Output (('{0:D4}: ' -f ($i+1)) + $c[$i])}\"",
         "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T19:57:19.059Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "85280b76f5caeda126755d6b7e14227379a6ca93a2d355dd2e37d6cd41fe1552"
+      }
+    },
+    {
+      "time": "2026-09-03T19:57:31.179Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

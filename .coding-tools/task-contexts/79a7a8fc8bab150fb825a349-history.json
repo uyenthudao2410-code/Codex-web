@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "7312ce4206b64ff9a1ac4506bd6a8256",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T20:32:02.353Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Network access is denied by default.",
+    "next_step": "",
+    "created_at": "2026-09-03T20:31:47.863Z",
+    "updated_at": "2026-09-03T20:32:02.353Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:31:47.863Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:31:48.263Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$identity='E:/DEV/Codex-web'; $h=[Security.Cryptography.SHA256]::Create(); try{$bytes=$h.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)); $hex=(($bytes | ForEach-Object {$_.ToString('x2')}) -join ''); 'WORKSPACE_SHA256='+$hex} finally {$h.Dispose()}\"",
+          "session_id": "guo_AX8kcCxgLIk56x7raK8R"
+        }
+      },
+      {
+        "time": "2026-09-03T20:31:48.575Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$identity='E:/DEV/Codex-web'; $h=[Security.Cryptography.SHA256]::Create(); try{$bytes=$h.ComputeHash([Text.Encoding]::UTF8.GetBytes($identity)); $hex=(($bytes | ForEach-Object {$_.ToString('x2')}) -join ''); 'WORKSPACE_SHA256='+$hex} finally {$h.Dispose()}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:32:02.353Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$dir=Join-Path $env:APPDATA 'web-mcp-assistant'; $target=Join-Path $dir 'native-lsp-binding.json'; $temp=$target+'.g4.tmp'; New-Item -ItemType Directory -Force -Path $dir | Out-Null; $payload=[ordered]@{schema_version=1;workspace_sha256='eee465e6be7ba3179cebda943f507904c68742bf12c96c971de68a00a0666a1e';origin='http://127.0.0.1:26690';credential_file='C:\\Users\\Admin\\AppData\\Local\\webcodex\\projects\\personal\\codex-web-684216395d\\credentials\\connector-key'}; $json=$pa",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:32:02.353Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:32:28.062Z",
+    "archive_reason": "finished"
+  }
+]

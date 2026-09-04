@@ -25,7 +25,10 @@ const execFileAsync = promisify(execFile);
 const STORE_VERSION = 2;
 const MAX_ACTIONS = 64;
 const MAX_OPERATION_AGE_MS = 24 * 60 * 60 * 1000;
+const MAX_DURABLE_EPOCH_TTL_MS = 10 * 60 * 1000;
+const PERSISTED_DURABLE_EPOCH_ADMISSION_ALLOWANCE_MS = 60_000;
 const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
+const ACTIVATION_EPOCH_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 const AUTO_ACTIVATION_INTERVAL_MS = 3000;
 const ACTIVATION_REQUEST_TTL_MS = 45000;
 const MAX_GIT_OUTPUT_BYTES = 1024 * 1024;
@@ -69,6 +72,56 @@ function actionError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
 }
 
+function durableEpochBinding(record) {
+  const binding = record?.durable_epoch_binding;
+  if (record?.state !== 'accepted'
+    || record?.activation_mode !== 'full_clean_activation'
+    || !binding || typeof binding !== 'object' || Array.isArray(binding)
+    || Object.keys(binding).length !== 3
+    || !Object.hasOwn(binding, 'operation_id')
+    || !Object.hasOwn(binding, 'activation_epoch_id')
+    || !Object.hasOwn(binding, 'expires_at_unix_ms')) return null;
+  const operationId = typeof binding.operation_id === 'string' ? binding.operation_id : '';
+  const activationEpochId = typeof binding.activation_epoch_id === 'string' ? binding.activation_epoch_id : '';
+  const expiresAtUnixMs = binding.expires_at_unix_ms;
+  const requestExpiresAtUnixMs = record.expires_at_unix_ms;
+  const createdAtUnixMs = record.created_at_unix_ms;
+  const persistedDeadlineCap = Number.isSafeInteger(createdAtUnixMs)
+    ? createdAtUnixMs + MAX_DURABLE_EPOCH_TTL_MS + PERSISTED_DURABLE_EPOCH_ADMISSION_ALLOWANCE_MS
+    : NaN;
+  if (!OPERATION_ID_PATTERN.test(operationId)
+    || operationId !== record.operation_id
+    || !ACTIVATION_EPOCH_ID_PATTERN.test(activationEpochId)
+    || activationEpochId !== record.activation_epoch_id
+    || !Number.isSafeInteger(expiresAtUnixMs)
+    || !Number.isSafeInteger(requestExpiresAtUnixMs)
+    || !Number.isSafeInteger(createdAtUnixMs)
+    || createdAtUnixMs <= 0
+    || !Number.isSafeInteger(persistedDeadlineCap)
+    || expiresAtUnixMs <= requestExpiresAtUnixMs
+    || expiresAtUnixMs > persistedDeadlineCap) return null;
+  return { operation_id: operationId, activation_epoch_id: activationEpochId, expires_at_unix_ms: expiresAtUnixMs };
+}
+
+function actionDeadline(record) {
+  const binding = durableEpochBinding(record);
+  return binding
+    ? { expires_at_unix_ms: binding.expires_at_unix_ms, source: 'durable_epoch' }
+    : { expires_at_unix_ms: Number(record?.expires_at_unix_ms || 0), source: 'request' };
+}
+
+function actionExpiryError(deadline) {
+  return deadline.source === 'durable_epoch'
+    ? {
+      code: 'ACTIVATION_REQUEST_EXPIRED',
+      message: 'The linked durable activation epoch expired before completion.'
+    }
+    : {
+      code: 'ACTIVATION_REQUEST_EXPIRED',
+      message: 'The activation request expired before completion.'
+    };
+}
+
 class RecoveryActionStore {
   constructor({ paths, now = () => Date.now(), maxActions = MAX_ACTIONS }) {
     this.file = paths.recoveryActionsFile();
@@ -103,11 +156,9 @@ class RecoveryActionStore {
     if (existing.request_fingerprint !== fingerprint) {
       throw actionError('IDEMPOTENCY_CONFLICT', 'operation_id was already used for a different activation request.');
     }
-    if (existing.state === 'accepted' && Number(existing.expires_at_unix_ms || 0) <= this.now()) {
-      return this.finish(existing.operation_id, 'failed', null, {
-        code: 'ACTIVATION_REQUEST_EXPIRED',
-        message: 'The activation request expired before completion.'
-      });
+    const deadline = actionDeadline(existing);
+    if (existing.state === 'accepted' && deadline.expires_at_unix_ms <= this.now()) {
+      return this.finish(existing.operation_id, 'failed', null, actionExpiryError(deadline));
     }
     return existing;
   }
@@ -116,7 +167,7 @@ class RecoveryActionStore {
     const now = this.now();
     return this.load().actions.find((item) => (
       item.state === 'accepted'
-      && Number(item.expires_at_unix_ms || 0) > now
+      && actionDeadline(item).expires_at_unix_ms > now
       && String(item.operation_id || '') !== String(excludeOperationId || '')
     )) || null;
   }
@@ -165,6 +216,7 @@ class RecoveryActionStore {
       // remains authoritative even after the Recovery Host hands ownership
       // to its replacement process.
       activation_epoch_id: null,
+      durable_epoch_binding: null,
       activation_mode: null,
       activation_state: null,
       lifecycle_decision: null,
@@ -179,13 +231,85 @@ class RecoveryActionStore {
   get(operationId) {
     const record = this.load().actions.find((item) => item.operation_id === String(operationId || '')) || null;
     if (!record) return null;
-    if (record.state === 'accepted' && Number(record.expires_at_unix_ms || 0) <= this.now()) {
-      return this.finish(record.operation_id, 'failed', null, {
-        code: 'ACTIVATION_REQUEST_EXPIRED',
-        message: 'The activation request expired before completion.'
-      });
+    const deadline = actionDeadline(record);
+    if (record.state === 'accepted' && deadline.expires_at_unix_ms <= this.now()) {
+      return this.finish(record.operation_id, 'failed', null, actionExpiryError(deadline));
     }
     return record;
+  }
+
+  bindDurableEpoch(operationId, binding) {
+    const operation = String(operationId || '');
+    if (!OPERATION_ID_PATTERN.test(operation)) {
+      throw actionError('INVALID_OPERATION_ID', 'operation_id must contain 16-128 allowlisted characters.');
+    }
+    if (!binding || typeof binding !== 'object' || Array.isArray(binding)
+      || Object.keys(binding).length !== 3
+      || !Object.hasOwn(binding, 'operation_id')
+      || !Object.hasOwn(binding, 'activation_epoch_id')
+      || !Object.hasOwn(binding, 'expires_at_unix_ms')) {
+      throw actionError('ACTIVATION_EPOCH_BINDING_INVALID', 'Durable activation epoch binding is malformed.');
+    }
+    const boundOperation = typeof binding.operation_id === 'string' ? binding.operation_id : '';
+    const activationEpochId = typeof binding.activation_epoch_id === 'string' ? binding.activation_epoch_id : '';
+    const expiresAtUnixMs = binding.expires_at_unix_ms;
+    if (boundOperation !== operation || !OPERATION_ID_PATTERN.test(boundOperation)) {
+      throw actionError('ACTIVATION_EPOCH_OPERATION_MISMATCH', 'Durable activation epoch operation does not match the linked action.');
+    }
+    if (!ACTIVATION_EPOCH_ID_PATTERN.test(activationEpochId)) {
+      throw actionError('ACTIVATION_EPOCH_BINDING_INVALID', 'Durable activation epoch identity is invalid.');
+    }
+    const store = this.load();
+    const index = store.actions.findIndex((item) => item.operation_id === operation);
+    if (index < 0) throw actionError('ACTIVATION_OPERATION_NOT_FOUND', 'Activation operation was not found.');
+    const current = store.actions[index];
+    if (current.state !== 'accepted') {
+      throw actionError('ACTIVATION_EPOCH_BINDING_TERMINAL', 'A terminal activation action cannot acquire or change a durable epoch binding.');
+    }
+    if (current.activation_epoch_id && current.activation_epoch_id !== activationEpochId) {
+      throw actionError('ACTIVATION_EPOCH_ID_MISMATCH', 'Durable activation epoch identity does not match the linked action.');
+    }
+    if (current.durable_epoch_binding != null) {
+      const existing = durableEpochBinding(current);
+      if (!existing) {
+        throw actionError('ACTIVATION_EPOCH_BINDING_INVALID', 'Stored durable activation epoch binding is invalid.');
+      }
+      if (existing.operation_id === boundOperation
+        && existing.activation_epoch_id === activationEpochId
+        && existing.expires_at_unix_ms === expiresAtUnixMs) return current;
+      throw actionError('ACTIVATION_EPOCH_BINDING_CONFLICT', 'Durable activation epoch binding is immutable once established.');
+    }
+    const now = this.now();
+    const requestExpiresAtUnixMs = current.expires_at_unix_ms;
+    const createdAtUnixMs = current.created_at_unix_ms;
+    const persistedDeadlineCap = Number.isSafeInteger(createdAtUnixMs)
+      ? createdAtUnixMs + MAX_DURABLE_EPOCH_TTL_MS + PERSISTED_DURABLE_EPOCH_ADMISSION_ALLOWANCE_MS
+      : NaN;
+    if (!Number.isSafeInteger(requestExpiresAtUnixMs)
+      || !Number.isSafeInteger(createdAtUnixMs)
+      || createdAtUnixMs <= 0
+      || !Number.isSafeInteger(persistedDeadlineCap)
+      || !Number.isSafeInteger(expiresAtUnixMs)
+      || expiresAtUnixMs <= now
+      || expiresAtUnixMs <= requestExpiresAtUnixMs
+      || expiresAtUnixMs > now + MAX_DURABLE_EPOCH_TTL_MS
+      || expiresAtUnixMs > persistedDeadlineCap) {
+      throw actionError('ACTIVATION_EPOCH_EXPIRY_INVALID', 'Durable activation epoch expiry is outside the bounded lifetime.');
+    }
+    const next = {
+      ...current,
+      activation_epoch_id: activationEpochId,
+      activation_mode: 'full_clean_activation',
+      durable_epoch_binding: {
+        operation_id: boundOperation,
+        activation_epoch_id: activationEpochId,
+        expires_at_unix_ms: expiresAtUnixMs
+      },
+      updated_at: new Date(now).toISOString()
+    };
+    store.actions[index] = next;
+    this.save(store.actions);
+    return next;
   }
 
   annotate(operationId, patch = {}) {
@@ -1319,13 +1443,14 @@ class AcceptedCodeActivationController {
       this.updateIntent(state, intent, { state: 'completed', current_operation_id: null, lifecycle_decision: postflight.lifecycle_decision, error: null, result: { ...(record.result || {}), postflight } }); return;
     }
     if (recordState === 'accepted') {
+      const effectiveDeadline = actionDeadline(record).expires_at_unix_ms;
       if (record?.result?.component_stopped === true) {
-        this.updateIntent(state, intent, Number(record.expires_at_unix_ms || 0) > this.now()
+        this.updateIntent(state, intent, effectiveDeadline > this.now()
           ? { state: 'awaiting', error: { code: 'COMPONENT_AWAITING_START', message: 'Coding MCP is stopped; activation remains resumable until a fresh instance starts.' } }
           : { state: 'deferred', current_operation_id: null, error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'Activation attempt expired before Coding MCP restarted.' } });
         return;
       }
-      this.updateIntent(state, intent, Number(record.expires_at_unix_ms || 0) > this.now()
+      this.updateIntent(state, intent, effectiveDeadline > this.now()
         ? { state: 'awaiting', error: null }
         : { state: 'deferred', current_operation_id: null, error: { code: 'ACTIVATION_REQUEST_EXPIRED', message: 'Activation attempt expired before completion.' } });
       return;

@@ -106,6 +106,77 @@ test('pending activation census replaces stale durable component evidence withou
     'a passing candidate remains evidence-only until finalize independently commits it');
 });
 
+test('pending census advances only STARTING and refreshes VERIFYING without mutating coordinator-owned states', (t) => {
+  const { paths } = fixture(t);
+  const activationEpochId = id('activation-pending-state-gate', '0001');
+  const census = {
+    pass: false,
+    activation_epoch_id: activationEpochId,
+    reason: 'UPDATE_INCOMPLETE'
+  };
+
+  for (const state of ['STARTING', 'VERIFYING']) {
+    let updateCalls = 0;
+    const current = {
+      activation_epoch_id: activationEpochId,
+      state,
+      admission_state: 'CLOSED',
+      verification: { previous: true }
+    };
+    const activation = new FullCleanActivation({
+      paths,
+      settings: { load: () => ({}) },
+      orchestrator: {},
+      epochStore: {
+        current: () => current,
+        update: (_epochId, next) => {
+          updateCalls += 1;
+          Object.assign(current, next);
+          return current;
+        }
+      }
+    });
+
+    const next = activation.recordPendingCensus(activationEpochId, census);
+    assert.equal(updateCalls, 1, `${state} must persist exactly one census refresh`);
+    assert.equal(next.state, 'VERIFYING');
+    assert.deepEqual(next.verification, census);
+    assert.equal(next.admission_state, 'CLOSED');
+  }
+
+  for (const state of ['PREPARING', 'ADMISSION_CLOSED', 'FROZEN', 'STOPPING', 'HANDOFF']) {
+    let updateCalls = 0;
+    const current = {
+      activation_epoch_id: activationEpochId,
+      state,
+      admission_state: 'CLOSED',
+      reason: 'preserve-me',
+      verification: { previous: true }
+    };
+    const before = structuredClone(current);
+    const activation = new FullCleanActivation({
+      paths,
+      settings: { load: () => ({}) },
+      orchestrator: {},
+      epochStore: {
+        current: () => current,
+        update: () => {
+          updateCalls += 1;
+          throw new Error('forbidden state must not reach the durable update');
+        }
+      }
+    });
+
+    assert.throws(
+      () => activation.recordPendingCensus(activationEpochId, census),
+      (error) => error?.code === 'ACTIVATION_EPOCH_STATE_INVALID'
+        && error?.details?.state === state
+    );
+    assert.equal(updateCalls, 0, `${state} must fail before durable mutation`);
+    assert.deepEqual(current, before);
+  }
+});
+
 function projectionSnapshot() {
   return {
     backup_api_copy: true,
@@ -1128,6 +1199,10 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   connectorEvidenceMode = 'discovery';
 
   connectorAcknowledged = false;
+  store.update(activationEpochId, {
+    state: 'STARTING',
+    reason: 'replacement-assembly-started'
+  });
   coordinator.recordPendingCensus(activationEpochId, {
     ...census,
     verified: false,

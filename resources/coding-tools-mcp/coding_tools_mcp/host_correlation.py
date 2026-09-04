@@ -33,7 +33,15 @@ def validate_pending_host_turn(value: Any, *, now_ms: float | None = None) -> di
     """
     if not isinstance(value, dict):
         return None
-    allowed = {"schema_version", "turn_id", "trace_id", "staged_at_unix_ms"}
+    allowed = {
+        "schema_version",
+        "turn_id",
+        "trace_id",
+        "staged_at_unix_ms",
+        "product_session_receipt_id",
+        "prior_product_session_receipt_id",
+        "product_session_transition",
+    }
     if set(value) - allowed or value.get("schema_version") != HOST_CORRELATION_SCHEMA_VERSION:
         return None
     turn_id = str(value.get("turn_id") or "").strip()
@@ -48,7 +56,40 @@ def validate_pending_host_turn(value: Any, *, now_ms: float | None = None) -> di
     current_ms = time.time() * 1000 if now_ms is None else float(now_ms)
     if float(staged_at) > current_ms + 5_000 or current_ms - float(staged_at) > HOST_CORRELATION_PENDING_TTL_MS:
         return None
-    return {"turn_id": turn_id, "trace_id": trace_id, "staged_at_unix_ms": float(staged_at)}
+    product_session = str(value.get("product_session_receipt_id") or "").strip()
+    prior_product_session = str(value.get("prior_product_session_receipt_id") or "").strip()
+    transition = str(value.get("product_session_transition") or "").strip().lower()
+    for receipt in (product_session, prior_product_session):
+        if receipt and (
+            not receipt.startswith("chatweb-product-session:")
+            or len(receipt) != len("chatweb-product-session:") + 64
+            or any(character not in "0123456789abcdef" for character in receipt.rsplit(":", 1)[-1])
+        ):
+            return None
+    if transition and transition not in {"observed", "same", "rotated"}:
+        return None
+    if (transition or prior_product_session) and not product_session:
+        return None
+    if transition == "rotated" and (
+        not prior_product_session or prior_product_session == product_session
+    ):
+        return None
+    return {
+        "turn_id": turn_id,
+        "trace_id": trace_id,
+        "staged_at_unix_ms": float(staged_at),
+        **(
+            {"product_session_receipt_id": product_session}
+            if product_session
+            else {}
+        ),
+        **(
+            {"prior_product_session_receipt_id": prior_product_session}
+            if prior_product_session
+            else {}
+        ),
+        **({"product_session_transition": transition} if transition else {}),
+    }
 
 
 def peek_pending_host_turn(workspace: Path, *, now_ms: float | None = None) -> dict[str, Any] | None:

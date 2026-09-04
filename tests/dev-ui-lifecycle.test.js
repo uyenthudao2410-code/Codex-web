@@ -22,10 +22,11 @@ const REVISION = 'a'.repeat(64);
 const ACCEPTED_HEAD = 'b'.repeat(40);
 const PROOF_FINGERPRINT = 'c'.repeat(64);
 
-test('package start contract routes through the full-system refresh lifecycle', () => {
+test('package start contract uses stable start/focus while full refresh stays explicit', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'package.json'), 'utf8'));
-  assert.equal(packageJson.scripts.start, 'node scripts/dev-ui-lifecycle.js refresh');
-  assert.equal(packageJson.scripts['dev:refresh'], packageJson.scripts.start);
+  assert.equal(packageJson.scripts.start, 'node scripts/dev-ui-lifecycle.js start');
+  assert.equal(packageJson.scripts.dev, packageJson.scripts.start);
+  assert.equal(packageJson.scripts['dev:refresh'], 'node scripts/dev-ui-lifecycle.js refresh');
   assert.equal(packageJson.scripts['dev:control-center'], 'node scripts/dev-ui-lifecycle.js control-center');
 });
 

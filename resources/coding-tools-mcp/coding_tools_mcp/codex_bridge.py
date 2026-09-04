@@ -308,10 +308,24 @@ def _usage_economics(token_usage: object, model: str) -> dict[str, Any] | None:
     last = usage.get("last") if usage else None
     if not isinstance(last, dict):
         return None
-    input_tokens = max(0, int(last.get("inputTokens") or 0))
-    cached_tokens = max(0, min(input_tokens, int(last.get("cachedInputTokens") or 0)))
-    output_tokens = max(0, int(last.get("outputTokens") or 0))
-    reasoning_tokens = max(0, int(last.get("reasoningOutputTokens") or 0))
+    exact_fields = (
+        "inputTokens",
+        "cachedInputTokens",
+        "outputTokens",
+        "reasoningOutputTokens",
+    )
+    exact: dict[str, int] = {}
+    for field in exact_fields:
+        value = last.get(field)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            return None
+        exact[field] = value
+    input_tokens = exact["inputTokens"]
+    cached_tokens = exact["cachedInputTokens"]
+    output_tokens = exact["outputTokens"]
+    reasoning_tokens = exact["reasoningOutputTokens"]
+    if cached_tokens > input_tokens or reasoning_tokens > output_tokens:
+        return None
     uncached_tokens = max(0, input_tokens - cached_tokens)
     rates = _CREDIT_RATES_PER_MILLION.get(model)
     estimated_credits = None
@@ -332,6 +346,10 @@ def _usage_economics(token_usage: object, model: str) -> dict[str, Any] | None:
         "estimated_credits": estimated_credits,
         "pricing_basis": _PRICING_BASIS if rates is not None else None,
         "estimated": rates is not None,
+        "measured": True,
+        "usage_provenance": "provider_reported",
+        "usage_source": "codex_app_server:thread/tokenUsage/updated",
+        "accounting_profile": "openai_compatible",
     }
 
 

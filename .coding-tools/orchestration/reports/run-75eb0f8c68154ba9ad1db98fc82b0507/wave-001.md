@@ -10,7 +10,7 @@
 - Base HEAD: `30b7d1b971b65034d3e4c95568c970fcc0e9380c`
 - Worktree fingerprint: `c2d3d8603062ab5dffd2a7e40987b50962830ee94841b090b99c4b454eb58d2f`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -30,6 +30,8 @@
 | 35476 | 2026-09-02T06:45:17.088Z | managed_process_started |  |  | owner=default |
 | 35477 | 2026-09-02T06:45:17.570Z | managed_process_terminal |  |  | owner=default |
 | 35497 | 2026-09-02T06:51:53.256Z | observation_span_recorded |  |  |  |
+| 38800 | 2026-09-03T19:52:16.637Z | state_transition | PREFLIGHT | ABORTED | reason=G3_RECONCILE_COMPLETED_BUT_STALE_PROJECTION |
+| 38801 | 2026-09-03T19:52:17.145Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -46,5 +48,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `8`
-- Chain head: `18f96ad96048795c8dc02c1071dfd5d54a110566b32fc5f3596c6692ce9f630c`
+- Events checked: `10`
+- Chain head: `1cfbf92ec0ecc941fdd3b748c268a51469cfea72be8d7323fbcd14c062de0176`

@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "2f7134a295b34e669b9810cac756da83",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T09:53:05.611Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-04T09:52:55.465Z",
+    "updated_at": "2026-09-04T09:53:05.611Z",
+    "events": [
+      {
+        "time": "2026-09-04T09:52:55.465Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T09:52:55.738Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.coding-tools/evaluation/chatweb-host-observations.jsonl'; $rows=Get-Content -LiteralPath $p -Tail 300 | ForEach-Object { try { $_ | ConvertFrom-Json } catch {} }; $rows | Group-Object event_type | Sort-Object Name | ForEach-Object { '{0}={1}' -f $_.Name,$_.Count }; '---LATEST_TOKEN_RELEVANT---'; $rows | Where-Object { $_.event_type -in @('controller_usage','turn_features','host_turn_span','user_turn_visible','assistant_response_first_visib",
+          "session_id": "4cnXh9_s8L4ja8ZJkp5aSuEw"
+        }
+      },
+      {
+        "time": "2026-09-04T09:52:56.458Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='.coding-tools/evaluation/chatweb-host-observations.jsonl'; $rows=Get-Content -LiteralPath $p -Tail 300 | ForEach-Object { try { $_ | ConvertFrom-Json } catch {} }; $rows | Group-Object event_type | Sort-Object Name | ForEach-Object { '{0}={1}' -f $_.Name,$_.Count }; '---LATEST_TOKEN_RELEVANT---'; $rows | Where-Object { $_.event_type -in @('controller_usage','turn_features','host_turn_span','user_turn_visible','assistant_response_first_visib",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T09:53:05.611Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import json; from coding_tools_mcp.token_measurements import summarize_workspace; print(json.dumps(summarize_workspace(r'E:\\DEV\\Codex-web'), sort_keys=True))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T09:53:05.611Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T09:53:11.283Z",
+    "archive_reason": "finished"
+  }
+]

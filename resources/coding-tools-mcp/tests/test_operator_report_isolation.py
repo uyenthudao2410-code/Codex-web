@@ -12,10 +12,86 @@ from unittest.mock import patch
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.protocol import PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
-from coding_tools_mcp.task_state import TaskStateStore
+from coding_tools_mcp.task_state import ContextualTaskStateStore, TaskStateStore
 
 
 class OperatorReportIsolationTests(unittest.TestCase):
+    def test_terminal_get_keeps_semantic_report_identity_stable_through_ack(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "stable operator report fixture",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                run_id = result["orchestration"]["run_id"]
+                wave_id = result["orchestration"]["wave_id"]
+                runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id="stable-operator-report-fixture",
+                    stage_version="1",
+                    input_fingerprint="stable-operator-report-fixture-proof",
+                    status="passed",
+                )
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": run_id,
+                    "reason": "fixture accepts proven terminal wave",
+                })
+                self.assertTrue(accepted["accepted"])
+                checkpoint = runtime.orchestration_ledger.list_checkpoints(
+                    run_id, wave_id=wave_id
+                )[-1]
+
+                first = runtime.task_control({"action": "get", "run_id": run_id})
+                first_state = first["state"]
+                report_id = str(first_state["completion_report_id"])
+                self.assertTrue(report_id)
+                self.assertEqual(
+                    first_state["completion_report"]["source_run_wave"]["checkpoint_id"],
+                    checkpoint["checkpoint_id"],
+                )
+
+                second = runtime.task_control({"action": "get", "run_id": run_id})
+                self.assertEqual(second["state"]["completion_report_id"], report_id)
+
+                acknowledged = runtime.task_control({
+                    "action": "ack",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "message_id": report_id,
+                })
+                self.assertTrue(acknowledged["acknowledged"])
+                after_ack = runtime.task_state.get()
+                acknowledged_at = after_ack["completion_report_acknowledged_at"]
+                self.assertEqual(after_ack["completion_report_acknowledged_id"], report_id)
+                self.assertTrue(acknowledged_at)
+
+                third = runtime.task_control({"action": "get", "run_id": run_id})
+                self.assertEqual(third["state"]["completion_report_id"], report_id)
+                self.assertEqual(
+                    third["state"]["completion_report_acknowledged_id"], report_id
+                )
+                self.assertEqual(
+                    third["state"]["completion_report_acknowledged_at"], acknowledged_at
+                )
+                repeated = runtime.task_control({"action": "ack", "message_id": report_id})
+                self.assertTrue(repeated["acknowledged"])
+                self.assertEqual(
+                    runtime.task_state.get()["completion_report_acknowledged_at"],
+                    acknowledged_at,
+                )
+            finally:
+                runtime.close()
+
     def test_read_only_audit_preserves_acknowledged_terminal_report_latch(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -60,6 +136,77 @@ class OperatorReportIsolationTests(unittest.TestCase):
                 self.assertEqual(after["completion_report_id"], report_id)
                 self.assertEqual(after["completion_report_acknowledged_id"], report_id)
                 self.assertIsNone(runtime.task_state.pending_completion_report())
+            finally:
+                runtime.close()
+
+    def test_exact_terminal_get_materializes_missing_report_without_making_audit_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "exact recovery completion report fixture",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "include_diff": False,
+                })
+                run_id = result["orchestration"]["run_id"]
+                wave_id = result["orchestration"]["wave_id"]
+                runtime.orchestration_ledger.record_proof(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id="exact-recovery-report-fixture",
+                    stage_version="1",
+                    input_fingerprint="exact-recovery-report-fixture-proof",
+                    status="passed",
+                )
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": run_id,
+                    "reason": "fixture accepts proven terminal wave",
+                })
+                self.assertTrue(accepted["accepted"])
+                self.assertEqual(accepted["orchestration"]["orchestration_state"], "CHECKPOINTED")
+
+                # Simulate a legacy/corrupted persisted projection. The public
+                # update surface intentionally cannot clear an issued report latch.
+                fixture_store = runtime.task_state._current_store()
+                with fixture_store._lock:
+                    fixture_state = fixture_store._read()
+                    fixture_state["completion_report"] = None
+                    fixture_state["completion_report_id"] = ""
+                    fixture_state["completion_report_acknowledged_id"] = ""
+                    fixture_state["completion_report_acknowledged_at"] = None
+                    fixture_store._write(fixture_state)
+                self.assertEqual(runtime.task_state.get()["completion_report_id"], "")
+
+                audit = runtime.task_control({"action": "audit", "run_id": run_id, "limit": 20})
+                self.assertEqual(audit["completion_report"]["accepted_or_not"], "ACCEPTED")
+                self.assertEqual(runtime.task_state.get()["completion_report_id"], "")
+
+                recovered = runtime.task_control({"action": "get", "run_id": run_id})
+                recovered_state = recovered["state"]
+                report_id = str(recovered_state["completion_report_id"])
+                self.assertTrue(report_id)
+                self.assertEqual(recovered_state["completion_report"]["source_run_wave"]["run_id"], run_id)
+                self.assertEqual(recovered_state["completion_report"]["source_run_wave"]["wave_id"], wave_id)
+                self.assertEqual(TaskStateStore._completion_report_id(recovered_state["completion_report"]), report_id)
+
+                acknowledged = runtime.task_control({
+                    "action": "ack",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "message_id": report_id,
+                })
+                self.assertTrue(acknowledged["acknowledged"])
+                self.assertEqual(acknowledged["report_id"], report_id)
+                after_ack = runtime.task_state.get()
+                self.assertEqual(after_ack["completion_report_acknowledged_id"], report_id)
+                self.assertTrue(after_ack["completion_report_acknowledged_at"])
             finally:
                 runtime.close()
 
@@ -243,6 +390,87 @@ class OperatorReportIsolationTests(unittest.TestCase):
                 self.assertEqual(started["state"]["objective"], "replacement")
             finally:
                 runtime.close()
+
+    def test_cross_context_command_report_recovery_and_exact_ack_are_workspace_local(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            scope = ["mcp2026:session-a"]
+            runtime = Runtime(root)
+            runtime.task_state = ContextualTaskStateStore(root, lambda: scope[0])
+            try:
+                runtime.task_state.update({"objective": "Session A command", "status": "active"})
+                runtime.task_state.record_command_started(
+                    "git rev-parse HEAD", "command-session-a", "."
+                )
+                payload = {
+                    "ok": True,
+                    "status": "exited",
+                    "command_id": "command-session-a",
+                    "session_id": "command-session-a",
+                    "exit_code": 0,
+                    "elapsed_ms": 4,
+                }
+                runtime._record_task_tool_result(
+                    "command_control",
+                    {"action": "poll", "command_id": "command-session-a"},
+                    payload,
+                )
+                report_id = runtime.task_state.get()["completion_report_id"]
+
+                scope[0] = "mcp2026:session-b"
+                self.assertEqual(runtime.task_state.get()["completion_report_id"], "")
+                recovered = runtime.command_control(
+                    {"action": "poll", "command_id": "command-session-a"}
+                )
+                self.assertEqual(recovered["status"], "reconciled_terminal")
+                self.assertEqual(recovered["completion_report_id"], report_id)
+                self.assertEqual(
+                    recovered["reconciled_sources"], ["task_state_completion_report"]
+                )
+
+                acknowledged = runtime.task_control(
+                    {"action": "ack", "message_id": report_id}
+                )
+                self.assertTrue(acknowledged["acknowledged"])
+                scope[0] = "mcp2026:session-a"
+                self.assertEqual(
+                    runtime.task_state.get()["completion_report_acknowledged_id"],
+                    report_id,
+                )
+            finally:
+                runtime.close()
+
+    def test_cross_context_completion_lookup_fails_closed_on_ambiguity_and_workspace_change(self) -> None:
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            first_root = Path(first)
+            second_root = Path(second)
+            scope = ["mcp2026:a"]
+            workspace = [first_root]
+            store = ContextualTaskStateStore(
+                first_root,
+                lambda: scope[0],
+                workspace_provider=lambda: workspace[0],
+            )
+            for label in ("a", "b"):
+                scope[0] = f"mcp2026:{label}"
+                store.update({"objective": f"Context {label}", "status": "active"})
+                store.set_completion_report(
+                    {
+                        "operator_visible_required": True,
+                        "command_id": "reused-command",
+                        "accepted_or_not": f"RESULT_{label.upper()}",
+                        "current_state": {},
+                    }
+                )
+
+            scope[0] = "mcp2026:c"
+            with self.assertRaisesRegex(ValueError, "ambiguous across task contexts"):
+                store.find_command_completion("reused-command")
+
+            workspace[0] = second_root
+            self.assertIsNone(store.find_command_completion("reused-command"))
+            with self.assertRaisesRegex(ValueError, "current workspace"):
+                store.ack_completion_report("not-present")
 
     def test_eocl_task_ignores_foreign_and_unowned_command_projection(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -416,6 +416,107 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_w4_public_tool_matrix_emits_exactly_one_bounded_invocation_event_per_call(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                runtime.performance_trace.clear()
+                runtime.request_context.hub_client = {
+                    "client_id": "chatweb-test",
+                    "client_type": "chatweb",
+                    "session_instance": "session-test-1",
+                    "execution_context_id": "execution-test-1",
+                }
+                runtime.request_context.stateless_task_context_id = "ctx-w4-test"
+                runtime.request_context.trace_context = {
+                    "trace_id": "1" * 32,
+                    "parent_span_id": "2" * 16,
+                    "trace_flags": "01",
+                    "tracestate": "",
+                }
+                runtime.task_state.ensure_started("W4 invocation telemetry test")
+                matrix = {
+                    "workspace_context": {"detail": "compact"},
+                    "agent_workflow": {"phase": "prepare", "workflow": "diagnose", "path": "."},
+                    "task_control": {"action": "get"},
+                    "document_workflow": {"action": "capabilities"},
+                    "exec_command": {"cmd": "echo w4", "workdir": "."},
+                    "command_control": {"action": "poll", "session_id": "w4-test"},
+                    "request_permissions": {},
+                    "view_image": {"path": "missing.png"},
+                }
+
+                def fake_dispatch(name: str, _args: dict[str, object], *, request_id: object = None) -> dict[str, object]:
+                    if name == "view_image":
+                        return {
+                            "content": [],
+                            "structuredContent": {
+                                "ok": False,
+                                "error": {"code": "W4_IMAGE_TEST", "category": "not_found", "retryable": False},
+                            },
+                            "isError": True,
+                        }
+                    payload = {"ok": True, "status": "ok"}
+                    if name == "command_control":
+                        payload["truncated"] = True
+                    return {"content": [], "structuredContent": payload, "isError": False}
+
+                with (
+                    patch.object(runtime, "activation_connector_bootstrap_result", return_value=None),
+                    patch.object(runtime, "_activation_enter_tool_call"),
+                    patch.object(runtime, "_activation_leave_tool_call"),
+                    patch.object(runtime, "_set_request_workspace_scope"),
+                    patch.object(runtime, "_preflight_tool_workspace_scope"),
+                    patch.object(runtime, "_call_tool_dispatch", side_effect=fake_dispatch),
+                ):
+                    for index, (name, arguments) in enumerate(matrix.items(), start=1):
+                        runtime.call_tool(name, arguments, request_id=f"w4-{index}")
+
+                events = runtime.performance_trace.get()["recent"][-8:]
+                self.assertEqual(len(events), 8)
+                self.assertEqual([event["tool"] for event in events], list(matrix))
+                self.assertEqual(len({event["invocation"]["invocation_id"] for event in events}), 8)
+                for index, event in enumerate(events, start=1):
+                    invocation = event["invocation"]
+                    self.assertEqual(invocation["schema_version"], 1)
+                    self.assertEqual(invocation["identity_source"], "transport_request_id")
+                    self.assertEqual(invocation["request_id"], f"w4-{index}")
+                    self.assertEqual(invocation["task_context_id"], "ctx-w4-test")
+                    self.assertEqual(invocation["session_instance"], "session-test-1")
+                    self.assertEqual(invocation["execution_context_id"], "execution-test-1")
+                    self.assertEqual(invocation["client_id"], "chatweb-test")
+                    self.assertEqual(invocation["trace_context"]["trace_id"], "1" * 32)
+                    self.assertNotIn("tokens", json.dumps(event).lower())
+                self.assertTrue(events[5]["truncated"])
+                self.assertEqual(events[7]["outcome"], {
+                    "status": "error",
+                    "error_code": "W4_IMAGE_TEST",
+                    "error_category": "not_found",
+                    "retryable": False,
+                })
+            finally:
+                runtime.close()
+
+    def test_w4_activation_bootstrap_early_return_still_emits_one_invocation_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(temp), permission_mode="safe")
+            try:
+                runtime.performance_trace.clear()
+                with patch.object(
+                    runtime,
+                    "activation_connector_bootstrap_result",
+                    return_value={"ok": True, "kind": "connector_compatibility_bootstrap", "completed": False},
+                ):
+                    result = runtime.call_tool("workspace_context", {"detail": "compact"}, request_id="w4-bootstrap")
+                self.assertFalse(result["isError"])
+                events = runtime.performance_trace.get()["recent"]
+                self.assertEqual(len(events), 1)
+                self.assertEqual(events[0]["tool"], "workspace_context")
+                self.assertEqual(events[0]["invocation"]["request_id"], "w4-bootstrap")
+                self.assertEqual(events[0]["outcome"], {"status": "ok"})
+            finally:
+                runtime.close()
+
     def test_idempotency_policy_separates_required_identity_from_optional_side_effects(self) -> None:
         self.assertFalse(Runtime._idempotency_eligible_call("workspace_context", {}))
         self.assertFalse(Runtime._idempotency_eligible_call("agent_workflow", {"phase": "prepare"}))
@@ -557,11 +658,11 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "c244ed297f707f9df48c1e5d6c7e204693f281a755c2e6344bde78e94abb8251")
+                self.assertEqual(contract["sha256"], "0a1a837eee066d5098074c7ff2174c472d08a4b1c869a0fce2c21cdb1d685482")
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["compatible_predecessor_sha256"], [
-                    "57ed56a4f008287d9d9fdef035fa248f91cce4d58e935280b28963e4126a8053",
+                    "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1",
                 ])
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)

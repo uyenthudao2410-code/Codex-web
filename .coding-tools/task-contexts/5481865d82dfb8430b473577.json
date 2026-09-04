@@ -1,0 +1,168 @@
+{
+  "version": 2,
+  "task_id": "753da0b7ac044a1fa74b3173670ee975",
+  "orchestration": {
+    "run_id": "34b024bf60894eb6b692040a048bd6a2",
+    "wave_id": "21c7b1740f634800b17f895c78d1265d",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "cb33a563f37d19cbe834bd17c6aa90015fae5e3923526821c4b542d9c545062a",
+    "contract_fp": ""
+  },
+  "objective": "Implement the smallest causal repair for live L3 controller usage after canary 79299d8b876e4c8490fcde5072c632b5 proved exact host correlation but zero controller usage. Install a content-free structured-usage bootstrap in the ChatGPT main world before page scripts using Chromium Page.addScriptToEvaluateOnNewDocument. The bootstrap may structurally inspect parsed JSON objects only for response.completed/response usage shapes and must retain/export only exact numeric usage plus bounded model metadata; it must not enable Network debugging, fetch response bodies, read message DOM content, or persist raw response payloads. The existing dom-ready observer subscribes to the bootstrap and retains its current late-hook fallback when bootstrap is unavailable. Preserve exact turn/trace binding and unknown_not_zero behavior when usage is absent. No changes to backend controller ingress/EOCL/provider L2. No restart, commit, push, release or deploy.",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/services/chatEvaluationJournal.js",
+          "state": "file",
+          "sha256": "a2eee4d0969d43954c53e9c33021a5b7a1c3ea6712bdd85ca7c2abf8dc638dfe",
+          "size_bytes": 36572,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "34b024bf60894eb6b692040a048bd6a2",
+          "wave_id": "21c7b1740f634800b17f895c78d1265d"
+        },
+        {
+          "path": "electron/chatViewController.js",
+          "state": "file",
+          "sha256": "a6e7018c25f6501e434b0c083f2b25b9a484bb1d65e6a6846ddc9ba35436e599",
+          "size_bytes": 21965,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "34b024bf60894eb6b692040a048bd6a2",
+          "wave_id": "21c7b1740f634800b17f895c78d1265d"
+        },
+        {
+          "path": "tests/chat-evaluation-journal.test.js",
+          "state": "file",
+          "sha256": "9c8e4c9c0dc0f65590a994021fe93820b9c1da85e30a3cdab0653a1f879a27e8",
+          "size_bytes": 19843,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "34b024bf60894eb6b692040a048bd6a2",
+          "wave_id": "21c7b1740f634800b17f895c78d1265d"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 120,
+        "head_hash": "72b514998898fa2af9ecc6e2e19d4f4c54cd7dcbd72ce0184cd29d76ffda0141"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "34b024bf60894eb6b692040a048bd6a2",
+      "wave_id": "21c7b1740f634800b17f895c78d1265d",
+      "checkpoint_id": "f820131ce57f4ebeb78409c02e6d465a",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "cb33a563f37d19cbe834bd17c6aa90015fae5e3923526821c4b542d9c545062a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Close the same L3 early-main-world controller-usage transport repair with one exact-byte no-write adoption wave whose durable surface exactly equals the entire three-file acceptance surface. Adopt all three already-correct current files together; do not change any source or test bytes. Re-run only the focused diff check and chat evaluation journal test to create fresh proof for this exact wave. Preserve all current privacy, fail-closed, correlation, and unknown_not_zero semantics. No restart, commit, push, release, deploy, reset or clean.",
+        "objective_revision": 4,
+        "objective_sha256": "58c3a10592b92423928321eec94a2a6d669ee5ca8242869a0f52c914d7904cc3",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d83d7b1d5eb8464a9f60870bf93e3635",
+          "stage_id": "check:169384f0c74e130f",
+          "status": "passed",
+          "duration_ms": 1563,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "5706276183da4304941dff745d5699a3",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 1968,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "63a19d425876216e857266907ba963a0abd6539d8ce20291f59d3f9ef451fb95",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-03T16:13:59.649Z",
+  "updated_at": "2026-09-03T16:17:19.338Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:13:59.649Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "34b024bf60894eb6b692040a048bd6a2"
+      }
+    },
+    {
+      "time": "2026-09-03T16:13:59.686Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "63a19d425876216e857266907ba963a0abd6539d8ce20291f59d3f9ef451fb95"
+      }
+    },
+    {
+      "time": "2026-09-03T16:17:19.338Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

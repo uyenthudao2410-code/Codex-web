@@ -1,0 +1,172 @@
+{
+  "version": 2,
+  "task_id": "769413e976774ded85357d935fbbb6d4",
+  "orchestration": {
+    "run_id": "fd6a880bf5ae49c99905358d4a61e51b",
+    "wave_id": "2d06285485f848b2b0bed56698ea1693",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "c0f826c94fd886a1b1012fe04fc121f2866d26653087f0a34fc8a7ce7c403899",
+    "contract_fp": ""
+  },
+  "objective": "Complete a workspace task",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "u2h_5HpfKGL35IRQxUbw5rRL",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 2929,
+    "finished_at": "2026-09-04T01:37:52.556Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "failed",
+      "integrity": {
+        "ok": true,
+        "checked": 9,
+        "head_hash": "5f4c5fafe8ee3f40c0feef4d3fffbb8c10f11313953ac997a4821e5bb05ecc27"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-fd6a880bf5ae49c99905358d4a61e51b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-fd6a880bf5ae49c99905358d4a61e51b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "fd6a880bf5ae49c99905358d4a61e51b",
+      "wave_id": "2d06285485f848b2b0bed56698ea1693",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "c0f826c94fd886a1b1012fe04fc121f2866d26653087f0a34fc8a7ce7c403899",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Inspect the single failing source-bundle invariant after the delivery full gate: tests/source-bundle.test.js reports 'private runtime state is not bundled from the source checkout' because resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3 exists. Read only the exact test and relevant bundle source/filter implementation to determine the intended remediation. Do not mutate files, do not create additional generated state, do not commit or push.",
+        "objective_revision": 1,
+        "objective_sha256": "c5050ca81e1a16b42e13102ba8c3c74be19d38217c114139578563d6a7ceeb20",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "c3bb182c1cae1e35e82884c6511f209bcd8db1b8844102e023bf17419f5fe68f",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-04T01:36:48.833Z",
+  "updated_at": "2026-09-04T01:39:22.940Z",
+  "events": [
+    {
+      "time": "2026-09-04T01:36:48.833Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-04T01:37:17.737Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T01:37:27.099Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T01:37:27.109Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T01:37:50.984Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 SHA256 && certutil -hashfile .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260820T101338Z.sqlite3 SHA256 && fc /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260820T101338Z.sqlite3",
+        "session_id": "u2h_5HpfKGL35IRQxUbw5rRL"
+      }
+    },
+    {
+      "time": "2026-09-04T01:37:52.556Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 SHA256 && certutil -hashfile .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260820T101338Z.sqlite3 SHA256 && fc /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260820T101338Z.sqlite3",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:38:47.797Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "c3bb182c1cae1e35e82884c6511f209bcd8db1b8844102e023bf17419f5fe68f"
+      }
+    },
+    {
+      "time": "2026-09-04T01:38:55.207Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+[
+  {
+    "version": 2,
+    "task_id": "40664690919c4f94a2dd8e98c8801ec7",
+    "orchestration": {
+      "run_id": "22a6e4963d434106af1b20727cdaf379",
+      "wave_id": "9f67b2de8ec1457090794dcd2ea45caa",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "c0f826c94fd886a1b1012fe04fc121f2866d26653087f0a34fc8a7ce7c403899",
+      "contract_fp": ""
+    },
+    "objective": "Prepare a safe GitHub delivery consolidation for the exact current E:\\DEV\\Codex-web worktree after the accepted L3E/token-first/dashboard and other already-accepted current checkpoints. Determine the exact commit scope from current Git status, preserving intended project source/docs/tests and canonical .coding-tools durable evidence, while permanently excluding only .coding-tools/orchestration/ledger.sqlite3-shm and ledger.sqlite3-wal if present. Do not modify source, do not reset/restore/clean/stash/rebase. Check for accidental secrets/credentials, volatile/generated junk, unresolved conflict markers, and unaccepted obvious scratch artifacts. Confirm HEAD/upstream divergence and identify the cheapest sufficient proof before commit/push. No commit or push in prepare.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "5qmXrmkfyn_Fy93vuvWS_PUE",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T01:36:42.147Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-04T01:21:02.415Z",
+    "updated_at": "2026-09-04T01:36:42.147Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:21:02.415Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Prepare a safe GitHub delivery consolidation for the exact current E:\\DEV\\Codex-web worktree after the accepted L3E/token-first/dashboard and other already-accepted current checkpoints. Determine the exact commit scope from current Git status, preserving intended project source/docs/tests and canonical .coding-tools durable evidence, while permanently excluding only .coding-tools/orchestration/ledger.sqlite3-shm and ledger.sqlite3-wal if present. Do not modify source, do not reset/restore/clean/stash/rebase. Check for accidental secrets/credentials, volatile/generated junk, unresolved conflict markers, and unaccepted obvious scratch artifacts. Confirm HEAD/upstream divergence and identify the cheapest sufficient proof before commit/push. No commit or push in prepare."
+        }
+      },
+      {
+        "time": "2026-09-04T01:21:03.819Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T01:21:05.237Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T01:21:05.244Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T01:21:19.470Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --porcelain=v1 -uall",
+          "session_id": "IlFY7gMqfEkIgOY5rd_KmwSP"
+        }
+      },
+      {
+        "time": "2026-09-04T01:21:19.907Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --porcelain=v1 -uall",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:34:09.806Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/check-source-root-clean.js && npm run check:coding-tools-history && npm run check:repository-secrets && git diff --check",
+          "session_id": "vP0ZBgpPlNo26s2qEH1HnT9C"
+        }
+      },
+      {
+        "time": "2026-09-04T01:34:58.230Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/check-source-root-clean.js && npm run check:coding-tools-history && npm run check:repository-secrets && git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:35:08.239Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "document_workflow",
+          "code": "NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-04T01:35:15.991Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T01:35:32.515Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run test:all",
+          "session_id": "5qmXrmkfyn_Fy93vuvWS_PUE"
+        }
+      },
+      {
+        "time": "2026-09-04T01:36:42.147Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run test:all",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:36:48.832Z",
+    "archive_reason": "finished"
+  }
+]

@@ -290,6 +290,7 @@ test('component ownership recognizes only fixed activation manifests', () => {
   assert.equal(componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/coding_tools_mcp/server.py'), true);
   assert.equal(componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/tests/test_coordination_state.py'), false);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/control-center.js'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'electron/services/chatEvaluationJournal.js'), true);
   assert.equal(componentOwnsPath('electron_ui', 'electron/services/nativeService.js'), false);
   assert.deepEqual(componentOwners('package.json'), ['recovery_host', 'electron_ui']);
   assert.deepEqual(componentOwners('docs/CURRENT_STATE.md'), []);
@@ -304,6 +305,17 @@ test('activation eligibility accepts strict v2 receipts and deterministic compon
   assert.equal(result.code, 'ACTIVATABLE');
   assert.deepEqual(result.affected_components, ['recovery_host']);
   assert.equal(acceptedReceipts(checkpoint)?.[0].run_id, checkpoint.run_id);
+});
+
+test('accepted ChatWeb evaluation journal source maps exactly to electron_ui activation', async (t) => {
+  const { workspace } = await fixture(t);
+  write(path.join(workspace, 'electron', 'services', 'chatEvaluationJournal.js'), 'module.exports = { evaluation: true };\n');
+  const checkpoint = checkpointFor(workspace, { files: ['electron/services/chatEvaluationJournal.js'] });
+  const result = evaluateActivationEligibility(checkpoint, { workspace, currentHead: checkpoint.git_head });
+  assert.equal(result.eligible, true);
+  assert.equal(result.code, 'ACTIVATABLE');
+  assert.equal(result.accepted_receipts_complete, true);
+  assert.deepEqual(result.affected_components, ['electron_ui']);
 });
 
 test('activation eligibility rejects receipt provenance mismatch', async (t) => {

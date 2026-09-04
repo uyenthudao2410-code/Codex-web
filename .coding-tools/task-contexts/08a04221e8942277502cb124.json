@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "f16fbea44e864dae8baa9ce284b9b21c",
+  "orchestration": {
+    "run_id": "08292926d68d4acd9e41d2450896b456",
+    "wave_id": "1dd80750c94b472690b265763d743a26",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+    "contract_fp": ""
+  },
+  "objective": "G5 real ChatWeb observability turn sequence; inspect existing context-observability contract without source mutation.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "db975fd3a2a026427a03edb59e13fc7ae6a050734b3bd45c42ca488e0e426374"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-08292926d68d4acd9e41d2450896b456\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-08292926d68d4acd9e41d2450896b456\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "08292926d68d4acd9e41d2450896b456",
+      "wave_id": "1dd80750c94b472690b265763d743a26",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G5 real ChatWeb observability turn sequence; inspect existing context-observability contract without source mutation.",
+        "objective_revision": 1,
+        "objective_sha256": "e53861e59d25251d48a4eb284d8f74c35359ac662faa682a0799246be8dcec2c",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "82e8013ca86dfd20030da3bd1cb5a619b75a14356a04182feec8f149459c5ba6",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T22:19:48.950Z",
+  "updated_at": "2026-09-03T22:22:11.080Z",
+  "events": [
+    {
+      "time": "2026-09-03T22:19:48.950Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G5 real ChatWeb observability turn sequence; inspect existing context-observability contract without source mutation."
+      }
+    },
+    {
+      "time": "2026-09-03T22:19:50.358Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:19:56.555Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:19:56.565Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T22:22:07.117Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "82e8013ca86dfd20030da3bd1cb5a619b75a14356a04182feec8f149459c5ba6"
+      }
+    },
+    {
+      "time": "2026-09-03T22:22:11.080Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

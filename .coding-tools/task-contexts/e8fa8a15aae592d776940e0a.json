@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "56da798b0f47436f9af3fdc487c1bcba",
     "wave_id": "46484a0aa51e4ac18f0fcac5406cc553",
-    "orchestration_state": "PREFLIGHT",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
@@ -16,23 +16,87 @@
     "contract_fp": ""
   },
   "objective": "Implement the exact-RUN archived-projection recovery repair in this current RUN/WAVE only. Canonical orchestration ledger remains authority. Extend stateless exact-run lookup to recover a registered task context from bounded TaskState history only when the archived row matches both requested run_id and canonical ledger task_id, preserving current-projection exact match and controller-owner checks. Fail closed for multiple matches, current pending completion report, active/nonterminal conflicting task or run, history/task identity mismatch, workspace mismatch, or foreign controller ownership. Extend projection reconciliation with requested_run_id so a safely replaceable terminal polluted compact projection can be archived/cleared through TaskStateStore APIs and restored from exact canonical ledger task identity without mutating the orchestration ledger. Pass requested_run_id from task_control into reconciliation. Keep default behavior unchanged without requested run. Add regression tests reproducing archived canonical projection replaced by failed auto-start-like task and exact run recovery with no task_context; prove active conflicting task and pending report refuse recovery. Preserve 8-tool contract, token/accounting code, unrelated dirty bytes. No W4 implementation, restart, commit, push, release or deploy.",
-  "status": "active",
+  "status": "stopped",
   "steps": [],
-  "current_step": "Orchestration preflight",
+  "current_step": "Aborted - operator report required",
   "current_command": null,
   "last_command_result": null,
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 4,
+        "head_hash": "02d925d18dab35e906edf8cd735c678784c3b8f38f80381451a24f8418dca768"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-56da798b0f47436f9af3fdc487c1bcba\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-56da798b0f47436f9af3fdc487c1bcba\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "56da798b0f47436f9af3fdc487c1bcba",
+      "wave_id": "46484a0aa51e4ac18f0fcac5406cc553",
+      "checkpoint_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "cd9fdac8b4ee50cfe307293d1356ef0f974776cd285d00e4dd4355cdb040bbad",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Implement the exact-RUN archived-projection recovery repair in this current RUN/WAVE only. Canonical orchestration ledger remains authority. Extend stateless exact-run lookup to recover a registered task context from bounded TaskState history only when the archived row matches both requested run_id and canonical ledger task_id, preserving current-projection exact match and controller-owner checks. Fail closed for multiple matches, current pending completion report, active/nonterminal conflicting task or run, history/task identity mismatch, workspace mismatch, or foreign controller ownership. Extend projection reconciliation with requested_run_id so a safely replaceable terminal polluted compact projection can be archived/cleared through TaskStateStore APIs and restored from exact canonical ledger task identity without mutating the orchestration ledger. Pass requested_run_id from task_control into reconciliation. Keep default behavior unchanged without requested run. Add regression tests reproducing archived canonical projection replaced by failed auto-start-like task and exact run recovery with no task_context; prove active conflicting task and pending report refuse recovery. Preserve 8-tool contract, token/accounting code, unrelated dirty bytes. No W4 implementation, restart, commit, push, release or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "1c3f1847525642b6f6bfd1376268e69cbf90ab9cb2b6d9d93aa02032153df49c",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": null,
+      "reason": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+      "event_seq": null
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "42de8c7ab4a5fdddfb56ed6ec6c0f104a570da6e0d711e8b6ef34715c84381c0",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
-  "failure": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
-  "next_step": "",
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-09-01T01:51:41.001Z",
-  "updated_at": "2026-09-01T01:51:42.174Z",
+  "updated_at": "2026-09-03T19:45:47.514Z",
   "events": [
     {
       "time": "2026-09-01T01:51:41.002Z",
@@ -61,6 +125,28 @@
       "details": {
         "tool": "agent_workflow",
         "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-03T19:45:37.466Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "42de8c7ab4a5fdddfb56ed6ec6c0f104a570da6e0d711e8b6ef34715c84381c0"
+      }
+    },
+    {
+      "time": "2026-09-03T19:45:47.514Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

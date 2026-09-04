@@ -1,0 +1,399 @@
+{
+  "version": 2,
+  "task_id": "c348e5d034be46fca87f34cc382d00be",
+  "orchestration": {
+    "run_id": "cf2e2aa253d744c2b3a80d74d1272247",
+    "wave_id": "a4fb60ed46d143d68949e528cf34c657",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "c0f826c94fd886a1b1012fe04fc121f2866d26653087f0a34fc8a7ce7c403899",
+    "contract_fp": ""
+  },
+  "objective": "Preserve the current misplaced private runtime ledger from resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3 into canonical root durable evidence before cleanup. Create a new non-overwriting recovery artifact .coding-tools/orchestration/recovered/misplaced-ledger-20260904-current.sqlite3, verify source and copy have identical SHA-256 and byte content, and make no other project changes. Do not remove the misplaced source yet. No commit/push yet.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-04T01:40:10.444Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-04T01:40:10.444Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "uydoLUSZTF1sd1x2HVTC03iO",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1739,
+    "finished_at": "2026-09-04T01:40:10.091Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 46,
+        "head_hash": "4b09599966086df9c31f20f76aa15ab8804dfa733bfdc4b1bb01b7a461e04647"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-cf2e2aa253d744c2b3a80d74d1272247\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-cf2e2aa253d744c2b3a80d74d1272247\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "cf2e2aa253d744c2b3a80d74d1272247",
+      "wave_id": "a4fb60ed46d143d68949e528cf34c657",
+      "checkpoint_id": "31d0e8d9bf734292af158cde728e39bc",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "c0f826c94fd886a1b1012fe04fc121f2866d26653087f0a34fc8a7ce7c403899",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Preserve the current misplaced private runtime ledger from resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3 into canonical root durable evidence before cleanup. Create a new non-overwriting recovery artifact .coding-tools/orchestration/recovered/misplaced-ledger-20260904-current.sqlite3, verify source and copy have identical SHA-256 and byte content, and make no other project changes. Do not remove the misplaced source yet. No commit/push yet.",
+        "objective_revision": 1,
+        "objective_sha256": "b87c05457b91665f93656ab1ec17108af6371fed9fec9865815b918d21064da9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 5,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "fc8be955a62c4b89bfdfc6016a07401d",
+          "stage_id": "check:087f5ad4161d6397",
+          "status": "passed",
+          "duration_ms": 1735,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d7484ceef5d444cba801b8cfeb177610",
+          "stage_id": "check:be99502a2b696a17",
+          "status": "passed",
+          "duration_ms": 1512,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "9eb30ee69cd645b48cc3a10ae71af480",
+          "stage_id": "check:4a157278db95fb03",
+          "status": "passed",
+          "duration_ms": 1277,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "60b753c3b30d47d99f00e37bd928b18a",
+          "stage_id": "check:50ddda95d55a893a",
+          "status": "passed",
+          "duration_ms": 2421,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "28febf4565b845dd8f71734601566b75",
+          "stage_id": "check:25ccdeb54c9eeea8",
+          "status": "passed",
+          "duration_ms": 2145,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "2749fb0976d2fe3afdb398a4f2fd2512c60833cc0e057a1d203b6682220d0fdc",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-04T01:39:45.928Z",
+  "updated_at": "2026-09-04T01:40:26.822Z",
+  "events": [
+    {
+      "time": "2026-09-04T01:39:45.928Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Preserve the current misplaced private runtime ledger from resources/coding-tools-mcp/.coding-tools/orchestration/ledger.sqlite3 into canonical root durable evidence before cleanup. Create a new non-overwriting recovery artifact .coding-tools/orchestration/recovered/misplaced-ledger-20260904-current.sqlite3, verify source and copy have identical SHA-256 and byte content, and make no other project changes. Do not remove the misplaced source yet. No commit/push yet."
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:48.190Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:50.816Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:53.780Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:53.785Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:56.376Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:57.300Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:59.074Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 SHA256",
+        "session_id": "az1JOECrVpoPqg7LBo9RBAuP"
+      }
+    },
+    {
+      "time": "2026-09-04T01:39:59.605Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:01.515Z",
+      "event": "command_started",
+      "details": {
+        "command": "if exist .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3 exit /b 17",
+        "session_id": "YubItqk275BCHvC6P-ODUcq2"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:02.017Z",
+      "event": "command_finished",
+      "details": {
+        "command": "if exist .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3 exit /b 17",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:03.618Z",
+      "event": "command_started",
+      "details": {
+        "command": "copy /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3",
+        "session_id": "WxBBdmhlDnd1GxZZ7JWL4gxC"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:04.000Z",
+      "event": "command_finished",
+      "details": {
+        "command": "copy /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:06.136Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3 SHA256",
+        "session_id": "Mqz3KJJqgN_GWmqk0_VGFzzS"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:07.083Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3 SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:09.708Z",
+      "event": "command_started",
+      "details": {
+        "command": "fc /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3",
+        "session_id": "uydoLUSZTF1sd1x2HVTC03iO"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:10.091Z",
+      "event": "command_finished",
+      "details": {
+        "command": "fc /b resources\\coding-tools-mcp\\.coding-tools\\orchestration\\ledger.sqlite3 .coding-tools\\orchestration\\recovered\\misplaced-ledger-20260904-current.sqlite3",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:10.444Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:10.444Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:11.065Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:11.073Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:11.213Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "c3d20717bf83b7f4391b26b3fdb7bcbe111fb5c57ef50a69953ea10ab844d1ab"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:11.437Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:22.972Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:26.634Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:26.653Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T01:40:26.814Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "2749fb0976d2fe3afdb398a4f2fd2512c60833cc0e057a1d203b6682220d0fdc"
+      }
+    }
+  ]
+}

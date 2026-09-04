@@ -5,6 +5,7 @@ const path = require('node:path');
 
 const CANARY_VERSION = 'opencode-flash-canary-v1';
 const FLASH_MODEL = 'opencode-go/deepseek-v4-flash';
+const CANARY_TOKEN_BUDGET = 4096;
 const CANARY_PROMPT = 'Read package.json only. Reply with exactly the value of its top-level name field and nothing else. Do not modify files.';
 const ELIGIBLE_STATES = new Set(['ROUTED', 'EXECUTING', 'PROVING', 'ACCEPTING']);
 const TERMINAL_STATES = new Set(['completed', 'failed', 'cancelled', 'timed_out']);
@@ -224,6 +225,7 @@ async function runFlashCanary({ port, token, workspace, request = requestJson, s
       client_version: CANARY_VERSION,
       model: FLASH_MODEL,
       prompt: CANARY_PROMPT,
+      token_budget: CANARY_TOKEN_BUDGET,
       timeout_ms: timeoutMs,
       request_id: requestId
     }
@@ -314,6 +316,7 @@ if (isElectronEntrypoint()) electronMain();
 
 module.exports = {
   CANARY_VERSION,
+  CANARY_TOKEN_BUDGET,
   FLASH_MODEL,
   CANARY_PROMPT,
   CanaryError,

@@ -11,6 +11,7 @@
  */
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
 
 const PROCESS_START_TOKEN_PATTERN = /^[0-9]{1,32}$/;
@@ -288,6 +289,7 @@ function createWindowsIdentityBroker({ spawnProcess = spawn } = {}) {
       ], {
         windowsHide: true,
         shell: false,
+        cwd: path.dirname(process.execPath),
         stdio: ['pipe', 'pipe', 'ignore']
       });
     } catch (error) {

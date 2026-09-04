@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from .errors import ToolFailure
@@ -24,6 +25,7 @@ from .git_utils import (
     require_git,
     validate_git_ref,
 )
+from .result_handoff import large_result_handoff, truncation_reason
 from .textutils import DEFAULT_MAX_LINES, truncate_text_head
 from .tool_schema import DIFF_CONTINUATION_TOKEN_MAX_CHARS
 
@@ -410,6 +412,28 @@ class GitToolsMixin:
             warnings.append("file list truncated")
         if redaction_count:
             warnings.append("sensitive values redacted from diff output")
+        handoff = None
+        if has_more:
+            next_review = {**options, "continuation": token}
+            handoff = large_result_handoff(
+                kind="DIFF_PAGE",
+                source_identity={"source_sha256": source_sha256},
+                scope_identity={
+                    "scope_fingerprint": self._diff_fingerprint(options),
+                },
+                reason=truncation_reason(page.truncated_by),
+                next_operation={
+                    "tool": "agent_workflow",
+                    "arguments": {
+                        "workflow": "diagnose",
+                        "phase": "prepare",
+                        "committed_review": next_review,
+                    },
+                },
+                continuation=token,
+                has_more=True,
+                continuation_recovers_all_omitted_data=True,
+            )
         return {
             "schema_version": COMMITTED_REVIEW_SCHEMA_VERSION,
             "deterministic": True,
@@ -442,6 +466,7 @@ class GitToolsMixin:
             },
             "diff": page.content,
             "continuation": token or None,
+            **({"large_result_handoff": handoff} if handoff is not None else {}),
             "result_tail": {
                 "source_total_bytes": total_bytes,
                 "page_output_bytes": len(page_bytes),
@@ -603,12 +628,35 @@ class GitToolsMixin:
                 "position": next_position,
             })
         diff_text = truncation.content
+        handoff = None
+        if truncated:
+            handoff = large_result_handoff(
+                kind="DIFF_PAGE",
+                source_identity={"source_fingerprint": source_fingerprint},
+                scope_identity={
+                    "scope_fingerprint": scope_fingerprint,
+                    "options_fingerprint": options_fingerprint,
+                },
+                reason=truncation_reason(truncation.truncated_by),
+                next_operation={
+                    "tool": "agent_workflow",
+                    "arguments": {
+                        "workflow": "resume",
+                        "phase": "resume",
+                        "continuation": continuation,
+                    },
+                },
+                continuation=continuation,
+                has_more=True,
+                continuation_recovers_all_omitted_data=True,
+            )
         return {
             "diff": diff_text,
             "files": parse_diff_files(diff_text),
             **truncation_fields(truncation),
             "truncated": truncated,
             "continuation": continuation,
+            **({"large_result_handoff": handoff} if handoff is not None else {}),
             "source_fingerprint": source_fingerprint,
             "scope_fingerprint": scope_fingerprint,
             "options_fingerprint": options_fingerprint,

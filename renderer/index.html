@@ -89,10 +89,17 @@
           </div>
 
           <div class="da-section">
-            <div class="da-section-head">
+            <div class="da-section-head da-technical-only">
               <div>
                 <h2>Phân tích Context & Chi phí</h2>
                 <p>Model-visible bytes được giữ nguyên ở đơn vị byte. Token/chi phí model chỉ hiển thị từ UsageEvent canonical có provenance. Token trên từng card Tool call của ChatGPT/Coding-VP là metric riêng của host; MCP hiện chưa nhận receipt hậu-call chứa con số đó nên hiển thị "—"/unknown thay vì ước lượng. Không quy đổi byte→token và request/response transport bytes không được coi là token.</p>
+              </div>
+            </div>
+
+            <div class="da-basic-token-head">
+              <div>
+                <h2>Định lượng Token &amp; Hiệu quả</h2>
+                <p>Ưu tiên số token đã đo, xu hướng sử dụng, cache, chi phí quy đổi và token trên mỗi kết quả hoàn tất. Số ước lượng luôn được đánh dấu riêng.</p>
               </div>
             </div>
 
@@ -169,15 +176,67 @@
               <div class="notice warning" id="activationClosureNotice" hidden><b>Activation chưa LIVE/CLOSED</b><p id="activationClosureMessage">Source, postflight, connector hoặc runtime readiness chưa đủ để đóng activation.</p></div>
             </article>
 
+            <section class="cc-goal-continuity-grid" aria-label="Goal, Knowledge and Continuity">
+              <article class="cc-card" id="ccGoalCard">
+                <div class="cc-card-head">
+                  <div><h3>Goal Pursuit</h3><p>Problem Revision là đơn vị hoàn thành; projection này chỉ đọc exact current RUN và không cấp authority.</p></div>
+                  <span id="ccGoalStatus" class="cc-pill is-offline">UNAVAILABLE</span>
+                </div>
+                <div class="cc-card-body">
+                  <div class="cc-goal-summary-grid">
+                    <div class="cc-evidence-stat"><span>Problem</span><b id="ccGoalProblem">UNKNOWN</b><small id="ccGoalRevision" class="cc-detail">Revision unknown</small></div>
+                    <div class="cc-evidence-stat"><span>Criteria</span><b id="ccGoalCriteria">UNKNOWN</b><small id="ccGoalCoverage" class="cc-detail">Exact coverage unavailable</small></div>
+                    <div class="cc-evidence-stat"><span>Current RUN / WAVE</span><b id="ccGoalRun">UNKNOWN</b><small id="ccGoalWave" class="cc-detail">Wave unknown</small></div>
+                    <div class="cc-evidence-stat"><span>Controller / Execution</span><b id="ccGoalController">UNKNOWN</b><small id="ccGoalExecution" class="cc-detail">Execution state unavailable</small></div>
+                  </div>
+                  <div class="cc-goal-next">
+                    <span>NEXT CRITICAL GAP</span>
+                    <b id="ccGoalGap">UNAVAILABLE</b>
+                    <small id="ccGoalAction">Next action unavailable</small>
+                  </div>
+                </div>
+              </article>
+
+              <article class="cc-card" id="ccContinuityCard">
+                <div class="cc-card-head">
+                  <div><h3>Knowledge &amp; Continuity</h3><p>Rotation safety comes from durable authority/continuity facts, never from heuristic pressure signals.</p></div>
+                  <span id="ccKnowledgeStatus" class="cc-pill is-offline">UNAVAILABLE</span>
+                </div>
+                <div class="cc-card-body cc-continuity-facts">
+                  <div class="cc-key-value"><span>Knowledge revision</span><b id="ccKnowledgeRevision">UNKNOWN</b><small id="ccKnowledgeAck" class="cc-detail">Controller ACK unknown</small></div>
+                  <div class="cc-key-value"><span>Recovery</span><b id="ccKnowledgeRecovery">UNKNOWN</b><small id="ccCapsuleStatus" class="cc-detail">Capsule unknown</small></div>
+                  <div class="cc-key-value"><span>Safe to rotate</span><b id="ccRotateStatus">UNKNOWN</b><small id="ccRotateReasons" class="cc-detail">Reason codes unavailable</small></div>
+                  <div class="cc-key-value"><span>Exact context pressure</span><b id="ccExactContext">UNKNOWN</b><small id="ccRotationSignals" class="cc-detail">HEURISTIC · signals unavailable · not authority</small></div>
+                  <div class="cc-key-value"><span>Problem economics</span><b id="ccProblemEconomics">UNAVAILABLE</b><small id="ccProblemEconomicsMeta" class="cc-detail">Manual immutable-snapshot analytics only; never polled on the heartbeat.</small></div>
+                </div>
+              </article>
+            </section>
+
             <!-- 2. Top 6 Metric KPI Cards (1:1 with Screenshot) -->
             <div class="da-grid-tiles da-grid-6">
+              <!-- Tile 0: CHATWEB TOKEN (primary) — per-turn ChatWeb measurement.
+                   Provider UsageEvent tiles below are a separate scope and must
+                   never be summed with this card. -->
+              <article class="da-tile card-purple">
+                <div class="da-tile-head">
+                  <div class="da-tile-icon icon-purple">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                  </div>
+                  <span class="da-tile-label">TOKEN CHATWEB</span>
+                </div>
+                <div class="da-tile-value" id="daChatTurnValue">—</div>
+                <div class="da-tile-foot-row">
+                  <span class="da-tile-delta" id="daChatTurnDelta">—</span>
+                </div>
+                <div class="da-tile-sub" id="daChatTurnMeta">—</div>
+              </article>
               <!-- Tile 1: ACCEPTED RESULT -->
               <article class="da-tile card-blue">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-blue">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                   </div>
-                  <span class="da-tile-label">ACCEPTED</span>
+                  <span class="da-tile-label">TỔNG TOKEN</span>
                 </div>
                 <div class="da-tile-value" id="daTokensTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -196,7 +255,7 @@
                   <div class="da-tile-icon icon-cyan">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 3v12m0 0l-4-4m4 4l4-4"/></svg>
                   </div>
-                  <span class="da-tile-label">TIME / ACCEPT</span>
+                  <span class="da-tile-label">INPUT TOKEN</span>
                 </div>
                 <div class="da-tile-value" id="daTokensInTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -213,7 +272,7 @@
                   <div class="da-tile-icon icon-purple">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8V7a2 2 0 012-2h12a2 2 0 012 2v1M12 21V9m0 0l-4 4m4-4l4 4"/></svg>
                   </div>
-                  <span class="da-tile-label">FIRST PASS</span>
+                  <span class="da-tile-label">OUTPUT TOKEN</span>
                 </div>
                 <div class="da-tile-value" id="daTokensOutTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -230,7 +289,7 @@
                   <div class="da-tile-icon icon-green">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
                   </div>
-                  <span class="da-tile-label">OBSERVED COST</span>
+                  <span class="da-tile-label">CHI PHÍ QUY ĐỔI</span>
                 </div>
                 <div class="da-tile-value" id="daCostTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -249,7 +308,7 @@
                   <div class="da-tile-icon icon-amber">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                   </div>
-                  <span class="da-tile-label">TOOLS / ACCEPT</span>
+                  <span class="da-tile-label">CACHED TOKEN</span>
                 </div>
                 <div class="da-tile-value" id="daEfficiencyTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -269,7 +328,7 @@
                   <div class="da-tile-icon icon-emerald">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
                   </div>
-                  <span class="da-tile-label">REWORK / REPLAN</span>
+                  <span class="da-tile-label">TOKEN / KẾT QUẢ</span>
                 </div>
                 <div class="da-tile-value" id="daCallsTotal">—</div>
                 <div class="da-tile-foot-row">
@@ -280,6 +339,13 @@
                 </div>
                 <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
               </article>
+            </div>
+
+            <div class="da-token-trust-strip" aria-label="Chất lượng số liệu token">
+              <span><small>AI thực thi</small><b id="daProviderTokenStatus">Đang chờ dữ liệu</b></span>
+              <span><small>ChatWeb điều phối</small><b id="daControllerTokenStatus">Chưa đủ dữ liệu</b></span>
+              <span><small>Độ tin cậy ước lượng</small><b id="daEstimateConfidence">Chưa phát hành</b></span>
+              <span><small>Token lượt chat</small><b id="daTurnTokenStatus">Chưa đo lượt nào</b></span>
             </div>
 
             <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
@@ -295,6 +361,21 @@
                 </div>
               </div>
               <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+            </article>
+
+            <article class="cc-card" aria-labelledby="daCoverageTitle">
+              <div class="cc-card-head">
+                <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
+                <span id="daCoveragePolicy" class="cc-pill is-waiting">unknown_not_zero</span>
+              </div>
+              <div class="cc-card-body cc-evidence-summary">
+                <div class="cc-evidence-stat"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
+                <div class="cc-evidence-stat"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
+                <div class="cc-evidence-stat"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
+                <div class="cc-evidence-stat"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
+                <div class="cc-evidence-stat"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
+                <div class="cc-evidence-stat"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
+              </div>
             </article>
 
             <!-- 3. Main 3-Column Charts Row (1:1 with Screenshot) -->

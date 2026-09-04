@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import shutil
@@ -573,7 +574,7 @@ class FileToolsMixin:
             removals = 0
             for op in operations:
                 self._validate_patch_path(op.path, require_existing=op.kind in {"update", "delete"})
-                if op.kind in {"add", "update", "delete"}:
+                if op.kind in {"add", "update", "delete", "write_exact"}:
                     self.workspace.reject_write_symlink_at(self._request_default_cwd(), op.path)
                 if op.move_to:
                     self._validate_patch_path(op.move_to, require_existing=False)
@@ -593,6 +594,56 @@ class FileToolsMixin:
                     affected.append({"path": target.display, "operation": "add"})
                     summaries.append(f"A {target.display}")
                     additions += len((op.add_content or "").splitlines())
+                elif op.kind == "write_exact":
+                    target = self._patch_resolve_for_write(op.path)
+                    if target.display in staged:
+                        raise ToolFailure(
+                            "PATCH_FAILED",
+                            "An exact file path may appear only once in a patch envelope.",
+                            category="validation",
+                            details={"path": target.display},
+                        )
+                    baseline = FileBaseline.capture(target.path)
+                    actual_preimage = baseline.digest or "absent"
+                    expected_preimage = str(op.preimage_sha256 or "")
+                    if actual_preimage != expected_preimage:
+                        raise ToolFailure(
+                            "PATCH_EXACT_PREIMAGE_MISMATCH",
+                            "Exact file preimage does not match the current workspace bytes.",
+                            category="validation",
+                            retryable=True,
+                            details={
+                                "path": target.display,
+                                "expected_sha256": expected_preimage,
+                                "actual_sha256": actual_preimage,
+                                "retry_hint": "Recapture the current file and regenerate the exact write operation.",
+                            },
+                        )
+                    exact_content = op.add_content or ""
+                    actual_postimage = hashlib.sha256(exact_content.encode("utf-8")).hexdigest()
+                    if actual_postimage != op.postimage_sha256:
+                        raise ToolFailure(
+                            "PATCH_EXACT_POSTIMAGE_MISMATCH",
+                            "Exact file content changed after patch parsing.",
+                            category="validation",
+                            details={
+                                "path": target.display,
+                                "expected_sha256": op.postimage_sha256,
+                                "actual_sha256": actual_postimage,
+                            },
+                        )
+                    staged[target.display] = StagedFile(
+                        target.display,
+                        target.path,
+                        exact_content,
+                        baseline,
+                        baseline.mode,
+                    )
+                    operation = "update" if baseline.data is not None else "add"
+                    affected.append({"path": target.display, "operation": operation})
+                    summaries.append(f"M {target.display}" if operation == "update" else f"A {target.display}")
+                    additions += len(exact_content.splitlines())
+                    removals += len((baseline.data or b"").splitlines())
                 elif op.kind == "delete":
                     target = self._patch_resolve_existing(op.path)
                     if target.path.is_dir():

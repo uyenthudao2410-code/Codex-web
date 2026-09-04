@@ -1,0 +1,288 @@
+[
+  {
+    "version": 2,
+    "task_id": "f62c5ca256de477c9f6436d57c7e72b7",
+    "orchestration": {
+      "run_id": "3ace8d597b1e4c15b47a9f8feea4416f",
+      "wave_id": "5e8e68371d954c679d001fe5e8937b3e",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "ce5e0119b3d0b8796fb1c6988df9d6e82539ab4a496753e7a8694e3445d31376",
+      "contract_fp": "93e3ed21d873b122a3d130156daaec043036975196cd0dcdf3fd44b64adf31e2"
+    },
+    "objective": "G6 source-adoption review-first wave for exact Problem prl-b1fed3cdfd5203d9d9202643265865c3 revision 1. Inspect only the 16 authorized candidate paths, reconcile current bytes against accepted provenance and HEAD 80aceb583202ad381c25687969fb48adbf74622c, review the exact G6-related hunks and public-contract delta, and prepare exact-byte adoption/proof. Do not write source, do not adopt yet, do not touch unrelated dirty files, do not restart, and do not claim criterion proof or resolution. Fail closed on foreign/concurrent bytes or contract/base drift.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Snn33wXGuuA_uO-2Cmz0gNKZ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 738,
+      "finished_at": "2026-09-03T23:46:34.647Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T23:43:22.159Z",
+    "updated_at": "2026-09-03T23:46:34.650Z",
+    "events": [
+      {
+        "time": "2026-09-03T23:43:22.159Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "G6 source-adoption review-first wave for exact Problem prl-b1fed3cdfd5203d9d9202643265865c3 revision 1. Inspect only the 16 authorized candidate paths, reconcile current bytes against accepted provenance and HEAD 80aceb583202ad381c25687969fb48adbf74622c, review the exact G6-related hunks and public-contract delta, and prepare exact-byte adoption/proof. Do not write source, do not adopt yet, do not touch unrelated dirty files, do not restart, and do not claim criterion proof or resolution. Fail closed on foreign/concurrent bytes or contract/base drift."
+        }
+      },
+      {
+        "time": "2026-09-03T23:43:23.649Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-03T23:43:50.064Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T23:43:56.680Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-03T23:43:56.686Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:04.732Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/main.js','electron/services/chatEvaluationJournal.js','resources/coding-tools-mcp/coding_tools_mcp/task_state.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py','resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py','reso",
+          "session_id": "hv_bm4LneNuTh6NqfbNBxhaJ"
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:04.898Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/main.js','electron/services/chatEvaluationJournal.js','resources/coding-tools-mcp/coding_tools_mcp/task_state.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py','resources/coding-tools-mcp/coding_tools_mcp/server.py','resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py','reso",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:25.764Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- electron/main.js electron/services/chatEvaluationJournal.js resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_to",
+          "session_id": "3PJRxtRPiM9ICBTk1HPclztt"
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:26.314Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- electron/main.js electron/services/chatEvaluationJournal.js resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_to",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:48.572Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --no-ext-diff --unified=3 -- electron/main.js electron/services/chatEvaluationJournal.js resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py tests/chat-evaluation-journal.test.js",
+          "session_id": "izRHwyQET5hIj_B1DfL_tVBi"
+        }
+      },
+      {
+        "time": "2026-09-03T23:45:49.150Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --no-ext-diff --unified=3 -- electron/main.js electron/services/chatEvaluationJournal.js resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py tests/chat-evaluation-journal.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:26.223Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --fixed-strings \"resources/coding-tools-mcp/coding_tools_mcp/server.py\" .coding-tools/orchestration/reports",
+          "session_id": "ZiaqNWp6Xzh-Do1fpJj0Gk16"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:27.521Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --fixed-strings \"resources/coding-tools-mcp/coding_tools_mcp/server.py\" .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:34.102Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --fixed-strings \"46ff56049ffe19a4c2c335715cd67dc5eae6b896754eea79df7a39b6d213a840\" .coding-tools/orchestration/reports",
+          "session_id": "Snn33wXGuuA_uO-2Cmz0gNKZ"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:34.650Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --fixed-strings \"46ff56049ffe19a4c2c335715cd67dc5eae6b896754eea79df7a39b6d213a840\" .coding-tools/orchestration/reports",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T23:46:44.449Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "11a40cfda47c4172a34309b305fce029",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Ruet14oVXDhLmfd2Fu_Wn-Qt",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 1105,
+      "finished_at": "2026-09-03T23:48:41.483Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T23:46:44.451Z",
+    "updated_at": "2026-09-03T23:48:41.483Z",
+    "events": [
+      {
+        "time": "2026-09-03T23:46:44.451Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:45.306Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py','resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py'); foreach ($f in $p) { Write-Output ('===== ' + $f + ' ====='); Get-Content -Raw -LiteralPath $f }\"",
+          "session_id": "2phF6nuKcnrpEDjTAdicKPsX"
+        }
+      },
+      {
+        "time": "2026-09-03T23:46:45.929Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py','resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py'); foreach ($f in $p) { Write-Output ('===== ' + $f + ' ====='); Get-Content -Raw -LiteralPath $f }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:09.833Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"compatible_predecessor_sha256|COMPATIBLE_PREDECESSOR|contract.*sha256|tool_contract.*sha|compatib\" resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_durable_coordination_runtime.py resources/coding-tools-mcp/tests/test_task_state_and_build.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "VnPXmWJ14PSqDDSxpG8DNaKf"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:10.354Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"compatible_predecessor_sha256|COMPATIBLE_PREDECESSOR|contract.*sha256|tool_contract.*sha|compatib\" resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_durable_coordination_runtime.py resources/coding-tools-mcp/tests/test_task_state_and_build.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:19.777Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -LiteralPath resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py -TotalCount 75; Write-Output '--- compatibility tests ---'; rg -n -i 'compatible predecessor|compatible_predecessor|compatibility.*contract|contract.*compatibility|tool contract.*predecessor' resources/coding-tools-mcp/tests\"",
+          "session_id": "6vEQYl6_keO_Fdyg1zOgEUPT"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:20.539Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -LiteralPath resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py -TotalCount 75; Write-Output '--- compatibility tests ---'; rg -n -i 'compatible predecessor|compatible_predecessor|compatibility.*contract|contract.*compatibility|tool contract.*predecessor' resources/coding-tools-mcp/tests\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:29.177Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$a='resources/coding-tools-mcp/tests/test_stateless_http_2026.py'; $b='resources/coding-tools-mcp/tests/test_efficiency_runtime.py'; (Get-Content $a)[380..420]; Write-Output '---'; (Get-Content $b)[640..680]\"",
+          "session_id": "UQSV_pOmzFYt03Uqg0PzJzya"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:29.779Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$a='resources/coding-tools-mcp/tests/test_stateless_http_2026.py'; $b='resources/coding-tools-mcp/tests/test_efficiency_runtime.py'; (Get-Content $a)[380..420]; Write-Output '---'; (Get-Content $b)[640..680]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:40.926Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def .*tool.*contract|sha256|compatible_predecessor_sha256|tool_contract =|tool_contract\\[\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py | Select-Object -First 120",
+          "session_id": "Ruet14oVXDhLmfd2Fu_Wn-Qt"
+        }
+      },
+      {
+        "time": "2026-09-03T23:48:41.483Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def .*tool.*contract|sha256|compatible_predecessor_sha256|tool_contract =|tool_contract\\[\" resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/server.py | Select-Object -First 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T23:48:47.846Z",
+    "archive_reason": "finished"
+  }
+]

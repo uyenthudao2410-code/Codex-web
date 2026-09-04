@@ -911,6 +911,99 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(events[0]["actor"], "controller")
         self.assertEqual(events[0]["turn_id"], "controller-first-turn")
 
+    def test_attested_trace_correlates_external_chatweb_usage_without_electron_pending_file(self) -> None:
+        trace_id = "a" * 32
+        traceparent = f"00-{trace_id}-{'b' * 16}-01"
+        context_id = "usage-attested-trace-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "controller-usage-attested-trace",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=346,
+            extra_headers={"traceparent": traceparent},
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(prepared["result"]["isError"], prepared)
+        structured = prepared["result"]["structuredContent"]
+        run_id = structured["orchestration"]["run_id"]
+        wave_id = structured["orchestration"]["wave_id"]
+        run = self.runtime.orchestration_ledger.get_run(run_id)
+        metadata = run["metadata"]
+        self.assertEqual(metadata["host_correlation"]["source"], "attested_chatweb_transport_trace")
+        self.assertTrue(metadata["host_correlation"]["eligible"])
+        self.assertTrue(metadata["host_correlation"]["content_free"])
+        self.assertEqual(metadata["evaluation"]["trace_id"], trace_id)
+        turn_id = f"chatweb-trace:{trace_id}"
+        self.assertEqual(metadata["evaluation"]["turn_id"], turn_id)
+
+        usage = self.controller_usage(turn_id, run_id=run_id, wave_id=wave_id)
+        usage["trace_id"] = trace_id
+        wrong_trace = "c" * 32
+        status, _, rejected = self.tool_call(
+            "task_control",
+            {"action": "get", "task_context_id": context_id},
+            request_id=347,
+            controller_usage=usage,
+            extra_headers={"traceparent": f"00-{wrong_trace}-{'d' * 16}-01"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["error"]["code"], -32602)
+        self.assertIn("authoritative request trace", rejected["error"]["message"])
+        self.assertEqual(self.runtime.orchestration_ledger.list_usage_events(run_id, limit=None), [])
+
+        status, _, recorded = self.tool_call(
+            "task_control",
+            {"action": "get", "task_context_id": context_id},
+            request_id=348,
+            controller_usage=usage,
+            extra_headers={"traceparent": traceparent},
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(recorded["result"]["isError"], recorded)
+        receipt = recorded["result"]["_meta"][CONTROLLER_USAGE_STATUS_META_KEY]
+        self.assertEqual(receipt["status"], "recorded")
+        self.assertEqual(receipt["turn_id"], turn_id)
+        events = self.runtime.orchestration_ledger.list_usage_events(run_id, limit=None)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["turn_id"], turn_id)
+        self.assertEqual(events[0]["usage"]["total_tokens"], 120)
+
+    def test_transport_trace_never_becomes_host_authority_without_connector_attestation(self) -> None:
+        trace_id = "e" * 32
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": "usage-unattested-trace-context",
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "controller-usage-unattested-trace",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=349,
+            extra_headers={
+                "traceparent": f"00-{trace_id}-{'f' * 16}-01",
+                CONNECTOR_ATTESTATION_HEADER: "",
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(prepared["result"]["isError"], prepared)
+        run_id = prepared["result"]["structuredContent"]["orchestration"]["run_id"]
+        metadata = self.runtime.orchestration_ledger.get_run(run_id)["metadata"]
+        self.assertNotIn("host_correlation", metadata)
+        self.assertNotIn("turn_id", metadata.get("evaluation", {}))
+        self.assertNotIn("trace_id", metadata.get("evaluation", {}))
+
     def test_existing_agent_workflow_rejects_deferred_usage_before_dispatch(self) -> None:
         context_id = "usage-existing-agent-context"
         self.stage_host_turn("controller-existing-agent-turn")

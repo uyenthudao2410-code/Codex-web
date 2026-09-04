@@ -1,0 +1,76 @@
+{
+  "version": 2,
+  "task_id": "04015ebd1fd2411196dcf9fde9dddec4",
+  "orchestration": {
+    "run_id": "afb4da270c2a45d0a333aab54d24532c",
+    "wave_id": "73ac936bf59c4a068d3cedf9f0564170",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "d41785165257cca30b48b4c95e4c15dd1b6cc20e377ffb802a45450fd1da3b94",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "diLM9OT9rjlSZz77i7Q6hxxf",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 650,
+    "finished_at": "2026-09-04T09:31:11.765Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-04T09:31:10.785Z",
+  "updated_at": "2026-09-04T09:44:12.588Z",
+  "events": [
+    {
+      "time": "2026-09-04T09:31:10.785Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-04T09:31:11.198Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --glob \"resources/coding-tools-mcp/coding_tools_mcp/*.py\" \"knowledge_revision|controller_knowledge|continuation|result_ref|source_fingerprint|model_visible_bytes|cache_hit|context_compiler|semantic_graph|reuse|deduplic\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "diLM9OT9rjlSZz77i7Q6hxxf"
+      }
+    },
+    {
+      "time": "2026-09-04T09:31:11.765Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --glob \"resources/coding-tools-mcp/coding_tools_mcp/*.py\" \"knowledge_revision|controller_knowledge|continuation|result_ref|source_fingerprint|model_visible_bytes|cache_hit|context_compiler|semantic_graph|reuse|deduplic\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T09:44:12.588Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    }
+  ]
+}

@@ -10,6 +10,7 @@ const { LogService } = require('./services/logService');
 const { EnvironmentService, pythonStatus } = require('./services/environmentService');
 const { ChatViewController } = require('./chatViewController');
 const { ChatEvaluationJournal } = require('./services/chatEvaluationJournal');
+const { buildExact: buildExactTokenMeasurement } = require('./services/tokenMeasurement');
 const { run } = require('./services/commandRunner');
 const { resolveProxy, clearProxyCache } = require('./services/proxyService');
 const { BuildVerificationService } = require('./services/buildVerificationService');
@@ -534,10 +535,21 @@ async function recordHostObservationSpan(event) {
 }
 
 async function recordControllerUsageReceipt(event) {
-  if (!event || event.event_type !== 'controller_usage' || !event.run_id || !event.wave_id || !event.turn_id || !event.trace_id) return false;
-  const tokenFields = ['input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_output_tokens'];
-  if (tokenFields.some((key) => !Number.isSafeInteger(event[key]) || event[key] < 0)) return false;
-  if (event.cached_input_tokens > event.input_tokens || event.reasoning_output_tokens > event.output_tokens) return false;
+  if (!event || event.event_type !== 'controller_usage' || !event.run_id || !event.wave_id) return false;
+  // Single validation authority: the shared token measurement contract
+  // enforces exact-integer counters, relations and identity shape.
+  const measured = buildExactTokenMeasurement({
+    turn_id: event.turn_id,
+    trace_id: event.trace_id,
+    input_tokens: event.input_tokens,
+    cached_input_tokens: event.cached_input_tokens,
+    output_tokens: event.output_tokens,
+    reasoning_output_tokens: event.reasoning_output_tokens,
+    model_id: event.model_id,
+    accounting_profile: event.accounting_profile,
+    source: event.source
+  });
+  if (!measured) return false;
   const current = settings.load();
   const token = secrets.get('mcpAuthToken');
   if (!token) return false;
@@ -719,8 +731,13 @@ function createChatWindow() {
       if (!workspace) return;
       let correlated = [];
       try {
-        chatEvaluationJournal.stagePendingTurns(workspace, events);
-        correlated = chatEvaluationJournal.attachExplicitBindings(workspace, events);
+        const productSessionEvents = chatEvaluationJournal.attachProductSession(
+          workspace,
+          events,
+          chatController?.getState()?.url
+        );
+        chatEvaluationJournal.stagePendingTurns(workspace, productSessionEvents);
+        correlated = chatEvaluationJournal.attachExplicitBindings(workspace, productSessionEvents);
         chatEvaluationJournal.append(workspace, correlated);
       } catch (error) {
         log.warn('Không thể ghi host-visible evaluation telemetry', { error: safeMessage(error) });

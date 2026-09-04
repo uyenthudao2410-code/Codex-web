@@ -2,6 +2,23 @@
 
 This roadmap describes the current **Tools-Codex-web Windows Desktop Execution Hub**, not the historical WebCodex product roadmap. For exact current-state precedence, see [`CURRENT_STATE.md`](CURRENT_STATE.md).
 
+## Current convergence directive — 2026-09-04
+
+**Do not build more system.** G2-style provenance closure is a convergence mechanism, not authorization for a new orchestration, governance, routing, memory, or intelligence layer. The next decisions must come from real continuity and economics evidence on the mechanisms that already exist.
+
+The active sequence is:
+
+1. converge existing source/proof/EOCL/live provenance without widening architecture;
+2. exercise one **real natural Problem** end to end, preserving exact Problem Revision -> RUN/WAVE -> accepted checkpoint -> independent outcome or truthful reopen;
+3. gather **5-10 natural Problems** with the same evidence discipline;
+4. measure accepted-result economics, rework, TTAR/TTPR, coverage and operator burden, keeping missing measurements unknown rather than zero;
+5. decide EGRI/P5 only from that natural evidence and its economics, not from source presence or test count;
+6. simplify the product by an explicit **KEEP / MODIFY / REMOVE** decision for each material mechanism or micro-policy.
+
+The evidence gates stay orthogonal: `SOURCE_PRESENT` is not `FOCUSED_PROOF`; focused proof is not `EOCL_ACCEPTED`; EOCL acceptance is not compatible live activation; `CURRENT_COMPATIBLE_ACKNOWLEDGED`/compatible current access is not strict connector rediscovery; strict rediscovery is not packaging/release/deployment/production; and technical acceptance is not a natural Problem outcome. Economics/policy promotion remains downstream of representative natural evidence. G3 is therefore not opened automatically by G2 closure.
+
+This directive supersedes older roadmap wording **only as current sequencing guidance**. Dated historical observations and research chronology stay intact as provenance. They must not be rewritten to imply that an older process receipt, source-only slice, package check, or benchmark was proof for the present runtime or production state.
+
 ## Current baseline
 
 The maintained product boundary now includes Electron Execution Control Center; one shared Coding Tools MCP Runtime; ChatWeb primary-tunnel access; Codex Desktop thin-proxy access into the same authority; the verified `smart-v3` eight-tool surface; EOCL/controller/write-fencing/proof/handoff/observation/restart controls; PRL Revision 4 problem/outcome semantics; Recovery Host + Windows Recovery Supervisor + independent Recovery MCP/Tunnel; bounded Codex/OpenCode provider lanes; semantic-first localization; closed LSP process telemetry/resource governance; an isolated packaged-Windows Recovery acceptance lane; accepted explicit validation compute-placement control for `local_only` and `server_preferred`; protocol-level ExceptionGroup normalization; and source-side semantic MCP health supervision that distinguishes control-health success from a broken tool plane.
@@ -37,7 +54,7 @@ Envelopes, provenance-preserving descriptive metrics and the unchanged eight-too
 public surface. These are implementation claims, not evidence that the
 methodology improves real outcomes.
 
-The current worktree also implements the bounded independent-outcome receipt
+The accepted P0.6 baseline also implements the bounded independent-outcome receipt
 bridge in PRL schema v12. A public caller still submits only the semantic
 `problem.confirm` intent; the runtime must claim the exact one-shot ChatWeb host
 turn, derive the content-free receipt from the exact event/problem/revision/
@@ -45,12 +62,42 @@ turn/trace tuple, and record it under `RUNTIME_OUTCOME_RECEIPT`. Receipt fields
 are part of the v3 problem-event hash chain and remain absent from the public
 tool input. Historical v2 confirmations survive v11-to-v12 migration byte-for-
 byte with empty receipt fields and do not count as independent coverage. This
-source path and its focused proof do not manufacture historical outcomes:
-natural receipt collection, full-component EOCL source acceptance and causal
-methodology evidence remain open gates. Current local runtime activation is
-closed for the exact development epoch recorded in `CURRENT_STATE.md` through
-the compatible bootstrap path; that receipt is process-bound and does not
-promote natural evidence or change release/production state.
+source path and its focused proof do not manufacture historical outcomes.
+Full-component exact-file EOCL acceptance and the P0.6 immutable baseline are
+closed at commit `30b7d1b971b65034d3e4c95568c970fcc0e9380c`; natural receipt
+collection and causal methodology evidence remain open gates. Current local
+runtime activation is closed for the exact development epoch recorded in
+`CURRENT_STATE.md` through the compatible bootstrap path; that receipt is
+process-bound and does not promote natural evidence or change
+package/release/production state.
+
+### P0.6 current closure — 2026-09-01
+
+Operational Convergence is no longer the next implementation blocker. The
+accepted baseline binds the exact 27-file source packet, Git/source identity,
+workspace identity, runtime revisions, eight-tool contract SHA, lifecycle
+census, focused proof, UI latency/terminal-visibility evidence, ChatWeb
+acceptance, completion-report acknowledgement and delivery snapshot. Current
+accepted-baseline receipts show `fully_ready=true`, healthy Recovery supervision
+and zero ordinary active RUNs or lifecycle residue. Earlier roadmap paragraphs that say
+P0.6, full-component acceptance or the scoped delivery commit is open are
+historical snapshots rather than current blockers.
+
+The post-baseline worktree now implements the first bounded P2 Resolution
+Capsule slice on the existing handoff path. It projects exact Problem Revision
+identity, the privacy-bounded contract when it fits the handoff budget,
+criteria/event/reopen/outcome-receipt identity, and content-free Problem Frame
+shadow evidence without transcript replay or new authority. Oversized contracts
+fail over explicitly to an exact-revision refresh requirement instead of being
+truncated. Focused source and coordination proof pass, but this slice remains
+source-only until controlled activation and exact acceptance; the current MCP
+runtime correctly reports `update_pending`.
+
+The next product gate is natural outcome evidence, not another convergence or
+orchestration layer. Use a real Golden HR problem to exercise the smallest
+necessary Workspace Intelligence, Resolution Capsule and bounded Fast Path
+slices, and require an independent outcome receipt or truthful same-revision
+reopen before calling it Trusted Resolution.
 
 The current evidence roadmap remains open in this order:
 

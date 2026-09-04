@@ -1,0 +1,162 @@
+{
+  "version": 2,
+  "task_id": "32b312b9f0324ed0b8d9b505298fbd27",
+  "orchestration": {
+    "run_id": "60875bd37f044de5b69ce1e0bb476b44",
+    "wave_id": "53637ac090f5499ebfceccb761837139",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "0d026319ce616d40e5273071680ddd2147da39d544459b7d0a8963d28ad1b37e",
+    "contract_fp": ""
+  },
+  "objective": "Correct exactly three stale regression tests without changing production behavior: update the smart-v3 contract SHA/predecessor oracle in tests/test_efficiency_runtime.py while preserving all concurrent WIP; add only the minimal handler.server.control_runtime no-op fixture needed by test_http_pre_dispatch_boundary_never_stringifies_exception_group in tests/test_exception_group_boundary.py; update the restart-poll oracle in tests/test_live_restart_reconcile.py to the durable reconciled_terminal contract while preserving the kill-on-close assertion. Preserve all pre-existing dirty worktree content. Do not touch any fourth source/test file.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-04T11:07:03.476Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "in_progress",
+      "updated_at": "2026-09-04T11:07:03.476Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-04T11:07:03.476Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Command path could not be inspected safely.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-04T11:06:57.929Z",
+  "updated_at": "2026-09-04T11:07:21.074Z",
+  "events": [
+    {
+      "time": "2026-09-04T11:06:57.929Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T11:06:58.481Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T11:06:59.404Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:00.956Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:00.965Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:02.654Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:03.476Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:04.470Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:04.474Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:04.589Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-04T11:07:21.074Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

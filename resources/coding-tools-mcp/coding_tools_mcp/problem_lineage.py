@@ -27,6 +27,7 @@ PROBLEM_EVENT_SCHEMA_LEGACY = 1
 PROBLEM_EVENT_SCHEMA_V11 = 2
 PROBLEM_EVENT_SCHEMA_CURRENT = 3
 PROBLEM_CAPSULE_MAX_BYTES = 8_192
+PROBLEM_HANDOFF_CONTRACT_EMBED_MAX_BYTES = 4_096
 PROBLEM_OUTCOME_CLAIM_MAX_BYTES = 131_072
 _ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 _FP_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -664,10 +665,160 @@ class ProblemLineageLedgerMixin:
             rows = connection.execute("SELECT DISTINCT problem_id,problem_revision FROM problem_events WHERE run_id=? AND link_status='EXACT' AND link_role='PRIMARY' AND relation_type IN ('LINK','ENGINEERING_ATTEMPT_BOUND') AND event_schema_version>=? AND problem_id IS NOT NULL AND problem_revision IS NOT NULL ORDER BY problem_id,problem_revision", (run_id, PROBLEM_EVENT_SCHEMA_V11)).fetchall()
             if len(rows) != 1: return None
             problem_id, revision = str(rows[0]["problem_id"]), int(rows[0]["problem_revision"]); revision_row = self._revision_row(connection, problem_id, revision); thread = connection.execute("SELECT * FROM problem_threads WHERE problem_id=?", (problem_id,)).fetchone()
-            if revision_row is None or thread is None: return {"active_problem_id": problem_id, "problem_revision": revision, "context_status": "BLOCKED_MISSING_PROBLEM_CONTEXT", "policy_eligible": False}
-            context = _revision(revision_row); events = connection.execute("SELECT * FROM problem_events WHERE problem_id=? AND problem_revision=? ORDER BY seq", (problem_id, revision)).fetchall()
-        feedback = next((row for row in reversed(events) if str(row["relation_type"] or "") == "USER_FEEDBACK"), None)
-        return {"active_problem_id": problem_id, "problem_revision": revision, "contract_fingerprint": context["contract_fingerprint"], "problem_state": str(thread["resolution_state"]) if int(thread["current_revision"]) == revision else "HISTORICAL_REVISION", "context_status": "VALID" if context["capsule_valid"] else "BLOCKED_MISSING_PROBLEM_CONTEXT", "policy_eligible": bool(context["capsule_valid"]), "latest_feedback_relation": str(feedback["feedback_intent"] if feedback is not None else "UNKNOWN"), "engineering_floor": context["engineering_floor"]}
+            if revision_row is None or thread is None:
+                return {
+                    "schema_version": 1,
+                    "kind": "derived_resolution_capsule",
+                    "run_id": run_id,
+                    "active_problem_id": problem_id,
+                    "problem_revision": revision,
+                    "context_status": "BLOCKED_MISSING_PROBLEM_CONTEXT",
+                    "policy_eligible": False,
+                    "contract_fingerprint": "",
+                    "criteria_fingerprint": "",
+                    "criteria_count": 0,
+                    "task_class": "unknown",
+                    "engineering_floor": "UNKNOWN",
+                    "problem_state": "UNKNOWN",
+                    "contract_capsule": None,
+                    "contract_capsule_included": False,
+                    "contract_capsule_bytes": 0,
+                    "contract_capsule_omission_reason": "BLOCKED_MISSING_PROBLEM_CONTEXT",
+                    "latest_feedback_relation": "UNKNOWN",
+                    "event_count": 0,
+                    "latest_event": None,
+                    "same_revision_reopened": False,
+                    "outcome_receipt_observed": False,
+                    "problem_frame": None,
+                    "problem_frame_status": "NOT_OBSERVED",
+                    "fresh_context": {
+                        "transcript_required": False,
+                        "raw_transcript_included": False,
+                        "raw_source_included": False,
+                        "private_reasoning_included": False,
+                        "problem_frame_content_included": False,
+                        "mutation_authority_granted": False,
+                        "acceptance_authority_granted": False,
+                        "exact_revision_refresh_required": True,
+                    },
+                }
+            context = _revision(revision_row)
+            stats = connection.execute(
+                """SELECT COUNT(*) AS event_count,
+                          MAX(CASE WHEN relation_type='REOPEN' THEN 1 ELSE 0 END) AS same_revision_reopened,
+                          MAX(CASE WHEN relation_type='CONFIRMED_RESOLUTION'
+                                        AND outcome_receipt_type<>'' AND outcome_receipt_id<>''
+                                   THEN 1 ELSE 0 END) AS outcome_receipt_observed
+                   FROM problem_events WHERE problem_id=? AND problem_revision=?""",
+                (problem_id, revision),
+            ).fetchone()
+            latest_row = connection.execute(
+                "SELECT * FROM problem_events WHERE problem_id=? AND problem_revision=? ORDER BY seq DESC LIMIT 1",
+                (problem_id, revision),
+            ).fetchone()
+            feedback = connection.execute(
+                "SELECT feedback_intent FROM problem_events WHERE problem_id=? AND problem_revision=? AND relation_type='USER_FEEDBACK' ORDER BY seq DESC LIMIT 1",
+                (problem_id, revision),
+            ).fetchone()
+            frame_row = connection.execute(
+                "SELECT * FROM events WHERE run_id=? AND event_type='problem_frame_shadow' ORDER BY seq DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+
+        capsule = context["capsule"] if context["capsule_valid"] else None
+        capsule_bytes = len(_json(capsule).encode("utf-8")) if capsule is not None else 0
+        capsule_included = capsule is not None and capsule_bytes <= PROBLEM_HANDOFF_CONTRACT_EMBED_MAX_BYTES
+        if not context["capsule_valid"]:
+            capsule_omission_reason = "BLOCKED_MISSING_PROBLEM_CONTEXT"
+        elif capsule_included:
+            capsule_omission_reason = None
+        else:
+            capsule_omission_reason = "EXCEEDS_HANDOFF_EMBED_BUDGET"
+
+        latest = _event(latest_row) if latest_row is not None else None
+        latest_event = None if latest is None else {
+            "seq": latest["seq"],
+            "event_id": latest["event_id"],
+            "event_hash": latest["event_hash"],
+            "relation_type": latest["relation_type"],
+            "state_after": latest["state_after"],
+            "reason_code": latest["reason_code"],
+            "recorded_at": latest["recorded_at"],
+        }
+
+        frame_projection = None
+        frame_status = "NOT_OBSERVED"
+        if frame_row is not None:
+            try:
+                frame_payload = json.loads(str(frame_row["payload_json"] or "{}"))
+                frame_problem_revision = int(frame_payload.get("problem_revision") or 0) if isinstance(frame_payload, dict) else 0
+                frame_revision = int(frame_payload.get("frame_revision") or 0) if isinstance(frame_payload, dict) else 0
+                counterevidence_count = int(frame_payload.get("counterevidence_count") or 0) if isinstance(frame_payload, dict) else 0
+            except (TypeError, ValueError, json.JSONDecodeError):
+                frame_status = "INVALID_SHADOW"
+            else:
+                if (
+                    isinstance(frame_payload, dict)
+                    and str(frame_payload.get("problem_id") or "") == problem_id
+                    and frame_problem_revision == revision
+                ):
+                    frame_status = "OBSERVED"
+                    frame_projection = {
+                        "event_seq": int(frame_row["seq"]),
+                        "event_id": str(frame_row["event_id"]),
+                        "event_hash": str(frame_row["event_hash"]),
+                        "recorded_at": str(frame_row["event_time"]),
+                        "frame_id": str(frame_payload.get("frame_id") or ""),
+                        "frame_revision": frame_revision,
+                        "frame_sha256": str(frame_payload.get("frame_sha256") or ""),
+                        "decision_changed": bool(frame_payload.get("decision_changed")),
+                        "counterevidence_count": counterevidence_count,
+                        "counterevidence_advisory_status": str(frame_payload.get("counterevidence_advisory_status") or ""),
+                        "frame_update_or_explanation_recommended": bool(frame_payload.get("frame_update_or_explanation_recommended")),
+                        "materiality_inferred": False,
+                        "authority_side_effects": False,
+                        "automatic_mutation_gate": False,
+                    }
+                else:
+                    frame_status = "MISMATCHED_SHADOW"
+
+        historical_revision = int(thread["current_revision"]) != revision
+        return {
+            "schema_version": 1,
+            "kind": "derived_resolution_capsule",
+            "run_id": run_id,
+            "active_problem_id": problem_id,
+            "problem_revision": revision,
+            "contract_fingerprint": context["contract_fingerprint"],
+            "criteria_fingerprint": context["criteria_fingerprint"],
+            "criteria_count": context["criteria_count"],
+            "task_class": context["task_class"],
+            "engineering_floor": context["engineering_floor"],
+            "problem_state": str(thread["resolution_state"]) if not historical_revision else "HISTORICAL_REVISION",
+            "context_status": "VALID" if context["capsule_valid"] else "BLOCKED_MISSING_PROBLEM_CONTEXT",
+            "policy_eligible": bool(context["capsule_valid"]),
+            "contract_capsule": capsule if capsule_included else None,
+            "contract_capsule_included": capsule_included,
+            "contract_capsule_bytes": capsule_bytes,
+            "contract_capsule_omission_reason": capsule_omission_reason,
+            "latest_feedback_relation": str(feedback["feedback_intent"] if feedback is not None else "UNKNOWN"),
+            "event_count": int(stats["event_count"] or 0),
+            "latest_event": latest_event,
+            "same_revision_reopened": bool(stats["same_revision_reopened"] or 0),
+            "outcome_receipt_observed": bool(stats["outcome_receipt_observed"] or 0),
+            "problem_frame": frame_projection,
+            "problem_frame_status": frame_status,
+            "fresh_context": {
+                "transcript_required": False,
+                "raw_transcript_included": False,
+                "raw_source_included": False,
+                "private_reasoning_included": False,
+                "problem_frame_content_included": False,
+                "mutation_authority_granted": False,
+                "acceptance_authority_granted": False,
+                "exact_revision_refresh_required": historical_revision or not capsule_included,
+            },
+        }
 
     @staticmethod
     def _problem_coverage_manifest(

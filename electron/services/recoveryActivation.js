@@ -672,16 +672,46 @@ class RecoveryActivation {
     } : null, error);
   }
 
+  bindFullCleanEpoch(operationId, result) {
+    if (typeof this.actions?.bindDurableEpoch !== 'function'
+      || typeof this.fullCleanActivation?.current !== 'function') {
+      throw activationError('ACTIVATION_EPOCH_BINDING_UNAVAILABLE', 'Durable Full Clean epoch binding is unavailable.');
+    }
+    const returnedOperationId = typeof result?.operation_id === 'string' ? result.operation_id : '';
+    const returnedEpochId = typeof result?.activation_epoch_id === 'string'
+      ? result.activation_epoch_id
+      : (typeof result?.result?.activation_epoch_id === 'string' ? result.result.activation_epoch_id : '');
+    if (returnedOperationId !== operationId || !returnedEpochId) {
+      throw activationError('ACTIVATION_EPOCH_BINDING_MISMATCH', 'Full Clean result is not bound to the exact activation operation and epoch.');
+    }
+    const epoch = this.fullCleanActivation.current();
+    const epochOperationId = typeof epoch?.operation_id === 'string' ? epoch.operation_id : '';
+    const epochId = typeof epoch?.activation_epoch_id === 'string' ? epoch.activation_epoch_id : '';
+    const expiresAtUnixMs = Number(epoch?.expires_at_unix_ms || epoch?.metadata?.expires_at_unix_ms || 0);
+    if (epochOperationId !== operationId || epochId !== returnedEpochId) {
+      throw activationError('ACTIVATION_EPOCH_BINDING_MISMATCH', 'Full Clean durable epoch identity does not match the returned activation result.');
+    }
+    return this.actions.bindDurableEpoch(operationId, {
+      operation_id: epochOperationId,
+      activation_epoch_id: epochId,
+      expires_at_unix_ms: expiresAtUnixMs
+    });
+  }
+
   async activateFullClean(request, { replay = false } = {}) {
     const operationId = request.operation_id;
     try {
+      // The authenticated request remains a short-lived admission credential.
+      // Once it has admitted an exact Full Clean transaction, the durable epoch
+      // owns the longer bounded replacement lifetime.  Do not collapse those
+      // two clocks by forwarding the request deadline into the epoch creator.
+      if (!replay) ensureActivationFresh(request, this.now());
       const result = await this.fullCleanActivation.restart({
         operationId,
         component: request.component,
         expectedDiskRevision: request.expected_disk_revision,
         sourceCheckpoint: request.source_checkpoint,
         allowAcceptancePending: request.allow_acceptance_pending,
-        expiresAtUnixMs: request.expires_at_unix_ms,
         // A replay carries the already-linked epoch; the coordinator must
         // reconcile it instead of creating a second activation transaction.
         ...(replay ? {
@@ -690,6 +720,9 @@ class RecoveryActivation {
         } : {}),
         reason: `component_revision:${request.component}`
       });
+      if (!['completed', 'failed', 'refused'].includes(String(result?.state || ''))) {
+        this.bindFullCleanEpoch(operationId, result);
+      }
       const record = this.actions.get(operationId);
       if (record) return { ...record, ...(replay ? { deduplicated: true } : {}) };
       return result;

@@ -7,7 +7,7 @@
   "main": "electron/main.js",
   "scripts": {
     "icon:build": "node scripts/generate-icon.js",
-    "start": "node scripts/dev-ui-lifecycle.js refresh",
+    "start": "node scripts/dev-ui-lifecycle.js start",
     "dev": "node scripts/dev-ui-lifecycle.js start",
     "dev:status": "node scripts/dev-ui-lifecycle.js status",
     "dev:control-center": "node scripts/dev-ui-lifecycle.js control-center",

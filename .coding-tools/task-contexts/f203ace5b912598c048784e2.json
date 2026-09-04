@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "268b8df1be5641818a57db05a23e93d6",
     "wave_id": "4ecdab25adac41a890e3d54e60c7f13d",
-    "orchestration_state": "PREFLIGHT",
+    "orchestration_state": "ABORTED",
     "execution_mode": "mcp_only",
     "route_requested": "",
     "route_resolved": "",
@@ -16,13 +16,73 @@
     "contract_fp": ""
   },
   "objective": "Complete a workspace task",
-  "status": "waiting",
+  "status": "stopped",
   "steps": [],
-  "current_step": "Waiting for model",
+  "current_step": "Aborted - operator report required",
   "current_command": null,
   "last_command_result": null,
-  "completion_report": null,
-  "completion_report_id": "",
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 8,
+        "head_hash": "122e89a95d787489c78b6189f3059d6970bb600120af6109f57112a53403d928"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-268b8df1be5641818a57db05a23e93d6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-268b8df1be5641818a57db05a23e93d6\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "268b8df1be5641818a57db05a23e93d6",
+      "wave_id": "4ecdab25adac41a890e3d54e60c7f13d",
+      "checkpoint_id": "",
+      "base_head": "30b7d1b971b65034d3e4c95568c970fcc0e9380c",
+      "worktree_fp": "09ab9500ce39b7fa5af045e0c4c7f4149a6820fd20b04886835e78bfe73b4f12",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Implement W7 Dashboard Semantics Rewrite from the token usage/cost/context observability master plan. Render ChatWeb Controller, Provider/Model, Tool & Context, Accepted-Result Economics, and mandatory Coverage sections with provenance/unknown reasons; remove any canonical bytes-to-token fallback so model_visible_bytes or bytes/N can never become canonical provider/controller token KPI. Preserve W1-W6 authority/non-overlap/unknown_not_zero semantics and public smart-v3 tool_count=8. No W8 budget enforcement, W9 history migration, W10 closure, commit, push, restart, deploy, or release. Use the smallest focused deterministic proof plus relevant renderer/backend regression and git diff --check.",
+        "objective_revision": 1,
+        "objective_sha256": "631a29a1e7d6cfe04697eaf0def3226750ed94bfc105cde455b955395917c291",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "c66899155e2f17634123f0e976c6fdcbd41c65b86f189d5eb03bf84f7a962aa3",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [],
@@ -30,9 +90,9 @@
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "Generate the result from the inspected content, then save it once.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-09-01T14:29:29.257Z",
-  "updated_at": "2026-09-01T14:31:38.121Z",
+  "updated_at": "2026-09-03T19:47:18.504Z",
   "events": [
     {
       "time": "2026-09-01T14:29:29.257Z",
@@ -109,6 +169,28 @@
       "event": "files_modified",
       "details": {
         "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T19:47:06.798Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "c66899155e2f17634123f0e976c6fdcbd41c65b86f189d5eb03bf84f7a962aa3"
+      }
+    },
+    {
+      "time": "2026-09-03T19:47:18.504Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
       }
     }
   ]

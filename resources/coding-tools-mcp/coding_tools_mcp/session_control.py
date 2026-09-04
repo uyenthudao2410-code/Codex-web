@@ -20,6 +20,7 @@ from .processes import (
     ExecSession,
     terminate_process_group,
 )
+from .result_handoff import large_result_handoff, truncation_reason
 
 
 def read_output_action(output_ref: str, *, offset: int = 0, limit: int | None = None) -> dict[str, Any]:
@@ -31,6 +32,55 @@ def read_output_action(output_ref: str, *, offset: int = 0, limit: int | None = 
             "limit": EXEC_PREVIEW_BYTES if limit is None else limit,
         },
     }
+
+
+def _output_page_handoff(
+    session: ExecSession,
+    *,
+    stream: str,
+    output_ref: str,
+    requested_offset: int,
+    next_offset: int | None,
+    limit: int,
+    has_more: bool,
+    retention: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    metrics = dict(retention or session.retained_stream_metrics(stream))
+    retention_lost = int(metrics.get("evicted_gap_bytes") or 0) > 0
+    continuation = (
+        {"output_ref": output_ref, "offset": int(next_offset), "limit": int(limit)}
+        if next_offset is not None
+        else None
+    )
+    next_operation = None
+    if continuation is not None:
+        next_operation = {
+            "tool": "command_control",
+            "arguments": {"action": "read", **continuation},
+        }
+    return large_result_handoff(
+        kind="OUTPUT_PAGE",
+        source_identity={
+            "command_id": session.session_id,
+            "stream": stream,
+            "output_ref": output_ref,
+            "observed_total_stream_bytes": int(metrics.get("total_stream_bytes") or 0),
+        },
+        scope_identity={
+            "requested_offset": int(requested_offset),
+            "limit": int(limit),
+        },
+        reason=truncation_reason("bytes", retention_lost=retention_lost),
+        next_operation=next_operation,
+        continuation=continuation,
+        has_more=has_more,
+        continuation_recovers_all_omitted_data=not retention_lost,
+        narrow_scope_hint=(
+            "The retained head/tail contains an explicit middle gap; omitted bytes cannot be recovered from this command handle."
+            if retention_lost
+            else None
+        ),
+    )
 
 
 class SessionControlMixin:
@@ -227,6 +277,20 @@ class SessionControlMixin:
             payload["next_actions"] = read_actions
             if terminal:
                 payload["next_action"] = read_actions[0]
+            retention = payload.get("output_retention")
+            retention = retention if isinstance(retention, dict) else {}
+            stream_retention = retention.get(output_stream)
+            stream_retention = stream_retention if isinstance(stream_retention, dict) else None
+            payload["large_result_handoff"] = _output_page_handoff(
+                session,
+                stream=output_stream,
+                output_ref=output_ref,
+                requested_offset=0,
+                next_offset=0,
+                limit=EXEC_PREVIEW_BYTES,
+                has_more=True,
+                retention=stream_retention,
+            )
         verbosity = str(args.get("verbosity", "")).strip().lower()
         if not verbosity:
             return payload
@@ -281,6 +345,17 @@ class SessionControlMixin:
                 compact["next_actions"] = preview_actions
                 if terminal and preview_actions:
                     compact["next_action"] = preview_actions[0]
+                if preview_streams:
+                    preview_stream = preview_streams[0]
+                    compact["large_result_handoff"] = _output_page_handoff(
+                        session,
+                        stream=preview_stream,
+                        output_ref=output_refs[preview_stream],
+                        requested_offset=0,
+                        next_offset=0,
+                        limit=preview_limit,
+                        has_more=True,
+                    )
         return compact
 
     def _session_output_summary(self, session: ExecSession, payload: dict[str, Any]) -> str:
@@ -362,6 +437,17 @@ class SessionControlMixin:
         if next_offset is not None:
             result["next_action"] = read_output_action(
                 str(result["stream_output_ref"]), offset=next_offset, limit=limit
+            )
+        if result["truncated"]:
+            result["large_result_handoff"] = _output_page_handoff(
+                session,
+                stream=stream,
+                output_ref=str(result["stream_output_ref"]),
+                requested_offset=requested_offset,
+                next_offset=int(next_offset) if next_offset is not None else None,
+                limit=limit,
+                has_more=next_offset is not None,
+                retention=window,
             )
         return result
 

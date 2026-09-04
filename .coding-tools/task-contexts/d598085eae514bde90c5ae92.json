@@ -1,0 +1,281 @@
+{
+  "version": 2,
+  "task_id": "40c2c683cc454578839b75d062797828",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "aETYo70nr2WPaPAGLz3X3Cpk",
+    "kind": "build",
+    "status": "timeout",
+    "result_status": "failed",
+    "exit_code": 0,
+    "duration_ms": 30020,
+    "finished_at": "2026-09-03T20:27:30.880Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "aETYo70nr2WPaPAGLz3X3Cpk",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "failed",
+      "command": {
+        "command_id": "aETYo70nr2WPaPAGLz3X3Cpk",
+        "kind": "build",
+        "status": "timeout",
+        "result_status": "failed",
+        "exit_code": 0,
+        "duration_ms": 30020
+      },
+      "git": {
+        "head": "80aceb583202ad381c25687969fb48adbf74622c",
+        "branch": "main",
+        "worktree_fp": "8a39eb38e7f881a5ba3d8d531313501cd03c76a7e11611a944f489a590c67be4",
+        "dirty_paths": [
+          "docs/CURRENT_STATE.md",
+          "docs/ROADMAP.md",
+          "electron/chatViewController.js",
+          "electron/services/chatEvaluationJournal.js",
+          "electron/services/componentRevision.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/processIdentity.js",
+          "electron/services/recoveryActionStore.js",
+          "electron/services/recoveryActivation.js",
+          "package.json",
+          "renderer/browser.js",
+          "renderer/control-center.css",
+          "renderer/control-center.js",
+          "renderer/dashboard.js",
+          "renderer/index.html",
+          "resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/agent_candidate.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/file_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/live_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/observation_spans.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/patching.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/session_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/task_state.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py",
+          "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+          "resources/coding-tools-mcp/tests/test_committed_review.py",
+          "resources/coding-tools-mcp/tests/test_durable_coordination_runtime.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "resources/coding-tools-mcp/tests/test_operations_analytics.py",
+          "resources/coding-tools-mcp/tests/test_operator_report_isolation.py",
+          "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "resources/coding-tools-mcp/tests/test_problem_resolution_economics.py",
+          "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "resources/coding-tools-mcp/tests/test_system_capability_suite.py",
+          "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "resources/coding-tools-mcp/tests/test_usage_accounting_v2.py",
+          "scripts/execution-hub-provider-canary.js",
+          "scripts/full-clean-activation.js",
+          "tests/accepted-code-activation.test.js",
+          "tests/chat-evaluation-journal.test.js",
+          "tests/control-panel.test.js",
+          "tests/dashboard-analytics.test.js",
+          "tests/dev-ui-lifecycle.test.js",
+          "tests/execution-hub-provider-canary.test.js",
+          "tests/full-clean-activation-command.test.js",
+          "tests/full-clean-activation.test.js",
+          "tests/process-identity.test.js",
+          "tests/recovery-activation.test.js",
+          "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_BREAKTHROUGH_METHODOLOGY_AND_IMPLEMENTATION_PROGRAM.md",
+          "docs/research/260901_CODING_WEB_EVIDENCE_GROUNDED_RESOLUTION_INTELLIGENCE_DETAILED_IMPLEMENTATION_PLAN.md",
+          "docs/research/260901_CODING_WEB_TOKEN_USAGE_COST_CONTEXT_OBSERVABILITY_AND_ACCEPTED_RESULT_EFFICIENCY_MASTER_PLAN.md",
+          "docs/research/260901_CODING_WEB_TRUSTED_GOAL_PURSUIT_SESSION_CONTINUITY_AND_PROBLEM_RESOLUTION_ECONOMICS_MASTER_PLAN.md",
+          "resources/coding-tools-mcp/coding_tools_mcp/context_observability.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/egri_p5_continuity_readiness.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/natural_problem_cohort.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_journey.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/provider_runtime.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/result_handoff.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/rotation_advisory_study.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/trusted_resolution_decision_gate.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/usage_reservations.py",
+          "resources/coding-tools-mcp/scripts/report_cross_session_continuity.py",
+          "resources/coding-tools-mcp/scripts/report_egri_p5_continuity_readiness.py",
+          "resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py",
+          "resources/coding-tools-mcp/scripts/report_rotation_advisory_readiness.py",
+          "resources/coding-tools-mcp/scripts/report_trusted_resolution_decision.py",
+          "resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "resources/coding-tools-mcp/tests/test_egri_p5_continuity_readiness.py",
+          "resources/coding-tools-mcp/tests/test_exact_patch_write.py",
+          "resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "resources/coding-tools-mcp/tests/test_natural_problem_cohort.py",
+          "resources/coding-tools-mcp/tests/test_rotation_advisory_study.py",
+          "resources/coding-tools-mcp/tests/test_tg4_result_handoff.py",
+          "resources/coding-tools-mcp/tests/test_trusted_resolution_decision_gate.py",
+          "resources/coding-tools-mcp/tests/test_usage_history_w9.py",
+          "resources/coding-tools-mcp/tests/test_usage_reservations.py"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "40c2c683cc454578839b75d062797828",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "kind": "build",
+          "status": "failed",
+          "exit_code": 0,
+          "duration_ms": 30020,
+          "command_id": "aETYo70nr2WPaPAGLz3X3Cpk"
+        }
+      ]
+    },
+    "accepted_or_not": "COMMAND_TERMINATED",
+    "blocker_or_failure": {
+      "failure_class": "COMMAND_TERMINATED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 0
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "9eaac9dc08e28a08bfbbce825d1a66c49693ffaefbc2d81de504501275360aa2",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [
+    {
+      "command": "cargo build --offline -p webcodex --bin webcodex-server",
+      "status": "failed",
+      "exit_code": 0,
+      "duration_ms": 30020,
+      "summary": "exit 0 | 30.0s | 11 lines | tail: 'warning: `webcodex` (lib) generated 1 warning (run `cargo fix --lib -p webcodex` to apply 1 suggestion)'",
+      "finished_at": "2026-09-03T20:27:30.880Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "aETYo70nr2WPaPAGLz3X3Cpk"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 472,
+        "command_id": "aETYo70nr2WPaPAGLz3X3Cpk",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:aETYo70nr2WPaPAGLz3X3Cpk:stdout",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:aETYo70nr2WPaPAGLz3X3Cpk:stderr",
+            "total_stream_bytes": 472,
+            "total_retained_bytes": 472,
+            "head_retained_bytes": 472,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+  "created_at": "2026-09-03T20:27:00.507Z",
+  "updated_at": "2026-09-03T20:27:31.592Z",
+  "events": [
+    {
+      "time": "2026-09-03T20:27:00.507Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T20:27:00.804Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo build --offline -p webcodex --bin webcodex-server",
+        "session_id": "aETYo70nr2WPaPAGLz3X3Cpk"
+      }
+    },
+    {
+      "time": "2026-09-03T20:27:30.880Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo build --offline -p webcodex --bin webcodex-server",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-03T20:27:31.592Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "aETYo70nr2WPaPAGLz3X3Cpk",
+        "accepted_or_not": "COMMAND_TERMINATED",
+        "report_id": "9eaac9dc08e28a08bfbbce825d1a66c49693ffaefbc2d81de504501275360aa2"
+      }
+    }
+  ]
+}

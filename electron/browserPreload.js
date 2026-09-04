@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('browserAssistant', {
   openManager: () => ipcRenderer.invoke('manager:open'),
   navigate: (action) => ipcRenderer.invoke('chat:navigate', action),
+  clearChatSession: () => ipcRenderer.invoke('chat:clear-session'),
   chatStatus: () => ipcRenderer.invoke('chat:status'),
   lightweightStatus: () => ipcRenderer.invoke('app:lightweight-snapshot'),
   liveOrchestration: () => ipcRenderer.invoke('panel:live-control'),

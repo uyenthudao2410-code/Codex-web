@@ -463,3 +463,106 @@ class RuntimeActivityMixin:
             "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
             "snapshot_busy": False,
         }
+
+    def _record_controller_usage_envelope_observation(
+        self,
+        identity: dict[str, Any],
+        *,
+        meta_present: bool,
+    ) -> None:
+        """Record content-free H0 evidence from the attested ChatWeb envelope.
+
+        Only presence of the exact controller-usage metadata key is recorded.
+        Prompts, responses, reasoning, usage payloads, and token estimates are
+        never stored here. This stays separate from successful contact receipts
+        so rejected tool calls cannot satisfy connector activation gates.
+        """
+        if (
+            str(identity.get("client_type") or "") != "chatweb"
+            or str(identity.get("role") or "") != "controller"
+            or str(identity.get("identity_source") or "") != "attested_transport"
+            or identity.get("attestation_verified") is not True
+        ):
+            return
+        record_id = self._hub_client_record_id(identity)
+        observed_at = datetime.now(timezone.utc).isoformat()
+        with self.tool_contact_lock:
+            previous = self.controller_usage_envelope_receipts.get(record_id) or {}
+            calls = int(previous.get("call_count") or 0) + 1
+            present = int(previous.get("meta_present_count") or 0) + int(bool(meta_present))
+            absent = int(previous.get("meta_absent_count") or 0) + int(not bool(meta_present))
+            self.controller_usage_envelope_receipts[record_id] = {
+                "schema_version": 1,
+                "client_id": str(identity.get("client_id") or ""),
+                "client_type": "chatweb",
+                "identity_source": "attested_transport",
+                "attestation_verified": True,
+                "attestation_source": str(identity.get("attestation_source") or "managed_tunnel"),
+                "method": "tools/call",
+                "contract_sha256": str(self.tool_contract.get("sha256") or ""),
+                "process_instance_id": self.process_instance_id,
+                "server_instance_id": self.server_instance_id,
+                "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or "") or None,
+                "first_observed_at": str(previous.get("first_observed_at") or observed_at),
+                "observed_at": observed_at,
+                "call_count": calls,
+                "meta_present_count": present,
+                "meta_absent_count": absent,
+                "latest_meta_present": bool(meta_present),
+            }
+
+    def connector_controller_usage_envelope(self, *, blocking: bool = True) -> dict[str, Any]:
+        """Return current-process H0 evidence without promoting absence to zero."""
+        acquired = self.tool_contact_lock.acquire(blocking=blocking)
+        if not acquired:
+            return {
+                "observed": False,
+                "current_process_observed": False,
+                "classification": "unobserved",
+                "call_count": None,
+                "meta_present_count": None,
+                "meta_absent_count": None,
+                "latest_meta_present": None,
+                "observed_at": None,
+                "identity_source": None,
+                "attestation_verified": False,
+                "snapshot_busy": True,
+            }
+        try:
+            candidates = [dict(receipt) for receipt in self.controller_usage_envelope_receipts.values()]
+        finally:
+            self.tool_contact_lock.release()
+        current_sha = str(self.tool_contract.get("sha256") or "")
+        epoch_id = str(getattr(self, "activation_epoch_id", None) or "").strip()
+        current = [
+            item for item in candidates
+            if str(item.get("client_type") or "") == "chatweb"
+            and str(item.get("identity_source") or "") == "attested_transport"
+            and item.get("attestation_verified") is True
+            and str(item.get("contract_sha256") or "") == current_sha
+            and str(item.get("process_instance_id") or "") == self.process_instance_id
+            and str(item.get("server_instance_id") or "") == self.server_instance_id
+            and (not epoch_id or str(item.get("activation_epoch_id") or "").strip() == epoch_id)
+        ]
+        latest = max(current, key=lambda item: str(item.get("observed_at") or ""), default=None)
+        calls = sum(int(item.get("call_count") or 0) for item in current)
+        present = sum(int(item.get("meta_present_count") or 0) for item in current)
+        absent = sum(int(item.get("meta_absent_count") or 0) for item in current)
+        classification = "present" if present > 0 else ("absent_so_far" if calls > 0 else "unobserved")
+        return {
+            "observed": bool(current),
+            "current_process_observed": bool(current),
+            "classification": classification,
+            "call_count": calls if current else 0,
+            "meta_present_count": present if current else 0,
+            "meta_absent_count": absent if current else 0,
+            "latest_meta_present": latest.get("latest_meta_present") if latest else None,
+            "first_observed_at": min((str(item.get("first_observed_at") or "") for item in current), default="") or None,
+            "observed_at": str((latest or {}).get("observed_at") or "") or None,
+            "identity_source": "attested_transport" if current else None,
+            "attestation_verified": bool(current),
+            "process_instance_id": self.process_instance_id if current else None,
+            "server_instance_id": self.server_instance_id if current else None,
+            "activation_epoch_id": str((latest or {}).get("activation_epoch_id") or "") or None,
+            "snapshot_busy": False,
+        }

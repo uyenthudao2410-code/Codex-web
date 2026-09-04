@@ -439,6 +439,111 @@
     element.className = `cc-pill is-${state}`;
   }
 
+  function renderGoalPursuit(data) {
+    const goal = data?.goal_pursuit || {};
+    const observed = goal?.status === 'observed';
+    const resolution = String(goal?.resolution_status || goal?.problem_state || 'UNAVAILABLE').toUpperCase();
+    const goalPillState = !observed
+      ? 'offline'
+      : ['RESOLVED_CONFIRMED', 'ABANDONED'].includes(resolution)
+        ? 'completed'
+        : resolution === 'BLOCKED'
+          ? 'blocked'
+          : 'connected';
+    setPill('ccGoalStatus', observed ? resolution : 'UNAVAILABLE', goalPillState);
+
+    const identity = observed && goal?.identity && typeof goal.identity === 'object' ? goal.identity : {};
+    setText('ccGoalProblem', identity.problem_id ? shortId(identity.problem_id, 18) : 'UNKNOWN');
+    setText('ccGoalRevision', identity.problem_revision
+      ? `Revision ${identity.problem_revision} · exact RUN binding`
+      : `Revision unknown${goal?.missing_reason ? ` · ${goal.missing_reason}` : ''}`);
+
+    const completion = observed && goal?.completion && typeof goal.completion === 'object'
+      ? goal.completion
+      : {};
+    const criteriaTotal = finiteNumber(completion.criteria_total);
+    const criteriaProven = finiteNumber(completion.criteria_proven);
+    const coverageObserved = completion.status === 'observed'
+      && criteriaTotal !== null
+      && criteriaProven !== null;
+    setText('ccGoalCriteria', coverageObserved ? `${criteriaProven} / ${criteriaTotal} proven` : 'UNKNOWN');
+    setText('ccGoalCoverage', coverageObserved
+      ? `Exact coverage ${completion.exact_coverage_status || 'observed'}`
+      : `Exact coverage unavailable${completion.missing_reason ? ` · ${completion.missing_reason}` : ''}`);
+
+    const current = goal?.current_run_wave && typeof goal.current_run_wave === 'object'
+      ? goal.current_run_wave
+      : {};
+    setText('ccGoalRun', current.run_id ? `Run ${shortId(current.run_id, 12)}` : 'UNKNOWN');
+    setText('ccGoalWave', current.wave_id
+      ? `Wave ${shortId(current.wave_id, 12)} · ${current.wave_state || 'state unknown'}`
+      : 'Wave unknown');
+    const controller = goal?.authority?.controller || data?.authority?.controller || {};
+    setText('ccGoalController', controller.owner_client_id
+      ? `${controller.owner_client_id} · ${controller.status || 'status unknown'}`
+      : 'UNKNOWN');
+    setText('ccGoalExecution', [current.execution_state, current.wave_state, current.execution_mode]
+      .filter(Boolean).join(' · ') || 'Execution state unavailable');
+
+    const noGap = observed && ['NONE', 'OBTAIN_INDEPENDENT_OUTCOME'].includes(String(goal?.next_action || ''))
+      && !goal?.next_critical_gap;
+    setText('ccGoalGap', observed
+      ? goal?.next_critical_gap || (noGap ? 'No unresolved engineering criterion' : 'UNAVAILABLE')
+      : `UNAVAILABLE${goal?.missing_reason ? ` · ${goal.missing_reason}` : ''}`);
+    setText('ccGoalAction', observed
+      ? `Next action · ${goal?.next_action || 'UNAVAILABLE'}`
+      : 'Next action unavailable');
+
+    const knowledge = goal?.knowledge && typeof goal.knowledge === 'object' ? goal.knowledge : {};
+    const knowledgeObserved = knowledge.status === 'observed';
+    setPill(
+      'ccKnowledgeStatus',
+      knowledgeObserved ? 'KNOWLEDGE CURRENT' : knowledge.controller_recovery_required ? 'RECOVERY REQUIRED' : 'UNAVAILABLE',
+      knowledgeObserved ? 'connected' : knowledge.controller_recovery_required ? 'waiting' : 'offline'
+    );
+    const knowledgeRevision = finiteNumber(knowledge.current_knowledge_revision);
+    const ackRevision = finiteNumber(knowledge.controller_ack_revision);
+    setText('ccKnowledgeRevision', knowledgeRevision !== null ? `Current rev ${knowledgeRevision}` : 'UNKNOWN');
+    setText('ccKnowledgeAck', ackRevision !== null
+      ? `Controller ACK rev ${ackRevision}`
+      : `Controller ACK unknown · ${knowledge.controller_ack_missing_reason || 'exact ACK unavailable'}`);
+    setText('ccKnowledgeRecovery', typeof knowledge.controller_recovery_required === 'boolean'
+      ? knowledge.controller_recovery_required ? 'REQUIRED' : 'CURRENT'
+      : 'UNKNOWN');
+
+    const continuity = data?.continuity || {};
+    const capsuleStatus = String(continuity.capsule_status || 'unknown').toUpperCase();
+    setText('ccCapsuleStatus', `Capsule ${capsuleStatus}`);
+    const rotationObserved = typeof continuity.safe_to_rotate_chatweb === 'boolean';
+    const rotationSafe = rotationObserved ? continuity.safe_to_rotate_chatweb : null;
+    setText('ccRotateStatus', rotationSafe === null ? 'UNKNOWN' : rotationSafe ? 'YES' : 'NO');
+    const rotationReasons = Array.isArray(continuity.reason_codes)
+      ? continuity.reason_codes.filter(Boolean)
+      : [];
+    setText('ccRotateReasons', rotationReasons.length ? rotationReasons.join(' · ') : 'Reason codes unavailable');
+
+    const matrix = data?.context_observability?.capability_matrix || {};
+    const exactPressure = matrix?.exact_context_pressure || {};
+    const exactPressureObserved = exactPressure.status === 'observed' && exactPressure.value !== null
+      && exactPressure.value !== undefined;
+    setText('ccExactContext', exactPressureObserved ? String(exactPressure.value) : 'UNKNOWN / UNOBSERVED');
+    const heuristic = matrix?.heuristic_rotation_signals || {};
+    const signals = Array.isArray(heuristic.signals) ? heuristic.signals : [];
+    const signalSummary = signals
+      .filter((item) => item && item.value !== null && item.value !== undefined)
+      .slice(0, 4)
+      .map((item) => `${item.name}=${String(item.value)}`)
+      .join(' · ');
+    setText('ccRotationSignals', `HEURISTIC · ${signalSummary || 'signals unavailable'} · not authority`);
+
+    const economics = data?.problem_economics || {};
+    const economicsAvailable = economics.status === 'analytics_available_off_fast_path';
+    setText('ccProblemEconomics', economicsAvailable ? 'MANUAL ANALYTICS' : 'UNAVAILABLE');
+    setText('ccProblemEconomicsMeta', economicsAvailable
+      ? 'Immutable-snapshot report available off fast path; no economics values are heartbeat-polled.'
+      : `Economics unavailable${economics.missing_reason ? ` · ${economics.missing_reason}` : ''}`);
+  }
+
   function renderActivity(data) {
     const activity = executionActivity(data);
     const element = byId('ccActivityIndicator');
@@ -513,6 +618,7 @@
     setText('ccPerformance', [directLine, localLine].filter(Boolean).join(' · '));
     renderProviderTraffic(data);
     renderRecovery(data);
+    renderGoalPursuit(data);
   }
 
   function renderProviderTraffic(data) {

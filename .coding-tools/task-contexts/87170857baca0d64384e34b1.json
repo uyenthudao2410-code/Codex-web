@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "3967f5f59f0a4eecb611b8c75ee7608b",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-03T16:54:48.448Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Command path could not be inspected safely.",
+  "next_step": "",
+  "created_at": "2026-09-03T16:54:48.443Z",
+  "updated_at": "2026-09-03T16:54:48.448Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:54:48.443Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T16:54:48.448Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 4 \"controllerUsageStatus|CONTROLLER_USAGE|controller_usage.*reject|ingest_controller_usage_envelope\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:54:48.448Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

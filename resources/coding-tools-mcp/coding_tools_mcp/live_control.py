@@ -6,7 +6,10 @@ import os
 from typing import Any
 
 from . import __version__
+from .context_observability import context_observability_projection, controller_knowledge_for_run
+from .controller_usage_ingress import CONTROLLER_USAGE_META_KEY
 from .envutils import ENV_PREFIX
+from .goal_pursuit import GoalPursuitError
 from .truth_snapshot import build_truth_snapshot
 
 
@@ -67,6 +70,7 @@ def _compact_direct_usage_receipt(event: dict[str, Any] | None) -> dict[str, Any
     return {
         "usage_id": event.get("usage_id") or None,
         "turn_id": event.get("turn_id") or None,
+        "trace_id": event.get("trace_id") or None,
         "event_time": event.get("event_time") or None,
         "actor": event.get("actor") or None,
         "provider_id": event.get("provider_id") or None,
@@ -119,6 +123,111 @@ def _tool_call_metering_projection() -> dict[str, Any]:
         "total_tokens": None,
         "latest": None,
         "reason": "client_receipt_not_exposed_by_mcp_transport",
+    }
+
+
+def _chatweb_measurement_projection(
+    runtime: Any,
+    *,
+    direct_usage: dict[str, Any],
+    tool_call_metering: dict[str, Any],
+) -> dict[str, Any]:
+    """Describe what ChatWeb usage can actually be claimed from live evidence.
+
+    The MCP runtime has an exact controller-usage ingress, but that capability
+    is not evidence that the ChatWeb host emitted a receipt for the current
+    session. Likewise, the host-visible Tool-call-card token number is a
+    separate plane and is not exposed by the current MCP transport. Keep these
+    facts explicit so UI/budget consumers cannot promote availability into
+    measurement or infer missing usage as zero.
+    """
+    controller = direct_usage.get("controller") if isinstance(direct_usage, dict) else None
+    controller_measurement = (
+        controller.get("measurement") if isinstance(controller, dict) and isinstance(controller.get("measurement"), dict) else {}
+    )
+    controller_provenance = (
+        controller.get("provenance") if isinstance(controller, dict) and isinstance(controller.get("provenance"), dict) else {}
+    )
+    controller_observed = bool(
+        isinstance(controller, dict)
+        and controller_measurement.get("usage") == "measured"
+        and controller_provenance.get("usage") in {"client_reported", "provider_reported"}
+    )
+    tool_card_observed = bool(
+        isinstance(tool_call_metering, dict)
+        and tool_call_metering.get("measurement") == "measured"
+        and tool_call_metering.get("total_tokens") is not None
+    )
+    tools = list(runtime.exposed_tool_names())
+    contract = runtime.tool_contract if isinstance(runtime.tool_contract, dict) else {}
+    envelope = (
+        runtime.connector_controller_usage_envelope(blocking=False)
+        if hasattr(runtime, "connector_controller_usage_envelope")
+        else {"classification": "unobserved", "snapshot_busy": False}
+    )
+    envelope_classification = str(envelope.get("classification") or "unobserved")
+    if envelope.get("snapshot_busy") is True:
+        envelope_observation = "unobserved"
+        envelope_lifecycle = "snapshot_busy"
+    elif envelope_classification == "present":
+        envelope_observation = "present"
+        envelope_lifecycle = "in_call_receipt_observed"
+    elif envelope_classification == "absent_so_far":
+        envelope_observation = "absent"
+        envelope_lifecycle = "no_in_call_receipt_observed"
+    else:
+        envelope_observation = "unobserved"
+        envelope_lifecycle = "unobserved"
+    blocking_reasons: list[str] = ["session_measurement_coverage_not_proven"]
+    if not controller_observed:
+        blocking_reasons.append("no_recent_exact_chatweb_controller_usage_receipt")
+    if envelope_observation == "absent":
+        blocking_reasons.append("attested_chatweb_tools_call_without_controller_usage_meta")
+    elif envelope_observation == "unobserved":
+        blocking_reasons.append("controller_usage_envelope_not_observed")
+    if not tool_card_observed:
+        blocking_reasons.append(str(tool_call_metering.get("reason") or "tool_call_card_receipt_unobserved"))
+    return {
+        "schema_version": 1,
+        "accounting_claim": "partial" if controller_observed else "unobserved",
+        "full_chatweb_accounting": False,
+        "missing_measurement_policy": "unknown_not_zero",
+        "controller_usage": {
+            "ingress_supported": True,
+            "transport": "mcp_tools_call_meta",
+            "meta_key": CONTROLLER_USAGE_META_KEY,
+            "observation": "observed" if controller_observed else "unobserved",
+            "latest_usage_id": controller.get("usage_id") if controller_observed else None,
+            "turn_id": controller.get("turn_id") if controller_observed else None,
+            "provenance": controller_provenance.get("usage") if controller_observed else None,
+            "host_envelope": {
+                "observation": envelope_observation,
+                "classification": envelope_classification,
+                "lifecycle": envelope_lifecycle,
+                "call_count": envelope.get("call_count"),
+                "meta_present_count": envelope.get("meta_present_count"),
+                "meta_absent_count": envelope.get("meta_absent_count"),
+                "latest_meta_present": envelope.get("latest_meta_present"),
+                "observed_at": envelope.get("observed_at"),
+                "provenance": envelope.get("identity_source"),
+            },
+            "post_turn_sideband": {
+                "supported": False,
+                "observation": "unsupported",
+                "reason": "no_supported_post_turn_controller_usage_transport",
+            },
+        },
+        "tool_call_tokens": {
+            "observation": "observed" if tool_card_observed else "unavailable",
+            "source": tool_call_metering.get("source") if isinstance(tool_call_metering, dict) else "chatweb_tool_call_card",
+            "reason": None if tool_card_observed else tool_call_metering.get("reason"),
+        },
+        "tool_inventory": {
+            "source": "runtime_tool_contract",
+            "tool_count": len(tools),
+            "contract_tool_count": contract.get("tool_count"),
+        },
+        "blocking_reasons": blocking_reasons,
     }
 
 
@@ -180,6 +289,7 @@ def control_presence_projection(
             ),
             "last_seen_at": client.get("last_seen_at"),
             "runtime_instance_id": client.get("runtime_instance_id"),
+            "session_instance": client.get("session_instance") or None,
             "contract_sha": client.get("contract_sha"),
         }
         if include_cursors:
@@ -261,6 +371,151 @@ def control_presence_projection(
     }
 
 
+def _goal_knowledge_projection(controller_knowledge: dict[str, Any]) -> dict[str, Any]:
+    observed = controller_knowledge.get("status") == "observed"
+    return {
+        "status": "observed" if observed else "unavailable",
+        "missing_reason": None if observed else controller_knowledge.get("reason"),
+        "current_knowledge_revision": (
+            controller_knowledge.get("knowledge_revision") if observed else None
+        ),
+        "checkpoint_id": controller_knowledge.get("checkpoint_id") if observed else None,
+        "checkpoint_created_at": (
+            controller_knowledge.get("checkpoint_created_at") if observed else None
+        ),
+        "controller_ack_revision": None,
+        "controller_ack_status": "unavailable",
+        "controller_ack_missing_reason": "exact_controller_endpoint_ack_unobserved",
+        "controller_recovery_required": not observed,
+        "continuity_status": "current_checkpoint_observed" if observed else "recovery_required",
+    }
+
+
+def _unavailable_goal_pursuit(
+    *,
+    run_id: str,
+    wave_id: str,
+    run: dict[str, Any],
+    wave: dict[str, Any],
+    orchestration_state: Any,
+    controller_knowledge: dict[str, Any],
+    authority: dict[str, Any],
+    reason: str,
+) -> dict[str, Any]:
+    return {
+        "status": "unavailable",
+        "missing_reason": reason,
+        "identity": None,
+        "problem_state": None,
+        "resolution_status": "UNAVAILABLE",
+        "completion": {
+            "status": "unavailable",
+            "criteria_total": None,
+            "criteria_proven": None,
+            "criteria_unresolved": None,
+            "exact_coverage_status": "UNAVAILABLE",
+            "missing_reason": reason,
+        },
+        "next_critical_gap": None,
+        "next_critical_gap_id": None,
+        "next_action": "UNAVAILABLE",
+        "knowledge": _goal_knowledge_projection(controller_knowledge),
+        "current_run_wave": {
+            "run_id": run_id or None,
+            "wave_id": wave_id or None,
+            "run_state": run.get("status") if run_id else None,
+            "wave_state": wave.get("status") if wave_id else None,
+            "execution_state": orchestration_state or None,
+            "execution_mode": wave.get("execution_mode") if wave_id else None,
+        },
+        "authority": {
+            "controller": dict(authority.get("controller") or {}),
+            "write": dict(authority.get("write") or {}),
+            "mutation_authority_granted": False,
+            "acceptance_authority_granted": False,
+            "problem_revision_authority_granted": False,
+        },
+        "derived_projection_only": True,
+    }
+
+
+def _live_goal_pursuit_projection(
+    runtime: Any,
+    *,
+    run_id: str,
+    wave_id: str,
+    run: dict[str, Any],
+    wave: dict[str, Any],
+    orchestration_state: Any,
+    controller_knowledge: dict[str, Any],
+    authority: dict[str, Any],
+) -> dict[str, Any]:
+    if not run_id:
+        return _unavailable_goal_pursuit(
+            run_id=run_id,
+            wave_id=wave_id,
+            run=run,
+            wave=wave,
+            orchestration_state=orchestration_state,
+            controller_knowledge=controller_knowledge,
+            authority=authority,
+            reason="run_id_missing",
+        )
+    try:
+        summary = runtime.orchestration_ledger.goal_pursuit_live_summary(run_id=run_id)
+    except GoalPursuitError as exc:
+        return _unavailable_goal_pursuit(
+            run_id=run_id,
+            wave_id=wave_id,
+            run=run,
+            wave=wave,
+            orchestration_state=orchestration_state,
+            controller_knowledge=controller_knowledge,
+            authority=authority,
+            reason=exc.code.lower(),
+        )
+    return {
+        "status": "observed",
+        "missing_reason": None,
+        "identity": dict(summary.get("identity") or {}),
+        "problem_state": summary.get("problem_state"),
+        "resolution_status": summary.get("resolution_status"),
+        "completion": dict(summary.get("completion") or {}),
+        "next_critical_gap": summary.get("next_critical_gap"),
+        "next_critical_gap_id": summary.get("next_critical_gap_id"),
+        "next_action": summary.get("next_action"),
+        "decision_state_provenance": summary.get("decision_state_provenance"),
+        "knowledge": _goal_knowledge_projection(controller_knowledge),
+        "current_run_wave": {
+            "run_id": run_id,
+            "wave_id": wave_id or None,
+            "run_state": run.get("status"),
+            "wave_state": wave.get("status") if wave_id else None,
+            "execution_state": orchestration_state or None,
+            "execution_mode": wave.get("execution_mode") if wave_id else None,
+        },
+        "stop": dict(summary.get("stop") or {}),
+        "fact_window": dict(summary.get("fact_window") or {}),
+        "authority": {
+            "controller": dict(authority.get("controller") or {}),
+            "write": dict(authority.get("write") or {}),
+            **dict(summary.get("authority") or {}),
+        },
+        "derived_projection_only": True,
+    }
+
+
+def _problem_economics_fast_path_capability(goal_pursuit: dict[str, Any]) -> dict[str, Any]:
+    observed_goal = goal_pursuit.get("status") == "observed"
+    return {
+        "status": "analytics_available_off_fast_path" if observed_goal else "unavailable",
+        "source": "offline_immutable_snapshot_report",
+        "missing_reason": None if observed_goal else goal_pursuit.get("missing_reason"),
+        "heartbeat_analytics_forbidden": True,
+        "observed_values": None,
+    }
+
+
 def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict[str, Any]:
     """Return the bounded authoritative state required by the 2-second panel poll."""
     activation = runtime.activation_admission_snapshot(blocking=False)
@@ -285,6 +540,33 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
         # ledger census.  Panel polling must not compete with that transaction
         # by reconciling and re-verifying the ledger every two seconds.  Return
         # a stable fail-closed shape until the exact epoch is committed READY.
+        pending_direct_usage = _direct_usage_projection([])
+        pending_tool_call_metering = _tool_call_metering_projection()
+        pending_controller_knowledge = controller_knowledge_for_run(
+            runtime.orchestration_ledger, ""
+        )
+        pending_context_observability = context_observability_projection(
+            run_id="",
+            clients=[],
+            direct_usage=pending_direct_usage,
+            capsule=None,
+            events=[],
+            counts={"events": 0, "waves": 0, "checkpoints": 0},
+            controller_knowledge=pending_controller_knowledge,
+        )
+        pending_goal = _unavailable_goal_pursuit(
+            run_id="",
+            wave_id="",
+            run={},
+            wave={},
+            orchestration_state="UPDATE_INCOMPLETE",
+            controller_knowledge=pending_controller_knowledge,
+            authority={
+                "controller": {"status": "unavailable"},
+                "write": {"status": "unavailable"},
+            },
+            reason="runtime_activation_pending",
+        )
         return {
             "schema_version": 2,
             "snapshot_scope": "live_control",
@@ -329,8 +611,16 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
                 "tool_contract": runtime.tool_contract,
                 "tools": list(runtime.exposed_tool_names()),
             },
-            "direct_usage": _direct_usage_projection([]),
-            "tool_call_metering": _tool_call_metering_projection(),
+            "direct_usage": pending_direct_usage,
+            "tool_call_metering": pending_tool_call_metering,
+            "chatweb_measurement": _chatweb_measurement_projection(
+                runtime,
+                direct_usage=pending_direct_usage,
+                tool_call_metering=pending_tool_call_metering,
+            ),
+            "context_observability": pending_context_observability,
+            "goal_pursuit": pending_goal,
+            "problem_economics": _problem_economics_fast_path_capability(pending_goal),
             "truth_snapshot": pending_truth,
             "clients": [],
             "authority": {
@@ -396,10 +686,32 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
     )
     provider_traffic = runtime.provider_traffic_snapshot()
     direct_usage = _direct_usage_projection(ledger.list_usage_events(run_id, limit=8) if run_id else [])
+    tool_call_metering = _tool_call_metering_projection()
+    controller_knowledge = controller_knowledge_for_run(ledger, run_id, run=run)
+    context_observability = context_observability_projection(
+        run_id=run_id,
+        clients=presence["clients"],
+        direct_usage=direct_usage,
+        capsule=capsule,
+        events=events,
+        counts=dict(live_projection.get("counts") or {}),
+        controller_knowledge=controller_knowledge,
+    )
     wave_id = str(projection.get("wave_id") or "").strip()
     selected_wave = next(
         (item for item in reversed(waves) if str(item.get("wave_id") or "") == wave_id),
         waves[-1] if waves else {},
+    )
+    live_authority = {"controller": presence["controller"], "write": presence["write"]}
+    goal_pursuit = _live_goal_pursuit_projection(
+        runtime,
+        run_id=run_id,
+        wave_id=wave_id,
+        run=run or {},
+        wave=selected_wave if isinstance(selected_wave, dict) else {},
+        orchestration_state=projection.get("orchestration_state"),
+        controller_knowledge=controller_knowledge,
+        authority=live_authority,
     )
     source_identity = runtime._cached_orchestration_workspace_identity()
     # A write lease means the cached source observation can predate mutation.
@@ -464,9 +776,17 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
             "tools": list(runtime.exposed_tool_names()),
         },
         "direct_usage": direct_usage,
-        "tool_call_metering": _tool_call_metering_projection(),
+        "tool_call_metering": tool_call_metering,
+        "chatweb_measurement": _chatweb_measurement_projection(
+            runtime,
+            direct_usage=direct_usage,
+            tool_call_metering=tool_call_metering,
+        ),
+        "context_observability": context_observability,
+        "goal_pursuit": goal_pursuit,
+        "problem_economics": _problem_economics_fast_path_capability(goal_pursuit),
         "truth_snapshot": truth_snapshot,
         "clients": presence["clients"],
-        "authority": {"controller": presence["controller"], "write": presence["write"]},
+        "authority": live_authority,
         "continuity": presence["continuity"],
     }

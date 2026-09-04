@@ -1,0 +1,47 @@
+{
+  "version": 2,
+  "task_id": "32bd20008c334262b45ce1f1f2c12ed2",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The coordination message or current completion report was not found.",
+  "next_step": "Generate the result from the inspected content, then save it once.",
+  "created_at": "2026-09-03T23:13:40.031Z",
+  "updated_at": "2026-09-03T23:15:07.260Z",
+  "events": [
+    {
+      "time": "2026-09-03T23:13:40.031Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-03T23:13:40.037Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T23:15:07.260Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "MESSAGE_NOT_FOUND"
+      }
+    }
+  ]
+}

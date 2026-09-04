@@ -1,0 +1,174 @@
+[
+  {
+    "version": 2,
+    "task_id": "1dcef2aa9c6848d29e36f3d6eff5a9cd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "bgcmofm_eUNaTHCalYvehK6e",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 385,
+      "finished_at": "2026-09-03T20:39:25.732Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T20:39:25.074Z",
+    "updated_at": "2026-09-03T20:39:25.732Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:39:25.074Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:39:25.464Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd.exe /d /c netstat -ano -p tcp | findstr /R /C:\":26690 .*LISTENING\"",
+          "session_id": "bgcmofm_eUNaTHCalYvehK6e"
+        }
+      },
+      {
+        "time": "2026-09-03T20:39:25.732Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd.exe /d /c netstat -ano -p tcp | findstr /R /C:\":26690 .*LISTENING\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:39:33.934Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0c294a469817473ba0bdc97f5d6d0cc3",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Lilw2qKqAnUP-vbFmzF1_64s",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 370,
+      "finished_at": "2026-09-03T20:40:33.298Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T20:39:33.935Z",
+    "updated_at": "2026-09-03T20:40:33.298Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:39:33.935Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:39:34.276Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd.exe /d /c if exist target\\debug\\webcodex.exe echo WEBCODEX_DEBUG_BINARY_READY=1",
+          "session_id": "3S7BxhpirAKIZdIRWyHdMdzo"
+        }
+      },
+      {
+        "time": "2026-09-03T20:39:34.526Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd.exe /d /c if exist target\\debug\\webcodex.exe echo WEBCODEX_DEBUG_BINARY_READY=1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:39:43.876Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd.exe /d /c target\\debug\\webcodex.exe run --root E:\\DEV\\Codex-web --profile personal --state-dir \"%LOCALAPPDATA%\\WebCodex\\g4-semantic\\codex-web\"",
+          "session_id": "LSWqc3vbXT852yNaYZlWKtmi"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:14.546Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$root=35260; $level1=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$root); foreach($p in $level1){Write-Output ('L1 PID='+$p.ProcessId+' PPID='+$p.ParentProcessId+' NAME='+$p.Name); $level2=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$p.ProcessId); foreach($c in $level2){Write-Output ('L2 PID='+$c.ProcessId+' PPID='+$c.ParentProcessId+' NAME='+$c.Name); $level3=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$c.ProcessId); f",
+          "session_id": "DCPWtPpUrZNZVvCjCNIZqI9G"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:15.153Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$root=35260; $level1=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$root); foreach($p in $level1){Write-Output ('L1 PID='+$p.ProcessId+' PPID='+$p.ParentProcessId+' NAME='+$p.Name); $level2=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$p.ProcessId); foreach($c in $level2){Write-Output ('L2 PID='+$c.ProcessId+' PPID='+$c.ParentProcessId+' NAME='+$c.Name); $level3=Get-CimInstance Win32_Process -Filter ('ParentProcessId='+$c.ProcessId); f",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:23.180Z",
+        "event": "command_started",
+        "details": {
+          "command": "tasklist.exe /FI \"PID eq 35260\" /FO CSV /NH",
+          "session_id": "o65-Sx861Hhn3wSQrGe6dlMh"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:23.389Z",
+        "event": "command_finished",
+        "details": {
+          "command": "tasklist.exe /FI \"PID eq 35260\" /FO CSV /NH",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:33.013Z",
+        "event": "command_started",
+        "details": {
+          "command": "cmd.exe /d /c netstat -ano -p tcp | findstr /R /C:\":26690 .*LISTENING\"",
+          "session_id": "Lilw2qKqAnUP-vbFmzF1_64s"
+        }
+      },
+      {
+        "time": "2026-09-03T20:40:33.298Z",
+        "event": "command_finished",
+        "details": {
+          "command": "cmd.exe /d /c netstat -ano -p tcp | findstr /R /C:\":26690 .*LISTENING\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:40:40.638Z",
+    "archive_reason": "finished"
+  }
+]

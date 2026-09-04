@@ -1,8 +1,38 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-08-31
+> **Status date:** 2026-09-04
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
+
+## 0. Current convergence guidance — 2026-09-04
+
+The current engineering strategy is **convergence, not architecture expansion**. Do not build more system merely because a historical plan contains another layer or because an evidence gate is still open. Existing implementation should be closed by exact provenance, a real end-to-end Problem continuity observation, natural evidence, and accepted-result economics before another framework or control plane is authorized.
+
+Use the following evidence ladder. Each row is a distinct claim and a stronger row must never be inferred from a weaker one:
+
+| Evidence state | What it proves |
+|---|---|
+| `SOURCE_PRESENT` | Exact bytes exist in the current checkout. This is not proof, acceptance, or runtime evidence. |
+| `FOCUSED_PROOF` | A bounded oracle passed for those exact bytes. This is still not final acceptance or live activation. |
+| `EOCL_ACCEPTED` | The semantic controller accepted exact receipts at a stable checkpoint. This is not proof that a process loaded them. |
+| `LIVE_COMPATIBLE` | A current development process/revision is live under the compatible activation path, for example `CURRENT_COMPATIBLE_ACKNOWLEDGED`. This is process-bound local evidence and is **not** strict connector rediscovery. |
+| `STRICT_REDISCOVERED` | An official current-process discovery receipt (`tools/list` or `server/discover`) exists and is acknowledged under the strict path. Compatible bootstrap/current access must never be relabeled as this state. |
+| `PACKAGED_RELEASED` | Required package/installer/release evidence has passed. Local source, EOCL, or live-development evidence does not imply this state, deployment, production, or SLO proof. |
+| `NATURAL_PROBLEM_OUTCOME` | A real natural Problem Revision preserves exact RUN/WAVE continuity and ends in independent outcome confirmation or a truthful same-revision reopen. Accepted execution alone is not this outcome. |
+| `ECONOMICS_POLICY` | Representative natural evidence has enough measured accepted-result economics to justify a policy decision. Missing usage, money, outcome, or coverage stays unknown rather than zero. |
+
+The convergence sequence is intentionally finite:
+
+1. converge the implementation and exact provenance already present; do not add another system layer;
+2. prove continuity on **one real natural Problem** from Problem Revision through exact RUN/WAVE/checkpoint to independent outcome or truthful reopen;
+3. gather **5-10 natural Problems** with the same provenance discipline instead of synthetic filler;
+4. measure accepted-result economics, coverage, rework, TTAR/TTPR and operator burden without converting missing evidence to zero;
+5. only then decide whether EGRI/P5 should advance, remain gated, or be simplified;
+6. classify the surviving surface explicitly as **KEEP / MODIFY / REMOVE**.
+
+`KEEP` means retain a mechanism with unique authority/value and current evidence. `MODIFY` means correct a demonstrated defect or evidence gap using the smallest existing surface. `REMOVE` means delete or collapse redundant policy/framework surface only after its authority/evidence role is demonstrably unnecessary; never erase durable evidence or rewrite dated research chronology to make the present look cleaner.
+
+This section is the current sequencing and provenance authority for this maintained document. Older dated runtime paragraphs below remain immutable observation snapshots. If a historical block says `current`, `update_pending`, `connector blocked`, `source-only`, or names a process/epoch, read that language in the timestamped observation window unless a fresh supported runtime receipt re-establishes it. A present-day `CURRENT`/`fully_ready` local observation is still only local runtime evidence; compatible current access is not strict rediscovery, and neither is a package/release/production claim.
 
 ## 1. Source of truth and document precedence
 
@@ -30,9 +60,78 @@ A schema-v2 postflight is accepted only when its operation, component, checkpoin
 
 `LIVE_CLOSED` means only that this exact accepted local source is loaded and locally ready under the verified lifecycle and connector contract. Its projection deliberately remains `release_state=NOT_RELEASED` and `production_state=NOT_CLAIMED`. Connector continuity is separate: persisted SHA equality alone is not process-freshness proof for a new full-clean epoch. A breaking contract, meaning the acknowledged SHA is not the exact current SHA and is not a declared compatible predecessor under the same schema/profile boundary, still requires an attested current-process `tools/list` or `server/discover` receipt plus official Recovery Host acknowledgement. For an exact current SHA or declared compatible predecessor, an admission-closed no-workspace bootstrap may instead close the connector gate only after an attested ChatWeb `workspace_context` call is bound to the exact activation epoch, MCP process instance, server instance and contract SHA, reports `workspace_accessed=false`, and the Recovery Host guarded ACK persists that exact receipt. Raw HTTP, implicit or explicit identity headers without managed-tunnel attestation, catalog metadata, arbitrary `tools/call`, or textual receipts cannot satisfy either path. The compatible acknowledged state is `CURRENT_COMPATIBLE_ACKNOWLEDGED`; it remains truthful with `connectorRediscovered=false`, carries its own compatibility acknowledgement timestamp, and may reach `READY` / admission `OPEN` without inventing a discovery receipt.
 
-### Operational recency override — 2026-08-27
+### Superseding P0.6 accepted baseline and live receipt — 2026-09-01
 
-The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) is the current operational receipt for volatile lifecycle, connector, PRL, and packaged-harness claims. It supersedes older uses of “current”, “active”, or “accepted” in this document when those terms describe a live process or connector rather than a source implementation.
+The current accepted source baseline is `main @ 30b7d1b971b65034d3e4c95568c970fcc0e9380c`, and the observed
+`origin/main` ref matches that commit. The P0.6 source packet contains exactly
+27 source/documentation files with packet SHA-256
+`b64a9704a73ea78fd3f330f12712b03090f8082765b3befd4b52eaa849d8d739`.
+Its immutable candidate and acceptance receipts are
+`.coding-tools/orchestration/baselines/p0.6-20260831T141719Z-b64a9704.candidate.json`
+and `.coding-tools/orchestration/baselines/p0.6-20260831T141719Z-b64a9704.acceptance.json`.
+ChatWeb accepted the exact-file wave at checkpoint
+`e3b6c1a07b3f4524af8d0bef967fc7d5`; the canonical proof fingerprint is
+`702139edffa332d62604af2b57e63c9ca65828207f92c589608f2c83df546fba`,
+and completion report
+`7a4ec1350c3a3ba58fb61926088e8f12f965a02de248a950b88de6d48483114c`
+is acknowledged. This supersedes earlier paragraphs that describe P0.6,
+full-component acceptance, or the scoped delivery commit as still open; those
+paragraphs remain historical receipts for the observations made at their own
+timestamps.
+
+The accepted-baseline process receipt immediately after delivery reported
+Electron UI and Coding MCP `CURRENT`, `components_ready=true`,
+`fully_ready=true`, `runtime_update_incomplete=false`, and `error_code=none`.
+Connector continuity at that accepted identity is
+`CURRENT_COMPATIBLE_ACKNOWLEDGED` through the managed-attested
+`compatible_activation_bootstrap` path, with
+`connector_refresh_required=false`, `connector_ack_pending=false`, and
+`connector_rediscovered=false`; no strict discovery is inferred. Windows
+Recovery Supervisor reports `Running` / `healthy` with zero consecutive
+failures. A fresh immutable Backup-API lifecycle census reports schema 12,
+SQLite integrity `ok`, zero foreign-key rows, zero ordinary active RUNs, no
+managed jobs, no projection drift, no unexplained active RUNs, no unbound live
+resources, and no stale background-operation residue. Six terminal P5 epoch
+anchors remain retained as evidence and do not constitute active work.
+
+P0 Operational Convergence and the P0.6 immutable local baseline are therefore
+closed for this accepted source/runtime identity. This does not promote the
+separate product-evidence or delivery gates: independent natural Golden HR
+outcomes, prospective causal evidence, P4 predictive validity, P5-A0 natural
+instrumentation health, Windows installer/release acceptance, deployment,
+production, and SLO claims remain open until their own authority and evidence
+requirements are satisfied.
+
+### Post-baseline P2 source slice — 2026-09-01
+
+The current post-P0.6 worktree adds a source-only derived Resolution Capsule to
+the existing `task_control(handoff)` path; it does not add a ninth public tool or
+a second authority/database plane. The projector binds the exact RUN to its
+primary Problem Revision, emits the typed contract and criteria fingerprints,
+bounded latest-event identity, same-revision reopen and independent-outcome
+receipt observations, and a content-free Problem Frame shadow/advisory. It
+explicitly states that transcript, raw source and private reasoning are absent
+and that the capsule grants neither mutation nor acceptance authority. The
+outer handoff remains capped at 8 KiB: a contract of at most 4 KiB is embedded;
+a larger valid contract is represented by its exact identity plus
+`exact_revision_refresh_required=true`, so callers must fetch the exact revision
+instead of receiving silently truncated content.
+
+Focused source proof for this slice is `17 passed, 3 subtests passed` in
+`tests/test_problem_lineage.py`, `18 passed` across the durable coordination and
+coordination-state consumers, plus the module-size and scoped diff-hygiene
+guards. This is not yet an accepted or loaded-runtime claim. A fresh
+`npm run dev:status` after the runtime-affecting source edit reports Electron UI
+`CURRENT`, but Coding MCP `mcp_revision_state=update_pending`,
+`components_ready=false`, `fully_ready=false`, and
+`runtime_update_incomplete=true`; the exact running and disk revisions differ.
+Recovery Supervisor independently remains `Running` / `healthy` with zero
+consecutive failures. Controlled activation and a new exact acceptance receipt
+are separate next gates; natural Golden HR outcome evidence remains uncreated.
+
+### Historical operational recency override — 2026-08-27
+
+The maintained execution tracker at [`research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md`](research/260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md) was the operational receipt for the volatile lifecycle, connector, PRL, and packaged-harness claims in that observation window. The superseding P0.6 section above is the current maintained receipt; this historical section must not override it.
 
 - The checked-out Git identity observed on 2026-08-29 is `main @ c0aa335c7c12746a1f4ff42e84234f8c54914658`, matching `origin/main`. The current full-clean activation-closure, PRL v11, managed-tunnel attestation, exact discovery-receipt and lightweight-UI waves remain newer uncommitted source until an exact accepted checkpoint says otherwise; therefore the P5 source baseline is not clean even though HEAD matches upstream. PRL fails public caller-derived authority closed, records immutable non-code dispositions and checkpoint-bound reconciliation, reports revision-scoped clocks/intervals, and emits C4 receipt schema `2` with Backup-API snapshot identity plus independently rebuilt proof/checkpoint/bridge coverage. Neither a matched source revision nor a fresh runtime receipt is a package, installer, release, deployment, production, or SLO claim.
 - Earlier P0/P4 connector acknowledgements and tool calls are `VERIFIED_SNAPSHOT`, not current-process authority. The current connector claim must be read from a fresh Recovery Host closure receipt under the unchanged-versus-changed SHA rules above; no persisted hash, generic tool call, or historical rediscovery timestamp may substitute for it.
@@ -581,6 +680,8 @@ Low-level/legacy tools may still exist in compatibility or non-smart modes, but 
 `agent_workflow` is the primary end-to-end coding path. Mutation/proof workflows are governed by the EOCL state machine and durable orchestration ledger. A successful command or green test does not by itself equal final acceptance; an `ACCEPTING` wave still requires the authorized semantic controller to accept or reject it.
 
 For a selected read-only review, `agent_workflow(phase="prepare")` also accepts an optional `committed_review` object. It requires exact local 40-hex base/head commits, computes an explicit local merge-base range, disables external diff/textconv and system/global attributes, bounds and redacts returned evidence, and signs any continuation to the immutable range. It adds no ninth MCP tool, cannot run in a mutation/resume phase, does not fetch history, and does not itself establish execution or acceptance evidence.
+
+For ordinary context collection, `agent_workflow` phase `prepare`/`run` exposes the existing bounded context controls and forwards them unchanged to `prepare_coding_context`. The public `smart-v3` surface remains exactly eight tools; this does not create a second index or authority.
 
 Current authority rules:
 

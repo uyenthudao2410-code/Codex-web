@@ -52,7 +52,6 @@
 
   // Tools whose payload bytes are binary (images) rather than model text —
   // counting them as tokens would systematically inflate the estimate.
-  const NON_TOKEN_TOOLS = new Set(['view_image']);
   const REALTIME_WINDOW_MS = 5 * 60 * 1000;
   const DASHBOARD_WINDOW_HOURS = 7 * 24;
   const DASHBOARD_ANALYTICS_REFRESH_MS = 30000;
@@ -165,16 +164,10 @@
             : null,
           ok: Boolean(record?.ok),
           durationMs: Number(record?.duration_ms || 0),
-          waitMs: Number(record?.wait_before_ms || 0),
-          tokenEligible: !NON_TOKEN_TOOLS.has(String(record?.tool || ''))
+          waitMs: Number(record?.wait_before_ms || 0)
         };
       })
       .filter(Boolean);
-  }
-
-  function tokensFromBytes(bytes) {
-    const ratio = Number(cost.bytesPerToken) >= 1 ? Number(cost.bytesPerToken) : 4;
-    return Number(bytes || 0) / ratio;
   }
 
   function localMidnight(date) {
@@ -184,16 +177,16 @@
   }
 
   function summarize(records) {
-    const result = { calls: 0, ok: 0, inTokens: 0, outTokens: 0, execMs: 0, waitMs: 0 };
+    const result = { calls: 0, ok: 0, requestBytes: 0, responseBytes: 0, modelVisibleBytes: 0, execMs: 0, waitMs: 0 };
     for (const record of records) {
       result.calls += 1;
       if (record.ok) result.ok += 1;
       result.execMs += record.durationMs;
       result.waitMs += record.waitMs;
-      if (!record.tokenEligible || record.modelVisibleBytes === null) continue;
-      // Transport request/response bytes are payload telemetry, not token truth.
-      // model_visible_bytes is measured; byte/token conversion remains estimated.
-      result.inTokens += tokensFromBytes(record.modelVisibleBytes);
+      // Transport request/response/model-visible bytes are payload telemetry, not token truth.
+      result.requestBytes += Math.max(0, Number(record.requestBytes) || 0);
+      result.responseBytes += Math.max(0, Number(record.responseBytes) || 0);
+      result.modelVisibleBytes += Math.max(0, Number(record.modelVisibleBytes) || 0);
     }
     return result;
   }
@@ -224,6 +217,30 @@
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     if (!analytics.outcomes || !analytics.speed || !analytics.efficiency || !analytics.cost) return null;
     return analytics;
+  }
+
+  function controllerTokenEstimateState(operations) {
+    const projection = operations?.controller_token_estimate;
+    if (!projection || typeof projection !== 'object') return null;
+    if (projection.missing_measurement_policy !== 'unknown_not_zero') return null;
+    const status = String(projection.status || '').trim().toLowerCase();
+    const measurement = String(projection.measurement || '').trim().toUpperCase();
+    if (!['exact', 'calibrated_estimate', 'context_estimate', 'unknown'].includes(status)) return null;
+    if (status === 'calibrated_estimate' && measurement !== 'CALIBRATED_ESTIMATE') return null;
+    if (status === 'context_estimate' && measurement !== 'CONTEXT_ESTIMATE') return null;
+    const estimate = projection.estimate && typeof projection.estimate === 'object' ? projection.estimate : {};
+    return {
+      status,
+      measurement,
+      confidence: String(projection.confidence || 'unknown').trim().toLowerCase(),
+      calibrationSamples: Math.max(0, Number(projection.calibration_samples) || 0),
+      exactRuns: Math.max(0, Number(projection.exact_runs) || 0),
+      missingExactRuns: Math.max(0, Number(projection.missing_exact_runs) || 0),
+      p10: Math.max(0, Number(estimate.p10_total_tokens ?? estimate.p10_context_tokens) || 0),
+      p50: Math.max(0, Number(estimate.p50_total_tokens ?? estimate.p50_context_tokens) || 0),
+      p90: Math.max(0, Number(estimate.p90_total_tokens ?? estimate.p90_context_tokens) || 0),
+      notControllerTotal: estimate.not_controller_total === true
+    };
   }
 
   function canonicalMeasuredUsage() {
@@ -309,54 +326,20 @@
   }
 
   function hourBuckets(records, buckets = 24) {
-    const nowHour = Math.floor(Date.now() / 3600000);
-    const start = nowHour - buckets + 1;
-    const grid = Array.from({ length: buckets }, (_, index) => ({
-      hour: start + index,
-      in: 0,
-      out: 0
-    }));
-    const indexOf = new Map(grid.map((bucket, index) => [bucket.hour, index]));
-    for (const record of records) {
-      const index = indexOf.get(record.hour);
-      if (index === undefined || !record.tokenEligible || record.modelVisibleBytes === null) continue;
-      grid[index].in += tokensFromBytes(record.modelVisibleBytes);
-    }
-    return grid;
+    void records;
+    void buckets;
+    return [];
   }
 
   function hourlyFromStore(buckets = 24) {
-    const map = perf?.hourly_metrics;
-    if (!map || typeof map !== 'object') return null;
-    const byHour = new Map();
-    for (const [key, bucket] of Object.entries(map)) {
-      const hour = Number(key);
-      if (!Number.isInteger(hour) || !bucket || typeof bucket !== 'object') continue;
-      const bytes = Number(bucket.model_visible_bytes) || 0;
-      byHour.set(hour, {
-        hour,
-        in: tokensFromBytes(bytes),
-        out: 0,
-        calls: Math.max(0, Number(bucket.tool_calls) || 0),
-        errors: Math.max(0, Number(bucket.errors) || 0),
-        cacheHits: Math.max(0, Number(bucket.cache_hits) || 0),
-        execMs: Math.max(0, Number(bucket.local_execution_ms) || 0),
-        waitMs: Math.max(0, Number(bucket.estimated_wait_ms) || 0)
-      });
-    }
-    if (!byHour.size) return null;
-    const nowHour = Math.floor(Date.now() / 3600000);
-    const start = nowHour - buckets + 1;
-    return Array.from({ length: buckets }, (_, index) => {
-      const hour = start + index;
-      return byHour.get(hour) || { hour, in: 0, out: 0 };
-    });
+    void buckets;
+    return null;
   }
 
   function performanceBuckets(records, count = 24) {
-    // Hourly buckets persisted server-side survive the recent-trace window;
-    // the recent trace remains the fallback when no hourly data exists yet.
-    return hourlyFromStore(count) || hourBuckets(records, count);
+    void records;
+    void count;
+    return [];
   }
 
   function canonicalHourBuckets(measured, count = DASHBOARD_WINDOW_HOURS) {
@@ -393,23 +376,8 @@
   }
 
   function toolBreakdown(records) {
-    const map = new Map();
-    for (const record of records) {
-      let entry = map.get(record.tool);
-      if (!entry) {
-        entry = { tool: record.tool, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cost: 0 };
-        map.set(record.tool, entry);
-      }
-      entry.calls += 1;
-      if (record.ok) entry.ok += 1;
-      if (!record.tokenEligible || record.modelVisibleBytes === null) continue;
-      const inTokens = tokensFromBytes(record.modelVisibleBytes);
-      const outTokens = 0;
-      entry.inTokens += inTokens;
-      entry.outTokens += outTokens;
-      entry.cost += (inTokens / 1e6) * Number(cost.rateIn) + (outTokens / 1e6) * Number(cost.rateOut);
-    }
-    return [...map.values()].sort((a, b) => b.cost - a.cost);
+    void records;
+    return [];
   }
 
   function modelPriceOf(modelId, component) {
@@ -520,34 +488,8 @@
   }
 
   function modelBreakdown(records) {
-    const map = new Map();
-    const lanes = laneWindows();
-    const windows = controllerWindows();
-    for (const record of records) {
-      const model = modelOf(record, lanes, windows);
-      let entry = map.get(model);
-      if (!entry) {
-        entry = { model, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cost: 0, execMs: 0, waitMs: 0 };
-        map.set(model, entry);
-      }
-      entry.calls += 1;
-      if (record.ok) entry.ok += 1;
-      entry.execMs += Math.max(0, Number(record.durationMs) || 0);
-      entry.waitMs += Math.max(0, Number(record.waitMs) || 0);
-      if (!record.tokenEligible || record.modelVisibleBytes === null) continue;
-      const inTokens = tokensFromBytes(record.modelVisibleBytes);
-      const outTokens = 0;
-      entry.inTokens += inTokens;
-      entry.outTokens += outTokens;
-      entry.usageEvidence = 'ESTIMATED';
-    }
-
-    for (const entry of map.values()) {
-      entry.cost = costOf(entry, entry.model);
-      entry.costSource = 'settings_estimate';
-      if (entry.calls > 0) entry.usageEvidence = 'ESTIMATED';
-    }
-    return map;
+    void records;
+    return new Map();
   }
 
   function modelState(modelId) {
@@ -800,7 +742,7 @@
     };
   }
 
-  function renderDonut(entries, evidence = 'estimated') {
+  function renderDonut(entries) {
     const svg = byId('daDonut');
     const legend = byId('daLegend');
     const center = byId('daDonutTotal');
@@ -815,12 +757,8 @@
     svg.replaceChildren();
     legend.replaceChildren();
     animateText(center, compact, total);
-    if (sub) sub.textContent = 'TOKEN ƯỚC TÍNH';
-    if (foot) foot.textContent = total > 0 ? `${entries.length} mô hình` : '— mô hình';
-    if (sub) sub.textContent = evidence === 'measured' ? 'TOKEN MEASURED' : 'TOKEN ESTIMATED';
-    if (foot) foot.textContent = total > 0
-      ? `${entries.length} ${evidence === 'measured' ? 'model' : 'tool'}`
-      : `— ${evidence === 'measured' ? 'model' : 'tool'}`;
+    if (sub) sub.textContent = 'TOKEN MEASURED';
+    if (foot) foot.textContent = total > 0 ? `${entries.length} model` : '— model';
     svg.appendChild(center);
     if (sub) svg.appendChild(sub);
     if (!total) {
@@ -861,7 +799,7 @@
     });
   }
 
-  function renderBars(entries, evidence = 'estimated') {
+  function renderBars(entries) {
     const container = byId('daToolBars');
     if (!container) return;
     container.replaceChildren();
@@ -885,12 +823,8 @@
       name.textContent = entry.tool;
       const meta = document.createElement('small');
       meta.textContent = `${entry.calls} lượt gọi · ${entry.ok}/${entry.calls} OK`;
-      if (evidence === 'measured') {
-        const source = entry.costSource === 'provider_reported' ? 'MEASURED' : entry.costSource === 'pricing_derived' ? 'DERIVED' : 'NO COST';
-        meta.textContent = `${entry.calls} UsageEvent · ${source}`;
-      } else {
-        meta.textContent += ' · ESTIMATED';
-      }
+      const source = entry.costSource === 'provider_reported' ? 'MEASURED' : entry.costSource === 'pricing_derived' ? 'DERIVED' : 'NO COST';
+      meta.textContent = `${entry.calls} UsageEvent · ${source}`;
       name.appendChild(meta);
       const track = document.createElement('span');
       track.className = 'da-bar-track';
@@ -927,7 +861,7 @@
 
     const head = document.createElement('div');
     head.className = 'da-model-head';
-    for (const label of ['Model', 'State', 'Input / context (EST.)', 'Output (EST.)', 'Calls', 'Share', 'Scenario cost']) {
+    for (const label of ['Model', 'State', 'Input token', 'Output token', 'Calls', 'Share', 'Usage cost']) {
       const cell = document.createElement('span');
       cell.textContent = label;
       head.appendChild(cell);
@@ -959,8 +893,8 @@
       title.textContent = model.name;
       const sub = document.createElement('small');
       const evidence = model.id === 'chatweb' && controllerUsage?.status === 'observed' && !hasTraffic
-        ? 'NO ROW ESTIMATE'
-        : (entry?.usageEvidence || (hasTraffic ? 'ESTIMATED' : 'NO USAGE'));
+        ? 'NO CANONICAL LANE ROW'
+        : (entry?.usageEvidence || (hasTraffic ? 'MEASURED' : 'NO USAGE'));
       const controllerEvidence = model.id === 'chatweb' && controllerUsage
         ? `CONTROLLER ${controllerUsage.status.toUpperCase()}`
         : '';
@@ -1001,8 +935,12 @@
       const costCell = document.createElement('span');
       costCell.className = 'da-model-cell da-model-cost';
       const isSubscription = model.id === 'desktop' || model.id === 'opencode';
-      const costSourceText = entry?.costSource === 'settings_estimate' ? 'SCENARIO settings estimate' : 'no usage estimate';
-      costCell.title = `Token ESTIMATED · cost ${costSourceText}`;
+      const costSourceText = entry?.costSource === 'provider_reported'
+        ? 'MEASURED provider-reported'
+        : entry?.costSource === 'pricing_derived'
+          ? 'DERIVED from canonical UsageEvent pricing'
+          : 'UNOBSERVED';
+      costCell.title = `Canonical UsageEvent token · cost ${costSourceText}`;
       costCell.innerHTML = `<b>${isSubscription && !rowCost ? '—' : money(displayedCost(rowCost))}</b>`;
 
       row.append(name, stateCell, inCell, outCell, callsCell, shareWrap, costCell);
@@ -1109,7 +1047,7 @@
       const tdTokens = document.createElement('td');
       tdTokens.className = 'cell-num';
       tdTokens.textContent = compact(modelTokens);
-      tdTokens.title = 'ESTIMATED từ model-visible bytes trong performance trace; không phải UsageEvent canonical';
+      tdTokens.title = 'Canonical UsageEvent token total';
 
       const tdShare = document.createElement('td');
       tdShare.className = 'cell-num';
@@ -1118,12 +1056,16 @@
       const tdCost = document.createElement('td');
       tdCost.className = 'cell-num';
       tdCost.textContent = money(displayedCost(rowCost));
-      tdCost.title = 'SCENARIO settings estimate; không phải provider billing';
+      tdCost.title = entry?.costSource === 'provider_reported'
+        ? 'MEASURED provider-reported cost'
+        : entry?.costSource === 'pricing_derived'
+          ? 'DERIVED from canonical UsageEvent token pricing; not provider billing'
+          : 'Cost unobserved';
 
       const tdCostPer1k = document.createElement('td');
       tdCostPer1k.className = 'cell-num';
       tdCostPer1k.textContent = money(displayedCost(costPer1k));
-      tdCostPer1k.title = 'SCENARIO / 1K ESTIMATED token; không phải provider billing';
+      tdCostPer1k.title = 'Derived only from canonical UsageEvent token/cost fields; unavailable when canonical evidence is missing';
 
       const tdStars = document.createElement('td');
       tdStars.className = 'cell-stars';
@@ -1589,6 +1531,203 @@
     setText('daOperationsCoverage', `Coverage accepted: TTAR ${Math.max(0, Number(analytics?.speed?.tta_samples) || 0)}/${accepted} · tool calls ${Math.max(0, Number(tools.observed_accepted) || 0)}/${accepted} · provider cost ${Math.max(0, Number(provider.complete_accepted) || 0)}/${accepted} · system cost ${Math.max(0, Number(system.complete_accepted) || 0)}/${accepted}`);
   }
 
+  function coverageLabel(value) {
+    const measured = observedNumber(value);
+    return measured === null ? '—' : `${(measured * 100).toFixed(0)}%`;
+  }
+
+  function renderCoverageMetric(valueId, metaId, metric) {
+    setText(valueId, coverageLabel(metric?.coverage));
+    if (!metric || typeof metric !== 'object') {
+      setText(metaId, 'UNOBSERVED · coverage projection unavailable');
+      return;
+    }
+    const measurement = String(metric.measurement || 'unobserved').toUpperCase();
+    const observed = observedNumber(metric.observed);
+    const exact = observedNumber(metric.exact);
+    const expected = observedNumber(metric.expected);
+    const details = [measurement];
+    if (observed !== null && exact !== null) details.push(`${Math.round(exact)}/${Math.round(observed)} exact`);
+    else if (observed !== null && expected !== null) details.push(`${Math.round(observed)}/${Math.round(expected)} observed`);
+    if (metric.missing_reason) details.push(String(metric.missing_reason));
+    if (metric.provenance) details.push(String(metric.provenance));
+    setText(metaId, details.join(' · '));
+  }
+
+  function turnTokenState(operations) {
+    const section = operations?.turn_token_measurements;
+    if (!section || typeof section !== 'object') return null;
+    if (section.measurement !== 'chat_turn_measurements_v1') return null;
+    if (section.missing_measurement_policy !== 'unknown_not_zero') return null;
+    if (section.content_free !== true) return null;
+    const turnsTotal = Math.max(0, Number(section.turns_total) || 0);
+    const exactTurns = Math.max(0, Number(section.turns_exact) || 0);
+    const session = section.session_total && typeof section.session_total === 'object' ? section.session_total : {};
+    const sessionPoint = session.point === null || session.point === undefined ? null : Math.max(0, Number(session.point) || 0);
+    const latest = section.latest_turn && typeof section.latest_turn === 'object' ? section.latest_turn : null;
+    const latestKind = latest ? String(latest.kind || 'unknown') : 'unknown';
+    const numOrNull = (value) => (value === null || value === undefined ? null : Math.max(0, Number(value) || 0));
+    return {
+      turnsTotal,
+      exactTurns,
+      sessionPoint,
+      sessionLower: numOrNull(session.lower),
+      sessionUpper: numOrNull(session.upper),
+      latestKind: ['exact', 'structural_estimate', 'unknown'].includes(latestKind) ? latestKind : 'unknown',
+      latestPoint: latest ? numOrNull(latest.point) : null,
+      latestLower: latest ? numOrNull(latest.lower) : null,
+      latestUpper: latest ? numOrNull(latest.upper) : null
+    };
+  }
+
+  function renderTurnTokens(operations) {
+    const state = turnTokenState(operations);
+    if (!state || state.turnsTotal < 1) {
+      setText('daTurnTokenStatus', 'Chưa đo lượt nào');
+      return;
+    }
+    if (state.latestKind === 'exact' && state.latestPoint !== null) {
+      setText('daTurnTokenStatus', `${compact(state.latestPoint)} Exact · ${state.turnsTotal} lượt`);
+      return;
+    }
+    if (state.latestKind === 'structural_estimate' && state.latestPoint !== null) {
+      const range = state.latestLower !== null && state.latestUpper !== null
+        ? ` (${compact(state.latestLower)}–${compact(state.latestUpper)})`
+        : '';
+      const session = state.sessionPoint !== null && state.turnsTotal > 1
+        ? ` · phiên ≈${compact(state.sessionPoint)}`
+        : '';
+      setText('daTurnTokenStatus', `≈${compact(state.latestPoint)}${range} · ${state.turnsTotal} lượt${session}`);
+      return;
+    }
+    if (state.sessionPoint !== null) {
+      setText('daTurnTokenStatus', `phiên ≈${compact(state.sessionPoint)} · lượt mới nhất chưa đo`);
+      return;
+    }
+    setText('daTurnTokenStatus', 'Lượt mới nhất chưa đo');
+  }
+
+  function renderChatTurnCard(operations) {
+    const state = turnTokenState(operations);
+    if (!state || state.turnsTotal < 1) {
+      setText('daChatTurnValue', '—');
+      setText('daChatTurnDelta', 'Chưa đo lượt chat nào');
+      setText('daChatTurnMeta', 'ChatWeb structural measurement · chờ turn FINAL đầu tiên');
+      return;
+    }
+    if (state.latestKind === 'exact' && state.latestPoint !== null) {
+      setText('daChatTurnValue', compact(state.latestPoint));
+      setText('daChatTurnDelta', `Exact · lượt mới nhất · ${state.turnsTotal} lượt`);
+      setText('daChatTurnMeta', 'EXACT receipt · provider/ChatGPT báo · không ước lượng');
+      return;
+    }
+    if (state.latestKind === 'structural_estimate' && state.latestPoint !== null) {
+      const range = state.latestLower !== null && state.latestUpper !== null
+        ? ` (${compact(state.latestLower)}–${compact(state.latestUpper)})`
+        : '';
+      const session = state.sessionPoint !== null && state.turnsTotal > 1
+        ? ` · phiên ≈${compact(state.sessionPoint)}`
+        : '';
+      setText('daChatTurnValue', `≈${compact(state.latestPoint)}`);
+      setText('daChatTurnDelta', `Lượt mới nhất${range} · ${state.turnsTotal} lượt${session}`);
+      setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · confidence none · exact chưa expose · không phải billing');
+      return;
+    }
+    if (state.sessionPoint !== null) {
+      setText('daChatTurnValue', `≈${compact(state.sessionPoint)}`);
+      setText('daChatTurnDelta', `Phiên · lượt mới nhất chưa đo · ${state.turnsTotal} lượt`);
+      setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · session total các lượt đã đo');
+      return;
+    }
+    setText('daChatTurnValue', '—');
+    setText('daChatTurnDelta', 'Lượt mới nhất chưa đo');
+    setText('daChatTurnMeta', 'Thiếu phép đo giữ unknown, không suy diễn từ 0');
+  }
+
+  function renderTokenOverviewTiles(measured, operations, controllerUsage) {    const hasMeasured = Boolean(measured && measured.events > 0);
+    const accepted = Math.max(0, Number(operations?.outcomes?.accepted) || 0);
+    const windowDays = Math.max(1, Number(operations?.window?.days) || 7);
+    const controllerObserved = controllerUsage?.status === 'observed';
+    const controllerUnobserved = controllerUsage?.status === 'unobserved';
+    const controllerEstimate = controllerTokenEstimateState(operations);
+    const estimateStatus = controllerEstimate?.status || 'unknown';
+    const estimatePrefix = controllerObserved ? `${Math.max(0, Number(controllerUsage?.eventCount) || 0)} exact · ` : '';
+
+    setText('daProviderTokenStatus', hasMeasured ? 'Đã đo' : 'Chưa có dữ liệu');
+    if (estimateStatus === 'calibrated_estimate') {
+      setText('daControllerTokenStatus', `${estimatePrefix}≈${compact(controllerEstimate.p50)} token bổ sung`);
+      setText('daEstimateConfidence', `${controllerEstimate.confidence.toUpperCase()} · ${controllerEstimate.calibrationSamples} mẫu · ${compact(controllerEstimate.p10)}–${compact(controllerEstimate.p90)}`);
+    } else if (estimateStatus === 'context_estimate') {
+      setText('daControllerTokenStatus', `${estimatePrefix}Context ≈${compact(controllerEstimate.p50)} token`);
+      setText('daEstimateConfidence', `LOW · ${compact(controllerEstimate.p10)}–${compact(controllerEstimate.p90)} · không phải controller total`);
+    } else if (estimateStatus === 'exact' || (controllerObserved && controllerEstimate?.missingExactRuns === 0)) {
+      setText('daControllerTokenStatus', `${Math.max(0, Number(controllerUsage?.eventCount) || 0)} exact receipt`);
+      setText('daEstimateConfidence', 'Không cần ước lượng');
+    } else {
+      setText('daControllerTokenStatus', controllerUnobserved ? 'Chưa đủ dữ liệu để ước lượng' : 'Chưa đủ dữ liệu');
+      setText('daEstimateConfidence', 'Chưa phát hành số ước lượng');
+    }
+
+    if (!hasMeasured) {
+      for (const id of ['daTokensTotal', 'daTokensInTotal', 'daTokensOutTotal', 'daCostTotal', 'daEfficiencyTotal', 'daCallsTotal']) setText(id, '-');
+      setText('daTokensDelta', 'Chưa có UsageEvent canonical');
+      setText('daTokensInDelta', 'Input token unknown');
+      setText('daTokensOutDelta', 'Output token unknown');
+      setText('daCostVnd', 'Chi phí unknown, không phải 0');
+      setText('daEfficiencyDelta', 'Cached token unknown');
+      setText('daCallsDelta', accepted > 0 ? `${accepted} kết quả; token chưa đo` : 'Chưa có kết quả hoàn tất');
+      return;
+    }
+
+    animateText(byId('daTokensTotal'), compact, measured.total);
+    animateText(byId('daTokensInTotal'), compact, measured.input);
+    animateText(byId('daTokensOutTotal'), compact, measured.output);
+    animateText(byId('daEfficiencyTotal'), compact, measured.cached);
+
+    setText('daTokensDelta', `${measured.events} UsageEvent · ${windowDays} ngày`);
+    setText('daTokensInDelta', `${compact(measured.cached)} cached`);
+    setText('daTokensOutDelta', measured.reasoning > 0 ? `${compact(measured.reasoning)} reasoning` : 'Output đã đo');
+    const cacheRatio = measured.input > 0 ? (measured.cached / measured.input) * 100 : null;
+    setText('daEfficiencyDelta', cacheRatio === null ? 'Cache ratio unknown' : `${cacheRatio.toFixed(1)}% input cached`);
+
+    if (measured.costSource !== 'unobserved') {
+      animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), measured.cost);
+      setText(
+        'daCostVnd',
+        measured.costSource === 'provider_reported'
+          ? 'Provider reported'
+          : 'Quy đổi bảng giá · không phải ChatGPT billing'
+      );
+    } else {
+      setText('daCostTotal', '-');
+      setText('daCostVnd', 'Chi phí unknown, không phải 0');
+    }
+
+    if (accepted > 0) {
+      animateText(byId('daCallsTotal'), compact, Math.round(measured.total / accepted));
+      setText('daCallsDelta', `${accepted} kết quả · tỷ lệ tổng hợp ${windowDays} ngày`);
+    } else {
+      setText('daCallsTotal', '-');
+      setText('daCallsDelta', 'Chưa có kết quả accepted trong cửa sổ');
+    }
+
+    setText('daTokensMeta', `MEASURED · canonical non-overlap · ${measured.events} UsageEvent`);
+    setText('daCostMeta', measured.costSource === 'pricing_derived' ? 'API-equivalent pricing estimate; not ChatGPT billing' : measured.costSource);
+    setText('daCallsMeta', accepted > 0 ? 'Aggregate token/accepted ratio; không phải causal per-run join' : 'Token/accepted unavailable');
+  }
+
+  function renderMeasurementCoverage(analytics) {
+    const coverage = analytics?.measurement_coverage;
+    const valid = coverage && coverage.missing_measurement_policy === 'unknown_not_zero';
+    setPill('daCoveragePolicy', valid ? 'unknown_not_zero' : 'coverage unavailable', valid ? 'active' : 'waiting');
+    renderCoverageMetric('daCoverageController', 'daCoverageControllerMeta', valid ? coverage.controller_usage : null);
+    renderCoverageMetric('daCoverageProvider', 'daCoverageProviderMeta', valid ? coverage.provider_usage : null);
+    renderCoverageMetric('daCoverageInvocation', 'daCoverageInvocationMeta', valid ? coverage.tool_invocation : null);
+    renderCoverageMetric('daCoverageToolCard', 'daCoverageToolCardMeta', valid ? coverage.tool_card_tokens : null);
+    renderCoverageMetric('daCoverageCost', 'daCoverageCostMeta', valid ? coverage.cost : null);
+    renderCoverageMetric('daCoverageRunAttribution', 'daCoverageRunAttributionMeta', valid ? coverage.exact_run_attribution : null);
+  }
+
   function renderHeatmap(measured) {
     const container = byId('daHeatmapGrid');
     if (!container) return;
@@ -1634,7 +1773,6 @@
     const operations = canonicalOperationsAnalytics();
     const buckets = chartTrendBuckets(measured, chartTimeMode);
     const entries = measured?.byModel?.length ? measured.byModel : [];
-    const evidence = 'measured';
     const models = new Map();
     const okRate = summary.calls ? percent(summary.ok, summary.calls) : 100;
 
@@ -1651,11 +1789,15 @@
     if (donutHeading?.firstChild) donutHeading.firstChild.textContent = 'Phân bố Token theo mô hình · measured ';
     const costHeading = byId('daToolBars')?.closest('.da-card')?.querySelector('h3');
     if (costHeading?.firstChild) costHeading.firstChild.textContent = 'Chi phí theo mô hình · measured/provider ';
-    renderOperationsTiles(operations);
+    renderTokenOverviewTiles(measured, operations, controllerUsage);
+    renderTurnTokens(operations);
+    renderChatTurnCard(operations);
+    renderSparkline(buckets);
     renderOperationsTable(operations);
+    renderMeasurementCoverage(operations);
     renderChart(buckets, chartTimeMode);
-    renderDonut(entries, evidence);
-    renderBars(entries, evidence);
+    renderDonut(entries);
+    renderBars(entries);
     renderModelTable(models, controllerUsage);
     renderFleetTable(models);
     renderHeatmap(measured);

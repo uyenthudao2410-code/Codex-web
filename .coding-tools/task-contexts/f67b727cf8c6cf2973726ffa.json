@@ -1,0 +1,151 @@
+{
+  "version": 2,
+  "task_id": "29ea5888c238496c857aaf05ce3c6ecb",
+  "orchestration": {
+    "run_id": "4c92ce8a2e544dde8f9ce4b7fe402a9f",
+    "wave_id": "1e5ccbe074714d678e2cc022decacc76",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+    "contract_fp": ""
+  },
+  "objective": "G2-P19 docs-only provenance closure ONLY for docs/CURRENT_STATE.md preimage SHA-256 f5bd666376b6779282f01f2db7cab8154c1dbbe8c6f415e2db8f89be4b3c9efc and docs/ROADMAP.md preimage SHA-256 a9d1fe520733206d9edb2788fb39cf7e8060b955b161be1f81aedc8b329b9112. Correct current guidance without rewriting immutable dated research chronology: preserve explicit distinctions among source presence, focused proof, EOCL acceptance, compatible live activation/current access, strict connector rediscovery, package/release/production, natural-Problem continuity, and economics/policy gates. Make the sequencing authority explicit: do not build more system; converge what exists; prove continuity on one real natural Problem; gather 5-10 natural Problems; measure accepted-result economics; then decide EGRI/P5 and KEEP/MODIFY/REMOVE simplification. Historical dated observations remain historical and never become current runtime proof. Docs-only; no source/test changes; no direct SQLite; no stale-RUN reconciliation; no reset/restore/clean/rebase; no commit/push/tag/release/publish/deploy; no synthetic Problems/outcomes.",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "docs/CURRENT_STATE.md",
+          "state": "file",
+          "sha256": "fd96b42c90c953fab9b8b99c96970949a2925f1f192fc36e3d682fb66fdbb1c8",
+          "size_bytes": 89814,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4c92ce8a2e544dde8f9ce4b7fe402a9f",
+          "wave_id": "1e5ccbe074714d678e2cc022decacc76"
+        },
+        {
+          "path": "docs/ROADMAP.md",
+          "state": "file",
+          "sha256": "7a9b35c02a30d1929fd479f49ad5c23aeb865161662fafb9cdb2e19d905db856",
+          "size_bytes": 29861,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4c92ce8a2e544dde8f9ce4b7fe402a9f",
+          "wave_id": "1e5ccbe074714d678e2cc022decacc76"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 32,
+        "head_hash": "7f7332b4ecaccf8bbdfb24ef0f6f579290aa56ce7a981e4081cf7aa31c00734f"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "4c92ce8a2e544dde8f9ce4b7fe402a9f",
+      "wave_id": "1e5ccbe074714d678e2cc022decacc76",
+      "checkpoint_id": "08afbff908374c4eaaea0c58080866d6",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6b5fb2badfbcfa32b95881356c90eb51b89d687739b0b7df90dd27ec25209209",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G2-P19 docs-only provenance closure ONLY for docs/CURRENT_STATE.md preimage SHA-256 f5bd666376b6779282f01f2db7cab8154c1dbbe8c6f415e2db8f89be4b3c9efc and docs/ROADMAP.md preimage SHA-256 a9d1fe520733206d9edb2788fb39cf7e8060b955b161be1f81aedc8b329b9112. Correct current guidance without rewriting immutable dated research chronology: preserve explicit distinctions among source presence, focused proof, EOCL acceptance, compatible live activation/current access, strict connector rediscovery, package/release/production, natural-Problem continuity, and economics/policy gates. Make the sequencing authority explicit: do not build more system; converge what exists; prove continuity on one real natural Problem; gather 5-10 natural Problems; measure accepted-result economics; then decide EGRI/P5 and KEEP/MODIFY/REMOVE simplification. Historical dated observations remain historical and never become current runtime proof. Docs-only; no source/test changes; no direct SQLite; no stale-RUN reconciliation; no reset/restore/clean/rebase; no commit/push/tag/release/publish/deploy; no synthetic Problems/outcomes.",
+        "objective_revision": 1,
+        "objective_sha256": "ce0ca53233a40a9699cadc05deb32c1cff75bde409c069d7067a01cbc6ff6fd9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "843b2cab677b473db394eb6ebe6aa218",
+          "stage_id": "check:be26c1c09b20fbbd",
+          "status": "passed",
+          "duration_ms": 1086,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "ce7456b16a8bf189c7c5a95a759f6de1acc3ebe8e7d37ca0453ddf54ea384452",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-03T19:21:19.968Z",
+  "updated_at": "2026-09-03T19:42:53.565Z",
+  "events": [
+    {
+      "time": "2026-09-03T19:21:19.968Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "4c92ce8a2e544dde8f9ce4b7fe402a9f"
+      }
+    },
+    {
+      "time": "2026-09-03T19:21:20.009Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "ce7456b16a8bf189c7c5a95a759f6de1acc3ebe8e7d37ca0453ddf54ea384452"
+      }
+    },
+    {
+      "time": "2026-09-03T19:21:43.397Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

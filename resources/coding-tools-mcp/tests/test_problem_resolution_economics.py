@@ -11,6 +11,7 @@ from coding_tools_mcp.ledger_analysis import open_ledger_analysis_snapshot
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.problem_lineage import problem_event_hash_material, problem_outcome_receipt_id
 from coding_tools_mcp.problem_resolution_economics import ProblemLineageFacts, problem_resolution_economics_report
+from coding_tools_mcp.usage_events import build_usage_event
 
 
 CAPSULE = {
@@ -76,12 +77,13 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
 
     def test_report_separates_resolution_from_administrative_disposition(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); self._fixture(root)
+            root = Path(temp)
+            self._fixture(root)
             with open_ledger_analysis_snapshot(root) as snapshot:
                 facts = ProblemLineageFacts.load(snapshot.reader)
                 report = problem_resolution_economics_report(snapshot.ledger, facts)
             self.assertEqual(report["status"], "DESCRIPTIVE_ONLY")
-            self.assertEqual(report["schema_version"], 5)
+            self.assertEqual(report["schema_version"], 6)
             self.assertEqual(report["denominators"]["problem_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["confirmed_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["trusted_resolution"]["true"], 1)
@@ -133,7 +135,8 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
 
     def test_v9_snapshot_is_inactive_and_writer_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); OrchestrationLedger(root)
+            root = Path(temp)
+            OrchestrationLedger(root)
             with open_ledger_analysis_snapshot(root) as snapshot:
                 report = problem_resolution_economics_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader))
             self.assertEqual(report["status"], "PRL_SCHEMA_INACTIVE")
@@ -141,7 +144,8 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
 
     def test_revision_metrics_do_not_reinterpret_an_older_confirmed_revision(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); self._fixture(root)
+            root = Path(temp)
+            self._fixture(root)
             ledger = OrchestrationLedger(root)
             current = ledger.problem_get("problem-fixture")["current_revision"]
             revised = ledger.problem_record_event({
@@ -168,7 +172,8 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
 
     def test_clock_authority_mismatch_is_missing_not_zero(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); self._fixture(root)
+            root = Path(temp)
+            self._fixture(root)
             with open_ledger_analysis_snapshot(root) as snapshot:
                 report = problem_resolution_economics_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader))
             metric = report["time_to_provisional"]
@@ -178,7 +183,8 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
 
     def test_revision_4_metrics_use_revision_denominators_and_reopen_invalidates_first_pass(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); self._fixture(root)
+            root = Path(temp)
+            self._fixture(root)
             ledger = OrchestrationLedger(root)
             problem = ledger.problem_get("problem-fixture")
             exact_link = next(
@@ -341,6 +347,169 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 after_reopen["multi_primary_run_revision_rate"]["revisions_with_multiple_primary_runs"],
                 1,
             )
+
+    def test_problem_journey_charges_replan_run_and_keeps_usage_planes_separate(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            problem = ledger.problem_get("problem-fixture")
+            first_link = next(
+                event for event in problem["events"]
+                if event["relation_type"] == "ENGINEERING_ATTEMPT_BOUND"
+            )
+            first_run, first_wave = first_link["run_id"], first_link["wave_id"]
+            context = {
+                "schema_version": 1,
+                "work_origin": "problem",
+                "resolution_claim": "full_problem",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "contract_fingerprint": problem["current_revision"]["contract_fingerprint"],
+                "engineering_floor": "REQUIRED",
+                "policy_eligible": False,
+            }
+            rejected_run = ledger.create_run(
+                objective="rejected attempt",
+                metadata={"problem_resolution": context},
+            )
+            rejected_wave = ledger.create_wave(
+                rejected_run,
+                execution_mode="mcp_only",
+                metadata={"problem_resolution": context},
+            )
+            ledger.problem_record_event({
+                "operation": "link",
+                "event_id": "link-rejected-run",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "run_id": rejected_run,
+                "wave_id": rejected_wave,
+                "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE",
+                "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:03Z", authority_context="RUNTIME_BINDING")
+            ledger.append_event(
+                rejected_run,
+                wave_id=rejected_wave,
+                event_type="wave_replanned",
+                payload={"reason": "proof_failed"},
+            )
+
+            for run_id, wave_id, actor, tokens, cost in (
+                (first_run, first_wave, "controller", 10, 0.10),
+                (first_run, first_wave, "provider", 20, 0.20),
+                (rejected_run, rejected_wave, "controller", 5, 0.05),
+            ):
+                delegation_id = f"{actor}-{run_id}"
+                event = build_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=delegation_id,
+                    provider_id="chatweb" if actor == "controller" else "provider",
+                    model_id="controller-model" if actor == "controller" else "provider-model",
+                    status="completed",
+                    source="chatweb:mcp_meta" if actor == "controller" else "provider:dispatch",
+                    input_tokens=tokens,
+                    output_tokens=1,
+                    provider_cost=cost,
+                    actor=actor,
+                    usage_provenance="client_reported" if actor == "controller" else "provider_reported",
+                )
+                ledger.record_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=delegation_id,
+                    usage_event=event,
+                )
+            ledger.finish_wave(first_wave, status="accepted")
+            ledger.finish_run(first_run, status="accepted")
+            ledger.finish_wave(rejected_wave, status="replanned")
+            ledger.finish_run(rejected_run, status="rejected")
+
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )
+            journeys = report["problem_revision_journeys"]
+            self.assertEqual(journeys["summary"]["exact_linked_run_count"], 2)
+            self.assertEqual(journeys["summary"]["accepted_run_count"], 1)
+            self.assertEqual(journeys["summary"]["rejected_or_aborted_run_count"], 1)
+            self.assertEqual(journeys["summary"]["replan_wave_count"], 1)
+            journey = journeys["journeys"][0]
+            self.assertEqual(len(journey["nested_per_run_economics"]), 2)
+            controller = journey["resources"]["controller_tokens_exact_when_available"]
+            provider = journey["resources"]["provider_tokens"]
+            self.assertEqual(controller["usage"]["input_total_tokens"], 15)
+            self.assertEqual(provider["usage"]["input_total_tokens"], 20)
+            self.assertIsNone(journey["resources"]["combined_model_tokens"])
+            self.assertTrue(journey["resources"]["cross_plane_token_sum_forbidden"])
+            self.assertEqual(
+                journey["avoided_duplicate_read_or_localization"]["missing_reason"],
+                "causal_avoidance_receipt_not_recorded",
+            )
+
+    def test_problem_journey_projects_exact_knowledge_recovery_and_capsule_overhead(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            problem = ledger.problem_get("problem-fixture")
+            run_id = next(
+                event["run_id"] for event in problem["events"]
+                if event["relation_type"] == "ENGINEERING_ATTEMPT_BOUND"
+            )
+            for index, kind in enumerate(("PROBLEM_PROVISIONAL_RESOLVED", "NEXT_CRITICAL_ACTION_CHANGED"), start=1):
+                ledger.controller_record_knowledge_checkpoint(
+                    workspace_id="workspace-fixture",
+                    problem_id="problem-fixture",
+                    problem_revision=1,
+                    material_event_kind=kind,
+                    material_event_id=f"material-{index}",
+                    material_state_fingerprint=str(index) * 64,
+                    capsule_fingerprint="3" * 64,
+                    source_fingerprint="4" * 64,
+                    runtime_behavior_fingerprint="5" * 64,
+                )
+            ledger.controller_ack_knowledge(
+                ack_id="ack-behind",
+                workspace_id="workspace-fixture",
+                problem_id="problem-fixture",
+                problem_revision=1,
+                knowledge_revision=1,
+                controller_endpoint_id="controller-endpoint-fixture",
+            )
+            ledger.record_handoff_capsule(
+                run_id=run_id,
+                conversation_epoch=2,
+                payload={"next_action": "continue exact Problem Revision"},
+            )
+            ledger.record_handoff_capsule(
+                run_id=run_id,
+                conversation_epoch=3,
+                payload={"next_action": "re-observe the same exact RUN"},
+            )
+
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                facts = ProblemLineageFacts.load(snapshot.reader)
+                report = problem_resolution_economics_report(snapshot.ledger, facts)
+            journey = report["problem_revision_journeys"]["journeys"][0]
+            continuity = journey["continuity"]
+            self.assertEqual(continuity["controller_knowledge_checkpoints"]["value"], 2)
+            self.assertEqual(continuity["controller_recovery_events"]["value"], 1)
+            self.assertEqual(continuity["stale_ack_recoveries"]["value"], 1)
+            self.assertGreater(continuity["recovery_delta_bytes"]["value"], 0)
+            self.assertGreater(continuity["capsule_bytes"]["value"], 0)
+            self.assertEqual(continuity["conversation_epochs_observed"]["values"], [2, 3])
+            self.assertEqual(continuity["capsule_count"]["value"], 2)
+            self.assertEqual(journey["topology"]["run_count"], 1)
+            self.assertEqual(continuity["resume_successes"]["value"], 0)
+            self.assertEqual(continuity["resume_attempts"]["status"], "UNAVAILABLE")
+            self.assertEqual(continuity["chatweb_product_sessions_observed"]["status"], "UNAVAILABLE")
+            query = report["problem_revision_journeys"]["query_evidence"]
+            self.assertLessEqual(query["total_snapshot_fact_load_statements"], 17)
+            self.assertEqual(query["n_plus_one_sqlite_queries"], 0)
 
 
 if __name__ == "__main__":

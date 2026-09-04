@@ -1,0 +1,353 @@
+[
+  {
+    "version": 2,
+    "task_id": "d96b62c9f29643ee869a0c184d7712f0",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T07:14:13.003Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-04T07:13:24.834Z",
+    "updated_at": "2026-09-04T07:14:13.003Z",
+    "events": [
+      {
+        "time": "2026-09-04T07:13:24.834Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-04T07:13:24.843Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T07:13:40.692Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "7k1_xRnNyBHjuX1DSvq9SXQs"
+        }
+      },
+      {
+        "time": "2026-09-04T07:13:41.427Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:13:48.094Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run report:accepted-result-economics",
+          "session_id": "VL0XaQ5ahk7Dk_aITnfBL0Ry"
+        }
+      },
+      {
+        "time": "2026-09-04T07:13:53.005Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run report:accepted-result-economics",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:04.803Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"estimated.*token|token.*estimate|controller_token|provider_usage|unknown_not_zero|measurement.*coverage|coverage.*token|token.*coverage|approx|quantif|host.*usage|usage.*host\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py resources/coding-tools-mcp/coding_tools_m",
+          "session_id": "tyBJma3SRZ2g892CetKt1oJD"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:06.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"estimated.*token|token.*estimate|controller_token|provider_usage|unknown_not_zero|measurement.*coverage|coverage.*token|token.*coverage|approx|quantif|host.*usage|usage.*host\" resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py resources/coding-tools-mcp/coding_tools_m",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:13.003Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"controller_token_estimate|p50_total_tokens|p90_total_tokens|p10_total_tokens|controller.*estimate\" resources/coding-tools-mcp/coding_tools_mcp renderer/dashboard.js tests resources/coding-tools-mcp/tests",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:13.003Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T07:14:23.272Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "dd4f8d1a20624d4c9a229af6d52d5eca",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "8a77R9MT6xt_6kDk1ba84u8F",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 467,
+      "finished_at": "2026-09-04T07:14:32.098Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T07:14:23.272Z",
+    "updated_at": "2026-09-04T07:14:32.098Z",
+    "events": [
+      {
+        "time": "2026-09-04T07:14:23.272Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:23.722Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 -e controller_token_estimate -e p50_total_tokens -e p90_total_tokens -e p10_total_tokens resources/coding-tools-mcp/coding_tools_mcp renderer/dashboard.js tests resources/coding-tools-mcp/tests",
+          "session_id": "FlWI_sxL4DuJcldQ4L8LZMbI"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:24.573Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e controller_token_estimate -e p50_total_tokens -e p90_total_tokens -e p10_total_tokens resources/coding-tools-mcp/coding_tools_mcp renderer/dashboard.js tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:31.351Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -e operations_analytics -e report:operations -e analytics_snapshot -e analytics package.json resources/coding-tools-mcp/scripts scripts | head -n 120",
+          "session_id": "8a77R9MT6xt_6kDk1ba84u8F"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:32.098Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -e operations_analytics -e report:operations -e analytics_snapshot -e analytics package.json resources/coding-tools-mcp/scripts scripts | head -n 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T07:14:39.724Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4eb5a3defb7a432394900f8aa538d5ac",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Cy1q5s1J4DlY285QH8UnW4-b",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 539,
+      "finished_at": "2026-09-04T07:14:40.533Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T07:14:39.726Z",
+    "updated_at": "2026-09-04T07:14:40.533Z",
+    "events": [
+      {
+        "time": "2026-09-04T07:14:39.726Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:40.267Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -e operations_analytics -e report:operations -e analytics_snapshot package.json resources/coding-tools-mcp/scripts scripts",
+          "session_id": "Cy1q5s1J4DlY285QH8UnW4-b"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:40.533Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -e operations_analytics -e report:operations -e analytics_snapshot package.json resources/coding-tools-mcp/scripts scripts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T07:14:46.421Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7ff22031ff254610b035df563a482d08",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "test",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T07:15:22.872Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest -q tests/test_operations_analytics.py && node --test ../../tests/dashboard-analytics.test.js",
+        "status": "failed",
+        "exit_code": null,
+        "duration_ms": null,
+        "summary": "",
+        "finished_at": "2026-09-04T07:15:22.872Z"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-04T07:14:46.422Z",
+    "updated_at": "2026-09-04T07:15:22.872Z",
+    "events": [
+      {
+        "time": "2026-09-04T07:14:46.422Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:46.703Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"operations_analytics\\(\" resources/coding-tools-mcp/coding_tools_mcp electron renderer tests",
+          "session_id": "iYUfAqGySMxkptm_HzMNZ7y8"
+        }
+      },
+      {
+        "time": "2026-09-04T07:14:46.922Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"operations_analytics\\(\" resources/coding-tools-mcp/coding_tools_mcp electron renderer tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:15:00.539Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -e operations_analytics.py -e controller_usage_ingress.py -e controller_token_estimate -e accepted_result_economics_report.py .coding-tools/orchestration/reports",
+          "session_id": "F9buMWEB0U6u5b_PnZ6MRa8R"
+        }
+      },
+      {
+        "time": "2026-09-04T07:15:00.800Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -e operations_analytics.py -e controller_usage_ingress.py -e controller_token_estimate -e accepted_result_economics_report.py .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:15:09.422Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T07:15:22.872Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q tests/test_operations_analytics.py && node --test ../../tests/dashboard-analytics.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:15:22.872Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T07:15:30.168Z",
+    "archive_reason": "finished"
+  }
+]

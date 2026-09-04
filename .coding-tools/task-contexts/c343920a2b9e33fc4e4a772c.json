@@ -1,0 +1,128 @@
+{
+  "version": 2,
+  "task_id": "c2cbfb4b210546b09d5de3101bcd28df",
+  "orchestration": {
+    "run_id": "f4fe15d172e64ff19c5978f9b87ee637",
+    "wave_id": "3308e66d376a4accaeac114ab3f72667",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "ce5e0119b3d0b8796fb1c6988df9d6e82539ab4a496753e7a8694e3445d31376",
+    "contract_fp": ""
+  },
+  "objective": "Redesign the Codex-web Control Center/dashboard for a basic end user: prioritize token quantification and accepted-result optimization metrics; remove most technical/runtime/orchestration details from the default dashboard surface while preserving all technical telemetry in underlying state and code for diagnostics. The primary view should emphasize controller usage (exact when available, calibrated estimate when not), provider exact tokens, combined/normalized compute, trend/comparison, accepted-result efficiency, and clear measurement confidence. Technical fields such as trace/RUN/WAVE/activation/process/server/schema/provenance should not occupy the default user-facing dashboard, though they remain available internally or in an advanced diagnostics section. Do not change accounting truth semantics: estimated values must never be labeled exact, unknown must never become zero, and API-equivalent cost must not be presented as ChatGPT billing. Prepare only; inspect current UI/data flow/tests and return the smallest coherent implementation scope and proof plan.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "idle",
+      "integrity": {
+        "ok": true,
+        "checked": 33,
+        "head_hash": "af504acd747feea1d13a4b6970879f952ba798df35622e5472dd42c3b6e6b45e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f4fe15d172e64ff19c5978f9b87ee637\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f4fe15d172e64ff19c5978f9b87ee637\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "f4fe15d172e64ff19c5978f9b87ee637",
+      "wave_id": "3308e66d376a4accaeac114ab3f72667",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "ce5e0119b3d0b8796fb1c6988df9d6e82539ab4a496753e7a8694e3445d31376",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Redesign the Codex-web Control Center/dashboard for a basic end user: prioritize token quantification and accepted-result optimization metrics; remove most technical/runtime/orchestration details from the default dashboard surface while preserving all technical telemetry in underlying state and code for diagnostics. The primary view should emphasize controller usage (exact when available, calibrated estimate when not), provider exact tokens, combined/normalized compute, trend/comparison, accepted-result efficiency, and clear measurement confidence. Technical fields such as trace/RUN/WAVE/activation/process/server/schema/provenance should not occupy the default user-facing dashboard, though they remain available internally or in an advanced diagnostics section. Do not change accounting truth semantics: estimated values must never be labeled exact, unknown must never become zero, and API-equivalent cost must not be presented as ChatGPT billing. Prepare only; inspect current UI/data flow/tests and return the smallest coherent implementation scope and proof plan.",
+        "objective_revision": 1,
+        "objective_sha256": "a2b4ddd80622e11e795941417a7debd3f25283874cd04bca105542fe28a10a6f",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "647d103845ed934e858106bd417c340d6640129b4ef4055aaa433eabf91c49de",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-04T00:29:13.106Z",
+  "updated_at": "2026-09-04T00:29:29.405Z",
+  "events": [
+    {
+      "time": "2026-09-04T00:29:13.106Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "f4fe15d172e64ff19c5978f9b87ee637"
+      }
+    },
+    {
+      "time": "2026-09-04T00:29:14.594Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "647d103845ed934e858106bd417c340d6640129b4ef4055aaa433eabf91c49de"
+      }
+    },
+    {
+      "time": "2026-09-04T00:29:29.405Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

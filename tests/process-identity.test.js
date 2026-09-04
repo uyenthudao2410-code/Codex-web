@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const { EventEmitter } = require('node:events');
 const { PassThrough } = require('node:stream');
 
@@ -309,6 +310,7 @@ test('asynchronous Windows observation uses a fixed hidden broker command and st
   assert.match(POWERSHELL_BROKER_SCRIPT, /ConvertFrom-Json/);
   assert.equal(options.shell, false);
   assert.equal(options.windowsHide, true);
+  assert.equal(options.cwd, path.dirname(process.execPath));
   assert.deepEqual(options.stdio, ['pipe', 'pipe', 'ignore']);
   assert.deepEqual(JSON.parse(harness.writes[0]), { id: 1, pid: PID });
 });

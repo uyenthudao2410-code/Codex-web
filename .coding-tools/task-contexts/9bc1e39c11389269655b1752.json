@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "task_id": "34cc75fdc6534e12adf33f3b06f86edc",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Dq6TE2cB019WTUAXR0Bs2jUf",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 325,
+    "finished_at": "2026-09-04T09:41:13.415Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-04T09:40:24.129Z",
+  "updated_at": "2026-09-04T09:41:13.415Z",
+  "events": [
+    {
+      "time": "2026-09-04T09:40:24.129Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-04T09:40:24.473Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --no-heading \"event_type\" \".coding-tools/evaluation/chatweb-host-observations.jsonl\"",
+        "session_id": "sA88JMYHVw3Y2tsE1fEymk7r"
+      }
+    },
+    {
+      "time": "2026-09-04T09:40:24.790Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --no-heading \"event_type\" \".coding-tools/evaluation/chatweb-host-observations.jsonl\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T09:41:05.639Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 --no-heading \"chatEvaluationDebugScript|sseStreams|sseEvents|sseCompleted|sseUsageHits|sseUsageRejected|structured_response_usage_exact|turn_features\" \"electron\" \"renderer\" \"scripts\"",
+        "session_id": "IiHvufeCRRhGGSplTEddsm0Y"
+      }
+    },
+    {
+      "time": "2026-09-04T09:41:06.191Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 --no-heading \"chatEvaluationDebugScript|sseStreams|sseEvents|sseCompleted|sseUsageHits|sseUsageRejected|structured_response_usage_exact|turn_features\" \"electron\" \"renderer\" \"scripts\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T09:41:13.072Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --no-heading \"ChatGPT structured-usage seam telemetry|sseUsageHits|sseUsageRejected\" \".coding-tools\" \"tmp\" \"work\" \"artifacts\" -g \"*.log\" -g \"*.txt\" -g \"*.json\" -g \"*.jsonl\"",
+        "session_id": "Dq6TE2cB019WTUAXR0Bs2jUf"
+      }
+    },
+    {
+      "time": "2026-09-04T09:41:13.415Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --no-heading \"ChatGPT structured-usage seam telemetry|sseUsageHits|sseUsageRejected\" \".coding-tools\" \"tmp\" \"work\" \"artifacts\" -g \"*.log\" -g \"*.txt\" -g \"*.json\" -g \"*.jsonl\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

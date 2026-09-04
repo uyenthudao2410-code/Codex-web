@@ -351,6 +351,22 @@ class CodexBridgeTests(unittest.TestCase):
         self.assertEqual(economics["uncached_input_tokens"], 2_000)
         self.assertEqual(economics["cached_input_tokens"], 8_000)
         self.assertAlmostEqual(economics["estimated_credits"], 0.085, places=6)
+        self.assertTrue(economics["measured"])
+        self.assertEqual(economics["usage_provenance"], "provider_reported")
+        self.assertEqual(economics["usage_source"], "codex_app_server:thread/tokenUsage/updated")
+        self.assertEqual(economics["accounting_profile"], "openai_compatible")
+
+    def test_usage_economics_rejects_incomplete_or_invalid_exact_token_receipts(self) -> None:
+        invalid = (
+            {"inputTokens": 10, "cachedInputTokens": 2, "outputTokens": 3},
+            {"inputTokens": 10, "cachedInputTokens": 2, "outputTokens": 3, "reasoningOutputTokens": True},
+            {"inputTokens": -1, "cachedInputTokens": 0, "outputTokens": 3, "reasoningOutputTokens": 1},
+            {"inputTokens": 10, "cachedInputTokens": 11, "outputTokens": 3, "reasoningOutputTokens": 1},
+            {"inputTokens": 10, "cachedInputTokens": 2, "outputTokens": 3, "reasoningOutputTokens": 4},
+        )
+        for last in invalid:
+            with self.subTest(last=last):
+                self.assertIsNone(_usage_economics({"last": last}, "gpt-5.6-luna"))
 
     def test_invalid_action_fails_without_starting_codex(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

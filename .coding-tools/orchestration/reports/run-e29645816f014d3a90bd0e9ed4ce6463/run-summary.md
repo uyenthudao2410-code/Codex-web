@@ -19,10 +19,10 @@
 
 ## Waves
 
-| # | Wave | Mode | Base | Status |
-|---:|---|---|---|---|
-| 1 | `2a06fa329b614a91ab254609b1d1ecc9` | `mcp_only` | `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` | replanned |
-| 2 | `8ba90c3cae63420c9014b1904e382e3b` | `mcp_only` | `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` | accepted |
+| # | Wave | Objective rev | Objective source | Mode | Base | Status |
+|---:|---|---:|---|---|---|---|
+| 1 | `2a06fa329b614a91ab254609b1d1ecc9` | 1 | `legacy_run_objective` | `mcp_only` | `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` | replanned |
+| 2 | `8ba90c3cae63420c9014b1904e382e3b` | 1 | `legacy_run_objective` | `mcp_only` | `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18` | accepted |
 
 ## Acceptance checkpoints
 

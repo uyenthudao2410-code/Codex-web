@@ -1,0 +1,67 @@
+{
+  "version": 2,
+  "task_id": "4bf77df81b464ee09136a1112302f3e3",
+  "orchestration": {},
+  "objective": "Create one bounded read-only EOCL engineering attempt for G6 Session A continuity evidence only. Do not mutate source, acquire a write lease, restart runtime, ACK connector, or execute repository commands inside this workflow; the single durable command will be executed separately by the controller.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-04T06:20:48.036Z",
+  "updated_at": "2026-09-04T06:22:31.354Z",
+  "events": [
+    {
+      "time": "2026-09-04T06:20:48.036Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Create one bounded read-only EOCL engineering attempt for G6 Session A continuity evidence only. Do not mutate source, acquire a write lease, restart runtime, ACK connector, or execute repository commands inside this workflow; the single durable command will be executed separately by the controller."
+      }
+    },
+    {
+      "time": "2026-09-04T06:20:49.478Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-04T06:21:06.807Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-04T06:21:47.832Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-04T06:22:16.005Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    }
+  ]
+}

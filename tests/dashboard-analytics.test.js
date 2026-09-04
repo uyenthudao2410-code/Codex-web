@@ -10,7 +10,7 @@ test('manager overview embeds accepted-result KPIs plus secondary token/cost dia
   const html = read('renderer/index.html');
   assert.match(html, /dashboard\.css/);
   assert.match(html, /dashboard\.js/);
-  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
+  for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daCoveragePolicy', 'daCoverageController', 'daCoverageControllerMeta', 'daCoverageProvider', 'daCoverageProviderMeta', 'daCoverageInvocation', 'daCoverageInvocationMeta', 'daCoverageToolCard', 'daCoverageToolCardMeta', 'daCoverageCost', 'daCoverageCostMeta', 'daCoverageRunAttribution', 'daCoverageRunAttributionMeta', 'daTurnTokenStatus', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing analytics id ${id}`);
   }
   assert.doesNotMatch(html, /id="daBytesPerToken"/);
@@ -74,7 +74,10 @@ test('dashboard visible token path uses canonical UsageEvents and never byte-der
   assert.match(js, /model_visible_bytes/);
   assert.match(js, /request_bytes/);
   assert.match(js, /response_bytes/);
-  assert.match(js, /Transport request\/response bytes are payload telemetry, not token truth/);
+  assert.match(js, /Transport request\/response\/model-visible bytes are payload telemetry, not token truth/);
+  assert.doesNotMatch(js, /function tokensFromBytes/);
+  assert.doesNotMatch(js, /tokensFromBytes\(/);
+  assert.doesNotMatch(js, /bytesPerToken/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.requestBytes\)/);
   assert.doesNotMatch(js, /tokensFromBytes\(record\.responseBytes\)/);
   assert.match(js, /DASHBOARD_ANALYTICS_REFRESH_MS = 30000/);
@@ -103,15 +106,39 @@ test('dashboard animation cancels the previous frame chain before scheduling a n
   assert.match(js, /element\.__dashboardAnimationFrame/);
   assert.match(js, /cancelAnimationFrame\(element\.__dashboardAnimationFrame\)/);
 });
+test('dashboard per-turn tile shows effective turn measurement without double count', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  assert.match(html, /TOKEN CHATWEB/);
+  assert.match(html, /id="daTurnTokenStatus"/);
+  assert.match(html, /id="daChatTurnValue"/);
+  assert.match(html, /id="daChatTurnDelta"/);
+  assert.match(html, /id="daChatTurnMeta"/);
+  assert.match(js, /function renderChatTurnCard\(operations\)/);
+  assert.match(js, /renderChatTurnCard\(operations\)/);
+  assert.match(js, /STRUCTURAL ESTIMATE · confidence none/);
+  assert.match(js, /Chưa đo lượt chat nào/);
+  assert.doesNotMatch(js, /measured\.total \+/);
+  assert.match(html, /Token lượt chat/);
+  assert.match(js, /function turnTokenState\(operations\)/);
+  assert.match(js, /function renderTurnTokens\(operations\)/);
+  assert.match(js, /turn_token_measurements/);
+  assert.match(js, /chat_turn_measurements_v1/);
+  assert.match(js, /renderTurnTokens\(operations\)/);
+  assert.match(js, /Chưa đo lượt nào/);
+  assert.match(js, /Lượt mới nhất chưa đo/);
+  assert.match(js, /phiên ≈/);
+  assert.doesNotMatch(js, /tokensFromBytes|bytesPerToken/);
+});
 
 test('dashboard analytics never fabricate provider billing data', () => {
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');
-  assert.match(js, /SCENARIO/);
   assert.match(js, /not provider billing/);
   assert.match(html, /Phân tích Context & Chi phí/);
   assert.match(html, /Tool call của ChatGPT\/Coding-VP/);
   assert.match(html, /Không quy đổi byte→token/);
+  assert.doesNotMatch(js, /tokensFromBytes\(/);
   assert.doesNotMatch(html, /Byte \/ context token/);
   assert.doesNotMatch(js, /api\.openai\.com|platform\.openai\.com\/usage/);
 });
@@ -189,19 +216,31 @@ test('cost model settings are allowlisted, normalized and persisted', () => {
   assert.equal(repaired.terra.out, 10);
 });
 
-test('dashboard prices canonical measured tokens while visible secondary token paths stay fail-closed', () => {
+test('dashboard keeps canonical measured token economics while byte telemetry stays non-token', () => {
   const js = read('renderer/dashboard.js');
-  assert.match(js, /MODEL_PRICING = \{/);
-  assert.match(js, /'deepseek-v4-flash': \{ in: 0\.28, out: 0\.42, cached: 0\.028 \}/);
-  assert.match(js, /'gpt-5\.6-sol': \{ in: 10, out: 40 \}/);
-  assert.match(js, /function modelPriceOf/);
   assert.match(js, /costSource = 'provider_reported'/);
   assert.match(js, /entry\.costSource = 'pricing_derived'/);
-  assert.match(js, /entry\.costSource = 'settings_estimate'/);
   assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
-  assert.match(js, /cachedTokens = Number\(summary\.cachedTokens\) \|\| 0/);
-  assert.match(js, /uncached = Math\.max\(0, Number\(summary\.inTokens\) - cachedTokens\)/);
-  assert.match(js, /DERIVED từ canonical token pricing/);
+  assert.doesNotMatch(js, /settings_estimate/);
+  assert.doesNotMatch(js, /tokensFromBytes\(/);
+  assert.doesNotMatch(js, /bytesPerToken/);
+  assert.match(js, /Canonical UsageEvent token total/);
+});
+
+test('measurement coverage panel exposes six evidence-qualified planes and preserves unknown-not-zero', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  assert.match(js, /function renderMeasurementCoverage/);
+  assert.match(js, /analytics\?\.measurement_coverage/);
+  assert.match(js, /coverage\.missing_measurement_policy === 'unknown_not_zero'/);
+  assert.match(js, /renderMeasurementCoverage\(operations\)/);
+  assert.match(html, /Measurement coverage/);
+  for (const id of ['daCoverageController', 'daCoverageProvider', 'daCoverageInvocation', 'daCoverageToolCard', 'daCoverageCost', 'daCoverageRunAttribution']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  assert.match(html, /Tool-card tokens/);
+  assert.match(html, /Exact RUN attribution/);
+  assert.match(html, /UNOBSERVED/);
 });
 
 test('dashboard styling is themed, animated and honors reduced motion', () => {
@@ -286,15 +325,43 @@ test('operations overview heatmap is built from real canonical hourly evidence',
   assert.doesNotMatch(js, /buckets\[hour % buckets\.length\]/);
 });
 
-test('operations overview keeps accepted-result KPIs primary while token cost diagnostics stay fail-closed', () => {
+test('basic overview keeps token quantification primary while technical telemetry stays retained but hidden', () => {
+  const html = read('renderer/index.html');
+  const css = read('renderer/dashboard.css');
   const js = read('renderer/dashboard.js');
-  assert.match(js, /renderOperationsTiles\(operations\)/);
+  assert.match(html, /TỔNG TOKEN/);
+  assert.match(html, /INPUT TOKEN/);
+  assert.match(html, /OUTPUT TOKEN/);
+  assert.match(html, /CACHED TOKEN/);
+  assert.match(html, /TOKEN \/ KẾT QUẢ/);
+  assert.match(html, /id="daProviderTokenStatus"/);
+  assert.match(html, /id="daControllerTokenStatus"/);
+  assert.match(html, /id="daEstimateConfidence"/);
+  assert.match(css, /#runtimeSourceStatusCard/);
+  assert.match(css, /article\[aria-labelledby="daOperationsTitle"\]/);
+  assert.match(css, /article\[aria-labelledby="daCoverageTitle"\]/);
+  assert.match(css, /#ccRestartButton/);
+  assert.match(css, /\.cc-bottom-grid/);
+  assert.match(css, /\.da-model-card \.da-fleet-table th:nth-child\(n \+ 5\)/);
+  assert.match(js, /function renderTokenOverviewTiles\(measured, operations, controllerUsage\)/);
+  assert.match(js, /renderTokenOverviewTiles\(measured, operations, controllerUsage\)/);
+  assert.match(js, /function controllerTokenEstimateState\(operations\)/);
+  assert.match(js, /operations\?\.controller_token_estimate/);
+  assert.match(js, /CALIBRATED_ESTIMATE/);
+  assert.match(js, /CONTEXT_ESTIMATE/);
+  assert.match(js, /p50_total_tokens \?\? estimate\.p50_context_tokens/);
+  assert.match(js, /không phải controller total/);
+  assert.match(js, /Math\.round\(measured\.total \/ accepted\)/);
+  assert.match(js, /measured\.cached \/ measured\.input/);
+  assert.match(js, /token bổ sung/);
+  assert.match(js, /Context ≈/);
+  assert.match(js, /Quy đổi bảng giá · không phải ChatGPT billing/);
   assert.match(js, /renderOperationsTable\(operations\)/);
   assert.match(js, /const providerUsd = observedNumber\(providerCost\.total_usd\)/);
   assert.match(js, /const toolMean = observedNumber\(tools\.mean_per_observed_accepted\)/);
   assert.match(js, /const replanRate = observedNumber\(efficiency\.replan_rate\)/);
   assert.match(js, /measured\.costSource !== 'unobserved'/);
-  assert.match(js, /DERIVED từ canonical token pricing/);
+  assert.match(js, /entry\.costSource === 'pricing_derived'/);
 });
 
 test('secondary model and fleet token economics fail closed without canonical lane mapping', () => {

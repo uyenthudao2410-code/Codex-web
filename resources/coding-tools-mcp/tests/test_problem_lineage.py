@@ -13,6 +13,7 @@ from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.problem_lineage import (
     PROBLEM_EVENT_SCHEMA_CURRENT,
+    PROBLEM_HANDOFF_CONTRACT_EMBED_MAX_BYTES,
     PROBLEM_SCHEMA_VERSION,
     ProblemLineageError,
     problem_event_hash_material,
@@ -75,13 +76,35 @@ def attach_chatweb(runtime: Runtime, context: str = "prl-test") -> None:
     runtime._touch_hub_client(runtime.request_context.hub_client)
 
 
-def stage_host_turn(root: Path, identifier: str) -> Path:
+def stage_host_turn(
+    root: Path,
+    identifier: str,
+    *,
+    product_session_receipt_id: str = "",
+    prior_product_session_receipt_id: str = "",
+    product_session_transition: str = "",
+) -> Path:
     pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
     pending.parent.mkdir(parents=True, exist_ok=True)
     pending.write_text(json.dumps({
         "schema_version": 1,
         "turn_id": f"turn-{identifier}",
         "trace_id": f"trace-{identifier}",
+        **(
+            {"product_session_receipt_id": product_session_receipt_id}
+            if product_session_receipt_id
+            else {}
+        ),
+        **(
+            {"prior_product_session_receipt_id": prior_product_session_receipt_id}
+            if prior_product_session_receipt_id
+            else {}
+        ),
+        **(
+            {"product_session_transition": product_session_transition}
+            if product_session_transition
+            else {}
+        ),
         "staged_at_unix_ms": int(time.time() * 1000),
     }), encoding="utf-8")
     return pending
@@ -369,9 +392,193 @@ class ProblemLineageTests(unittest.TestCase):
                 self.assertEqual(run["metadata"]["problem_resolution"]["problem_revision"], 1)
                 handoff = runtime.orchestration_ledger.problem_handoff_for_run(ctx.run_id)
                 assert handoff is not None
+                self.assertEqual(handoff["schema_version"], 1)
+                self.assertEqual(handoff["kind"], "derived_resolution_capsule")
+                self.assertEqual(handoff["run_id"], ctx.run_id)
                 self.assertEqual(handoff["problem_revision"], 1)
+                self.assertEqual(handoff["contract_capsule"], capsule())
+                self.assertTrue(handoff["contract_capsule_included"])
+                self.assertEqual(handoff["criteria_count"], 1)
+                self.assertEqual(len(handoff["criteria_fingerprint"]), 64)
+                self.assertGreaterEqual(handoff["event_count"], 3)
+                self.assertEqual(handoff["latest_event"]["relation_type"], "ENGINEERING_ATTEMPT_BOUND")
+                self.assertFalse(handoff["same_revision_reopened"])
+                self.assertFalse(handoff["outcome_receipt_observed"])
+                self.assertFalse(handoff["fresh_context"]["transcript_required"])
+                self.assertFalse(handoff["fresh_context"]["raw_transcript_included"])
+                self.assertFalse(handoff["fresh_context"]["raw_source_included"])
+                self.assertFalse(handoff["fresh_context"]["private_reasoning_included"])
+                self.assertFalse(handoff["fresh_context"]["mutation_authority_granted"])
+                self.assertFalse(handoff["fresh_context"]["acceptance_authority_granted"])
+                self.assertFalse(handoff["fresh_context"]["exact_revision_refresh_required"])
             finally:
                 runtime.close()
+
+    def test_problem_run_records_host_product_session_and_continuity_core_receipts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="safe")
+            workspace_id = "workspace-product-session"
+            runtime._orchestration_workspace_identity = lambda _path: {
+                "branch": "test",
+                "base_head": "a" * 40,
+                "worktree_fp": "b" * 64,
+                "source_fingerprint": "c" * 64,
+                "workspace_identity": {"workspace_id": workspace_id},
+            }
+            try:
+                runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                attach_chatweb(runtime, "product-session")
+                stage_host_turn(root, "product-open")
+                opened = runtime.task_control(
+                    {
+                        "action": "problem",
+                        "problem_event": public_event(open_event("product-open")),
+                    }
+                )
+                event = opened["problem"]["event"]
+                problem_id = str(event["problem_id"])
+                fingerprint = str(event["contract_fingerprint"])
+                session_receipt = "chatweb-product-session:" + "d" * 64
+                stage_host_turn(
+                    root,
+                    "product-run",
+                    product_session_receipt_id=session_receipt,
+                    product_session_transition="observed",
+                )
+                ctx, _ = runtime._agent_orchestration_context(
+                    {
+                        "workflow": "bugfix",
+                        "phase": "prepare",
+                        "execution_mode": "mcp_only",
+                        "problem_context": {
+                            "work_origin": "problem",
+                            "problem_id": problem_id,
+                            "problem_revision": 1,
+                            "contract_fingerprint": fingerprint,
+                            "resolution_claim": "none",
+                        },
+                    },
+                    objective="record exact product session",
+                )
+                session_event = next(
+                    item
+                    for item in runtime.orchestration_ledger.list_events(ctx.run_id)
+                    if item["event_type"] == "cross_session_chatweb_session_started"
+                )
+                self.assertEqual(session_event["payload"]["session_role"], "A")
+                self.assertEqual(
+                    session_event["payload"]["product_session_receipt_id"],
+                    session_receipt,
+                )
+                self.assertNotIn("conversation_id", session_event["payload"])
+
+                checkpoint = runtime.task_control(
+                    {
+                        "action": "continuity",
+                        "continuity_action": "checkpoint",
+                        "continuity_event": {
+                            "problem_id": problem_id,
+                            "problem_revision": 1,
+                            "material_event_kind": "PROBLEM_OPENED",
+                            "material_event_id": str(event["event_id"]),
+                        },
+                    }
+                )
+                core_event = next(
+                    item
+                    for item in runtime.orchestration_ledger.list_events(ctx.run_id)
+                    if item["event_type"] == "continuity_core_recorded"
+                )
+                self.assertEqual(core_event["payload"]["workspace_id"], workspace_id)
+                self.assertEqual(
+                    core_event["payload"]["continuity_core_fingerprint"],
+                    checkpoint["continuity_core"]["continuity_core_fingerprint"],
+                )
+            finally:
+                runtime.close()
+
+    def test_derived_resolution_capsule_reports_reopen_receipt_and_oversize_refresh(self) -> None:
+        temporary, ledger = self._ledger()
+        try:
+            opened = ledger.problem_record_event(
+                open_event("resolution-capsule-open"),
+                now=NOW,
+                authority_context="RUNTIME_EXPLICIT_USER",
+            )
+            problem_id = str(opened["event"]["problem_id"])
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "resolution-capsule-link",
+                "problem_id": problem_id, "problem_revision": 1,
+                "run_id": "run-resolution-capsule", "link_role": "PRIMARY",
+                "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_BINDING")
+            ledger.problem_record_event({
+                "operation": "provisional_resolve", "event_id": "resolution-capsule-provisional",
+                "problem_id": problem_id, "problem_revision": 1,
+                "run_id": "run-resolution-capsule",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EOCL")
+            receipt_id = problem_outcome_receipt_id(
+                receipt_type="CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                event_id="resolution-capsule-confirm",
+                problem_id=problem_id,
+                problem_revision=1,
+                turn_id="turn-resolution-capsule",
+                trace_id="trace-resolution-capsule",
+            )
+            ledger.problem_record_event({
+                "operation": "confirm", "event_id": "resolution-capsule-confirm",
+                "problem_id": problem_id, "problem_revision": 1,
+                "turn_id": "turn-resolution-capsule", "trace_id": "trace-resolution-capsule",
+                "feedback_intent": "CONFIRM_RESOLVED",
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                "outcome_receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1",
+                "outcome_receipt_id": receipt_id,
+            }, now=NOW, authority_context="RUNTIME_OUTCOME_RECEIPT")
+            ledger.problem_record_event({
+                "operation": "reopen", "event_id": "resolution-capsule-reopen",
+                "problem_id": problem_id, "problem_revision": 1,
+                "feedback_intent": "SAME_PROBLEM_STILL_FAILING",
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_EXPLICIT_USER")
+
+            handoff = ledger.problem_handoff_for_run("run-resolution-capsule")
+            assert handoff is not None
+            self.assertEqual(handoff["problem_state"], "REOPENED")
+            self.assertTrue(handoff["same_revision_reopened"])
+            self.assertTrue(handoff["outcome_receipt_observed"])
+            self.assertEqual(handoff["latest_event"]["relation_type"], "REOPEN")
+            self.assertEqual(handoff["latest_event"]["reason_code"], "explicit_same_problem_correction")
+
+            large_contract = capsule(summary="x" * 2_000)
+            large_contract["acceptance_criteria"] = [
+                {"criterion_id": f"criterion-{index}", "summary": "y" * 700}
+                for index in range(1, 7)
+            ]
+            large_opened = ledger.problem_record_event(
+                open_event("large-resolution-capsule-open", contract_capsule=large_contract),
+                now=NOW,
+                authority_context="RUNTIME_EXPLICIT_USER",
+            )
+            large_problem_id = str(large_opened["event"]["problem_id"])
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "large-resolution-capsule-link",
+                "problem_id": large_problem_id, "problem_revision": 1,
+                "run_id": "run-large-resolution-capsule", "link_role": "PRIMARY",
+                "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now=NOW, authority_context="RUNTIME_BINDING")
+            large_handoff = ledger.problem_handoff_for_run("run-large-resolution-capsule")
+            assert large_handoff is not None
+            self.assertGreater(large_handoff["contract_capsule_bytes"], PROBLEM_HANDOFF_CONTRACT_EMBED_MAX_BYTES)
+            self.assertIsNone(large_handoff["contract_capsule"])
+            self.assertFalse(large_handoff["contract_capsule_included"])
+            self.assertEqual(large_handoff["contract_capsule_omission_reason"], "EXCEEDS_HANDOFF_EMBED_BUDGET")
+            self.assertTrue(large_handoff["fresh_context"]["exact_revision_refresh_required"])
+        finally:
+            temporary.cleanup()
 
     def test_invalid_shadow_frame_restores_pending_host_turn_before_run_creation(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -497,6 +704,37 @@ class ProblemLineageTests(unittest.TestCase):
                 self.assertTrue(frame_event["payload"]["frame_update_or_explanation_recommended"])
                 self.assertFalse(frame_event["payload"]["materiality_inferred"])
                 self.assertFalse(frame_event["payload"]["automatic_mutation_gate"])
+                resolution_capsule = runtime.orchestration_ledger.problem_handoff_for_run(run_id)
+                assert resolution_capsule is not None
+                self.assertEqual(resolution_capsule["problem_frame_status"], "OBSERVED")
+                self.assertEqual(resolution_capsule["problem_frame"]["frame_id"], "frame-runtime-c3")
+                self.assertEqual(resolution_capsule["problem_frame"]["event_hash"], frame_event["event_hash"])
+                self.assertEqual(resolution_capsule["problem_frame"]["counterevidence_count"], 1)
+                self.assertTrue(resolution_capsule["problem_frame"]["decision_changed"])
+                self.assertTrue(resolution_capsule["problem_frame"]["frame_update_or_explanation_recommended"])
+                self.assertFalse(resolution_capsule["problem_frame"]["materiality_inferred"])
+                self.assertFalse(resolution_capsule["problem_frame"]["authority_side_effects"])
+                self.assertFalse(resolution_capsule["fresh_context"]["problem_frame_content_included"])
+                recorded_handoff = runtime.task_control({
+                    "action": "handoff",
+                    "handoff_action": "record",
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "payload": {"next_action": "Continue from the derived resolution capsule"},
+                })
+                self.assertTrue(recorded_handoff["recorded"])
+                stored_lineage = recorded_handoff["capsule"]["payload"]["problem_lineage"]
+                self.assertEqual(stored_lineage["kind"], "derived_resolution_capsule")
+                self.assertEqual(stored_lineage["problem_frame"]["frame_sha256"], frame_event["payload"]["frame_sha256"])
+                with self.assertRaises(ToolFailure) as reserved_handoff:
+                    runtime.task_control({
+                        "action": "handoff",
+                        "handoff_action": "record",
+                        "run_id": run_id,
+                        "wave_id": wave_id,
+                        "payload": {"problem_lineage": {"caller": "forged"}},
+                    })
+                self.assertEqual(reserved_handoff.exception.code, "HANDOFF_PRL_FIELD_RESERVED")
                 proof_id = runtime.orchestration_ledger.record_proof(
                     run_id=run_id,
                     wave_id=wave_id,

@@ -21,15 +21,18 @@ from .acceptance_receipts import (
     passed_proof_fingerprint,
 )
 from .codex_bridge import CodexBridgeError
+from .controller_continuity import ControllerContinuityControlMixin
 from .activation_capability import valid_activation_operation_id
 from .activation_lifecycle import ActivationLifecycleMixin
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
+from .goal_pursuit import GoalPursuitControlMixin
 from .lifecycle_census import lifecycle_census, open_lifecycle_census_snapshot, read_task_projection
 from .orchestration_control import OrchestrationControlError
 from .p5_control import P5ControlMixin
 from .problem_lineage import ProblemLineageError
 from .problem_lineage_control import ProblemLineageControlMixin
+from .product_session_receipts import record_current_continuity_core
 from .solution_shadow_control import SolutionShadowControlMixin
 from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
@@ -74,7 +77,7 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
         "confidence",
     ],
 }
-class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5ControlMixin, ProblemLineageControlMixin):
+class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMixin, GoalPursuitControlMixin, SolutionShadowControlMixin, P5ControlMixin, ProblemLineageControlMixin):
     def activation_preflight(
         self,
         *,
@@ -994,11 +997,86 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
         requested_run = str(args.get("run_id") or "").strip()
         if requested_run:
             self._assert_task_control_workspace(requested_run)
-        self._reconcile_task_orchestration_projection()
+        exact_recovery_run = str(
+            getattr(self.request_context, "stateless_exact_run_recovery_id", "") or ""
+        ).strip()
+        projection_recovery_run = requested_run if (
+            action == "get" or (requested_run and requested_run == exact_recovery_run)
+        ) else ""
+        try:
+            self._reconcile_task_orchestration_projection(requested_run_id=projection_recovery_run)
+        except RuntimeError as exc:
+            raise ToolFailure(
+                "EXACT_RUN_RECOVERY_REFUSED",
+                str(exc),
+                category="runtime",
+                retryable=False,
+                details={"run_id": requested_run},
+            ) from exc
+        if projection_recovery_run:
+            recovered_ctx = self.orchestration_control.snapshot(projection_recovery_run)
+            recovered_state = self.task_state.get()
+            if (
+                recovered_ctx is not None
+                and recovered_ctx.state in {"CHECKPOINTED", "REPLAN", "BLOCKED", "ABORTED"}
+                and not str(recovered_state.get("completion_report_id") or "").strip()
+            ):
+                recovered_result = self._orchestration_result(recovered_ctx, write_reports=False)
+                recovered_report = (
+                    recovered_result.get("completion_report")
+                    if isinstance(recovered_result, dict)
+                    else None
+                )
+                if not isinstance(recovered_report, dict):
+                    raise ToolFailure(
+                        "EXACT_RUN_REPORT_MATERIALIZATION_FAILED",
+                        "Exact-run recovery reached a report-bearing state but no completion report was derived.",
+                        category="runtime",
+                        retryable=False,
+                        details={
+                            "run_id": projection_recovery_run,
+                            "wave_id": recovered_ctx.wave_id,
+                            "state": recovered_ctx.state,
+                        },
+                    )
+                persisted_state = self.task_state.set_completion_report(recovered_report)
+                persisted_report_id = str(persisted_state.get("completion_report_id") or "").strip()
+                persisted_report = (
+                    persisted_state.get("completion_report")
+                    if isinstance(persisted_state.get("completion_report"), dict)
+                    else {}
+                )
+                persisted_source = (
+                    persisted_report.get("source_run_wave")
+                    if isinstance(persisted_report.get("source_run_wave"), dict)
+                    else {}
+                )
+                if (
+                    not persisted_report_id
+                    or str(persisted_source.get("run_id") or "") != projection_recovery_run
+                    or str(persisted_source.get("wave_id") or "") != str(recovered_ctx.wave_id or "")
+                ):
+                    raise ToolFailure(
+                        "EXACT_RUN_REPORT_MATERIALIZATION_FAILED",
+                        "Exact-run completion report did not persist against the recovered RUN/WAVE projection.",
+                        category="runtime",
+                        retryable=False,
+                        details={
+                            "run_id": projection_recovery_run,
+                            "wave_id": recovered_ctx.wave_id,
+                            "state": recovered_ctx.state,
+                        },
+                    )
         if action == "p5":
             return self._p5_control(args)
         if action == "problem":
             return self._problem_control(args)
+        if action == "goal":
+            return self._goal_control(args)
+        if action == "continuity":
+            result = self._controller_continuity_control(args)
+            record_current_continuity_core(self, args, result)
+            return result
         if action == "get":
             # The stream is not the source of truth after reconnect.  Repair
             # the compact view from the SQLite ledger before returning status.
@@ -1079,10 +1157,17 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                 return {"acknowledged": True, "message": message}
             state = self.task_state.get()
             current_report_id = str(state.get("completion_report_id") or "").strip()
-            if current_report_id and message_id == current_report_id:
-                try:
-                    acknowledged_state = self.task_state.ack_completion_report(message_id)
-                except ValueError as exc:
+            try:
+                acknowledged_state = self.task_state.ack_completion_report(message_id)
+            except ValueError as exc:
+                if "ambiguous across task contexts" in str(exc):
+                    raise ToolFailure(
+                        "OPERATOR_REPORT_ACK_AMBIGUOUS",
+                        str(exc),
+                        category="conflict",
+                        details={"report_id": message_id},
+                    ) from exc
+                if current_report_id and message_id == current_report_id:
                     raise ToolFailure(
                         "OPERATOR_REPORT_ACK_INVALID",
                         str(exc),
@@ -1090,13 +1175,17 @@ class CoordinationMixin(ActivationLifecycleMixin, SolutionShadowControlMixin, P5
                         retryable=True,
                         details={"report_id": message_id},
                     ) from exc
-                return {
-                    "acknowledged": True,
-                    "acknowledgement_type": "operator_completion_report",
-                    "report_id": message_id,
-                    "state": acknowledged_state,
-                }
-            raise ToolFailure("MESSAGE_NOT_FOUND", "The coordination message or current completion report was not found.", category="not_found")
+                raise ToolFailure(
+                    "MESSAGE_NOT_FOUND",
+                    "The coordination message or workspace-local completion report was not found.",
+                    category="not_found",
+                ) from exc
+            return {
+                "acknowledged": True,
+                "acknowledgement_type": "operator_completion_report",
+                "report_id": message_id,
+                "state": acknowledged_state,
+            }
         if action == "handoff":
             state, projection, run_id, wave_id = self._coordination_ids(args)
             handoff_action = str(args.get("handoff_action") or "get").strip().lower()

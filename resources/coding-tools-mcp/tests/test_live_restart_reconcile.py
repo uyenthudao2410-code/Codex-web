@@ -180,8 +180,15 @@ class LiveRestartReconcileTests(unittest.TestCase):
                 )
                 self.assertEqual(status, 200)
                 polled = body.get("result", {}).get("structuredContent", {})
-                self.assertEqual(polled.get("ok"), False)
-                self.assertIn((polled.get("error") or {}).get("code"), {"SESSION_NOT_FOUND", "COMMAND_NOT_FOUND"})
+                self.assertTrue(polled.get("ok"))
+                self.assertEqual(polled.get("status"), "reconciled_terminal")
+                self.assertTrue(polled.get("reconciled"))
+                self.assertEqual(polled.get("reconciled_sources"), ["managed_process_job"])
+                managed_job = polled.get("managed_job") or {}
+                self.assertTrue(managed_job.get("terminal"))
+                self.assertNotEqual(managed_job.get("result_status"), "succeeded")
+                completion_report = polled.get("completion_report") or {}
+                self.assertEqual(completion_report.get("accepted_or_not"), "COMMAND_FAILED")
             finally:
                 if process_b is not None and process_b.poll() is None:
                     process_b.kill()

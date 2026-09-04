@@ -15,6 +15,7 @@ from coding_tools_mcp.server import (
     STATELESS_PROTOCOL_VERSION,
 )
 from coding_tools_mcp.provider_traffic import ProviderTrafficGovernor
+from coding_tools_mcp.usage_reservations import UsageReservationStore
 
 
 class ExecutionHubHTTPTests(unittest.TestCase):
@@ -194,6 +195,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
             payload={
                 "usage_id": "live-controller-usage",
                 "turn_id": "turn-live",
+                "trace_id": "trace-live",
                 "actor": "controller",
                 "provider_id": "openai",
                 "model": "gpt-5.6-sol",
@@ -294,7 +296,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(body["snapshot_scope"], "live_control")
         self.assertEqual(body["integrity"]["code"], "UNVERIFIED_ON_LIVE_PATH")
-        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic", "runtime", "direct_usage", "tool_call_metering", "truth_snapshot"):
+        for key in ("task", "run", "waves", "events", "proofs", "delegations", "runtime_activity", "clients", "authority", "continuity", "provider_traffic", "runtime", "direct_usage", "tool_call_metering", "chatweb_measurement", "context_observability", "goal_pursuit", "problem_economics", "truth_snapshot"):
             self.assertIn(key, body)
         self.assertEqual(observed_usage_limits, [8])
         self.assertEqual(body["runtime"]["tools"], list(self.runtime.exposed_tool_names()))
@@ -307,6 +309,7 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(direct["controller"]["usage"]["output_total_tokens"], 20)
         self.assertEqual(direct["controller"]["usage"]["output_reasoning_tokens"], 5)
         self.assertEqual(direct["controller"]["provenance"]["usage"], "client_reported")
+        self.assertEqual(direct["controller"]["trace_id"], "trace-live")
         self.assertEqual(direct["provider"]["usage"]["input_total_tokens"], 80)
         self.assertEqual(direct["provider"]["cost"]["provider_cost"], 0.003)
         self.assertEqual(direct["provider"]["provenance"]["usage"], "provider_reported")
@@ -318,6 +321,69 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertIsNone(tool_call_metering["total_tokens"])
         self.assertIsNone(tool_call_metering["latest"])
         self.assertEqual(tool_call_metering["reason"], "client_receipt_not_exposed_by_mcp_transport")
+        chatweb_measurement = body["chatweb_measurement"]
+        self.assertEqual(chatweb_measurement["accounting_claim"], "partial")
+        self.assertFalse(chatweb_measurement["full_chatweb_accounting"])
+        self.assertEqual(chatweb_measurement["missing_measurement_policy"], "unknown_not_zero")
+        self.assertTrue(chatweb_measurement["controller_usage"]["ingress_supported"])
+        self.assertEqual(chatweb_measurement["controller_usage"]["transport"], "mcp_tools_call_meta")
+        self.assertEqual(chatweb_measurement["controller_usage"]["meta_key"], "io.coding-tools/controllerUsage")
+        self.assertEqual(chatweb_measurement["controller_usage"]["observation"], "observed")
+        self.assertEqual(chatweb_measurement["controller_usage"]["latest_usage_id"], "live-controller-usage")
+        self.assertEqual(chatweb_measurement["controller_usage"]["turn_id"], "turn-live")
+        self.assertEqual(chatweb_measurement["controller_usage"]["provenance"], "client_reported")
+        host_envelope = chatweb_measurement["controller_usage"]["host_envelope"]
+        self.assertEqual(host_envelope["observation"], "unobserved")
+        self.assertEqual(host_envelope["classification"], "unobserved")
+        self.assertEqual(host_envelope["lifecycle"], "unobserved")
+        self.assertFalse(chatweb_measurement["controller_usage"]["post_turn_sideband"]["supported"])
+        self.assertEqual(
+            chatweb_measurement["controller_usage"]["post_turn_sideband"]["reason"],
+            "no_supported_post_turn_controller_usage_transport",
+        )
+        self.assertEqual(chatweb_measurement["tool_call_tokens"]["observation"], "unavailable")
+        self.assertEqual(
+            chatweb_measurement["tool_call_tokens"]["reason"],
+            "client_receipt_not_exposed_by_mcp_transport",
+        )
+        self.assertEqual(chatweb_measurement["tool_inventory"]["tool_count"], 8)
+        self.assertEqual(chatweb_measurement["tool_inventory"]["contract_tool_count"], 8)
+        self.assertIn("session_measurement_coverage_not_proven", chatweb_measurement["blocking_reasons"])
+        self.assertIn("controller_usage_envelope_not_observed", chatweb_measurement["blocking_reasons"])
+        self.assertIn("client_receipt_not_exposed_by_mcp_transport", chatweb_measurement["blocking_reasons"])
+        observability = body["context_observability"]
+        capabilities = observability["capability_matrix"]
+        self.assertEqual(capabilities["exact_controller_usage"]["status"], "supported")
+        self.assertEqual(capabilities["exact_controller_usage"]["observation"], "observed")
+        self.assertEqual(capabilities["exact_session_identity"]["status"], "partial")
+        self.assertEqual(
+            capabilities["exact_session_identity"]["product_session_id"]["status"],
+            "unobserved",
+        )
+        self.assertEqual(
+            capabilities["exact_session_identity"]["turn_trace_identity"]["trace_id"],
+            "trace-live",
+        )
+        self.assertEqual(capabilities["exact_context_pressure"]["status"], "unobserved")
+        self.assertIsNone(capabilities["exact_context_pressure"]["value"])
+        self.assertEqual(capabilities["controller_knowledge_revision"]["status"], "supported")
+        self.assertEqual(capabilities["controller_knowledge_revision"]["observation"], "unobserved")
+        self.assertIsNone(capabilities["controller_knowledge_revision"]["knowledge_revision"])
+        self.assertEqual(capabilities["heuristic_rotation_signals"]["status"], "available")
+        self.assertEqual(capabilities["heuristic_rotation_signals"]["source"], "heuristic")
+        self.assertTrue(capabilities["heuristic_rotation_signals"]["not_rotation_authority"])
+        self.assertEqual(observability["rotation_policy"]["automatic_handoff"], "off")
+        goal = body["goal_pursuit"]
+        self.assertEqual(goal["status"], "unavailable")
+        self.assertEqual(goal["missing_reason"], "goal_prl_schema_inactive")
+        self.assertIsNone(goal["identity"])
+        self.assertIsNone(goal["completion"]["criteria_total"])
+        self.assertIsNone(goal["completion"]["criteria_proven"])
+        self.assertFalse(goal["authority"]["acceptance_authority_granted"])
+        economics = body["problem_economics"]
+        self.assertEqual(economics["status"], "unavailable")
+        self.assertTrue(economics["heartbeat_analytics_forbidden"])
+        self.assertIsNone(economics["observed_values"])
         truth = body["truth_snapshot"]
         self.assertEqual(truth["source"]["git_head"], "hub-test-head")
         self.assertEqual(truth["source"]["worktree_fp"], "hub-test-fp")
@@ -380,6 +446,117 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(body["delegations"], [])
         self.assertEqual(body["counts"], {"events": 0, "waves": 0, "checkpoints": 0})
         self.assertEqual(body["continuity"]["reason_codes"], ["NO_ACTIVE_EXECUTION"])
+        self.assertEqual(body["goal_pursuit"]["status"], "unavailable")
+        self.assertEqual(body["goal_pursuit"]["missing_reason"], "run_id_missing")
+
+    def test_live_snapshot_composes_observed_goal_without_polling_economics(self) -> None:
+        summary = {
+            "identity": {
+                "problem_id": "problem-live",
+                "problem_revision": 3,
+                "contract_fingerprint": "contract-fp",
+                "criteria_fingerprint": "criteria-fp",
+            },
+            "problem_state": "OPEN",
+            "resolution_status": "IN_PROGRESS",
+            "completion": {
+                "status": "observed",
+                "criteria_total": 5,
+                "criteria_proven": 2,
+                "criteria_unresolved": 3,
+                "exact_coverage_status": "PARTIAL",
+                "missing_reason": None,
+            },
+            "next_critical_gap": "Capture cross-session proof",
+            "next_critical_gap_id": "criterion-3",
+            "next_action": "SATISFY_UNRESOLVED_CRITERION",
+            "decision_state_provenance": "CANONICAL_PRL_EOCL_PROOF_JOIN_BOUNDED",
+            "stop": {"legitimate_stop": False, "reason": "NONE"},
+            "fact_window": {"truncated": False},
+            "authority": {
+                "mutation_authority_granted": False,
+                "acceptance_authority_granted": False,
+                "problem_revision_authority_granted": False,
+            },
+        }
+        ledger = self.runtime.orchestration_ledger
+        with patch.object(ledger, "goal_pursuit_live_summary", return_value=summary) as projector:
+            status, body = self.get_live_snapshot()
+        self.assertEqual(status, 200, body)
+        projector.assert_called_once_with(run_id=self.ctx.run_id)
+        goal = body["goal_pursuit"]
+        self.assertEqual(goal["status"], "observed")
+        self.assertEqual(goal["identity"]["problem_id"], "problem-live")
+        self.assertEqual(goal["identity"]["problem_revision"], 3)
+        self.assertEqual(goal["completion"]["criteria_proven"], 2)
+        self.assertEqual(goal["completion"]["criteria_total"], 5)
+        self.assertEqual(goal["current_run_wave"]["run_id"], self.ctx.run_id)
+        self.assertEqual(goal["current_run_wave"]["wave_id"], self.ctx.wave_id)
+        self.assertFalse(goal["authority"]["mutation_authority_granted"])
+        self.assertFalse(goal["authority"]["acceptance_authority_granted"])
+        economics = body["problem_economics"]
+        self.assertEqual(economics["status"], "analytics_available_off_fast_path")
+        self.assertEqual(economics["source"], "offline_immutable_snapshot_report")
+        self.assertTrue(economics["heartbeat_analytics_forbidden"])
+        self.assertIsNone(economics["observed_values"])
+
+    def test_live_snapshot_reads_the_exact_current_problem_binding(self) -> None:
+        ledger = self.runtime.orchestration_ledger
+        ledger.migrate_problem_lineage_schema()
+        opened = ledger.problem_record_event(
+            {
+                "operation": "open",
+                "event_id": "hub-live-goal-open",
+                "task_id": "hub-live-goal-task",
+                "task_class": "feature",
+                "engineering_floor": "REQUIRED",
+                "contract_capsule": {
+                    "objective_summary": "Expose bounded Goal truth",
+                    "acceptance_criteria": [
+                        {"criterion_id": "goal-ui", "summary": "Goal identity is visible"},
+                        {"criterion_id": "continuity-ui", "summary": "Continuity remains truthful"},
+                    ],
+                    "protected_invariants": ["Preserve the eight-tool contract"],
+                    "constraints": ["No inferred authority"],
+                    "unresolved_conditions": [],
+                },
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                "evidence_level": "OBSERVED",
+            },
+            now="2026-09-01T00:00:00+00:00",
+            authority_context="RUNTIME_EXPLICIT_USER",
+        )
+        problem_id = str(opened["event"]["problem_id"])
+        ledger.problem_record_event(
+            {
+                "operation": "link",
+                "event_id": "hub-live-goal-bind",
+                "problem_id": problem_id,
+                "problem_revision": 1,
+                "run_id": self.ctx.run_id,
+                "wave_id": self.ctx.wave_id,
+                "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE",
+                "evidence_level": "OBSERVED",
+            },
+            now="2026-09-01T00:00:00+00:00",
+            authority_context="RUNTIME_BINDING",
+        )
+        status, body = self.get_live_snapshot()
+        self.assertEqual(status, 200, body)
+        goal = body["goal_pursuit"]
+        self.assertEqual(goal["status"], "observed")
+        self.assertEqual(goal["identity"]["problem_id"], problem_id)
+        self.assertEqual(goal["identity"]["problem_revision"], 1)
+        self.assertEqual(goal["resolution_status"], "IN_PROGRESS")
+        self.assertEqual(goal["completion"]["criteria_total"], 2)
+        self.assertEqual(goal["completion"]["criteria_proven"], 0)
+        self.assertEqual(goal["next_critical_gap_id"], "goal-ui")
+        self.assertEqual(goal["knowledge"]["status"], "unavailable")
+        self.assertTrue(goal["knowledge"]["controller_recovery_required"])
+        self.assertEqual(
+            body["problem_economics"]["status"], "analytics_available_off_fast_path"
+        )
 
     def test_dashboard_analytics_isolated_from_live_control_polling(self) -> None:
         ledger = self.runtime.orchestration_ledger
@@ -611,16 +788,33 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         control.mark_ready(self.ctx)
         control.select_route(self.ctx, {"requested": "opencode", "selected": "opencode", "reason": "test"})
         control.transition(self.ctx, "EXECUTING", reason="provider_inference")
-        status, started = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect", "request_id": "req"})
+        missing_status, missing = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect", "request_id": "missing-budget"})
+        self.assertEqual(missing_status, 409, missing)
+        self.assertEqual(missing["code"], "PROVIDER_USAGE_RESERVATION_REQUIRED")
+        status, started = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect", "request_id": "req", "token_budget": 256})
         self.assertEqual(status, 200, started)
         self.assertEqual(started["dispatch"]["status"], "running")
         self.assertTrue(started["delegation"]["metadata"]["read_only_enforced"])
         self.assertNotIn("inspect", repr(started["delegation"]))
         self.assertEqual(started["admission"]["reason"], "admitted")
-        blocked_status, blocked = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect another", "request_id": "req-2"})
+        reservation_event = next(item for item in self.runtime.orchestration_ledger.list_events(self.ctx.run_id) if item["event_type"] == "usage_reservation_reserved")
+        reservation_id = reservation_event["payload"]["reservation_id"]
+        reservations = UsageReservationStore(self.runtime.orchestration_ledger)
+        reserved = reservations.get(self.ctx.run_id, reservation_id)
+        self.assertEqual(reserved["status"], "reserved")
+        self.assertEqual(reserved["reservation"], {"unit": "tokens", "units": 256, "measurement": "estimated"})
+        blocked_status, blocked = self.post_hub({"action": "provider_dispatch", "client_id": "electron-panel", "client_type": "electron", "model": "opencode-go/deepseek-v4-flash", "prompt": "inspect another", "request_id": "req-2", "token_budget": 128})
         self.assertEqual(blocked_status, 409, blocked)
         self.assertEqual(blocked["code"], "PROVIDER_ADMISSION_DENIED")
         self.assertEqual(blocked["details"]["reason"], "concurrency_exhausted")
+
+        terminal_snapshot = {**started["dispatch"], "status": "completed", "returncode": 0, "timing": {"queue_ms": 1, "provider_ms": 5, "total_ms": 6}}
+        self.runtime._opencode_provider.snapshot = terminal_snapshot
+        self.runtime._sync_opencode_dispatch(terminal_snapshot, self.ctx)
+        indeterminate = reservations.get(self.ctx.run_id, reservation_id)
+        self.assertEqual(indeterminate["status"], "indeterminate")
+        self.assertEqual(indeterminate["actual"], {"unit": "tokens", "units": None, "measurement": "unobserved"})
+        self.assertEqual(self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id), [])
 
         telemetry = {
             "schema_version": 1, "event_type": "message.updated", "session_id": "ses-adapter", "message_id": "msg-adapter",
@@ -634,9 +828,15 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual(measured["delegation_id"], "delegation-provider-1")
         self.assertEqual(measured["delegation"]["metadata"]["economics"]["input_tokens"], 80)
         self.assertEqual(len(self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id)), 1)
+        reconciled = reservations.get(self.ctx.run_id, reservation_id)
+        self.assertEqual(reconciled["status"], "reconciled")
+        self.assertEqual(reconciled["reservation"]["units"], 256)
+        self.assertEqual(reconciled["actual"], {"unit": "tokens", "units": 92, "measurement": "measured"})
         duplicate_status, duplicate = self.post_hub({"action": "provider_telemetry", "client_id": "opencode", "client_type": "opencode", "telemetry": telemetry})
         self.assertEqual(duplicate_status, 200, duplicate)
         self.assertEqual(len(self.runtime.orchestration_ledger.list_usage_events(self.ctx.run_id)), 1)
+        reservation_events = [item for item in self.runtime.orchestration_ledger.list_events(self.ctx.run_id) if item["event_type"] == "usage_reservation_reconciled"]
+        self.assertEqual(len(reservation_events), 1)
 
         observe_status, observed = self.post_hub({"action": "provider_observe", "client_id": "electron-panel", "client_type": "electron", "dispatch_id": "dispatch-1"})
         self.assertEqual(observe_status, 200, observed)
@@ -689,6 +889,23 @@ class ExecutionHubHTTPTests(unittest.TestCase):
 
         self.runtime._opencode_provider.close()
         self.runtime._opencode_provider = FakeProvider()
+        reservations = UsageReservationStore(self.runtime.orchestration_ledger)
+        reservation_id = self.runtime._provider_traffic_key(
+            run_id=run_id,
+            wave_id=wave_id,
+            model="opencode-go/deepseek-v4-flash",
+            request_id="req",
+            prompt_sha256="abc",
+        )
+        reservations.reserve(
+            run_id=run_id,
+            wave_id=wave_id,
+            reservation_id=reservation_id,
+            request_id="req",
+            provider_model="opencode-go/deepseek-v4-flash",
+            reserved_units=512,
+            expires_at_unix_ms=None,
+        )
         common = {
             "schema_version": 1, "event_type": "message.updated", "session_id": "ses-multi",
             "provider_dispatch_id": "dispatch-multi", "provider_delegation_id": "delegation-multi",
@@ -716,6 +933,10 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertEqual((usage[0]["usage"]["input_tokens"], usage[0]["usage"]["output_tokens"]), (150, 15))
         self.assertAlmostEqual(usage[0]["cost"]["provider_cost"], 0.003)
         self.assertEqual(usage[0]["timing"]["provider_ms"], 900)
+        reconciled = reservations.get(run_id, reservation_id)
+        self.assertEqual(reconciled["status"], "reconciled")
+        self.assertEqual(reconciled["reservation"]["units"], 512)
+        self.assertEqual(reconciled["actual"], {"unit": "tokens", "units": 165, "measurement": "measured"})
 
     def test_shadow_route_is_idempotent_and_does_not_mutate_execution_authority(self) -> None:
         class NoDispatchProvider:

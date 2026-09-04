@@ -5,7 +5,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from .usage_events import accounting_profile_for, canonicalize_usage
+from .usage_events import accounting_profile_for, canonicalize_usage, usage_event_from_provider_delegation
 
 
 CANONICAL_USAGE_KEYS = (
@@ -40,6 +40,12 @@ def _usage_evidence_for_dedupe(payload: dict[str, Any]) -> dict[str, Any]:
     for key in CANONICAL_USAGE_KEYS:
         usage.pop(key, None)
     comparable["usage"] = usage
+    if str(comparable.get("actor") or "").strip().lower() == "controller":
+        # These are attribution fields, not economic evidence. Ignoring them
+        # here lets an exact controller turn replay dedupe across EOCL waves;
+        # the first durable event remains the retained attribution record.
+        comparable.pop("wave_id", None)
+        comparable.pop("delegation_id", None)
     return comparable
 
 
@@ -50,17 +56,21 @@ def record_usage_event(
     wave_id: str,
     delegation_id: str,
     usage_event: dict[str, Any],
+    event_time: str | None = None,
 ) -> dict[str, Any]:
     usage_id = str(usage_event.get("usage_id") or "")[:256].strip()
     with ledger._lock:
-        with ledger._connect() as connection:
-            rows = connection.execute(
-                "SELECT event_id,payload_json FROM events WHERE run_id=? AND event_type='usage_event' ORDER BY seq",
-                (str(run_id)[:256],),
-            ).fetchall()
-        for row in rows:
-            payload = json.loads(row["payload_json"] or "{}")
-            if usage_id and str(payload.get("usage_id") or "") == usage_id:
+        if usage_id:
+            with ledger._connect() as connection:
+                row = connection.execute(
+                    """SELECT event_id,payload_json FROM events
+                       WHERE run_id=? AND event_type='usage_event'
+                         AND json_extract(payload_json, '$.usage_id')=?
+                       LIMIT 1""",
+                    (str(run_id)[:256], usage_id),
+                ).fetchone()
+            if row is not None:
+                payload = json.loads(row["payload_json"] or "{}")
                 if _usage_evidence_for_dedupe(payload) != _usage_evidence_for_dedupe(usage_event):
                     raise ValueError("usage_id already exists with different evidence")
                 return {"recorded": False, "event_id": row["event_id"], "usage_id": usage_id}
@@ -70,8 +80,116 @@ def record_usage_event(
             delegation_id=delegation_id,
             event_type="usage_event",
             payload=usage_event,
+            event_time=event_time,
         )
         return {"recorded": True, "event_id": event["event_id"], "usage_id": usage_id}
+
+
+def backfill_measured_provider_usage(ledger: Any, *, page_size: int = 100) -> dict[str, Any]:
+    """Append canonical historical UsageEvents for exact terminal provider telemetry only."""
+    if isinstance(page_size, bool) or not isinstance(page_size, int) or not 1 <= page_size <= 500:
+        raise ValueError("page_size must be an integer between 1 and 500")
+
+    cutoff = datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    cursor_finished_at: str | None = None
+    cursor_delegation_id = ""
+    examined = 0
+    eligible = 0
+    recorded = 0
+    already_present = 0
+    skipped_unmeasured_or_inexact = 0
+    pages_read = 0
+    max_page_rows = 0
+
+    while True:
+        with ledger._lock, ledger._connect() as connection:
+            if cursor_finished_at is None:
+                rows = connection.execute(
+                    """SELECT d.*, w.run_id AS run_id
+                       FROM delegations d
+                       JOIN waves w ON w.wave_id=d.wave_id
+                       WHERE d.status IN ('completed','failed')
+                         AND d.finished_at IS NOT NULL
+                         AND d.finished_at <= ?
+                       ORDER BY d.finished_at,d.delegation_id
+                       LIMIT ?""",
+                    (cutoff, page_size),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """SELECT d.*, w.run_id AS run_id
+                       FROM delegations d
+                       JOIN waves w ON w.wave_id=d.wave_id
+                       WHERE d.status IN ('completed','failed')
+                         AND d.finished_at IS NOT NULL
+                         AND d.finished_at <= ?
+                         AND (d.finished_at > ? OR (d.finished_at = ? AND d.delegation_id > ?))
+                       ORDER BY d.finished_at,d.delegation_id
+                       LIMIT ?""",
+                    (cutoff, cursor_finished_at, cursor_finished_at, cursor_delegation_id, page_size),
+                ).fetchall()
+        if not rows:
+            break
+
+        pages_read += 1
+        max_page_rows = max(max_page_rows, len(rows))
+        for row in rows:
+            examined += 1
+            delegation = {
+                "delegation_id": row["delegation_id"],
+                "wave_id": row["wave_id"],
+                "model": row["model"],
+                "status": row["status"],
+                "finished_at": row["finished_at"],
+                "metadata": json.loads(row["metadata_json"] or "{}"),
+            }
+            usage_event = usage_event_from_provider_delegation(
+                run_id=str(row["run_id"]),
+                wave_id=str(row["wave_id"]),
+                delegation=delegation,
+            )
+            if usage_event is None:
+                skipped_unmeasured_or_inexact += 1
+                continue
+            eligible += 1
+            result = record_usage_event(
+                ledger,
+                run_id=str(row["run_id"]),
+                wave_id=str(row["wave_id"]),
+                delegation_id=str(row["delegation_id"]),
+                usage_event=usage_event,
+                event_time=str(row["finished_at"]),
+            )
+            if result.get("recorded") is True:
+                recorded += 1
+            else:
+                already_present += 1
+
+        cursor_finished_at = str(rows[-1]["finished_at"])
+        cursor_delegation_id = str(rows[-1]["delegation_id"])
+
+    return {
+        "schema_version": 1,
+        "source": "terminal_provider_delegations",
+        "policy": "measured_exact_only",
+        "snapshot_finished_at_cutoff": cutoff,
+        "examined": examined,
+        "eligible": eligible,
+        "recorded": recorded,
+        "already_present": already_present,
+        "skipped_unmeasured_or_inexact": skipped_unmeasured_or_inexact,
+        "query": {
+            "bounded_keyset": True,
+            "page_size": page_size,
+            "pages_read": pages_read,
+            "max_page_rows": max_page_rows,
+            "order": ["finished_at", "delegation_id"],
+        },
+        "provenance_rewritten": False,
+        "estimates_promoted": False,
+        "event_time_source": "delegation_finished_at",
+        "idempotency": "stable_usage_id",
+    }
 
 
 def _project_event(ledger: Any, row: Any) -> dict[str, Any]:
@@ -109,10 +227,18 @@ def recent_usage_events(ledger: Any, *, limit: int = 8) -> list[dict[str, Any]]:
     return [_project_event(ledger, row) for row in reversed(rows)]
 
 
-def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> dict[str, Any]:
-    """Aggregate every durable UsageEvent in an exact UTC window without sampling."""
-    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= 31:
-        raise ValueError("days must be an integer between 1 and 31")
+def usage_analytics(
+    ledger: Any,
+    *,
+    days: int = 7,
+    now: str | None = None,
+    page_size: int = 100,
+) -> dict[str, Any]:
+    """Aggregate a complete exact UTC window through bounded keyset pages."""
+    if isinstance(days, bool) or not isinstance(days, int) or not 1 <= days <= 3650:
+        raise ValueError("days must be an integer between 1 and 3650")
+    if isinstance(page_size, bool) or not isinstance(page_size, int) or not 1 <= page_size <= 500:
+        raise ValueError("page_size must be an integer between 1 and 500")
 
     def parse_time(value: str) -> datetime:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -127,15 +253,6 @@ def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> di
     end = parse_time(now) if now else datetime.now(timezone.utc)
     start = end - timedelta(days=days)
     rolling_start = end - timedelta(minutes=5)
-    with ledger._lock, ledger._connect() as connection:
-        rows = connection.execute(
-            """SELECT * FROM events
-               WHERE event_type='usage_event'
-                 AND julianday(event_time) >= julianday(?)
-                 AND julianday(event_time) <= julianday(?)
-               ORDER BY event_time,seq""",
-            (iso(start), iso(end)),
-        ).fetchall()
 
     def empty_bucket() -> dict[str, Any]:
         return {
@@ -206,27 +323,86 @@ def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> di
     actors: dict[str, dict[str, Any]] = {}
     providers: dict[str, dict[str, Any]] = {}
     models: dict[tuple[str, str, str], dict[str, Any]] = {}
+    coverage_days: dict[str, dict[str, Any]] = {}
     invalid_event_count = 0
-    for row in rows:
-        item = ledger._event_row(row)
-        payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
-        try:
-            canonical = canonical_usage_payload(payload)
-            event_time = parse_time(str(item.get("event_time") or ""))
-        except (TypeError, ValueError):
-            invalid_event_count += 1
-            continue
-        actor = str(payload.get("actor") or "provider").strip().lower() or "provider"
-        provider_id = str(payload.get("provider_id") or "unknown").strip() or "unknown"
-        model = str(payload.get("model") or payload.get("model_id") or "unknown").strip() or "unknown"
-        hour_key = iso(event_time.replace(minute=0, second=0, microsecond=0), milliseconds=False)
-        add(overall, payload, canonical)
-        add(hours.setdefault(hour_key, empty_bucket()), payload, canonical)
-        add(actors.setdefault(actor, empty_bucket()), payload, canonical)
-        add(providers.setdefault(provider_id, empty_bucket()), payload, canonical)
-        add(models.setdefault((actor, provider_id, model), empty_bucket()), payload, canonical)
-        if event_time >= rolling_start:
-            add(rolling, payload, canonical)
+    source_event_count = 0
+    pages_read = 0
+    max_page_rows = 0
+    cursor_event_time: str | None = None
+    cursor_seq = 0
+
+    with ledger._lock, ledger._connect() as connection:
+        snapshot_row = connection.execute(
+            "SELECT COALESCE(MAX(seq),0) FROM events WHERE event_type='usage_event'"
+        ).fetchone()
+        snapshot_max_seq = int(snapshot_row[0] or 0) if snapshot_row else 0
+
+    while True:
+        with ledger._lock, ledger._connect() as connection:
+            if cursor_event_time is None:
+                rows = connection.execute(
+                    """SELECT * FROM events
+                       WHERE event_type='usage_event'
+                         AND event_time >= ? AND event_time <= ?
+                         AND seq <= ?
+                       ORDER BY event_time,seq
+                       LIMIT ?""",
+                    (iso(start), iso(end), snapshot_max_seq, page_size),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    """SELECT * FROM events
+                       WHERE event_type='usage_event'
+                         AND event_time >= ? AND event_time <= ?
+                         AND seq <= ?
+                         AND (event_time > ? OR (event_time = ? AND seq > ?))
+                       ORDER BY event_time,seq
+                       LIMIT ?""",
+                    (iso(start), iso(end), snapshot_max_seq, cursor_event_time, cursor_event_time, cursor_seq, page_size),
+                ).fetchall()
+        if not rows:
+            break
+
+        pages_read += 1
+        max_page_rows = max(max_page_rows, len(rows))
+        source_event_count += len(rows)
+        for row in rows:
+            item = ledger._event_row(row)
+            payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
+            try:
+                canonical = canonical_usage_payload(payload)
+                event_time = parse_time(str(item.get("event_time") or ""))
+            except (TypeError, ValueError):
+                invalid_event_count += 1
+                continue
+            actor = str(payload.get("actor") or "provider").strip().lower() or "provider"
+            provider_id = str(payload.get("provider_id") or "unknown").strip() or "unknown"
+            model = str(payload.get("model") or payload.get("model_id") or "unknown").strip() or "unknown"
+            hour_key = iso(event_time.replace(minute=0, second=0, microsecond=0), milliseconds=False)
+            day_key = event_time.date().isoformat()
+            measurement = payload.get("measurement") if isinstance(payload.get("measurement"), dict) else {}
+            coverage = coverage_days.setdefault(day_key, {
+                "source_event_count": 0,
+                "usage_measurement": {},
+                "cost_measurement": {},
+                "actors": {},
+            })
+            coverage["source_event_count"] += 1
+            usage_measurement = str(measurement.get("usage") or "unobserved").strip().lower() or "unobserved"
+            cost_measurement = str(measurement.get("cost") or "unobserved").strip().lower() or "unobserved"
+            coverage["usage_measurement"][usage_measurement] = int(coverage["usage_measurement"].get(usage_measurement) or 0) + 1
+            coverage["cost_measurement"][cost_measurement] = int(coverage["cost_measurement"].get(cost_measurement) or 0) + 1
+            coverage["actors"][actor] = int(coverage["actors"].get(actor) or 0) + 1
+            add(overall, payload, canonical)
+            add(hours.setdefault(hour_key, empty_bucket()), payload, canonical)
+            add(actors.setdefault(actor, empty_bucket()), payload, canonical)
+            add(providers.setdefault(provider_id, empty_bucket()), payload, canonical)
+            add(models.setdefault((actor, provider_id, model), empty_bucket()), payload, canonical)
+            if event_time >= rolling_start:
+                add(rolling, payload, canonical)
+
+        cursor_event_time = str(rows[-1]["event_time"])
+        cursor_seq = int(rows[-1]["seq"])
 
     controller_summary = finish(actors["controller"]) if "controller" in actors else None
     controller_observed = bool(controller_summary and int(controller_summary["event_count"]) > 0)
@@ -249,9 +425,31 @@ def usage_analytics(ledger: Any, *, days: int = 7, now: str | None = None) -> di
             "days": days,
             "start": iso(start),
             "end": iso(end),
-            "source_event_count": len(rows),
+            "source_event_count": source_event_count,
             "aggregated_event_count": int(overall["event_count"]),
             "invalid_event_count": invalid_event_count,
+        },
+        "query": {
+            "bounded_keyset": True,
+            "page_size": page_size,
+            "pages_read": pages_read,
+            "max_page_rows": max_page_rows,
+            "snapshot_max_seq": snapshot_max_seq,
+            "order": ["event_time", "seq"],
+        },
+        "coverage_by_time": {
+            "granularity": "day",
+            "buckets": [
+                {
+                    "day": key,
+                    "source_event_count": int(coverage_days[key]["source_event_count"]),
+                    "usage_measurement": dict(sorted(coverage_days[key]["usage_measurement"].items())),
+                    "cost_measurement": dict(sorted(coverage_days[key]["cost_measurement"].items())),
+                    "actors": dict(sorted(coverage_days[key]["actors"].items())),
+                }
+                for key in sorted(coverage_days)
+            ],
+            "missing_measurement_policy": "unknown_not_zero",
         },
         "controller_usage": controller_usage,
         "overall": finish(overall),

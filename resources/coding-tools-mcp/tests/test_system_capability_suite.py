@@ -187,6 +187,14 @@ class ContextBudgetTests(unittest.TestCase):
         self.assertTrue(sc.get("output_ref"))
         next_actions = sc.get("next_actions") or []
         self.assertTrue(any(item.get("tool") == "read_output" for item in next_actions))
+        handoff = sc["large_result_handoff"]
+        self.assertEqual(handoff["kind"], "OUTPUT_PAGE")
+        self.assertEqual(handoff["reason"], "BYTE_BUDGET")
+        self.assertEqual(handoff["next_operation"]["tool"], "command_control")
+        self.assertEqual(handoff["next_operation"]["arguments"]["action"], "read")
+        self.assertTrue(
+            handoff["recoverability"]["continuation_recovers_all_omitted_data"]
+        )
         diagnostics = sc.get("diagnostics") or []
         self.assertTrue(any(item.get("code") == "OUTPUT_TRUNCATED" for item in diagnostics))
 

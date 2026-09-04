@@ -9,7 +9,6 @@ commit against the live audit database.
 from __future__ import annotations
 
 import json
-import shutil
 import sqlite3
 import tempfile
 import threading
@@ -56,23 +55,37 @@ def _proof_cache_summary(rows: dict[str, list[sqlite3.Row]], *, stage_limit: int
         bucket = by_stage.setdefault(key, {"eligible": 0, "hits": 0, "misses": 0, "known_hits": 0, "known_ms": 0, "accepted_opportunities": 0, "accepted_hits": 0, "checkpoint_opportunities": 0, "checkpoint_hits": 0})
         run_id = str(event["run_id"])
         hit = event_type == "proof_cache_hit"
-        overall["eligible"] += 1; bucket["eligible"] += 1; run_ids.add(run_id)
+        overall["eligible"] += 1
+        bucket["eligible"] += 1
+        run_ids.add(run_id)
         if hit:
-            overall["hits"] += 1; bucket["hits"] += 1
+            overall["hits"] += 1
+            bucket["hits"] += 1
             source_id = str(payload.get("source_proof_id") or "")
             if source_id in proof_duration:
-                overall["known_hits"] += 1; overall["known_ms"] += proof_duration[source_id]
-                bucket["known_hits"] += 1; bucket["known_ms"] += proof_duration[source_id]
+                overall["known_hits"] += 1
+                overall["known_ms"] += proof_duration[source_id]
+                bucket["known_hits"] += 1
+                bucket["known_ms"] += proof_duration[source_id]
         else:
-            overall["misses"] += 1; bucket["misses"] += 1
+            overall["misses"] += 1
+            bucket["misses"] += 1
             reason = str(payload.get("reason") or "")
             misses[reason if reason in {"cold", "input_fingerprint_changed", "stage_version_changed"} else "other"] = misses.get(reason if reason in {"cold", "input_fingerprint_changed", "stage_version_changed"} else "other", 0) + 1
         if run_id in accepted_runs:
-            accepted_run_ids.add(run_id); overall["accepted_opportunities"] += 1; bucket["accepted_opportunities"] += 1
-            if hit: overall["accepted_hits"] += 1; bucket["accepted_hits"] += 1
+            accepted_run_ids.add(run_id)
+            overall["accepted_opportunities"] += 1
+            bucket["accepted_opportunities"] += 1
+            if hit:
+                overall["accepted_hits"] += 1
+                bucket["accepted_hits"] += 1
         if run_id in accepted_checkpoints:
-            checkpoint_run_ids.add(run_id); overall["checkpoint_opportunities"] += 1; bucket["checkpoint_opportunities"] += 1
-            if hit: overall["checkpoint_hits"] += 1; bucket["checkpoint_hits"] += 1
+            checkpoint_run_ids.add(run_id)
+            overall["checkpoint_opportunities"] += 1
+            bucket["checkpoint_opportunities"] += 1
+            if hit:
+                overall["checkpoint_hits"] += 1
+                bucket["checkpoint_hits"] += 1
         if str(event["event_time"] or ""):
             times.append(str(event["event_time"]))
     ordered = sorted(by_stage.items(), key=lambda item: (-item[1]["eligible"], item[0][0], item[0][1]))
@@ -150,6 +163,7 @@ class LedgerFacts(OrchestrationLedger):
         self._lock = threading.RLock()
         self._proof_cache_stage_group_count = int(proof_cache_summary.pop("_stage_group_count", 0))
         self._proof_cache_summary = proof_cache_summary
+        self.fact_load_statements = len(rows)
         self._economics_cache: dict[str, dict[str, Any]] = {}
         self._evaluation_cache: dict[str, dict[str, Any]] = {}
         self._runs = {str(row["run_id"]): self._run_row(row) for row in rows["runs"]}

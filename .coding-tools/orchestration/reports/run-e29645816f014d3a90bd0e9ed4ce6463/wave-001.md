@@ -3,6 +3,9 @@
 - Run: `e29645816f014d3a90bd0e9ed4ce6463`
 - Wave: `2a06fa329b614a91ab254609b1d1ecc9`
 - Objective: Update canonical project documentation only to record that the P0 live activation incident is now operationally accepted, based on the live proof just collected. Inspect docs/CURRENT_STATE.md and docs/ROADMAP.md for the exact stale statements about raw ExceptionGroup, P0 live activation, source-vs-live state, and next-phase gating. Preserve all unrelated source/UI work and do not modify anything in prepare.
+- Objective revision: `1`
+- Objective SHA-256: `9163e3ec51741f462ea93bb88a484c670f831c8351de3e9ff1120086324669bf`
+- Objective source: `legacy_run_objective`
 - Mode: `mcp_only`
 - Base HEAD: `0cf1eec7366f09d52235ca235d92ccd8b3ea4e18`
 - Worktree fingerprint: `4cbbe5bb759a1b9c762f22eec9285d3b15505b870eedd960504cc70dbe6423ed`

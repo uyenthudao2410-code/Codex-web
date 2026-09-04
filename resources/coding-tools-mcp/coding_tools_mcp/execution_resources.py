@@ -919,6 +919,12 @@ class ExecutionResourceGovernor:
                     ),
                 )
         except sqlite3.IntegrityError as exc:
+            if "managed_process_jobs.command_id" in str(exc):
+                raise ExecutionResourceError(
+                    "COMMAND_ID_CONFLICT",
+                    "command_id is already bound to a durable managed job.",
+                    details={"command_id": str(command_id)},
+                ) from exc
             active_claim = self._active_heavy_claim()
             active = self._rows(active_only=True)
             heavy = next((row for row in active if row["resource_class"] == "HEAVY"), None)
@@ -1157,7 +1163,28 @@ class ExecutionResourceGovernor:
     def _public_row(row: dict[str, Any] | None) -> dict[str, Any] | None:
         if row is None:
             return None
-        return {
+        lifecycle_state = str(row.get("lifecycle_state") or "")
+        terminal = lifecycle_state not in ACTIVE_LIFECYCLES
+        metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        raw_exit_code = metadata.get("exit_code")
+        exit_code = (
+            int(raw_exit_code)
+            if isinstance(raw_exit_code, int) and not isinstance(raw_exit_code, bool)
+            else None
+        )
+        if not terminal:
+            result_status = "running"
+        elif lifecycle_state in {"timeout", "timed_out"}:
+            result_status = "timed_out"
+        elif lifecycle_state in {"terminated", "cancelled"}:
+            result_status = "terminated"
+        elif exit_code == 0 and lifecycle_state in {"exited", "completed", "closed"}:
+            result_status = "succeeded"
+        elif exit_code is not None or lifecycle_state in {"failed", "spawn_failed"}:
+            result_status = "failed"
+        else:
+            result_status = "unknown"
+        public = {
             key: row.get(key)
             for key in (
                 "job_id",
@@ -1170,8 +1197,50 @@ class ExecutionResourceGovernor:
                 "lifecycle_state",
                 "started_at",
                 "updated_at",
+                "finished_at",
             )
         }
+        public.update(
+            {
+                "terminal": terminal,
+                "exit_code": exit_code,
+                "result_status": result_status,
+            }
+        )
+        return public
+
+    def find_exact_job(
+        self, *, command_id: str = "", job_id: str = ""
+    ) -> dict[str, Any] | None:
+        """Resolve one checkout-local managed job by durable identity."""
+        command = str(command_id or "").strip()
+        job = str(job_id or "").strip()
+        if not command and not job:
+            raise ExecutionResourceError(
+                "EXECUTION_JOB_ID_REQUIRED",
+                "command_id or job_id is required for exact managed-job lookup.",
+            )
+        clauses = ["checkout_id=?"]
+        params: list[Any] = [self.checkout_id]
+        if command:
+            clauses.append("command_id=?")
+            params.append(command)
+        if job:
+            clauses.append("job_id=?")
+            params.append(job)
+        with self.ledger._lock, self.ledger._connect() as connection:
+            rows = connection.execute(
+                f"SELECT * FROM managed_process_jobs WHERE {' AND '.join(clauses)} "
+                "ORDER BY started_at DESC LIMIT 2",
+                params,
+            ).fetchall()
+        if len(rows) > 1:
+            raise ExecutionResourceError(
+                "EXECUTION_JOB_AMBIGUOUS",
+                "Managed-job identity is not unique in the current checkout.",
+                details={"command_id": command or None, "job_id": job or None},
+            )
+        return self._public_row(self._row(rows[0])) if rows else None
 
     def snapshot(self, *, limit: int = 20, reconcile: bool = True) -> dict[str, Any]:
         # Mutation/control paths keep reconciliation enabled by default.  A

@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
+from .controller_continuity import ControllerContinuityLedgerMixin
+from .goal_pursuit import GoalPursuitLedgerMixin
 from .idempotency_codec import decode_summary as _decode_idempotency_summary, encode_summary as _encode_idempotency_summary
 from .ledger_file_gate import ledger_access_gate
 from .ledger_event_chain import append_hash_chained_event
@@ -25,6 +27,7 @@ from .problem_lineage import ProblemLineageLedgerMixin
 from .quality_outcomes import QualityOutcomeLedgerMixin
 from .usage_ledger import (
     CANONICAL_USAGE_KEYS,
+    backfill_measured_provider_usage as _backfill_measured_provider_usage,
     canonical_usage_payload,
     list_usage_events as _list_usage_events,
     recent_usage_events as _recent_usage_events,
@@ -324,7 +327,7 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
         digest.update(_json(extra).encode("utf-8"))
     return digest.hexdigest()
 
-class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
+class OrchestrationLedger(ControllerContinuityLedgerMixin, GoalPursuitLedgerMixin, LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
     """Durable append-only orchestration audit source for one workspace.
     The ledger stores structured control/evidence identity, not raw prompts, patches,
     file contents, stdout, or stderr. Events are hash-chained per run so accidental
@@ -401,6 +404,9 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                     metadata_json TEXT NOT NULL DEFAULT '{}'
                 );
                 CREATE INDEX IF NOT EXISTS idx_delegations_wave_started ON delegations(wave_id, started_at);
+                CREATE INDEX IF NOT EXISTS idx_delegations_terminal_finished_id
+                    ON delegations(finished_at, delegation_id)
+                    WHERE status IN ('completed','failed') AND finished_at IS NOT NULL;
                 CREATE TABLE IF NOT EXISTS events (
                     seq INTEGER PRIMARY KEY AUTOINCREMENT,
                     event_id TEXT NOT NULL UNIQUE,
@@ -419,6 +425,10 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                 CREATE INDEX IF NOT EXISTS idx_events_run_time_type ON events(run_id, event_time DESC, event_type);
                 CREATE INDEX IF NOT EXISTS idx_events_wave_seq ON events(wave_id, seq);
                 CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
+                CREATE INDEX IF NOT EXISTS idx_events_type_time_seq ON events(event_type, event_time, seq);
+                CREATE INDEX IF NOT EXISTS idx_events_usage_id
+                    ON events(run_id, event_type, json_extract(payload_json, '$.usage_id'))
+                    WHERE event_type='usage_event';
                 CREATE TABLE IF NOT EXISTS proofs (
                     proof_id TEXT PRIMARY KEY,
                     run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
@@ -635,6 +645,7 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                 """
             )
             self._p5_ensure_schema(connection)
+            self._controller_continuity_ensure_schema(connection)
             for column in ("error_code TEXT NOT NULL DEFAULT ''", "workflow_patch_preflight INTEGER NOT NULL DEFAULT 0", "summary_codec TEXT NOT NULL DEFAULT 'plain_json'", "summary_blob BLOB"):
                 try:
                     connection.execute(f"ALTER TABLE idempotency_records ADD COLUMN {column}")
@@ -682,10 +693,17 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
         task_id: str = "",
         metadata: dict[str, Any] | None = None,
         run_id: str | None = None,
+        goal_controller_precondition: dict[str, Any] | None = None,
     ) -> str:
         run_id = run_id or uuid.uuid4().hex
         now = utc_now()
         with self._lock, self._connect() as connection:
+            if goal_controller_precondition is not None:
+                self._controller_continuity_ensure_schema(connection)
+                connection.execute("BEGIN IMMEDIATE")
+                self._controller_assert_goal_run_precondition(
+                    connection, goal_controller_precondition
+                )
             connection.execute(
                 "INSERT INTO runs(run_id,task_id,objective,status,started_at,metadata_json) VALUES(?,?,?,?,?,?)",
                 (run_id, _bounded_text(task_id, 256), _bounded_text(objective, 4000), "active", now, _json(_sanitize(metadata or {}))),
@@ -1164,6 +1182,7 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
         wave_id: str,
         delegation_id: str,
         usage_event: dict[str, Any],
+        event_time: str | None = None,
     ) -> dict[str, Any]:
         return _record_usage_event(
             self,
@@ -1171,7 +1190,11 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
             wave_id=wave_id,
             delegation_id=delegation_id,
             usage_event=_sanitize(usage_event),
+            event_time=event_time,
         )
+
+    def backfill_measured_provider_usage(self, *, page_size: int = 100) -> dict[str, Any]:
+        return _backfill_measured_provider_usage(self, page_size=page_size)
 
     def list_usage_events(self, run_id: str, *, limit: int | None = 100) -> list[dict[str, Any]]:
         return _list_usage_events(self, run_id, limit=limit)
@@ -1179,8 +1202,14 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
     def recent_usage_events(self, *, limit: int = 8) -> list[dict[str, Any]]:
         return _recent_usage_events(self, limit=limit)
 
-    def usage_analytics(self, *, days: int = 7, now: str | None = None) -> dict[str, Any]:
-        return _usage_analytics(self, days=days, now=now)
+    def usage_analytics(
+        self,
+        *,
+        days: int = 7,
+        now: str | None = None,
+        page_size: int = 100,
+    ) -> dict[str, Any]:
+        return _usage_analytics(self, days=days, now=now, page_size=page_size)
 
     def record_shadow_route(
         self,
@@ -3138,6 +3167,19 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
                 return None
             existing = json.loads(row["summary_json"] or "{}")
             existing.update(_sanitize(summary or {}))
+            existing["terminal_snapshot"] = {
+                "schema_version": 1,
+                "operation_id": _bounded_text(operation_id, 256),
+                "status": _bounded_text(status, 64),
+                "finished_at": now,
+                "worker_terminalized": bool(existing.get("worker_terminalized")),
+                "result_available_at_terminalization": bool(
+                    existing.get("result_available_in_memory")
+                ),
+                "result_durability": "process_runtime",
+                "restart_safe": False,
+                "content_addressed": False,
+            }
             connection.execute(
                 """UPDATE background_operations
                 SET status=?, updated_at=?, finished_at=?, summary_json=?
@@ -3168,6 +3210,17 @@ class OrchestrationLedger(LifecycleReconciliationLedgerMixin, ObservationSpanLed
             for row in rows:
                 summary = json.loads(row["summary_json"] or "{}")
                 summary["orphan_reason"] = "mcp_runtime_restarted"
+                summary["terminal_snapshot"] = {
+                    "schema_version": 1,
+                    "operation_id": str(row["operation_id"]),
+                    "status": "orphaned",
+                    "finished_at": now,
+                    "worker_terminalized": False,
+                    "result_available_at_terminalization": False,
+                    "result_durability": "process_runtime",
+                    "restart_safe": False,
+                    "content_addressed": False,
+                }
                 connection.execute(
                     """UPDATE background_operations
                     SET status='orphaned', updated_at=?, finished_at=?, summary_json=?

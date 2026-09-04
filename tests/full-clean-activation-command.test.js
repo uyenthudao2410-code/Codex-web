@@ -311,6 +311,65 @@ test('deferred parent barrier fails closed when marker changes', async () => {
   );
 });
 
+test('deferred parent barrier rejects a replacement marker with the right nonce but wrong identity', async () => {
+  const operationId = deferredOperationId(Date.now());
+  await assert.rejects(
+    waitForDeferredParentExit({
+      parentPid: 12345,
+      parentMarker: 'marker.json',
+      parentMarkerNonce: 'e'.repeat(36),
+      parentOperationId: operationId,
+      timeoutMs: 100,
+      isAlive: () => false,
+      readFile: () => ({
+        operation_id: deferredOperationId(Date.now() + 1),
+        pid: 12345,
+        nonce: 'e'.repeat(36)
+      }),
+      waitFn: async () => {}
+    }),
+    { code: 'DEFERRED_PARENT_MARKER_INVALID' }
+  );
+});
+
+test('detached worker accepts a parent boundary already closed before worker startup', async () => {
+  const { root, paths } = tempPaths();
+  try {
+    const now = Date.now();
+    const operationId = deferredOperationId(now);
+    const envelope = buildDeferredEnvelope({
+      paths,
+      checkpoint,
+      operationId,
+      requestedAtUnixMs: now,
+      parentPid: process.pid + 1000
+    });
+    const files = writeDeferredRequest(paths, envelope);
+    fs.rmSync(files.markerPath, { force: true });
+    let activationCalls = 0;
+    const result = await runDeferredWorker(files.requestPath, {
+      paths,
+      env: {},
+      now: () => now + 1,
+      isAlive: () => false,
+      waitParent: (options) => waitForDeferredParentExit({ ...options, graceMs: 0 }),
+      runActivation: async () => {
+        activationCalls += 1;
+        return {
+          ok: true,
+          fully_ready: true,
+          activation_epoch_id: 'epoch-post-parent-exit',
+          replacement: { ready: true, state: 'READY', admission_open: true, fully_ready: true }
+        };
+      }
+    });
+    assert.equal(result.state, 'completed');
+    assert.equal(activationCalls, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('detached worker waits for the post-tool boundary before contacting Recovery Host', async () => {
   const { root, paths } = tempPaths();
   try {

@@ -1,0 +1,396 @@
+[
+  {
+    "version": 2,
+    "task_id": "494dc119cb6c4ee6aceb6112edec95f3",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "test",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T01:54:22.814Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity tests/test_exception_group_boundary.py::ExceptionGroupBoundaryTests::test_http_pre_dispatch_boundary_never_stringifies_exception_group tests/test_live_restart_reconcile.py::LiveRestartReconcileTests::test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree -vv",
+        "status": "failed",
+        "exit_code": null,
+        "duration_ms": null,
+        "summary": "",
+        "finished_at": "2026-09-04T01:54:22.814Z"
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T01:54:22.806Z",
+    "updated_at": "2026-09-04T01:54:22.814Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:54:22.806Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:22.814Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py::EfficiencyRuntimeTests::test_workspace_context_exposes_non_secret_runtime_activation_identity tests/test_exception_group_boundary.py::ExceptionGroupBoundaryTests::test_http_pre_dispatch_boundary_never_stringifies_exception_group tests/test_live_restart_reconcile.py::LiveRestartReconcileTests::test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree -vv",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:22.814Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:54:32.296Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f591f640d4c74eac9feb9389320b28cd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "u6wmJVbsROUN3r1zwMFZ855M",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 4467,
+      "finished_at": "2026-09-04T01:54:37.083Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -k \"workspace_context_exposes_non_secret_runtime_activation_identity or http_pre_dispatch_boundary_never_stringifies_exception_group or mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\" -vv",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 4467,
+        "summary": "exit 1 | 4.5s | 215 lines | tail: '====================== 3 failed, 26 deselected in 3.31s ======================='",
+        "finished_at": "2026-09-04T01:54:37.083Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "u6wmJVbsROUN3r1zwMFZ855M"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 11597,
+          "command_id": "u6wmJVbsROUN3r1zwMFZ855M",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:u6wmJVbsROUN3r1zwMFZ855M:stdout",
+              "total_stream_bytes": 11597,
+              "total_retained_bytes": 11597,
+              "head_retained_bytes": 11597,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:u6wmJVbsROUN3r1zwMFZ855M:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T01:54:32.297Z",
+    "updated_at": "2026-09-04T01:54:37.083Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:54:32.297Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:32.721Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -k \"workspace_context_exposes_non_secret_runtime_activation_identity or http_pre_dispatch_boundary_never_stringifies_exception_group or mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\" -vv",
+          "session_id": "u6wmJVbsROUN3r1zwMFZ855M"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:37.083Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -k \"workspace_context_exposes_non_secret_runtime_activation_identity or http_pre_dispatch_boundary_never_stringifies_exception_group or mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\" -vv",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:54:45.779Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "317bfee945bc4b609ec18e3c411c901a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T01:54:52.290Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T01:54:45.780Z",
+    "updated_at": "2026-09-04T01:54:52.290Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:54:45.780Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:46.188Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"class ExceptionSafeMCPHandler|def handle_rpc|self\\.server|_touch_hub_client\" coding_tools_mcp/mcp_http_handler.py tests/test_exception_group_boundary.py",
+          "session_id": "zzJUL7GvATyD6s_Ku8cHciH1"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:46.503Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"class ExceptionSafeMCPHandler|def handle_rpc|self\\.server|_touch_hub_client\" coding_tools_mcp/mcp_http_handler.py tests/test_exception_group_boundary.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:52.290Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"_record_controller_usage_envelope_observation|runtime\\._touch_hub_client|_record_successful_rpc_contact\" coding_tools_mcp/mcp_http_handler.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:54:52.290Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:55:00.352Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "66049668f76b4299b3de97cf596ffdf2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "QmUEj-nKAFJcKmnlPQf8OvSB",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 375,
+      "finished_at": "2026-09-04T01:56:02.056Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T01:55:00.352Z",
+    "updated_at": "2026-09-04T01:56:02.056Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:55:00.352Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:00.733Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 _record_controller_usage_envelope_observation coding_tools_mcp/mcp_http_handler.py && rg -n -C 10 _touch_hub_client coding_tools_mcp/mcp_http_handler.py && rg -n -C 10 _record_successful_rpc_contact coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "PydHDAXKtv-vRrs9l3jHuRx8"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:01.058Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 _record_controller_usage_envelope_observation coding_tools_mcp/mcp_http_handler.py && rg -n -C 10 _touch_hub_client coding_tools_mcp/mcp_http_handler.py && rg -n -C 10 _record_successful_rpc_contact coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:50.587Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"durable_idempotency|reconciled|orphan|polled.get\\(\\\"ok\\\"\\)|command_control\" tests coding_tools_mcp",
+          "session_id": "LSIMq2zhDVoRIPjGu4aTtVCj"
+        }
+      },
+      {
+        "time": "2026-09-04T01:55:50.905Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"durable_idempotency|reconciled|orphan|polled.get\\(\\\"ok\\\"\\)|command_control\" tests coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:01.747Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"mark_orphan|orphan_reason|durable_idempotency|result_status|command_id\" tests/test_live_restart_reconcile.py coding_tools_mcp/job_manager.py coding_tools_mcp/runtime_background.py coding_tools_mcp/server.py coding_tools_mcp/workflow_tools.py coding_tools_mcp/task_state.py",
+          "session_id": "QmUEj-nKAFJcKmnlPQf8OvSB"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:02.056Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"mark_orphan|orphan_reason|durable_idempotency|result_status|command_id\" tests/test_live_restart_reconcile.py coding_tools_mcp/job_manager.py coding_tools_mcp/runtime_background.py coding_tools_mcp/server.py coding_tools_mcp/workflow_tools.py coding_tools_mcp/task_state.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:56:10.392Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bcadf0a3cb7b48e795de42a84d07a364",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T01:56:10.397Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T01:56:10.393Z",
+    "updated_at": "2026-09-04T01:56:10.397Z",
+    "events": [
+      {
+        "time": "2026-09-04T01:56:10.393Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:10.397Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"def _command_handle|def command_control|find_command_completion\\(command_id\\)|COMMAND_NOT_FOUND\" coding_tools_mcp/server.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T01:56:10.397Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T01:56:17.370Z",
+    "archive_reason": "finished"
+  }
+]

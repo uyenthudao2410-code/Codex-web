@@ -12,6 +12,7 @@ from .envutils import ENV_PREFIX
 from .errors import ToolFailure
 from .orchestration_control import RunContext, normalize_failure_class
 from .tool_contract import AGENT_EXECUTION_ROUTES
+from .usage_events import build_usage_event
 
 
 AGENT_EXTERNAL_REVIEW_ENV = f"{ENV_PREFIX}_EXTERNAL_REVIEW"
@@ -807,6 +808,38 @@ class AgentCandidateMixin:
 
         status = str(observation.get("status") or bridge_result.get("status") or "unknown")
 
+        economics = observation.get("economics") if isinstance(observation.get("economics"), dict) else None
+
+        if (
+            orchestration_ctx is not None
+            and str(orchestration_ctx.delegation_id or "").strip()
+            and economics is not None
+            and economics.get("measured") is True
+        ):
+            usage_event = build_usage_event(
+                run_id=orchestration_ctx.run_id,
+                wave_id=orchestration_ctx.wave_id,
+                delegation_id=orchestration_ctx.delegation_id,
+                provider_id="openai",
+                model_id=str(routing.get("model") or ""),
+                status=status,
+                source="codex_app_server:thread/tokenUsage/updated",
+                input_tokens=economics["input_tokens"],
+                cached_input_tokens=economics["cached_input_tokens"],
+                output_tokens=economics["output_tokens"],
+                reasoning_output_tokens=economics["reasoning_output_tokens"],
+                provider_cost=None,
+                total_ms=observation.get("wall_time_ms"),
+                accounting_profile="openai_compatible",
+                usage_provenance="provider_reported",
+            )
+            self.orchestration_ledger.record_usage_event(
+                run_id=orchestration_ctx.run_id,
+                wave_id=orchestration_ctx.wave_id,
+                delegation_id=orchestration_ctx.delegation_id,
+                usage_event=usage_event,
+            )
+
         if orchestration_ctx is not None:
             self.orchestration_ledger.append_event(
                 orchestration_ctx.run_id,
@@ -819,7 +852,7 @@ class AgentCandidateMixin:
                     "status": status,
                     "wall_time_ms": observation.get("wall_time_ms"),
                     "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
-                    "economics": observation.get("economics"),
+                    "economics": economics,
                 },
             )
 
@@ -831,7 +864,7 @@ class AgentCandidateMixin:
 
             "wall_time_ms": observation.get("wall_time_ms"),
 
-            "economics": observation.get("economics"),
+            "economics": economics,
 
             "deadline_hit": bool(observation.get("deadline_hit", bridge_result.get("deadline_hit", False))),
 

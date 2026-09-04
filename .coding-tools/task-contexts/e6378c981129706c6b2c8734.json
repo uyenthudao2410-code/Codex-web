@@ -1,0 +1,148 @@
+{
+  "version": 2,
+  "task_id": "7f7758310ac74cb789ebba776f29eff6",
+  "orchestration": {
+    "run_id": "eb693e309ad34ddd959173b698cf5a35",
+    "wave_id": "fbf058f50a1b4a0a9e8e1039d345683d",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+    "contract_fp": ""
+  },
+  "objective": "Complete an end-to-end workspace workflow",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "5a25248021ef6558baf5115fcdacf7fc323bf6336f2f8ee16bcebadaf883e291"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-eb693e309ad34ddd959173b698cf5a35\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-eb693e309ad34ddd959173b698cf5a35\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "eb693e309ad34ddd959173b698cf5a35",
+      "wave_id": "fbf058f50a1b4a0a9e8e1039d345683d",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "0faee146ff3a9e8a33b0a40103a781345f93fff61603576e2b500f2beed90bbf",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Complete an end-to-end workspace workflow",
+        "objective_revision": 1,
+        "objective_sha256": "a2774d289f38231ae7063d6214614b0f698c51e66301f97c0b72c27e8a8cf327",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "3cfa7788442b79c6b1a7fac6aa4357f1509e96088ac2b0a2076f83161979e933",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T22:05:23.293Z",
+  "updated_at": "2026-09-03T22:13:38.575Z",
+  "events": [
+    {
+      "time": "2026-09-03T22:05:23.293Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete an end-to-end workspace workflow"
+      }
+    },
+    {
+      "time": "2026-09-03T22:05:24.693Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:05:31.278Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T22:05:31.283Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T22:05:49.194Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "3cfa7788442b79c6b1a7fac6aa4357f1509e96088ac2b0a2076f83161979e933"
+      }
+    },
+    {
+      "time": "2026-09-03T22:05:53.879Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

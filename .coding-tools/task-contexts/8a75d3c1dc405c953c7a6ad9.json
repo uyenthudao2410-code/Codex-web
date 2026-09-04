@@ -1,0 +1,476 @@
+{
+  "version": 2,
+  "task_id": "e5dc52b18f004f929f8f4ab9ddc04aa0",
+  "orchestration": {
+    "run_id": "f41958c2ada0494184b13162856a0673",
+    "wave_id": "645fd19f9529410cba8645d118487142",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+    "contract_fp": ""
+  },
+  "objective": "Fresh live L3 controller-usage canary for the current ChatWeb turn. Immediately bind this exact current user-visible host turn to this new RUN/WAVE through the supported content-free electron_pending_host_turn correlation path. Do not mutate source files, restart runtime, or read/persist prompt or assistant bodies. Run only the read-only oracle `npm run dev:status`. Preserve controller token fields as unknown_not_zero unless exact numeric usage is observed. This canary is for live evidence only and must be terminalized after post-response inspection.",
+  "status": "stopped",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:14:44.801Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-03T16:14:44.801Z"
+    }
+  ],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "_ORXuNXJ5ktTkyCIyTnKufXi",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 706,
+    "finished_at": "2026-09-03T16:16:06.517Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 37,
+        "head_hash": "698f7faa16022ccb53bec83bc1086dce60fa850a25a4e093ced9d5f125c5fe68"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f41958c2ada0494184b13162856a0673\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f41958c2ada0494184b13162856a0673\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "f41958c2ada0494184b13162856a0673",
+      "wave_id": "645fd19f9529410cba8645d118487142",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fresh live L3 controller-usage canary for the current ChatWeb turn. Immediately bind this exact current user-visible host turn to this new RUN/WAVE through the supported content-free electron_pending_host_turn correlation path. Do not mutate source files, restart runtime, or read/persist prompt or assistant bodies. Run only the read-only oracle `npm run dev:status`. Preserve controller token fields as unknown_not_zero unless exact numeric usage is observed. This canary is for live evidence only and must be terminalized after post-response inspection.",
+        "objective_revision": 1,
+        "objective_sha256": "f88a5945b49ad1291e41173faeb0fecd8b36a54689a6d0b87c99641d46642556",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "3c896df0fe9c41808ac9bde2eed1db2b",
+          "stage_id": "check:385f51573288f6e6",
+          "status": "passed",
+          "duration_ms": 1335,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Reject this fresh scheduled-turn L3 canary as non-qualifying. The scheduled automation turn is not emitted into the integrated Electron ChatGPT DOM observer: both chatweb-host-turn-pending.json and chatweb-host-turn-binding.json are missing, the host observation journal has no record matching this RUN/WAVE, and its latest user_turn_visible is 2026-09-03T15:50:17.164Z, about 24 minutes before this RUN started at 16:14:35Z. Therefore the scheduler transport cannot supply the required <=120s electron_pending_host_turn receipt. Preserve controller usage as unknown_not_zero and do not splice this canary into L4.",
+      "event_seq": 37767
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "fb4c7d623c5323382fcf3993c5b39d941bf6fb6d5f0ee134f0652faf33581d15",
+  "completion_report_acknowledged_id": "fb4c7d623c5323382fcf3993c5b39d941bf6fb6d5f0ee134f0652faf33581d15",
+  "completion_report_acknowledged_at": "2026-09-03T16:18:51.896Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T16:14:35.146Z",
+  "updated_at": "2026-09-03T16:18:51.900Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:14:35.146Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fresh live L3 controller-usage canary for the current ChatWeb turn. Immediately bind this exact current user-visible host turn to this new RUN/WAVE through the supported content-free electron_pending_host_turn correlation path. Do not mutate source files, restart runtime, or read/persist prompt or assistant bodies. Run only the read-only oracle `npm run dev:status`. Preserve controller token fields as unknown_not_zero unless exact numeric usage is observed. This canary is for live evidence only and must be terminalized after post-response inspection."
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:36.607Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:38.922Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:40.514Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:40.520Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:42.179Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:42.886Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:43.821Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status",
+        "session_id": "RVTIOSgVcrk_6BRRU8Fo_s_e"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:44.421Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:44.799Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:44.801Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:45.191Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:45.192Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:45.273Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "77364ae7b14d14d43fe101cfc0bdee30478f66fd5b99a744b1e6144e14f762f0"
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:45.478Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T16:14:59.948Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:15:36.497Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('.coding-tools/evaluation/chatweb-host-turn-pending.json','.coding-tools/evaluation/chatweb-host-turn-binding.json'); foreach($p in $paths){ if(Test-Path $p){ $j=Get-Content $p -Raw | ConvertFrom-Json; [pscustomobject]@{path=$p;schema_version=$j.schema_version;trace_id=$j.trace_id;turn_id=$j.turn_id;run_id=$j.run_id;wave_id=$j.wave_id;claimed_at=$j.claimed_at;expires_at=$j.expires_at;source=$j.source;measurement=$j.measurement} | ConvertTo-Json -Compress ",
+        "session_id": "QHF8raLbCNi_iEGSRY5e5b5W"
+      }
+    },
+    {
+      "time": "2026-09-03T16:15:37.131Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('.coding-tools/evaluation/chatweb-host-turn-pending.json','.coding-tools/evaluation/chatweb-host-turn-binding.json'); foreach($p in $paths){ if(Test-Path $p){ $j=Get-Content $p -Raw | ConvertFrom-Json; [pscustomobject]@{path=$p;schema_version=$j.schema_version;trace_id=$j.trace_id;turn_id=$j.turn_id;run_id=$j.run_id;wave_id=$j.wave_id;claimed_at=$j.claimed_at;expires_at=$j.expires_at;source=$j.source;measurement=$j.measurement} | ConvertTo-Json -Compress ",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:15:49.895Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:15:51.339Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/evaluation/chatweb-host-observations.jsonl' -Tail 40 | ForEach-Object { try { $j=$_ | ConvertFrom-Json; [pscustomobject]@{schema_version=$j.schema_version;event_type=$j.event_type;trace_id=$j.trace_id;turn_id=$j.turn_id;run_id=$j.run_id;wave_id=$j.wave_id;usage_id=$j.usage_id;input_tokens=$j.input_tokens;cached_input_tokens=$j.cached_input_tokens;output_tokens=$j.output_tokens;reasoning_output_tokens=$j.reasoning_output_tokens;measuremen",
+        "session_id": "3uvuvIHTYpZwX2Wx67ZxfB52"
+      }
+    },
+    {
+      "time": "2026-09-03T16:15:52.111Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/evaluation/chatweb-host-observations.jsonl' -Tail 40 | ForEach-Object { try { $j=$_ | ConvertFrom-Json; [pscustomobject]@{schema_version=$j.schema_version;event_type=$j.event_type;trace_id=$j.trace_id;turn_id=$j.turn_id;run_id=$j.run_id;wave_id=$j.wave_id;usage_id=$j.usage_id;input_tokens=$j.input_tokens;cached_input_tokens=$j.cached_input_tokens;output_tokens=$j.output_tokens;reasoning_output_tokens=$j.reasoning_output_tokens;measuremen",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:04.806Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:05.920Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"[DateTimeOffset]::FromUnixTimeMilliseconds([int64]1788450617164).UtcDateTime.ToString('o')\"",
+        "session_id": "_ORXuNXJ5ktTkyCIyTnKufXi"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:06.517Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"[DateTimeOffset]::FromUnixTimeMilliseconds([int64]1788450617164).UtcDateTime.ToString('o')\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:23.632Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:24.097Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "77364ae7b14d14d43fe101cfc0bdee30478f66fd5b99a744b1e6144e14f762f0"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:33.959Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:35.804Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:35.807Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:35.913Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "cdcea9f491a1734ea1328a0eefb625f1942e92ab166df33f5e2a802c541ee788"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:42.937Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:52.001Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "cdcea9f491a1734ea1328a0eefb625f1942e92ab166df33f5e2a802c541ee788"
+      }
+    },
+    {
+      "time": "2026-09-03T16:16:58.530Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:17:00.454Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "fb4c7d623c5323382fcf3993c5b39d941bf6fb6d5f0ee134f0652faf33581d15"
+      }
+    },
+    {
+      "time": "2026-09-03T16:18:41.656Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:18:51.896Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fb4c7d623c5323382fcf3993c5b39d941bf6fb6d5f0ee134f0652faf33581d15"
+      }
+    }
+  ]
+}

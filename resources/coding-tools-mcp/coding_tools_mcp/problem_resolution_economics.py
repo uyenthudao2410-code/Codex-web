@@ -22,11 +22,27 @@ from .problem_lineage import (
     problem_event_hash_material,
     problem_outcome_receipt_id,
 )
+from .problem_resolution_journey import problem_revision_journeys
 
 
-PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 5
+PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 6
 _ACTIVE_STAGES = frozenset({"preflight", "localization", "routing", "execution", "replan", "proof", "acceptance"})
 _ADMINISTRATIVE_RELATIONS = frozenset({"BLOCK", "ABANDON"})
+_FACT_LIMITS = {
+    "problem_threads": 5_000,
+    "problem_revisions": 5_000,
+    "problem_events": 50_000,
+    "controller_knowledge_checkpoints": 20_000,
+    "controller_knowledge_acks": 20_000,
+    "controller_reattach_receipts": 20_000,
+    "handoff_capsules": 20_000,
+}
+_OPTIONAL_FACT_TABLES = (
+    "controller_knowledge_checkpoints",
+    "controller_knowledge_acks",
+    "controller_reattach_receipts",
+    "handoff_capsules",
+)
 
 
 def _text(value: Any) -> str:
@@ -71,12 +87,27 @@ class ProblemLineageFacts:
     events to a later revision.
     """
 
-    def __init__(self, *, schema_version: int, threads: list[dict[str, Any]], revisions: list[dict[str, Any]], events: list[dict[str, Any]], fact_load_statements: int) -> None:
+    def __init__(
+        self,
+        *,
+        schema_version: int,
+        threads: list[dict[str, Any]],
+        revisions: list[dict[str, Any]],
+        events: list[dict[str, Any]],
+        fact_load_statements: int,
+        optional_facts: dict[str, list[dict[str, Any]]] | None = None,
+        available_fact_tables: set[str] | None = None,
+        truncated_tables: set[str] | None = None,
+    ) -> None:
         self.schema_version = schema_version
         self.threads = threads
         self.revisions = revisions
         self.events = events
         self.fact_load_statements = fact_load_statements
+        self.fact_limits = dict(_FACT_LIMITS)
+        self.available_fact_tables = frozenset(available_fact_tables or set())
+        self.truncated_tables = frozenset(truncated_tables or set())
+        self._optional_facts = {name: list(rows) for name, rows in (optional_facts or {}).items()}
         self._events_by_problem: dict[str, list[dict[str, Any]]] = defaultdict(list)
         self._events_by_revision: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
         self._revisions_by_problem: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -100,16 +131,52 @@ class ProblemLineageFacts:
 
     @classmethod
     def load(cls, reader: LedgerReadSession) -> "ProblemLineageFacts":
+        statement_start = reader.statement_count
         row = reader.one("PRAGMA user_version")
         schema = int(row[0] if row is not None else 0)
         if schema != PROBLEM_SCHEMA_VERSION:
-            return cls(schema_version=schema, threads=[], revisions=[], events=[], fact_load_statements=1)
+            return cls(
+                schema_version=schema,
+                threads=[],
+                revisions=[],
+                events=[],
+                fact_load_statements=reader.statement_count - statement_start,
+            )
+
+        truncated: set[str] = set()
+
+        def bounded_rows(table: str, order_by: str) -> list[dict[str, Any]]:
+            limit = _FACT_LIMITS[table]
+            rows = reader.rows(f"SELECT * FROM {table} ORDER BY {order_by} LIMIT ?", (limit + 1,))
+            if len(rows) > limit:
+                truncated.add(table)
+            return [dict(item) for item in rows[:limit]]
+
+        available_rows = reader.rows(
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name IN (?,?,?,?) ORDER BY name",
+            _OPTIONAL_FACT_TABLES,
+        )
+        available = {str(item["name"]) for item in available_rows}
+        optional: dict[str, list[dict[str, Any]]] = {}
+        optional_order = {
+            "controller_knowledge_checkpoints": "problem_id,problem_revision,knowledge_revision,checkpoint_id",
+            "controller_knowledge_acks": "problem_id,problem_revision,created_at,ack_id",
+            "controller_reattach_receipts": "problem_id,problem_revision,generation,reattach_id",
+            "handoff_capsules": "run_id,conversation_epoch,created_at,capsule_id",
+        }
+        for table in _OPTIONAL_FACT_TABLES:
+            if table in available:
+                optional[table] = bounded_rows(table, optional_order[table])
         return cls(
             schema_version=schema,
-            threads=[dict(row) for row in reader.rows("SELECT * FROM problem_threads ORDER BY problem_id")],
-            revisions=[dict(row) for row in reader.rows("SELECT * FROM problem_revisions ORDER BY problem_id,revision")],
-            events=[_fact_event(row) for row in reader.rows("SELECT * FROM problem_events ORDER BY problem_id,seq")],
-            fact_load_statements=4,
+            threads=bounded_rows("problem_threads", "problem_id"),
+            revisions=bounded_rows("problem_revisions", "problem_id,revision"),
+            events=[_fact_event(item) for item in bounded_rows("problem_events", "problem_id,seq")],
+            fact_load_statements=reader.statement_count - statement_start,
+            optional_facts=optional,
+            available_fact_tables=available,
+            truncated_tables=truncated,
         )
 
     def events_for_problem(self, problem_id: str) -> list[dict[str, Any]]:
@@ -120,6 +187,9 @@ class ProblemLineageFacts:
 
     def revisions_for_problem(self, problem_id: str) -> list[dict[str, Any]]:
         return list(self._revisions_by_problem.get(problem_id, ()))
+
+    def optional_rows(self, table: str) -> list[dict[str, Any]]:
+        return list(self._optional_facts.get(table, ()))
 
     def verify_chain(self, problem_id: str) -> dict[str, Any]:
         previous = ""
@@ -283,16 +353,48 @@ def _classify_duration(start: dict[str, Any] | None, target: dict[str, Any] | No
     return ("observed", value, None) if value is not None else ("missing", None, reason)
 
 
+def _revision_time_value(outcome: str, value: float | None, reason: str | None, *, definition: str) -> dict[str, Any]:
+    status = {
+        "observed": "OBSERVED",
+        "censored": "RIGHT_CENSORED",
+        "competing": "COMPETING_DISPOSITION",
+        "missing": "UNAVAILABLE",
+    }.get(outcome, "UNAVAILABLE")
+    return {
+        "status": status,
+        "value_ms": round(float(value), 6) if value is not None else None,
+        "definition": definition,
+        "missing_reason": reason if status == "UNAVAILABLE" else None,
+        "unknown_is_not_zero": True,
+    }
+
+
 def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLineageFacts) -> dict[str, Any]:
     if not isinstance(ledger, LedgerFacts) or not isinstance(problems, ProblemLineageFacts):
         raise TypeError("problem-resolution economics requires immutable LedgerFacts and ProblemLineageFacts")
     if problems.schema_version != PROBLEM_SCHEMA_VERSION:
         return {"schema_version": PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION, "status": "PRL_SCHEMA_INACTIVE", "observed_schema_version": problems.schema_version, "policy": {"no_writer": True, "no_historical_backfill": True, "unknown_is_not_zero": True}}
+    if problems.truncated_tables:
+        return {
+            "schema_version": PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION,
+            "status": "FACT_WINDOW_TRUNCATED",
+            "truncated_tables": sorted(problems.truncated_tables),
+            "fact_limits": dict(problems.fact_limits),
+            "policy": {
+                "no_partial_causal_or_economic_projection": True,
+                "no_writer": True,
+                "unknown_is_not_zero": True,
+            },
+        }
 
     values: dict[str, list[float]] = {"provisional": [], "confirmed": [], "administrative": [], "interval_width": [], "active": []}
     missing: dict[str, Counter[str]] = {key: Counter() for key in values}
-    censored: Counter[str] = Counter(); competing: Counter[str] = Counter(); revision_outcomes = Counter()
-    intervals: list[dict[str, float]] = []; wall_intervals: list[dict[str, float]] = []
+    censored: Counter[str] = Counter()
+    competing: Counter[str] = Counter()
+    revision_outcomes = Counter()
+    intervals: list[dict[str, float]] = []
+    wall_intervals: list[dict[str, float]] = []
+    time_facts: list[dict[str, Any]] = []
     chain_invalid = exact_links = coverage_complete = receipt_bound_confirmations = 0
     thread_states = Counter(_text(thread.get("resolution_state")) or "UNKNOWN" for thread in problems.threads)
 
@@ -305,27 +407,71 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
             chain_invalid += 1
             for key in ("provisional", "confirmed", "administrative", "interval_width"):
                 missing[key]["problem_event_chain_invalid"] += 1
+            time_facts.append(
+                {
+                    "problem_id": problem_id,
+                    "problem_revision": number,
+                    "ttoc_wall_ms": _revision_time_value(
+                        "missing",
+                        None,
+                        "problem_event_chain_invalid",
+                        definition="attested revision start to authoritative confirmation; not exact real-world resolution",
+                    ),
+                    "ttpr_wall_interval": {
+                        "status": "UNAVAILABLE",
+                        "lower_bound_ms": None,
+                        "upper_bound_ms": None,
+                        "missing_reason": "problem_event_chain_invalid",
+                        "unknown_is_not_zero": True,
+                    },
+                    "restricted_ttpr_active_ms": _revision_time_value(
+                        "missing",
+                        None,
+                        "problem_event_chain_invalid",
+                        definition="union of exact-primary-run active intervals in one clock domain",
+                    ),
+                }
+            )
             continue
         start, start_reason = _revision_start_event(revision, events)
         provisional, confirmed = _first_relation(events, "PROVISIONAL_RESOLUTION"), _first_relation(events, "CONFIRMED_RESOLUTION")
         disposition = _administrative_disposition(revision, events, problems.revisions_for_problem(problem_id), problems)
+        revision_time: dict[str, Any] = {"problem_id": problem_id, "problem_revision": number}
         for key, target in (("provisional", provisional), ("confirmed", confirmed), ("administrative", disposition)):
             outcome, duration, reason = _classify_duration(start, target, disposition if key != "administrative" else None)
-            if outcome == "observed": values[key].append(float(duration))
-            elif outcome == "censored": censored[key] += 1
-            elif outcome == "competing": competing[key] += 1
-            else: missing[key][reason or start_reason or "unknown"] += 1
-        if provisional is not None: revision_outcomes["technical_full_pass_observed"] += 1
-        if confirmed is not None: revision_outcomes["authoritative_confirmation_observed"] += 1
+            if outcome == "observed":
+                values[key].append(float(duration))
+            elif outcome == "censored":
+                censored[key] += 1
+            elif outcome == "competing":
+                competing[key] += 1
+            else:
+                missing[key][reason or start_reason or "unknown"] += 1
+            if key == "confirmed":
+                revision_time["ttoc_wall_ms"] = _revision_time_value(
+                    outcome,
+                    duration,
+                    reason or start_reason,
+                    definition="attested revision start to authoritative confirmation; not exact real-world resolution",
+                )
+        if provisional is not None:
+            revision_outcomes["technical_full_pass_observed"] += 1
+        interval_outcome = "censored"
+        interval_reason: str | None = None
+        if confirmed is not None:
+            revision_outcomes["authoritative_confirmation_observed"] += 1
         if confirmed is not None and _independent_outcome_receipt_bound(confirmed):
             receipt_bound_confirmations += 1
-        if provisional is not None and confirmed is not None: revision_outcomes["trusted_resolution_observed"] += 1
-        if disposition is not None: revision_outcomes["administrative_disposition_observed"] += 1
+        if provisional is not None and confirmed is not None:
+            revision_outcomes["trusted_resolution_observed"] += 1
+        if disposition is not None:
+            revision_outcomes["administrative_disposition_observed"] += 1
         if confirmed is not None:
             contradictory = max((int(event.get("seq") or 0) for event in events if _current_eligible(event) and _text(event.get("relation_type")) in {"REOPEN", "BLOCK", "ABANDON"} and int(event.get("seq") or 0) < int(confirmed.get("seq") or 0)), default=-1)
             candidates = [event for event in events if _current_eligible(event) and _text(event.get("relation_type")) == "PROVISIONAL_RESOLUTION" and contradictory < int(event.get("seq") or 0) < int(confirmed.get("seq") or 0)]
             lower = candidates[-1] if candidates else None
             outcome, width, reason = _classify_duration(lower, confirmed, disposition)
+            interval_outcome, interval_reason = outcome, reason
             if outcome == "observed":
                 values["interval_width"].append(float(width))
                 lower_from_start, _ = _elapsed_ms(start or {}, lower)
@@ -333,17 +479,60 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
                 if lower_from_start is not None and upper_from_start is not None:
                     intervals.append({"lower_bound_from_start_ms": lower_from_start, "upper_bound_from_start_ms": upper_from_start, "width_ms": float(width)})
                     wall_intervals.append({"lower_bound_ms": lower_from_start, "upper_bound_ms": upper_from_start, "width_ms": float(width)})
-            elif outcome == "censored": censored["interval_width"] += 1
-            elif outcome == "competing": competing["interval_width"] += 1
-            else: missing["interval_width"][reason or "technical_full_pass_before_confirmation_missing"] += 1
+                    revision_time["ttpr_wall_interval"] = {
+                        "status": "OBSERVED_INTERVAL_CENSORED",
+                        "lower_bound_ms": lower_from_start,
+                        "upper_bound_ms": upper_from_start,
+                        "width_ms": float(width),
+                        "confirmation_is_not_exact_resolution_time": True,
+                        "missing_reason": None,
+                        "unknown_is_not_zero": True,
+                    }
+            elif outcome == "censored":
+                censored["interval_width"] += 1
+            elif outcome == "competing":
+                competing["interval_width"] += 1
+            else:
+                missing["interval_width"][reason or "technical_full_pass_before_confirmation_missing"] += 1
         elif disposition is not None:
+            interval_outcome = "competing"
             competing["interval_width"] += 1
         else:
             censored["interval_width"] += 1
+        if "ttpr_wall_interval" not in revision_time:
+            interval_status = {
+                "censored": "RIGHT_CENSORED",
+                "competing": "COMPETING_DISPOSITION",
+                "missing": "UNAVAILABLE",
+            }.get(interval_outcome, "UNAVAILABLE")
+            revision_time["ttpr_wall_interval"] = {
+                "status": interval_status,
+                "lower_bound_ms": None,
+                "upper_bound_ms": None,
+                "width_ms": None,
+                "missing_reason": interval_reason if interval_status == "UNAVAILABLE" else None,
+                "confirmation_is_not_exact_resolution_time": True,
+                "unknown_is_not_zero": True,
+            }
         run_ids = _primary_runs(ledger, problem_id, number, events)
         active, active_reason = _restricted_active_ms(ledger, run_ids)
-        if active is None: missing["active"][active_reason or "unknown"] += 1
-        else: values["active"].append(active)
+        if active is None:
+            missing["active"][active_reason or "unknown"] += 1
+            revision_time["restricted_ttpr_active_ms"] = _revision_time_value(
+                "missing",
+                None,
+                active_reason or "unknown",
+                definition="union of exact-primary-run active intervals in one clock domain",
+            )
+        else:
+            values["active"].append(active)
+            revision_time["restricted_ttpr_active_ms"] = _revision_time_value(
+                "observed",
+                active,
+                None,
+                definition="union of exact-primary-run active intervals in one clock domain",
+            )
+        time_facts.append(revision_time)
         exact_links += sum(1 for event in events if _text(event.get("link_status")) == "EXACT")
         for run_id in run_ids:
             coverage_complete += sum(1 for wave in ledger.list_waves(run_id) if isinstance(wave.get("metadata"), dict) and isinstance(wave["metadata"].get("problem_resolution"), dict) and isinstance(wave["metadata"]["problem_resolution"].get("coverage_manifest"), dict))
@@ -437,6 +626,12 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
         },
         "control_friction_decomposition": {"unit": "wave_replanned_event", "counts": dict(sorted(control_friction.items())), "classification": "descriptive_structured_reason_only", "unknown_is_not_zero": True},
     }
+    journeys = problem_revision_journeys(
+        ledger,
+        problems,
+        time_facts=time_facts,
+        receipt_bound=_independent_outcome_receipt_bound,
+    )
     return {
         "schema_version": PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION, "problem_schema_version": problems.schema_version,
         "status": "DESCRIPTIVE_ONLY" if current_events else "NO_CURRENT_PRL_EVENTS",
@@ -450,4 +645,5 @@ def problem_resolution_economics_report(ledger: LedgerFacts, problems: ProblemLi
         "mechanics_coverage": {"exact_revision_binding_events": exact_links, "full_claim_waves_with_structural_manifest": coverage_complete, "receipt_bound_outcome_confirmations": receipt_bound_confirmations, "outcome_observation_requires_authoritative_transition": True, "legacy_schema_events_policy_ineligible": True},
         "policy": {"read_only_immutable_snapshot_required": True, "no_writer_or_schema_mutation": True, "no_raw_prompt_response_or_transcript": True, "no_timestamp_proximity_link": True, "no_historical_causal_backfill": True, "silence_is_censored": True, "administrative_disposition_not_success": True, "automatic_policy_promotion": False},
         "revision_4_metrics": revision_metrics,
+        "problem_revision_journeys": journeys,
     }

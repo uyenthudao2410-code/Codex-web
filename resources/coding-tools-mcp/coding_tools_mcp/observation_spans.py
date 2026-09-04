@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from .context_observability import controller_knowledge_for_run
+
 
 def _bounded_text(value: Any, limit: int) -> str:
     text = str(value or "")
@@ -13,7 +15,8 @@ class ObservationSpanLedgerMixin:
     """Own content-free observation-span recording and critical-path analysis."""
 
     def record_observation_span(self, *, run_id: str, span: dict[str, Any], wave_id: str = "") -> dict[str, Any]:
-        if self.get_run(run_id) is None:
+        run = self.get_run(run_id)
+        if run is None:
             raise ValueError("observation span run was not found")
         if wave_id and not any(str(item.get("wave_id") or "") == wave_id for item in self.list_waves(run_id)):
             raise ValueError("observation span wave does not belong to the run")
@@ -62,10 +65,26 @@ class ObservationSpanLedgerMixin:
 
         existing = next((item for item in self.list_observation_spans(run_id) if item.get("span_id") == span_id), None)
         if existing is not None:
-            comparable = {key: value for key, value in existing.items() if key not in {"seq", "event_time"}}
+            comparable = {
+                key: value
+                for key, value in existing.items()
+                if key not in {"seq", "event_time", "controller_knowledge_at_observation"}
+            }
             if comparable != payload:
                 raise ValueError("observation span_id already exists with different evidence")
             return {**existing, "recorded": False}
+
+        if (
+            payload.get("source") == "electron_chatgpt_dom"
+            and payload.get("observer_plane") == "electron_chatgpt_dom"
+            and payload.get("trace_id")
+            and payload.get("turn_id")
+        ):
+            payload["controller_knowledge_at_observation"] = controller_knowledge_for_run(
+                self,
+                run_id,
+                run=run,
+            )
 
         event = self.append_event(run_id, wave_id=wave_id or None, event_type="observation_span_recorded", payload=payload)
         return {**payload, "recorded": True, "seq": event["seq"], "event_time": event["event_time"]}

@@ -1,0 +1,68 @@
+[
+  {
+    "version": 2,
+    "task_id": "367b60712a3d4651a5e293853b78036f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "k8pYPMNmBrGxBQepyYiT_W8S",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 1749,
+      "finished_at": "2026-09-03T20:45:52.048Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T20:45:11.789Z",
+    "updated_at": "2026-09-03T20:45:52.048Z",
+    "events": [
+      {
+        "time": "2026-09-03T20:45:11.789Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T20:45:12.248Z",
+        "event": "command_started",
+        "details": {
+          "command": "target\\debug\\webcodex.exe run --root \"E:\\DEV\\Codex-web\" --profile personal --state-dir \"C:\\Users\\Admin\\AppData\\Local\\WebCodex\\g4-semantic\\codex-web\"",
+          "session_id": "1f7ncVFppsjYvyPlIBbAcpwu"
+        }
+      },
+      {
+        "time": "2026-09-03T20:45:50.430Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$root=42584; $l=Get-NetTCPConnection -LocalPort 26690 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if(-not $l){'LISTENER=none'; exit 2}; $pid=[int]$l.OwningProcess; $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$pid) -ErrorAction SilentlyContinue; $parent=if($p){[int]$p.ParentProcessId}else{0}; $pp=if($parent){Get-CimInstance Win32_Process -Filter ('ProcessId='+$parent) -ErrorAction SilentlyContinue}else{$null}; $owned=($pid -",
+          "session_id": "k8pYPMNmBrGxBQepyYiT_W8S"
+        }
+      },
+      {
+        "time": "2026-09-03T20:45:52.048Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -Command \"$root=42584; $l=Get-NetTCPConnection -LocalPort 26690 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if(-not $l){'LISTENER=none'; exit 2}; $pid=[int]$l.OwningProcess; $p=Get-CimInstance Win32_Process -Filter ('ProcessId='+$pid) -ErrorAction SilentlyContinue; $parent=if($p){[int]$p.ParentProcessId}else{0}; $pp=if($parent){Get-CimInstance Win32_Process -Filter ('ProcessId='+$parent) -ErrorAction SilentlyContinue}else{$null}; $owned=($pid -",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T20:46:03.743Z",
+    "archive_reason": "finished"
+  }
+]

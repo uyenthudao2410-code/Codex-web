@@ -221,6 +221,9 @@ function truthShort(value, fallback = 'UNKNOWN') {
 }
 
 function renderTruthConsole(truthSnapshot) {
+  // Truth Console UI removed: keep panel focused on token/routing + coordination.
+  // Backend truth_snapshot stays authoritative; skip DOM work when section is absent.
+  if (!document.getElementById('truthConsole')) return;
   const truth = truthSnapshot && typeof truthSnapshot === 'object' ? truthSnapshot : {};
   const source = truth.source || {};
   const runtime = truth.runtime || {};

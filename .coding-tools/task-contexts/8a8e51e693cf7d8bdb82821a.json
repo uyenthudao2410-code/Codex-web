@@ -1,0 +1,202 @@
+{
+  "version": 2,
+  "task_id": "e3eb4333ca42457092d92f7b6f685793",
+  "orchestration": {
+    "run_id": "2e61f7e6a19647fd9fdf6fe781a060ae",
+    "wave_id": "9908f5a97e1548b99dc75f4d15091bdb",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+    "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnosis of the remaining L3 structured controller-usage transport gap in E:\\DEV\\Codex-web. Determine the smallest causal repair that can produce exact numeric controller usage for an already content-free bound interactive ChatWeb turn without reading or persisting prompt/assistant bodies. Focus on the Electron host observation journal, pending-host-turn claim/binding path, CDP/debugger structured usage extraction, post-response observation flow, and handoff into MCP controller_usage events. Do not mutate source, restart runtime, or create synthetic usage. Distinguish the separate finding that scheduled automation turns are not DOM-visible from the actual structured-usage extraction/transport path used by interactive turns.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "BN37AzEUooEFBVwe2P4SuaHW",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 938,
+    "finished_at": "2026-09-03T16:20:03.942Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 12,
+        "head_hash": "16e553c29ad50f6051d5362fe80a46f6cd6ce5b78c9f4ac79b7fe7873d10e715"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2e61f7e6a19647fd9fdf6fe781a060ae\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2e61f7e6a19647fd9fdf6fe781a060ae\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "2e61f7e6a19647fd9fdf6fe781a060ae",
+      "wave_id": "9908f5a97e1548b99dc75f4d15091bdb",
+      "checkpoint_id": "",
+      "base_head": "80aceb583202ad381c25687969fb48adbf74622c",
+      "worktree_fp": "6e9a91755453f579b1b44200b78043fb1794a60c0b9770d93484d0c428df5dd2",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only diagnosis of the remaining L3 structured controller-usage transport gap in E:\\DEV\\Codex-web. Determine the smallest causal repair that can produce exact numeric controller usage for an already content-free bound interactive ChatWeb turn without reading or persisting prompt/assistant bodies. Focus on the Electron host observation journal, pending-host-turn claim/binding path, CDP/debugger structured usage extraction, post-response observation flow, and handoff into MCP controller_usage events. Do not mutate source, restart runtime, or create synthetic usage. Distinguish the separate finding that scheduled automation turns are not DOM-visible from the actual structured-usage extraction/transport path used by interactive turns.",
+        "objective_revision": 1,
+        "objective_sha256": "a0680402132992670e8e853de2bf7fea92f1c31380288679d3e488c7e2510ffc",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "b0ab8ff47a0978f9e736d950080ecd1959e06d2f8503ce40dcae09a0698cad0f",
+  "completion_report_acknowledged_id": "b0ab8ff47a0978f9e736d950080ecd1959e06d2f8503ce40dcae09a0698cad0f",
+  "completion_report_acknowledged_at": "2026-09-03T16:21:29.986Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-03T16:17:45.372Z",
+  "updated_at": "2026-09-03T16:21:29.989Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:17:45.372Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnosis of the remaining L3 structured controller-usage transport gap in E:\\DEV\\Codex-web. Determine the smallest causal repair that can produce exact numeric controller usage for an already content-free bound interactive ChatWeb turn without reading or persisting prompt/assistant bodies. Focus on the Electron host observation journal, pending-host-turn claim/binding path, CDP/debugger structured usage extraction, post-response observation flow, and handoff into MCP controller_usage events. Do not mutate source, restart runtime, or create synthetic usage. Distinguish the separate finding that scheduled automation turns are not DOM-visible from the actual structured-usage extraction/transport path used by interactive turns."
+      }
+    },
+    {
+      "time": "2026-09-03T16:17:46.702Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:17:48.811Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-03T16:17:48.817Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T16:19:09.666Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-03T16:19:30.271Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log'; Get-Content $p -Tail 1200 | ForEach-Object { try { $j=$_ | ConvertFrom-Json; $stage=[string]$j.meta.stage; $msg=[string]$j.message; if($stage -like 'chat-evaluation*' -or $msg -match 'structured-usage|evaluation telemetry|controller telemetry'){ [pscustomobject]@{time=$j.time;level=$j.level;stage=$stage;message=$msg;code=$j.meta.code;error=$j.meta.error;timeout_ms=$j.meta.timeout_ms} | ConvertTo-Jso",
+        "session_id": "lYWCCPUdS8HfABAxtFaE9gYb"
+      }
+    },
+    {
+      "time": "2026-09-03T16:19:31.189Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log'; Get-Content $p -Tail 1200 | ForEach-Object { try { $j=$_ | ConvertFrom-Json; $stage=[string]$j.meta.stage; $msg=[string]$j.message; if($stage -like 'chat-evaluation*' -or $msg -match 'structured-usage|evaluation telemetry|controller telemetry'){ [pscustomobject]@{time=$j.time;level=$j.level;stage=$stage;message=$msg;code=$j.meta.code;error=$j.meta.error;timeout_ms=$j.meta.timeout_ms} | ConvertTo-Jso",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:20:03.287Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content 'package.json' -Raw | ConvertFrom-Json; [pscustomobject]@{electron=$j.devDependencies.electron;node=$j.engines.node} | ConvertTo-Json -Compress; Select-String -Path 'electron/*.js' -Pattern 'contextBridge.executeInMainWorld|executeInMainWorld' | ForEach-Object { ('{0}:{1}: {2}' -f $_.Path,$_.LineNumber,$_.Line.Trim()) }\"",
+        "session_id": "BN37AzEUooEFBVwe2P4SuaHW"
+      }
+    },
+    {
+      "time": "2026-09-03T16:20:03.943Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content 'package.json' -Raw | ConvertFrom-Json; [pscustomobject]@{electron=$j.devDependencies.electron;node=$j.engines.node} | ConvertTo-Json -Compress; Select-String -Path 'electron/*.js' -Pattern 'contextBridge.executeInMainWorld|executeInMainWorld' | ForEach-Object { ('{0}:{1}: {2}' -f $_.Path,$_.LineNumber,$_.Line.Trim()) }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-03T16:20:31.678Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "b0ab8ff47a0978f9e736d950080ecd1959e06d2f8503ce40dcae09a0698cad0f"
+      }
+    },
+    {
+      "time": "2026-09-03T16:20:37.807Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-03T16:21:29.986Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b0ab8ff47a0978f9e736d950080ecd1959e06d2f8503ce40dcae09a0698cad0f"
+      }
+    }
+  ]
+}

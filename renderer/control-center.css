@@ -340,6 +340,29 @@ body[data-theme="dark"] {
 .cc-key-value span { color: var(--cc-subtle); font-size: 8px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; }
 .cc-key-value b { overflow-wrap: anywhere; color: var(--cc-text); font-size: 10px; font-weight: 600; }
 
+.cc-goal-continuity-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .85fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+.cc-goal-summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cc-goal-next {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--cc-blue) 25%, var(--cc-border));
+  border-radius: 10px;
+  background: var(--cc-blue-soft);
+}
+.cc-goal-next span { color: var(--cc-blue); font-size: 8px; font-weight: 850; letter-spacing: .7px; }
+.cc-goal-next b { color: var(--cc-text); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
+.cc-goal-next small { color: var(--cc-muted); font-size: 9px; line-height: 1.4; }
+.cc-continuity-facts { display: grid; gap: 10px; }
+.cc-continuity-facts .cc-key-value { gap: 2px; padding-bottom: 8px; }
+.cc-continuity-facts .cc-detail { margin-top: 2px; }
+
 .cc-bottom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
 .cc-evidence-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cc-evidence-stat { padding: 12px; border: 1px solid var(--cc-border); border-radius: 10px; background: var(--cc-surface-soft); }
@@ -405,7 +428,7 @@ body[data-theme="dark"] {
 
 @media (max-width: 1050px) {
   .cc-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .cc-workbench, .routing-layout { grid-template-columns: minmax(0, 1fr); }
+  .cc-workbench, .routing-layout, .cc-goal-continuity-grid { grid-template-columns: minmax(0, 1fr); }
   .cc-side-stack { grid-template-columns: 1fr 1fr; }
 }
 
@@ -424,7 +447,7 @@ body[data-theme="dark"] {
 }
 
 @media (max-width: 760px) {
-  .cc-kpi-grid, .cc-client-grid, .cc-evidence-summary, .cc-action-grid { grid-template-columns: 1fr; }
+  .cc-kpi-grid, .cc-client-grid, .cc-evidence-summary, .cc-action-grid, .cc-goal-summary-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

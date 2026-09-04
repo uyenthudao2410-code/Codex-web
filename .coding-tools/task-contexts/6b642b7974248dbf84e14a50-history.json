@@ -1,0 +1,67 @@
+[
+  {
+    "version": 2,
+    "task_id": "4e6dcf6ea0934d19a299e067f128bf95",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T07:21:22.675Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-04T07:21:11.094Z",
+    "updated_at": "2026-09-04T07:21:22.675Z",
+    "events": [
+      {
+        "time": "2026-09-04T07:21:11.094Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-04T07:21:11.101Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T07:21:22.675Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --stat -- resources/coding-tools-mcp/coding_tools_mcp/controller_usage_ingress.py resources/coding-tools-mcp/coding_tools_mcp/usage_ledger.py resources/coding-tools-mcp/coding_tools_mcp/usage_pricing.py resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py resources/coding-tools-mcp/coding_tools_mcp/performance_trace.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mc",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T07:21:22.675Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T07:21:32.029Z",
+    "archive_reason": "finished"
+  }
+]

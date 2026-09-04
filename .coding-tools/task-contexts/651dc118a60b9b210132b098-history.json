@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "17381dff0f4c41df9b2f632a85c3ca7d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ZW8oMotxuj11OiflkSQSXHwj",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 362,
+      "finished_at": "2026-09-03T21:12:16.612Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-03T21:12:06.079Z",
+    "updated_at": "2026-09-03T21:12:16.612Z",
+    "events": [
+      {
+        "time": "2026-09-03T21:12:06.079Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T21:12:06.483Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py','resources/coding-tools-mcp/tests/test_task_state_and_build.py','docs/CURRENT_STATE.md'); Get-FileHash -Algorithm SHA256 $paths | ForEach-Object { '{0} {1}' -f ($_.Path.Substring((Get-Location).Path.Length+1).Replace('\\\\','/')),$_.Hash.ToLowerInvariant() }\"",
+          "session_id": "-nrOIIlMfqMLa8u0Y6nDI7Wt"
+        }
+      },
+      {
+        "time": "2026-09-03T21:12:07.079Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$paths=@('resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py','resources/coding-tools-mcp/tests/test_task_state_and_build.py','docs/CURRENT_STATE.md'); Get-FileHash -Algorithm SHA256 $paths | ForEach-Object { '{0} {1}' -f ($_.Path.Substring((Get-Location).Path.Length+1).Replace('\\\\','/')),$_.Hash.ToLowerInvariant() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T21:12:16.301Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l --fixed-strings -e \"04a77035ba5df0cf0f68d8278d68ac640fe0296376c1ec7e1514c6f2312364c0\" -e \"1751590e9102dc379f4258554eb6f87b2945036cc2df7501c46e4d30eb8b627a\" -e \"fd96b42c90c953fab9b8b99c96970949a2925f1f192fc36e3d682fb66fdbb1c8\" .coding-tools/orchestration/reports",
+          "session_id": "ZW8oMotxuj11OiflkSQSXHwj"
+        }
+      },
+      {
+        "time": "2026-09-03T21:12:16.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l --fixed-strings -e \"04a77035ba5df0cf0f68d8278d68ac640fe0296376c1ec7e1514c6f2312364c0\" -e \"1751590e9102dc379f4258554eb6f87b2945036cc2df7501c46e4d30eb8b627a\" -e \"fd96b42c90c953fab9b8b99c96970949a2925f1f192fc36e3d682fb66fdbb1c8\" .coding-tools/orchestration/reports",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T21:12:25.149Z",
+    "archive_reason": "finished"
+  }
+]

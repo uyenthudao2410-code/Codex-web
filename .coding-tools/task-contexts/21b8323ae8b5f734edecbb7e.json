@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c02315db1ffb4b4386b82418b9aa16a6",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "duv1WUqYkIXyhOvA_aD1l_uk",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 3539,
+    "finished_at": "2026-09-03T16:53:29.538Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-03T16:53:25.672Z",
+  "updated_at": "2026-09-03T16:53:29.538Z",
+  "events": [
+    {
+      "time": "2026-09-03T16:53:25.672Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-03T16:53:26.021Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_stateless_http_2026.StatelessHttp2026Tests.test_controller_usage_binds_to_scoped_run_and_deduplicates_before_dispatch tests.test_stateless_http_2026.StatelessHttp2026Tests.test_controller_usage_rejects_invalid_or_non_chatweb_reports_before_first_run",
+        "session_id": "duv1WUqYkIXyhOvA_aD1l_uk"
+      }
+    },
+    {
+      "time": "2026-09-03T16:53:29.538Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_stateless_http_2026.StatelessHttp2026Tests.test_controller_usage_binds_to_scoped_run_and_deduplicates_before_dispatch tests.test_stateless_http_2026.StatelessHttp2026Tests.test_controller_usage_rejects_invalid_or_non_chatweb_reports_before_first_run",
+        "status": "passed"
+      }
+    }
+  ]
+}

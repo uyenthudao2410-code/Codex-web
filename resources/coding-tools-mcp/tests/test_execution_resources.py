@@ -190,6 +190,41 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
         finally:
             self.governor.complete(active.job_id, lifecycle_state="exited", exit_code=0)
 
+    def test_exact_job_lookup_exposes_terminal_result_and_enforces_unique_command_id(self) -> None:
+        run_id, wave_id = self._owner()
+        first = self.governor.admit(
+            command="git rev-parse HEAD",
+            command_id="durable-command",
+            run_id=run_id,
+            wave_id=wave_id,
+            resource_class="LIGHT",
+        )
+        self.governor.complete(first.job_id, lifecycle_state="exited", exit_code=0)
+
+        observed = self.governor.find_exact_job(command_id="durable-command")
+        self.assertIsNotNone(observed)
+        self.assertEqual(observed["job_id"], first.job_id)
+        self.assertTrue(observed["terminal"])
+        self.assertEqual(observed["exit_code"], 0)
+        self.assertEqual(observed["result_status"], "succeeded")
+        self.assertTrue(observed["finished_at"])
+        self.assertNotIn("metadata", observed)
+
+        with self.assertRaises(ExecutionResourceError) as duplicate:
+            self.governor.admit(
+                command="git rev-parse HEAD",
+                command_id="durable-command",
+                run_id=run_id,
+                wave_id=wave_id,
+                resource_class="LIGHT",
+            )
+        self.assertEqual(duplicate.exception.code, "COMMAND_ID_CONFLICT")
+        self.assertIsNone(
+            self.governor.find_exact_job(
+                command_id="durable-command", job_id="different-job"
+            )
+        )
+
     def test_resource_classification_distinguishes_cargo_metadata_and_builds(self) -> None:
         self.assertEqual(classify_resource_class("cargo metadata --no-deps"), "LIGHT")
         self.assertEqual(classify_resource_class("cargo fmt --check"), "MEDIUM")

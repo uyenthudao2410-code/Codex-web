@@ -1,0 +1,108 @@
+[
+  {
+    "version": 2,
+    "task_id": "6a8af81a094946c5b1d6d7162a9aa0e6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-03T21:17:25.183Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "",
+    "created_at": "2026-09-03T21:16:53.171Z",
+    "updated_at": "2026-09-03T21:17:25.183Z",
+    "events": [
+      {
+        "time": "2026-09-03T21:16:53.171Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-03T21:16:53.602Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"prepare_coding_context|agent_workflow\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "FwTRaBL3L-tzhBVAlbLF7bfg"
+        }
+      },
+      {
+        "time": "2026-09-03T21:16:53.902Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"prepare_coding_context|agent_workflow\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:03.989Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"test_agent_workflow_prepares_bug_context_in_one_call|test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool\" resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "session_id": "cphFv9fLJkUWEmx5QDtoJAGv"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:04.295Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"test_agent_workflow_prepares_bug_context_in_one_call|test_agent_workflow_schema_exposes_final_execution_routes_without_new_tool\" resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:14.324Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"committed_review|agent_workflow\" docs/CURRENT_STATE.md",
+          "session_id": "_3oh6MjrJGdKdpg4dJtRzdd4"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:14.600Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"committed_review|agent_workflow\" docs/CURRENT_STATE.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:25.183Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 6 \"\\[\\\"plan\\\"\\]\\[\\\"limits\\\"\\]|max_matches_per_query|max_total_bytes\" resources/coding-tools-mcp/tests/test_task_state_and_build.py | Select-Object -First 120",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-03T21:17:25.183Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-03T21:17:37.006Z",
+    "archive_reason": "finished"
+  }
+]

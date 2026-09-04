@@ -19,9 +19,10 @@ def resolve_stateless_task_context(
     *,
     identity_from_request: Callable[[dict[str, Any]], dict[str, Any]],
     recover_exact_run_context: Callable[[str, str], str],
-) -> tuple[dict[str, Any], str, str]:
+) -> tuple[dict[str, Any], str, str, str]:
     """Resolve one MCP-2026 application context without collapsing isolation."""
     task_context_id = ""
+    exact_run_recovery_id = ""
     dispatch_request = request
     if request.get("method") == "tools/call":
         params = request.get("params") if isinstance(request.get("params"), dict) else {}
@@ -49,13 +50,16 @@ def resolve_stateless_task_context(
                 if action in TASK_CONTROL_CONTINUATION_ACTIONS and run_id and exact_selector:
                     identity = identity_from_request(request)
                     if str(identity.get("client_type") or "") == "chatweb":
-                        task_context_id = recover_exact_run_context(
+                        recovered_context_id = recover_exact_run_context(
                             run_id,
                             str(identity.get("client_id") or "chatweb"),
                         )
+                        if recovered_context_id:
+                            task_context_id = recovered_context_id
+                            exact_run_recovery_id = run_id
     if not task_context_id:
         task_context_id = f"ctx_{secrets.token_hex(16)}"
     execution_context_id = "mcp2026:" + hashlib.sha256(
         f"mcp2026-task:{task_context_id}".encode("utf-8")
     ).hexdigest()[:56]
-    return dispatch_request, task_context_id, execution_context_id
+    return dispatch_request, task_context_id, execution_context_id, exact_run_recovery_id
