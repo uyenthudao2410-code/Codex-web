@@ -1,0 +1,330 @@
+[
+  {
+    "version": 2,
+    "task_id": "f5b04b6b74404bcc8a7bff6ca25f3423",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "-_xv7LEWtPZ63XwopohFSaAX",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 287,
+      "finished_at": "2026-09-06T08:46:20.190Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T08:46:01.553Z",
+    "updated_at": "2026-09-06T08:46:20.190Z",
+    "events": [
+      {
+        "time": "2026-09-06T08:46:01.553Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:01.868Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -8 --oneline --decorate --no-renames && git show --stat --oneline --decorate --no-renames HEAD && git show --name-status --format=fuller --no-renames HEAD",
+          "session_id": "Z3T7MQq04Lx7-PQRKHdmouzP"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:02.418Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -8 --oneline --decorate --no-renames && git show --stat --oneline --decorate --no-renames HEAD && git show --name-status --format=fuller --no-renames HEAD",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:11.476Z",
+        "event": "command_started",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-833b600f9a1b418ba7c2aafede1f65b6\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-54d4adbbd7de4adb8261f03656a7799a\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\run-summary.md",
+          "session_id": "VWV5OYvOH90NBTfP3DmSIOBD"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:11.760Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-833b600f9a1b418ba7c2aafede1f65b6\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-54d4adbbd7de4adb8261f03656a7799a\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\run-summary.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:19.959Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /n /i /c:\"package:win\" /c:\"packaged-recovery-smoke\" /c:\"verify-packaged-resources\" /c:\"PACKAGED_SMART_TOOL\" /c:\"installer\" .coding-tools\\orchestration\\reports\\run-*\\*.md",
+          "session_id": "-_xv7LEWtPZ63XwopohFSaAX"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:20.190Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /n /i /c:\"package:win\" /c:\"packaged-recovery-smoke\" /c:\"verify-packaged-resources\" /c:\"PACKAGED_SMART_TOOL\" /c:\"installer\" .coding-tools\\orchestration\\reports\\run-*\\*.md",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T08:46:28.185Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "225d3b4fd76b4fd489c536cfbe321919",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T08:46:54.920Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-06T08:46:28.186Z",
+    "updated_at": "2026-09-06T08:46:54.920Z",
+    "events": [
+      {
+        "time": "2026-09-06T08:46:28.186Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:28.518Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -i -e \"package:win\" -e \"packaged-recovery-smoke\" -e \"verify-packaged-resources\" -e \"PACKAGED_SMART_TOOL\" -e \"installer\" -- .coding-tools/orchestration/reports",
+          "session_id": "AgCL8H3lWDI3VPlGJgQyac-U"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:28.889Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -i -e \"package:win\" -e \"packaged-recovery-smoke\" -e \"verify-packaged-resources\" -e \"PACKAGED_SMART_TOOL\" -e \"installer\" -- .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:36.858Z",
+        "event": "command_started",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-b0af28fad7424e28b076c1172a95253f\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-99d7d38cb36e474e93a7cf259db85f0c\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-2498e44384ec4f8cac2b1a70d0957349\\run-summary.md",
+          "session_id": "GL2_8Ptv5gpmBUUJkUvxIHn1"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:37.115Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-b0af28fad7424e28b076c1172a95253f\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-99d7d38cb36e474e93a7cf259db85f0c\\run-summary.md && echo. && type .coding-tools\\orchestration\\reports\\run-2498e44384ec4f8cac2b1a70d0957349\\run-summary.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:44.600Z",
+        "event": "command_started",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-b0af28fad7424e28b076c1172a95253f\\wave-001.md && echo. && type .coding-tools\\orchestration\\reports\\run-54d4adbbd7de4adb8261f03656a7799a\\wave-001.md",
+          "session_id": "S0X48I5zyYRMgkyUj5PPChDB"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:44.898Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type .coding-tools\\orchestration\\reports\\run-b0af28fad7424e28b076c1172a95253f\\wave-001.md && echo. && type .coding-tools\\orchestration\\reports\\run-54d4adbbd7de4adb8261f03656a7799a\\wave-001.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:54.920Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),p=require('./package.json'); console.log('electronLanguages='+JSON.stringify(p.build.electronLanguages)); const a='dist/coding-tools-mcp-setup-1.0.0.exe'; if(fs.existsSync(a)){const s=fs.statSync(a); console.log('installer_bytes='+s.size); console.log('installer_mtime='+s.mtime.toISOString())} else console.log('installer_missing'); const d='dist/win-unpacked/resources/resources/coding-tools-mcp'; for(const n of ['tests','benchmarks','scripts']) console.log('packag",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:46:54.920Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T08:47:03.978Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "234a1e6cc01a4f89a1341eb7453b375c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "iwYV2dvYFFig6jvvyg4gliys",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 320,
+      "finished_at": "2026-09-06T08:47:04.943Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T08:47:03.979Z",
+    "updated_at": "2026-09-06T08:47:04.943Z",
+    "events": [
+      {
+        "time": "2026-09-06T08:47:03.979Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:04.660Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"electronLanguages\" /c:\"en-US\" /c:\"\\\"vi\\\"\" package.json && dir /-C dist\\coding-tools-mcp-setup-1.0.0.exe && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\tests (echo packaged_tests=present) else (echo packaged_tests=absent) && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\benchmarks (echo packaged_benchmarks=present) else (echo packaged_benchmarks=absent) && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\scripts (echo packaged_sc",
+          "session_id": "iwYV2dvYFFig6jvvyg4gliys"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:04.943Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"electronLanguages\" /c:\"en-US\" /c:\"\\\"vi\\\"\" package.json && dir /-C dist\\coding-tools-mcp-setup-1.0.0.exe && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\tests (echo packaged_tests=present) else (echo packaged_tests=absent) && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\benchmarks (echo packaged_benchmarks=present) else (echo packaged_benchmarks=absent) && if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\scripts (echo packaged_sc",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T08:47:13.761Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7721e28af6eb46398e6c9fb1c70d44d0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T08:47:32.239Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-06T08:47:13.762Z",
+    "updated_at": "2026-09-06T08:47:32.239Z",
+    "events": [
+      {
+        "time": "2026-09-06T08:47:13.762Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:14.035Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/ui-performance-scheduling.test.js tests/build-verification.test.js && git diff --check",
+          "session_id": "bBa7lasDNBs9OIieY6RS6UPk"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:15.342Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/ui-performance-scheduling.test.js tests/build-verification.test.js && git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:32.239Z",
+        "event": "command_finished",
+        "details": {
+          "command": "if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\tests (echo packaged_tests=present) else (echo packaged_tests=absent_or_no_build) & if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\benchmarks (echo packaged_benchmarks=present) else (echo packaged_benchmarks=absent_or_no_build) & if exist dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\scripts (echo packaged_scripts=present) else (echo packaged_scripts=absent_or_no_build) & if exist dist\\win-unpacked\\locales ",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T08:47:32.239Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T08:47:41.205Z",
+    "archive_reason": "finished"
+  }
+]
