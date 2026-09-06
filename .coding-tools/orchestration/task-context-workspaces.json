@@ -32606,6 +32606,13 @@
       "updated_at": "2026-09-02T05:34:20.887Z",
       "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
     },
+    "ctx_6dc45bb7bfbf9f98e8bb6c057fffa270": {
+      "canonical_root": "E:\\DEV\\Codex-web",
+      "created_at": "2026-09-06T10:34:01.176Z",
+      "schema_version": 1,
+      "updated_at": "2026-09-06T10:34:01.176Z",
+      "workspace_id": "368dc8d57af2cd4d14bd248fa3488279d297cc0f6eacd8e76a8cf28617e0f251"
+    },
     "ctx_6dc5e0d616b089ca74c3cbeb133ab321": {
       "canonical_root": "E:\\DEV\\Codex-web",
       "created_at": "2026-09-03T20:04:01.285Z",
