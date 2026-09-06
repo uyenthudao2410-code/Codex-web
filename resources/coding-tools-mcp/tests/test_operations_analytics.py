@@ -302,6 +302,83 @@ class OperationsAnalyticsTests(unittest.TestCase):
             self.assertEqual(estimate["measurement"], "CONTEXT_ESTIMATE")
 
 
+class AllToolCallTokenMeasurementsTests(unittest.TestCase):
+    NOW = "2026-08-19T08:00:00Z"
+
+    @staticmethod
+    def _hour(year: int, month: int, day: int, hour: int) -> int:
+        from datetime import datetime, timezone
+
+        return int(datetime(year, month, day, hour, tzinfo=timezone.utc).timestamp() // 3600)
+
+    def _analytics(self, performance: dict) -> dict:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger = OrchestrationLedger(Path(raw))
+            return operations_analytics(
+                ledger, performance=performance, days=7, now=self.NOW
+            )
+
+    def test_all_calls_estimate_uses_context_prior_without_runs(self) -> None:
+        hour = self._hour(2026, 8, 19, 7)
+        result = self._analytics(
+            {
+                "run_metrics": {},
+                "hourly_metrics": {
+                    hour: {"tool_calls": 5, "model_visible_bytes": 4000, "model_visible_chars": 3500},
+                },
+            }
+        )
+        section = result["tool_call_token_measurements"]
+        self.assertEqual(section["scope"], "all_tool_calls_in_window")
+        self.assertEqual(section["missing_measurement_policy"], "unknown_not_zero")
+        self.assertTrue(section["content_free"])
+        self.assertEqual(section["tool_calls"], 5)
+        self.assertEqual(section["model_visible_bytes"], 4000)
+        self.assertEqual(section["model_visible_chars"], 3500)
+        self.assertEqual(section["status"], "context_estimate")
+        self.assertEqual(section["measurement"], "CONTEXT_ESTIMATE")
+        self.assertEqual(section["confidence"], "low")
+        self.assertEqual(section["estimate"]["p10_context_tokens"], 667)
+        self.assertEqual(section["estimate"]["p50_context_tokens"], 1000)
+        self.assertEqual(section["estimate"]["p90_context_tokens"], 2000)
+        self.assertTrue(section["estimate"]["not_controller_total"])
+        # The accepted-runs estimate stays untouched by out-of-run traffic.
+        accepted = result["controller_token_estimate"]
+        self.assertEqual(accepted["status"], "unknown")
+        self.assertIsNone(accepted["estimate"])
+
+    def test_all_calls_ignores_buckets_outside_window_and_malformed_keys(self) -> None:
+        hour = self._hour(2026, 8, 19, 7)
+        old = self._hour(2026, 8, 10, 7)
+        result = self._analytics(
+            {
+                "run_metrics": {},
+                "hourly_metrics": {
+                    hour: {"tool_calls": 2, "model_visible_bytes": 800},
+                    old: {"tool_calls": 90, "model_visible_bytes": 900000},
+                    "not-an-hour": {"tool_calls": 7, "model_visible_bytes": 700},
+                    self._hour(2026, 8, 19, 9): {"tool_calls": 3, "model_visible_bytes": 300},
+                },
+            }
+        )
+        section = result["tool_call_token_measurements"]
+        self.assertEqual(section["tool_calls"], 2)
+        self.assertEqual(section["model_visible_bytes"], 800)
+        self.assertEqual(section["estimate"]["p50_context_tokens"], 200)
+
+    def test_all_calls_without_bytes_stays_unknown_never_zero(self) -> None:
+        for performance in ({}, {"run_metrics": {}}, {"hourly_metrics": {}}):
+            result = self._analytics(performance)
+            section = result["tool_call_token_measurements"]
+            self.assertEqual(section["status"], "unknown")
+            self.assertEqual(section["measurement"], "UNKNOWN")
+            self.assertIsNone(section["estimate"])
+            self.assertIsNone(section["tool_calls"])
+            self.assertEqual(
+                section["missing_reason"], "no_tool_call_bytes_in_window"
+            )
+
+
 
 if __name__ == "__main__":
     unittest.main()

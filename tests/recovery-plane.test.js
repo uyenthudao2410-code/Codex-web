@@ -14,6 +14,7 @@ const {
   recoveryMcpHealthObservation,
   recoveryTunnelFingerprint,
   recoveryTunnelListenerPid,
+  parseLoopbackListenerPid,
   stopExactTree: terminateExactTree
 } = require('../electron/services/recoveryPlaneService');
 const { observeProcessIdentity } = require('../electron/services/processIdentity');
@@ -172,7 +173,189 @@ else {
   test('Recovery Tunnel keeps candidate ownership separate until readiness',()=>{const source=fs.readFileSync(path.join(root,'electron','services','recoveryPlaneService.js'),'utf8');assert.match(source,/recoveryTunnelCandidatePid/);assert.match(source,/blocked_health_port_in_use/);assert.match(source,/RECOVERY_TUNNEL_HEALTH_PORT_IN_USE/);assert.match(source,/recoveryTunnelListenerPid\(port\)\s*!==\s*Number\(pid\)/);assert.doesNotMatch(source,/updateState\(\{\s*recoveryTunnelPid:\s*child\.pid,\s*recoveryTunnelFingerprint:\s*fingerprint,\s*recoveryTunnelConfigured:\s*true,\s*recoveryTunnelState:\s*'starting'/);});
   test('Recovery Plane serializes overlapping ensure calls',async()=>{const service=new RecoveryPlaneService({paths:{},log:null});let mcpCalls=0;let tunnelCalls=0;service.ensureMcp=async()=>{mcpCalls+=1;return{state:'healthy'};};service.ensureTunnel=async()=>{tunnelCalls+=1;await new Promise((resolve)=>setTimeout(resolve,40));return{state:'healthy',configured:true,pid:123};};const credentials={authToken:'x'.repeat(32),runtimeApiKey:'configured'};const [first,second]=await Promise.all([service.ensure({},credentials),service.ensure({},credentials)]);assert.equal(mcpCalls,1);assert.equal(tunnelCalls,1);assert.equal(first.tunnel.state,'healthy');assert.equal(second.tunnel.state,'healthy');});
   test('Recovery Plane exposes a stable independent-mode identifier',()=>{const source=fs.readFileSync(path.join(root,'electron','services','recoveryPlaneService.js'),'utf8');const host=fs.readFileSync(path.join(root,'electron','services','recoveryHost.js'),'utf8');assert.match(source,/independent_mcp_tunnel_v1/);assert.match(host,/recovery_plane_mode:\s*'independent_mcp_tunnel_v1'/);});
-  test('invalid Recovery Tunnel configuration deactivates only exact owned tunnel receipts',()=>{const source=fs.readFileSync(path.join(root,'electron','services','recoveryPlaneService.js'),'utf8');assert.match(source,/async deactivateOwnedTunnel\([\s\S]*ownedIdentity\(state, 'recoveryTunnel'[\s\S]*ownedIdentity\(state, 'recoveryTunnelCandidate'[\s\S]*terminateOwnedIdentity\(identity, prefix[\s\S]*recoveryTunnelPid:\s*null/);assert.match(source,/if \(!tunnelId\)[\s\S]*deactivateOwnedTunnel\(state, \{ configured: false, tunnelState: 'not_configured' \}\)/);assert.match(source,/blocked_shared_tunnel_id'[\s\S]*RECOVERY_TUNNEL_ID_NOT_INDEPENDENT/);assert.match(source,/blocked_missing_runtime_key'[\s\S]*RECOVERY_TUNNEL_RUNTIME_KEY_MISSING/);});
+  test('invalid Recovery Tunnel configuration deactivates only exact owned tunnel receipts',()=>{const source=fs.readFileSync(path.join(root,'electron','services','recoveryPlaneService.js'),'utf8');assert.match(source,/async deactivateOwnedTunnel\([\s\S]*ownedIdentity\(state, 'recoveryTunnel'[\s\S]*ownedIdentity\(state, 'recoveryTunnelCandidate'[\s\S]*terminateOwnedIdentity\(identity, prefix[\s\S]*recoveryTunnelPid:\s*null/);assert.match(source,/if \(!tunnelId\)[\s\S]*deactivateOwnedTunnel\(state, \{ configured: false, tunnelState: 'not_configured'[^}]*\}\)/);assert.match(source,/blocked_shared_tunnel_id'[\s\S]*RECOVERY_TUNNEL_ID_NOT_INDEPENDENT/);assert.match(source,/blocked_missing_runtime_key'[\s\S]*RECOVERY_TUNNEL_RUNTIME_KEY_MISSING/);});
   test('Recovery Tunnel operator UI exposes independent settings and live header telemetry',()=>{const settingsHtml=fs.readFileSync(path.join(root,'renderer','index.html'),'utf8');const appJs=fs.readFileSync(path.join(root,'renderer','app.js'),'utf8');const browserHtml=fs.readFileSync(path.join(root,'renderer','browser.html'),'utf8');const browserJs=fs.readFileSync(path.join(root,'renderer','browser.js'),'utf8');const browserCss=fs.readFileSync(path.join(root,'renderer','browser.css'),'utf8');const main=fs.readFileSync(path.join(root,'electron','main.js'),'utf8');assert.match(settingsHtml,/id="recoveryTunnelIdInput"/);assert.match(settingsHtml,/id="saveRecoveryTunnel"/);assert.match(settingsHtml,/data-open="openai-tunnels"/);assert.match(appJs,/recoveryTunnelId:\s*\$\('#recoveryTunnelIdInput'\)/);assert.match(appJs,/recoveryHost\?\.recovery_plane\?\.tunnel/);assert.match(browserHtml,/id="recoveryTunnelState"/);assert.match(browserJs,/recoveryHost\?\.recovery_plane\?\.tunnel/);assert.match(browserJs,/state:\s*'connected'/);assert.match(browserJs,/state:\s*'connecting'/);assert.match(browserJs,/state:\s*'not_configured'/);assert.match(browserCss,/service-state span\.warn i/);assert.match(main,/https:\/\/platform\.openai\.com\/settings\/organization\/tunnels/);});
   test('Recovery Tunnel configuration is colocated with the primary Tunnel under Connections',()=>{const html=fs.readFileSync(path.join(root,'renderer','index.html'),'utf8');const deployStart=html.indexOf('data-page-view="deploy"');const settingsStart=html.indexOf('data-page-view="settings"');const recoveryInput=html.indexOf('id="recoveryTunnelIdInput"');assert.ok(deployStart>=0);assert.ok(settingsStart>deployStart);assert.ok(recoveryInput>deployStart&&recoveryInput<settingsStart);assert.match(html.slice(deployStart,settingsStart),/Tunnel ID chính[\s\S]*Recovery Tunnel ID/);assert.doesNotMatch(html.slice(settingsStart),/id="recoveryTunnelIdInput"|<h3>Tunnel cứu hộ<\/h3>/);});
+  test('Recovery Plane loopback listener parser distinguishes held, idle and malformed rows', () => {
+    const fixture = [
+      'Active Connections',
+      '',
+      '  Proto  Local Address          Foreign Address        State           PID',
+      '  TCP    127.0.0.1:18083        0.0.0.0:0              LISTENING       1234',
+      '  TCP    127.0.0.1:18767        0.0.0.0:0              LISTENING       5678',
+      '  TCP    127.0.0.1:18083        127.0.0.1:54321        ESTABLISHED     9999',
+      '  UDP    127.0.0.1:18083        *:*                                    1111'
+    ].join('\r\n');
+    assert.equal(parseLoopbackListenerPid(fixture, 18083), 1234);
+    assert.equal(parseLoopbackListenerPid(fixture, 18767), 5678);
+    assert.equal(parseLoopbackListenerPid(fixture, 19999), null);
+    assert.equal(parseLoopbackListenerPid('', 18083), null);
+    assert.equal(parseLoopbackListenerPid(null, 18083), null);
+  });
+  test('Recovery Plane stop clears an unverifiable tunnel receipt only when its health port proves idle', async (t) => {
+    const deviceId = '12345678-1234-4123-8123-123456789abc';
+    const token = '10000000000000201';
+    const healthPort = await freePort();
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-recovery-idle-stop-'));
+    t.after(() => fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
+    const stateFile = path.join(temp, 'recovery-plane-state.json');
+    fs.writeFileSync(stateFile, JSON.stringify({
+      version: 1,
+      recoveryTunnelPid: process.pid,
+      recoveryTunnelProcessStartToken: token,
+      recoveryTunnelInstanceId: 'stale-tunnel-instance-0201',
+      recoveryTunnelFingerprint: '0'.repeat(64),
+      recoveryTunnelActivationEpochId: 'activation-stale-0201',
+      recoveryTunnelDeviceId: deviceId,
+      recoveryTunnelDeviceInstanceId: 'stale-device-instance-0201'
+    }));
+    const terminated = [];
+    const warnings = [];
+    const service = new RecoveryPlaneService({
+      paths: { recoveryPlaneStateFile: () => stateFile },
+      log: { info() {}, warn(message, meta) { warnings.push({ message, meta }); }, error() {} },
+      deviceIdentity: { version: 1, device_id: deviceId, display_name: 'Idle proof test', created_at: '2026-08-17T00:00:00.000Z' },
+      deviceInstanceId: 'idle-proof-instance-0201',
+      asyncProcessIdentityObserver: async (pid) => ({ state: 'unavailable', pid, code: 'PROCESS_IDENTITY_UNVERIFIED' }),
+      exactProcessTerminator: async (identity) => { terminated.push(identity); }
+    });
+    assert.equal(await service.stop({ recoveryHealthPort: healthPort }), true);
+    assert.deepEqual(terminated, [], 'an unverifiable PID must never be terminated');
+    assert.equal(processAlive(process.pid), true);
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(persisted.recoveryTunnelPid, null);
+    assert.equal(persisted.recoveryTunnelProcessStartToken, null);
+    assert.equal(persisted.recoveryTunnelInstanceId, null);
+    assert.equal(persisted.recoveryTunnelState, 'stopped');
+    assert.ok(warnings.some((entry) => entry.meta?.prefix === 'recoveryTunnel' && entry.meta?.pid === process.pid),
+      'the idle clear must be auditable');
+  });
+  test('Recovery Plane stop keeps an unverifiable tunnel receipt when the stored PID holds the port', async (t) => {
+    const deviceId = '12345678-1234-4123-8123-123456789abc';
+    const token = '10000000000000202';
+    const server = net.createServer();
+    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    const heldPort = server.address().port;
+    t.after(() => server.close());
+    assert.equal(await recoveryTunnelListenerPid(heldPort), process.pid, 'test precondition: netstat must resolve the held port');
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-recovery-held-stop-'));
+    t.after(() => fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
+    const stateFile = path.join(temp, 'recovery-plane-state.json');
+    fs.writeFileSync(stateFile, JSON.stringify({
+      version: 1,
+      recoveryTunnelPid: process.pid,
+      recoveryTunnelProcessStartToken: token,
+      recoveryTunnelInstanceId: 'held-tunnel-instance-0202',
+      recoveryTunnelFingerprint: '0'.repeat(64),
+      recoveryTunnelActivationEpochId: 'activation-held-0202',
+      recoveryTunnelDeviceId: deviceId,
+      recoveryTunnelDeviceInstanceId: 'held-device-instance-0202'
+    }));
+    const terminated = [];
+    const service = new RecoveryPlaneService({
+      paths: { recoveryPlaneStateFile: () => stateFile },
+      log: null,
+      deviceIdentity: { version: 1, device_id: deviceId, display_name: 'Held proof test', created_at: '2026-08-17T00:00:00.000Z' },
+      deviceInstanceId: 'held-proof-instance-0202',
+      asyncProcessIdentityObserver: async (pid) => ({ state: 'unavailable', pid, code: 'PROCESS_IDENTITY_UNVERIFIED' }),
+      exactProcessTerminator: async (identity) => { terminated.push(identity); }
+    });
+    await assert.rejects(service.stop({ recoveryHealthPort: heldPort }), { code: 'RECOVERY_TUNNEL_PROCESS_IDENTITY_UNVERIFIED' });
+    assert.deepEqual(terminated, []);
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(persisted.recoveryTunnelPid, process.pid, 'a possibly live port holder must keep its receipt');
+  });
+  test('Recovery Plane ownedIdentity reuses idle proof without proof, port holder, or other errors', async (t) => {
+    const deviceId = '12345678-1234-4123-8123-123456789abc';
+    const token = '10000000000000203';
+    const idlePort = await freePort();
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-recovery-owned-idle-'));
+    t.after(() => fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
+    const stateFile = path.join(temp, 'recovery-plane-state.json');
+    const seed = () => fs.writeFileSync(stateFile, JSON.stringify({
+      version: 1,
+      recoveryMcpPid: process.pid,
+      recoveryMcpProcessStartToken: token,
+      recoveryMcpInstanceId: 'owned-idle-instance-0203',
+      recoveryMcpDeviceId: deviceId,
+      recoveryMcpDeviceInstanceId: 'owned-idle-device-0203'
+    }));
+    const makeService = () => new RecoveryPlaneService({
+      paths: { recoveryPlaneStateFile: () => stateFile },
+      log: null,
+      deviceIdentity: { version: 1, device_id: deviceId, display_name: 'Owned idle test', created_at: '2026-08-17T00:00:00.000Z' },
+      deviceInstanceId: 'owned-idle-proof-0203',
+      asyncProcessIdentityObserver: async (pid) => ({ state: 'unavailable', pid, code: 'PROCESS_IDENTITY_UNVERIFIED' }),
+      exactProcessTerminator: async () => { throw new Error('must never terminate an unverifiable PID'); }
+    });
+    seed();
+    const withoutProof = makeService();
+    await assert.rejects(withoutProof.ownedIdentity(withoutProof.readState(), 'recoveryMcp', 'RECOVERY_MCP'), { code: 'RECOVERY_MCP_PROCESS_IDENTITY_UNVERIFIED' });
+    assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).recoveryMcpPid, process.pid);
+    const withProof = makeService();
+    assert.equal(await withProof.ownedIdentity(withProof.readState(), 'recoveryMcp', 'RECOVERY_MCP', idlePort), null);
+    assert.equal(processAlive(process.pid), true);
+    assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).recoveryMcpPid, null);
+  });
+  test('Recovery Plane ownedIdentity keeps the receipt when the stored PID holds the proof port', async (t) => {
+    const deviceId = '12345678-1234-4123-8123-123456789abc';
+    const token = '10000000000000204';
+    const server = net.createServer();
+    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    const heldPort = server.address().port;
+    t.after(() => server.close());
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-recovery-owned-held-'));
+    t.after(() => fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
+    const stateFile = path.join(temp, 'recovery-plane-state.json');
+    fs.writeFileSync(stateFile, JSON.stringify({
+      version: 1,
+      recoveryMcpPid: process.pid,
+      recoveryMcpProcessStartToken: token,
+      recoveryMcpInstanceId: 'owned-held-instance-0204',
+      recoveryMcpDeviceId: deviceId,
+      recoveryMcpDeviceInstanceId: 'owned-held-device-0204'
+    }));
+    const service = new RecoveryPlaneService({
+      paths: { recoveryPlaneStateFile: () => stateFile },
+      log: null,
+      deviceIdentity: { version: 1, device_id: deviceId, display_name: 'Owned held test', created_at: '2026-08-17T00:00:00.000Z' },
+      deviceInstanceId: 'owned-held-proof-0204',
+      asyncProcessIdentityObserver: async (pid) => ({ state: 'unavailable', pid, code: 'PROCESS_IDENTITY_UNVERIFIED' }),
+      exactProcessTerminator: async () => { throw new Error('must never terminate an unverifiable PID'); }
+    });
+    await assert.rejects(service.ownedIdentity(service.readState(), 'recoveryMcp', 'RECOVERY_MCP', heldPort), { code: 'RECOVERY_MCP_PROCESS_IDENTITY_UNVERIFIED' });
+    assert.equal(JSON.parse(fs.readFileSync(stateFile, 'utf8')).recoveryMcpPid, process.pid);
+  });
+  test('Recovery Plane deactivate clears unverifiable receipts when unconfigured and ports prove idle', async (t) => {
+    const deviceId = '12345678-1234-4123-8123-123456789abc';
+    const token = '10000000000000205';
+    const idlePort = await freePort();
+    const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-recovery-deactivate-idle-'));
+    t.after(() => fs.rmSync(temp, { recursive: true, force: true, maxRetries: 10, retryDelay: 50 }));
+    const stateFile = path.join(temp, 'recovery-plane-state.json');
+    fs.writeFileSync(stateFile, JSON.stringify({
+      version: 1,
+      recoveryTunnelPid: process.pid,
+      recoveryTunnelProcessStartToken: token,
+      recoveryTunnelInstanceId: 'deactivate-idle-instance-0205',
+      recoveryTunnelDeviceId: deviceId,
+      recoveryTunnelDeviceInstanceId: 'deactivate-idle-device-0205'
+    }));
+    const terminated = [];
+    const service = new RecoveryPlaneService({
+      paths: { recoveryPlaneStateFile: () => stateFile },
+      log: null,
+      deviceIdentity: { version: 1, device_id: deviceId, display_name: 'Deactivate idle test', created_at: '2026-08-17T00:00:00.000Z' },
+      deviceInstanceId: 'deactivate-idle-proof-0205',
+      asyncProcessIdentityObserver: async (pid) => ({ state: 'unavailable', pid, code: 'PROCESS_IDENTITY_UNVERIFIED' }),
+      exactProcessTerminator: async (identity) => { terminated.push(identity); }
+    });
+    const result = await service.deactivateOwnedTunnel(service.readState(), { configured: false, tunnelState: 'not_configured', recoveryHealthPort: idlePort });
+    assert.equal(result.state, 'not_configured');
+    assert.equal(result.pid, null);
+    assert.deepEqual(terminated, []);
+    const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(persisted.recoveryTunnelPid, null);
+    assert.equal(persisted.recoveryTunnelConfigured, false);
+  });
 }

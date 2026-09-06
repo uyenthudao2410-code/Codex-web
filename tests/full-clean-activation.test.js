@@ -1450,6 +1450,45 @@ test('public full-clean refresh renews the Coding MCP fence after slow UI termin
     'the public refresh path must not invent an accepted source checkpoint');
 });
 
+test('full-clean restart forwards service ports as recovery-plane idle proof', async (t) => {
+  const { root, paths } = fixture(t);
+  let nowUnixMs = 1_700_000_000_000;
+  const durableExpiresAtUnixMs = nowUnixMs + 600_000;
+  const operationId = id('operation-idle-proof', '1001');
+  const stopArgs = [];
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: new ActivationEpochStore({ paths, now: () => nowUnixMs }),
+    settings: { load: () => ({ workspace: root, recoveryHealthPort: 18083, recoveryMcpPort: 18767 }) },
+    orchestrator: {
+      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      prepareCodeActivation: async (options) => ({
+        safe: true,
+        fenced: true,
+        fence_operation_id: options.operationId,
+        expires_at_unix_ms: options.expiresAtUnixMs
+      }),
+      currentMcpHealth: async () => null,
+      stop: async () => true
+    },
+    recoveryPlane: { stop: async (idleProof) => { stopArgs.push(idleProof); } },
+    getUiPresence: () => ({}),
+    spawnRecoveryReplacement: async () => {},
+    now: () => nowUnixMs
+  });
+
+  const result = await coordinator.restart({
+    operationId,
+    refresh: true,
+    mode: 'full_clean_refresh',
+    expiresAtUnixMs: durableExpiresAtUnixMs
+  });
+
+  assert.equal(result.state, 'HANDOFF');
+  assert.deepEqual(stopArgs, [{ recoveryHealthPort: 18083, recoveryMcpPort: 18767 }],
+    'the STOPPING boundary must let the plane prove stale receipts idle without terminating them');
+});
+
 test('full-clean single-flight reuses only the exact operation and source authority', async (t) => {
   const { root, paths } = fixture(t);
   const coordinator = new FullCleanActivation({

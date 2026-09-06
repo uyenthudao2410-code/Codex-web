@@ -39,6 +39,11 @@ WORKFLOW_PROOF_FINALIZATION_RESERVE_SECONDS = 5.0
 class ContextToolsMixin:
     def workspace_context(self, args: dict[str, Any]) -> dict[str, Any]:
         detail = str(args.get("detail", "compact")).lower()
+        if str(args.get("path", ".") or ".").strip() in {"", "."}:
+            # The caller relies on the active workspace binding, not an
+            # explicit path.  When the bound drive is gone there is no safe
+            # fallback: any other directory would be the wrong workspace.
+            self._require_active_workspace_binding_available()
         resolved, scope_root, scope_identity = self._workspace_identity_for_request(args.get("path", "."))
         cache_args = {
             "path": str(resolved.path),

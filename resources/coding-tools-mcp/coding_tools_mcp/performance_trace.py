@@ -127,6 +127,7 @@ class PerformanceTraceStore:
         request_bytes: int = 0,
         response_bytes: int = 0,
         model_visible_bytes: int = 0,
+        model_visible_chars: int = 0,
         ok: bool = True,
         cache_hit: bool = False,
         deduplicated: bool = False,
@@ -197,6 +198,7 @@ class PerformanceTraceStore:
                 "request_bytes": max(0, int(request_bytes)),
                 "response_bytes": max(0, int(response_bytes)),
                 "model_visible_bytes": max(0, int(model_visible_bytes)),
+                "model_visible_chars": max(0, int(model_visible_chars)),
                 "invocation": measured_invocation,
                 "outcome": measured_outcome,
                 "truncated": bool(truncated),
@@ -269,6 +271,7 @@ class PerformanceTraceStore:
             state["request_bytes"] += event["request_bytes"]
             state["response_bytes"] += event["response_bytes"]
             state["model_visible_bytes"] += event["model_visible_bytes"]
+            state["model_visible_chars"] += event["model_visible_chars"]
             if measured_phase_timing:
                 state["phase_timing_samples"] += 1
                 for key, value in measured_phase_timing.items():
@@ -318,6 +321,8 @@ class PerformanceTraceStore:
                     "request_bytes": 0,
                     "response_bytes": 0,
                     "model_visible_bytes": 0,
+                    "model_visible_chars": 0,
+                    "model_visible_chars": 0,
                     "idempotency_eligible_calls": 0,
                     "idempotency_eligible_key_calls": 0,
                     "idempotency_required_calls": 0,
@@ -360,6 +365,7 @@ class PerformanceTraceStore:
                 metric["request_bytes"] += event["request_bytes"]
                 metric["response_bytes"] += event["response_bytes"]
                 metric["model_visible_bytes"] += event["model_visible_bytes"]
+                metric["model_visible_chars"] = int(metric.get("model_visible_chars", 0) or 0) + int(event.get("model_visible_chars", 0) or 0)
                 metric["idempotency_eligible_calls"] += 1 if idempotency_eligible else 0
                 metric["idempotency_eligible_key_calls"] += 1 if idempotency_eligible and idempotency_key_present else 0
                 if measured_policy == "required":
@@ -423,6 +429,7 @@ class PerformanceTraceStore:
                     "request_bytes": 0,
                     "response_bytes": 0,
                     "model_visible_bytes": 0,
+                    "model_visible_chars": 0,
                     "local_execution_ms": 0,
                     "estimated_wait_ms": 0,
                     "last_finished_at": "",
@@ -433,6 +440,7 @@ class PerformanceTraceStore:
                 bucket["request_bytes"] += event["request_bytes"]
                 bucket["response_bytes"] += event["response_bytes"]
                 bucket["model_visible_bytes"] += event["model_visible_bytes"]
+                bucket["model_visible_chars"] += event["model_visible_chars"]
                 bucket["local_execution_ms"] += duration_ms
                 bucket["estimated_wait_ms"] += wait_before_ms
                 bucket["last_finished_at"] = event["finished_at"]
@@ -485,6 +493,7 @@ class PerformanceTraceStore:
             "request_bytes": 0,
             "response_bytes": 0,
             "model_visible_bytes": 0,
+            "model_visible_chars": 0,
             "phase_timing_samples": 0,
             "phase_timing_ms": {},
             "localization_samples": 0,
@@ -544,7 +553,7 @@ class PerformanceTraceStore:
             "idempotency_current_policy_required_calls", "idempotency_current_policy_required_key_calls",
             "idempotency_optional_calls", "idempotency_optional_key_calls", "idempotency_auto_key_calls",
             "proof_cache_eligible", "proof_cache_hits", "proof_cache_misses", "proof_cache_saved_ms",
-            "model_visible_bytes", "phase_timing_samples", "localization_samples", "localization_queries",
+            "model_visible_bytes", "model_visible_chars", "phase_timing_samples", "localization_samples", "localization_queries",
             "lsp_available_samples", "lsp_attempted_queries", "lsp_handled_queries", "fallback_search_queries",
             "result_tail_samples", "result_tail_source_bytes", "result_tail_page_bytes", "result_tail_remaining_bytes",
             "result_truncated_calls", "result_continuation_offered", "result_continuation_reads",
@@ -609,6 +618,7 @@ class PerformanceTraceStore:
             metric.setdefault("proof_cache_eligible", 0)
             metric.setdefault("proof_cache_hits", 0)
             metric.setdefault("proof_cache_misses", 0)
+            metric.setdefault("model_visible_chars", 0)
             metric.setdefault("proof_cache_miss_reasons", {})
             metric.setdefault("proof_cache_saved_ms", 0)
             metric.setdefault("idempotency_required_calls", 0)
@@ -658,13 +668,15 @@ class PerformanceTraceStore:
                 "request_bytes": 0,
                 "response_bytes": 0,
                 "model_visible_bytes": 0,
+                "model_visible_chars": 0,
                 "local_execution_ms": 0,
                 "estimated_wait_ms": 0,
                 "last_finished_at": "",
             }
             for key in (
                 "tool_calls", "errors", "cache_hits", "request_bytes",
-                "response_bytes", "model_visible_bytes", "local_execution_ms",
+                "response_bytes", "model_visible_bytes", "model_visible_chars",
+                "local_execution_ms",
                 "estimated_wait_ms",
             ):
                 try:

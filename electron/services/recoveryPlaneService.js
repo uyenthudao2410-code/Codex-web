@@ -150,11 +150,9 @@ function persistenceCleanupFailure(kind, persistenceError, cleanupError) {
   return cleanupError;
 }
 
-async function recoveryTunnelListenerPid(port) {
-  const result = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: RECOVERY_TUNNEL_PROBE_TIMEOUT_MS });
-  if (result.code !== 0) return null;
+function parseLoopbackListenerPid(stdout, port) {
   const target = `127.0.0.1:${Number(port)}`;
-  for (const line of String(result.stdout || '').split(/\r?\n/)) {
+  for (const line of String(stdout || '').split(/\r?\n/)) {
     const fields = line.trim().split(/\s+/);
     if (fields.length < 5 || String(fields[0]).toUpperCase() !== 'TCP') continue;
     if (fields[1] !== target || String(fields[3]).toUpperCase() !== 'LISTENING') continue;
@@ -162,6 +160,12 @@ async function recoveryTunnelListenerPid(port) {
     return Number.isInteger(pid) && pid > 0 ? pid : null;
   }
   return null;
+}
+
+async function recoveryTunnelListenerPid(port) {
+  const result = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: RECOVERY_TUNNEL_PROBE_TIMEOUT_MS });
+  if (result.code !== 0) return null;
+  return parseLoopbackListenerPid(result.stdout, port);
 }
 
 async function recoveryTunnelReady(paths, port, pid) {
@@ -223,14 +227,31 @@ class RecoveryPlaneService {
   }
   assertOwnedLive(pid, storedDeviceId, kind) { if (!this.device || !isAlive(pid)) return; const ownership = classifyStoredDeviceOwner(storedDeviceId, this.device.deviceId); if (ownership === 'owned') return; const code = ownership === 'foreign' ? `${kind}_FOREIGN_DEVICE` : `${kind}_OWNER_UNVERIFIED`; throw Object.assign(new Error(ownership === 'foreign' ? `${kind} process state belongs to another device; refusing to adopt or terminate it.` : `${kind} process state predates device ownership metadata; refusing to adopt or terminate the live process.`), { code, ownerDeviceId: String(storedDeviceId || '') || null, expectedDeviceId: this.device.deviceId }); }
 
-  async ownedIdentity(state, prefix, kind) {
+  async ownedIdentity(state, prefix, kind, idleProofPort = 0) {
     // Exact OS identity is the first gate.  This preserves the typed
     // *_PROCESS_IDENTITY_UNVERIFIED contract for live legacy records that
     // have no start token, before device ownership classification runs.
-    const identity = await this.exactIdentity(state, prefix, kind);
-    const pid = state?.[`${prefix}Pid`];
-    if (identity) this.assertOwnedLive(pid, state?.[`${prefix}DeviceId`], kind);
-    return identity;
+    try {
+      const identity = await this.exactIdentity(state, prefix, kind);
+      const pid = state?.[`${prefix}Pid`];
+      if (identity) this.assertOwnedLive(pid, state?.[`${prefix}DeviceId`], kind);
+      return identity;
+    } catch (error) {
+      // A stored PID can outlive its owner: after a crash or reboot the PID
+      // may belong to an unobservable system process while the paper receipt
+      // still claims it.  Callers that know this plane's loopback service
+      // port may pass it as idle proof.  The receipt is then forgotten — never
+      // terminated — but only when a listener probe proves the stored PID
+      // does not hold the service port.  Without a port, with any other
+      // error, or when the PID holds the port, the original error propagates
+      // and the receipt is preserved.
+      if (!Number.isSafeInteger(Number(idleProofPort)) || Number(idleProofPort) <= 0) throw error;
+      if (String(error?.code || '') !== `${kind}_PROCESS_IDENTITY_UNVERIFIED`) throw error;
+      if (String(error?.details?.observed_state || '') !== 'unavailable') throw error;
+      if (!['recoveryTunnel', 'recoveryTunnelCandidate', 'recoveryMcp'].includes(prefix)) throw error;
+      await this.clearProvenIdleUnverifiableReceipt(prefix, Number(idleProofPort), error);
+      return null;
+    }
   }
 
   exactIdentity(state, prefix, kind) {
@@ -461,11 +482,12 @@ class RecoveryPlaneService {
     return true;
   }
 
-  async deactivateOwnedTunnel(state, { configured, tunnelState, errorCode = null }) {
-    const tunnelIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+  async deactivateOwnedTunnel(state, { configured, tunnelState, errorCode = null, recoveryHealthPort = 0 }) {
+    const idlePort = Number(recoveryHealthPort) || 0;
+    const tunnelIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL', idlePort);
     // Validate the candidate receipt independently even when its numeric PID
     // equals the primary.  PID equality alone is not an identity proof.
-    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', idlePort);
     const identities = [
       ['recoveryTunnel', tunnelIdentity],
       ['recoveryTunnelCandidate', candidateIdentity]
@@ -476,8 +498,12 @@ class RecoveryPlaneService {
       await this.terminateOwnedIdentity(identity, prefix, 'RECOVERY_TUNNEL');
       terminated.push(identity);
     }
-    const tunnelReceipt = storedProcessReceipt(state, 'recoveryTunnel');
-    const candidateReceipt = storedProcessReceipt(state, 'recoveryTunnelCandidate');
+    // Recapture after identity resolution: proven-idle receipts may already
+    // have been cleared above, and the guarded update must compare against
+    // the current file rather than the entry snapshot.
+    const refreshed = this.readState();
+    const tunnelReceipt = storedProcessReceipt(refreshed, 'recoveryTunnel');
+    const candidateReceipt = storedProcessReceipt(refreshed, 'recoveryTunnelCandidate');
     this.updateState({
       recoveryTunnelPid: null,
       recoveryTunnelProcessStartToken: null,
@@ -510,8 +536,12 @@ class RecoveryPlaneService {
     const scriptRevision = fileSha256(script);
     const fingerprint = recoveryFingerprint(settings, scriptRevision, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId);
     const state = this.readState();
-    const existingReceipt = storedProcessReceipt(state, 'recoveryMcp');
-    const existingIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
+    const mcpPort = Number(settings.recoveryMcpPort) || 0;
+    const existingIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP', mcpPort);
+    // Recapture after identity resolution: a proven-idle receipt may already
+    // have been cleared above, and later guarded updates must compare against
+    // the current file rather than the entry snapshot.
+    const existingReceipt = storedProcessReceipt(this.readState(), 'recoveryMcp');
     const currentChecks = {
       instance_id_present: Boolean(state.recoveryMcpInstanceId),
       exact_process_identity: Boolean(existingIdentity),
@@ -546,7 +576,7 @@ class RecoveryPlaneService {
     const current = this.lastMcpCurrentObservation.current;
     if (current) {
       const latestState = this.readState();
-      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
+      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP', mcpPort);
       if (latestIdentity && sameProcessIdentity(existingIdentity, latestIdentity)
         && latestState.recoveryMcpFingerprint === fingerprint
         && latestState.recoveryMcpInstanceId === state.recoveryMcpInstanceId) {
@@ -604,7 +634,7 @@ class RecoveryPlaneService {
       if (!isAlive(child.pid)) break;
       if (await recoveryMcpHealth(settings.recoveryMcpPort, authToken, this.device?.deviceId || '', this.device?.deviceInstanceId || '', this.activationEpochId, child.pid, recoveryMcpInstanceId, { timeoutMs: RECOVERY_MCP_ACTIVATION_HEALTH_TIMEOUT_MS })) {
         const latestState = this.readState();
-        const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP');
+        const latestIdentity = await this.ownedIdentity(latestState, 'recoveryMcp', 'RECOVERY_MCP', mcpPort);
         if (latestIdentity && sameProcessIdentity(spawnedIdentity, latestIdentity)
           && latestState.recoveryMcpInstanceId === recoveryMcpInstanceId
           && latestState.recoveryMcpFingerprint === fingerprint) {
@@ -622,20 +652,24 @@ class RecoveryPlaneService {
     const state = this.readState();
     const tunnelId = String(settings.recoveryTunnelId || '').trim();
     if (!tunnelId) {
-      return this.deactivateOwnedTunnel(state, { configured: false, tunnelState: 'not_configured' });
+      return this.deactivateOwnedTunnel(state, { configured: false, tunnelState: 'not_configured', recoveryHealthPort: Number(settings.recoveryHealthPort) || 0 });
     }
     if (tunnelId === String(settings.tunnelId || '').trim()) {
-      return this.deactivateOwnedTunnel(state, { configured: true, tunnelState: 'blocked_shared_tunnel_id', errorCode: 'RECOVERY_TUNNEL_ID_NOT_INDEPENDENT' });
+      return this.deactivateOwnedTunnel(state, { configured: true, tunnelState: 'blocked_shared_tunnel_id', errorCode: 'RECOVERY_TUNNEL_ID_NOT_INDEPENDENT', recoveryHealthPort: Number(settings.recoveryHealthPort) || 0 });
     }
     if (!runtimeApiKey) {
-      return this.deactivateOwnedTunnel(state, { configured: true, tunnelState: 'blocked_missing_runtime_key', errorCode: 'RECOVERY_TUNNEL_RUNTIME_KEY_MISSING' });
+      return this.deactivateOwnedTunnel(state, { configured: true, tunnelState: 'blocked_missing_runtime_key', errorCode: 'RECOVERY_TUNNEL_RUNTIME_KEY_MISSING', recoveryHealthPort: Number(settings.recoveryHealthPort) || 0 });
     }
     if (!fs.existsSync(this.paths.tunnelExecutable())) throw Object.assign(new Error('Recovery Tunnel executable is missing.'), { code: 'RECOVERY_TUNNEL_EXECUTABLE_MISSING' });
     const fingerprint = recoveryTunnelFingerprint(settings, authToken, this.device?.deviceId || '', this.activationEpochId);
-    const primaryReceipt = storedProcessReceipt(state, 'recoveryTunnel');
-    const candidateReceipt = storedProcessReceipt(state, 'recoveryTunnelCandidate');
-    const primaryIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
-    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+    const healthPort = Number(settings.recoveryHealthPort) || 0;
+    const primaryIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
+    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', healthPort);
+    // Recapture after identity resolution: proven-idle receipts may already
+    // have been cleared above, and later guarded updates must compare against
+    // the current file rather than the entry snapshot.
+    const primaryReceipt = storedProcessReceipt(this.readState(), 'recoveryTunnel');
+    const candidateReceipt = storedProcessReceipt(this.readState(), 'recoveryTunnelCandidate');
     const current = Boolean(state.recoveryTunnelInstanceId)
       && Boolean(primaryIdentity)
       && state.recoveryTunnelFingerprint === fingerprint
@@ -643,7 +677,7 @@ class RecoveryPlaneService {
       && await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, state.recoveryTunnelPid);
     if (current) {
       const latestState = this.readState();
-      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+      const latestIdentity = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
       const latestReady = latestIdentity
         && sameProcessIdentity(primaryIdentity, latestIdentity)
         && latestState.recoveryTunnelFingerprint === fingerprint
@@ -651,7 +685,7 @@ class RecoveryPlaneService {
         && latestState.recoveryTunnelActivationEpochId === state.recoveryTunnelActivationEpochId
         && await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, latestState.recoveryTunnelPid);
       const finalState = latestReady ? this.readState() : null;
-      const finalIdentity = finalState && await this.ownedIdentity(finalState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+      const finalIdentity = finalState && await this.ownedIdentity(finalState, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
       if (finalIdentity
         && sameProcessIdentity(latestIdentity, finalIdentity)
         && finalState.recoveryTunnelFingerprint === fingerprint
@@ -685,8 +719,8 @@ class RecoveryPlaneService {
       for (let index = 0; index < RECOVERY_TUNNEL_START_ATTEMPTS; index += 1) {
         if (await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, candidatePid)) {
           const latestState = this.readState();
-          const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
-          const latestPrimary = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL');
+          const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', healthPort);
+          const latestPrimary = await this.ownedIdentity(latestState, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
           const candidateInstanceId = String(latestState.recoveryTunnelCandidateInstanceId || '').trim();
           if (!latestCandidate || !sameProcessIdentity(candidateIdentity, latestCandidate)
             || latestState.recoveryTunnelCandidateFingerprint !== fingerprint
@@ -764,7 +798,7 @@ class RecoveryPlaneService {
     for (let index = 0; index < RECOVERY_TUNNEL_START_ATTEMPTS; index += 1) {
       if (await recoveryTunnelReady(this.paths, settings.recoveryHealthPort, child.pid)) {
         const latestState = this.readState();
-        const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
+        const latestCandidate = await this.ownedIdentity(latestState, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', healthPort);
         if (!latestCandidate || !sameProcessIdentity(spawnedIdentity, latestCandidate)
           || latestState.recoveryTunnelCandidateInstanceId !== recoveryTunnelInstanceId
           || latestState.recoveryTunnelCandidateFingerprint !== fingerprint) {
@@ -802,11 +836,45 @@ class RecoveryPlaneService {
     return this.lastStatus;
   }
 
-  async stop() {
+  async clearProvenIdleUnverifiableReceipt(prefix, port, originalError) {
+    // The stored PID exists but its OS start token cannot be observed (for
+    // example a recycled PID now owned by a protected system process).  Never
+    // terminate that PID.  Only forget the paper receipt, and only when a
+    // loopback listener probe proves the stored PID does not hold this
+    // plane's service port.  A held port or a failed probe keeps the receipt
+    // and rethrows, preserving the exact fail-closed contract.
     const state = this.readState();
-    const tunnelIdentity = await this.ownedIdentity(state, 'recoveryTunnel', 'RECOVERY_TUNNEL');
-    const candidateIdentity = await this.ownedIdentity(state, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL');
-    const mcpIdentity = await this.ownedIdentity(state, 'recoveryMcp', 'RECOVERY_MCP');
+    const receipt = storedProcessReceipt(state, prefix);
+    const storedPid = receipt.pid;
+    if (!storedPid) return null;
+    const probe = await run('netstat.exe', ['-ano', '-p', 'tcp'], { allowFailure: true, timeoutMs: RECOVERY_TUNNEL_PROBE_TIMEOUT_MS });
+    if (!probe || Number(probe.code) !== 0) throw originalError;
+    const listenerPid = parseLoopbackListenerPid(probe.stdout, port);
+    if (listenerPid === storedPid) throw originalError;
+    const clearPatch = prefix === 'recoveryMcp'
+      ? { recoveryMcpPid: null, recoveryMcpProcessStartToken: null, recoveryMcpInstanceId: null, recoveryMcpDeviceId: null, recoveryMcpDeviceInstanceId: null, recoveryMcpActivationEpochId: null }
+      : prefix === 'recoveryTunnelCandidate'
+        ? { recoveryTunnelCandidatePid: null, recoveryTunnelCandidateProcessStartToken: null, recoveryTunnelCandidateInstanceId: null, recoveryTunnelCandidateFingerprint: null, recoveryTunnelCandidateActivationEpochId: null, recoveryTunnelCandidateStartedAt: null, recoveryTunnelCandidateDeviceId: null, recoveryTunnelCandidateDeviceInstanceId: null }
+        : { recoveryTunnelPid: null, recoveryTunnelProcessStartToken: null, recoveryTunnelInstanceId: null, recoveryTunnelFingerprint: null, recoveryTunnelActivationEpochId: null, recoveryTunnelDeviceId: null, recoveryTunnelDeviceInstanceId: null };
+    this.updateState(clearPatch, (value) => sameStoredProcessReceipt(value, prefix, receipt), 'RECOVERY_PROCESS_STATE_CHANGED');
+    this.log?.warn?.('Recovery Plane cleared an unverifiable stale process receipt without termination; the stored PID does not hold the service port.', {
+      prefix,
+      pid: storedPid,
+      port: Number(port),
+      listener_pid: listenerPid,
+      code: String(originalError?.code || '') || null
+    });
+    return null;
+  }
+
+  async stop(idleProof = {}) {
+    const initial = this.readState();
+    const healthPort = Number(idleProof?.recoveryHealthPort) || 0;
+    const mcpPort = Number(idleProof?.recoveryMcpPort) || 0;
+    const tunnelIdentity = await this.ownedIdentity(initial, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
+    const candidateIdentity = await this.ownedIdentity(initial, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', healthPort);
+    const mcpIdentity = await this.ownedIdentity(initial, 'recoveryMcp', 'RECOVERY_MCP', mcpPort);
+    const state = this.readState();
     const receipts = {
       recoveryTunnel: storedProcessReceipt(state, 'recoveryTunnel'),
       recoveryTunnelCandidate: storedProcessReceipt(state, 'recoveryTunnelCandidate'),
@@ -829,4 +897,4 @@ class RecoveryPlaneService {
   }
 }
 
-module.exports = { RecoveryPlaneService, recoveryFingerprint, recoveryTunnelFingerprint, recoveryMcpHealth, recoveryMcpHealthObservation, recoveryTunnelListenerPid, recoveryTunnelReady, stopExactTree };
+module.exports = { RecoveryPlaneService, recoveryFingerprint, recoveryTunnelFingerprint, recoveryMcpHealth, recoveryMcpHealthObservation, recoveryTunnelListenerPid, parseLoopbackListenerPid, recoveryTunnelReady, stopExactTree };

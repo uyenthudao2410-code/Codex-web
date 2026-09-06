@@ -1748,6 +1748,45 @@
     setText('daTurnTokenStatus', 'Lượt mới nhất chưa đo');
   }
 
+  function toolCallTokenState(operations) {
+    const section = operations?.tool_call_token_measurements;
+    if (!section || typeof section !== 'object') return null;
+    if (section.missing_measurement_policy !== 'unknown_not_zero') return null;
+    if (section.content_free !== true) return null;
+    const status = String(section.status || '').trim().toLowerCase();
+    const measurement = String(section.measurement || '').trim().toUpperCase();
+    if (!['calibrated_estimate', 'context_estimate', 'unknown'].includes(status)) return null;
+    if (status === 'calibrated_estimate' && measurement !== 'CALIBRATED_ESTIMATE') return null;
+    if (status === 'context_estimate' && measurement !== 'CONTEXT_ESTIMATE') return null;
+    const estimate = section.estimate && typeof section.estimate === 'object' ? section.estimate : {};
+    return {
+      status,
+      measurement,
+      confidence: String(section.confidence || 'unknown').trim().toLowerCase(),
+      calls: observedNumber(section.tool_calls),
+      bytes: observedNumber(section.model_visible_bytes),
+      chars: observedNumber(section.model_visible_chars),
+      p10: observedNumber(estimate.p10_total_tokens ?? estimate.p10_context_tokens),
+      p50: observedNumber(estimate.p50_total_tokens ?? estimate.p50_context_tokens),
+      p90: observedNumber(estimate.p90_total_tokens ?? estimate.p90_context_tokens)
+    };
+  }
+
+  function renderToolCallTokens(operations) {
+    const state = toolCallTokenState(operations);
+    if (!state || state.calls === null || state.calls < 1) {
+      setText('daToolCallTokenStatus', 'Chưa đo lượt nào');
+      return;
+    }
+    const chars = state.chars !== null ? ` · ${compact(state.chars)} ký tự` : '';
+    if ((state.status === 'calibrated_estimate' || state.status === 'context_estimate') && state.p50 !== null) {
+      const tag = state.status === 'calibrated_estimate' ? ` · ${state.confidence.toUpperCase()}` : ' · CONTEXT';
+      setText('daToolCallTokenStatus', `≈${compact(state.p50)} · ${state.calls} lượt gọi${tag}${chars}`);
+      return;
+    }
+    setText('daToolCallTokenStatus', `${state.calls} lượt gọi · chưa đủ dữ liệu ước lượng${chars}`);
+  }
+
   function renderTurnLog(operations) {
     const container = byId('daTurnLog');
     if (!container) return;
@@ -2039,6 +2078,7 @@
     if (costHeading?.firstChild) costHeading.firstChild.textContent = 'Chi phí theo mô hình · measured/provider ';
     renderTokenOverviewTiles(measured, operations, controllerUsage);
     renderTurnTokens(operations);
+    renderToolCallTokens(operations);
     renderChatTurnCard(operations);
     renderLiveTurnCard(orchestration);
     renderTurnLog(operations);

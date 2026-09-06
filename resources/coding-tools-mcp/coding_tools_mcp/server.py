@@ -120,7 +120,7 @@ from .operator_report import build_command_completion_report, build_orchestratio
 from .proof_ledger import ProofLedger  # noqa: F401  # composition-root namespace
 from .telemetry import SessionTelemetry  # noqa: F401  # composition-root namespace
 from .textutils import DEFAULT_MAX_LINES, TextTruncation, truncate_text_head  # noqa: F401  # composition-root namespace
-from .tool_results import make_tool_result, model_visible_text_bytes  # noqa: F401  # composition-root namespace
+from .tool_results import make_tool_result, model_visible_text_bytes, model_visible_text_chars  # noqa: F401  # composition-root namespace
 from .tool_contract import (  # noqa: F401  # composition-root namespace
     AGENT_EXECUTION_ROUTES,
     SMART_COMPAT_TOOL_NAMES,
@@ -1110,6 +1110,10 @@ class Runtime(
             key in args and str(args.get(key) or "").strip() not in {"", "."}
             for key in ("path", "workdir")
         )
+        if name == "workspace_context" and not path_supplied and bound_root is None:
+            # The caller relies on the active workspace binding.  When the
+            # bound drive is gone there is no safe fallback directory.
+            self._require_active_workspace_binding_available()
         run_bound_root: Path | None = None
         if name == "task_control" and mutation and bound_root is None and not path_supplied:
             requested_run_id = str(args.get("run_id") or "").strip()
@@ -2511,6 +2515,11 @@ class Runtime(
                 request_bytes=len(json.dumps(args, ensure_ascii=False, default=str).encode("utf-8")),
                 response_bytes=len(json.dumps(payload, ensure_ascii=False, default=str).encode("utf-8")),
                 model_visible_bytes=model_visible_text_bytes(
+                    name,
+                    payload,
+                    is_error=bool(payload.get("ok") is False),
+                ),
+                model_visible_chars=model_visible_text_chars(
                     name,
                     payload,
                     is_error=bool(payload.get("ok") is False),

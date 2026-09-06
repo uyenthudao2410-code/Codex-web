@@ -370,6 +370,15 @@ token chứng minh process gốc đã chết hoặc PID đã được tái sử 
 không parse được, process còn sống/không xác minh được và mọi blocker còn lại
 vẫn fail-closed.
 
+Receipt Recovery Plane mà OS start token không quan sát được (ví dụ PID cũ đã
+chết và số PID bị tái sử dụng bởi system process được bảo vệ) không bao giờ bị
+terminate. Các đường `stop`/`ensure`/`deactivate` truyền loopback service port
+làm idle proof: chỉ khi probe chứng minh PID lưu trữ không giữ port thì receipt
+giấy mới được xóa CAS-guarded để refresh/boot tiếp tục được trên mọi máy; port
+vẫn bị PID đó giữ hoặc probe thất bại thì receipt được giữ nguyên và lỗi gốc
+vẫn fail-closed. Không truyền port, lỗi khác, receipt tokenless legacy và mọi
+đường terminate/migration giữ nguyên hợp đồng cũ.
+
 Electron UI tự relaunch bằng launcher argv cố định sau khi host trả lệnh qua UI
 registration; registration revision mới complete action. Full-clean Recovery
 Host update dừng Coding MCP/Tunnel và Recovery Plane trước khi host cũ nhả

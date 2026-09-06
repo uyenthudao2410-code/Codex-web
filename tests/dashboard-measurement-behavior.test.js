@@ -48,6 +48,7 @@ function dashboard() {
       observedNumber, canonicalMeasuredUsage, canonicalControllerUsageState,
       controllerTokenEstimateState, turnTokenState, renderTokenOverviewTiles,
       renderChatTurnCard, renderLiveTurnCard, renderTurnLog, renderDonut, renderAll,
+      toolCallTokenState, renderToolCallTokens,
       snapshotFreshnessLabel, realtimeAgeLabel, rollingProviderUsage, updateRealtimeMetrics, canonicalHourBuckets,
       animateText, compact, setText, applyOverviewPulse,
       setAnalytics(value) { analyticsSnapshot = value; },
@@ -378,4 +379,32 @@ test('unknown replaces an in-flight animation and an observed zero replaces the 
   assert.equal(d.frames.size, 0);
   d.animateText(metric, d.compact, 0);
   assert.equal(metric.textContent, '0');
+});
+
+test('tool-call turns render estimated bands and never zero-fill missing windows', () => {
+  const d = dashboard();
+  assert.equal(d.toolCallTokenState(null), null);
+  assert.equal(d.toolCallTokenState({}), null);
+  const bad = { missing_measurement_policy: 'unknown_not_zero', content_free: true, status: 'context_estimate', measurement: 'CONTEXT_ESTIMATE' };
+  assert.equal(d.toolCallTokenState({ tool_call_token_measurements: bad }).calls, null);
+  d.element('daToolCallTokenStatus');
+  d.renderToolCallTokens(null);
+  assert.equal(d.element('daToolCallTokenStatus').textContent, 'Chưa đo lượt nào');
+  const section = {
+    missing_measurement_policy: 'unknown_not_zero', content_free: true,
+    status: 'context_estimate', measurement: 'CONTEXT_ESTIMATE', confidence: 'low',
+    tool_calls: 5, model_visible_bytes: 4000, model_visible_chars: 3500,
+    estimate: { p10_context_tokens: 667, p50_context_tokens: 1000, p90_context_tokens: 2000, not_controller_total: true }
+  };
+  const state = d.toolCallTokenState({ tool_call_token_measurements: section });
+  assert.equal(state.calls, 5);
+  assert.equal(state.p50, 1000);
+  assert.equal(state.chars, 3500);
+  d.renderToolCallTokens({ tool_call_token_measurements: section });
+  assert.match(d.element('daToolCallTokenStatus').textContent, /≈1\.0K · 5 lượt gọi · CONTEXT · 3\.5K ký tự/);
+  const calibrated = { ...section, status: 'calibrated_estimate', measurement: 'CALIBRATED_ESTIMATE', confidence: 'low', estimate: { p10_total_tokens: 900, p50_total_tokens: 1000, p90_total_tokens: 1100 } };
+  d.renderToolCallTokens({ tool_call_token_measurements: calibrated });
+  assert.match(d.element('daToolCallTokenStatus').textContent, /≈1\.0K · 5 lượt gọi · LOW · 3\.5K ký tự/);
+  d.renderToolCallTokens({ tool_call_token_measurements: { ...section, tool_calls: 0 } });
+  assert.equal(d.element('daToolCallTokenStatus').textContent, 'Chưa đo lượt nào');
 });

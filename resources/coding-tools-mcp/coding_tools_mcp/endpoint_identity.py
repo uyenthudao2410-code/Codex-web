@@ -35,6 +35,37 @@ def _route_key(label: str, endpoint_id: str) -> str:
     return f"{slug[:40] or 'device'}-{endpoint_id[:8]}"
 
 
+def workspace_binding_id(
+    *,
+    device_instance_id: object = "",
+    workspace_root: object = None,
+    generation: object = 0,
+) -> str:
+    """Return the opaque binding for (device instance, workspace, generation).
+
+    The binding rotates whenever the device instance changes, the active
+    workspace switches, or the workspace generation bumps. Only the digest
+    leaves this function, so it is safe to carry in receipts, health, and
+    attestation metadata without exposing the raw path.
+    """
+    try:
+        generation_value = int(generation or 0)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        generation_value = 0
+    try:
+        normalized = (
+            _normalized_root(Path(workspace_root).resolve(strict=False))  # type: ignore[arg-type]
+            if workspace_root is not None
+            else ""
+        )
+    except (TypeError, ValueError, OSError):
+        normalized = ""
+    return _sha256_identity(
+        "workspace-binding",
+        f"{str(device_instance_id or '').strip()}\0{normalized}\0{generation_value}",
+    )
+
+
 def endpoint_identity_payload(
     runtime: Any,
     *,
@@ -76,6 +107,7 @@ def endpoint_identity_payload(
     activation_epoch_id = str(
         getattr(runtime, "activation_epoch_id", None) or ""
     ).strip()
+    generation = int(getattr(runtime, "workspace_generation", 0) or 0)
     return {
         "schema_version": ENDPOINT_IDENTITY_SCHEMA_VERSION,
         "endpoint_id": endpoint_id,
@@ -86,7 +118,12 @@ def endpoint_identity_payload(
         "workspace": str(root),
         "workspace_name": root.name or str(root),
         "workspace_id": resolved_workspace_id,
-        "workspace_generation": int(getattr(runtime, "workspace_generation", 0) or 0),
+        "workspace_generation": generation,
+        "workspace_binding_id": workspace_binding_id(
+            device_instance_id=device_instance_id,
+            workspace_root=root,
+            generation=generation,
+        ),
         "process_instance_id": str(getattr(runtime, "process_instance_id", "") or "") or None,
         "server_instance_id": str(getattr(runtime, "server_instance_id", "") or "") or None,
         "activation_epoch_id": activation_epoch_id or None,

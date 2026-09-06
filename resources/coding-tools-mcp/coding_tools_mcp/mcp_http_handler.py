@@ -42,6 +42,7 @@ from .protocol import (
     validate_rpc_envelope,
 )
 from .controller_usage_ingress import CONTROLLER_USAGE_META_KEY, active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
+from .endpoint_identity import workspace_binding_id
 from .live_control import control_presence_projection, live_control_snapshot
 from .mcp_metadata import MCP_ENDPOINT_PATH, SERVER_NAME, SERVER_TITLE, server_card_payload  # noqa: F401  # compatibility re-export
 from .operations_analytics import operations_analytics
@@ -255,6 +256,11 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 "connector_activation_bootstrap": connector_activation_bootstrap,
                 "projection_rebuild": runtime.projection_rebuild_snapshot(),
                 "workspace_generation": runtime.workspace_generation,
+                "workspace_binding_id": workspace_binding_id(
+                    device_instance_id=str(os.environ.get(f"{ENV_PREFIX}_DEVICE_INSTANCE_ID", "") or "").strip(),
+                    workspace_root=runtime.workspace.root,
+                    generation=runtime.workspace_generation,
+                ),
                 "code_revision": str(os.environ.get(f"{ENV_PREFIX}_CODE_REVISION", "")).strip() or None,
                 "device_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_ID", "")).strip() or None,
                 "device_instance_id": str(os.environ.get(f"{ENV_PREFIX}_DEVICE_INSTANCE_ID", "")).strip() or None,

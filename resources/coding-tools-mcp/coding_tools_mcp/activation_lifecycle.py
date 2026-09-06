@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 from .envutils import ENV_PREFIX
+from .endpoint_identity import workspace_binding_id
 from .errors import ToolFailure
 from .lifecycle_census import lifecycle_census, open_lifecycle_census_snapshot, read_task_projection
 from .projection_rebuild import (
@@ -501,6 +502,68 @@ class ActivationLifecycleMixin:
                 and not bool(getattr(self, "activation_completion_closed", False))
             )
 
+    def _workspace_binding_metadata(self) -> dict[str, Any]:
+        """Return content-free binding metadata for the active workspace.
+
+        Safe to expose while admission is closed: only the opaque binding
+        digest, the generation, the bare workspace name, and a drive
+        existence flag. No file listing, Git access, or source reads occur.
+        """
+
+        root = getattr(getattr(self, "workspace", None), "root", None)
+        try:
+            root_text = str(root) if root is not None else ""
+        except Exception:
+            root_text = ""
+        try:
+            available = bool(root_text) and os.path.isdir(root_text)
+        except Exception:
+            available = False
+        try:
+            generation = int(getattr(self, "workspace_generation", 0) or 0)
+        except (TypeError, ValueError):
+            generation = 0
+        try:
+            name = (root.name if hasattr(root, "name") else "") or ""
+        except Exception:
+            name = ""
+        device_instance_id = str(
+            os.environ.get(f"{ENV_PREFIX}_DEVICE_INSTANCE_ID", "") or ""
+        ).strip()
+        binding = None
+        if root_text:
+            try:
+                binding = workspace_binding_id(
+                    device_instance_id=device_instance_id,
+                    workspace_root=root,
+                    generation=generation,
+                )
+            except Exception:
+                binding = None
+        return {
+            "workspace_binding_id": binding,
+            "workspace_generation": generation,
+            "workspace_name": str(name or "")[:80] or None,
+            "available": available,
+        }
+
+    def _require_active_workspace_binding_available(self) -> dict[str, Any]:
+        """Raise WORKSPACE_UNAVAILABLE when the bound drive is gone.
+
+        Callers that rely on the active workspace binding (no explicit path)
+        must fail here instead of falling back to another directory.
+        """
+        binding = self._workspace_binding_metadata()
+        if binding.get("available") is not True:
+            raise ToolFailure(
+                "WORKSPACE_UNAVAILABLE",
+                "The active workspace is unavailable. Reselect the workspace before retrying; no fallback directory will be used.",
+                category="runtime",
+                retryable=False,
+                details={"workspace_binding": binding},
+            )
+        return binding
+
     def activation_connector_bootstrap_result(self, name: str) -> dict[str, Any] | None:
         with self.activation_lock:
             if not self.activation_connector_bootstrap_allowed(name):
@@ -515,6 +578,7 @@ class ActivationLifecycleMixin:
                     "completed": False,
                     "retryable": False,
                     "workspace_accessed": False,
+                    "workspace_binding": self._workspace_binding_metadata(),
                     "error": {
                         "code": "ACTIVATION_REQUEST_EXPIRED",
                         "message": (
@@ -567,6 +631,7 @@ class ActivationLifecycleMixin:
                 "completed": False,
                 "retryable": True,
                 "workspace_accessed": False,
+                "workspace_binding": self._workspace_binding_metadata(),
                 "activation_bootstrap": {
                     "schema_version": 1,
                     "kind": "connector_compatibility_bootstrap",

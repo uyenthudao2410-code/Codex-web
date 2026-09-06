@@ -163,6 +163,113 @@ def _controller_token_estimate(
     }
 
 
+def _tool_call_token_measurements(
+    *,
+    performance: dict[str, Any] | None,
+    start: datetime,
+    end: datetime,
+    calibration_ratios: list[float],
+) -> dict[str, Any]:
+    """Estimate tokens over every tool call in the window, not just accepted runs.
+
+    Casual ChatWeb turns never create EOCL runs, so the accepted-runs estimate
+    stays unknown for them even though every call's model-visible bytes pass
+    through this runtime (the one choke point we own, OpenRouter-style). This
+    projection aggregates the persisted performance-trace hourly buckets
+    instead, using the same calibrated-or-prior ladder and the same honesty
+    labels. Context bytes are not controller/model totals.
+    """
+    base = {
+        "scope": "all_tool_calls_in_window",
+        "window": {"start": _iso(start), "end": _iso(end), "basis": "performance_trace_hourly_utc"},
+        "calibration_samples": len(calibration_ratios),
+        "calibration_min_samples": CONTROLLER_CALIBRATION_MIN_SAMPLES,
+        "missing_measurement_policy": MISSING_POLICY,
+        "content_free": True,
+    }
+    buckets = (performance or {}).get("hourly_metrics") if isinstance(performance, dict) else {}
+    calls = 0
+    visible_bytes = 0
+    visible_chars = 0
+    if isinstance(buckets, dict):
+        try:
+            start_hour = int(start.timestamp() // 3600)
+            end_hour = int(end.timestamp() // 3600)
+        except (OverflowError, OSError, ValueError):
+            start_hour = end_hour = None
+        if start_hour is not None:
+            for raw_hour, bucket in buckets.items():
+                try:
+                    hour = int(raw_hour)
+                except (TypeError, ValueError):
+                    continue
+                if hour < start_hour or hour > end_hour:
+                    continue
+                if not isinstance(bucket, dict):
+                    continue
+                try:
+                    calls += max(0, int(bucket.get("tool_calls") or 0))
+                    visible_bytes += max(0, int(bucket.get("model_visible_bytes") or 0))
+                    visible_chars += max(0, int(bucket.get("model_visible_chars") or 0))
+                except (TypeError, ValueError):
+                    continue
+    base.update({
+        "tool_calls": calls or None,
+        "model_visible_bytes": visible_bytes or None,
+        "model_visible_chars": visible_chars or None,
+    })
+    if calls <= 0 or visible_bytes <= 0:
+        return {
+            **base,
+            "status": "unknown",
+            "measurement": "UNKNOWN",
+            "confidence": "unknown",
+            "method": None,
+            "estimate": None,
+            "missing_reason": "no_tool_call_bytes_in_window",
+        }
+    if len(calibration_ratios) >= CONTROLLER_CALIBRATION_MIN_SAMPLES:
+        p10_ratio = _nearest_rank_float(calibration_ratios, 10)
+        p50_ratio = _nearest_rank_float(calibration_ratios, 50)
+        p90_ratio = _nearest_rank_float(calibration_ratios, 90)
+        if p10_ratio is not None and p50_ratio is not None and p90_ratio is not None:
+            confidence = "high" if len(calibration_ratios) >= 30 else "medium" if len(calibration_ratios) >= 12 else "low"
+            return {
+                **base,
+                "status": "calibrated_estimate",
+                "measurement": "CALIBRATED_ESTIMATE",
+                "confidence": confidence,
+                "method": "exact_controller_tokens_per_model_visible_byte_v1",
+                "estimate": {
+                    "p10_total_tokens": max(0, round(visible_bytes * p10_ratio)),
+                    "p50_total_tokens": max(0, round(visible_bytes * p50_ratio)),
+                    "p90_total_tokens": max(0, round(visible_bytes * p90_ratio)),
+                },
+                "provenance": "exact_controller_usage_event+performance_trace.hourly_metrics.model_visible_bytes",
+                "missing_reason": None,
+            }
+    return {
+        **base,
+        "status": "context_estimate",
+        "measurement": "CONTEXT_ESTIMATE",
+        "confidence": "low",
+        "method": "model_visible_bytes_context_prior_v1",
+        "estimate": {
+            "p10_context_tokens": max(0, round(visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P10)),
+            "p50_context_tokens": max(0, round(visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P50)),
+            "p90_context_tokens": max(0, round(visible_bytes / CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P90)),
+            "not_controller_total": True,
+        },
+        "prior": {
+            "p10_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P10,
+            "p50_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P50,
+            "p90_bytes_per_token": CONTEXT_ESTIMATE_BYTES_PER_TOKEN_P90,
+        },
+        "provenance": "performance_trace.hourly_metrics.model_visible_bytes; explicit context estimate only",
+        "missing_reason": "exact_calibration_below_minimum",
+    }
+
+
 def _chat_turn_measurements(ledger: Any) -> dict[str, Any]:
     """Session per-turn token summary from the Electron host journal.
 
@@ -549,6 +656,13 @@ def operations_analytics(
         calibration_ratios=controller_calibration_ratios,
     )
 
+    tool_call_token_measurements = _tool_call_token_measurements(
+        performance=performance if isinstance(performance, dict) else None,
+        start=start,
+        end=end,
+        calibration_ratios=controller_calibration_ratios,
+    )
+
     return {
         "schema_version": 1,
         "measurement": MEASUREMENT,
@@ -615,6 +729,7 @@ def operations_analytics(
             },
         },
         "controller_token_estimate": controller_token_estimate,
+        "tool_call_token_measurements": tool_call_token_measurements,
         "turn_token_measurements": _chat_turn_measurements(ledger),
         "measurement_coverage": {
             "missing_measurement_policy": MISSING_POLICY,

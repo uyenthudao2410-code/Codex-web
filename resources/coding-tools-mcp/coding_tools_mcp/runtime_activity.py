@@ -1,7 +1,47 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any
+
+from .endpoint_identity import workspace_binding_id
+from .envutils import ENV_PREFIX
+
+
+def _workspace_binding_snapshot(owner: Any) -> dict[str, Any]:
+    """Snapshot the opaque workspace binding for contact receipts.
+
+    Content-free: only the digest, the generation counter, and the device
+    instance label. A workspace switch bumps the generation (and restarts
+    managed processes), so a receipt bound to the previous snapshot must
+    stop counting as current contact.
+    """
+    root = getattr(getattr(owner, "workspace", None), "root", None)
+    try:
+        generation = int(getattr(owner, "workspace_generation", 0) or 0)
+    except (TypeError, ValueError):
+        generation = 0
+    device_instance_id = str(
+        os.environ.get(f"{ENV_PREFIX}_DEVICE_INSTANCE_ID", "") or ""
+    ).strip()
+    binding = None
+    if root is not None:
+        try:
+            binding = workspace_binding_id(
+                device_instance_id=device_instance_id,
+                workspace_root=root,
+                generation=generation,
+            )
+        except Exception:
+            binding = None
+    return {"workspace_binding_id": binding, "workspace_generation": generation}
+
+
+def _generation_or_none(value: Any) -> int | None:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return None
 
 
 def hub_client_activity_state(
@@ -276,6 +316,7 @@ class RuntimeActivityMixin:
         if str(bootstrap.get("activation_epoch_id") or "").strip() != epoch_id:
             return
         capabilities = identity.get("capabilities") if isinstance(identity.get("capabilities"), dict) else {}
+        binding_snapshot = _workspace_binding_snapshot(self)
         receipt = {
             "client_id": client_id,
             "client_type": client_type,
@@ -290,6 +331,8 @@ class RuntimeActivityMixin:
             "process_instance_id": self.process_instance_id,
             "server_instance_id": self.server_instance_id,
             "activation_epoch_id": epoch_id,
+            "workspace_binding_id": binding_snapshot["workspace_binding_id"],
+            "workspace_generation": binding_snapshot["workspace_generation"],
             "workspace_accessed": False,
             "observed_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -310,6 +353,8 @@ class RuntimeActivityMixin:
                 and str(existing.get("process_instance_id") or "") == receipt["process_instance_id"]
                 and str(existing.get("server_instance_id") or "") == receipt["server_instance_id"]
                 and str(existing.get("activation_epoch_id") or "") == receipt["activation_epoch_id"]
+                and str(existing.get("workspace_binding_id") or "") == str(receipt["workspace_binding_id"] or "")
+                and _generation_or_none(existing.get("workspace_generation")) == _generation_or_none(receipt["workspace_generation"])
                 for existing in self.activation_bootstrap_receipts.values()
             )
             if current_boundary_exists:
@@ -344,6 +389,7 @@ class RuntimeActivityMixin:
         latest = max(candidates, key=lambda item: str(item.get("observed_at") or ""), default=None)
         current_sha = str(self.tool_contract.get("sha256") or "")
         epoch_id = str(getattr(self, "activation_epoch_id", None) or "")
+        binding_snapshot = _workspace_binding_snapshot(self)
         current = bool(
             latest
             and str(latest.get("client_type") or "") == "chatweb"
@@ -356,6 +402,8 @@ class RuntimeActivityMixin:
             and str(latest.get("server_instance_id") or "") == self.server_instance_id
             and str(latest.get("activation_epoch_id") or "") == epoch_id
             and latest.get("attestation_verified") is True
+            and str(latest.get("workspace_binding_id") or "") == str(binding_snapshot["workspace_binding_id"] or "")
+            and _generation_or_none(latest.get("workspace_generation")) == _generation_or_none(binding_snapshot["workspace_generation"])
         )
         return {
             "observed": latest is not None,
@@ -373,6 +421,8 @@ class RuntimeActivityMixin:
             "attestation_verified": (latest or {}).get("attestation_verified") is True,
             "attestation_source": str((latest or {}).get("attestation_source") or "") or None,
             "workspace_accessed": (latest or {}).get("workspace_accessed"),
+            "workspace_binding_id": str((latest or {}).get("workspace_binding_id") or "") or None,
+            "workspace_generation": (latest or {}).get("workspace_generation"),
             "snapshot_busy": False,
         }
 

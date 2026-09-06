@@ -257,6 +257,30 @@ class EfficiencyRuntimeTests(unittest.TestCase):
             self.assertEqual(metric["lsp_handled_queries"], 2)
             self.assertEqual(metric["fallback_search_queries"], 1)
 
+    def test_performance_trace_records_exact_model_visible_chars(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = PerformanceTraceStore(Path(temp))
+            state = store.record(
+                tool="workspace_context",
+                started_monotonic=10.0,
+                finished_monotonic=11.0,
+                started_wall_utc="2026-08-15T00:00:00.000Z",
+                finished_wall_utc="2026-08-15T00:00:01.000Z",
+                model_visible_bytes=120,
+                model_visible_chars=60,
+                orchestration={"run_id": "run-chars-1"},
+            )
+            self.assertEqual(state["recent"][-1]["model_visible_chars"], 60)
+            self.assertEqual(state["model_visible_chars"], 60)
+            self.assertEqual(state["run_metrics"]["run-chars-1"]["model_visible_chars"], 60)
+            hours = state["hourly_metrics"]
+            self.assertTrue(hours)
+            bucket = next(iter(hours.values()))
+            self.assertEqual(bucket["model_visible_chars"], 60)
+            # Legacy persisted state without the counter still normalizes.
+            reloaded = PerformanceTraceStore(Path(temp))
+            self.assertEqual(reloaded.get()["model_visible_chars"], 60)
+
     def test_performance_trace_v6_hourly_metrics_bucket_by_started_hour_and_prune_rolling_window(self) -> None:
         fixture_now = datetime.fromisoformat("2026-08-18T12:00:00+00:00").timestamp()
         with tempfile.TemporaryDirectory() as temp, patch(

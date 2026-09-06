@@ -369,6 +369,22 @@ function validateConnectorReadyGate({ health, contractStatus, nowUnixMs } = {}) 
       if (!bootstrapObservedAt || !Number.isFinite(bootstrapObservedAtUnixMs)) add('COMPATIBILITY_BOOTSTRAP_TIMESTAMP_INVALID');
       else if (Number.isSafeInteger(nowUnixMs)
         && bootstrapObservedAtUnixMs > nowUnixMs + CONNECTOR_DISCOVERY_FUTURE_SKEW_MS) add('COMPATIBILITY_BOOTSTRAP_FROM_FUTURE');
+      // A workspace switch bumps the MCP generation and rebinds the active
+      // workspace.  A contact receipt bound to the previous binding must not
+      // close the new boundary: it fails with a typed mismatch so the client
+      // re-discovers instead of silently using the wrong workspace.  Either
+      // side may predate binding metadata (old tunnel/MCP); absence on either
+      // side skips this check and preserves the previous behavior.
+      const receiptBindingId = text(activationBootstrap.workspace_binding_id);
+      const liveBindingId = text(health?.workspace_binding_id);
+      const receiptGeneration = Number(activationBootstrap.workspace_generation);
+      const liveGeneration = Number(health?.workspace_generation);
+      if (receiptBindingId && liveBindingId && receiptBindingId !== liveBindingId) {
+        add('CONNECTOR_BINDING_MISMATCH');
+      } else if (Number.isSafeInteger(receiptGeneration) && Number.isSafeInteger(liveGeneration)
+        && receiptGeneration !== liveGeneration) {
+        add('CONNECTOR_BINDING_MISMATCH');
+      }
     }
     if (contractStatus?.rediscovered === true) add('COMPATIBILITY_MODE_MUST_NOT_CLAIM_REDISCOVERY');
     if (compatibilityMode && contractStatus?.compatibilityAcknowledged !== true) add('STATUS_COMPATIBILITY_NOT_ACKNOWLEDGED');
@@ -1058,7 +1074,7 @@ class FullCleanActivation {
       }
     }
     if (typeof this.recoveryPlane?.stop === 'function') {
-      try { await this.recoveryPlane.stop(); }
+      try { await this.recoveryPlane.stop(this._recoveryPlaneStopIdleProof()); }
       catch (error) {
         this.log?.error?.(error.message, {
           stage: 'full-clean-failure-recovery-plane-stop',
@@ -1073,6 +1089,21 @@ class FullCleanActivation {
     const value = this.settings?.load?.() || {};
     if (!value || typeof value !== 'object') throw epochError('FULL_CLEAN_SETTINGS_UNAVAILABLE', 'Runtime settings could not be loaded.');
     return value;
+  }
+
+  // Loopback service ports the Recovery Plane stop may use as idle proof.
+  // When a stored PID is alive but its OS start token is unobservable (for
+  // example a recycled PID now owned by a protected system process), the
+  // plane clears only the paper receipt — never terminates the PID — and only
+  // when the stored PID provably does not hold the service port.  Missing
+  // settings preserve the previous fail-closed stop with no idle proof.
+  _recoveryPlaneStopIdleProof() {
+    let settings = null;
+    try { settings = this._settings(); } catch { return {}; }
+    return {
+      recoveryHealthPort: Number(settings?.recoveryHealthPort) || 0,
+      recoveryMcpPort: Number(settings?.recoveryMcpPort) || 0
+    };
   }
 
   _componentRevisions() {
@@ -1652,7 +1683,7 @@ class FullCleanActivation {
         }
         await this.orchestrator.stop({ manual: false, fullClean: true, activationEpochId: epochId });
       }
-      if (typeof this.recoveryPlane?.stop === 'function') await this.recoveryPlane.stop();
+      if (typeof this.recoveryPlane?.stop === 'function') await this.recoveryPlane.stop(this._recoveryPlaneStopIdleProof());
       this.store.update(epochId, { state: 'HANDOFF', reason: 'replacement-recovery-host-requested' });
       if (typeof this.spawnRecoveryReplacement !== 'function') throw epochError('RECOVERY_REPLACEMENT_UNAVAILABLE', 'Full clean activation requires a Recovery Host replacement launcher.');
       await this.spawnRecoveryReplacement({
