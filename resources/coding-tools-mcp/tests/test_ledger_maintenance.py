@@ -88,6 +88,16 @@ class LedgerMaintenanceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             ledger, _, _ = self._finished_ledger(root)
+            source = root / ".coding-tools" / "orchestration" / "ledger.sqlite3"
+            connection = sqlite3.connect(source)
+            try:
+                connection.execute("CREATE TABLE maintenance_reclaimable_probe(payload BLOB)")
+                connection.execute("INSERT INTO maintenance_reclaimable_probe(payload) VALUES(zeroblob(?))", (1024 * 1024,))
+                connection.commit()
+                connection.execute("DELETE FROM maintenance_reclaimable_probe")
+                connection.commit()
+            finally:
+                connection.close()
             before = inspect_maintenance_readiness(root)
             self.assertTrue(before["compact_allowed"])
             with self.assertRaises(PermissionError):
@@ -118,6 +128,8 @@ class LedgerMaintenanceTests(unittest.TestCase):
                 result = compact_ledger(root, expected_sha256=before["ledger_sha256"], runtime_stopped=True)
             self.assertTrue(result["replaced"])
             self.assertEqual(result["candidate_logical_sha256"], before["logical_sha256"])
+            self.assertEqual(result["candidate_compaction"]["journal_mode"], "delete")
+            self.assertGreater(result["candidate_compaction"]["saved_bytes"], 0)
             self.assertTrue(result["durability"]["candidate_fsync"])
             self.assertTrue(result["durability"]["replacement_fsync"])
             candidate_fsync = events.index(("fsync", "ledger.compact.sqlite3"))
@@ -132,6 +144,7 @@ class LedgerMaintenanceTests(unittest.TestCase):
             self.assertEqual(after["max_event_seq"], before["max_event_seq"])
             self.assertEqual(after["head_event_hash"], before["head_event_hash"])
             self.assertEqual(after["logical_sha256"], before["logical_sha256"])
+            self.assertLess(after["size_bytes"], before["size_bytes"])
             with self.assertRaises(PermissionError):
                 post_restart_append_smoke(root, explicitly_authorized=False)
             smoke = post_restart_append_smoke(root, explicitly_authorized=True)

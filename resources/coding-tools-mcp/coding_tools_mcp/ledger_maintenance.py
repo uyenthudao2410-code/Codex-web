@@ -1,8 +1,8 @@
 """Fail-closed maintenance for the canonical orchestration ledger.
 
 This is deliberately separate from normal writer/readers. It never truncates
-or VACUUMs the live file: compaction is an Online Backup API copy validated
-before a guarded atomic replacement.
+or VACUUMs the live file: compaction is an Online Backup API copy, VACUUMed
+off-line, validated, and then installed through a guarded atomic replacement.
 """
 
 from __future__ import annotations
@@ -178,6 +178,30 @@ def _fsync_file(path: Path) -> None:
         os.close(fd)
 
 
+def _vacuum_candidate(path: Path) -> dict[str, Any]:
+    """Repack only the detached replacement database, never the live ledger."""
+    before_size = path.stat().st_size
+    connection = sqlite3.connect(path, timeout=30.0)
+    try:
+        connection.execute("PRAGMA busy_timeout=30000")
+        journal_mode = str(connection.execute("PRAGMA journal_mode=DELETE").fetchone()[0]).lower()
+        if journal_mode != "delete":
+            raise RuntimeError(f"replacement ledger refused DELETE journal mode: {journal_mode}")
+        connection.execute("VACUUM")
+    finally:
+        connection.close()
+    after_size = path.stat().st_size
+    sidecars = _sidecar_state(path)
+    if sidecars["wal"]["exists"] or sidecars["shm"]["exists"]:
+        raise RuntimeError("replacement ledger retained WAL sidecars after off-line VACUUM")
+    return {
+        "journal_mode": journal_mode,
+        "before_size_bytes": int(before_size),
+        "after_size_bytes": int(after_size),
+        "saved_bytes": int(before_size - after_size),
+    }
+
+
 def _fsync_parent_directory(path: Path) -> dict[str, Any]:
     """Flush rename metadata where the platform exposes directory fsync."""
     if os.name == "nt":
@@ -299,6 +323,7 @@ def compact_ledger(workspace: Path, *, expected_sha256: str, runtime_stopped: bo
                 finally:
                     destination.close()
 
+            candidate_compaction = _vacuum_candidate(replacement)
             candidate_connection = sqlite3.connect(replacement)
             candidate_connection.row_factory = sqlite3.Row
             try:
@@ -332,6 +357,7 @@ def compact_ledger(workspace: Path, *, expected_sha256: str, runtime_stopped: bo
         "exclusive_source": exclusive_source,
         "checkpointed_source": checkpointed_source,
         "final_source": final_source,
+        "candidate_compaction": candidate_compaction,
         "candidate_logical_sha256": candidate["logical_sha256"],
         "after_sha256": _sha256(source),
         "wal_checkpoint": wal_checkpoint,
