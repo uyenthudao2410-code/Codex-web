@@ -1,6 +1,6 @@
 {
   "version": 6,
-  "tool_calls": 43471,
+  "tool_calls": 43472,
   "errors": 3127,
   "cache_hits": 289,
   "deduplicated_calls": 9,
@@ -71,11 +71,11 @@
     "cold": 867
   },
   "proof_cache_saved_ms": 2331,
-  "local_execution_ms": 99035704,
-  "estimated_wait_ms": 1155670303,
-  "request_bytes": 31227460,
-  "response_bytes": 2414559275,
-  "model_visible_bytes": 67341889,
+  "local_execution_ms": 99036437,
+  "estimated_wait_ms": 1155729646,
+  "request_bytes": 31227499,
+  "response_bytes": 2414560861,
+  "model_visible_bytes": 67341918,
   "phase_timing_samples": 1874,
   "phase_timing_ms": {
     "workspace_ms": 775755,
@@ -10539,67 +10539,8 @@
       "last_finished_at": "2026-09-06T06:34:34.349Z"
     }
   },
-  "last_finished_at": "2026-09-06T06:50:57.278Z",
+  "last_finished_at": "2026-09-06T06:51:57.362Z",
   "recent": [
-    {
-      "tool": "command_control",
-      "started_at": "2026-09-06T06:18:19.169Z",
-      "finished_at": "2026-09-06T06:18:19.536Z",
-      "wall_time_source": "operation_boundary",
-      "duration_ms": 375,
-      "wait_before_ms": 593,
-      "request_bytes": 205,
-      "response_bytes": 2134,
-      "model_visible_bytes": 74,
-      "invocation": {
-        "schema_version": 1,
-        "invocation_id": "74a72f439102f0dfdb69e9f31e81dcdeb004526c017134f125cd25c35a54e2ba",
-        "identity_source": "transport_request_id",
-        "request_id": "0",
-        "task_context_id": "ctx_7d248e464c5aafb5310b71ba345896d7",
-        "task_id": "9ffc7ef6d2ac434b86bda497e410ce0b",
-        "session_instance": "6835b421db5e9a4a",
-        "execution_context_id": "mcp2026:587a6aa42925a192e873b1657a5c32039f5b51298e989dd724d49570",
-        "client_id": "chatweb",
-        "client_type": "chatweb",
-        "trace_context": {
-          "trace_id": "6a9d0504000000004d0fd9470a1b1ecc",
-          "parent_span_id": "540e25053594e442",
-          "trace_flags": "00",
-          "trace_context_schema_version": 1,
-          "tracestate_present": true
-        }
-      },
-      "outcome": {
-        "status": "ok"
-      },
-      "truncated": false,
-      "cache_hit": false,
-      "deduplicated": false,
-      "idempotency_eligible": false,
-      "idempotency_key_present": true,
-      "idempotency_policy": "none",
-      "idempotency_key_source": "explicit",
-      "idempotency_operation": "command_control:poll",
-      "idempotency_missing_reason": "",
-      "error_class": "",
-      "proof_cache_eligible": 0,
-      "proof_cache_hits": 0,
-      "proof_cache_misses": 0,
-      "proof_cache_miss_reasons": {},
-      "proof_cache_saved_ms": 0,
-      "ok": true,
-      "run_id": "9b50ea48b82f4a108040b5a1636ab935",
-      "wave_id": "d032961fbaad4f6685050e259ce46228",
-      "delegation_id": "",
-      "execution_mode": "mcp_only",
-      "route_requested": "",
-      "route_resolved": "",
-      "orchestration_state": "PREFLIGHT",
-      "phase_timing": {},
-      "localization": {},
-      "result_tail": {}
-    },
     {
       "tool": "agent_workflow",
       "started_at": "2026-09-06T06:18:21.322Z",
@@ -16298,6 +16239,57 @@
       "phase_timing": {},
       "localization": {},
       "result_tail": {}
+    },
+    {
+      "tool": "workspace_context",
+      "started_at": "2026-09-06T06:51:56.618Z",
+      "finished_at": "2026-09-06T06:51:57.362Z",
+      "wall_time_source": "operation_boundary",
+      "duration_ms": 733,
+      "wait_before_ms": 59343,
+      "request_bytes": 39,
+      "response_bytes": 1586,
+      "model_visible_bytes": 29,
+      "invocation": {
+        "schema_version": 1,
+        "invocation_id": "fe3bcace943142f5db000485a094c89bccfa869360b8cac327b49303ca3acec7",
+        "identity_source": "transport_request_id",
+        "request_id": "recovery-semantic-health",
+        "task_context_id": "ctx_ee8be59bd8de29c66d01ff150d433381",
+        "session_instance": "1ae3f63d434d4156",
+        "execution_context_id": "mcp2026:57951a3c5b329d66e0ba49e65421858321888603651845af303a1f01",
+        "client_id": "recovery-semantic-watchdog",
+        "client_type": "electron"
+      },
+      "outcome": {
+        "status": "ok"
+      },
+      "truncated": false,
+      "cache_hit": false,
+      "deduplicated": false,
+      "idempotency_eligible": false,
+      "idempotency_key_present": false,
+      "idempotency_policy": "none",
+      "idempotency_key_source": "none",
+      "idempotency_operation": "workspace_context",
+      "idempotency_missing_reason": "",
+      "error_class": "",
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "ok": true,
+      "run_id": "",
+      "wave_id": "",
+      "delegation_id": "",
+      "execution_mode": "",
+      "route_requested": "",
+      "route_resolved": "",
+      "orchestration_state": "",
+      "phase_timing": {},
+      "localization": {},
+      "result_tail": {}
     }
   ],
   "hourly_metrics": {
@@ -18067,15 +18059,15 @@
     },
     "496854": {
       "hour": 496854,
-      "tool_calls": 194,
+      "tool_calls": 195,
       "errors": 31,
       "cache_hits": 0,
-      "request_bytes": 111468,
-      "response_bytes": 17193602,
-      "model_visible_bytes": 174983,
-      "local_execution_ms": 348267,
-      "estimated_wait_ms": 2348158,
-      "last_finished_at": "2026-09-06T06:50:57.278Z"
+      "request_bytes": 111507,
+      "response_bytes": 17195188,
+      "model_visible_bytes": 175012,
+      "local_execution_ms": 349000,
+      "estimated_wait_ms": 2407501,
+      "last_finished_at": "2026-09-06T06:51:57.362Z"
     }
   }
 }
