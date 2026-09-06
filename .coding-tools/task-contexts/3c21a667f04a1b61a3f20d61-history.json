@@ -1,0 +1,524 @@
+[
+  {
+    "version": 2,
+    "task_id": "932d942a70f24cc3b24cdf760b8fa416",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:41:23.146Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "continuity_event is required",
+    "next_step": "",
+    "created_at": "2026-09-06T04:39:56.779Z",
+    "updated_at": "2026-09-06T04:45:53.332Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:39:56.779Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T04:41:23.146Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; if(-not(Test-Path -LiteralPath $installer)){throw 'INSTALLER_MISSING'}; $i=Get-Item -LiteralPath $installer; $v=$i.VersionInfo; $keys=@('dist\\win-unpacked\\resources\\resources\\native-python\\python.exe','dist\\win-unpacked\\resources\\resources\\native-python\\pythonw.exe','dist\\win-unpacked\\resources\\resources\\coding-tools-mcp\\pyp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:41:23.146Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "EXECUTION_OWNER_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-06T04:44:52.398Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_IDENTITY_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-06T04:45:03.395Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_PROBLEM_REVISION_STALE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:45:53.332Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_EVENT_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:46:01.687Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "787785721e3e404faad0994d41947231",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:46:08.263Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-06T04:46:01.689Z",
+    "updated_at": "2026-09-06T04:46:08.263Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:46:01.689Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:01.865Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 \"EXACT_RUN_RECOVERY_REFUSED|exact_run_restored|stateless_exact_run_recovery|projection_exact_run\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "0w9M_5_hyvaxUiT0ywL1QZ8v"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:02.122Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 \"EXACT_RUN_RECOVERY_REFUSED|exact_run_restored|stateless_exact_run_recovery|projection_exact_run\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:08.263Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"def stateless_task_context_for_run|stateless_task_context_for_run\\(\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:08.263Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:46:13.736Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f1552904e1b244b783382f2e47514ab4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "5_34kgp2UsFqVWXHR3jQfOQS",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 897,
+      "finished_at": "2026-09-06T04:48:15.360Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:46:13.737Z",
+    "updated_at": "2026-09-06T04:48:15.360Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:46:13.737Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:14.022Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 -F \"def stateless_task_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "vrVi_8e3iFmuSpAr3vPZFpdE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:14.330Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 -F \"def stateless_task_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:20.497Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=49;$i -le 125;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "R64wAGumtYSBBiC3VjteevFx"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:20.965Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=49;$i -le 125;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:42.189Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show --no-ext-diff --no-renames --format=fuller --stat --oneline -1 573b6ff5a5ff2509288c9656e18fd375f1ab32d3 && git diff --no-ext-diff --no-renames --name-status 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -- electron/main.js electron/services/runtimePaths.js tests/runtime-user-data-path.test.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js package.json",
+          "session_id": "QrNAei7ClrbqeTcl6HA7peBr"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:42.524Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show --no-ext-diff --no-renames --format=fuller --stat --oneline -1 573b6ff5a5ff2509288c9656e18fd375f1ab32d3 && git diff --no-ext-diff --no-renames --name-status 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -- electron/main.js electron/services/runtimePaths.js tests/runtime-user-data-path.test.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:53.581Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline --decorate --no-merges 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -20",
+          "session_id": "k-61l0A7LAwq_DcdeZ6q1vEv"
+        }
+      },
+      {
+        "time": "2026-09-06T04:46:53.815Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline --decorate --no-merges 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -20",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:10.592Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools/task-contexts .coding-tools/orchestration/reports",
+          "session_id": "5RcIaEOABJRnmx1EVx15cW4g"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:10.892Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools/task-contexts .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:20.700Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $o=$j.orchestration; [pscustomobject]@{task_id=$j.task_id;status=$j.status;current_step=$j.current_step;run_id=$o.run_id;wave_id=$o.wave_id;orchestration_state=$o.orchestration_state;completion_report_id=$j.completion_report_id;property_names=@($j.PSObject.Properties.Name);file_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $",
+          "session_id": "teyGAfOfXk8xmaIc6nFHnGGp"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:21.358Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $o=$j.orchestration; [pscustomobject]@{task_id=$j.task_id;status=$j.status;current_step=$j.current_step;run_id=$o.run_id;wave_id=$o.wave_id;orchestration_state=$o.orchestration_state;completion_report_id=$j.completion_report_id;property_names=@($j.PSObject.Properties.Name);file_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:27.450Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $matches=@($j.events | Where-Object { ($_ | ConvertTo-Json -Compress -Depth 8) -like '*3ddeec792a9e4ad589567f0e147c2630*' } | ForEach-Object { [pscustomobject]@{time=$_.time;event=$_.event;details=$_.details} }); [pscustomobject]@{count=$matches.Count;matches=$matches}|ConvertTo-Json -Depth 8 -Compress\"",
+          "session_id": "uGX6TnO3qW-HR0Vcu5TlogFq"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:28.043Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json'; $j=Get-Content -Raw -LiteralPath $p | ConvertFrom-Json; $matches=@($j.events | Where-Object { ($_ | ConvertTo-Json -Compress -Depth 8) -like '*3ddeec792a9e4ad589567f0e147c2630*' } | ForEach-Object { [pscustomobject]@{time=$_.time;event=$_.event;details=$_.details} }); [pscustomobject]@{count=$matches.Count;matches=$matches}|ConvertTo-Json -Depth 8 -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:34.027Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools",
+          "session_id": "YugoG8hCM7Ujkdkqbfp6NzBQ"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:34.275Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:43.607Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 -F \"if action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "_o0pAdFfSEbQqWMKK88MIMkv"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:43.826Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 -F \"if action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:02.069Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 -F \"assertExactPackagedResources\" scripts/verify-packaged-resources.js",
+          "session_id": "Q1a5kc5n5PvaIrhaqVuu0ZEO"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:02.477Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 -F \"assertExactPackagedResources\" scripts/verify-packaged-resources.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:14.527Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; if(-not(Test-Path -LiteralPath $installer)){throw 'INSTALLER_MISSING'}; if(-not(Test-Path -LiteralPath $asar)){throw 'ASAR_MISSING'}; $i=Get-Item -LiteralPath $installer; $v=$i.VersionInfo; $tmp=Join-Path $env:TEMP ('c4-wave4-verify-'+[guid]::NewGuid().ToString('N",
+          "session_id": "5_34kgp2UsFqVWXHR3jQfOQS"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:15.360Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; if(-not(Test-Path -LiteralPath $installer)){throw 'INSTALLER_MISSING'}; if(-not(Test-Path -LiteralPath $asar)){throw 'ASAR_MISSING'}; $i=Get-Item -LiteralPath $installer; $v=$i.VersionInfo; $tmp=Join-Path $env:TEMP ('c4-wave4-verify-'+[guid]::NewGuid().ToString('N",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:48:22.407Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "699dd9964e4e4fcab453f48e0c8326fc",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:48:33.062Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-06T04:48:22.409Z",
+    "updated_at": "2026-09-06T04:48:33.062Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:48:22.409Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:22.658Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$root=(Get-Location).Path; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; @(& (Join-Path $root 'node_modules\\.bin\\asar.cmd') list $asar) | Where-Object { $_ -match 'runtimePaths|electron\\\\main\\.js|electron/main\\.js' }\"",
+          "session_id": "4Kuex3dYch-Wt18covsRJ9TL"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:23.337Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$root=(Get-Location).Path; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; @(& (Join-Path $root 'node_modules\\.bin\\asar.cmd') list $asar) | Where-Object { $_ -match 'runtimePaths|electron\\\\main\\.js|electron/main\\.js' }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:33.062Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const a=require('@electron/asar'); const c=require('node:crypto'); const p='dist/win-unpacked/resources/app.asar'; for(const f of ['electron/main.js','electron\\\\services\\\\runtimePaths.js']){const b=a.extractFile(p,f); console.log(f+' '+c.createHash('sha256').update(b).digest('hex')+' '+b.length)}\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:33.062Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:48:42.742Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ca63d2714df64229af6810104e23e9bb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "a7b7kyn54PldQredSv0vg2O9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 565,
+      "finished_at": "2026-09-06T04:49:02.279Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:48:42.743Z",
+    "updated_at": "2026-09-06T04:49:02.279Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:48:42.743Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:43.025Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; $tmp=Join-Path $env:TEMP ('c4-wave4-asar-'+[guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $tmp | Out-Null; try { & (Join-Path $root 'node_modules\\.bin\\asar.cmd') extract $asar $tmp | Out-Null; $main=Join-Path $tmp 'electron\\main.js'; $rp=Join",
+          "session_id": "_C4zrzj6zbQx_kPslh5TvP0w"
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:44.369Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $asar=Join-Path $root 'dist\\win-unpacked\\resources\\app.asar'; $tmp=Join-Path $env:TEMP ('c4-wave4-asar-'+[guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Path $tmp | Out-Null; try { & (Join-Path $root 'node_modules\\.bin\\asar.cmd') extract $asar $tmp | Out-Null; $main=Join-Path $tmp 'electron\\main.js'; $rp=Join",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:01.720Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $tmp=Join-Path $env:TEMP ('c4-parity-'+[guid]::NewGuid().ToString('N')+'.js'); $verify=(Join-Path $root 'scripts\\verify-packaged-resources.js').Replace('\\\\','/'); $src=(Join-Path $root 'resources').Replace('\\\\','/'); $pkg=(Join-Path $root 'dist\\win-unpacked\\resources\\resources').Replace('\\\\','/'); $code='const v=require('+([System.Management.Automation.Language.CodeGeneration]::QuoteArgument",
+          "session_id": "a7b7kyn54PldQredSv0vg2O9"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:02.279Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $tmp=Join-Path $env:TEMP ('c4-parity-'+[guid]::NewGuid().ToString('N')+'.js'); $verify=(Join-Path $root 'scripts\\verify-packaged-resources.js').Replace('\\\\','/'); $src=(Join-Path $root 'resources').Replace('\\\\','/'); $pkg=(Join-Path $root 'dist\\win-unpacked\\resources\\resources').Replace('\\\\','/'); $code='const v=require('+([System.Management.Automation.Language.CodeGeneration]::QuoteArgument",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:49:10.650Z",
+    "archive_reason": "finished"
+  }
+]

@@ -1,0 +1,549 @@
+[
+  {
+    "version": 2,
+    "task_id": "2c155b1ba15d40f1a7c19154abc53669",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:10:30.440Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-06T05:09:44.136Z",
+    "updated_at": "2026-09-06T05:10:30.440Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:09:44.136Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T05:09:44.139Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:09:54.262Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "SESSION_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:00.168Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:30.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse --verify HEAD && git rev-parse --verify refs/stash && git rev-parse --verify \"d866^{commit}\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:30.440Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:10:39.027Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6c0625227f8b431a91cc6577befaec82",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:11:02.246Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-06T05:10:39.028Z",
+    "updated_at": "2026-09-06T05:11:02.246Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:10:39.028Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:39.725Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse --verify HEAD && git rev-parse --verify refs/stash && git rev-parse --verify \"d866^{commit}\"",
+          "session_id": "WwfyK8-7nIkAwJWPlydzZf7I"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:40.305Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse --verify HEAD && git rev-parse --verify refs/stash && git rev-parse --verify \"d866^{commit}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:47.514Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff-tree --no-commit-id --name-only -r d8668cd8deb8441f15b554dcc28d94a665a523b7",
+          "session_id": "uyGPYPxaJTbDe5NVXxAIzgeA"
+        }
+      },
+      {
+        "time": "2026-09-06T05:10:47.974Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff-tree --no-commit-id --name-only -r d8668cd8deb8441f15b554dcc28d94a665a523b7",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:02.246Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),c=require('crypto'),cp=require('child_process'),path=require('path'); const h=b=>c.createHash('sha256').update(b).digest('hex'); const stash='54a47e10e9af452c2580e4b45d7b06c8ca678761',d866='d8668cd8deb8441f15b554dcc28d94a665a523b7'; const c4=['electron/main.js','electron/services/runtimePaths.js','scripts/packaged-recovery-smoke.js','tests/recovery-host.test.js','tests/runtime-user-data-path.test.js']; const prot=['electron/services/fullCleanActivation.js','electr",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:02.246Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:11:21.258Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "50653d99197a4a9b9cd536eba2d6e60c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:14:52.905Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH",
+          "kind": "build",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+          "branch": "main",
+          "worktree_fp": "8d9ebcda3e5b92cdf47ccd6c0fb77bf2eb93d43ef4ed187b91aeacef150c032c",
+          "dirty_paths": [
+            "electron/main.js",
+            "electron/services/runtimePaths.js",
+            "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+            "resources/coding-tools-mcp/tests/test_activation_epoch.py",
+            "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+            "scripts/packaged-recovery-smoke.js",
+            "tests/recovery-host.test.js",
+            "tests/runtime-user-data-path.test.js"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "50653d99197a4a9b9cd536eba2d6e60c",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "kind": "build",
+            "status": "passed",
+            "exit_code": 0,
+            "duration_ms": null,
+            "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH"
+          }
+        ]
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "67f0712452fb4d8b00199e6cc89b90d6158190af941b10d03d98fd0223daf59f",
+    "completion_report_acknowledged_id": "67f0712452fb4d8b00199e6cc89b90d6158190af941b10d03d98fd0223daf59f",
+    "completion_report_acknowledged_at": "2026-09-06T05:15:05.650Z",
+    "test_results": [],
+    "build_results": [
+      {
+        "command": "npm run dist",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 2804 lines | tail: '• building block map  blockMapFile=dist\\\\coding-tools-mcp-setup-1.0.0.exe.blockmap'",
+        "finished_at": "2026-09-06T05:13:49.465Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "d95ceb1524164793b5585e5209664c72",
+          "owner_wave": "ed03827d4a80449db9b1cd00a529524a",
+          "size_bytes": 314697,
+          "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:oDZMUuB-4sjiK3lYPLoXSPuH:stdout",
+              "total_stream_bytes": 314697,
+              "total_retained_bytes": 314697,
+              "head_retained_bytes": 65536,
+              "tail_retained_bytes": 249161,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:oDZMUuB-4sjiK3lYPLoXSPuH:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T05:11:21.259Z",
+    "updated_at": "2026-09-06T05:15:05.653Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:11:21.259Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:22.035Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile \"electron\\main.js\" SHA256 && certutil -hashfile \"electron\\services\\runtimePaths.js\" SHA256 && certutil -hashfile \"scripts\\packaged-recovery-smoke.js\" SHA256 && certutil -hashfile \"tests\\recovery-host.test.js\" SHA256 && certutil -hashfile \"tests\\runtime-user-data-path.test.js\" SHA256 && certutil -hashfile \"electron\\services\\fullCleanActivation.js\" SHA256 && certutil -hashfile \"electron\\services\\nativeService.js\" SHA256 && certutil -hashfile \"electron\\services\\recoveryPlaneServi",
+          "session_id": "q-Y4IQ7Tlr21REFCbj8RPnTU"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:22.973Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile \"electron\\main.js\" SHA256 && certutil -hashfile \"electron\\services\\runtimePaths.js\" SHA256 && certutil -hashfile \"scripts\\packaged-recovery-smoke.js\" SHA256 && certutil -hashfile \"tests\\recovery-host.test.js\" SHA256 && certutil -hashfile \"tests\\runtime-user-data-path.test.js\" SHA256 && certutil -hashfile \"electron\\services\\fullCleanActivation.js\" SHA256 && certutil -hashfile \"electron\\services\\nativeService.js\" SHA256 && certutil -hashfile \"electron\\services\\recoveryPlaneServi",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:29.497Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --exit-code d8668cd8deb8441f15b554dcc28d94a665a523b7 -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/services/tunnelService.js && dir /-C \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\"",
+          "session_id": "TwLMwnSWw6fABNaWpnfVj4F2"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:29.890Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --exit-code d8668cd8deb8441f15b554dcc28d94a665a523b7 -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/services/tunnelService.js && dir /-C \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:11:53.582Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dist",
+          "session_id": "oDZMUuB-4sjiK3lYPLoXSPuH"
+        }
+      },
+      {
+        "time": "2026-09-06T05:13:49.465Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dist",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:13:50.152Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "oDZMUuB-4sjiK3lYPLoXSPuH",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "67f0712452fb4d8b00199e6cc89b90d6158190af941b10d03d98fd0223daf59f"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:10.297Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile \"dist\\coding-tools-mcp-setup-1.0.0.exe\" SHA256 && dir /-C \"dist\\coding-tools-mcp-setup-1.0.0.exe\" && certutil -hashfile \"dist\\win-unpacked\\resources\\app.asar\" SHA256 && npm pkg get version",
+          "session_id": "sLF_EEdm1EMGY0DRv6mYLS4C"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:11.078Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile \"dist\\coding-tools-mcp-setup-1.0.0.exe\" SHA256 && dir /-C \"dist\\coding-tools-mcp-setup-1.0.0.exe\" && certutil -hashfile \"dist\\win-unpacked\\resources\\app.asar\" SHA256 && npm pkg get version",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:17.677Z",
+        "event": "command_started",
+        "details": {
+          "command": "dir /B \"node_modules\\.bin\\asar*\"",
+          "session_id": "P66tAgTUWdkn_MK4hQ2watmg"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:18.085Z",
+        "event": "command_finished",
+        "details": {
+          "command": "dir /B \"node_modules\\.bin\\asar*\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:23.269Z",
+        "event": "command_started",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" --help",
+          "session_id": "ilu3JOcER28zVCHkQFyyxghl"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:23.727Z",
+        "event": "command_finished",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:35.468Z",
+        "event": "command_started",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" extract \"dist\\win-unpacked\\resources\\app.asar\" \"dist\\c4-asar-verify-session-c\" && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\main.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\services\\runtimePaths.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\scripts\\packaged-recovery-smoke.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\tests\\recovery-host.test.js\" SHA256 && certutil -hashfile \"dist\\c4-asa",
+          "session_id": "xBBK7_LtSS7q3r86jyhA_Ggs"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:38.703Z",
+        "event": "command_finished",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" extract \"dist\\win-unpacked\\resources\\app.asar\" \"dist\\c4-asar-verify-session-c\" && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\main.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\services\\runtimePaths.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\scripts\\packaged-recovery-smoke.js\" SHA256 && certutil -hashfile \"dist\\c4-asar-verify-session-c\\tests\\recovery-host.test.js\" SHA256 && certutil -hashfile \"dist\\c4-asa",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:52.905Z",
+        "event": "command_finished",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" list \"dist\\win-unpacked\\resources\\app.asar\" | findstr /I /C:\"electron\\main.js\" /C:\"electron\\services\\runtimePaths.js\" /C:\"scripts\\packaged-recovery-smoke.js\" /C:\"tests\\recovery-host.test.js\" /C:\"tests\\runtime-user-data-path.test.js\" /C:\"electron\\services\\fullCleanActivation.js\" /C:\"electron\\services\\nativeService.js\" /C:\"electron\\services\\recoveryPlaneService.js\" /C:\"electron\\services\\tunnelService.js\" && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\ser",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:14:52.905Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-06T05:15:05.650Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "67f0712452fb4d8b00199e6cc89b90d6158190af941b10d03d98fd0223daf59f"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:15:12.543Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "13212b148b974122b2076462562f53f3",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:15:22.324Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "",
+    "created_at": "2026-09-06T05:15:12.545Z",
+    "updated_at": "2026-09-06T05:15:22.324Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:15:12.545Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:15:13.321Z",
+        "event": "command_started",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" list \"dist\\win-unpacked\\resources\\app.asar\" | findstr /I /C:\"electron\\main.js\" /C:\"electron\\services\\runtimePaths.js\" /C:\"scripts\\packaged-recovery-smoke.js\" /C:\"tests\\recovery-host.test.js\" /C:\"tests\\runtime-user-data-path.test.js\" /C:\"electron\\services\\fullCleanActivation.js\" /C:\"electron\\services\\nativeService.js\" /C:\"electron\\services\\recoveryPlaneService.js\" /C:\"electron\\services\\tunnelService.js\" && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\ser",
+          "session_id": "btpRmyXntGWvhzFn-TlJHjvf"
+        }
+      },
+      {
+        "time": "2026-09-06T05:15:13.812Z",
+        "event": "command_finished",
+        "details": {
+          "command": "\"node_modules\\.bin\\asar.cmd\" list \"dist\\win-unpacked\\resources\\app.asar\" | findstr /I /C:\"electron\\main.js\" /C:\"electron\\services\\runtimePaths.js\" /C:\"scripts\\packaged-recovery-smoke.js\" /C:\"tests\\recovery-host.test.js\" /C:\"tests\\runtime-user-data-path.test.js\" /C:\"electron\\services\\fullCleanActivation.js\" /C:\"electron\\services\\nativeService.js\" /C:\"electron\\services\\recoveryPlaneService.js\" /C:\"electron\\services\\tunnelService.js\" && certutil -hashfile \"dist\\c4-asar-verify-session-c\\electron\\ser",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:15:22.324Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /N /I /C:\"files\" /C:\"electron\" /C:\"scripts\" /C:\"tests\" package.json && rmdir /S /Q \"dist\\c4-asar-verify-session-c\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:15:22.324Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:15:32.913Z",
+    "archive_reason": "finished"
+  }
+]

@@ -9,6 +9,22 @@ function requiredRoot(value, name) {
   return resolved;
 }
 
+function hasExplicitUserDataDirectory(argv = process.argv) {
+  return (Array.isArray(argv) ? argv : []).some((value) => {
+    const text = String(value || '').trim();
+    if (!text.startsWith('--user-data-dir=')) return false;
+    return Boolean(text.slice('--user-data-dir='.length).trim());
+  });
+}
+
+function configureElectronUserDataPath(app, { argv = process.argv, recoveryHostMode = false } = {}) {
+  if (!app) throw new Error('Electron app is required to configure userData.');
+  if (!(recoveryHostMode && hasExplicitUserDataDirectory(argv))) {
+    app.setPath('userData', path.join(app.getPath('appData'), 'web-mcp-assistant'));
+  }
+  return app.getPath('userData');
+}
+
 function optionalArtifactId(value, name) {
   const text = String(value || '').trim();
   if (!text) return '';
@@ -101,4 +117,10 @@ function createElectronRuntimePaths(app, processResourcesPath = process.resource
   });
 }
 
-module.exports = { RuntimePaths, createRuntimePaths, createElectronRuntimePaths };
+module.exports = {
+  RuntimePaths,
+  createRuntimePaths,
+  createElectronRuntimePaths,
+  configureElectronUserDataPath,
+  hasExplicitUserDataDirectory
+};

@@ -19,7 +19,7 @@ const { readJson, writeJsonAtomic } = require('./services/jsonStore');
 const { panelInset, panelBounds } = require('./services/panelLayout');
 const runtimePathApi = require('./paths');
 const { resourcesRoot, hubProxyDescriptorFile } = runtimePathApi;
-const { createElectronRuntimePaths } = require('./services/runtimePaths');
+const { createElectronRuntimePaths, configureElectronUserDataPath } = require('./services/runtimePaths');
 const { RecoveryIpcClient } = require('./services/recoveryIpc');
 const {
   ensureRecoveryHost,
@@ -34,8 +34,9 @@ const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerforman
 
 // Version 1.0 has a new product identity but retains the existing encrypted
 // desktop profile so an upgrade does not orphan its runtime configuration.
+const recoveryHostMode = process.argv.includes('--recovery-host') || process.env.WEBCODEX_PROCESS_ROLE === 'recovery-host';
 app.setName('Coding Tools MCP');
-app.setPath('userData', path.join(app.getPath('appData'), 'web-mcp-assistant'));
+configureElectronUserDataPath(app, { argv: process.argv, recoveryHostMode });
 
 let chatWindow;
 let managerWindow;
@@ -53,7 +54,6 @@ const TOOLBAR_HEIGHT = 112;
 const PANEL_ORCHESTRATION_TIMEOUT_MS = 10000;
 const PANEL_LIVE_CONTROL_TIMEOUT_MS = 2500;
 const PANEL_ANALYTICS_TIMEOUT_MS = 10000;
-const recoveryHostMode = process.argv.includes('--recovery-host') || process.env.WEBCODEX_PROCESS_ROLE === 'recovery-host';
 const runtimePaths = createElectronRuntimePaths(app);
 runtimePathApi.configureRuntimePaths(runtimePaths);
 const settings = new SettingsStore(runtimePaths);

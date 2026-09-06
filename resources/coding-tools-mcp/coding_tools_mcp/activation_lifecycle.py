@@ -529,6 +529,39 @@ class ActivationLifecycleMixin:
                         },
                     },
                 }
+            identity = self._current_hub_client() or {}
+            binding_verified = bool(
+                str(identity.get("client_type") or "").strip() == "chatweb"
+                and str(identity.get("identity_source") or "").strip() == "attested_transport"
+                and identity.get("attestation_verified") is True
+            )
+            if not binding_verified:
+                # Compatibility bootstrap is connector authority, not generic
+                # liveness. An unattested caller can receive a workspace-free
+                # diagnosis, but it must never be told that an authoritative
+                # bootstrap was accepted when no durable receipt can be made.
+                return {
+                    "ok": False,
+                    "completed": False,
+                    "retryable": False,
+                    "workspace_accessed": False,
+                    "error": {
+                        "code": "CONNECTOR_ACTIVATION_BINDING_UNVERIFIED",
+                        "message": (
+                            "The connector compatibility bootstrap did not arrive through the "
+                            "current managed ChatWeb tunnel attestation. Reattach or refresh the "
+                            "managed connector before retrying."
+                        ),
+                        "category": "runtime",
+                        "retryable": False,
+                        "details": {
+                            "activation_epoch_id": epoch_id,
+                            "identity_source": str(identity.get("identity_source") or "unavailable"),
+                            "attestation_verified": identity.get("attestation_verified") is True,
+                            "attestation_source": str(identity.get("attestation_source") or "unavailable"),
+                        },
+                    },
+                }
             return {
                 "ok": True,
                 "completed": False,

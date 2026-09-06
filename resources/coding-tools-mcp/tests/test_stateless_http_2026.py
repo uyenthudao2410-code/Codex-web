@@ -478,6 +478,37 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(after_open_retry["observed_at"], first_observed_at)
         self.assertEqual(after_open_retry["client_id"], first_client_id)
 
+    def test_closed_epoch_workspace_context_without_attestation_reports_binding_failure(self) -> None:
+        self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
+        self.runtime.activation_epoch_id = "activation-bootstrap-binding-failure-0001"
+        self.runtime.activation_gate_config = "closed"
+        self.runtime.activation_admission = "closed"
+        self.runtime.activation_expires_at_unix_ms = int(time.time() * 1000) + 60_000
+
+        status, _, body = self.tool_call(
+            "workspace_context",
+            {"path": "must-not-be-resolved-before-binding", "detail": "compact"},
+            request_id=71,
+            extra_headers={CONNECTOR_ATTESTATION_HEADER: ""},
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(body["result"]["isError"])
+        structured = body["result"]["structuredContent"]
+        self.assertFalse(structured["ok"])
+        self.assertFalse(structured["completed"])
+        self.assertFalse(structured["retryable"])
+        self.assertFalse(structured["workspace_accessed"])
+        self.assertNotIn("activation_bootstrap", structured)
+        self.assertEqual(structured["error"]["code"], "CONNECTOR_ACTIVATION_BINDING_UNVERIFIED")
+        self.assertFalse(structured["error"]["retryable"])
+        self.assertEqual(
+            structured["error"]["details"]["activation_epoch_id"],
+            "activation-bootstrap-binding-failure-0001",
+        )
+        self.assertFalse(structured["error"]["details"]["attestation_verified"])
+        self.assertFalse(self.runtime.connector_activation_bootstrap()["observed"])
+        self.assertEqual(self.runtime.activation_admission, "closed")
+
     def test_expired_epoch_workspace_context_returns_terminal_error_without_contact(self) -> None:
         self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
         self.runtime.activation_epoch_id = "activation-bootstrap-expired-0001"

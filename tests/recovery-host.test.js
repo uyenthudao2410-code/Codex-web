@@ -1076,6 +1076,7 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
   assert.equal(ping.pid, process.pid);
   assert.equal(ping.instance_id, host.instanceId);
   assert.equal(ping.ready, false);
+  assert.equal(ping.recovery_plane_mode, undefined, 'liveness ping must remain independent of rich recovery-plane status');
   assert.equal(uiIdentityCalls, 0, 'liveness ping must not start a blocking UI identity probe');
   assert.equal(durableEpochReads, projectionEpochReads,
     'liveness ping must not re-read the durable activation epoch');
@@ -1083,6 +1084,7 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
     'liveness ping must not recalculate component revisions');
 
   const cachedStatus = await host.handlers()['recovery.status']();
+  assert.equal(cachedStatus.recovery_plane_mode, 'independent_mcp_tunnel_v1');
   assert.equal(cachedStatus.electron_ui_revision.state, 'current');
   assert.equal(cachedStatus.telemetry_available, true);
   assert.equal(cachedStatus.signal_stale, false);

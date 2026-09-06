@@ -1,0 +1,270 @@
+[
+  {
+    "version": 2,
+    "task_id": "48b1e13d7e5e4899b741da5feb922922",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "QZ7JqhUNFAqboHhHe9tOprD5",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 128,
+      "duration_ms": 234,
+      "finished_at": "2026-09-06T04:52:10.649Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:52:10.171Z",
+    "updated_at": "2026-09-06T04:52:10.649Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:52:10.171Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:10.424Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse --verify 54a47e10e9af452c2580e4b45d7b06c8ca678761^{commit} && git show -s --format=%H%n%P%n%T%n%ci%n%s 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git status --short -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "session_id": "QZ7JqhUNFAqboHhHe9tOprD5"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:10.649Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse --verify 54a47e10e9af452c2580e4b45d7b06c8ca678761^{commit} && git show -s --format=%H%n%P%n%T%n%ci%n%s 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git status --short -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:52:17.296Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c20d910531a0490884bb4d616f2b53e1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "SbIuM96e8-S4CFoHj3pmcx_K",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 359,
+      "finished_at": "2026-09-06T04:54:05.533Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:52:17.297Z",
+    "updated_at": "2026-09-06T04:54:05.533Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:52:17.297Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:17.575Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse --verify refs/stash && git stash list --format=%gd%x09%H%x09%gs && git cat-file -t 54a47e10e9af452c2580e4b45d7b06c8ca678761",
+          "session_id": "2VRfgGG6g5K0gYR9I9r2o2Mh"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:17.907Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse --verify refs/stash && git stash list --format=%gd%x09%H%x09%gs && git cat-file -t 54a47e10e9af452c2580e4b45d7b06c8ca678761",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:25.141Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-list --parents -n 1 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git show -s --format=%H%n%T%n%ci%n%s 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git status --short -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "session_id": "BPoDN5ct7rMU9Nrt6vw1nOzL"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:25.549Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-list --parents -n 1 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git show -s --format=%H%n%T%n%ci%n%s 54a47e10e9af452c2580e4b45d7b06c8ca678761 && git status --short -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:36.524Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --binary --no-ext-diff 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 54a47e10e9af452c2580e4b45d7b06c8ca678761 -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "session_id": "RcaPJcm4xq_jAW5IwHtTpnAj"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:36.765Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --binary --no-ext-diff 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 54a47e10e9af452c2580e4b45d7b06c8ca678761 -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:50.666Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --no-ext-diff 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js && git diff --no-ext-diff d8668cd8deb8441f15b554dcc28d94a665a523b7^ d8668cd8deb8441f15b554dcc28d94a665a523b7 -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/se",
+          "session_id": "lKMHFSsigVmOeXoeCGqIicmp"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:50.973Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --no-ext-diff 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 573b6ff5a5ff2509288c9656e18fd375f1ab32d3 -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js && git diff --no-ext-diff d8668cd8deb8441f15b554dcc28d94a665a523b7^ d8668cd8deb8441f15b554dcc28d94a665a523b7 -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/se",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:07.509Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_HOST_IDENTITY_UNAVAILABLE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:17.215Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 -F \"PRL_HOST_IDENTITY_UNAVAILABLE\" resources/coding-tools-mcp/coding_tools_mcp tests electron scripts",
+          "session_id": "rbYdyUxeGcpCoWeKpFYT7tJr"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:17.508Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 -F \"PRL_HOST_IDENTITY_UNAVAILABLE\" resources/coding-tools-mcp/coding_tools_mcp tests electron scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:26.210Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -F -e \"claim_pending_host_turn\" -e \"record_pending_host_turn\" -e \"pending_host_turn\" resources/coding-tools-mcp/coding_tools_mcp electron tests",
+          "session_id": "WOx5wTk9CaLFkt_BAM1FlWqe"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:26.475Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -F -e \"claim_pending_host_turn\" -e \"record_pending_host_turn\" -e \"pending_host_turn\" resources/coding-tools-mcp/coding_tools_mcp electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:36.015Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -F \"chatweb-host-turn-pending.json\" electron resources/coding-tools-mcp/coding_tools_mcp tests scripts",
+          "session_id": "wNswWGTWhdVl3xCi7WgljwN5"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:36.325Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -F \"chatweb-host-turn-pending.json\" electron resources/coding-tools-mcp/coding_tools_mcp tests scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:43.270Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/chatEvaluationJournal.js'; $l=Get-Content -LiteralPath $p; for($i=460;$i -le 560;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "rwEApLuOLkF3HQjrUVQgYW5T"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:43.942Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/chatEvaluationJournal.js'; $l=Get-Content -LiteralPath $p; for($i=460;$i -le 560;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:53.368Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/chatEvaluationJournal.js'; $l=Get-Content -LiteralPath $p; for($i=559;$i -le 680;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "RXlCfOY3rL2idFYIEJnSBHD0"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:53.925Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/chatEvaluationJournal.js'; $l=Get-Content -LiteralPath $p; for($i=559;$i -le 680;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:05.247Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 -F \"def _problem_resolution_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && rg -n -C 18 -F \"work_origin\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py | Select-Object -First 120",
+          "session_id": "SbIuM96e8-S4CFoHj3pmcx_K"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:05.533Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 -F \"def _problem_resolution_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py && rg -n -C 18 -F \"work_origin\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py | Select-Object -First 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:54:12.317Z",
+    "archive_reason": "finished"
+  }
+]

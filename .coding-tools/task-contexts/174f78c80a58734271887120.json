@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "task_id": "4b530d25887348aaa37e9b04559145c2",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "rDrnSy7TyxEpKD86yChlvy-U",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 635,
+    "finished_at": "2026-09-06T04:45:04.954Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T04:44:20.982Z",
+  "updated_at": "2026-09-06T04:45:04.954Z",
+  "events": [
+    {
+      "time": "2026-09-06T04:44:20.982Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:21.337Z",
+      "event": "command_started",
+      "details": {
+        "command": "git stash list --date=iso && echo ===HEAD=== && git log --oneline --decorate -n 12 && echo ===REFLOG=== && git reflog -n 20 --date=iso",
+        "session_id": "eQTv4Ky1DEstFM7Utap3wKXu"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:21.739Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git stash list --date=iso && echo ===HEAD=== && git log --oneline --decorate -n 12 && echo ===REFLOG=== && git reflog -n 20 --date=iso",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:35.319Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ===STASH-META=== && git show --no-patch --pretty=raw stash@{0} && echo ===STASH-FILES=== && git stash show --name-status --include-untracked stash@{0} && echo ===PULLED-FILES=== && git diff --name-status 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 && echo ===PULLED-STAT=== && git diff --stat 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+        "session_id": "9tJVPCX2P2YfiHCXr5YJtc4_"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:36.013Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ===STASH-META=== && git show --no-patch --pretty=raw stash@{0} && echo ===STASH-FILES=== && git stash show --name-status --include-untracked stash@{0} && echo ===PULLED-FILES=== && git diff --name-status 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3 && echo ===PULLED-STAT=== && git diff --stat 9b3241ddc963a77d916edc453ea7b7e8e4ae5391..573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:49.363Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ===LOCAL-SOURCE-STASH=== && git diff --stat 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js && echo ===APPLY-CHECK-ONTO-CURRENT-HEAD=== && git diff --binary 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime",
+        "session_id": "au2ztpQITLmXt49SwxahzfmT"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:49.678Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ===LOCAL-SOURCE-STASH=== && git diff --stat 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js && echo ===APPLY-CHECK-ONTO-CURRENT-HEAD=== && git diff --binary 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:44:59.847Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --unified=6 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+        "session_id": "4q0d9fNTUZmEhxrjHLlgIFm3"
+      }
+    },
+    {
+      "time": "2026-09-06T04:45:00.103Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --unified=6 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:45:04.313Z",
+      "event": "command_started",
+      "details": {
+        "command": "git show --stat --summary d8668cd && echo ===DIFF=== && git show --unified=5 --format=fuller d8668cd -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/services/tunnelService.js tests/process-identity.test.js tests/recovery-plane.test.js tests/runtime-lifecycle.test.js tests/runtime-state-identity.test.js",
+        "session_id": "rDrnSy7TyxEpKD86yChlvy-U"
+      }
+    },
+    {
+      "time": "2026-09-06T04:45:04.954Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git show --stat --summary d8668cd && echo ===DIFF=== && git show --unified=5 --format=fuller d8668cd -- electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/recoveryPlaneService.js electron/services/tunnelService.js tests/process-identity.test.js tests/recovery-plane.test.js tests/runtime-lifecycle.test.js tests/runtime-state-identity.test.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

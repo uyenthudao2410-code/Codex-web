@@ -51,9 +51,9 @@ async function waitJson(file, timeoutMs = 15000) {
   }
   return null;
 }
-async function pingRecoveryHost(descriptor) {
+async function callRecoveryHost(descriptor, action) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({ action: 'recovery.ping', args: [] });
+    const body = JSON.stringify({ action, args: [] });
     const request = http.request({
       host: '127.0.0.1', port: Number(descriptor.port), path: '/v1/call', method: 'POST', timeout: 1500,
       headers: { Authorization: `Bearer ${descriptor.token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
@@ -68,6 +68,7 @@ async function pingRecoveryHost(descriptor) {
     request.end(body);
   });
 }
+function pingRecoveryHost(descriptor) { return callRecoveryHost(descriptor, 'recovery.ping'); }
 function runSupervisor(manifestPath, statusPath) {
   const result = spawnSync('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', supervisorScript,
@@ -139,7 +140,8 @@ async function main() {
     assert(ping?.ok === true && ping?.data?.ready === true, 'PACKAGED_RECOVERY_HOST_NOT_READY');
     assert(Number(ping.data.pid) === Number(descriptor.owner_pid), 'PACKAGED_RECOVERY_HOST_IDENTITY_MISMATCH');
     assert(Boolean(ping.data.device_id), 'PACKAGED_DEVICE_IDENTITY_MISSING');
-    assert(ping.data.recovery_plane_mode === 'independent_mcp_tunnel_v1', 'PACKAGED_RECOVERY_MODE_MISMATCH');
+    const richStatus = await callRecoveryHost(descriptor, 'recovery.status');
+    assert(richStatus?.ok === true && richStatus?.data?.recovery_plane_mode === 'independent_mcp_tunnel_v1', 'PACKAGED_RECOVERY_MODE_MISMATCH');
 
     let plane = null;
     const planeDeadline = Date.now() + 12000;
@@ -181,7 +183,7 @@ async function main() {
       ok: true,
       package: { executable: true, app_asar: true, required_resources: required.length },
       isolation: { user_data_isolated: true, production_descriptor_stable: true },
-      recovery: { host_ready: true, device_identity_present: true, mode: ping.data.recovery_plane_mode, mcp_alive: true },
+      recovery: { host_ready: true, device_identity_present: true, mode: richStatus.data.recovery_plane_mode, mcp_alive: true },
       supervisor: { healthy: true, live_owner_fail_closed: true, hash_mismatch_fail_closed: true, scheduled_task_mutation: false }
     }));
   } finally {

@@ -140,6 +140,13 @@ class ActivationEpochTests(unittest.TestCase):
                     runtime, "_call_tool_dispatch",
                     side_effect=AssertionError("bootstrap must not dispatch a workspace tool"),
                 ):
+                    runtime.request_context.hub_client = {
+                        "client_id": "chatweb-activation-deadline-test",
+                        "client_type": "chatweb",
+                        "identity_source": "attested_transport",
+                        "attestation_verified": True,
+                        "attestation_source": "managed_tunnel",
+                    }
                     result = runtime.call_tool(
                         "workspace_context",
                         {"path": "outside-bootstrap-workspace", "detail": "compact"},

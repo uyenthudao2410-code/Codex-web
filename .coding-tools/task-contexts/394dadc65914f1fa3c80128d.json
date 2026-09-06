@@ -1,0 +1,131 @@
+{
+  "version": 2,
+  "task_id": "4dcda397fd9d4aef89e5df09ba55d600",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "o5nSwZkcPuPEM327KUIuXGYD",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-06T05:15:48.130Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "o5nSwZkcPuPEM327KUIuXGYD",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "o5nSwZkcPuPEM327KUIuXGYD",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+        "branch": "main",
+        "worktree_fp": "8d9ebcda3e5b92cdf47ccd6c0fb77bf2eb93d43ef4ed187b91aeacef150c032c",
+        "dirty_paths": [
+          "electron/main.js",
+          "electron/services/runtimePaths.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "scripts/packaged-recovery-smoke.js",
+          "tests/recovery-host.test.js",
+          "tests/runtime-user-data-path.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "4dcda397fd9d4aef89e5df09ba55d600",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "6f85f576ca77a2493e88c25cec497d25637f8ae21503c28b224e272168d65395",
+  "completion_report_acknowledged_id": "6f85f576ca77a2493e88c25cec497d25637f8ae21503c28b224e272168d65395",
+  "completion_report_acknowledged_at": "2026-09-06T05:16:10.969Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-06T05:15:32.915Z",
+  "updated_at": "2026-09-06T05:16:10.972Z",
+  "events": [
+    {
+      "time": "2026-09-06T05:15:32.915Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T05:15:33.804Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/packaged-recovery-smoke.js",
+        "session_id": "o5nSwZkcPuPEM327KUIuXGYD"
+      }
+    },
+    {
+      "time": "2026-09-06T05:15:48.130Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/packaged-recovery-smoke.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:15:48.742Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "o5nSwZkcPuPEM327KUIuXGYD",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "6f85f576ca77a2493e88c25cec497d25637f8ae21503c28b224e272168d65395"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:10.969Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "6f85f576ca77a2493e88c25cec497d25637f8ae21503c28b224e272168d65395"
+      }
+    }
+  ]
+}

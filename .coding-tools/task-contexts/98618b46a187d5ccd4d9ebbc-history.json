@@ -1,0 +1,895 @@
+[
+  {
+    "version": 2,
+    "task_id": "50fbb184b1bf49318245e0ae45198747",
+    "orchestration": {
+      "run_id": "29ea186cac88421abd990fe75eec310f",
+      "wave_id": "df5de8bece5d4e68b533071b1c11a4fc",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+      "worktree_fp": "438b0046c376c49991f8a8f795bae5b8455bd95b0a577214e67e7cfd79174bdb",
+      "contract_fp": ""
+    },
+    "objective": "Integrate the five source/test changes preserved in stash@{0} onto current main without restoring stale runtime evidence, then identify the smallest causal fix for the new-machine failure where connector_compatibility_bootstrap remains accepted but completed=false/retry_required=true/workspace_accessed=false even though local MCP+tunnel+workspace detection are healthy. Preserve machine/workspace auto-detection and fail-closed activation semantics; do not weaken READY/admission gates.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "HS5dE-Vidbuv5iSHMyGA32qc",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 559,
+      "finished_at": "2026-09-06T04:50:13.937Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:47:18.227Z",
+    "updated_at": "2026-09-06T04:50:13.938Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:47:18.227Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Integrate the five source/test changes preserved in stash@{0} onto current main without restoring stale runtime evidence, then identify the smallest causal fix for the new-machine failure where connector_compatibility_bootstrap remains accepted but completed=false/retry_required=true/workspace_accessed=false even though local MCP+tunnel+workspace detection are healthy. Preserve machine/workspace auto-detection and fail-closed activation semantics; do not weaken READY/admission gates."
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:19.178Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:23.701Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T04:47:23.706Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T04:48:20.867Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:08.378Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:27.444Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"connector_compatibility_bootstrap|activation_bootstrap|retry_required|workspace_accessed|RUNTIME_ACTIVATION_PENDING|compatible_activation_bootstrap|READY_COMMITTED|admission_open\" resources/coding-tools-mcp/coding_tools_mcp electron tests resources/coding-tools-mcp/tests",
+          "session_id": "LRAaXwNuawM7yALn5QwdJm7K"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:27.894Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"connector_compatibility_bootstrap|activation_bootstrap|retry_required|workspace_accessed|RUNTIME_ACTIVATION_PENDING|compatible_activation_bootstrap|READY_COMMITTED|admission_open\" resources/coding-tools-mcp/coding_tools_mcp electron tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:41.900Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 activation_connector_bootstrap_result resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "0t2lal7CU9F-MA1TLCZvoipD"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:42.361Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 activation_connector_bootstrap_result resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:49.310Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 connector_compatibility_bootstrap resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py resources/coding-tools-mcp/tests/test_activation_epoch.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "dk33A3JaOJORqQZN6rqai6ZS"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:49.737Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 connector_compatibility_bootstrap resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py resources/coding-tools-mcp/tests/test_activation_epoch.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:55.377Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 connector_activation_bootstrap electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "session_id": "-7lwl04fhf2xza7hmZibw2bt"
+        }
+      },
+      {
+        "time": "2026-09-06T04:49:55.879Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 connector_activation_bootstrap electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:02.800Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 acknowledgeExactConnectorDiscovery electron/services/runtimeOrchestrator.js electron/recoveryHost.js tests/runtime-lifecycle.test.js tests/recovery-host.test.js",
+          "session_id": "gCXm0-tA4wGqe7CTR0pHpH8l"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:03.262Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 acknowledgeExactConnectorDiscovery electron/services/runtimeOrchestrator.js electron/recoveryHost.js tests/runtime-lifecycle.test.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:13.502Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 acknowledgeConnectorContract electron/recoveryHost.js electron/services/fullCleanActivation.js",
+          "session_id": "HS5dE-Vidbuv5iSHMyGA32qc"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:13.938Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 acknowledgeConnectorContract electron/recoveryHost.js electron/services/fullCleanActivation.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:50:20.570Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bc76f729ec9c4645a49af115464455fc",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "mZtiGXMlFSA7QFp1lHMbsqNh",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 343,
+      "finished_at": "2026-09-06T04:50:45.313Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:50:20.572Z",
+    "updated_at": "2026-09-06T04:50:45.313Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:50:20.572Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:20.813Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 acknowledgeExact electron",
+          "session_id": "ZKCH3-VK8NiStPqPfbe1X0LJ"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:21.064Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 acknowledgeExact electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:28.661Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 36 bootstrapCurrent electron/recoveryHost.js tests/recovery-host.test.js",
+          "session_id": "3DqG0Dwk7u1IC8Kze84-6NIE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:28.904Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 36 bootstrapCurrent electron/recoveryHost.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:34.589Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 connector-pending tests/recovery-host.test.js electron/recoveryHost.js",
+          "session_id": "9RKc1lybe9t1Bmq-vyg4cpVW"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:34.914Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 connector-pending tests/recovery-host.test.js electron/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:44.988Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 activation_connector_pending_cache electron/recoveryHost.js",
+          "session_id": "mZtiGXMlFSA7QFp1lHMbsqNh"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:45.313Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 activation_connector_pending_cache electron/recoveryHost.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:50:50.911Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ea3e24a3172a42558b9f8ca9775457cb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "WueCrpIwHKmDUD3uiyCnG0Hu",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 272,
+      "finished_at": "2026-09-06T04:50:51.414Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:50:50.912Z",
+    "updated_at": "2026-09-06T04:50:51.414Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:50:50.912Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:51.189Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 connectorPending electron/recoveryHost.js",
+          "session_id": "WueCrpIwHKmDUD3uiyCnG0Hu"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:51.414Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 connectorPending electron/recoveryHost.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:50:56.421Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fb234c374b30428d890701c40d7a5594",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "_ycaRr5Ere_916ZxIE6_TXrv",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 523,
+      "finished_at": "2026-09-06T04:50:57.206Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:50:56.422Z",
+    "updated_at": "2026-09-06T04:50:57.206Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:50:56.422Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:56.778Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 finalCensus electron/recoveryHost.js",
+          "session_id": "_ycaRr5Ere_916ZxIE6_TXrv"
+        }
+      },
+      {
+        "time": "2026-09-06T04:50:57.206Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 finalCensus electron/recoveryHost.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:51:03.811Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ec2cdcdb26354fbea510481d73cb11f0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:53:03.496Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-06T04:51:03.813Z",
+    "updated_at": "2026-09-06T04:53:03.496Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:51:03.813Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:04.164Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"require\\(.+recoveryHost|class RecoveryHost|RecoveryHost =\" tests/recovery-host.test.js electron",
+          "session_id": "wJV9kFzfyEGicf9m_xIw9O7y"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:04.413Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"require\\(.+recoveryHost|class RecoveryHost|RecoveryHost =\" tests/recovery-host.test.js electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:09.120Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 finalCensus electron/services/recoveryHost.js",
+          "session_id": "ssw3-SggfKCGGnoaQOw_Rn_5"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:09.450Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 finalCensus electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:14.656Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 connectorPendingObservation electron/services/recoveryHost.js",
+          "session_id": "hX5s-BrC884OwbbEabA1zqVG"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:14.939Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 connectorPendingObservation electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:20.081Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 connectorEvidenceObserved electron/services/recoveryHost.js",
+          "session_id": "wMtlNXWJZHL16uicdx-I3DZs"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:20.375Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 connectorEvidenceObserved electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:25.722Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 exactConnectorEvidenceObserved electron/services/recoveryHost.js",
+          "session_id": "EtIAmFj-dEjp6aRCeDwuhSDm"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:26.088Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 exactConnectorEvidenceObserved electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:34.265Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 connectorTimestampValid electron/services/recoveryHost.js",
+          "session_id": "8_xin3cfrDCz5B3xu-VHvqMn"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:34.723Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 connectorTimestampValid electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:43.598Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --oneline -8 -- electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py tests/recovery-host.test.js resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "uMxovHIk0rhYQ6wgyGNKRr-Q"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:43.966Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --oneline -8 -- electron/services/recoveryHost.js resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py tests/recovery-host.test.js resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:51.182Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"def _record_activation_bootstrap|activation_bootstrap_receipts\" resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "session_id": "Fvm1s8qC3AFSzUWSRkMFOca6"
+        }
+      },
+      {
+        "time": "2026-09-06T04:51:51.432Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"def _record_activation_bootstrap|activation_bootstrap_receipts\" resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:01.190Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 _hub_identity_from_request resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "PdoelsApYHW7FJRynBUy_09d"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:01.422Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 _hub_identity_from_request resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:48.357Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "-qSwxr0-5CHKYmyo4aEqlKig"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:48.616Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"def _hub_identity_from_request\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:55.248Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"CONNECTOR_ATTESTATION|connector_attestation|X-Coding-Tools-Client\" electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "session_id": "438ALZeSKGuZznn0slBfGX8j"
+        }
+      },
+      {
+        "time": "2026-09-06T04:52:55.676Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"CONNECTOR_ATTESTATION|connector_attestation|X-Coding-Tools-Client\" electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:03.496Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"connectorAttestation|CONNECTOR_ATTESTATION|attestationSecret|attestation\" electron/services/tunnelService.js electron/services/nativeService.js electron/services/runtimeOrchestrator.js electron/services/recoveryHost*.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:03.496Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:53:11.103Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d923b176ce964b87940ce94f2ab39f7e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:55:47.336Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path escapes the workspace and is blocked.",
+    "next_step": "",
+    "created_at": "2026-09-06T04:53:11.106Z",
+    "updated_at": "2026-09-06T04:55:47.336Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:53:11.106Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:11.358Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"connectorAttestation|CONNECTOR_ATTESTATION|attestationSecret|attestation\" electron/services/tunnelService.js electron/services/nativeService.js electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js electron/services/recoveryHostLauncher.js",
+          "session_id": "gnrhD7JWfncIZsD12iBn9gU5"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:11.707Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"connectorAttestation|CONNECTOR_ATTESTATION|attestationSecret|attestation\" electron/services/tunnelService.js electron/services/nativeService.js electron/services/runtimeOrchestrator.js electron/services/recoveryHost.js electron/services/recoveryHostLauncher.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:19.751Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"connectorAttestationForHealth|rotateConnectorAttestationSecret|tunnel_attestation_refreshed|CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE\" electron/services/runtimeOrchestrator.js",
+          "session_id": "q79GVd3vK9IgiyJfMYlzOVX-"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:20.000Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"connectorAttestationForHealth|rotateConnectorAttestationSecret|tunnel_attestation_refreshed|CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE\" electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:32.741Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show HEAD:electron/services/tunnelService.js | findstr /n /c:\"mcp.extra-headers\" /c:\"X-Coding-Tools\" /c:\"CONNECTOR_ATTESTATION\" /c:\"connectorAttestation\"",
+          "session_id": "OFOUwaz7l3F5dr5300ESPB94"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:33.050Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show HEAD:electron/services/tunnelService.js | findstr /n /c:\"mcp.extra-headers\" /c:\"X-Coding-Tools\" /c:\"CONNECTOR_ATTESTATION\" /c:\"connectorAttestation\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:42.684Z",
+        "event": "command_started",
+        "details": {
+          "command": "git show HEAD:electron/services/tunnelService.js | more +140",
+          "session_id": "cD3aS1gS7gwIHd70yOnaqua1"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:42.992Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git show HEAD:electron/services/tunnelService.js | more +140",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:57.908Z",
+        "event": "command_started",
+        "details": {
+          "command": "git blame -L 1478,1576 -- electron/services/recoveryHost.js && git blame -L 232,317 -- resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "session_id": "O3mAErxWY-wsm382YYDXHMBT"
+        }
+      },
+      {
+        "time": "2026-09-06T04:53:58.310Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git blame -L 1478,1576 -- electron/services/recoveryHost.js && git blame -L 232,317 -- resources/coding-tools-mcp/coding_tools_mcp/runtime_activity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:14.369Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"connector_compatibility_bootstrap|activation_bootstrap\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "session_id": "F4-UlQ3nFIjzjdu2VyDOoqDX"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:14.741Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"connector_compatibility_bootstrap|activation_bootstrap\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_activation_epoch.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:23.369Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"def tool_call|CONNECTOR_ATTESTATION_HEADER|connector_attestation_secret\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "fhQpGwHlAfct-GWJ_na1qo28"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:23.700Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"def tool_call|CONNECTOR_ATTESTATION_HEADER|connector_attestation_secret\" resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:43.806Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:51.681Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_HOST_IDENTITY_UNAVAILABLE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:57.450Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"def activation_connector_bootstrap_result|def activation_connector_bootstrap_allowed\" resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "SuRE1oEEtC_dDHoZKgjZrNfn"
+        }
+      },
+      {
+        "time": "2026-09-06T04:54:57.744Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"def activation_connector_bootstrap_result|def activation_connector_bootstrap_allowed\" resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:04.801Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"activation_connector_bootstrap_result\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_results.py",
+          "session_id": "XnCB9EGhw3nGzpo0KN4r-olO"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:05.134Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"activation_connector_bootstrap_result\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/tool_results.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:21.768Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --binary 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "session_id": "PyQbvwUiQvnG7VVeG5hxD9Vc"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:22.078Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --binary 9b3241ddc963a77d916edc453ea7b7e8e4ae5391 stash@{0} -- electron/main.js electron/services/runtimePaths.js scripts/packaged-recovery-smoke.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:32.260Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 15 \"def _current_hub_client\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "p1Tn0041QDRAZ-mP09mHJzQ6"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:32.577Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 15 \"def _current_hub_client\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:47.336Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"\\.tunnel\\.start\\(\" electron tests",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:55:47.336Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:55:52.503Z",
+    "archive_reason": "finished"
+  }
+]
