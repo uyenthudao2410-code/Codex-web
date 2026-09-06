@@ -1,0 +1,542 @@
+{
+  "version": 2,
+  "task_id": "7c7bdd42f806443d84e507c81b9cd0be",
+  "orchestration": {
+    "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+    "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+    "worktree_fp": "7065b366606129615f37919fc7768f8e344ce6e705a0baa848543b4502d598eb",
+    "contract_fp": ""
+  },
+  "objective": "Doc-only completion wave in the same E:\\DEV\\Codex-web objective lineage. Review and final-accept exactly docs/CURRENT_STATE.md, docs/RELEASE_CHECKLIST.md, docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md, and docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md. The first two must record only current verified 1.0 local release-candidate facts and the supported direct installed-smoke command. The two 260905 files must remain dated chronology and match the verified restored Git blobs from object a8adf665da992e438f9a7ee9e7c05b277f0f83db: ac52d55bc4bb2f9ea918ba75b936f945885fd6ec and d80c055eb1857da178c73465a268b05f428ffabc. Validate scoped git diff --check and that every local link in docs/CURRENT_STATE.md resolves. Do not run product tests; alter source/runtime; commit/push/restart/release/publish/tag/deploy; reconcile stale RUNs; create experiments/cohorts; or ACK cf5cefca8d2f505e507929f1c8e44143c4a94c2e744c39efa1141bc448eae70c.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-06T10:14:32.545Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-06T10:14:32.545Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-06T10:14:32.545Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "pp8JCbuwtV0T964VbhtV0efL",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-06T10:14:32.144Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "docs/CURRENT_STATE.md",
+          "state": "file",
+          "sha256": "5c34374eebfe45fd09a555e98fafcc231ab4a2a450bec0e3d6e6e7eb24ae40fb",
+          "size_bytes": 102911,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+          "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82"
+        },
+        {
+          "path": "docs/RELEASE_CHECKLIST.md",
+          "state": "file",
+          "sha256": "ceaca5e4904cdf388e263f901f6ea107dd008c508969229d2442c84eb7c42ad4",
+          "size_bytes": 12078,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+          "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82"
+        },
+        {
+          "path": "docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md",
+          "state": "file",
+          "sha256": "32dbcc6e504bd69536081e4e67b0ca40f617935588f749508d73d9e3c492c39e",
+          "size_bytes": 136829,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+          "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82"
+        },
+        {
+          "path": "docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+          "state": "file",
+          "sha256": "ea6d1373ca8e74632e1e10ef4edb1bbe58f84afe4287adafb25912134c83bf9e",
+          "size_bytes": 292379,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+          "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 58,
+        "head_hash": "d3d77a240eb1e192997135e9c0c27dfe3830249ee2f450f7038484c99a70c3db"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4e338dcc0db2454185faaa4c4b37f750\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4e338dcc0db2454185faaa4c4b37f750\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "4e338dcc0db2454185faaa4c4b37f750",
+      "wave_id": "d68b4e6ba1db4fe79d725a91dbf09b82",
+      "checkpoint_id": "b78b6a28416a4c0597d8d386d97e6f59",
+      "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+      "worktree_fp": "7065b366606129615f37919fc7768f8e344ce6e705a0baa848543b4502d598eb",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Doc-only completion wave in the same E:\\DEV\\Codex-web objective lineage. Review and final-accept exactly docs/CURRENT_STATE.md, docs/RELEASE_CHECKLIST.md, docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md, and docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md. The first two must record only current verified 1.0 local release-candidate facts and the supported direct installed-smoke command. The two 260905 files must remain dated chronology and match the verified restored Git blobs from object a8adf665da992e438f9a7ee9e7c05b277f0f83db: ac52d55bc4bb2f9ea918ba75b936f945885fd6ec and d80c055eb1857da178c73465a268b05f428ffabc. Validate scoped git diff --check and that every local link in docs/CURRENT_STATE.md resolves. Do not run product tests; alter source/runtime; commit/push/restart/release/publish/tag/deploy; reconcile stale RUNs; create experiments/cohorts; or ACK cf5cefca8d2f505e507929f1c8e44143c4a94c2e744c39efa1141bc448eae70c.",
+        "objective_revision": 1,
+        "objective_sha256": "4a9d700ebe4d2f103e8164c824590c1e74092f31e673162f5fccc6252446de03",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 5,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "fe3cebd14ae24a5eb97776cb55416e40",
+          "stage_id": "check:984f84b53437a727",
+          "status": "passed",
+          "duration_ms": 1134,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "f837bf96a663454c984d17268d005ab6",
+          "stage_id": "check:19689c46a03ab922",
+          "status": "passed",
+          "duration_ms": 1164,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1dda1b1221a7470380389fe822e30aac",
+          "stage_id": "check:e9e5e1599145c4d4",
+          "status": "passed",
+          "duration_ms": 1159,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "33d842f978fd46d48e4cd8099cecc9aa",
+          "stage_id": "check:d44ade71b903109e",
+          "status": "passed",
+          "duration_ms": 1299,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "5369365fa111472a8a48fef14c6550e9",
+          "stage_id": "check:3b1cb263850f3dc0",
+          "status": "passed",
+          "duration_ms": 1688,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "33f27343c5798a4cc3b4935469f6ac9743361c7f1ef1f6e4444943519ff6927d",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-06T10:11:43.219Z",
+  "updated_at": "2026-09-06T10:14:44.128Z",
+  "events": [
+    {
+      "time": "2026-09-06T10:11:43.219Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:12:06.939Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:01.237Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:02.737Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:02.748Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:16.949Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md && certutil -hashfile docs\\CURRENT_STATE.md SHA256 && certutil -hashfile docs\\RELEASE_CHECKLIST.md SHA256 && certutil -hashfile docs\\research\\260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md SHA256 && certutil -hashfile docs\\research\\260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md SHA",
+        "session_id": "O5pHwVuG641FAc2ymxjxRMWd"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:18.542Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md && certutil -hashfile docs\\CURRENT_STATE.md SHA256 && certutil -hashfile docs\\RELEASE_CHECKLIST.md SHA256 && certutil -hashfile docs\\research\\260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md SHA256 && certutil -hashfile docs\\research\\260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md SHA",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:42.050Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -o -E \"\\]\\([^)]*\\)\" -- docs/CURRENT_STATE.md",
+        "session_id": "WfWzpw8C3zIaKkHQ6tyGQus7"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:42.534Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -o -E \"\\]\\([^)]*\\)\" -- docs/CURRENT_STATE.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:52.338Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -E \"^\\[[^]]+\\]:\" -- docs/CURRENT_STATE.md || echo NO_REFERENCE_LINK_DEFINITIONS && certutil -hashfile docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md SHA256",
+        "session_id": "Ibv6hdeZS3Ajsx3PHyPsaX8H"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:52.800Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -E \"^\\[[^]]+\\]:\" -- docs/CURRENT_STATE.md || echo NO_REFERENCE_LINK_DEFINITIONS && certutil -hashfile docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:59.132Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --unified=3 -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md",
+        "session_id": "NFG8R5HsnXHQo3_5V6n2ztMU"
+      }
+    },
+    {
+      "time": "2026-09-06T10:13:59.726Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --unified=3 -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:18.747Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:19.522Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:21.033Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:21.041Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:22.567Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:23.217Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:24.051Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+        "session_id": "cUuLphWbm5sYpyUP_1X7_B07"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:24.517Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:25.791Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -o -E \"\\]\\([^)]*\\)\" -- docs/CURRENT_STATE.md",
+        "session_id": "EKguUvbND4p1vRjZaxg4sVWj"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:26.284Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -o -E \"\\]\\([^)]*\\)\" -- docs/CURRENT_STATE.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:27.548Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -E \"^\\[[^]]+\\]:\" -- docs/CURRENT_STATE.md || echo NO_REFERENCE_LINK_DEFINITIONS",
+        "session_id": "JXfCm2ReK8qXTZNtEAhAsN5k"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:28.026Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -E \"^\\[[^]]+\\]:\" -- docs/CURRENT_STATE.md || echo NO_REFERENCE_LINK_DEFINITIONS",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:29.366Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile docs\\research\\260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md SHA256 && certutil -hashfile docs\\research\\260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md SHA256 && certutil -hashfile docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md SHA256",
+        "session_id": "RiBgEkqY_p6m442iq-A290lD"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:29.877Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile docs\\research\\260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md SHA256 && certutil -hashfile docs\\research\\260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md SHA256 && certutil -hashfile docs\\research\\260823_CODING_WEB_GATE0_PRL_IMPLEMENTATION_AND_VALIDATION_TRACKER.md SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:31.484Z",
+      "event": "command_started",
+      "details": {
+        "command": "git hash-object docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md && git hash-object docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md && git rev-parse a8adf665da992e438f9a7ee9e7c05b277f0f83db:docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md && git rev-parse a8adf665da992e438f9a7ee9e7c05b277f0f83db:docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+        "session_id": "pp8JCbuwtV0T964VbhtV0efL"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:32.144Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git hash-object docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md && git hash-object docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md && git rev-parse a8adf665da992e438f9a7ee9e7c05b277f0f83db:docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md && git rev-parse a8adf665da992e438f9a7ee9e7c05b277f0f83db:docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:32.541Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:32.545Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:32.968Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:32.972Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:33.101Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "225e7e748bb0454274ebeced1a9b7871e9a0b7571d1112fa6e7ca9f9d5e3675f"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:33.271Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:41.669Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:43.982Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:43.988Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T10:14:44.125Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "33f27343c5798a4cc3b4935469f6ac9743361c7f1ef1f6e4444943519ff6927d"
+      }
+    }
+  ]
+}

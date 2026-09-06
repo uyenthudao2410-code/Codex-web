@@ -1,6 +1,6 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-09-04
+> **Status date:** 2026-09-06
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
@@ -33,6 +33,69 @@ The convergence sequence is intentionally finite:
 `KEEP` means retain a mechanism with unique authority/value and current evidence. `MODIFY` means correct a demonstrated defect or evidence gap using the smallest existing surface. `REMOVE` means delete or collapse redundant policy/framework surface only after its authority/evidence role is demonstrably unnecessary; never erase durable evidence or rewrite dated research chronology to make the present look cleaner.
 
 This section is the current sequencing and provenance authority for this maintained document. Older dated runtime paragraphs below remain immutable observation snapshots. If a historical block says `current`, `update_pending`, `connector blocked`, `source-only`, or names a process/epoch, read that language in the timestamped observation window unless a fresh supported runtime receipt re-establishes it. A present-day `CURRENT`/`fully_ready` local observation is still only local runtime evidence; compatible current access is not strict rediscovery, and neither is a package/release/production claim.
+
+### Current 1.0 engineering/release-candidate receipt — 2026-09-06
+
+The local Windows 1.0 engineering candidate is closed through source, full
+Python proof, an exact-current NSIS build, packaged and installed Recovery
+smoke, and a sufficient fresh UI performance window. This is a local
+release-candidate claim only: no tag, GitHub release, publication, deployment,
+production claim, independent new-machine run, or upgrade from a historically
+published installer is implied.
+
+- `npm run test:mcp` completed with `936 passed, 5 skipped` in `371.66s`
+  (exit `0`). The earlier 300-second timeout was a proof-window limitation, not
+  a retained Python failure.
+- The current-source Node release lane completed with `714` tests passed plus
+  source-root and tracked-secret guards passed. One Windows temporary-tree
+  cleanup produced `EPERM`; its exact focused retry passed `4/4`. The final
+  `npx electron-builder --win nsis` node then completed with exit `0` and
+  produced `dist/coding-tools-mcp-setup-1.0.0.exe`. The exact installer used
+  for the final local smoke was `121,636,941` bytes with SHA-256
+  `20f740bac29522d634bbfc4708040538f0cab8528d907e03ac46b7dd47f8af0c`;
+  its blockmap SHA-256 was
+  `d0d8a0348eace3969715e11da79a856c8e576c8c7b881e314dc88fa375ba104b`.
+- The final packaged smoke proved byte-exact allowed resources, only `en-US`
+  and `vi` locales, `smart-v3` with exactly eight public tools, Recovery Host
+  and independent Recovery MCP readiness, supervisor health, live-owner and
+  executable-hash fail-closed behavior, no Scheduled Task mutation, and an
+  unchanged production Recovery descriptor.
+- `node scripts/installed-recovery-smoke.js` then installed the exact NSIS
+  candidate silently into an isolated temporary path, verified its registered
+  installation and the same packaged Recovery/contract surface, uninstalled it
+  with exit `0`, removed installed files and registration, and proved that the
+  production Recovery descriptor and existing Recovery Supervisor Scheduled
+  Task definition did not change. This is same-machine isolated-install proof,
+  not an independent new-machine receipt.
+- The release-harness source was accepted by Coding-VP at checkpoint
+  `e5673e0ded354257a7c3309dfc1691b0` and corrected after lifecycle postflight at
+  checkpoint `84b65096ab0c4a4e98bcf07362f94540`. The correction removed an unnecessary
+  `package.json` alias that made the Electron revision appear stale without an
+  activatable component; the direct installed-smoke command remains the
+  supported test entry point. Current `npm run dev:status` again reports equal
+  Electron running/disk revisions, `CURRENT`, `fully_ready=true`, and
+  `CURRENT_COMPATIBLE_ACKNOWLEDGED`. Compatible bootstrap remains distinct from
+  strict connector rediscovery.
+- A fresh Electron UI instance collected 20 renderer, 40 main-process, and 445
+  event-loop samples. Readiness is `pass`: event-loop p95 `15.5ms`, normal IPC
+  p95 `85.1ms`, snapshot-apply p95 `0.1ms`, and dashboard-refresh p95 `110.6ms`.
+  The older long-lived window's insufficient/stale sample set is superseded for
+  this local candidate, not rewritten.
+- A query-only canonical lifecycle census reports zero managed jobs, zero
+  unexplained active RUNs, zero awaiting-acceptance RUNs, and no projection
+  drift. Thirty-three inactive RUNs remain below the 86,400-second stale
+  threshold and are therefore not eligible for forced reconciliation. Six P5
+  experiment anchors remain retained historical evidence.
+- The two `260905_*` research/checkpoint documents referenced below were
+  restored byte-for-byte from their verified retained Git object. They remain
+  dated chronology and do not override this maintained current receipt.
+
+Natural Problem continuity/outcome, representative accepted-result economics,
+automatic non-deterministic routing promotion, strict connector rediscovery,
+an independent new-machine run, and publication/deployment remain separate
+evidence gates. They are not blockers to this bounded local engineering
+release-candidate closure and must not be reported as completed without their
+own real evidence.
 
 ### Baseline correction source checkpoint — 2026-09-05
 

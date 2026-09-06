@@ -35,6 +35,7 @@ npm run test:mcp
 npm run test:all
 npm run test:recovery:e2e
 npm run test:recovery:packaged
+node scripts/installed-recovery-smoke.js
 npm run canary:opencode-flash:preflight
 ```
 
@@ -142,6 +143,16 @@ npm run dist:dir
 Output root is `dist\`. `package.json` currently names the installer `coding-tools-mcp-setup-${version}.${ext}` and uses `scripts/verify-packaged-resources.js` as `afterPack`. Verify bundled resources and packaged behavior from the exact accepted source.
 
 For Recovery changes, `npm run test:recovery:packaged` is the safe isolated packaged-runtime lane. It intentionally does not install/uninstall the Windows Recovery Supervisor Scheduled Task and therefore does not replace an installed-logon/session smoke when that OS boundary is part of the release.
+
+After `npm run dist` creates the exact NSIS candidate, run
+`node scripts/installed-recovery-smoke.js` on a machine with no existing
+per-user Coding Tools MCP installation. The harness installs into an isolated
+temporary path, reuses the packaged Recovery/contract smoke against the
+installed tree, uninstalls in a guarded `finally` path, and verifies that the
+production Recovery descriptor and existing Recovery Supervisor Scheduled Task
+definition remain unchanged. This is same-machine isolated-install evidence;
+do not label it new-machine, upgrade, reboot/logon, publication, or production
+proof.
 
 ## 10. Post-package smoke and publish
 

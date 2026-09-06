@@ -58,6 +58,9 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
+  const packagedSmoke = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'packaged-recovery-smoke.js'), 'utf8');
+  assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
+  assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
 });
 
 test('dist cleaner removes stale package output before Electron Builder runs', () => {

@@ -1,0 +1,1253 @@
+[
+  {
+    "version": 2,
+    "task_id": "8e85400f6371408f83df599ee86b9daf",
+    "orchestration": {
+      "run_id": "85234da2d785427aa9687b172fe8b12e",
+      "wave_id": "963b1d4e8a9344e9ad3d4fd9d4ace8e3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+      "worktree_fp": "76ccaeec1f14fd1a27221ced37386f8b495dfc6743ae9b5fd01f104c5f39ca72",
+      "contract_fp": ""
+    },
+    "objective": "Bounded EOCL release-harness acceptance on main at base HEAD ef5aa3b74f91b5f5167f002b27a04e43c895180f. Review and accept exactly package.json, scripts/packaged-recovery-smoke.js, scripts/installed-recovery-smoke.js, and tests/build-verification.test.js. Validate actual diff, node syntax, node --test tests/build-verification.test.js, and npm run test:recovery:installed against the current installer. Preserve production descriptor and Scheduled Task; do not touch the two 260905 research docs or unrelated source/evidence; no commit/push/restart/release/publish/tag/deploy/experiments/cohorts/stale reconciliation/report ACK.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "review",
+        "text": "",
+        "status": "pending",
+        "updated_at": "2026-09-06T09:56:53.822Z"
+      },
+      {
+        "id": "proof",
+        "text": "",
+        "status": "pending",
+        "updated_at": "2026-09-06T09:56:53.822Z"
+      },
+      {
+        "id": "acceptance",
+        "text": "",
+        "status": "pending",
+        "updated_at": "2026-09-06T09:56:53.822Z"
+      }
+    ],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "18YaAjgJcs7VxWhgIFSkI1rg",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 767,
+      "finished_at": "2026-09-06T09:57:21.905Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T09:56:53.822Z",
+    "updated_at": "2026-09-06T09:57:21.905Z",
+    "events": [
+      {
+        "time": "2026-09-06T09:56:53.822Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:03.333Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:04.784Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:04.790Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:15.191Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- package.json scripts/packaged-recovery-smoke.js tests/build-verification.test.js",
+          "session_id": "sjQNwDnMnKLnGG-rA64gRBjP"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:15.845Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- package.json scripts/packaged-recovery-smoke.js tests/build-verification.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:21.461Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --no-index -- NUL scripts/installed-recovery-smoke.js",
+          "session_id": "18YaAjgJcs7VxWhgIFSkI1rg"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:21.905Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --no-index -- NUL scripts/installed-recovery-smoke.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T09:57:29.761Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6c419fe7eeab43ca9b871dc812c10bcf",
+    "orchestration": {
+      "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+      "wave_id": "b830e33c0391497f9eef5e788cee2126",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+      "worktree_fp": "76ccaeec1f14fd1a27221ced37386f8b495dfc6743ae9b5fd01f104c5f39ca72",
+      "contract_fp": ""
+    },
+    "objective": "Adopt and prove exactly the four reviewed pre-existing release-harness files on main at base HEAD ef5aa3b74f91b5f5167f002b27a04e43c895180f. Do not modify their bytes. Run only the requested bounded proof: Node syntax checks for the three JavaScript files, node --test tests/build-verification.test.js, and npm run test:recovery:installed against the current dist/coding-tools-mcp-setup-1.0.0.exe. The installed harness must preserve the production recovery descriptor and Scheduled Task. Do not touch the two 260905 research docs or unrelated source/evidence; no commit/push/restart/release/publish/tag/deploy/experiments/cohorts/stale reconciliation/report ACK.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-06T09:58:16.930Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-06T09:58:16.930Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-06T09:58:16.930Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "g138Cy0Dxh3coE62kkQIUirl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T09:58:16.544Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "package.json",
+            "state": "file",
+            "sha256": "9fd5350e5c6b2acbf717297df9ef6450c4f8c8e0bb9a9de782618b50554e1e03",
+            "size_bytes": 6029,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+            "wave_id": "b830e33c0391497f9eef5e788cee2126"
+          },
+          {
+            "path": "scripts/packaged-recovery-smoke.js",
+            "state": "file",
+            "sha256": "1a1673455a420ef31db8811b1c80271b90113729479383da7cccb8c40fd6b73a",
+            "size_bytes": 13658,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+            "wave_id": "b830e33c0391497f9eef5e788cee2126"
+          },
+          {
+            "path": "scripts/installed-recovery-smoke.js",
+            "state": "file",
+            "sha256": "a492588c9ac9f8441acff383d488623471babd7aae53f23884de76dd0e4b5c7e",
+            "size_bytes": 7388,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+            "wave_id": "b830e33c0391497f9eef5e788cee2126"
+          },
+          {
+            "path": "tests/build-verification.test.js",
+            "state": "file",
+            "sha256": "498981753ad5408820e09567e387bf3eee3109c25de8a3e629bb58abf9ebf4ac",
+            "size_bytes": 7641,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+            "wave_id": "b830e33c0391497f9eef5e788cee2126"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 44,
+          "head_hash": "567a8b099b491e607dcbd5c28664719132a5b3793c18eefa27c1de5a14f24bda"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6c7d904b731b4a228a4684933e6fd7a3\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6c7d904b731b4a228a4684933e6fd7a3\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "6c7d904b731b4a228a4684933e6fd7a3",
+        "wave_id": "b830e33c0391497f9eef5e788cee2126",
+        "checkpoint_id": "e5673e0ded354257a7c3309dfc1691b0",
+        "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+        "worktree_fp": "76ccaeec1f14fd1a27221ced37386f8b495dfc6743ae9b5fd01f104c5f39ca72",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Adopt and prove exactly the four reviewed pre-existing release-harness files on main at base HEAD ef5aa3b74f91b5f5167f002b27a04e43c895180f. Do not modify their bytes. Run only the requested bounded proof: Node syntax checks for the three JavaScript files, node --test tests/build-verification.test.js, and npm run test:recovery:installed against the current dist/coding-tools-mcp-setup-1.0.0.exe. The installed harness must preserve the production recovery descriptor and Scheduled Task. Do not touch the two 260905 research docs or unrelated source/evidence; no commit/push/restart/release/publish/tag/deploy/experiments/cohorts/stale reconciliation/report ACK.",
+          "objective_revision": 1,
+          "objective_sha256": "78bd5476dedf4da10defc904e966027d0282061e6f216e66deae86615a8f8d22",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 5,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "274169f410e441268a7045d2759cf60c",
+            "stage_id": "check:719395034be5a3ca",
+            "status": "passed",
+            "duration_ms": 1224,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "58cb30af79f6412f95bff238087c7c51",
+            "stage_id": "check:89c42cc96b3eb71c",
+            "status": "passed",
+            "duration_ms": 1241,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "af1b1513f3ce4813be6dfa279b46e650",
+            "stage_id": "check:bdda12fe7067ef68",
+            "status": "passed",
+            "duration_ms": 1202,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "33210efd6f2b4bbca615e015f844bea5",
+            "stage_id": "check:c258b46a1eabc99b",
+            "status": "passed",
+            "duration_ms": 1255,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "3dc2e84aeb4c4df9abb0cb34e5bd385b",
+            "stage_id": "check:2c01020283f3fd63",
+            "status": "passed",
+            "duration_ms": 22443,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "b9f71d668707560ff8db2a40089c7d9bffa4419039064761901ab705308f53b9",
+    "completion_report_acknowledged_id": "b9f71d668707560ff8db2a40089c7d9bffa4419039064761901ab705308f53b9",
+    "completion_report_acknowledged_at": "2026-09-06T10:00:58.195Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T09:57:29.763Z",
+    "updated_at": "2026-09-06T10:01:03.248Z",
+    "events": [
+      {
+        "time": "2026-09-06T09:57:29.763Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:30.633Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile package.json SHA256 && certutil -hashfile scripts\\packaged-recovery-smoke.js SHA256 && certutil -hashfile scripts\\installed-recovery-smoke.js SHA256 && certutil -hashfile tests\\build-verification.test.js SHA256 && certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+          "session_id": "UECMwnCXAn5_WjDUThATD8SP"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:30.921Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile package.json SHA256 && certutil -hashfile scripts\\packaged-recovery-smoke.js SHA256 && certutil -hashfile scripts\\installed-recovery-smoke.js SHA256 && certutil -hashfile tests\\build-verification.test.js SHA256 && certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:42.147Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:43.230Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:44.490Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:44.495Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:46.049Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:46.654Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:47.619Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "session_id": "Tn3eCWaS2KDCq5Hmh1g70Nal"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:48.100Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:49.489Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check scripts/installed-recovery-smoke.js",
+          "session_id": "YWHlPXM3XkXRg9a7_0SkW8db"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:49.945Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check scripts/installed-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:51.299Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check tests/build-verification.test.js",
+          "session_id": "EId8kqrZr_LVjo_wry9C3RQI"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:51.764Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check tests/build-verification.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:53.011Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/build-verification.test.js",
+          "session_id": "1CU_TRY-3bvlCRz6ttkBeasd"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:53.576Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/build-verification.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:57:54.869Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run test:recovery:installed",
+          "session_id": "g138Cy0Dxh3coE62kkQIUirl"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:16.544Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run test:recovery:installed",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:16.928Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:16.930Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:17.337Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:17.339Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:17.435Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "73531678c1104e60f23121bd360380494e283c4fe58d4e3af5cd052ca23fab36"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:17.572Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:30.064Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:30.379Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:35.596Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:45.162Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:45.165Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T09:58:45.250Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "b9f71d668707560ff8db2a40089c7d9bffa4419039064761901ab705308f53b9"
+        }
+      },
+      {
+        "time": "2026-09-06T10:00:26.061Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:00:58.195Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "b9f71d668707560ff8db2a40089c7d9bffa4419039064761901ab705308f53b9"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:03.248Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T10:01:03.389Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "fb0b6556fdb74f078efadb0fca31582e",
+    "orchestration": {
+      "run_id": "3d09dd331ade4d50963628e955b11dd2",
+      "wave_id": "7a28674f1efd472f8201294da6da5f5b",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+      "worktree_fp": "76ccaeec1f14fd1a27221ced37386f8b495dfc6743ae9b5fd01f104c5f39ca72",
+      "contract_fp": ""
+    },
+    "objective": "Explicit continuation correction after predecessor checkpoint e5673e0ded354257a7c3309dfc1691b0 exposed DEV_UI_CHECKPOINT_NOT_ACTIVATABLE from the unnecessary package.json test alias. Apply only the smallest correction: remove test:recovery:installed from package.json and remove only the exact corresponding package-script assertion from tests/build-verification.test.js. Retain scripts/installed-recovery-smoke.js unchanged and retain CODEX_PACKAGED_APP_ROOT support in scripts/packaged-recovery-smoke.js unchanged. Validate the direct harness remains repeatable and npm run dev:status has no Electron UI revision mismatch attributable to this packet. Do not bypass activation; do not touch docs/research/260905*, unrelated source/evidence, Git delivery, release/deploy, experiments, stale-run reconciliation, or ACK report cf5cefca8d2f505e507929f1c8e44143c4a94c2e744c39efa1141bc448eae70c.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-06T10:02:06.982Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-06T10:02:06.982Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-06T10:02:06.982Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "y5nbkjAz7JmmAAdOaM3kmcAp",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 799,
+      "finished_at": "2026-09-06T10:02:37.461Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "package.json",
+            "state": "file",
+            "sha256": "9b44c52c0b2d3aa2dd7c3d15876e714e67591d6a17de45e3ede3b11f7008e3c5",
+            "size_bytes": 5955,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "3d09dd331ade4d50963628e955b11dd2",
+            "wave_id": "7a28674f1efd472f8201294da6da5f5b"
+          },
+          {
+            "path": "scripts/packaged-recovery-smoke.js",
+            "state": "file",
+            "sha256": "1a1673455a420ef31db8811b1c80271b90113729479383da7cccb8c40fd6b73a",
+            "size_bytes": 13658,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "3d09dd331ade4d50963628e955b11dd2",
+            "wave_id": "7a28674f1efd472f8201294da6da5f5b"
+          },
+          {
+            "path": "scripts/installed-recovery-smoke.js",
+            "state": "file",
+            "sha256": "a492588c9ac9f8441acff383d488623471babd7aae53f23884de76dd0e4b5c7e",
+            "size_bytes": 7388,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "3d09dd331ade4d50963628e955b11dd2",
+            "wave_id": "7a28674f1efd472f8201294da6da5f5b"
+          },
+          {
+            "path": "tests/build-verification.test.js",
+            "state": "file",
+            "sha256": "eb5adf832e1dbc2fa13d1e636582557c655b7961d1666662d64fdc5dfe8b9f76",
+            "size_bytes": 7536,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "3d09dd331ade4d50963628e955b11dd2",
+            "wave_id": "7a28674f1efd472f8201294da6da5f5b"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 1,
+          "observation_count": 1,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "6419aec735484b58b4ff7567d24623c4",
+              "seq": 42163,
+              "event_time": "2026-09-06T10:01:28.365Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "2a097228c51ea4b3ca95c90ab450d33d5e17ceec528234190e5bc863e5cf7ef9",
+                "7ae45ad102eab3b6d7e7896acd08c427a9b25b346470d7bc6507b6481575d519"
+              ],
+              "file_count": 2,
+              "additions": 0,
+              "removals": 2,
+              "line_changes": 2,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 55,
+          "head_hash": "dafffa8a3e962298e6a8f45fe373fd0b145612ca03f6551f1878088fb34063f6"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3d09dd331ade4d50963628e955b11dd2\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3d09dd331ade4d50963628e955b11dd2\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "3d09dd331ade4d50963628e955b11dd2",
+        "wave_id": "7a28674f1efd472f8201294da6da5f5b",
+        "checkpoint_id": "84b65096ab0c4a4e98bcf07362f94540",
+        "base_head": "ef5aa3b74f91b5f5167f002b27a04e43c895180f",
+        "worktree_fp": "76ccaeec1f14fd1a27221ced37386f8b495dfc6743ae9b5fd01f104c5f39ca72",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Explicit continuation correction after predecessor checkpoint e5673e0ded354257a7c3309dfc1691b0 exposed DEV_UI_CHECKPOINT_NOT_ACTIVATABLE from the unnecessary package.json test alias. Apply only the smallest correction: remove test:recovery:installed from package.json and remove only the exact corresponding package-script assertion from tests/build-verification.test.js. Retain scripts/installed-recovery-smoke.js unchanged and retain CODEX_PACKAGED_APP_ROOT support in scripts/packaged-recovery-smoke.js unchanged. Validate the direct harness remains repeatable and npm run dev:status has no Electron UI revision mismatch attributable to this packet. Do not bypass activation; do not touch docs/research/260905*, unrelated source/evidence, Git delivery, release/deploy, experiments, stale-run reconciliation, or ACK report cf5cefca8d2f505e507929f1c8e44143c4a94c2e744c39efa1141bc448eae70c.",
+          "objective_revision": 1,
+          "objective_sha256": "55a365fb8bc9b007690ed206af38a6b34348f4ad71b5034d095549d4eab8f1e0",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 6,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "acb3896e03c04bb0bfc28058e814a22c",
+            "stage_id": "check:719395034be5a3ca",
+            "status": "passed",
+            "duration_ms": 1299,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "b2a0a784c7d34410b6069e1ba841b860",
+            "stage_id": "check:89c42cc96b3eb71c",
+            "status": "passed",
+            "duration_ms": 1298,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "321af43724974035beee09f30ebd3a76",
+            "stage_id": "check:bdda12fe7067ef68",
+            "status": "passed",
+            "duration_ms": 1214,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "0dde313fe2ca49a9a95f368dd4a7910e",
+            "stage_id": "check:c258b46a1eabc99b",
+            "status": "passed",
+            "duration_ms": 1325,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "0c987a6c5eae435a85d5496b99018da6",
+            "stage_id": "check:bda80ff0a48cc0e7",
+            "status": "passed",
+            "duration_ms": 26036,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "382ce958a1c043d8b8a93f2a940a63a5",
+            "stage_id": "check:385f51573288f6e6",
+            "status": "passed",
+            "duration_ms": 1525,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "5d3051fe9a83894a4369e2f54881e8c200224a829fa67c8dd6985b957c25deb4",
+    "completion_report_acknowledged_id": "5d3051fe9a83894a4369e2f54881e8c200224a829fa67c8dd6985b957c25deb4",
+    "completion_report_acknowledged_at": "2026-09-06T10:11:36.726Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "package.json",
+        "operation": "update",
+        "updated_at": "2026-09-06T10:02:07.658Z"
+      },
+      {
+        "path": "tests/build-verification.test.js",
+        "operation": "update",
+        "updated_at": "2026-09-06T10:02:07.658Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T10:01:03.392Z",
+    "updated_at": "2026-09-06T10:11:43.073Z",
+    "events": [
+      {
+        "time": "2026-09-06T10:01:03.392Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:23.096Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:25.384Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:27.004Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:27.010Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:29.290Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:30.040Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:31.108Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "session_id": "T7_BEjc3VzqN1H4Q_7fUeJpH"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:31.530Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:32.929Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check scripts/installed-recovery-smoke.js",
+          "session_id": "prpcqWTqsEN7MztHajg8VeIg"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:33.481Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check scripts/installed-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:34.706Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --check tests/build-verification.test.js",
+          "session_id": "sB3lKkSXHTDPmmlci2D3sPoJ"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:35.185Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --check tests/build-verification.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:36.595Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/build-verification.test.js",
+          "session_id": "wd1wolX95EJTHk4YlDFAXO0n"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:37.055Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/build-verification.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:01:38.463Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/installed-recovery-smoke.js",
+          "session_id": "0QhcVRSz8iAhcEmZx4v5SA73"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:03.614Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/installed-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:04.987Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "y8aLyFhsuLC-BcS2-Bp6Kmlp"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:05.706Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:06.979Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:06.982Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:07.411Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:07.414Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:07.539Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "e062972007cbfdc9f3cb761391fadd94b039a84f2975c1ef199c43e0f686a940"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:07.658Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:19.579Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:19.803Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:24.307Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:36.847Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- package.json scripts/packaged-recovery-smoke.js scripts/installed-recovery-smoke.js tests/build-verification.test.js && certutil -hashfile package.json SHA256 && certutil -hashfile scripts\\packaged-recovery-smoke.js SHA256 && certutil -hashfile scripts\\installed-recovery-smoke.js SHA256 && certutil -hashfile tests\\build-verification.test.js SHA256",
+          "session_id": "y5nbkjAz7JmmAAdOaM3kmcAp"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:37.461Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- package.json scripts/packaged-recovery-smoke.js scripts/installed-recovery-smoke.js tests/build-verification.test.js && certutil -hashfile package.json SHA256 && certutil -hashfile scripts\\packaged-recovery-smoke.js SHA256 && certutil -hashfile scripts\\installed-recovery-smoke.js SHA256 && certutil -hashfile tests\\build-verification.test.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:46.616Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:49.027Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:49.029Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:02:49.149Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "5d3051fe9a83894a4369e2f54881e8c200224a829fa67c8dd6985b957c25deb4"
+        }
+      },
+      {
+        "time": "2026-09-06T10:11:24.428Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T10:11:36.726Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "5d3051fe9a83894a4369e2f54881e8c200224a829fa67c8dd6985b957c25deb4"
+        }
+      },
+      {
+        "time": "2026-09-06T10:11:43.073Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T10:11:43.215Z",
+    "archive_reason": "superseded"
+  }
+]

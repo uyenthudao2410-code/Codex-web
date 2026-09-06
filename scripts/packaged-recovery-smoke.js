@@ -9,7 +9,10 @@ const { assertExactPackagedResources } = require('./verify-packaged-resources');
 
 const root = path.resolve(__dirname, '..');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-const unpackedRoot = path.join(root, 'dist', 'win-unpacked');
+const requestedAppRoot = String(process.env.CODEX_PACKAGED_APP_ROOT || '').trim();
+const unpackedRoot = requestedAppRoot
+  ? path.resolve(requestedAppRoot)
+  : path.join(root, 'dist', 'win-unpacked');
 const executable = path.join(unpackedRoot, `${packageJson.build.productName}.exe`);
 const packagedResources = path.join(unpackedRoot, 'resources', 'resources');
 const packagedPython = path.join(packagedResources, 'native-python', 'python.exe');
