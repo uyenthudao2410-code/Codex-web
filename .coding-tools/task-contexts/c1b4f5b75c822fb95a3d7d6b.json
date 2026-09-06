@@ -1,0 +1,278 @@
+{
+  "version": 2,
+  "task_id": "610605b1d7464f16b161915ad866552d",
+  "orchestration": {
+    "run_id": "d95ceb1524164793b5585e5209664c72",
+    "wave_id": "ed03827d4a80449db9b1cd00a529524a",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+    "worktree_fp": "b2e43a13319453167ed05d2e758572f5bb196d37699edc5c82582dd06eabb565",
+    "contract_fp": "0650c239fc6d37f7631a7fd418a604ded7197e085e8757d108e6c1c2dce6a01f"
+  },
+  "objective": "Run a workspace command",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "CygPBHWCFWlPw3lKu0_itjKg",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1277,
+    "finished_at": "2026-09-06T05:39:52.592Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/main.js",
+          "state": "file",
+          "sha256": "c3f096958e6fe922289d3ebdb182a9e33ea78a775869e82755de150668964703",
+          "size_bytes": 53491,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "d95ceb1524164793b5585e5209664c72",
+          "wave_id": "ed03827d4a80449db9b1cd00a529524a"
+        },
+        {
+          "path": "electron/services/runtimePaths.js",
+          "state": "file",
+          "sha256": "37b7bb917c3f78725e8abeeabed0ff961b9432672497d9d42abbe307a116b057",
+          "size_bytes": 6568,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "d95ceb1524164793b5585e5209664c72",
+          "wave_id": "ed03827d4a80449db9b1cd00a529524a"
+        },
+        {
+          "path": "scripts/packaged-recovery-smoke.js",
+          "state": "file",
+          "sha256": "5624aab26707f35ff904d5fd645d5eb9b70351bc41efeb7d052374121b14a543",
+          "size_bytes": 11423,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "d95ceb1524164793b5585e5209664c72",
+          "wave_id": "ed03827d4a80449db9b1cd00a529524a"
+        },
+        {
+          "path": "tests/recovery-host.test.js",
+          "state": "file",
+          "sha256": "d8210abea5e1d7d343b361412821eec8c951d4a7d93a1f85ab322259179ebe6c",
+          "size_bytes": 82042,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "d95ceb1524164793b5585e5209664c72",
+          "wave_id": "ed03827d4a80449db9b1cd00a529524a"
+        },
+        {
+          "path": "tests/runtime-user-data-path.test.js",
+          "state": "file",
+          "sha256": "07b72add0e9b09f7197764bedf966cd3200d575f3f81f43e06b39e7ad1d015b8",
+          "size_bytes": 2564,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "d95ceb1524164793b5585e5209664c72",
+          "wave_id": "ed03827d4a80449db9b1cd00a529524a"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 187,
+        "head_hash": "69eb01fbd3d5e7dc60893961226b1dc3fd35f6ce74cd0662f0e6d51762e3a2f2"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d95ceb1524164793b5585e5209664c72\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d95ceb1524164793b5585e5209664c72\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d95ceb1524164793b5585e5209664c72\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d95ceb1524164793b5585e5209664c72",
+      "wave_id": "ed03827d4a80449db9b1cd00a529524a",
+      "checkpoint_id": "777480e8957941f9ade53ec06e248d55",
+      "base_head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
+      "worktree_fp": "b2e43a13319453167ed05d2e758572f5bb196d37699edc5c82582dd06eabb565",
+      "contract_fp": "0650c239fc6d37f7631a7fd418a604ded7197e085e8757d108e6c1c2dce6a01f",
+      "objective_provenance": {
+        "effective_objective": "POST-DRIFT C4 CONTINUATION on current main@573b6ff5a5ff2509288c9656e18fd375f1ab32d3: predecessor Problem prl-b09df609d532ffe6816b85554c35621e / RUN 3ddeec792a9e4ad589567f0e147c2630 became unrecoverable after external fast-forward replaced source and canonical ledger. Preserve stash 54a47e10e9af452c2580e4b45d7b06c8ca678761 and all unrelated work. Rebase only electron/main.js, electron/services/runtimePaths.js, scripts/packaged-recovery-smoke.js, tests/recovery-host.test.js, tests/runtime-user-data-path.test.js from that stash onto current HEAD; never apply stashed .coding-tools/ledger/task-context/docs/browser logs. Prove focused tests; build one 1.0.0 NSIS for final fingerprint; verify artifact; run packaged recovery smoke once; preserve production descriptor baseline; leave development runtime ready; stop before C5; no publish/deploy; never ACK cf5cefca8d2f505e507929f1c8e44143c4a94c2e744c39efa1141bc448eae70c.",
+        "objective_revision": 1,
+        "objective_sha256": "592667f2ae19c074c2123928511bd7b34099340e29fbf11cd1384ce6e4d311d4",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "4c6a0ec0420e46e790f095b15688031c",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 6953,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "23c18a9ecb1976b4ef2e82c69bd12aa67b283a5bc8fdd520e1dffaf972ca783c",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-06T05:38:45.890Z",
+  "updated_at": "2026-09-06T05:40:12.349Z",
+  "events": [
+    {
+      "time": "2026-09-06T05:38:45.890Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T05:38:46.643Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"function writeJsonAtomic\\|JSON.stringify(value\" -- electron/services/recoveryIpc.js electron/services | findstr /i /c:\"writeJsonAtomic\" /c:\"JSON.stringify(value\"",
+        "session_id": "wwHR_2hYxTUFTeyuXzxbMDWi"
+      }
+    },
+    {
+      "time": "2026-09-06T05:38:47.158Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"function writeJsonAtomic\\|JSON.stringify(value\" -- electron/services/recoveryIpc.js electron/services | findstr /i /c:\"writeJsonAtomic\" /c:\"JSON.stringify(value\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:38:53.101Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /c:\"\\\"owner_pid\\\"\" /c:\"\\\"instance_id\\\"\" /c:\"\\\"device_instance_id\\\"\" /c:\"\\\"activation_epoch_id\\\"\" \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\"",
+        "session_id": "vXdU8NW7nA55fgqlWSVecsGc"
+      }
+    },
+    {
+      "time": "2026-09-06T05:38:53.625Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /c:\"\\\"owner_pid\\\"\" /c:\"\\\"instance_id\\\"\" /c:\"\\\"device_instance_id\\\"\" /c:\"\\\"activation_epoch_id\\\"\" \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:21.319Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"function descriptorRequestOptions\\|const descriptorRequestOptions\\|expectedOwnerPid\\|expectedInstanceId\" -- electron/services/recoveryHostLauncher.js",
+        "session_id": "YTvRJIV-ftRY2EObYrNnDG2o"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:21.843Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"function descriptorRequestOptions\\|const descriptorRequestOptions\\|expectedOwnerPid\\|expectedInstanceId\" -- electron/services/recoveryHostLauncher.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:29.133Z",
+      "event": "command_started",
+      "details": {
+        "command": "git show HEAD:electron/services/recoveryHostLauncher.js | findstr /n \"^\" | findstr /r \"^20[4-9]: ^21[0-9]: ^22[0-2]:\"",
+        "session_id": "uaWv0gbvqqWKwu883J_po69B"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:29.551Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git show HEAD:electron/services/recoveryHostLauncher.js | findstr /n \"^\" | findstr /r \"^20[4-9]: ^21[0-9]: ^22[0-2]:\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:51.509Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status && git rev-parse HEAD && git rev-parse origin/main && git status --porcelain --untracked-files=all -- resources",
+        "session_id": "CygPBHWCFWlPw3lKu0_itjKg"
+      }
+    },
+    {
+      "time": "2026-09-06T05:39:52.593Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status && git rev-parse HEAD && git rev-parse origin/main && git status --porcelain --untracked-files=all -- resources",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:40:12.169Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-06T05:40:12.174Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T05:40:12.347Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "23c18a9ecb1976b4ef2e82c69bd12aa67b283a5bc8fdd520e1dffaf972ca783c"
+      }
+    }
+  ]
+}

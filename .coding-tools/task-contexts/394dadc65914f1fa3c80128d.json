@@ -5,16 +5,67 @@
   "objective": "Run a workspace command",
   "status": "waiting",
   "steps": [],
-  "current_step": "Operator report acknowledged",
-  "current_command": null,
+  "current_step": "Waiting for model",
+  "current_command": {
+    "command": "npm run dev:refresh",
+    "kind": "command",
+    "session_id": "IIjC2A7T5tT1ZrpNGY1rXVEC",
+    "workdir": ".",
+    "status": "running",
+    "started_at": "2026-09-06T05:17:27.137Z",
+    "owner_run": "d95ceb1524164793b5585e5209664c72",
+    "owner_wave": "ed03827d4a80449db9b1cd00a529524a",
+    "exit_code": null,
+    "elapsed_ms": 1014,
+    "artifact_ref": {
+      "schema_version": 1,
+      "kind": "command_output",
+      "scope": "runtime_retained",
+      "source": "command",
+      "locator": {
+        "command_id": "IIjC2A7T5tT1ZrpNGY1rXVEC"
+      },
+      "durability": "process_runtime",
+      "restart_safe": false,
+      "content_addressed": false,
+      "retrieval": {
+        "tool": "command_control",
+        "action": "read"
+      },
+      "owner_run": "d95ceb1524164793b5585e5209664c72",
+      "owner_wave": "ed03827d4a80449db9b1cd00a529524a",
+      "size_bytes": 262,
+      "command_id": "IIjC2A7T5tT1ZrpNGY1rXVEC",
+      "streams": {
+        "stdout": {
+          "output_ref": "command:IIjC2A7T5tT1ZrpNGY1rXVEC:stdout",
+          "total_stream_bytes": 262,
+          "total_retained_bytes": 262,
+          "head_retained_bytes": 262,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        },
+        "stderr": {
+          "output_ref": "command:IIjC2A7T5tT1ZrpNGY1rXVEC:stderr",
+          "total_stream_bytes": 0,
+          "total_retained_bytes": 0,
+          "head_retained_bytes": 0,
+          "tail_retained_bytes": 0,
+          "evicted_gap_bytes": 0,
+          "evicted_bytes_total": 0
+        }
+      }
+    }
+  },
   "last_command_result": {
-    "command_id": "o5nSwZkcPuPEM327KUIuXGYD",
+    "command_id": "Sy90A26rzHsz4TlxL2UYz5Va",
     "kind": "command",
     "status": "exited",
     "result_status": "passed",
     "exit_code": 0,
-    "duration_ms": null,
-    "finished_at": "2026-09-06T05:15:48.130Z"
+    "duration_ms": 616,
+    "finished_at": "2026-09-06T05:16:37.264Z"
   },
   "completion_report": {
     "schema_version": 1,
@@ -86,7 +137,7 @@
   "failure": null,
   "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-09-06T05:15:32.915Z",
-  "updated_at": "2026-09-06T05:16:10.972Z",
+  "updated_at": "2026-09-06T05:17:27.567Z",
   "events": [
     {
       "time": "2026-09-06T05:15:32.915Z",
@@ -125,6 +176,62 @@
       "event": "operator_completion_report_acknowledged",
       "details": {
         "report_id": "6f85f576ca77a2493e88c25cec497d25637f8ae21503c28b224e272168d65395"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:21.822Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256 && dir /-C \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" && npm run dev:status",
+        "session_id": "1Gy7YfF9MhVntrVM_F_Ef5Oe"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:22.581Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256 && dir /-C \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" && npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:30.597Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /N /I /C:\"dev:\" /C:\"full-clean\" /C:\"recovery\" package.json",
+        "session_id": "u1Jm0MfoL4HNJCj48BA-JD-4"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:31.080Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /N /I /C:\"dev:\" /C:\"full-clean\" /C:\"recovery\" package.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:36.772Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /N /I /C:\"full-clean\" /C:\"fullClean\" /C:\"refresh\" /C:\"replace\" /C:\"activation\" scripts\\dev-ui-lifecycle.js",
+        "session_id": "Sy90A26rzHsz4TlxL2UYz5Va"
+      }
+    },
+    {
+      "time": "2026-09-06T05:16:37.264Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /N /I /C:\"full-clean\" /C:\"fullClean\" /C:\"refresh\" /C:\"replace\" /C:\"activation\" scripts\\dev-ui-lifecycle.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:17:27.137Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:refresh",
+        "session_id": "IIjC2A7T5tT1ZrpNGY1rXVEC"
       }
     }
   ]

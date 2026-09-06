@@ -1,0 +1,1331 @@
+[
+  {
+    "version": 2,
+    "task_id": "f507f8942ed44b36a5201833b6449994",
+    "orchestration": {
+      "run_id": "adf17d3be37846bea78d008ee245b98c",
+      "wave_id": "eb88e11c86184cf697e5d4d840dfff54",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Investigate and prepare a comprehensive but minimal fix for fresh-machine activation readiness and installed footprint/performance on Codex-web 1.0.0 at current main. Primary defect: a newly installed machine reaches connector_compatibility_bootstrap accepted=true with snapshot_busy=false but ready_commit_digest=null, configured_gate=CLOSED, activation admission CLOSED, workspace_accessed=false, yielding RUNTIME_ACTIVATION_PENDING indefinitely. Trace the producer/persistence/verification/consumer chain for ready_commit_digest and the coordinator transition that opens configured_gate, including packaged/fresh-install paths and connector contract bootstrap. Add a fail-fast typed state if a non-busy bootstrap cannot obtain or produce a valid ready commit instead of infinite retry. Secondary objective: identify actual packaged/install footprint and startup overhead attributable to unnecessary bundled files or duplicated runtime resources; preserve Recovery Host, MCP, eight smart-v3 tools, native semantic binding, offline fresh-machine startup, and current repo evidence policy. Do not optimize by deleting required .coding-tools repository evidence; only package/runtime payload may exclude development/evidence artifacts when proven unnecessary. Return exact root cause, smallest coherent source/test/package scope, current dist/package size evidence if available, and cheapest sufficient focused proofs. Do not mutate yet.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:46:19.235Z",
+    "updated_at": "2026-09-06T05:46:35.334Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:46:19.235Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Investigate and prepare a comprehensive but minimal fix for fresh-machine activation readiness and installed footprint/performance on Codex-web 1.0.0 at current main. Primary defect: a newly installed machine reaches connector_compatibility_bootstrap accepted=true with snapshot_busy=false but ready_commit_digest=null, configured_gate=CLOSED, activation admission CLOSED, workspace_accessed=false, yielding RUNTIME_ACTIVATION_PENDING indefinitely. Trace the producer/persistence/verification/consumer chain for ready_commit_digest and the coordinator transition that opens configured_gate, including packaged/fresh-install paths and connector contract bootstrap. Add a fail-fast typed state if a non-busy bootstrap cannot obtain or produce a valid ready commit instead of infinite retry. Secondary objective: identify actual packaged/install footprint and startup overhead attributable to unnecessary bundled files or duplicated runtime resources; preserve Recovery Host, MCP, eight smart-v3 tools, native semantic binding, offline fresh-machine startup, and current repo evidence policy. Do not optimize by deleting required .coding-tools repository evidence; only package/runtime payload may exclude development/evidence artifacts when proven unnecessary. Return exact root cause, smallest coherent source/test/package scope, current dist/package size evidence if available, and cheapest sufficient focused proofs. Do not mutate yet."
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:19.930Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PRL_EXACT_BINDING_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:28.827Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:35.326Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:35.334Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:47:23.780Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "5104ca81f5fa4ffd82626771ebbdd558",
+    "orchestration": {
+      "run_id": "ccf1bde0bd9845608bea3be7a340c56e",
+      "wave_id": "13c6cc45f0d14325913cadf636f783f7",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Narrow the fresh-install activation failure to the exact READY-commit producer/receipt/gate transition. At main@9e752e34, inspect only the current implementation and focused tests that define connector_compatibility_bootstrap, ready_commit_digest, configured_gate/admission, activation snapshot/ready receipt, and RUNTIME_ACTIVATION_PENDING. Determine why a fresh installed instance can be non-busy with an accepted compatibility bootstrap yet have no ready_commit_digest, and whether any current schema mismatch around task_context_id can actually prevent the handshake. Do not mutate. Return exact symbols/branches, invariant violation, minimal fix/test scope, and distinguish causal bug from incidental schema differences.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:47:23.781Z",
+    "updated_at": "2026-09-06T05:47:29.094Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:47:23.781Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:24.401Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:29.087Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:29.094Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:48:05.168Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "458e3d19675942b5bcf76461a7e4b8ff",
+    "orchestration": {
+      "run_id": "bb208044027a4c86b016785001df3177",
+      "wave_id": "30bf41d71acb47aaaec11bb209ef3901",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Follow up the fresh-machine READY-commit investigation by inspecting only the Python activation bootstrap decision path and its directly bound tests. Recover the exact implementation branches that (a) return connector_compatibility_bootstrap accepted, (b) compute or read ready_commit_digest, (c) decide configured_gate/admission, and (d) emit RUNTIME_ACTIVATION_PENDING when snapshot_busy is false. Identify the precise missing transition for a first-ever install with no prior ready receipt. Also determine whether task_control not accepting task_context_id is involved in this code path or is an unrelated public-schema difference. Do not mutate; return exact symbols and minimal patch/test scope.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:48:05.168Z",
+    "updated_at": "2026-09-06T05:48:13.299Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:48:05.169Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:06.520Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:13.294Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:13.299Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:48:25.551Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ffbbe12dbcbf4d8db924dfb5692c9831",
+    "orchestration": {
+      "run_id": "8661504009eb470ebee5d77606b657a2",
+      "wave_id": "4347b113ba864d049463b8c66f9a7496",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Materialize the exact current activation-lifecycle code needed for the fresh-install defect. Inspect only activation_lifecycle.py plus the two directly relevant activation tests. I need the complete implementations around __init__/activation configuration, activation_admission_snapshot, activation_connector_bootstrap_result, complete_activation_epoch, and _activation_enter_tool_call, plus tests covering bootstrap-before-ready and admission opening. Explain the first-install state machine and identify the exact missing producer or transition when ready_commit_digest is None and snapshot_busy is false. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:48:25.552Z",
+    "updated_at": "2026-09-06T05:48:32.524Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:48:25.552Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:26.111Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:32.519Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:32.524Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:48:43.841Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "caf382bd1c704de489dcda7909b0f6af",
+    "orchestration": {
+      "run_id": "3d868f6ebc504eaeb74e5a9c1596faaa",
+      "wave_id": "23cbf97876ff42209d02e13cde408d58",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Trace the Electron/Recovery Host side that is supposed to turn an accepted compatibility bootstrap into the authoritative ready commit and call /__control/activation complete_epoch. Inspect current main implementation only. Identify where the digest is produced, persisted/validated, and submitted; show the fresh-install branch where no prior receipt exists; determine why accepted bootstrap can remain retrying with ready_commit_digest null even though snapshot_busy is false. Include the exact conditions that open/close configured activation, retry behavior, and how packaged install differs from development. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:48:43.842Z",
+    "updated_at": "2026-09-06T05:48:48.561Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:48:43.842Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:44.511Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:48.555Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:48.561Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:49:28.927Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ad73c10e8a5146cdb299c43da6de5e87",
+    "orchestration": {
+      "run_id": "6caebb1785784b8d971df59002e968b2",
+      "wave_id": "b271e7fdc8b24144844a70d82fd9989d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Materialize the exact Recovery Host ready-commit producer and submit path for the fresh-install activation defect. Inspect only electron/services/recoveryHost.js and tests/recovery-host.test.js. Return the complete functions/branches around readyCommitDigest, runtimeReadyRaw/runtimeCommitRaw, complete_epoch request construction, persisted recovery/activation marker receipt, and the source-digest mismatch guard. Reconstruct the first-ever packaged install path when there is no prior ready receipt/checkpoint and show exactly why ready_commit_digest can remain null while connector bootstrap is accepted and snapshot_busy is false. Identify the smallest causal fix that preserves current source-digest and bootstrap-token validation, plus the minimum focused regression tests. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:49:28.928Z",
+    "updated_at": "2026-09-06T05:49:36.112Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:49:28.928Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:29.620Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:36.005Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:36.112Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:49:53.072Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "df91760002ed479687f59689b8fbc5f3",
+    "orchestration": {
+      "run_id": "844084f153fa401f9ba9569800c4ee9b",
+      "wave_id": "4fa815d5200940dea78713180e174e45",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Trace the exact first-start/fresh-install activation state machine from Recovery Host runtime start through NativeService/MCP environment into FullCleanActivation READY_COMMITTED and complete_epoch. Inspect only runtimeOrchestrator.js, nativeService.js, fullCleanActivation.js, activationEpoch.js and focused runtime lifecycle tests. Establish whether configured_gate=CLOSED is expected by design, when activation_gate/admission are allowed to open, who must create the first durable epoch and ready_commit_digest, and what happens on a brand-new install with no existing activation epoch/bootstrap envelope. Find the exact path that can start MCP with activation admission closed but never schedule a full-clean epoch, yielding accepted compatibility bootstrap plus ready_commit_digest=null forever. Do not mutate. Return exact symbols/conditions and smallest coherent fix boundary.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:49:53.075Z",
+    "updated_at": "2026-09-06T05:49:58.128Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:49:53.075Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:53.662Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:58.122Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:58.128Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:50:38.439Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "58ed1a99e50545d5aab0876e11ebbd02",
+    "orchestration": {
+      "run_id": "b47a98a98be442af9bac7b4ac79091bf",
+      "wave_id": "6a3100ecb87e4bccbfd4ba19fd1aee02",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Pin the exact fresh-install trigger/wiring bug. On current main, inspect only the startup/recovery code that constructs FullCleanActivationManager and decides whether to call activate(), resume activation, or merely leave MCP running with activation CLOSED. Reconstruct the first-ever installed start when there is no durable activation epoch/ready receipt. Find the exact branch that can yield: connector_compatibility_bootstrap accepted=true, snapshot_busy=false, ready_commit_digest=null, configured_gate=CLOSED, admission CLOSED, and repeated RUNTIME_ACTIVATION_PENDING. Distinguish initial install, ordinary reattach, recovery after stale owner, and already-completed activation. Return exact symbols/conditions and the smallest causal patch boundary; do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:50:38.441Z",
+    "updated_at": "2026-09-06T05:50:44.222Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:50:38.441Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:39.089Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:44.180Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:44.222Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:51:23.715Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "a2aec80d528242989dc0dc670c33b035",
+    "orchestration": {
+      "run_id": "af844dcf2f444c15ad35a27002b38372",
+      "wave_id": "5f275779d9064bd488b2b6326ccd6055",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Pin the exact fresh-install activation trigger/wiring defect on current main without repeating broad investigation. Inspect only electron/main.js and electron/services/recoveryHost.js. Find where FullCleanActivationManager is constructed or invoked, every branch that calls activate()/resume/recovery activation, and the first-ever installed startup branch when there is no durable activation epoch/ready receipt. Reconstruct the exact condition that can leave MCP running with activation gate CLOSED while connector_compatibility_bootstrap is accepted, snapshot_busy=false, ready_commit_digest=null and workspace calls loop on RUNTIME_ACTIVATION_PENDING. Return exact symbols/conditions and smallest causal patch boundary. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:51:23.717Z",
+    "updated_at": "2026-09-06T05:51:29.874Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:51:23.717Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:24.339Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:29.865Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:29.874Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:51:43.955Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "68e69a0105af4a2ab9d7f1495441ceb0",
+    "orchestration": {
+      "run_id": "eb18c2678720433daa1e5c9f84a42835",
+      "wave_id": "5ec74b303bec4accae8c25f8a5fad043",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Resolve the remaining ambiguity in the first-install READY-commit bug. Inspect only electron/services/recoveryHostLauncher.js, electron/recoveryHost.js, electron/services/runtimeOrchestrator.js, and electron/services/nativeService.js. Trace ensureRecoveryHost() on a packaged fresh install with no descriptor/no prior epoch: what process is spawned, whether a recovery bootstrap envelope or activation epoch is created, what activationGate/epoch values are passed to NativeService.start, and whether RuntimeOrchestrator.start({automatic:true}) can launch MCP with CODING_TOOLS_MCP_ACTIVATION_GATE=CLOSED without a FullCleanActivation transaction capable of producing ready_commit_digest. Return the exact fresh-install state sequence and one causal fix point; do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:51:43.956Z",
+    "updated_at": "2026-09-06T05:51:48.795Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:51:43.957Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:44.731Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:48.790Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:48.795Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:52:38.791Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "cdbbe8c9cc574be9ae3bc5ebbbc13761",
+    "orchestration": {
+      "run_id": "d68f3273b087447ab108ac159a35e14f",
+      "wave_id": "c74f4fe6db994989a74da5b13e88cc6f",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Trace the exact packaged startup/bootstrap transaction that can create an epoch-bound CLOSED MCP on a new install. Inspect only electron/main.js, electron/services/recoveryBootstrap.js, electron/services/recoveryHost.js and scripts/dev-ui-lifecycle.js. Identify calls that create/write a recovery bootstrap envelope or invoke full_clean_refresh/full-clean activation during ordinary packaged startup, first install, stale-host replacement, and UI reattach. Inspect RecoveryHost.reconcileIncompleteEpoch()/startup adoption behavior enough to explain how an epoch can remain nonterminal with ready_commit_digest missing and no active coordinator progress. Return one exact causal stranded-state branch and the safest recovery/fail-fast patch boundary. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:52:38.792Z",
+    "updated_at": "2026-09-06T05:52:44.721Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:52:38.792Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:39.467Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:44.715Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:44.721Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:53:02.409Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "0d353882b71b4bd38910fc7a8f27e60f",
+    "orchestration": {
+      "run_id": "410d6f4a7e7e45c7943716ad635a0fd4",
+      "wave_id": "8592e28c0f4d4b5b8d4bf0c304819bbe",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Audit the current Windows package composition for correctness, startup cost, and installed footprint. Inspect package.json plus any electron-builder configuration and package-smoke scripts. Determine exactly which repository trees are copied into app.asar/extraResources, whether coding-tools-mcp is duplicated, whether tests/docs/caches/dev artifacts are shipped, and whether the packaged MCP/tool schema can drift from current source. Propose the smallest package-only exclusions that preserve packaged offline startup, Recovery Host, Coding MCP, tunnel/native semantic support and Python dependencies. Do not mutate. Return current build input rules and the exact parity assertions needed in packaged-recovery-smoke.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "JurNMx8ta35yQrH5y7oKU4Us",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 992,
+      "finished_at": "2026-09-06T05:54:12.251Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:53:02.410Z",
+    "updated_at": "2026-09-06T05:54:12.251Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:53:02.410Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:53:03.008Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:53:06.793Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:53:06.799Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:11.427Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function Measure-Tree([string]$p){ if(!(Test-Path -LiteralPath $p)){ return [pscustomobject]@{path=$p;exists=$false;bytes=0;files=0} }; $i=Get-Item -LiteralPath $p; if($i.PSIsContainer){ $f=Get-ChildItem -LiteralPath $p -File -Recurse -Force -ErrorAction SilentlyContinue; return [pscustomobject]@{path=$p;exists=$true;bytes=[int64](($f|Measure-Object Length -Sum).Sum);files=[int](($f|Measure-Object).Count)} } else { re",
+          "session_id": "JurNMx8ta35yQrH5y7oKU4Us"
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:12.251Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function Measure-Tree([string]$p){ if(!(Test-Path -LiteralPath $p)){ return [pscustomobject]@{path=$p;exists=$false;bytes=0;files=0} }; $i=Get-Item -LiteralPath $p; if($i.PSIsContainer){ $f=Get-ChildItem -LiteralPath $p -File -Recurse -Force -ErrorAction SilentlyContinue; return [pscustomobject]@{path=$p;exists=$true;bytes=[int64](($f|Measure-Object Length -Sum).Sum);files=[int](($f|Measure-Object).Count)} } else { re",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:54:36.013Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "e9895448542c4f49a8ef4a433c59eca8",
+    "orchestration": {
+      "run_id": "75f7b927fb8c412da7ef2a8e2709323d",
+      "wave_id": "b0fd2aae94d44ce1b200d3c6fa3141b0",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Resolve the exact stranded-activation recovery branch before mutation. Inspect only RecoveryHost.start/reconcileIncompleteEpoch and FullCleanActivationManager recovery entry points plus ActivationEpochStore state transitions. For a persisted nonterminal epoch in STARTED_UNREADY/CONNECTOR_READY/MCP_READY/HEALTHY with ready_commit_digest absent after the original full-clean owner/coordinator is gone, state exactly what current startup does, whether any code resumes/restarts that epoch, and why compatibility bootstrap can remain accepted-but-pending forever. Identify a recovery rule safe against a genuinely active coordinator using durable epoch owner/lock/activity/age or Recovery Host single-owner facts already available; do not open admission or synthesize a digest. Specify minimal tests for fresh install interrupted before READY_COMMITTED and restart recovery. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:54:36.016Z",
+    "updated_at": "2026-09-06T05:54:41.570Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:54:36.016Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:36.668Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:41.527Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:41.570Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:55:23.859Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "6c44567a76224f468235006497e73b1b",
+    "orchestration": {
+      "run_id": "c6bd64a1dc444416baa0baadad71fe4d",
+      "wave_id": "9503e6d427154ea6a27439f0b0ed3a02",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Before mutation, give the exact current code behavior for stranded activation recovery. Inspect only RecoveryHost.reconcileIncompleteEpoch/start and the ActivationEpochStore transitions it calls. For each nonterminal state STARTED_UNREADY, CONNECTOR_READY, MCP_READY, HEALTHY, READY_COMMITTED, state whether current startup resumes, adopts, fails, or leaves it pending, and under what evidence. Focus on the case ready_commit_digest is absent and the original full-clean coordinator is gone. Identify the single safest causal change that cannot race a genuinely active coordinator: use existing Recovery Host ownership/bootstrap/epoch evidence, never synthesize a digest or force admission open. Also state the exact existing test seams to extend. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "iHZN24ygWQBgWFd4SuF4Fz8z",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1069,
+      "finished_at": "2026-09-06T05:57:01.672Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:55:23.861Z",
+    "updated_at": "2026-09-06T05:57:01.672Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:55:23.861Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:24.580Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:29.593Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:29.598Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:43.170Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short --branch && git diff --name-only && git diff --cached --name-only",
+          "session_id": "91VtwSJ5cfWgYH-9jYYl0HKg"
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:44.247Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short --branch && git diff --name-only && git diff --cached --name-only",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:52.939Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function M([string]$p){ if(!(Test-Path -LiteralPath $p)){ [pscustomobject]@{path=$p;bytes=0;files=0}; return }; $f=Get-ChildItem -LiteralPath $p -File -Recurse -Force -ErrorAction SilentlyContinue; [pscustomobject]@{path=$p;bytes=[int64](($f|Measure-Object Length -Sum).Sum);files=[int](($f|Measure-Object).Count)} }; $base='dist\\win-unpacked\\resources\\resources\\coding-tools-mcp'; $rows=@(); foreach($n in @('coding_tool",
+          "session_id": "yfe7d6DTwRgTFgyKzz1rt8p-"
+        }
+      },
+      {
+        "time": "2026-09-06T05:55:53.660Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function M([string]$p){ if(!(Test-Path -LiteralPath $p)){ [pscustomobject]@{path=$p;bytes=0;files=0}; return }; $f=Get-ChildItem -LiteralPath $p -File -Recurse -Force -ErrorAction SilentlyContinue; [pscustomobject]@{path=$p;bytes=[int64](($f|Measure-Object Length -Sum).Sum);files=[int](($f|Measure-Object).Count)} }; $base='dist\\win-unpacked\\resources\\resources\\coding-tools-mcp'; $rows=@(); foreach($n in @('coding_tool",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:08.521Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n --glob \"*.d.ts\" --glob \"*.json\" \"electronLanguages\" node_modules/app-builder-lib node_modules/electron-builder",
+          "session_id": "0TvvWWZC3_L-16PzbqicVlsx"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:09.891Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n --glob \"*.d.ts\" --glob \"*.json\" \"electronLanguages\" node_modules/app-builder-lib node_modules/electron-builder",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:17.812Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"coding-tools-mcp[\\\\/](tests|benchmarks|scripts)|resources[\\\\/]coding-tools-mcp[\\\\/](tests|benchmarks|scripts)|python_vendor|coding_tools_mcp\" electron scripts resources/coding-tools-mcp/coding_tools_mcp package.json tests --glob \"!resources/coding-tools-mcp/tests/**\" --glob \"!resources/coding-tools-mcp/benchmarks/**\"",
+          "session_id": "m-cClUjvrg9qMDG1CYYGi445"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:18.221Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"coding-tools-mcp[\\\\/](tests|benchmarks|scripts)|resources[\\\\/]coding-tools-mcp[\\\\/](tests|benchmarks|scripts)|python_vendor|coding_tools_mcp\" electron scripts resources/coding-tools-mcp/coding_tools_mcp package.json tests --glob \"!resources/coding-tools-mcp/tests/**\" --glob \"!resources/coding-tools-mcp/benchmarks/**\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:44.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$roots=@('dist\\win-unpacked\\resources\\resources\\tools','dist\\win-unpacked\\resources\\resources\\tunnel-client','dist\\win-unpacked\\resources\\resources\\recovery-mcp','dist\\win-unpacked\\resources\\resources\\recovery-supervisor'); $rows=@(); foreach($r in $roots){ if(Test-Path -LiteralPath $r){ Get-ChildItem -LiteralPath $r -File -Recurse | ForEach-Object { $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLower(); $rows += [pscustomobje",
+          "session_id": "ktmmPN0BcKh9W3gK0F2gtUfG"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:45.180Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$roots=@('dist\\win-unpacked\\resources\\resources\\tools','dist\\win-unpacked\\resources\\resources\\tunnel-client','dist\\win-unpacked\\resources\\resources\\recovery-mcp','dist\\win-unpacked\\resources\\resources\\recovery-supervisor'); $rows=@(); foreach($r in $roots){ if(Test-Path -LiteralPath $r){ Get-ChildItem -LiteralPath $r -File -Recurse | ForEach-Object { $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLower(); $rows += [pscustomobje",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:57:00.913Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='node_modules\\app-builder-lib\\scheme.json'; $c=Get-Content -LiteralPath $p; foreach($n in @(2088,2784,3422,8495,9287)){ $a=[Math]::Max(0,$n-1); $b=[Math]::Min($c.Length-1,$n+14); Write-Output ('---'+$n+'---'); $c[$a..$b] }\"",
+          "session_id": "iHZN24ygWQBgWFd4SuF4Fz8z"
+        }
+      },
+      {
+        "time": "2026-09-06T05:57:01.672Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='node_modules\\app-builder-lib\\scheme.json'; $c=Get-Content -LiteralPath $p; foreach($n in @(2088,2784,3422,8495,9287)){ $a=[Math]::Max(0,$n-1); $b=[Math]::Min($c.Length-1,$n+14); Write-Output ('---'+$n+'---'); $c[$a..$b] }\"",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:57:14.825Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c507be118e334af8982e36f495ca4491",
+    "orchestration": {
+      "run_id": "61205349df494189b45d9c993739f385",
+      "wave_id": "3beb200069e740969513f04a2351a3e6",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Inspect only the Python activation compatibility-bootstrap path and determine what typed diagnostic can be added without falsely failing a legitimate in-progress full-clean activation. Specifically return the exact fields available to activation_connector_bootstrap_result/_activation_enter_tool_call (epoch id, expiry, ready_commit_digest, snapshot_busy, configured/effective gate, any started/updated timestamps or coordinator state), and whether the server can distinguish 'first connector contact waiting for Recovery Host final census' from 'stranded no coordinator'. If it cannot, say so and recommend not adding a premature READY_COMMIT_MISSING error there. Also identify an existing typed expiry/failure boundary and tests. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:57:14.827Z",
+    "updated_at": "2026-09-06T05:57:23.692Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:57:14.827Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:57:15.993Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:57:23.683Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:57:23.692Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:58:22.039Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "1c9164c30df44132866246489f664959",
+    "orchestration": {
+      "run_id": "7cd8649beba24ba8826cfff5b9d598b8",
+      "wave_id": "1d76dba92ec24d66b19a4e88c7f4cf62",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": ""
+    },
+    "objective": "Final pre-mutation check: inspect only RecoveryHost/ActivationEpoch deadline and failure evidence for incomplete activation. Determine whether a stranded epoch with no ready_commit_digest has an existing authoritative expiry/deadline/updated-at policy that can be used to fail closed without inventing a new timeout. Locate bootstrap envelope expiry, activation epoch timestamps, recovery supervisor retry/deadline fields, and markFailed conditions. If no such authoritative deadline exists, say so and recommend fixing package/currentness plus restart-resume proof rather than adding a heuristic timeout. Do not mutate.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T05:58:22.042Z",
+    "updated_at": "2026-09-06T05:58:31.228Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:58:22.042Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:23.185Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:31.074Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:31.228Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:59:04.487Z",
+    "archive_reason": "superseded"
+  }
+]

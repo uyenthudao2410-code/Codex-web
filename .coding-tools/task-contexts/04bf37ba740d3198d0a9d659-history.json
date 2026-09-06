@@ -1,0 +1,2235 @@
+[
+  {
+    "version": 2,
+    "task_id": "c82064ebab6e469e914b8a082cbbae36",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:42:58.599Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-06T05:42:29.780Z",
+    "updated_at": "2026-09-06T05:42:58.599Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:42:29.780Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T05:42:29.786Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:42:58.599Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -I -E \"NSIS|installer|uninstall|upgrade|autoUpdater|setLoginItemSettings|userData|APPDATA|LOCALAPPDATA|runAfterFinish|allowToChangeInstallationDirectory\" -- package.json electron scripts tests docs/RELEASE_CHECKLIST.md",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:42:58.599Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:43:04.706Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e158372d2e314d7b8e069656f511554d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "_0e191LQabTbqMyZk54KeGjv",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 236,
+      "finished_at": "2026-09-06T05:43:38.480Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-06T05:43:04.707Z",
+    "updated_at": "2026-09-06T05:43:38.480Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:43:04.707Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:05.015Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -I -E \"NSIS|installer|uninstall|upgrade|autoUpdater|setLoginItemSettings|userData|APPDATA|LOCALAPPDATA|runAfterFinish|allowToChangeInstallationDirectory\" -- package.json electron scripts tests docs/RELEASE_CHECKLIST.md",
+          "session_id": "LSJbWh4SylSBtc_zscCAXUip"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:05.470Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -I -E \"NSIS|installer|uninstall|upgrade|autoUpdater|setLoginItemSettings|userData|APPDATA|LOCALAPPDATA|runAfterFinish|allowToChangeInstallationDirectory\" -- package.json electron scripts tests docs/RELEASE_CHECKLIST.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:11.910Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:23.257Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '=== TAGS ==='; git tag --list --sort=-creatordate; Write-Output '=== PACKAGE VERSION HISTORY ==='; $commits = @(git log --format=%H -- package.json); foreach ($c in $commits) { $raw = git show ($c + ':package.json'); try { $pkg = ($raw | Out-String | ConvertFrom-Json); $date = git show -s --format=%cs $c; Write-Output (($c.Substring(0,12)) + ' ' + $date + ' version=' + $pkg.version) } catch {} }; Wri",
+          "session_id": "XbHEPpFmYK9LxNrMwuH2B3ph"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:27.238Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '=== TAGS ==='; git tag --list --sort=-creatordate; Write-Output '=== PACKAGE VERSION HISTORY ==='; $commits = @(git log --format=%H -- package.json); foreach ($c in $commits) { $raw = git show ($c + ':package.json'); try { $pkg = ($raw | Out-String | ConvertFrom-Json); $date = git show -s --format=%cs $c; Write-Output (($c.Substring(0,12)) + ' ' + $date + ' version=' + $pkg.version) } catch {} }; Wri",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:38.222Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log --all --date=iso-strict --pretty=format:\"COMMIT %H %ad %s\" -p -G \"\\\"version\\\"[[:space:]]*:[[:space:]]*\\\"(1\\.0\\.0|0\\.3\\.4|0\\.1\\.6)\\\"\" -- package.json",
+          "session_id": "_0e191LQabTbqMyZk54KeGjv"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:38.480Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log --all --date=iso-strict --pretty=format:\"COMMIT %H %ad %s\" -p -G \"\\\"version\\\"[[:space:]]*:[[:space:]]*\\\"(1\\.0\\.0|0\\.3\\.4|0\\.1\\.6)\\\"\" -- package.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:43:44.354Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4feae1d722584ce788f1ac9da59002a2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:44:37.562Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-06T05:43:44.355Z",
+    "updated_at": "2026-09-06T05:44:37.562Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:43:44.355Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:44.672Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$out = & git log --all --date=short '--pretty=format:COMMIT %H %ad %s' -p -- package.json; $out | Select-String -Pattern '^COMMIT |^[+-].*\\\"version\\\"' | ForEach-Object { $_.Line }\"",
+          "session_id": "JqtZUbhly-XeT66JIHq-QKPG"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:45.391Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$out = & git log --all --date=short '--pretty=format:COMMIT %H %ad %s' -p -- package.json; $out | Select-String -Pattern '^COMMIT |^[+-].*\\\"version\\\"' | ForEach-Object { $_.Line }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:54.083Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $prior=(git rev-parse 'e22c67cca50c43ce89179129645d12838624773a^').Trim(); Write-Output ('PRIOR_HEAD=' + $prior); $pkg=(git show ($prior + ':package.json') | Out-String | ConvertFrom-Json); Write-Output ('version=' + $pkg.version); Write-Output ('dist=' + $pkg.scripts.dist); Write-Output ('dist_dir=' + $pkg.scripts.'dist:dir'); Write-Output ('appId=' + $pkg.build.appId); Write-Output ('productName=' + $pkg.build.p",
+          "session_id": "1R42oZBwxdPcirLmWHU-tp2X"
+        }
+      },
+      {
+        "time": "2026-09-06T05:43:54.904Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $prior=(git rev-parse 'e22c67cca50c43ce89179129645d12838624773a^').Trim(); Write-Output ('PRIOR_HEAD=' + $prior); $pkg=(git show ($prior + ':package.json') | Out-String | ConvertFrom-Json); Write-Output ('version=' + $pkg.version); Write-Output ('dist=' + $pkg.scripts.dist); Write-Output ('dist_dir=' + $pkg.scripts.'dist:dir'); Write-Output ('appId=' + $pkg.build.appId); Write-Output ('productName=' + $pkg.build.p",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:03.166Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 14 -E \"configureDesktopUserDataPath|setLoginItemSettings|isPackaged|process\\.argv|autoUpdater|DISABLE.*START|AUTO.*START|startup\" -- electron/main.js electron/services/runtimePaths.js tests/runtime-user-data-path.test.js tests/runtime-installation-identity.test.js",
+          "session_id": "68vmP0tdSwHA3ZrIYS1g27IB"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:03.422Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 14 -E \"configureDesktopUserDataPath|setLoginItemSettings|isPackaged|process\\.argv|autoUpdater|DISABLE.*START|AUTO.*START|startup\" -- electron/main.js electron/services/runtimePaths.js tests/runtime-user-data-path.test.js tests/runtime-installation-identity.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:37.562Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const p=require.resolve('app-builder-lib/package.json'); const j=require(p); console.log('appBuilderLib='+p); console.log('version='+j.version)\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:37.562Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:44:48.717Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "dc9192b9e6b6450485df776ca3877aa1",
+    "orchestration": {
+      "run_id": "e57f96b081e04e8182361c40ffab5d95",
+      "wave_id": "694b30cc6aeb4162b0a3dc5c56972285",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": "4d349d411b8887238ad4a1f9f43404a9bef00c6de368373ca6d72f1c271aea86"
+    },
+    "objective": "C5 isolated Windows installer lifecycle only. Continue the same user goal after canonical C4 checkpoint 777480e8957941f9ade53ec06e248d55 on exact current main/origin HEAD 9e752e34db745cd4fb2d0830a517910eced9c37f. Do not rerun C4 build/smoke/refresh. Frozen C5 root C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34; install root C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34\\install; all test APPDATA/LOCALAPPDATA/user-data stay beneath that root. Historical prior source, if used, is exact commit 026f79b3ab5997cb15f38a3b41769da6a79d790b in external worktree C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3. Preserve source bytes, all .coding-tools evidence and unrelated work. Never touch the real installed app/profile, Windows login/startup registration, Recovery Supervisor task, or production descriptor except read-only before/after identity snapshots. No publish/tag/release/deploy. Never ACK the forbidden completion report. Acceptance: truthful clean silent 1.0.0 install/uninstall with exact current artifact; isolated recovery-host health with no tunnel/updater/autostart effects; upgrade only if a real reproducible 0.3.4 installer is built from the historical commit; rollback only if actually restored to 0.3.4; final cleanup plus exact production descriptor/install-registry/scheduled-task invariants; terminal C5 checkpoint with exact artifacts/jobs/hashes/roots and proof classification.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-06T05:48:06.381Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-06T05:48:06.381Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:48:38.346Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 26,
+          "head_hash": "d04db1c6dc465bfc0b37635f755b1a35ea4b0dfb5f68acd063e6acec729d72b3"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e57f96b081e04e8182361c40ffab5d95\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e57f96b081e04e8182361c40ffab5d95\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "e57f96b081e04e8182361c40ffab5d95",
+        "wave_id": "694b30cc6aeb4162b0a3dc5c56972285",
+        "checkpoint_id": "fd7c90d5d2db477cbc45e7bfa280d3fc",
+        "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+        "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+        "contract_fp": "4d349d411b8887238ad4a1f9f43404a9bef00c6de368373ca6d72f1c271aea86",
+        "objective_provenance": {
+          "effective_objective": "C5 isolated Windows installer lifecycle only. Continue the same user goal after canonical C4 checkpoint 777480e8957941f9ade53ec06e248d55 on exact current main/origin HEAD 9e752e34db745cd4fb2d0830a517910eced9c37f. Do not rerun C4 build/smoke/refresh. Frozen C5 root C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34; install root C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34\\install; all test APPDATA/LOCALAPPDATA/user-data stay beneath that root. Historical prior source, if used, is exact commit 026f79b3ab5997cb15f38a3b41769da6a79d790b in external worktree C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3. Preserve source bytes, all .coding-tools evidence and unrelated work. Never touch the real installed app/profile, Windows login/startup registration, Recovery Supervisor task, or production descriptor except read-only before/after identity snapshots. No publish/tag/release/deploy. Never ACK the forbidden completion report. Acceptance: truthful clean silent 1.0.0 install/uninstall with exact current artifact; isolated recovery-host health with no tunnel/updater/autostart effects; upgrade only if a real reproducible 0.3.4 installer is built from the historical commit; rollback only if actually restored to 0.3.4; final cleanup plus exact production descriptor/install-registry/scheduled-task invariants; terminal C5 checkpoint with exact artifacts/jobs/hashes/roots and proof classification.",
+          "objective_revision": 1,
+          "objective_sha256": "3fa1fa6fcbde5c22c790908e1c9a09beb264d4fd3ff9bd9b4e54b1179970a85b",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "e1a5d2033a234c9ebc859d409043d688",
+            "stage_id": "check:8fbf345c88368916",
+            "status": "passed",
+            "duration_ms": 1316,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "d8c1348d44aec1dd5aa821885f13120d103b6e349d182d01c6455b1432fba1ab",
+    "completion_report_acknowledged_id": "d8c1348d44aec1dd5aa821885f13120d103b6e349d182d01c6455b1432fba1ab",
+    "completion_report_acknowledged_at": "2026-09-06T05:48:54.084Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T05:44:48.719Z",
+    "updated_at": "2026-09-06T05:49:03.445Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:44:48.719Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:48.982Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $pkg=Get-Content -Raw -LiteralPath 'node_modules/app-builder-lib/package.json' | ConvertFrom-Json; Write-Output ('app-builder-lib=' + $pkg.version); $root='node_modules/app-builder-lib/templates/nsis'; if (!(Test-Path -LiteralPath $root)) { throw 'NSIS template root missing' }; Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.nsh' | Select-String -Pattern '/S','/D=','uninstall','UninstallString','Install",
+          "session_id": "T4mdAmX4-zcSE_j8viXqWI_m"
+        }
+      },
+      {
+        "time": "2026-09-06T05:44:49.678Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $pkg=Get-Content -Raw -LiteralPath 'node_modules/app-builder-lib/package.json' | ConvertFrom-Json; Write-Output ('app-builder-lib=' + $pkg.version); $root='node_modules/app-builder-lib/templates/nsis'; if (!(Test-Path -LiteralPath $root)) { throw 'NSIS template root missing' }; Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.nsh' | Select-String -Pattern '/S','/D=','uninstall','UninstallString','Install",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:10.483Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='SilentlyContinue'; $cmd=Get-Command WindowsSandbox.exe; if ($cmd) { Write-Output ('WindowsSandbox=' + $cmd.Source) } else { Write-Output 'WindowsSandbox=missing' }; $f=Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM; if ($f) { Write-Output ('SandboxFeature=' + $f.State) } else { Write-Output 'SandboxFeature=unknown' }\"",
+          "session_id": "JSwcEBfUtSyaroUcqvDpvU8o"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:11.409Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='SilentlyContinue'; $cmd=Get-Command WindowsSandbox.exe; if ($cmd) { Write-Output ('WindowsSandbox=' + $cmd.Source) } else { Write-Output 'WindowsSandbox=missing' }; $f=Get-WindowsOptionalFeature -Online -FeatureName Containers-DisposableClientVM; if ($f) { Write-Output ('SandboxFeature=' + $f.State) } else { Write-Output 'SandboxFeature=unknown' }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:32.892Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '=== PROD_DESCRIPTOR_SANITIZED ==='; $dp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if (Test-Path -LiteralPath $dp) { $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $dp).Hash.ToLowerInvariant(); $d=Get-Content -Raw -LiteralPath $dp | ConvertFrom-Json; Write-Output ('path=' + $dp); Write-Output ('sha256=' + $h); Write-Output ('owner=' + [string]$d.owner); Write-Output ('owner_pid='",
+          "session_id": "mf1VNEQRoektwZx2dyv59wmt"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:35.350Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '=== PROD_DESCRIPTOR_SANITIZED ==='; $dp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if (Test-Path -LiteralPath $dp) { $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $dp).Hash.ToLowerInvariant(); $d=Get-Content -Raw -LiteralPath $dp | ConvertFrom-Json; Write-Output ('path=' + $dp); Write-Output ('sha256=' + $h); Write-Output ('owner=' + [string]$d.owner); Write-Output ('owner_pid='",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:47.067Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 10 -E \"autoStartServices|tunnelId|startRecoveryHostApplication|ensureRecoveryHost|startWithWindows|default.*settings|DEFAULT\" -- electron/services electron/recoveryHost.js electron/main.js",
+          "session_id": "14yymOXzTRXiGdEdqL5_P8m3"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:47.367Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 10 -E \"autoStartServices|tunnelId|startRecoveryHostApplication|ensureRecoveryHost|startWithWindows|default.*settings|DEFAULT\" -- electron/services electron/recoveryHost.js electron/main.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:55.925Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 3 -E \"settingsFile\\(\\)|recoveryDescriptorFile\\(\\)|recoveryStateFile\\(\\)|recoveryMcpPort\" -- electron/services/runtimePaths.js electron/services/settingsStore.js electron/services/recoveryHost.js",
+          "session_id": "5Ozx47Dw6x9SBddxGbGxtM-7"
+        }
+      },
+      {
+        "time": "2026-09-06T05:45:56.192Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 3 -E \"settingsFile\\(\\)|recoveryDescriptorFile\\(\\)|recoveryStateFile\\(\\)|recoveryMcpPort\" -- electron/services/runtimePaths.js electron/services/settingsStore.js electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:01.411Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$root='node_modules/app-builder-lib/templates/nsis'; Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.nsh' | Select-String -Pattern 'RUN_AFTER_FINISH','runAfterFinish','Silent','IfSilent','isSilent','/S' -SimpleMatch | Select-Object -First 180 | ForEach-Object { $_.Path.Replace((Get-Location).Path + '\\','') + ':' + $_.LineNumber + ':' + $_.Line.Trim() }\"",
+          "session_id": "dSuw1yI7ndAxSf525QHkRXSV"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:01.978Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$root='node_modules/app-builder-lib/templates/nsis'; Get-ChildItem -LiteralPath $root -Recurse -File -Filter '*.nsh' | Select-String -Pattern 'RUN_AFTER_FINISH','runAfterFinish','Silent','IfSilent','isSilent','/S' -SimpleMatch | Select-Object -First 180 | ForEach-Object { $_.Path.Replace((Get-Location).Path + '\\','') + ':' + $_.LineNumber + ':' + $_.Line.Trim() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:08.386Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='node_modules/app-builder-lib/templates/nsis/installSection.nsh'; $lines=Get-Content -LiteralPath $p; for($i=84;$i -le [Math]::Min(116,$lines.Count);$i++){ Write-Output (($i+1).ToString() + ':' + $lines[$i]) }\"",
+          "session_id": "y4GgNAmqGOgCwxNvMnfhrZis"
+        }
+      },
+      {
+        "time": "2026-09-06T05:46:09.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p='node_modules/app-builder-lib/templates/nsis/installSection.nsh'; $lines=Get-Content -LiteralPath $p; for($i=84;$i -le [Math]::Min(116,$lines.Count);$i++){ Write-Output (($i+1).ToString() + ':' + $lines[$i]) }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:20.137Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34','C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3'); foreach($p in $paths){ Write-Output ($p + '=' + (Test-Path -LiteralPath $p)) }\"",
+          "session_id": "bjAtNJHkta3HxjExST055lkw"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:20.654Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$paths=@('C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34','C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3'); foreach($p in $paths){ Write-Output ($p + '=' + (Test-Path -LiteralPath $p)) }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:25.204Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 8 -E \"RPC_ACTIONS|recovery\\.stop|recovery\\.shutdown|host\\.stop|shutdown|stop\" -- electron/services/recoveryIpc.js electron/services/recoveryHost.js electron/recoveryHost.js",
+          "session_id": "pjOxiGcYpM4SCrpl0T0i2s05"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:25.463Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 8 -E \"RPC_ACTIONS|recovery\\.stop|recovery\\.shutdown|host\\.stop|shutdown|stop\" -- electron/services/recoveryIpc.js electron/services/recoveryHost.js electron/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:47:58.427Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:00.753Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:02.162Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:02.172Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:03.540Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:04.270Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:05.153Z",
+        "event": "command_started",
+        "details": {
+          "command": "git rev-parse HEAD",
+          "session_id": "sS4fXvs6QlXh5lXIjop2U3aO"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:05.775Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git rev-parse HEAD",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:06.378Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:06.381Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:07.137Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:07.139Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:07.263Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "7f0b643a7f92603c168bf50a1d9c9601eb1fd6b645f119b76a3767d924283969"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:07.423Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:16.231Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:18.877Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:18.880Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:18.972Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "d8c1348d44aec1dd5aa821885f13120d103b6e349d182d01c6455b1432fba1ab"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:38.069Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:38.346Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$targets=@((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Desktop')) 'Trợ lý Web MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Trợ lý Web MCP.lnk')); foreach($p in $targets){ Write-Output ($p + '=' + (Test-Path -LiteralPath $p)) }\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:48:54.084Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "d8c1348d44aec1dd5aa821885f13120d103b6e349d182d01c6455b1432fba1ab"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:03.445Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T05:49:03.731Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b35619ef3e0c4468a15932e666b00cfe",
+    "orchestration": {
+      "run_id": "afd57ba0d9d34a6b9b9d7b5e65775590",
+      "wave_id": "1a8d87e465b14b229b47fae6485dd6cf",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": "4d349d411b8887238ad4a1f9f43404a9bef00c6de368373ca6d72f1c271aea86"
+    },
+    "objective": "Continue the same C5 material RUN from the already-installed current 1.0.0 state created by Wave 6380d0a4c21246a6bb753bb3b12cb829. Do not reinstall. Correct the stale registry oracle: the actual NSIS DisplayName is 'Coding Tools MCP 1.0.0', with DisplayVersion 1.0.0 and an UninstallString rooted under C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34\\install. Capture that install proof, run Recovery Host only with isolated APPDATA/LOCALAPPDATA/user-data and no tunnel/autostart, prove descriptor owner/process/loopback listener without HTTP, kill only that isolated process tree, silently uninstall, verify current shortcuts/registry/install root are removed, locate and preserve the pre-existing legacy shortcut by its immutable SHA256 393337c654c77795dad8a847a259391364635ed058e75603314b8321200c5957 rather than its corrupted JSON path string, and verify production descriptor and Recovery Supervisor definition equal baseline. Authenticated HTTP ping remains BLOCKED_BY_SERVER_POLICY. No C4 rerun, historical installer, normal UI, publish/tag/release/deploy, or forbidden ACK.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-06T05:58:57.161Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-06T05:58:57.161Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "E0Ae4xK27i99OIZblOG4Ec8d",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T05:58:56.738Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 114,
+          "head_hash": "5612743aa5665c91bcb01266569110632f1972baf496a720e10100a01c621dfe"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-afd57ba0d9d34a6b9b9d7b5e65775590\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-afd57ba0d9d34a6b9b9d7b5e65775590\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-afd57ba0d9d34a6b9b9d7b5e65775590\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-afd57ba0d9d34a6b9b9d7b5e65775590\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-afd57ba0d9d34a6b9b9d7b5e65775590\\wave-004.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "afd57ba0d9d34a6b9b9d7b5e65775590",
+        "wave_id": "1a8d87e465b14b229b47fae6485dd6cf",
+        "checkpoint_id": "b51dd665a3dc4db7ac5c73d93f160f02",
+        "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+        "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+        "contract_fp": "4d349d411b8887238ad4a1f9f43404a9bef00c6de368373ca6d72f1c271aea86",
+        "objective_provenance": {
+          "effective_objective": "Continue the same C5 material RUN from the already-installed current 1.0.0 state created by Wave 6380d0a4c21246a6bb753bb3b12cb829. Do not reinstall. Correct the stale registry oracle: the actual NSIS DisplayName is 'Coding Tools MCP 1.0.0', with DisplayVersion 1.0.0 and an UninstallString rooted under C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34\\install. Capture that install proof, run Recovery Host only with isolated APPDATA/LOCALAPPDATA/user-data and no tunnel/autostart, prove descriptor owner/process/loopback listener without HTTP, kill only that isolated process tree, silently uninstall, verify current shortcuts/registry/install root are removed, locate and preserve the pre-existing legacy shortcut by its immutable SHA256 393337c654c77795dad8a847a259391364635ed058e75603314b8321200c5957 rather than its corrupted JSON path string, and verify production descriptor and Recovery Supervisor definition equal baseline. Authenticated HTTP ping remains BLOCKED_BY_SERVER_POLICY. No C4 rerun, historical installer, normal UI, publish/tag/release/deploy, or forbidden ACK.",
+          "objective_revision": 4,
+          "objective_sha256": "6594aa2cbae848bc3a40906a2550ed8cc3a29e9a85e2c80e2d5e9425a9f1a6f0",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 4,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "2b8ac51f80b64e929b3d2b853d0b6cf4",
+            "stage_id": "check:4cad43a2958f6fb4",
+            "status": "passed",
+            "duration_ms": 3422,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "d7156949eeca4a2191a2bbfb1400b182",
+            "stage_id": "check:a179fdbfc86ef952",
+            "status": "passed",
+            "duration_ms": 8972,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "5256b382b8ff481d81822058285784a5",
+            "stage_id": "check:44a49412fa7b0ddd",
+            "status": "passed",
+            "duration_ms": 9915,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "92a996f2fd9a4f7eb95dfd83a894b582",
+            "stage_id": "check:03ae778e17b1e464",
+            "status": "passed",
+            "duration_ms": 3079,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "c95f7665fbeb2290acbfb83fdbea46d24624e1e077a2ca9ffc7607235f86fa7b",
+    "completion_report_acknowledged_id": "c95f7665fbeb2290acbfb83fdbea46d24624e1e077a2ca9ffc7607235f86fa7b",
+    "completion_report_acknowledged_at": "2026-09-06T06:00:46.278Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T05:49:03.733Z",
+    "updated_at": "2026-09-06T06:01:29.736Z",
+    "events": [
+      {
+        "time": "2026-09-06T05:49:03.733Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:04.020Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$targets=@((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Desktop')) 'Trợ lý Web MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Trợ lý Web MCP.lnk')); foreach($p in $targets){ Write-Output ($p + '=' + (Test-Path -LiteralPath $p)) }\"",
+          "session_id": "VFhC176IVSwxkFcL5qR04EH5"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:04.503Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$targets=@((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Coding Tools MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Desktop')) 'Trợ lý Web MCP.lnk'),(Join-Path ([Environment]::GetFolderPath('Programs')) 'Trợ lý Web MCP.lnk')); foreach($p in $targets){ Write-Output ($p + '=' + (Test-Path -LiteralPath $p)) }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:22.404Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Join-Path ([Environment]::GetFolderPath('Programs')) 'Trợ lý Web MCP.lnk'; if(Test-Path -LiteralPath $p){ $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); Write-Output ('legacy_shortcut_path=' + $p); Write-Output ('legacy_shortcut_sha256=' + $h); Write-Output ('legacy_shortcut_bytes=' + (Get-Item -LiteralPath $p).Length) } else { Write-Output 'legacy_shortcut_missing' }\"",
+          "session_id": "E9cW3fpYptGPeBwgUUlxCXBR"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:23.221Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Join-Path ([Environment]::GetFolderPath('Programs')) 'Trợ lý Web MCP.lnk'; if(Test-Path -LiteralPath $p){ $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); Write-Output ('legacy_shortcut_path=' + $p); Write-Output ('legacy_shortcut_sha256=' + $h); Write-Output ('legacy_shortcut_bytes=' + (Get-Item -LiteralPath $p).Length) } else { Write-Output 'legacy_shortcut_missing' }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:36.579Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 4 \"recoveryHostDescriptorFile\\|dataRootPath\\|userData\" -- electron/services/runtimePaths.js",
+          "session_id": "wAc9PeBNqrjfOjg6oyt4h6sx"
+        }
+      },
+      {
+        "time": "2026-09-06T05:49:36.837Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 4 \"recoveryHostDescriptorFile\\|dataRootPath\\|userData\" -- electron/services/runtimePaths.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:45.272Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:47.657Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:49.005Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:49.012Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:50.389Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:51.129Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:52.205Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:52.207Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:50:52.331Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PERMISSION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:10.056Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:51:46.072Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:11.907Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:14.274Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:15.632Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:15.639Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:16.955Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:17.907Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:18.916Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; function FileHash([string]$p){ (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant() }; function TextHash([string]$s){ $sha=[Security.Cryptography.SHA256]::Create(); try { ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($s)))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() } }; function MatchingInstalls(){ $out=@(); foreach($r in @",
+          "session_id": "7PE-csJadBcbf5z0vBZrRfVd"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:19.365Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$ErrorActionPreference='Stop'; function FileHash([string]$p){ (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant() }; function TextHash([string]$s){ $sha=[Security.Cryptography.SHA256]::Create(); try { ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($s)))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() } }; function MatchingInstalls(){ $out=@(); foreach($r in @",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:19.747Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:20.587Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:20.590Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:20.592Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:20.723Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "c0a257be51eb9f812e96ec26b4f8e7aa88e2f599e2081738b51dc1dcef14be64"
+        }
+      },
+      {
+        "time": "2026-09-06T05:52:20.840Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:16.777Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:17.810Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:24.680Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "c0a257be51eb9f812e96ec26b4f8e7aa88e2f599e2081738b51dc1dcef14be64"
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:52.935Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:54:53.339Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "IDEMPOTENCY_OUTCOME_UNKNOWN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:06.912Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:10.853Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:12.326Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:12.331Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:13.537Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:14.175Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:15.130Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';if(Test-Path $r){throw 'C5_ROOT_NOT_CLEAN'};$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$u=Join-Path $r 'profile\\user-data';$e=Join-Path $r 'evidence';New-Item -ItemType Directory -Force -Path $ad,$la,$u,$e|Out-Null;$s='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe';$sh=(Get-FileHash -Algorithm SH",
+          "session_id": "zKRya99j2lBM0nUUPodQVDe4"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:19.939Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';if(Test-Path $r){throw 'C5_ROOT_NOT_CLEAN'};$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$u=Join-Path $r 'profile\\user-data';$e=Join-Path $r 'evidence';New-Item -ItemType Directory -Force -Path $ad,$la,$u,$e|Out-Null;$s='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe';$sh=(Get-FileHash -Algorithm SH",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:21.271Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$e=Join-Path $r 'evidence';$s='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$x=Start-Process -FilePath $s -ArgumentList @('/S',('/D='+$i)) -PassThru -Wait -WindowStyle Hidden;if($x.ExitCode -ne 0){throw ('INSTALL_",
+          "session_id": "mp3B30CmupbaOdVmUN4IlrYe"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:35.328Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$e=Join-Path $r 'evidence';$s='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$x=Start-Process -FilePath $s -ArgumentList @('/S',('/D='+$i)) -PassThru -Wait -WindowStyle Hidden;if($x.ExitCode -ne 0){throw ('INSTALL_",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:35.860Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:37.084Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:37.088Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:37.091Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:37.283Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "cd0cc7bc34ec32d7ad37f88a60e0ca1ceb89762a909adbb22b7cfcb835315224"
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:37.627Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:51.156Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:56:53.325Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "cd0cc7bc34ec32d7ad37f88a60e0ca1ceb89762a909adbb22b7cfcb835315224"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:14.159Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:16.429Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:20.015Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:22.019Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:22.028Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:24.389Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:25.296Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:26.698Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$e=Join-Path $r 'evidence';$exe=Join-Path $i 'Coding Tools MCP.exe';if(!(Test-Path $exe)){throw 'INSTALLED_EXE_MISSING'};$m=@(Get-ChildItem 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'|ForEach-Object{Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue}|Where-Object{$_.DisplayName -like 'Coding Tools MCP*' -and",
+          "session_id": "fgK0NtY4qnCezCVFkBe6UIM3"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:29.006Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$e=Join-Path $r 'evidence';$exe=Join-Path $i 'Coding Tools MCP.exe';if(!(Test-Path $exe)){throw 'INSTALLED_EXE_MISSING'};$m=@(Get-ChildItem 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall'|ForEach-Object{Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue}|Where-Object{$_.DisplayName -like 'Coding Tools MCP*' -and",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:31.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$u=Join-Path $r 'profile\\user-data';$e=Join-Path $r 'evidence';$exe=Join-Path $i 'Coding Tools MCP.exe';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$env:WEBCODEX_PROCESS_ROLE='recovery-host';$rp=Start-Process -FilePath $exe -ArgumentList @('--recovery-host',('--user-d",
+          "session_id": "fnYtfuw01GDqYjTiae5eSdNT"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:38.782Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$u=Join-Path $r 'profile\\user-data';$e=Join-Path $r 'evidence';$exe=Join-Path $i 'Coding Tools MCP.exe';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$env:WEBCODEX_PROCESS_ROLE='recovery-host';$rp=Start-Process -FilePath $exe -ArgumentList @('--recovery-host',('--user-d",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:44.397Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$e=Join-Path $r 'evidence';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$u=@(Get-ChildItem -LiteralPath $i -File -Filter 'Uninstall*.exe' -ErrorAction Stop);if($u.Count -ne 1){throw ('UNINSTALLER_COUNT_'+$u.Count)};$x=Start-Process -FilePath $u[0].FullName -ArgumentLis",
+          "session_id": "3E0yo1M-5Hl2X4uZzNXhY5rj"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:52.540Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$ad=Join-Path $r 'profile\\Roaming';$la=Join-Path $r 'profile\\Local';$e=Join-Path $r 'evidence';$env:APPDATA=$ad;$env:LOCALAPPDATA=$la;$u=@(Get-ChildItem -LiteralPath $i -File -Filter 'Uninstall*.exe' -ErrorAction Stop);if($u.Count -ne 1){throw ('UNINSTALLER_COUNT_'+$u.Count)};$x=Start-Process -FilePath $u[0].FullName -ArgumentLis",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:54.625Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$b=Get-Content -Raw -LiteralPath (Join-Path $e 'baseline.json')|ConvertFrom-Json;$pd=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$ph=(Get-FileHash -Algorithm SHA256 -LiteralPath $pd).Hash.ToLowerInvariant();$p=Get-Content -Raw -LiteralPath $pd|ConvertFrom-Json;if($ph -ne [string]$b.prodDescriptorSha256 -or [str",
+          "session_id": "E0Ae4xK27i99OIZblOG4Ec8d"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:56.738Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$b=Get-Content -Raw -LiteralPath (Join-Path $e 'baseline.json')|ConvertFrom-Json;$pd=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$ph=(Get-FileHash -Algorithm SHA256 -LiteralPath $pd).Hash.ToLowerInvariant();$p=Get-Content -Raw -LiteralPath $pd|ConvertFrom-Json;if($ph -ne [string]$b.prodDescriptorSha256 -or [str",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:57.158Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:57.161Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:57.842Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:57.845Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:58.090Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "0224734f5ae4926520f50fdabd6253feaa8b6bc5b0c00b24faa17ba0c657e8c4"
+        }
+      },
+      {
+        "time": "2026-09-06T05:58:58.286Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T05:59:11.753Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:59:16.734Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-06T05:59:16.737Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T05:59:17.084Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "c95f7665fbeb2290acbfb83fdbea46d24624e1e077a2ca9ffc7607235f86fa7b"
+        }
+      },
+      {
+        "time": "2026-09-06T05:59:38.035Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:00:46.278Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "c95f7665fbeb2290acbfb83fdbea46d24624e1e077a2ca9ffc7607235f86fa7b"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:29.736Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T06:01:30.875Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3a62d3356aa94316bac33315aaf233e9",
+    "orchestration": {
+      "run_id": "7684bd70d5ec45c68f0a5a03615fa653",
+      "wave_id": "e8bd790c2ecc4aeb9f45c736c7a2b772",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+      "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+      "contract_fp": "7d952928e7a108a2de650bdde55d1604c48fc20cd333a964cefa8701b825693e"
+    },
+    "objective": "Terminal C5 closure after historical prior-artifact reproduction was truthfully blocked. Continue the same historical C5 RUN after Wave 3618a4ff5cc4417ab52ea48ee0856d92 CHECK_FAILED: the external worktree at exact prior commit 026f79b3ab5997cb15f38a3b41769da6a79d790b was created and npm ci --offline passed, but the repository-supported npm run dist stopped at npm test with 259 tests / 251 pass / 8 fail, all in recovery-supervisor.test.js, before electron-builder ran. Do not bypass tests or build a synthetic prior installer. Upgrade and rollback remain NOT_PROVEN also because no disposable Windows sandbox exists and the prior/current packages share appId com.gptwebcodex.assistant while a real legacy Start Menu shortcut SHA256 393337c654c77795dad8a847a259391364635ed058e75603314b8321200c5957 must remain untouched. Record the exact blocker under the existing C5 temp evidence, remove only the external historical worktree created by C5, and prove final invariants: current HEAD/origin remain 9e752e34db745cd4fb2d0830a517910eced9c37f, current verified installer hash remains e7e91a4340fb388d36f6e24d5b7b58dbd697142b1f3b3fd1a392477d0ed9a440, C5 install root/current registry/current shortcuts/current C5 install processes are absent after the already accepted current lifecycle, the legacy shortcut remains byte-identical, production descriptor identity/hash and Recovery Supervisor task remain equal to the C5 baseline, and all C5 profile/evidence remains retained. Final classification must explicitly preserve current clean silent install/uninstall + isolated descriptor/process/listener proof as PASS, authenticated loopback recovery.ping/status as BLOCKED_BY_SERVER_POLICY, prior artifact as NOT_PRODUCED, and upgrade/rollback as NOT_PROVEN. No C4 rerun, no installer execution, no normal UI, no production/startup/task writes, no network, no source mutation, no publish/tag/release/deploy, and never ACK the forbidden report.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-06T06:04:21.089Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-06T06:04:21.089Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "nGc_K_GUatV2uXuCGfRT91bl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T06:04:20.710Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 70,
+          "head_hash": "2673ebda23130a050414a5f0813b71cd51f7d7274ff913d95f592f9674d45129"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-7684bd70d5ec45c68f0a5a03615fa653\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-7684bd70d5ec45c68f0a5a03615fa653\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-7684bd70d5ec45c68f0a5a03615fa653\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "7684bd70d5ec45c68f0a5a03615fa653",
+        "wave_id": "e8bd790c2ecc4aeb9f45c736c7a2b772",
+        "checkpoint_id": "f549bc0102e24c028c07e9ad48c034a7",
+        "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
+        "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
+        "contract_fp": "7d952928e7a108a2de650bdde55d1604c48fc20cd333a964cefa8701b825693e",
+        "objective_provenance": {
+          "effective_objective": "Terminal C5 closure after historical prior-artifact reproduction was truthfully blocked. Continue the same historical C5 RUN after Wave 3618a4ff5cc4417ab52ea48ee0856d92 CHECK_FAILED: the external worktree at exact prior commit 026f79b3ab5997cb15f38a3b41769da6a79d790b was created and npm ci --offline passed, but the repository-supported npm run dist stopped at npm test with 259 tests / 251 pass / 8 fail, all in recovery-supervisor.test.js, before electron-builder ran. Do not bypass tests or build a synthetic prior installer. Upgrade and rollback remain NOT_PROVEN also because no disposable Windows sandbox exists and the prior/current packages share appId com.gptwebcodex.assistant while a real legacy Start Menu shortcut SHA256 393337c654c77795dad8a847a259391364635ed058e75603314b8321200c5957 must remain untouched. Record the exact blocker under the existing C5 temp evidence, remove only the external historical worktree created by C5, and prove final invariants: current HEAD/origin remain 9e752e34db745cd4fb2d0830a517910eced9c37f, current verified installer hash remains e7e91a4340fb388d36f6e24d5b7b58dbd697142b1f3b3fd1a392477d0ed9a440, C5 install root/current registry/current shortcuts/current C5 install processes are absent after the already accepted current lifecycle, the legacy shortcut remains byte-identical, production descriptor identity/hash and Recovery Supervisor task remain equal to the C5 baseline, and all C5 profile/evidence remains retained. Final classification must explicitly preserve current clean silent install/uninstall + isolated descriptor/process/listener proof as PASS, authenticated loopback recovery.ping/status as BLOCKED_BY_SERVER_POLICY, prior artifact as NOT_PRODUCED, and upgrade/rollback as NOT_PROVEN. No C4 rerun, no installer execution, no normal UI, no production/startup/task writes, no network, no source mutation, no publish/tag/release/deploy, and never ACK the forbidden report.",
+          "objective_revision": 2,
+          "objective_sha256": "3fb524d13ec12b69d805435f172a2e722d328c8a542b55b1091e509b94374607",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 3,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "02f2c06eda524643b0ed3441b79473b7",
+            "stage_id": "check:a138d3d3991a2faf",
+            "status": "passed",
+            "duration_ms": 2086,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "3f4793a9db194165b5edbcde7ff7c1c0",
+            "stage_id": "check:ff53c087086ef59a",
+            "status": "passed",
+            "duration_ms": 3896,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "8353ea33a0754488a52fd202b3580155",
+            "stage_id": "check:1c659014b1313aa1",
+            "status": "passed",
+            "duration_ms": 3356,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "bcb04e6eca8417a46098b91f16e8931c681af4a124f5cdf7d03baf3f86d58f0f",
+    "completion_report_acknowledged_id": "bcb04e6eca8417a46098b91f16e8931c681af4a124f5cdf7d03baf3f86d58f0f",
+    "completion_report_acknowledged_at": "2026-09-06T06:05:06.558Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-06T06:01:30.877Z",
+    "updated_at": "2026-09-06T06:05:16.250Z",
+    "events": [
+      {
+        "time": "2026-09-06T06:01:30.877Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "C5 historical prior-artifact build only, continuing after accepted current-lifecycle checkpoint b51dd665a3dc4db7ac5c73d93f160f02, C5 contract checkpoint fd7c90d5d2db477cbc45e7bfa280d3fc, and predecessor C4 checkpoint 777480e8957941f9ade53ec06e248d55. Current source remains main/origin HEAD 9e752e34db745cd4fb2d0830a517910eced9c37f. Reproduce the legitimate prior 0.3.4 source at exact commit 026f79b3ab5997cb15f38a3b41769da6a79d790b in external worktree C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3. Network is forbidden: dependency installation must use npm --offline only, Electron 43.2.0 and electron-builder/NSIS caches were preverified locally. Build the repository-defined prior NSIS artifact only if fully offline succeeds; hash and copy the resulting web-mcp-assistant-setup-0.3.4.exe into C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34\\artifacts. Do NOT install or launch 0.3.4 and do NOT claim upgrade/rollback: the real user profile contains a pre-existing legacy Trợ lý Web MCP shortcut SHA256 393337c654c77795dad8a847a259391364635ed058e75603314b8321200c5957, the prior/current packages share appId com.gptwebcodex.assistant, and Windows Sandbox is unavailable, so host-side upgrade/rollback is not safely isolated. Preserve main source bytes, all .coding-tools evidence and unrelated work. No normal UI, production profile/descriptor/task writes, C4 rerun, network, publish/tag/release/deploy, or forbidden ACK."
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:33.119Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:35.810Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:37.386Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:37.417Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:39.669Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:40.310Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:41.711Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';if(Test-Path -LiteralPath $wt){throw 'PRIOR_WORKTREE_ALREADY_EXISTS'};git worktree add --detach $wt 026f79b3ab5997cb15f38a3b41769da6a79d790b;if($LASTEXITCODE -ne 0){throw ('WORKTREE_ADD_EXIT_'+$LASTEXITCODE)};$h=(git -C $wt rev-parse HEAD).Trim();if($h -ne '026f79b3ab5997cb15f38a3b41769da6a79d790b'){throw ('PRIOR_HEAD_MISMATCH_'+$h)};$v=(Get-Conten",
+          "session_id": "1xplTav_XgV1KFzRy5h0RcRJ"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:45.216Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';if(Test-Path -LiteralPath $wt){throw 'PRIOR_WORKTREE_ALREADY_EXISTS'};git worktree add --detach $wt 026f79b3ab5997cb15f38a3b41769da6a79d790b;if($LASTEXITCODE -ne 0){throw ('WORKTREE_ADD_EXIT_'+$LASTEXITCODE)};$h=(git -C $wt rev-parse HEAD).Trim();if($h -ne '026f79b3ab5997cb15f38a3b41769da6a79d790b'){throw ('PRIOR_HEAD_MISMATCH_'+$h)};$v=(Get-Conten",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:46.569Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';$env:npm_config_offline='true';$env:npm_config_audit='false';$env:npm_config_fund='false';$env:ELECTRON_GET_USE_PROXY='0';Push-Location $wt;try{npm ci --offline --no-audit --no-fund;if($LASTEXITCODE -ne 0){throw ('NPM_CI_OFFLINE_EXIT_'+$LASTEXITCODE)};Write-Output 'PRIOR_NPM_CI_OFFLINE=PASS'}finally{Pop-Location}\"",
+          "session_id": "iyAJHQvdJxgDIPD4DSoDZejB"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:52.325Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';$env:npm_config_offline='true';$env:npm_config_audit='false';$env:npm_config_fund='false';$env:ELECTRON_GET_USE_PROXY='0';Push-Location $wt;try{npm ci --offline --no-audit --no-fund;if($LASTEXITCODE -ne 0){throw ('NPM_CI_OFFLINE_EXIT_'+$LASTEXITCODE)};Write-Output 'PRIOR_NPM_CI_OFFLINE=PASS'}finally{Pop-Location}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:01:53.668Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';$env:npm_config_offline='true';$env:npm_config_audit='false';$env:npm_config_fund='false';$env:ELECTRON_GET_USE_PROXY='0';Push-Location $wt;try{npm run dist;if($LASTEXITCODE -ne 0){throw ('PRIOR_DIST_EXIT_'+$LASTEXITCODE)};Write-Output 'PRIOR_DIST_OFFLINE=PASS'}finally{Pop-Location}\"",
+          "session_id": "TOOjjaB-UZguBlwhYiDKL4lR"
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:30.774Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';$env:npm_config_offline='true';$env:npm_config_audit='false';$env:npm_config_fund='false';$env:ELECTRON_GET_USE_PROXY='0';Push-Location $wt;try{npm run dist;if($LASTEXITCODE -ne 0){throw ('PRIOR_DIST_EXIT_'+$LASTEXITCODE)};Write-Output 'PRIOR_DIST_OFFLINE=PASS'}finally{Pop-Location}\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:31.154Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:31.968Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:31.971Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:31.972Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:32.057Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "de32a30917b3d8109dcefa017fad75f32a88809505c78dfa2250737d87ad6f99"
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:32.210Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:42.938Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:02:43.478Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T06:03:21.515Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "de32a30917b3d8109dcefa017fad75f32a88809505c78dfa2250737d87ad6f99"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:01.157Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:03.027Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:06.221Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:07.722Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:07.728Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:09.222Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:09.925Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:10.940Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';if(!(Test-Path -LiteralPath $wt)){throw 'PRIOR_WORKTREE_MISSING_BEFORE_CLOSURE'};$h=(git -C $wt rev-parse HEAD).Trim();if($h -ne '026f79b3ab5997cb15f38a3b41769da6a79d790b'){throw ('PRIOR_HEAD_MISMATCH_'+$h)};$v=(Get-Content -Raw -LiteralPath (Join-Path $wt 'pack",
+          "session_id": "PZ58hbLhNWi6pcBzhJjId1ic"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:12.248Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';if(!(Test-Path -LiteralPath $wt)){throw 'PRIOR_WORKTREE_MISSING_BEFORE_CLOSURE'};$h=(git -C $wt rev-parse HEAD).Trim();if($h -ne '026f79b3ab5997cb15f38a3b41769da6a79d790b'){throw ('PRIOR_HEAD_MISMATCH_'+$h)};$v=(Get-Content -Raw -LiteralPath (Join-Path $wt 'pack",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:13.539Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';git worktree remove --force $wt;if($LASTEXITCODE -ne 0){throw ('WORKTREE_REMOVE_EXIT_'+$LASTEXITCODE)};if(Test-Path -LiteralPath $wt){throw 'PRIOR_WORKTREE_PATH_REMAINS'};$listed=(git worktree list --porcelain | Out-String);if($listed -like ('*'+$wt+'*')){throw 'PRIOR_WORKTREE_STILL_REGISTERED'};Write-Output 'PRIOR_EXTERNAL_WORKTREE_CLEANUP=PASS';W",
+          "session_id": "gaNWv0O-TRGgySKSYAsL9cIZ"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:16.790Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$wt='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';git worktree remove --force $wt;if($LASTEXITCODE -ne 0){throw ('WORKTREE_REMOVE_EXIT_'+$LASTEXITCODE)};if(Test-Path -LiteralPath $wt){throw 'PRIOR_WORKTREE_PATH_REMAINS'};$listed=(git worktree list --porcelain | Out-String);if($listed -like ('*'+$wt+'*')){throw 'PRIOR_WORKTREE_STILL_REGISTERED'};Write-Output 'PRIOR_EXTERNAL_WORKTREE_CLEANUP=PASS';W",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:18.372Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$main='E:\\DEV\\Codex-web';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$b=Get-Content -Raw -LiteralPath (Join-Path $e 'baseline.json')|ConvertFrom-Json;$head=(git -C $main rev-parse HEAD).Trim();$origin=(git -C $main rev-parse origin/main).Trim();if($head -ne '9e752e34db745cd4fb2d0830a517910eced9c37f' -or $origin -ne $head){throw 'MAIN_HEAD_DRIFT'};$setup=Join-Path $main 'd",
+          "session_id": "nGc_K_GUatV2uXuCGfRT91bl"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:20.710Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$main='E:\\DEV\\Codex-web';$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$e=Join-Path $r 'evidence';$b=Get-Content -Raw -LiteralPath (Join-Path $e 'baseline.json')|ConvertFrom-Json;$head=(git -C $main rev-parse HEAD).Trim();$origin=(git -C $main rev-parse origin/main).Trim();if($head -ne '9e752e34db745cd4fb2d0830a517910eced9c37f' -or $origin -ne $head){throw 'MAIN_HEAD_DRIFT'};$setup=Join-Path $main 'd",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.087Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.089Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.573Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.576Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.718Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "49f0ef0ed3c0602d6be13a0160ddd33cdfcfd640f381c136d0f146bf7d14e0b8"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:21.847Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:33.411Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:35.878Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:35.881Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:36.017Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "bcb04e6eca8417a46098b91f16e8931c681af4a124f5cdf7d03baf3f86d58f0f"
+        }
+      },
+      {
+        "time": "2026-09-06T06:04:47.291Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T06:05:06.558Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "bcb04e6eca8417a46098b91f16e8931c681af4a124f5cdf7d03baf3f86d58f0f"
+        }
+      },
+      {
+        "time": "2026-09-06T06:05:16.250Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T06:05:16.508Z",
+    "archive_reason": "finished"
+  }
+]

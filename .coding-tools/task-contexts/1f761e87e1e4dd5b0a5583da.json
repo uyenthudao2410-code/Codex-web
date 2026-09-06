@@ -1,0 +1,104 @@
+{
+  "version": 2,
+  "task_id": "9e11be3196344b5887bb0c4e4afc3a5b",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "M2JOyUpV7FUI4xY6Zc_6J-9L",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1397,
+    "finished_at": "2026-09-06T06:00:55.974Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T05:55:34.535Z",
+  "updated_at": "2026-09-06T06:00:55.974Z",
+  "events": [
+    {
+      "time": "2026-09-06T05:55:34.535Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T05:55:34.864Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';Write-Output ('C5_ROOT_EXISTS='+(Test-Path -LiteralPath $r));$m=@();foreach($q in @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall')){if(Test-Path $q){$m+=@(Get-ChildItem $q|ForEach-Object{Get-ItemProperty $_.PSPath -ErrorAction SilentlyContin",
+        "session_id": "YZdTAANXkw42QK3x5qXokD81"
+      }
+    },
+    {
+      "time": "2026-09-06T05:55:36.214Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';Write-Output ('C5_ROOT_EXISTS='+(Test-Path -LiteralPath $r));$m=@();foreach($q in @('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall')){if(Test-Path $q){$m+=@(Get-ChildItem $q|ForEach-Object{Get-ItemProperty $_.PSPath -ErrorAction SilentlyContin",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:57:12.221Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$b=Get-Content -Raw -LiteralPath (Join-Path $r 'evidence\\baseline.json')|ConvertFrom-Json;Write-Output ('ROOT='+(Test-Path $r));$exe=Join-Path $i 'Coding Tools MCP.exe';Write-Output ('EXE='+(Test-Path $exe));if(Test-Path $exe){Write-Output ('EXE_SHA256='+((Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant()))};$un=@(Get-ChildItem -Litera",
+        "session_id": "vyVEZuPJ8x6chzDOACvqZi5o"
+      }
+    },
+    {
+      "time": "2026-09-06T05:57:14.466Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$i=Join-Path $r 'install';$b=Get-Content -Raw -LiteralPath (Join-Path $r 'evidence\\baseline.json')|ConvertFrom-Json;Write-Output ('ROOT='+(Test-Path $r));$exe=Join-Path $i 'Coding Tools MCP.exe';Write-Output ('EXE='+(Test-Path $exe));if(Test-Path $exe){Write-Output ('EXE_SHA256='+((Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant()))};$un=@(Get-ChildItem -Litera",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T05:57:33.371Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$b=Get-Content -Raw -LiteralPath (Join-Path $r 'evidence\\baseline.json')|ConvertFrom-Json;Write-Output ('BASE_TASK_SHA256='+$b.supervisorTaskSha256);Write-Output ('BASE_LEGACY_PATH='+$b.legacyShortcutPath);Write-Output ('BASE_LEGACY_SHA256='+$b.legacyShortcutSha256);Write-Output ('BASE_LEGACY_EXISTS='+(Test-Path -LiteralPath ([string]$b.legacyShortcutPath)));$prog=[Environment]::GetFo",
+        "session_id": "aqNOpZnbXfvpD9oK6ytQPcOo"
+      }
+    },
+    {
+      "time": "2026-09-06T05:57:34.257Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$r='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-9e752e34';$b=Get-Content -Raw -LiteralPath (Join-Path $r 'evidence\\baseline.json')|ConvertFrom-Json;Write-Output ('BASE_TASK_SHA256='+$b.supervisorTaskSha256);Write-Output ('BASE_LEGACY_PATH='+$b.legacyShortcutPath);Write-Output ('BASE_LEGACY_SHA256='+$b.legacyShortcutSha256);Write-Output ('BASE_LEGACY_EXISTS='+(Test-Path -LiteralPath ([string]$b.legacyShortcutPath)));$prog=[Environment]::GetFo",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T06:00:54.531Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$prior='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';Write-Output ('PRIOR_WORKTREE_EXISTS='+(Test-Path -LiteralPath $prior));Write-Output ('NPM_CACHE='+(npm config get cache));$ec=Join-Path $env:LOCALAPPDATA 'electron\\Cache';Write-Output ('ELECTRON_CACHE='+$ec+'|exists='+(Test-Path $ec));if(Test-Path $ec){Get-ChildItem -LiteralPath $ec -Recurse -File -ErrorAction SilentlyContinue|Where-Object{$_.N",
+        "session_id": "M2JOyUpV7FUI4xY6Zc_6J-9L"
+      }
+    },
+    {
+      "time": "2026-09-06T06:00:55.974Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$prior='C:\\Users\\Admin\\AppData\\Local\\Temp\\codex-web-c5-prior-026f79b3';Write-Output ('PRIOR_WORKTREE_EXISTS='+(Test-Path -LiteralPath $prior));Write-Output ('NPM_CACHE='+(npm config get cache));$ec=Join-Path $env:LOCALAPPDATA 'electron\\Cache';Write-Output ('ELECTRON_CACHE='+$ec+'|exists='+(Test-Path $ec));if(Test-Path $ec){Get-ChildItem -LiteralPath $ec -Recurse -File -ErrorAction SilentlyContinue|Where-Object{$_.N",
+        "status": "passed"
+      }
+    }
+  ]
+}
