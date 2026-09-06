@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "d623321a8ad542fc9592040eaa0a1976",
     "wave_id": "7645d1e894444b8aaa7c499e393c770f",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Implement the bounded Codex-web 1.0 finish-line optimization on current main f702c2a without changing the public 8-tool smart-v3 contract or weakening EOCL/activation safety. Make dev and packaged Electron UI materially lighter: in renderer/browser.js, renderer/control-center.js, renderer/panel.js and renderer/dashboard.js prevent overlapping async polls, back off noncritical polling when the document/window is hidden or unfocused, avoid redundant unchanged DOM/render work where the current structure permits, and keep active-task/health refresh responsive when visible. In electron/chatViewController.js consolidate/debounce repeated chat UI enhancement scheduling/MutationObserver-triggered work so hidden/unchanged pages do not repeatedly rescan/rewrite the DOM; do not alter chat semantics. Preserve correctness-critical lease/heartbeat/recovery timers. Reduce Windows package footprint using supported electron-builder configuration to ship only en-US and vi locales and exclude only runtime-unused resources/coding-tools-mcp/tests, benchmarks and scripts from extraResources; retain coding_tools_mcp, python_vendor, Python/runtime launchers, Recovery Host, tunnel and native semantic/offline behavior. Strengthen scripts/verify-packaged-resources.js and tests/build-verification.test.js (or the closest existing package oracle) so packaged output must contain the current runtime entrypoints/public smart-v3 contract and must not contain the excluded dev-only payload/locales. Do not fake READY commits or force activation gates open; activation behavior remains fail-closed. Preserve all .coding-tools runtime/evidence and unrelated files. Add/update focused regression tests for the changed UI scheduling/package behavior where practical. Finish the wave only if focused tests and git diff --check pass; otherwise return a typed replan with exact failures.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "verify",
@@ -31,7 +31,7 @@
       "updated_at": "2026-09-06T06:21:06.274Z"
     }
   ],
-  "current_step": "Acceptance decision - operator report required",
+  "current_step": "Completed - operator report required",
   "current_command": {
     "command": "node --test tests/build-verification.test.js tests/recovery-host.test.js tests/runtime-user-data-path.test.js && git diff --check",
     "kind": "command",
@@ -69,14 +69,14 @@
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
       "integrity": {
         "ok": true,
-        "checked": 38,
-        "head_hash": "ead6d5b21d86ccc99fd61c3afbbd392f94e3ba6c733f8bf658dd76eba22cea92"
+        "checked": 41,
+        "head_hash": "a10a005af29c50c99e957d3a54bee960636d696b58620cd494a97ff0b7325f10"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\run-summary.md",
@@ -89,7 +89,7 @@
     "source_run_wave": {
       "run_id": "d623321a8ad542fc9592040eaa0a1976",
       "wave_id": "7645d1e894444b8aaa7c499e393c770f",
-      "checkpoint_id": "",
+      "checkpoint_id": "359b6c09493f498b8e06bc34194b0c5b",
       "base_head": "f702c2a4036d1d185337c14fe1f5cd03e14e3409",
       "worktree_fp": "31640b20c26b036f4ffacee3c36f92a0058a54d3b621ee34a6cdffc9f3c30974",
       "contract_fp": "",
@@ -117,12 +117,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "ACCEPTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
   },
-  "completion_report_id": "1358794c4c3235cddc8e79c9f424d7f1eb058e53488ae4bacd1d7728c33cf00b",
+  "completion_report_id": "3a092194aaea6503af83f380d1e46eede6913a04ff482b2d14b44f4ccbd466e0",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -14169,9 +14169,9 @@
   },
   "modified_files": [],
   "failure": null,
-  "next_step": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject.",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-09-06T06:19:12.079Z",
-  "updated_at": "2026-09-06T06:21:07.220Z",
+  "updated_at": "2026-09-06T08:02:14.490Z",
   "events": [
     {
       "time": "2026-09-06T06:19:12.079Z",
@@ -14444,6 +14444,48 @@
       "event": "files_modified",
       "details": {
         "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T07:54:28.478Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T08:02:14.221Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-06T08:02:14.246Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T08:02:14.458Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "3a092194aaea6503af83f380d1e46eede6913a04ff482b2d14b44f4ccbd466e0"
       }
     }
   ]

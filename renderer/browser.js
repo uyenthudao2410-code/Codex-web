@@ -6,9 +6,13 @@ let lastRuntimeState = null;
 let lastRuntimeCheckAt = 0;
 let taskRefreshInFlight = null;
 let taskBusy = false;
+let workspaceRefreshInFlight = null;
+let lastWorkspaceSignature = '';
 const TASK_POLL_BUSY_MS = 2000;
 const TASK_POLL_IDLE_MS = 5000;
 const TASK_POLL_HIDDEN_MS = 15000;
+const WORKSPACE_POLL_VISIBLE_MS = 15000;
+const WORKSPACE_POLL_HIDDEN_MS = 60000;
 
 function unwrap(result) {
   if (!result?.ok) throw new Error(result?.error || 'Thao tác thất bại');
@@ -214,19 +218,29 @@ async function pollTask() {
 }
 
 function renderWorkspace(hub) {
-  activeWorkspace = hub.activeWorkspace || '';
-  $('#activeWorkspace').textContent = activeWorkspace || 'Chưa chọn';
-  $('#activeWorkspace').title = activeWorkspace;
+  const recentWorkspaces = Array.isArray(hub?.recentWorkspaces)
+    ? hub.recentWorkspaces.filter(Boolean)
+    : [];
+  const nextWorkspace = String(hub?.activeWorkspace || '');
+  const signature = JSON.stringify([nextWorkspace, ...recentWorkspaces]);
+  const workspaceListChanged = signature !== lastWorkspaceSignature;
+  activeWorkspace = nextWorkspace;
+  const activeWorkspaceNode = $('#activeWorkspace');
+  const activeWorkspaceText = activeWorkspace || 'Chưa chọn';
+  if (activeWorkspaceNode.textContent !== activeWorkspaceText) activeWorkspaceNode.textContent = activeWorkspaceText;
+  if (activeWorkspaceNode.title !== activeWorkspace) activeWorkspaceNode.title = activeWorkspace;
   renderWorkspaceHealth();
+  if (!workspaceListChanged) return;
+  lastWorkspaceSignature = signature;
   const chips = $('#workspaceChips');
   chips.replaceChildren();
   const select = $('#workspaceSelect');
   select.replaceChildren();
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = `Tất cả workspace (${(hub.recentWorkspaces || []).length})`;
+  placeholder.textContent = `Tất cả workspace (${recentWorkspaces.length})`;
   select.appendChild(placeholder);
-  (hub.recentWorkspaces || []).filter(Boolean).forEach((workspace) => {
+  recentWorkspaces.forEach((workspace) => {
     const option = document.createElement('option');
     option.value = workspace;
     option.textContent = workspace === activeWorkspace ? `Hiện tại: ${baseName(workspace)}` : baseName(workspace);
@@ -234,7 +248,7 @@ function renderWorkspace(hub) {
     select.appendChild(option);
   });
   select.value = '';
-  (hub.recentWorkspaces || []).filter((item) => item && item !== activeWorkspace).slice(0, 4).forEach((workspace) => {
+  recentWorkspaces.filter((item) => item !== activeWorkspace).slice(0, 4).forEach((workspace) => {
     const button = document.createElement('button');
     button.className = 'workspace-chip';
     button.textContent = baseName(workspace);
@@ -244,9 +258,24 @@ function renderWorkspace(hub) {
   });
 }
 
-async function refreshWorkspace() {
-  try { renderWorkspace(unwrap(await api.workspaceHub())); }
-  catch { /* retain the last usable workspace state */ }
+async function refreshWorkspace(force = false) {
+  if (!force && document.visibilityState === 'hidden') return;
+  if (workspaceRefreshInFlight) return workspaceRefreshInFlight;
+  workspaceRefreshInFlight = (async () => {
+    try { renderWorkspace(unwrap(await api.workspaceHub())); }
+    catch { /* retain the last usable workspace state */ }
+  })();
+  try { await workspaceRefreshInFlight; }
+  finally { workspaceRefreshInFlight = null; }
+}
+
+function workspacePollDelay() {
+  return document.visibilityState === 'hidden' ? WORKSPACE_POLL_HIDDEN_MS : WORKSPACE_POLL_VISIBLE_MS;
+}
+
+async function pollWorkspace() {
+  await refreshWorkspace(false);
+  setTimeout(pollWorkspace, workspacePollDelay());
 }
 
 async function switchWorkspace(workspace, showProgress = true) {
@@ -367,10 +396,12 @@ api.onDownload((item) => {
   else if (item.error) node.textContent = item.error;
 });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'hidden') void refreshTask(true);
+  if (document.visibilityState !== 'hidden') {
+    void refreshTask(true);
+    void refreshWorkspace(true);
+  }
 });
 api.chatStatus().then((result) => renderChatState(unwrap(result))).catch(() => {});
 refreshStatus();
-refreshWorkspace();
+refreshWorkspace(true).finally(() => setTimeout(pollWorkspace, workspacePollDelay()));
 refreshTask(true).finally(() => setTimeout(pollTask, taskPollDelay()));
-setInterval(refreshWorkspace, 15000);

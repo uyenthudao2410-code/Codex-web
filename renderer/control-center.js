@@ -19,6 +19,7 @@
   let refreshInFlight = false;
   let lastPerformanceRead = 0;
   let coalescedUpdates = 0;
+  let heartbeatRenderScheduled = false;
   const eventLoopLagSamples = [];
   const UI_EVENT_LOOP_SAMPLE_MS = 250;
   const UI_EVENT_LOOP_BATCH_SIZE = 30;
@@ -78,7 +79,9 @@
 
   function setText(id, value) {
     const element = byId(id);
-    if (element) element.textContent = String(value ?? '—');
+    if (!element) return;
+    const text = String(value ?? '—');
+    if (element.textContent !== text) element.textContent = text;
   }
 
   function shortId(value, length = 8) {
@@ -345,14 +348,18 @@
   function setRouterNode(prefix, key, state, detail) {
     const element = byId(`${prefix}Router${NODE_SUFFIX[key]}`);
     if (!element) return;
-    for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) element.classList.remove(`is-${name}`);
-    element.classList.add(`is-${state}`);
-    element.dataset.state = state;
-    element.title = detail || state;
+    if (element.dataset.state !== state) {
+      for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) element.classList.remove(`is-${name}`);
+      element.classList.add(`is-${state}`);
+      element.dataset.state = state;
+    }
+    const nextTitle = detail || state;
+    if (element.title !== nextTitle) element.title = nextTitle;
     const label = element.querySelector('[data-router-state]');
     if (label) {
       const idle = COMPUTE_KEYS.includes(key) || key === 'writer';
-      label.textContent = state === 'connected' ? 'online' : state === 'offline' && idle ? 'idle' : state;
+      const nextLabel = state === 'connected' ? 'online' : state === 'offline' && idle ? 'idle' : state;
+      if (label.textContent !== nextLabel) label.textContent = nextLabel;
     }
   }
 
@@ -413,14 +420,31 @@
   function setRouterEdge(prefix, key, state, flow = 'none') {
     const element = byId(`${prefix}Edge${NODE_SUFFIX[key]}`);
     if (!element) return;
-    for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) element.classList.remove(`is-${name}`);
-    element.classList.add(`is-${state}`);
+    const stateChanged = element.dataset.state !== state;
+    if (stateChanged) {
+      for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) element.classList.remove(`is-${name}`);
+      element.classList.add(`is-${state}`);
+      element.dataset.state = state;
+    }
     const group = element.closest('.ops-router-edge-group');
     if (group) {
-      for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) group.classList.remove(`is-${name}`);
-      group.classList.add(`is-${state}`);
-      group.dataset.flow = flow;
-      syncEdgeParticles(group, element, state, flow);
+      const groupStateChanged = group.dataset.state !== state;
+      const flowChanged = group.dataset.flow !== flow;
+      if (groupStateChanged) {
+        for (const name of ['offline', 'connected', 'waiting', 'blocked', 'active']) group.classList.remove(`is-${name}`);
+        group.classList.add(`is-${state}`);
+        group.dataset.state = state;
+      }
+      if (flowChanged) group.dataset.flow = flow;
+      const page = group.closest('.page');
+      const pageVisible = !page || page.classList.contains('active');
+      const particlesExpected = state === 'active' && flow !== 'none' && !reducedMotion
+        && document.visibilityState !== 'hidden' && pageVisible;
+      const hasParticles = Boolean(group.querySelector('.ops-router-particle'));
+      if (stateChanged || groupStateChanged || flowChanged
+        || (particlesExpected && !hasParticles) || (!particlesExpected && hasParticles)) {
+        syncEdgeParticles(group, element, state, flow);
+      }
     }
   }
 
@@ -460,8 +484,10 @@
   function setPill(id, text, state) {
     const element = byId(id);
     if (!element) return;
-    element.textContent = text;
-    element.className = `cc-pill is-${state}`;
+    const nextText = String(text);
+    const nextClassName = `cc-pill is-${state}`;
+    if (element.textContent !== nextText) element.textContent = nextText;
+    if (element.className !== nextClassName) element.className = nextClassName;
   }
 
   function renderGoalPursuit(data) {
@@ -715,6 +741,23 @@
     renderCommandCenter(data);
   }
 
+  function scheduleHeartbeatRender() {
+    if (!shouldPoll()) return;
+    if (heartbeatRenderScheduled) {
+      coalescedUpdates += 1;
+      return;
+    }
+    heartbeatRenderScheduled = true;
+    const commit = () => {
+      heartbeatRenderScheduled = false;
+      if (!shouldPoll() || refreshInFlight) return;
+      renderAll();
+      setText('ccLastSync', snapshotSyncText(snapshot?.status));
+    };
+    if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(commit);
+    else commit();
+  }
+
   function nowMs() {
     return window.performance?.now?.() ?? Date.now();
   }
@@ -937,10 +980,7 @@
     snapshot.status.staleAfterMs = finiteNonNegativeNumber(health?.staleAfterMs);
     snapshot.status.snapshotObservedAtUnixMs = finiteNumber(health?.snapshotObservedAtUnixMs);
     snapshot.status.snapshotAgeMs = finiteNonNegativeNumber(health?.snapshotAgeMs);
-    if (shouldPoll() && !refreshInFlight) {
-      renderAll();
-      setText('ccLastSync', snapshotSyncText(snapshot.status));
-    }
+    if (shouldPoll() && !refreshInFlight) scheduleHeartbeatRender();
   });
 
   refresh(true).finally(() => setTimeout(pollControlCenter, controlCenterPollDelay()));

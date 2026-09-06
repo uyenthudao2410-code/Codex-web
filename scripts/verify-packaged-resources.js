@@ -9,18 +9,23 @@ const FORBIDDEN_DIRECTORY_NAMES = new Set([
   ".pytest_cache",
   ".coding-tools",
 ]);
+const DEV_ONLY_CODING_MCP_DIRECTORIES = new Set([
+  "tests",
+  "benchmarks",
+  "scripts",
+]);
 
 function forbiddenReason(relativePath, isDirectory) {
   const normalized = relativePath.split(path.sep).join("/");
   const parts = normalized.split("/").filter(Boolean);
+  if (parts[0] === "coding-tools-mcp" && DEV_ONLY_CODING_MCP_DIRECTORIES.has(parts[1])) {
+    return "development-only Coding MCP directory";
+  }
   if (parts.some((part) => FORBIDDEN_DIRECTORY_NAMES.has(part))) {
     return "volatile runtime/cache directory";
   }
   if (parts.some((part) => part.endsWith(".egg-info"))) {
     return "Python packaging metadata";
-  }
-  if (normalized === "coding-tools-mcp/benchmarks/reports" || normalized.startsWith("coding-tools-mcp/benchmarks/reports/")) {
-    return "raw benchmark/runtime report";
   }
   if (!isDirectory && /\.(?:pyc|pyo)$/i.test(normalized)) {
     return "compiled Python cache file";

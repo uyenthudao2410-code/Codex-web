@@ -41,7 +41,9 @@ test('electron packaging excludes volatile resource evidence and validates the p
   const codingResources = resources.find((entry) => entry.from === 'resources' && entry.to === 'resources');
   assert.ok(codingResources, 'resources extraResources entry is required');
   const requiredFilters = [
-    '!coding-tools-mcp/benchmarks/reports/**',
+    '!coding-tools-mcp/tests/**',
+    '!coding-tools-mcp/benchmarks/**',
+    '!coding-tools-mcp/scripts/**',
     '!**/__pycache__/**',
     '!**/.pytest_cache/**',
     '!**/*.egg-info/**',
@@ -52,6 +54,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
   for (const filter of requiredFilters) {
     assert.ok(codingResources.filter?.includes(filter), `missing packaging sanitation filter: ${filter}`);
   }
+  assert.deepEqual(packageJson.build?.electronLanguages, ['en-US', 'vi']);
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
@@ -105,7 +108,9 @@ test('packaged resource sanitation rejects raw reports and Python cache metadata
     assert.equal(assertSanitizedPackagedResources(root).sanitized, true);
 
     const cases = [
-      ['coding-tools-mcp', 'benchmarks', 'reports', 'runtime.json'],
+      ['coding-tools-mcp', 'tests', 'test_runtime.py'],
+      ['coding-tools-mcp', 'benchmarks', 'runtime_activation.py'],
+      ['coding-tools-mcp', 'scripts', 'report_runtime.py'],
       ['coding-tools-mcp', 'coding_tools_mcp', '__pycache__', 'server.pyc'],
       ['coding-tools-mcp', '.pytest_cache', 'v', 'cache', 'nodeids'],
       ['coding-tools-mcp', 'coding_tools_mcp.egg-info', 'PKG-INFO'],

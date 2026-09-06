@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "76571a1a2d6347dcbc5e61bb4adfdaad",
     "wave_id": "32affdcc59214aba9fb8979c305e9e20",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Implement the smallest coherent fresh-machine activation/package-currentness and footprint fix on main@9e752e34 without changing workspace resolution or weakening activation gates. Preserve the existing authoritative 10-minute activation/bootstrap expiry and Recovery Host resume semantics; do not synthesize ready_commit_digest and do not make Python fail early merely because snapshot_busy=false. Add focused regression coverage proving an active admission-closed Recovery Host epoch with no ready commit is resumed/finalized when valid and terminalized with ACTIVATION_REQUEST_EXPIRED at its durable deadline instead of looping indefinitely. Strengthen Windows packaged smoke/verification so a package cannot be considered valid unless the packaged Coding MCP public contract is the exact smart-v3 8-tool contract and critical current schemas (including task_context_id on task_control/workspace_context/agent_workflow where source declares them) match the current packaged source; this must detect stale/mixed MCP resources before installation. Reduce installed footprint safely by configuring Electron languages to en-US and vi only and excluding runtime-unused resources/coding-tools-mcp tests, benchmarks, and scripts from extraResources while preserving coding_tools_mcp, python_vendor, pyproject/runtime metadata, Recovery Host, Recovery MCP, tunnel/native semantic tools, native Python, and offline startup. Update packaged resource parity exclusion logic and build-verification tests to match. Do not delete any source or .coding-tools evidence and do not commit/push/restart/deploy. Run focused Node tests for recovery-host/build verification and any smoke-unit tests that do not require a new package; run git diff --check and report exact changed paths.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "checks",
@@ -37,7 +37,7 @@
       "updated_at": "2026-09-06T06:00:55.096Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Completed - operator report required",
   "current_command": {
     "command": "npm run test",
     "kind": "test",
@@ -75,14 +75,14 @@
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
       "integrity": {
         "ok": true,
-        "checked": 30,
-        "head_hash": "a1c8f9cc8ece4374fb2c910530c898f41ec7cb7d15e5ed13fdfa0d2c8006828d"
+        "checked": 33,
+        "head_hash": "f28ea6217e01bd64164361f14ff2f98e4ccdc62e14c47cce55238e8561c3872a"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-76571a1a2d6347dcbc5e61bb4adfdaad\\run-summary.md",
@@ -94,7 +94,7 @@
     "source_run_wave": {
       "run_id": "76571a1a2d6347dcbc5e61bb4adfdaad",
       "wave_id": "32affdcc59214aba9fb8979c305e9e20",
-      "checkpoint_id": "",
+      "checkpoint_id": "59f7bae017cb4895b09ff5993dcd0e9a",
       "base_head": "9e752e34db745cd4fb2d0830a517910eced9c37f",
       "worktree_fp": "6546f235f77e31e7b47a1f6c568d1f6291fec2c3fce76edc6b85030cc9b5259e",
       "contract_fp": "",
@@ -138,12 +138,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "ACCEPTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
   },
-  "completion_report_id": "d083e08895c5ee53ed5061d617a963896870a6ebcbaabad3c57a0538385a62b6",
+  "completion_report_id": "59486feaad357083edac7374a12425b2ce54c0adc74f497c8ca7d2ff34c83d21",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -14190,9 +14190,9 @@
   },
   "modified_files": [],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-09-06T05:59:04.489Z",
-  "updated_at": "2026-09-06T06:01:33.426Z",
+  "updated_at": "2026-09-06T08:00:51.186Z",
   "events": [
     {
       "time": "2026-09-06T05:59:04.489Z",
@@ -14386,6 +14386,35 @@
           "orchestration",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-09-06T08:00:50.761Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-06T08:00:50.786Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T08:00:51.160Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "59486feaad357083edac7374a12425b2ce54c0adc74f497c8ca7d2ff34c83d21"
       }
     }
   ]

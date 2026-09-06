@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "2498e44384ec4f8cac2b1a70d0957349",
     "wave_id": "8d0547393c034f8f9da4366bc98dc38b",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Proof-only REPLAN for the already integrated recovery and new-machine activation fix. Adopt the exact eight current source/test files by SHA-256 without changing bytes, then create canonical EOCL proof by running the combined Recovery Host/userData/recycled-PID Node tests and full activation/stateless HTTP Python tests. No additional implementation changes.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "apply",
@@ -43,7 +43,7 @@
       "updated_at": "2026-09-06T05:02:37.515Z"
     }
   ],
-  "current_step": "Awaiting acceptance",
+  "current_step": "Completed - operator report required",
   "current_command": {
     "command": "node --test tests/runtime-user-data-path.test.js tests/runtime-state-identity.test.js tests/recovery-host.test.js && cd resources\\coding-tools-mcp && python -m unittest tests.test_activation_epoch tests.test_stateless_http_2026",
     "kind": "command",
@@ -79,49 +79,89 @@
       "files": [
         {
           "path": "electron/main.js",
-          "operation": "update"
+          "state": "file",
+          "sha256": "c3f096958e6fe922289d3ebdb182a9e33ea78a775869e82755de150668964703",
+          "size_bytes": 53491,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
         },
         {
           "path": "electron/services/runtimePaths.js",
-          "operation": "update"
-        },
-        {
-          "path": "scripts/packaged-recovery-smoke.js",
-          "operation": "update"
-        },
-        {
-          "path": "tests/recovery-host.test.js",
-          "operation": "update"
-        },
-        {
-          "path": "tests/runtime-user-data-path.test.js",
-          "operation": "add"
+          "state": "file",
+          "sha256": "37b7bb917c3f78725e8abeeabed0ff961b9432672497d9d42abbe307a116b057",
+          "size_bytes": 6568,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
         },
         {
           "path": "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
-          "operation": "update"
+          "state": "file",
+          "sha256": "3370796c4ab7d205a874d38eb6dc7e42a2c0b55b5d585548576b18b57f70e13e",
+          "size_bytes": 32855,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
         },
         {
           "path": "resources/coding-tools-mcp/tests/test_activation_epoch.py",
-          "operation": "update"
+          "state": "file",
+          "sha256": "3af79550a0b4ff8ef479ac27c838cd615894f2c8c288a221784fb30a04842881",
+          "size_bytes": 23331,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
         },
         {
           "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
-          "operation": "update"
+          "state": "file",
+          "sha256": "edc3809db08612a8ac9bc7e98f4648af565b4df171752a4dbda5210d5b0683a9",
+          "size_bytes": 74359,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
+        },
+        {
+          "path": "scripts/packaged-recovery-smoke.js",
+          "state": "file",
+          "sha256": "5624aab26707f35ff904d5fd645d5eb9b70351bc41efeb7d052374121b14a543",
+          "size_bytes": 11423,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
+        },
+        {
+          "path": "tests/recovery-host.test.js",
+          "state": "file",
+          "sha256": "d8210abea5e1d7d343b361412821eec8c951d4a7d93a1f85ab322259179ebe6c",
+          "size_bytes": 82042,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
+        },
+        {
+          "path": "tests/runtime-user-data-path.test.js",
+          "state": "file",
+          "sha256": "07b72add0e9b09f7197764bedf966cd3200d575f3f81f43e06b39e7ad1d015b8",
+          "size_bytes": 2564,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2498e44384ec4f8cac2b1a70d0957349",
+          "wave_id": "8d0547393c034f8f9da4366bc98dc38b"
         }
       ],
-      "source": "aligned_task_modified_files",
+      "source": "accepted_checkpoint_file_attestations",
       "raw_source_or_command_output_included": false
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
       "integrity": {
         "ok": true,
-        "checked": 58,
-        "head_hash": "77c05b90dbc9fd55ec1d9a24a92797f6b81c11db4fe76df634ec0f7d680442b6"
+        "checked": 61,
+        "head_hash": "afeccf1272fba38cd714bef4a0903a407183d03d5b3825dd93a224decc0d9fe1"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2498e44384ec4f8cac2b1a70d0957349\\run-summary.md",
@@ -134,7 +174,7 @@
     "source_run_wave": {
       "run_id": "2498e44384ec4f8cac2b1a70d0957349",
       "wave_id": "8d0547393c034f8f9da4366bc98dc38b",
-      "checkpoint_id": "",
+      "checkpoint_id": "5e61468218f041d8b34d551870a0e95a",
       "base_head": "573b6ff5a5ff2509288c9656e18fd375f1ab32d3",
       "worktree_fp": "b2e43a13319453167ed05d2e758572f5bb196d37699edc5c82582dd06eabb565",
       "contract_fp": "",
@@ -170,12 +210,12 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "ACCEPTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
   },
-  "completion_report_id": "da55e4efdc7d827f92ae690c4cf3e3f142917be6300fea302b2df4020264a5e6",
+  "completion_report_id": "8ee78ae6795a1aee7f572c5092757063f9e628503d6be0bfcde5a9a70902bf23",
   "completion_report_acknowledged_id": "",
   "completion_report_acknowledged_at": null,
   "test_results": [
@@ -14235,9 +14275,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-09-06T04:55:52.504Z",
-  "updated_at": "2026-09-06T05:04:12.241Z",
+  "updated_at": "2026-09-06T07:59:29.181Z",
   "events": [
     {
       "time": "2026-09-06T04:55:52.504Z",
@@ -14825,6 +14865,35 @@
           "orchestration",
           "status"
         ]
+      }
+    },
+    {
+      "time": "2026-09-06T07:59:28.886Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-06T07:59:28.913Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T07:59:29.156Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "8ee78ae6795a1aee7f572c5092757063f9e628503d6be0bfcde5a9a70902bf23"
       }
     }
   ]

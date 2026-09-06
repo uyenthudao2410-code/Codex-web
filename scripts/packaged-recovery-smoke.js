@@ -12,9 +12,21 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 
 const unpackedRoot = path.join(root, 'dist', 'win-unpacked');
 const executable = path.join(unpackedRoot, `${packageJson.build.productName}.exe`);
 const packagedResources = path.join(unpackedRoot, 'resources', 'resources');
+const packagedPython = path.join(packagedResources, 'native-python', 'python.exe');
+const packagedMcpRoot = path.join(packagedResources, 'coding-tools-mcp');
 const supervisorScript = path.join(packagedResources, 'recovery-supervisor', 'recovery-supervisor.ps1');
 const sourceSupervisorScript = path.join(root, 'resources', 'recovery-supervisor', 'recovery-supervisor.ps1');
 const productionDescriptor = path.join(process.env.APPDATA || '', 'web-mcp-assistant', 'recovery-host.json');
+const EXPECTED_SMART_TOOLS = [
+  'agent_workflow',
+  'command_control',
+  'document_workflow',
+  'exec_command',
+  'request_permissions',
+  'task_control',
+  'view_image',
+  'workspace_context'
+];
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } }
@@ -77,6 +89,34 @@ function runSupervisor(manifestPath, statusPath) {
   assert(result.status === 0, `PACKAGED_SUPERVISOR_COMMAND_FAILED:${String(result.stdout || result.stderr || '').slice(0, 300)}`);
   return JSON.parse(String(result.stdout || '').trim());
 }
+function inspectPackagedToolContract() {
+  const probe = [
+    'import json, os, sys',
+    'root = os.path.abspath(sys.argv[1])',
+    'sys.path.insert(0, root)',
+    'sys.path.insert(0, os.path.join(root, "python_vendor"))',
+    'from coding_tools_mcp.tool_contract import SMART_TOOL_PROFILE, TOOL_MODE_ALLOWLISTS',
+    'from coding_tools_mcp.tool_schema import input_schemas',
+    'schemas = input_schemas()',
+    'keys = ("workspace_context", "agent_workflow", "task_control")',
+    'print(json.dumps({"profile": SMART_TOOL_PROFILE, "tools": sorted(TOOL_MODE_ALLOWLISTS["smart"]), "task_context_id": {name: "task_context_id" in schemas[name]["properties"] for name in keys}}, sort_keys=True))'
+  ].join('; ');
+  const result = spawnSync(packagedPython, ['-I', '-c', probe, packagedMcpRoot], {
+    cwd: packagedMcpRoot,
+    windowsHide: true,
+    encoding: 'utf8'
+  });
+  assert(result.status === 0, `PACKAGED_SMART_TOOL_CONTRACT_PROBE_FAILED:${String(result.stderr || result.stdout || '').slice(0, 300)}`);
+  let contract = null;
+  try { contract = JSON.parse(String(result.stdout || '').trim()); }
+  catch { throw new Error('PACKAGED_SMART_TOOL_CONTRACT_PROBE_INVALID_JSON'); }
+  assert(contract?.profile === 'smart-v3', 'PACKAGED_SMART_TOOL_PROFILE_MISMATCH');
+  assert(JSON.stringify(contract?.tools || []) === JSON.stringify(EXPECTED_SMART_TOOLS), 'PACKAGED_SMART_TOOL_CONTRACT_MISMATCH');
+  for (const name of ['workspace_context', 'agent_workflow', 'task_control']) {
+    assert(contract?.task_context_id?.[name] === true, `PACKAGED_TASK_CONTEXT_SCHEMA_MISMATCH:${name}`);
+  }
+  return contract;
+}
 function packagedManifest(dataRoot) {
   return {
     schema_version: 1,
@@ -110,13 +150,14 @@ async function main() {
     path.join(unpackedRoot, 'resources', 'app.asar'),
     supervisorScript,
     path.join(packagedResources, 'recovery-mcp', 'recovery_mcp.py'),
-    path.join(packagedResources, 'native-python', 'python.exe'),
+    packagedPython,
     path.join(packagedResources, 'tools', 'tunnel-client.exe'),
     path.join(packagedResources, 'coding-tools-mcp', 'coding_tools_mcp', 'server.py')
   ];
   for (const file of required) assert(fs.existsSync(file), `PACKAGED_RESOURCE_MISSING:${path.basename(file)}`);
   assertExactPackagedResources(path.join(root, 'resources'), packagedResources);
   assert(sha256File(supervisorScript) === sha256File(sourceSupervisorScript), 'PACKAGED_RECOVERY_SUPERVISOR_SOURCE_MISMATCH');
+  const packagedContract = inspectPackagedToolContract();
 
   const productionBefore = descriptorIdentity(readJson(productionDescriptor));
   const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-packaged-recovery-'));
@@ -181,7 +222,12 @@ async function main() {
     assert(sameDescriptorIdentity(productionBefore, productionAfter), 'PRODUCTION_RECOVERY_DESCRIPTOR_CHANGED');
     console.log(JSON.stringify({
       ok: true,
-      package: { executable: true, app_asar: true, required_resources: required.length },
+      package: {
+        executable: true,
+        app_asar: true,
+        required_resources: required.length,
+        smart_tool_contract: packagedContract
+      },
       isolation: { user_data_isolated: true, production_descriptor_stable: true },
       recovery: { host_ready: true, device_identity_present: true, mode: richStatus.data.recovery_plane_mode, mcp_alive: true },
       supervisor: { healthy: true, live_owner_fail_closed: true, hash_mismatch_fail_closed: true, scheduled_task_mutation: false }

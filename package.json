@@ -57,6 +57,10 @@
     "electronDist": "node_modules/electron/dist",
     "appId": "com.gptwebcodex.assistant",
     "productName": "Coding Tools MCP",
+    "electronLanguages": [
+      "en-US",
+      "vi"
+    ],
     "artifactName": "coding-tools-mcp-setup-${version}.${ext}",
     "directories": {
       "output": "dist"
@@ -74,7 +78,9 @@
         "to": "resources",
         "filter": [
           "**/*",
-          "!coding-tools-mcp/benchmarks/reports/**",
+          "!coding-tools-mcp/tests/**",
+          "!coding-tools-mcp/benchmarks/**",
+          "!coding-tools-mcp/scripts/**",
           "!**/__pycache__/**",
           "!**/.pytest_cache/**",
           "!**/*.egg-info/**",
