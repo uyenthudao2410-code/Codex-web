@@ -1,6 +1,6 @@
 {
   "version": 6,
-  "tool_calls": 43879,
+  "tool_calls": 43880,
   "errors": 3143,
   "cache_hits": 292,
   "deduplicated_calls": 9,
@@ -71,11 +71,11 @@
     "cold": 879
   },
   "proof_cache_saved_ms": 2331,
-  "local_execution_ms": 99686581,
-  "estimated_wait_ms": 1167800358,
-  "request_bytes": 31340251,
-  "response_bytes": 2441941634,
-  "model_visible_bytes": 67793244,
+  "local_execution_ms": 99687347,
+  "estimated_wait_ms": 1167859560,
+  "request_bytes": 31340290,
+  "response_bytes": 2441943221,
+  "model_visible_bytes": 67793273,
   "phase_timing_samples": 1883,
   "phase_timing_ms": {
     "workspace_ms": 782718,
@@ -10561,59 +10561,8 @@
       "last_finished_at": "2026-09-06T10:25:39.210Z"
     }
   },
-  "last_finished_at": "2026-09-06T10:30:02.231Z",
+  "last_finished_at": "2026-09-06T10:31:02.210Z",
   "recent": [
-    {
-      "tool": "workspace_context",
-      "started_at": "2026-09-06T09:32:00.387Z",
-      "finished_at": "2026-09-06T09:32:01.086Z",
-      "wall_time_source": "operation_boundary",
-      "duration_ms": 687,
-      "wait_before_ms": 59250,
-      "request_bytes": 39,
-      "response_bytes": 1586,
-      "model_visible_bytes": 29,
-      "invocation": {
-        "schema_version": 1,
-        "invocation_id": "abf197056b1fe07da06d91179d2e6ca8d997d8af4da4970cbdfb1a4c27e2dc38",
-        "identity_source": "transport_request_id",
-        "request_id": "recovery-semantic-health",
-        "task_context_id": "ctx_a42000c9493c80f306c50eaa0771a5c2",
-        "session_instance": "825f123d8bb281f0",
-        "execution_context_id": "mcp2026:6493cc3d63107fb799453f904872532f0947c2ff7d493dd6a6874dd0",
-        "client_id": "recovery-semantic-watchdog",
-        "client_type": "electron"
-      },
-      "outcome": {
-        "status": "ok"
-      },
-      "truncated": false,
-      "cache_hit": false,
-      "deduplicated": false,
-      "idempotency_eligible": false,
-      "idempotency_key_present": false,
-      "idempotency_policy": "none",
-      "idempotency_key_source": "none",
-      "idempotency_operation": "workspace_context",
-      "idempotency_missing_reason": "",
-      "error_class": "",
-      "proof_cache_eligible": 0,
-      "proof_cache_hits": 0,
-      "proof_cache_misses": 0,
-      "proof_cache_miss_reasons": {},
-      "proof_cache_saved_ms": 0,
-      "ok": true,
-      "run_id": "",
-      "wave_id": "",
-      "delegation_id": "",
-      "execution_mode": "",
-      "route_requested": "",
-      "route_resolved": "",
-      "orchestration_state": "",
-      "phase_timing": {},
-      "localization": {},
-      "result_tail": {}
-    },
     {
       "tool": "workspace_context",
       "started_at": "2026-09-06T09:33:00.438Z",
@@ -16054,6 +16003,57 @@
       "phase_timing": {},
       "localization": {},
       "result_tail": {}
+    },
+    {
+      "tool": "workspace_context",
+      "started_at": "2026-09-06T10:31:01.431Z",
+      "finished_at": "2026-09-06T10:31:02.210Z",
+      "wall_time_source": "operation_boundary",
+      "duration_ms": 766,
+      "wait_before_ms": 59202,
+      "request_bytes": 39,
+      "response_bytes": 1587,
+      "model_visible_bytes": 29,
+      "invocation": {
+        "schema_version": 1,
+        "invocation_id": "030c19fdb28bd866abedc803a0ec3b1123d1936c27b1d0db0768b4ee0ed3a2df",
+        "identity_source": "transport_request_id",
+        "request_id": "recovery-semantic-health",
+        "task_context_id": "ctx_c89973a495e6e97fea69e978dc9b85ad",
+        "session_instance": "825f123d8bb281f0",
+        "execution_context_id": "mcp2026:44ba64d36800d86237246d32d80c3a822335068d3b043f4bd1555194",
+        "client_id": "recovery-semantic-watchdog",
+        "client_type": "electron"
+      },
+      "outcome": {
+        "status": "ok"
+      },
+      "truncated": false,
+      "cache_hit": false,
+      "deduplicated": false,
+      "idempotency_eligible": false,
+      "idempotency_key_present": false,
+      "idempotency_policy": "none",
+      "idempotency_key_source": "none",
+      "idempotency_operation": "workspace_context",
+      "idempotency_missing_reason": "",
+      "error_class": "",
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "ok": true,
+      "run_id": "",
+      "wave_id": "",
+      "delegation_id": "",
+      "execution_mode": "",
+      "route_requested": "",
+      "route_resolved": "",
+      "orchestration_state": "",
+      "phase_timing": {},
+      "localization": {},
+      "result_tail": {}
     }
   ],
   "hourly_metrics": {
@@ -17835,15 +17835,15 @@
     },
     "496858": {
       "hour": 496858,
-      "tool_calls": 63,
+      "tool_calls": 64,
       "errors": 3,
       "cache_hits": 0,
-      "request_bytes": 26058,
-      "response_bytes": 1473847,
-      "model_visible_bytes": 19749,
-      "local_execution_ms": 140001,
-      "estimated_wait_ms": 1723759,
-      "last_finished_at": "2026-09-06T10:30:02.231Z"
+      "request_bytes": 26097,
+      "response_bytes": 1475434,
+      "model_visible_bytes": 19778,
+      "local_execution_ms": 140767,
+      "estimated_wait_ms": 1782961,
+      "last_finished_at": "2026-09-06T10:31:02.210Z"
     }
   }
 }
