@@ -2550,13 +2550,16 @@ for (const [label, ServiceClass, prefix] of [
     if (prefix === 'native') assert.equal(state.nativeConnectorAttestationSecretHash, '');
   });
 
-  test(`${label} stop rejects a recycled PID without calling the terminator`, async (t) => {
+  test(`${label} stop clears a retired receipt without terminating its recycled PID`, async (t) => {
     const token = '10000000000000012';
     const harness = exactStopHarness(ServiceClass, prefix, token, { state: 'live', pid: process.pid, process_start_token: '10000000000000013' });
     t.after(() => fs.rmSync(harness.file, { force: true }));
-    await assert.rejects(harness.service.stop(), { code: `${label.toUpperCase()}_PROCESS_IDENTITY_CHANGED` });
+    assert.equal(await harness.service.stop(), false);
     assert.deepEqual(harness.terminated, []);
-    assert.deepEqual(JSON.parse(fs.readFileSync(harness.file, 'utf8')), harness.fields);
+    const state = JSON.parse(fs.readFileSync(harness.file, 'utf8'));
+    assert.equal(state[`${prefix}Pid`], null);
+    assert.equal(state[`${prefix}ProcessStartToken`], null);
+    assert.doesNotThrow(() => process.kill(process.pid, 0));
   });
 
   test(`${label} stop rejects unavailable or missing identity without clearing state`, async (t) => {

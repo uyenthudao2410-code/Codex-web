@@ -533,6 +533,14 @@ PID/instance/revision trước khi trả quyền điều khiển. Lệnh không 
 identity. Nếu canonical ledger, ownership hoặc runtime postflight không chứng
 minh được, lệnh fail-closed với `UPDATE_INCOMPLETE`.
 
+Khi chuyển máy hoặc khởi động lại Windows, PID lưu trong runtime state có thể
+được cấp lại cho một ứng dụng khác. Census và lifecycle MCP/Tunnel đối chiếu
+PID **kèm OS process-start token**: token khác chứng minh tiến trình cũ đã mất,
+không phải runtime đang bận. Census chỉ đọc; khi start/stop, service chỉ gỡ
+receipt cũ nếu receipt chưa bị cập nhật đồng thời, không dừng tiến trình đang
+giữ PID đó. Thiếu token hoặc không đọc được danh tính vẫn bị chặn an toàn.
+Không xoá `.coding-tools`/ledger hoặc tắt ứng dụng khác để vượt lỗi này.
+
 Completion của CLI và admission của connector là hai mốc khác nhau. Khi exact
 component census đã chứng minh toàn bộ process mới, `npm run dev:refresh` trả exit code 0
 với `DEV_UI REFRESHED`, kể cả khi record durable còn

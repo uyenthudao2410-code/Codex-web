@@ -976,6 +976,16 @@ This evidence program is intentionally separate from the engineering completion 
 
 ## 7. Recovery architecture
 
+Persisted MCP/Tunnel PIDs are not live ownership proof across reboot or profile
+migration. Stopped-runtime activation census and primary/Recovery service
+lifecycle compare each PID with its OS process-start token. A verified different
+token means the stored process has exited; census remains read-only and service
+cleanup clears only the unchanged stale receipt, without adopting or terminating
+the unrelated replacement PID. Missing tokens, malformed observations and
+unavailable identity probes still fail closed. Device-ownership checks and legacy
+Recovery migration apply only after the exact stored process is proven live.
+The canonical ledger and durable history are never cleared to recover a PID.
+
 Independent recovery is no longer only a roadmap concept. The current source contains:
 
 - a headless Recovery Host that owns primary Runtime/Tunnel/Execution-Hub lifecycle;

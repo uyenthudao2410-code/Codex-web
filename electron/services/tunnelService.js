@@ -306,7 +306,7 @@ class TunnelService {
       processIdentityObserver,
       kind: 'TUNNEL'
     });
-    this.assertOwnedLive(state);
+    if (identity) this.assertOwnedLive(state);
     return identity;
   }
 

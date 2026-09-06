@@ -225,7 +225,12 @@ async function requireExactStoredProcessIdentity({ pid: pidValue, processStartTo
   kind = 'PROCESS'
 } = {}) {
   const pid = Number(pidValue);
-  if (!Number.isSafeInteger(pid) || pid <= 0 || !isAlive(pid)) return null;
+  if (!Number.isSafeInteger(pid) || pid <= 0) return null;
+  try { process.kill(pid, 0); } catch (error) {
+    if (error?.code === 'ESRCH') return null;
+    // Access denied is not exit proof. Let the OS identity observer decide;
+    // an unavailable observation below must still refuse lifecycle mutation.
+  }
   const token = normalizeProcessStartToken(processStartToken);
   if (!token) {
     throw processIdentityError(kind, 'UNVERIFIED', 'Live process state has no verified OS start token.', { pid });
@@ -238,8 +243,9 @@ async function requireExactStoredProcessIdentity({ pid: pidValue, processStartTo
       cause_code: error?.code || ''
     });
   }
-  if (observed?.state === 'absent') return null;
-  if (observed?.state !== 'live') {
+  const observedToken = normalizeProcessStartToken(observed?.process_start_token);
+  if (Number(observed?.pid) === pid && observed?.state === 'absent') return null;
+  if (Number(observed?.pid) !== pid || observed?.state !== 'live' || !observedToken) {
     throw processIdentityError(kind, 'UNVERIFIED', 'Live process OS identity could not be verified.', {
       pid,
       observed_state: observed?.state || null,
@@ -247,13 +253,12 @@ async function requireExactStoredProcessIdentity({ pid: pidValue, processStartTo
     });
   }
   const identity = processIdentityFrom({ pid, process_start_token: token });
-  if (!sameProcessIdentity(identity, observed)) {
-    throw processIdentityError(kind, 'CHANGED', 'Stored PID now belongs to a different OS process identity.', {
-      pid,
-      expected_process_start_token: token,
-      observed_process_start_token: normalizeProcessStartToken(observed.process_start_token)
-    });
-  }
+  // A verified different OS start token proves the stored process has exited.
+  // This is common after reboot/profile migration: the PID may now belong to
+  // an unrelated application. Return no owner so callers can CAS-clear only
+  // the stale receipt. Never adopt or terminate the replacement process.
+  // Unknown/malformed observations above must not take this recovery path.
+  if (observedToken !== token) return null;
   return identity;
 }
 
@@ -411,7 +416,7 @@ class NativeService {
       processIdentityObserver,
       kind: 'NATIVE'
     });
-    this.assertOwnedLive(state);
+    if (identity) this.assertOwnedLive(state);
     return identity;
   }
 

@@ -6,7 +6,8 @@ const { promisify } = require('node:util');
 const { ActivationEpochStore } = require('./activationEpoch');
 const { readJson } = require('./jsonStore');
 const { pythonStatus } = require('./environmentService');
-const { isAlive: isAlivePid } = require('./nativeService');
+const { isAlive: isAlivePid, requireExactStoredProcessIdentity } = require('./nativeService');
+const { observeProcessIdentityAsync } = require('./processIdentity');
 const { tunnelFingerprint } = require('./tunnelService');
 const { recoveryMcpHealthObservation, recoveryTunnelReady: probeRecoveryTunnelReady } = require('./recoveryPlaneService');
 const {
@@ -586,12 +587,15 @@ function summarizeCensus(raw, { workspace, allowAcceptancePending = false } = {}
   };
 }
 
-function runtimeStateHasLiveManagedProcess(paths) {
+async function runtimeStateHasLiveManagedProcess(paths, processIdentityObserver = observeProcessIdentityAsync) {
   let state;
   try { state = readJson(paths.stateFile(), {}); } catch { state = {}; }
-  const pids = [Number(state.nativePid || 0), Number(state.tunnelPid || 0)].filter((pid) => Number.isSafeInteger(pid) && pid > 0);
-  for (const pid of pids) {
-    try { process.kill(pid, 0); return true; } catch { /* stale PID */ }
+  for (const prefix of ['native', 'tunnel']) {
+    const identity = await requireExactStoredProcessIdentity({
+      pid: state[`${prefix}Pid`],
+      processStartToken: state[`${prefix}ProcessStartToken`]
+    }, { processIdentityObserver, kind: prefix.toUpperCase() });
+    if (identity) return true;
   }
   return false;
 }
@@ -765,7 +769,16 @@ async function canonicalLedgerCensus({ paths, workspace, allowAcceptancePending 
       result.lifecycle.blockers = [...new Set([...result.lifecycle.blockers, 'source_git_identity_unavailable'])];
     }
   }
-  if (runtimeStateHasLiveManagedProcess(paths)) {
+  let liveManagedProcess;
+  try {
+    liveManagedProcess = await runtimeStateHasLiveManagedProcess(paths);
+  } catch (error) {
+    // Identity uncertainty refuses activation, but must not strand the
+    // exclusive ledger gate held across stopped-runtime admission.
+    if (releaseExclusive) await releaseExclusive().catch(() => false);
+    throw error;
+  }
+  if (liveManagedProcess) {
     result.safe = false;
     result.code = 'RUNTIME_BUSY';
     result.reason = 'live_runtime_state_process';
@@ -2385,6 +2398,7 @@ module.exports = {
   DEFAULT_TTL_MS,
   operationId,
   canonicalLedgerCensus,
+  runtimeStateHasLiveManagedProcess,
   canonicalSnapshot,
   summarizeCensus,
   canonicalProjectionRebuildSha256,

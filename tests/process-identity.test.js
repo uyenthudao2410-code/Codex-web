@@ -401,12 +401,16 @@ test('persistent Windows identity broker fails closed on spawn, pipe, output, an
   await t.test('timeout', async () => {
     const harness = brokerHarness({ responseFor: () => null });
     const broker = createWindowsIdentityBroker({ spawnProcess: harness.spawn });
+    // Mock child.ref()/stdout.ref() only count calls; unlike real process
+    // handles they cannot keep Node alive for the broker's unref'ed timer.
+    const keepAlive = setTimeout(() => {}, 1000);
     try {
       const observed = await broker.observe(PID, { timeoutMs: 100 });
       assert.equal(observed.state, 'unavailable');
       assert.equal(observed.details.reason, 'probe_timeout');
       assert.equal(harness.children[0].killCalls, 1);
     } finally {
+      clearTimeout(keepAlive);
       broker.close();
     }
   });
