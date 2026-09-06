@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import http.client
 import json
 import os
@@ -7,15 +8,435 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.operator_report import (
+    build_command_completion_report,
+    build_operator_completion_report,
+)
 from coding_tools_mcp.protocol import PROTOCOL_VERSION
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 from coding_tools_mcp.task_state import ContextualTaskStateStore, TaskStateStore
 
 
 class OperatorReportIsolationTests(unittest.TestCase):
+    RUN_ID = "a" * 32
+    WAVE_ID = "b" * 32
+
+    @staticmethod
+    def _path_hash(path: str) -> str:
+        return hashlib.sha256(path.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _patch_event(
+        cls,
+        seq: int,
+        *,
+        run_id: str | None = None,
+        wave_id: str | None = None,
+        event_id: str | None = None,
+        event_time: str = "2026-09-05T05:00:00.000Z",
+        complete: bool = True,
+        file_ids: list[object] | None = None,
+        file_count: object = 1,
+        additions: object = 1,
+        removals: object = 0,
+        line_changes: object = 1,
+        payload_extra: dict | None = None,
+    ) -> dict:
+        ids = [cls._path_hash("fixture.py")] if file_ids is None else file_ids
+        payload = {
+            "schema_version": 1,
+            "measurement": "applied_patch_delta_v1",
+            "content_free": True,
+            "production_behavior_changed": False,
+            "complete": complete,
+            "file_count": file_count,
+            "additions": additions,
+            "removals": removals,
+            "line_changes": line_changes,
+            "file_ids": ids,
+        }
+        payload.update(payload_extra or {})
+        return {
+            "seq": seq,
+            "event_id": event_id or f"{seq:032x}",
+            "event_time": event_time,
+            "event_type": "patch_surface_observed",
+            "run_id": run_id or cls.RUN_ID,
+            "wave_id": wave_id or cls.WAVE_ID,
+            "payload": payload,
+        }
+
+    @classmethod
+    def _operator_report(
+        cls,
+        events: list[dict],
+        *,
+        checkpoint: dict | None = None,
+        task_state: dict | None = None,
+    ) -> dict:
+        run_id = cls.RUN_ID
+        wave_id = cls.WAVE_ID
+
+        class Ledger:
+            def get_run(self, requested_run_id: str) -> dict:
+                assert requested_run_id == run_id
+                return {"status": "active"}
+
+            def list_waves(self, requested_run_id: str) -> list[dict]:
+                assert requested_run_id == run_id
+                return [{"wave_id": wave_id, "status": "active"}]
+
+            def list_proofs(self, requested_run_id: str, *, wave_id: str) -> list[dict]:
+                assert requested_run_id == run_id
+                return []
+
+            def list_checkpoints(self, requested_run_id: str, *, wave_id: str) -> list[dict]:
+                assert requested_run_id == run_id
+                return [checkpoint] if checkpoint else []
+
+            def list_events(self, requested_run_id: str, *, wave_id: str) -> list[dict]:
+                assert requested_run_id == run_id
+                return list(events)
+
+            def wave_objective_provenance(self, requested_run_id: str, requested_wave_id: str) -> dict:
+                assert requested_run_id == run_id
+                assert requested_wave_id == wave_id
+                return {"objective_source": "test_fixture"}
+
+            def verify_chain(self, requested_run_id: str) -> dict:
+                assert requested_run_id == run_id
+                return {"ok": True, "checked": len(events)}
+
+        state = {
+            "status": "waiting",
+            "modified_files": [],
+            "orchestration": {"run_id": run_id, "wave_id": wave_id},
+        }
+        state.update(task_state or {})
+        ctx = SimpleNamespace(
+            run_id=run_id,
+            wave_id=wave_id,
+            state="REPLAN",
+            base_head="c" * 40,
+            worktree_fp="d" * 64,
+            contract_fp="",
+        )
+        return build_operator_completion_report(
+            ledger=Ledger(),
+            ctx=ctx,
+            task_state=state,
+            reports={},
+        )
+
+    def test_replan_projects_canonical_partial_patch_after_unrelated_events(self) -> None:
+        unrelated = [
+            {
+                "seq": index,
+                "event_type": "observation_span_recorded",
+                "run_id": self.RUN_ID,
+                "wave_id": self.WAVE_ID,
+                "payload": {"ignored": True},
+            }
+            for index in range(1, 151)
+        ]
+        event = self._patch_event(
+            151,
+            payload_extra={
+                "path": "must/not/leak.py",
+                "source": "must-not-leak",
+                "command": "must-not-leak",
+                "arbitrary": {"secret": "must-not-leak"},
+            },
+        )
+        report = self._operator_report([*unrelated, event])
+        changed = report["what_changed"]
+        projection = changed["patch_surface_observations"]
+
+        self.assertEqual(changed["files"], [])
+        self.assertEqual(changed["source"], "canonical_patch_surface_observations")
+        self.assertEqual(report["proof_actually_run"]["count"], 0)
+        self.assertEqual(report["accepted_or_not"], "NOT_ACCEPTED_REPLAN_REQUIRED")
+        self.assertEqual(projection["matching_event_count"], 1)
+        self.assertEqual(projection["observation_count"], 1)
+        self.assertTrue(projection["complete"])
+        self.assertEqual(
+            projection["authority"],
+            "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        )
+        serialized = json.dumps(report, sort_keys=True)
+        for forbidden in ("must/not/leak.py", "must-not-leak", '"arbitrary"'):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_patch_projection_rejects_wrong_scope_and_malformed_identity_or_metadata(self) -> None:
+        wrong_run = self._patch_event(1, run_id="f" * 32)
+        wrong_wave = self._patch_event(2, wave_id="e" * 32)
+        bad_id = self._patch_event(3, event_id="not-an-event-id")
+        bad_time = self._patch_event(4, event_time="2026-99-99T25:61:00Z")
+        bad_metadata = self._patch_event(
+            5,
+            payload_extra={"measurement": "wrong_measurement"},
+        )
+        report = self._operator_report(
+            [wrong_run, wrong_wave, bad_id, bad_time, bad_metadata]
+        )
+        changed = report["what_changed"]
+        projection = changed["patch_surface_observations"]
+
+        self.assertEqual(changed["source"], "no_durable_file_receipts")
+        self.assertEqual(projection["matching_event_count"], 3)
+        self.assertEqual(projection["observation_count"], 0)
+        self.assertEqual(projection["rejected_event_count"], 3)
+        self.assertTrue(projection["invalid"])
+        self.assertFalse(projection["truncated"])
+        self.assertFalse(projection["complete"])
+
+    def test_patch_projection_requires_exact_schema_and_canonical_timestamp(self) -> None:
+        valid_times = [
+            "2026-09-05T05:00:00Z",
+            "2026-09-05T05:00:00.1+00:00",
+            "2024-02-29T23:59:59.123456-05:30",
+            "2026-09-05T05:00:00+23:59",
+        ]
+        for seq, event_time in enumerate(valid_times, start=20):
+            with self.subTest(valid_time=event_time):
+                projection = self._operator_report(
+                    [self._patch_event(seq, event_time=event_time)]
+                )["what_changed"]["patch_surface_observations"]
+                self.assertEqual(projection["observation_count"], 1)
+                self.assertEqual(projection["rejected_event_count"], 0)
+                self.assertTrue(projection["complete"])
+                self.assertEqual(projection["observations"][0]["event_time"], event_time)
+
+        invalid_schema_values = [1.0, True, "1", None]
+        for seq, schema_version in enumerate(invalid_schema_values, start=30):
+            with self.subTest(schema_version=schema_version):
+                event = self._patch_event(
+                    seq,
+                    payload_extra={"schema_version": schema_version},
+                )
+                projection = self._operator_report([event])["what_changed"]["patch_surface_observations"]
+                self.assertEqual(projection["observation_count"], 0)
+                self.assertEqual(projection["rejected_event_count"], 1)
+                self.assertTrue(projection["invalid"])
+
+        missing_schema = self._patch_event(34)
+        missing_schema["payload"].pop("schema_version")
+        projection = self._operator_report([missing_schema])["what_changed"]["patch_surface_observations"]
+        self.assertEqual(projection["observation_count"], 0)
+        self.assertEqual(projection["rejected_event_count"], 1)
+        self.assertTrue(projection["invalid"])
+
+        invalid_times = [
+            "2026-09-05 05:00:00Z",
+            "20260905T050000Z",
+            "2026-W36-6T05:00:00Z",
+            "2026-09-05T05:00:00",
+            "2025-02-29T05:00:00Z",
+            "2026-09-05T24:00:00Z",
+            "2026-09-05T05:00:00+24:00",
+            "2026-09-05T05:00:00+01:60",
+            "2026-09-05T05:00:00Z ",
+            "２０２６-09-05T05:00:00Z",
+            "2026-09-05\n05:00:00Z",
+        ]
+        for seq, event_time in enumerate(invalid_times, start=40):
+            with self.subTest(invalid_time=event_time):
+                projection = self._operator_report(
+                    [self._patch_event(seq, event_time=event_time)]
+                )["what_changed"]["patch_surface_observations"]
+                self.assertEqual(projection["observation_count"], 0)
+                self.assertEqual(projection["rejected_event_count"], 1)
+                self.assertTrue(projection["invalid"])
+
+    def test_patch_projection_preserves_true_zero_and_marks_empty_missing_or_contradictory_counts(self) -> None:
+        true_zero = self._patch_event(
+            10,
+            file_count=1,
+            additions=0,
+            removals=0,
+            line_changes=0,
+        )
+        empty = self._patch_event(
+            11,
+            file_ids=[],
+            file_count=0,
+            additions=0,
+            removals=0,
+            line_changes=0,
+        )
+        missing = self._patch_event(12)
+        missing["payload"].pop("additions")
+        invalid = self._patch_event(
+            13,
+            file_ids=[],
+            file_count=True,
+            additions=None,
+            removals=-1,
+            line_changes=False,
+        )
+        contradictory = self._patch_event(
+            14,
+            file_ids=[self._path_hash("one.py")],
+            file_count=2,
+            additions=1,
+            removals=1,
+            line_changes=9,
+        )
+        projection = self._operator_report(
+            [true_zero, empty, missing, invalid, contradictory]
+        )["what_changed"]["patch_surface_observations"]
+        by_seq = {item["seq"]: item for item in projection["observations"]}
+
+        self.assertEqual(
+            {key: by_seq[10][key] for key in ("file_count", "additions", "removals", "line_changes")},
+            {"file_count": 1, "additions": 0, "removals": 0, "line_changes": 0},
+        )
+        self.assertTrue(by_seq[10]["complete"])
+        self.assertFalse(by_seq[10]["invalid"])
+        self.assertEqual(by_seq[11]["file_count"], 0)
+        self.assertEqual(by_seq[11]["additions"], 0)
+        self.assertEqual(by_seq[11]["removals"], 0)
+        self.assertEqual(by_seq[11]["line_changes"], 0)
+        self.assertTrue(by_seq[11]["invalid"])
+        self.assertFalse(by_seq[11]["complete"])
+        self.assertIn("file_count", by_seq[11]["invalid_fields"])
+        self.assertIn("file_ids", by_seq[11]["invalid_fields"])
+        self.assertEqual(by_seq[12]["additions"], None)
+        self.assertTrue(by_seq[12]["invalid"])
+        self.assertFalse(by_seq[12]["complete"])
+        self.assertEqual(by_seq[13]["file_count"], None)
+        self.assertEqual(by_seq[13]["additions"], None)
+        self.assertEqual(by_seq[13]["removals"], None)
+        self.assertEqual(by_seq[13]["line_changes"], None)
+        self.assertTrue(by_seq[13]["invalid"])
+        self.assertEqual(by_seq[14]["file_count"], None)
+        self.assertEqual(by_seq[14]["line_changes"], None)
+        self.assertEqual(by_seq[14]["additions"], 1)
+        self.assertEqual(by_seq[14]["removals"], 1)
+        self.assertTrue(by_seq[14]["invalid"])
+        self.assertFalse(projection["complete"])
+
+    def test_patch_projection_caps_latest_matching_rows_after_scope_filtering(self) -> None:
+        matching = [
+            self._patch_event(
+                seq,
+                file_count=1,
+                additions=0,
+                removals=0,
+                line_changes=0,
+            )
+            for seq in range(1, 106)
+        ]
+        projection = self._operator_report(matching)["what_changed"]["patch_surface_observations"]
+        self.assertEqual(projection["matching_event_count"], 105)
+        self.assertEqual(projection["observation_count"], 100)
+        self.assertEqual(projection["observations"][0]["seq"], 6)
+        self.assertEqual(projection["observations"][-1]["seq"], 105)
+        self.assertTrue(projection["truncated"])
+        self.assertFalse(projection["complete"])
+
+    def test_patch_projection_marks_duplicate_or_invalid_ids_incomplete(self) -> None:
+        hashes = sorted(self._path_hash(f"path-{index}.py") for index in range(3))
+        malformed_ids = [hashes[0], hashes[0], "BAD-ID", hashes[1]]
+        incomplete = self._patch_event(
+            200,
+            complete=False,
+            file_ids=malformed_ids,
+            file_count=4,
+            additions=0,
+            removals=0,
+            line_changes=0,
+        )
+        projection = self._operator_report([incomplete])["what_changed"]["patch_surface_observations"]
+        row = projection["observations"][0]
+        self.assertLessEqual(len(row["path_hashes_sha256"]), 256)
+        self.assertTrue(row["truncated"])
+        self.assertTrue(row["invalid"])
+        self.assertFalse(row["producer_complete"])
+        self.assertFalse(row["complete"])
+        self.assertTrue(projection["truncated"])
+        self.assertTrue(projection["invalid"])
+        self.assertFalse(projection["complete"])
+
+    def test_patch_projection_clean_producer_truncation_is_incomplete_not_invalid(self) -> None:
+        hashes = sorted(self._path_hash(f"path-{index}.py") for index in range(256))
+        incomplete = self._patch_event(
+            201,
+            complete=False,
+            file_ids=hashes,
+            file_count=257,
+            additions=0,
+            removals=0,
+            line_changes=0,
+        )
+        projection = self._operator_report([incomplete])["what_changed"]["patch_surface_observations"]
+        row = projection["observations"][0]
+        self.assertEqual(row["path_hashes_sha256"], hashes)
+        self.assertEqual(row["file_count"], 257)
+        self.assertEqual(row["additions"], 0)
+        self.assertEqual(row["removals"], 0)
+        self.assertEqual(row["line_changes"], 0)
+        self.assertTrue(row["truncated"])
+        self.assertFalse(row["invalid"])
+        self.assertFalse(row["producer_complete"])
+        self.assertFalse(row["complete"])
+        self.assertTrue(projection["truncated"])
+        self.assertFalse(projection["invalid"])
+        self.assertFalse(projection["complete"])
+
+    def test_accepted_receipts_keep_precedence_and_plain_command_report_contract_is_unchanged(self) -> None:
+        checkpoint = {
+            "checkpoint_id": "checkpoint-report-fixture",
+            "metadata": {
+                "accepted_files": {
+                    "source": "explicit_acceptance_attestations",
+                    "files": [
+                        {
+                            "path": "accepted.py",
+                            "state": "modified",
+                            "sha256": "f" * 64,
+                            "size_bytes": 17,
+                            "receipt_kind": "explicit_attestation",
+                            "run_id": self.RUN_ID,
+                            "wave_id": self.WAVE_ID,
+                        }
+                    ],
+                }
+            },
+        }
+        report = self._operator_report([self._patch_event(300)], checkpoint=checkpoint)
+        self.assertEqual(
+            report["what_changed"]["source"],
+            "accepted_checkpoint_file_attestations",
+        )
+        self.assertEqual([item["path"] for item in report["what_changed"]["files"]], ["accepted.py"])
+
+        command_report = build_command_completion_report(
+            task_state={
+                "status": "completed",
+                "modified_files": [],
+                "orchestration": {},
+                "last_command_result": {
+                    "command_id": "plain-command-fixture",
+                    "kind": "command",
+                    "result_status": "passed",
+                    "status": "exited",
+                    "exit_code": 0,
+                    "duration_ms": 1,
+                },
+            },
+            workspace_identity={},
+        )
+        self.assertIsNotNone(command_report)
+        self.assertEqual(
+            set(command_report["what_changed"]),
+            {"files", "source", "raw_source_or_command_output_included"},
+        )
+
     def test_terminal_get_keeps_semantic_report_identity_stable_through_ack(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

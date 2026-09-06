@@ -47,12 +47,18 @@ test('workspace manager exposes extra authorized roots without changing the chat
 test('package and manager identify the Coding Tools MCP 1.0 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
+  const pyproject = read('resources/coding-tools-mcp/pyproject.toml');
+  const pythonPackage = read('resources/coding-tools-mcp/coding_tools_mcp/__init__.py');
+  const pythonMetadata = read('resources/coding-tools-mcp/coding_tools_mcp.egg-info/PKG-INFO');
   assert.equal(pkg.name, 'coding-tools-mcp');
   assert.equal(pkg.version, '1.0.0');
   assert.equal(pkg.build.productName, 'Coding Tools MCP');
   assert.equal(pkg.build.artifactName, 'coding-tools-mcp-setup-${version}.${ext}');
   assert.match(manager, /Coding Tools MCP <span>v1\.0\.0<\/span>/);
-  assert.match(manager, /Coding Tools MCP · 0\.4\.3/);
+  assert.match(manager, /Coding Tools MCP · 1\.0\.0/);
+  assert.match(pyproject, /^version = "1\.0\.0"$/m);
+  assert.match(pythonPackage, /^__version__ = "1\.0\.0"$/m);
+  assert.match(pythonMetadata, /^Version: 1\.0\.0\r?$/m);
 });
 
 test('settings window hides independently and reveals its shell before runtime inspection finishes', () => {

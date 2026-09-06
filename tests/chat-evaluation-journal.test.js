@@ -865,3 +865,101 @@ test('observer finalizes turn features at turn end, never at first visible', () 
   const debug = vm.runInContext(chatEvaluationDebugScript(), sandbox);
   assert.equal(debug.observer.featuresFinalized, 1);
 });
+
+for (const pageUptimeMs of [0, 600000]) {
+test(`observer emits a larger final structural snapshot after interim streaming progress (page uptime ${pageUptimeMs}ms)`, () => {
+  let nowMs = pageUptimeMs + 100;
+  const makeNode = (role, text) => ({
+    isConnected: true,
+    getAttribute: (name) => (name === 'data-message-author-role' ? role : ''),
+    closest: () => null,
+    querySelector: () => ({}),
+    querySelectorAll: () => [],
+    getClientRects: () => [{ width: 120, height: 24 }],
+    textContent: text
+  });
+  const userNode = makeNode('user', 'count tokens please');
+  const assistantNode = makeNode('assistant', 'ab');
+  const sandbox = vm.createContext({
+    window: {},
+    document: {
+      body: {},
+      querySelector: () => null,
+      querySelectorAll: (selector) => {
+        if (String(selector).includes('conversation-turn-')) return [];
+        return sandbox.__showAssistant ? [userNode, assistantNode] : [userNode];
+      },
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    },
+    MutationObserver: class {
+      constructor(callback) { sandbox.__mutationCallback = callback; }
+      observe() {}
+      disconnect() {}
+    },
+    Response: class {},
+    performance: { now: () => nowMs, timeOrigin: 1000 },
+    crypto: {
+      randomUUID: () => 'interim-turn-id',
+      getRandomValues: (bytes) => { bytes.fill(5); return bytes; }
+    },
+    requestAnimationFrame: (callback) => { sandbox.__rafCallback = callback; return 1; },
+    setTimeout: () => 1,
+    clearTimeout: () => {},
+    TextDecoder: require('node:util').TextDecoder
+  });
+  sandbox.__showAssistant = false;
+  vm.runInContext(buildChatEvaluationObserverScript({ navigationEpoch: 41, clockDomain: 'electron-renderer:41' }), sandbox);
+  vm.runInContext(`
+    window.__mcpHostEvaluationTelemetry.armed = true;
+    window.__mcpHostEvaluationTelemetry.awaitingUserVisible = true;
+    window.__mcpHostEvaluationTelemetry.intentDeadlineMs = performance.now() + 50000;
+    window.__mcpHostEvaluationTelemetry.intentBaselineOrdinal = -1;
+    window.__mcpHostEvaluationTelemetry.pendingIntentIdentity = { turnId: 'turn-interim', traceId: 'trace-interim' };
+  `, sandbox);
+  const scanOnce = () => {
+    sandbox.__mutationCallback();
+    sandbox.__rafCallback();
+    return vm.runInContext(chatEvaluationDrainScript(), sandbox);
+  };
+  scanOnce();
+  nowMs = pageUptimeMs + 200;
+  sandbox.__showAssistant = true;
+  let drained = scanOnce();
+  assert.equal(drained.filter((event) => event.event_type === 'host_turn_span').length, 1);
+  // Growth within 3s of start: no interim yet.
+  nowMs = pageUptimeMs + 1000;
+  assistantNode.textContent = 'ab plus a longer streamed chunk';
+  drained = scanOnce();
+  assert.equal(drained.filter((event) => event.event_type === 'turn_features').length, 0);
+  // Growth past the 3s interim cadence: one progressive snapshot.
+  const interimText = 'ab plus a longer streamed chunk and even more tokens flowing';
+  nowMs = pageUptimeMs + 3400;
+  assistantNode.textContent = interimText;
+  drained = scanOnce();
+  const interim = drained.filter((event) => event.event_type === 'turn_features');
+  assert.equal(interim.length, 1);
+  assert.equal(interim[0].asst_chars, interimText.length);
+  // A later growth inside the interim cadence has no second interim, but the
+  // terminal snapshot must carry the larger final value and same turn identity.
+  const finalText = `${interimText} after another streamed chunk before completion`;
+  nowMs = pageUptimeMs + 4100;
+  assistantNode.textContent = finalText;
+  drained = scanOnce();
+  assert.equal(drained.filter((event) => event.event_type === 'turn_features').length, 0);
+  // Quiet window: exactly one final snapshot supersedes the interim downstream.
+  nowMs = pageUptimeMs + 5200;
+  drained = scanOnce();
+  const finalSnapshot = drained.filter((event) => event.event_type === 'turn_features');
+  assert.equal(finalSnapshot.length, 1);
+  assert.equal(finalSnapshot[0].turn_id, interim[0].turn_id);
+  assert.equal(finalSnapshot[0].trace_id, interim[0].trace_id);
+  assert.equal(finalSnapshot[0].observation_id, interim[0].observation_id);
+  assert.equal(finalSnapshot[0].asst_chars, finalText.length);
+  assert.ok(finalSnapshot[0].asst_chars > interim[0].asst_chars);
+  assert.ok(finalSnapshot[0].monotonic_ms > interim[0].monotonic_ms);
+  const debug = vm.runInContext(chatEvaluationDebugScript(), sandbox);
+  assert.equal(debug.observer.featuresInterim, 1);
+  assert.equal(debug.observer.featuresFinalized, 1);
+});
+}

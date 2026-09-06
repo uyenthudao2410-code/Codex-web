@@ -139,7 +139,8 @@
   }
 
   function observedNumber(value) {
-    if (value === null || value === undefined || value === '') return null;
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && value.trim() === '') return null;
     const number = Number(value);
     return Number.isFinite(number) && number >= 0 ? number : null;
   }
@@ -200,7 +201,8 @@
     if (controller.missing_measurement_policy !== 'unknown_not_zero') return null;
     const status = String(controller.status || '').trim().toLowerCase();
     if (status !== 'observed' && status !== 'unobserved') return null;
-    const eventCount = Math.max(0, Number(controller.event_count) || 0);
+    const eventCount = observedNumber(controller.event_count);
+    if (eventCount === null) return null;
     if ((status === 'observed' && eventCount < 1) || (status === 'unobserved' && eventCount !== 0)) return null;
     return {
       status,
@@ -233,12 +235,12 @@
       status,
       measurement,
       confidence: String(projection.confidence || 'unknown').trim().toLowerCase(),
-      calibrationSamples: Math.max(0, Number(projection.calibration_samples) || 0),
-      exactRuns: Math.max(0, Number(projection.exact_runs) || 0),
-      missingExactRuns: Math.max(0, Number(projection.missing_exact_runs) || 0),
-      p10: Math.max(0, Number(estimate.p10_total_tokens ?? estimate.p10_context_tokens) || 0),
-      p50: Math.max(0, Number(estimate.p50_total_tokens ?? estimate.p50_context_tokens) || 0),
-      p90: Math.max(0, Number(estimate.p90_total_tokens ?? estimate.p90_context_tokens) || 0),
+      calibrationSamples: observedNumber(projection.calibration_samples),
+      exactRuns: observedNumber(projection.exact_runs),
+      missingExactRuns: observedNumber(projection.missing_exact_runs),
+      p10: observedNumber(estimate.p10_total_tokens ?? estimate.p10_context_tokens),
+      p50: observedNumber(estimate.p50_total_tokens ?? estimate.p50_context_tokens),
+      p90: observedNumber(estimate.p90_total_tokens ?? estimate.p90_context_tokens),
       notControllerTotal: estimate.not_controller_total === true
     };
   }
@@ -248,57 +250,97 @@
     if (!analytics || analytics.measurement !== 'canonical_non_overlapping') return null;
     if (analytics.missing_measurement_policy !== 'unknown_not_zero') return null;
     const overall = analytics.overall && typeof analytics.overall === 'object' ? analytics.overall : {};
-    const events = Math.max(0, Number(overall.event_count) || 0);
-    if (!events) return null;
+    const events = observedNumber(overall.event_count);
+    if (events === null || events < 1) return null;
     const usage = overall.usage && typeof overall.usage === 'object' ? overall.usage : {};
     const costStats = overall.cost && typeof overall.cost === 'object' ? overall.cost : {};
-    const measuredCostEvents = Math.max(0, Number(costStats.measured_event_count) || 0);
-    const derivedCostEvents = Math.max(0, Number(costStats.derived_event_count) || 0);
-    const unobservedCostEvents = Math.max(0, Number(costStats.unobserved_event_count) || 0);
-    const measuredCost = Math.max(0, Number(costStats.measured_usd) || 0);
-    const derivedCost = Math.max(0, Number(costStats.derived_usd) || 0);
-    const costSource = measuredCostEvents > 0 ? 'provider_reported' : derivedCostEvents > 0 ? 'pricing_derived' : 'unobserved';
-    const cost = costSource === 'provider_reported' ? measuredCost : costSource === 'pricing_derived' ? derivedCost : 0;
+    const input = observedNumber(usage.input_total_tokens);
+    const cached = observedNumber(usage.input_cached_tokens);
+    const output = observedNumber(usage.output_total_tokens);
+    const reasoning = observedNumber(usage.output_reasoning_tokens);
+    const total = observedNumber(usage.total_tokens);
+    if (input === null || output === null || total === null) return null;
+    const measuredCostEvents = observedNumber(costStats.measured_event_count);
+    const derivedCostEvents = observedNumber(costStats.derived_event_count);
+    const unobservedCostEvents = observedNumber(costStats.unobserved_event_count);
+    const measuredCost = observedNumber(costStats.measured_usd);
+    const derivedCost = observedNumber(costStats.derived_usd);
+    const costSource = measuredCostEvents !== null && measuredCost !== null && measuredCostEvents > 0
+      ? 'provider_reported'
+      : derivedCostEvents !== null && derivedCost !== null && derivedCostEvents > 0
+        ? 'pricing_derived'
+        : 'unobserved';
+    const cost = costSource === 'provider_reported' ? measuredCost : costSource === 'pricing_derived' ? derivedCost : null;
     const hours = new Map();
+    let hoursAvailable = Array.isArray(analytics.hourly);
     for (const row of Array.isArray(analytics.hourly) ? analytics.hourly : []) {
       const time = Date.parse(String(row?.hour || ''));
-      if (!Number.isFinite(time)) continue;
+      if (!Number.isFinite(time)) { hoursAvailable = false; continue; }
       const rowUsage = row?.usage && typeof row.usage === 'object' ? row.usage : {};
-      hours.set(Math.floor(time / 3600000), {
-        in: Math.max(0, Number(rowUsage.input_total_tokens) || 0),
-        out: Math.max(0, Number(rowUsage.output_total_tokens) || 0),
-        total: Math.max(0, Number(rowUsage.total_tokens) || 0),
-        events: Math.max(0, Number(row?.event_count) || 0)
-      });
+      const input = observedNumber(rowUsage.input_total_tokens);
+      const output = observedNumber(rowUsage.output_total_tokens);
+      const total = observedNumber(rowUsage.total_tokens);
+      const events = observedNumber(row?.event_count);
+      if (input === null || output === null || total === null || events === null) { hoursAvailable = false; continue; }
+      hours.set(Math.floor(time / 3600000), { in: input, out: output, total, events });
     }
     const rollingRow = analytics.rolling_5m && typeof analytics.rolling_5m === 'object' ? analytics.rolling_5m : {};
     const rollingUsage = rollingRow.usage && typeof rollingRow.usage === 'object' ? rollingRow.usage : {};
     const rolling = {
-      events: Math.max(0, Number(rollingRow.event_count) || 0),
-      tokens: Math.max(0, Number(rollingUsage.total_tokens) || 0),
+      events: observedNumber(rollingRow.event_count),
+      tokens: observedNumber(rollingUsage.total_tokens),
       end: String(rollingRow.end || analytics?.window?.end || '')
     };
+    const modelRows = Array.isArray(analytics.by_model) ? analytics.by_model : null;
     const modelMap = new Map();
-    for (const row of Array.isArray(analytics.by_model) ? analytics.by_model : []) {
+    let byModelStatus = modelRows && modelRows.length ? 'complete' : 'unavailable';
+    let byModelCachedComplete = Boolean(modelRows && modelRows.length);
+    for (const row of modelRows || []) {
       const model = String(row?.model || row?.model_id || 'unknown').trim() || 'unknown';
       const rowUsage = row?.usage && typeof row.usage === 'object' ? row.usage : {};
       const rowCost = row?.cost && typeof row.cost === 'object' ? row.cost : {};
       const entry = modelMap.get(model) || {
         tool: model, model, calls: 0, ok: 0, inTokens: 0, outTokens: 0, cachedTokens: 0,
-        cost: 0, costSource: 'unobserved', usageEvidence: 'MEASURED',
+        cachedComplete: true, cost: null, costSource: 'unobserved', usageEvidence: 'MEASURED',
         measuredCost: 0, derivedCost: 0, measuredCostEvents: 0, derivedCostEvents: 0
       };
-      entry.calls += Math.max(0, Number(row?.event_count) || 0);
-      entry.inTokens += Math.max(0, Number(rowUsage.input_total_tokens) || 0);
-      entry.outTokens += Math.max(0, Number(rowUsage.output_total_tokens) || 0);
-      entry.cachedTokens += Math.max(0, Number(rowUsage.input_cached_tokens) || 0);
-      entry.measuredCost += Math.max(0, Number(rowCost.measured_usd) || 0);
-      entry.derivedCost += Math.max(0, Number(rowCost.derived_usd) || 0);
-      entry.measuredCostEvents += Math.max(0, Number(rowCost.measured_event_count) || 0);
-      entry.derivedCostEvents += Math.max(0, Number(rowCost.derived_event_count) || 0);
+      const calls = observedNumber(row?.event_count);
+      const input = observedNumber(rowUsage.input_total_tokens);
+      const output = observedNumber(rowUsage.output_total_tokens);
+      const cached = observedNumber(rowUsage.input_cached_tokens);
+      if (calls === null || input === null || output === null) {
+        byModelStatus = 'partial';
+        continue;
+      }
+      entry.calls += calls;
+      entry.inTokens += input;
+      entry.outTokens += output;
+      if (cached === null) {
+        entry.cachedComplete = false;
+        byModelCachedComplete = false;
+      } else if (entry.cachedComplete) {
+        entry.cachedTokens += cached;
+      }
+      const measuredCost = observedNumber(rowCost.measured_usd);
+      const derivedCost = observedNumber(rowCost.derived_usd);
+      const measuredCostEvents = observedNumber(rowCost.measured_event_count);
+      const derivedCostEvents = observedNumber(rowCost.derived_event_count);
+      if (measuredCost !== null && measuredCostEvents !== null) {
+        entry.measuredCost += measuredCost;
+        entry.measuredCostEvents += measuredCostEvents;
+      }
+      if (derivedCost !== null && derivedCostEvents !== null) {
+        entry.derivedCost += derivedCost;
+        entry.derivedCostEvents += derivedCostEvents;
+      }
       modelMap.set(model, entry);
     }
     for (const entry of modelMap.values()) {
+      if (!entry.cachedComplete) {
+        entry.cachedTokens = null;
+        entry.usageEvidence = 'MEASURED PARTIAL';
+      }
+      delete entry.cachedComplete;
       if (entry.measuredCostEvents > 0) {
         entry.cost = entry.measuredCost;
         entry.costSource = 'provider_reported';
@@ -307,20 +349,33 @@
         entry.costSource = 'pricing_derived';
       }
     }
+    if (byModelStatus === 'complete') {
+      const coverage = [...modelMap.values()].reduce((summary, entry) => {
+        summary.calls += entry.calls;
+        summary.input += entry.inTokens;
+        summary.output += entry.outTokens;
+        return summary;
+      }, { calls: 0, input: 0, output: 0 });
+      if (coverage.calls !== events || coverage.input !== input || coverage.output !== output) {
+        byModelStatus = 'partial';
+      }
+    }
     return {
       events,
-      input: Math.max(0, Number(usage.input_total_tokens) || 0),
-      cached: Math.max(0, Number(usage.input_cached_tokens) || 0),
-      output: Math.max(0, Number(usage.output_total_tokens) || 0),
-      reasoning: Math.max(0, Number(usage.output_reasoning_tokens) || 0),
-      total: Math.max(0, Number(usage.total_tokens) || 0),
+      input,
+      cached,
+      output,
+      reasoning,
+      total,
       cost,
       costSource,
       measuredCostEvents,
       derivedCostEvents,
       unobservedCostEvents,
-      hours,
+      hours: hoursAvailable ? hours : null,
       rolling,
+      byModelStatus,
+      byModelCachedComplete,
       byModel: [...modelMap.values()].sort((a, b) => (b.inTokens + b.outTokens) - (a.inTokens + a.outTokens))
     };
   }
@@ -520,15 +575,19 @@
   // ---- 9router-style animations -------------------------------------------
 
   function animateText(element, formatter, next) {
+    if (element?.__dashboardAnimationFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(element.__dashboardAnimationFrame);
+      element.__dashboardAnimationFrame = null;
+    }
     if (!element || reducedMotion || orchestrationIsBusy()) {
       if (element) element.textContent = formatter(next);
       return;
     }
     const from = Number(element.dataset.value) || 0;
     const to = Number(next) || 0;
-    if (from === to) return;
-    if (element.__dashboardAnimationFrame && typeof cancelAnimationFrame === 'function') {
-      cancelAnimationFrame(element.__dashboardAnimationFrame);
+    if (from === to) {
+      element.textContent = formatter(to);
+      return;
     }
     const start = performance.now();
     const duration = 520;
@@ -551,7 +610,13 @@
 
   function setText(id, value) {
     const element = byId(id);
-    if (element) element.textContent = String(value ?? '—');
+    if (!element) return;
+    if (element.__dashboardAnimationFrame && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(element.__dashboardAnimationFrame);
+      element.__dashboardAnimationFrame = null;
+    }
+    delete element.dataset.value;
+    element.textContent = String(value ?? '—');
   }
 
   function setPill(id, text, state) {
@@ -742,38 +807,84 @@
     };
   }
 
-  function renderDonut(entries) {
+  function renderDonut(entries, breakdownStatus = 'unavailable', cachedComplete = false) {
     const svg = byId('daDonut');
     const legend = byId('daLegend');
     const center = byId('daDonutTotal');
     const sub = byId('daDonutSub');
     const foot = byId('daDonutFoot');
     if (!svg || !legend) return;
-    const total = entries.reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
+    const rows = Array.isArray(entries) ? entries : [];
+    const status = breakdownStatus === 'complete' || breakdownStatus === 'partial'
+      ? breakdownStatus
+      : 'unavailable';
+    const total = rows.reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
     const colors = ['var(--da-in)', 'var(--da-out)', 'var(--da-cost)', '#7c5cff', '#2ba7a0', '#c95b9e'];
     const radius = 54;
     const stroke = 13;
     const circumference = 2 * Math.PI * radius;
     svg.replaceChildren();
     legend.replaceChildren();
-    animateText(center, compact, total);
-    if (sub) sub.textContent = 'TOKEN MEASURED';
-    if (foot) foot.textContent = total > 0 ? `${entries.length} model` : '— model';
+    if (status === 'complete') animateText(center, compact, total);
+    else setText('daDonutTotal', '—');
+    if (sub) {
+      sub.textContent = status === 'complete'
+        ? (cachedComplete ? 'TOKEN MEASURED' : 'TOKEN MEASURED · CACHED PARTIAL')
+        : status === 'partial'
+          ? 'TOKEN BREAKDOWN PARTIAL'
+          : 'TOKEN BREAKDOWN UNAVAILABLE';
+    }
+    if (foot) foot.textContent = status === 'complete'
+      ? `${rows.length} model`
+      : status === 'partial'
+        ? `${rows.length} model observed`
+        : '— model';
     svg.appendChild(center);
     if (sub) svg.appendChild(sub);
+    if (status === 'unavailable') {
+      const empty = document.createElement('div');
+      empty.className = 'da-chart-empty';
+      empty.style.height = 'auto';
+      empty.style.minHeight = '170px';
+      empty.textContent = 'Phân bổ token theo model chưa khả dụng; dữ liệu thiếu không được tính là 0.';
+      legend.replaceChildren(empty);
+      return;
+    }
+    if (status === 'partial') {
+      const note = document.createElement('div');
+      note.className = 'da-chart-empty';
+      note.style.height = 'auto';
+      note.textContent = 'Breakdown theo model chỉ có một phần; tổng và tỷ trọng chưa khả dụng.';
+      legend.appendChild(note);
+      rows.forEach((entry, index) => {
+        const value = entry.inTokens + entry.outTokens;
+        const row = document.createElement('div');
+        row.className = 'da-legend-row';
+        const dot = document.createElement('i');
+        dot.style.setProperty('--legend-color', colors[index % colors.length]);
+        const name = document.createElement('b');
+        name.textContent = entry.tool;
+        name.title = entry.tool;
+        const stat = document.createElement('span');
+        stat.textContent = `${compact(value)} đã quan sát`;
+        row.append(dot, name, stat);
+        legend.appendChild(row);
+      });
+      return;
+    }
     if (!total) {
       const empty = document.createElement('div');
       empty.className = 'da-chart-empty';
       empty.style.height = 'auto';
       empty.style.minHeight = '170px';
-      empty.textContent = 'Chưa có lưu lượng token để phân bổ.';
+      empty.textContent = 'UsageEvent theo model hợp lệ có tổng token = 0.';
       legend.replaceChildren(empty);
       return;
     }
 
     let offset = 0;
     const gap = entries.length > 1 ? 2 : 0;
-    entries.forEach((entry, index) => {
+    rows.forEach((entry, index) => {
       const value = entry.inTokens + entry.outTokens;
       const length = Math.max(0, (value / total) * circumference - gap);
       const ring = svgEl('circle', {
@@ -803,15 +914,19 @@
     const container = byId('daToolBars');
     if (!container) return;
     container.replaceChildren();
-    const top = entries.slice().sort((a, b) => (b.cost || 0) - (a.cost || 0)).slice(0, 6);
+    const top = entries
+      .filter((entry) => observedNumber(entry?.cost) !== null)
+      .slice()
+      .sort((a, b) => (b.cost || 0) - (a.cost || 0))
+      .slice(0, 6);
     if (!top.length) {
       const empty = document.createElement('div');
       empty.className = 'cc-empty';
-      empty.textContent = 'Chưa có bản ghi công cụ để xếp hạng.';
+      empty.textContent = 'Chưa có chi phí UsageEvent canonical để xếp hạng.';
       container.appendChild(empty);
       return;
     }
-    const maxCost = Math.max(...top.map((entry) => entry.cost), 0);
+    const maxCost = Math.max(...top.map((entry) => observedNumber(entry.cost) || 0), 0);
     top.forEach((entry, index) => {
       const row = document.createElement('div');
       row.className = 'da-bar-row';
@@ -830,7 +945,7 @@
       track.className = 'da-bar-track';
       const fill = document.createElement('i');
       fill.className = 'da-bar-fill';
-      fill.style.width = `${maxCost ? Math.max(4, (entry.cost / maxCost) * 100) : 0}%`;
+      fill.style.width = `${maxCost ? Math.max(4, ((observedNumber(entry.cost) || 0) / maxCost) * 100) : 0}%`;
       track.appendChild(fill);
       const value = document.createElement('span');
       value.className = 'da-bar-value';
@@ -856,7 +971,7 @@
     if (summary) {
       setPill('daModelSummary', `${activeModels} model active`, activeModels ? 'active' : 'offline');
     }
-    const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + entry.cost, 0);
+    const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + (observedNumber(entry.cost) || 0), 0);
     const totalTokens = [...breakdown.values()].reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
 
     const head = document.createElement('div');
@@ -879,8 +994,8 @@
       const calls = entry?.calls || 0;
       const inTokens = entry?.inTokens || 0;
       const outTokens = entry?.outTokens || 0;
-      const rowCost = entry?.cost || 0;
-      const share = totalCost ? percent(rowCost, totalCost) : percent(inTokens + outTokens, totalTokens);
+      const rowCost = observedNumber(entry?.cost);
+      const share = rowCost !== null && totalCost > 0 ? percent(rowCost, totalCost) : percent(inTokens + outTokens, totalTokens);
 
       const row = document.createElement('div');
       row.className = `da-model-row${state === 'active' ? ' is-active' : state === 'waiting' ? ' is-waiting' : state === 'blocked' ? ' is-blocked' : ''}`;
@@ -934,14 +1049,13 @@
 
       const costCell = document.createElement('span');
       costCell.className = 'da-model-cell da-model-cost';
-      const isSubscription = model.id === 'desktop' || model.id === 'opencode';
       const costSourceText = entry?.costSource === 'provider_reported'
         ? 'MEASURED provider-reported'
         : entry?.costSource === 'pricing_derived'
           ? 'DERIVED from canonical UsageEvent pricing'
           : 'UNOBSERVED';
       costCell.title = `Canonical UsageEvent token · cost ${costSourceText}`;
-      costCell.innerHTML = `<b>${isSubscription && !rowCost ? '—' : money(displayedCost(rowCost))}</b>`;
+      costCell.innerHTML = `<b>${rowCost === null ? '—' : money(displayedCost(rowCost))}</b>`;
 
       row.append(name, stateCell, inCell, outCell, callsCell, shareWrap, costCell);
       container.appendChild(row);
@@ -966,6 +1080,7 @@
   };
 
   function updateHeaderContext() {
+    if (!snapshot || typeof snapshot !== 'object') return;
     const today = new Date();
     const dateFormatted = new Intl.DateTimeFormat('vi-VN', {
       day: '2-digit',
@@ -979,19 +1094,27 @@
     if (snapshot?.settings?.workspace) {
       const parts = snapshot.settings.workspace.split(/[\\/]/).filter(Boolean);
       const name = parts[parts.length - 1] || 'Codex-web';
-      const select = byId('daProjectSelect');
-      if (select && !select.dataset.bound) {
-        select.dataset.bound = 'true';
-        select.innerHTML = `
-          <option selected>${name}</option>
-          <option>Codex Assistant Hub</option>
-          <option>Multi-Agent Workspace</option>
-        `;
-      }
+      setText('daProjectText', name);
     }
     if (snapshot?.status?.localMcpUrl) {
-      setText('daEnvText', snapshot.status.runtimeRunning ? 'Local · Port 18766' : 'Local · Chờ khởi động');
+      const running = snapshot.status.runtimeRunning;
+      setText('daEnvText', typeof running === 'boolean'
+        ? running ? 'Local · Port 18766' : 'Local · Chờ khởi động'
+        : 'Local · trạng thái chưa xác nhận');
     }
+  }
+
+  function snapshotFreshnessLabel() {
+    const status = snapshot?.status;
+    if (!status || typeof status !== 'object') return 'Freshness snapshot chưa xác nhận';
+    if (status.signalStale === true) return 'Snapshot stale; cần kiểm tra lại';
+    const ageMs = observedNumber(status.snapshotAgeMs);
+    const observedAt = observedNumber(status.snapshotObservedAtUnixMs);
+    if (observedAt !== null && observedAt > 0 && Number.isFinite(new Date(observedAt).getTime())) {
+      return `Snapshot receipt ${new Date(observedAt).toLocaleTimeString('vi-VN')}`;
+    }
+    if (ageMs !== null) return `Snapshot cache ${formatDuration(ageMs)} trước`;
+    return 'Freshness snapshot chưa xác nhận';
   }
 
   function renderFleetTable(breakdown) {
@@ -1010,7 +1133,7 @@
       return;
     }
 
-    const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + entry.cost, 0);
+    const totalCost = [...breakdown.values()].reduce((sum, entry) => sum + (observedNumber(entry.cost) || 0), 0);
     const totalTokens = [...breakdown.values()].reduce((sum, entry) => sum + entry.inTokens + entry.outTokens, 0);
 
     for (const model of MODELS) {
@@ -1024,9 +1147,9 @@
       const inTokens = entry?.inTokens || 0;
       const outTokens = entry?.outTokens || 0;
       const modelTokens = inTokens + outTokens;
-      const rowCost = entry?.cost || 0;
-      const share = totalCost ? percent(rowCost, totalCost) : (totalTokens ? percent(modelTokens, totalTokens) : 0);
-      const costPer1k = modelTokens > 0 ? (rowCost / (modelTokens / 1000)) : 0;
+      const rowCost = observedNumber(entry?.cost);
+      const share = rowCost !== null && totalCost > 0 ? percent(rowCost, totalCost) : (totalTokens ? percent(modelTokens, totalTokens) : 0);
+      const costPer1k = rowCost !== null && modelTokens > 0 ? (rowCost / (modelTokens / 1000)) : null;
       const okRate = calls ? percent(Math.max(0, Number(entry?.ok) || 0), calls) : null;
       const latencyMs = calls
         ? (Math.max(0, Number(entry?.execMs) || 0) + Math.max(0, Number(entry?.waitMs) || 0)) / calls
@@ -1055,7 +1178,7 @@
 
       const tdCost = document.createElement('td');
       tdCost.className = 'cell-num';
-      tdCost.textContent = money(displayedCost(rowCost));
+      tdCost.textContent = rowCost === null ? '—' : money(displayedCost(rowCost));
       tdCost.title = entry?.costSource === 'provider_reported'
         ? 'MEASURED provider-reported cost'
         : entry?.costSource === 'pricing_derived'
@@ -1064,7 +1187,7 @@
 
       const tdCostPer1k = document.createElement('td');
       tdCostPer1k.className = 'cell-num';
-      tdCostPer1k.textContent = money(displayedCost(costPer1k));
+      tdCostPer1k.textContent = costPer1k === null ? '—' : money(displayedCost(costPer1k));
       tdCostPer1k.title = 'Derived only from canonical UsageEvent token/cost fields; unavailable when canonical evidence is missing';
 
       const tdStars = document.createElement('td');
@@ -1104,22 +1227,23 @@
   }
 
   function realtimeAgeLabel(time, now = Date.now()) {
-    if (!Number.isFinite(Number(time))) return 'chưa có mẫu mới';
-    const ageMs = Math.max(0, now - Number(time));
+    const observedAt = observedNumber(time);
+    if (observedAt === null || observedAt > now) return 'freshness chưa xác nhận';
+    const ageMs = now - observedAt;
     if (ageMs < 10000) return 'vừa cập nhật';
     if (ageMs < 60000) return `${Math.floor(ageMs / 1000)} giây trước`;
     return `${Math.floor(ageMs / 60000)} phút trước`;
   }
 
   function rollingProviderUsage(measured, now = Date.now(), windowMs = REALTIME_WINDOW_MS) {
-    const samples = Math.max(0, Number(measured?.rolling?.events) || 0);
-    const tokens = Math.max(0, Number(measured?.rolling?.tokens) || 0);
+    const samples = observedNumber(measured?.rolling?.events);
+    const tokens = observedNumber(measured?.rolling?.tokens);
     const end = Date.parse(String(measured?.rolling?.end || ''));
-    const latestAt = samples > 0 && Number.isFinite(end) ? Math.min(now, end) : null;
+    const latestAt = samples !== null && tokens !== null && samples > 0 && Number.isFinite(end) && end <= now ? end : null;
     return {
       samples,
       tokens,
-      tpm: tokens / Math.max(1, windowMs / 60000),
+      tpm: tokens === null ? null : tokens / Math.max(1, windowMs / 60000),
       latestAt
     };
   }
@@ -1139,13 +1263,18 @@
   function updateRealtimeMetrics(records, measured) {
     const now = Date.now();
     const throughput = rollingProviderUsage(measured, now);
-    if (throughput.samples > 0) {
+    if (throughput.samples !== null && throughput.tokens !== null && throughput.samples > 0 && throughput.tpm !== null
+        && throughput.latestAt !== null && now - throughput.latestAt <= REALTIME_WINDOW_MS) {
       if (throughput.tpm > 0 && throughput.tpm < 1) setText('daRealtimeTpm', '<1');
       else animateText(byId('daRealtimeTpm'), (value) => compact(Math.round(value)), throughput.tpm);
       setText('daRealtimeTpmMeta', `5 phút · ${throughput.samples} phép đo · ${realtimeAgeLabel(throughput.latestAt, now)}`);
     } else {
       setText('daRealtimeTpm', '—');
-      setText('daRealtimeTpmMeta', 'Không có phép đo provider trong 5 phút gần nhất');
+      setText('daRealtimeTpmMeta', throughput.latestAt !== null && now - throughput.latestAt > REALTIME_WINDOW_MS
+        ? 'Phép đo provider đã cũ; chờ cửa sổ 5 phút mới'
+        : throughput.samples === 0
+          ? 'Không có phép đo provider trong 5 phút gần nhất'
+          : 'Phép đo provider hoặc freshness chưa xác nhận');
     }
 
     const latency = rollingLatency(records, now);
@@ -1154,7 +1283,9 @@
       setText('daRealtimeLatencyMeta', `5 phút · ${latency.calls} lệnh · ${realtimeAgeLabel(latency.latestAt, now)}`);
     } else {
       setText('daRealtimeLatency', '—');
-      setText('daRealtimeLatencyMeta', 'Không có lệnh trong 5 phút gần nhất');
+      setText('daRealtimeLatencyMeta', perf === null || perf === undefined
+        ? 'Dữ liệu lệnh chưa khả dụng'
+        : 'Không có lệnh trong 5 phút gần nhất');
     }
   }
 
@@ -1218,8 +1349,11 @@
     if (!summaryList) return;
     const topTool = entries[0]?.tool || 'MCP Tools';
     const hasMeasured = Boolean(measured && measured.events > 0);
+    const distributionStatus = measured?.byModelStatus || 'unavailable';
+    const completeDistribution = hasMeasured && distributionStatus === 'complete' && entries.length > 0;
+    const partialDistribution = hasMeasured && distributionStatus === 'partial';
     const distributionTotal = hasMeasured ? measured.total : 0;
-    const topToolPct = hasMeasured && entries[0]
+    const topToolPct = completeDistribution && entries[0]
       ? percent(entries[0].inTokens + entries[0].outTokens, Math.max(1, distributionTotal)).toFixed(0)
       : null;
     const measuredTokens = measured ? measured.total : 0;
@@ -1244,8 +1378,14 @@
       <div class="da-summary-item">
         <div class="sum-icon-circle cyan">☵</div>
         <div class="sum-info">
-          <b>${hasMeasured ? 'Phân bổ mô hình' : 'Token chưa có phép đo'}</b>
-          <small>${hasMeasured ? `${topTool} chiếm ${topToolPct}% token canonical` : 'Không suy diễn token từ model-visible bytes'}</small>
+          <b>${!hasMeasured ? 'Token chưa có phép đo' : completeDistribution ? 'Phân bổ mô hình' : 'Phân bổ mô hình chưa đầy đủ'}</b>
+          <small>${!hasMeasured
+            ? 'Không suy diễn token từ model-visible bytes'
+            : completeDistribution
+              ? `${topTool} chiếm ${topToolPct}% token canonical`
+              : partialDistribution
+                ? 'Breakdown theo model chỉ có một phần; không phát hành tổng/tỷ trọng đầy đủ'
+                : 'Breakdown theo model chưa khả dụng; dữ liệu thiếu không được tính là 0'}</small>
         </div>
         <span class="sum-link-btn cyan">Chi tiết ›</span>
       </div>
@@ -1560,13 +1700,14 @@
     if (section.measurement !== 'chat_turn_measurements_v1') return null;
     if (section.missing_measurement_policy !== 'unknown_not_zero') return null;
     if (section.content_free !== true) return null;
-    const turnsTotal = Math.max(0, Number(section.turns_total) || 0);
-    const exactTurns = Math.max(0, Number(section.turns_exact) || 0);
+    const turnsTotal = observedNumber(section.turns_total);
+    const exactTurns = observedNumber(section.turns_exact);
+    if (turnsTotal === null || exactTurns === null) return null;
     const session = section.session_total && typeof section.session_total === 'object' ? section.session_total : {};
-    const sessionPoint = session.point === null || session.point === undefined ? null : Math.max(0, Number(session.point) || 0);
+    const sessionPoint = observedNumber(session.point);
     const latest = section.latest_turn && typeof section.latest_turn === 'object' ? section.latest_turn : null;
     const latestKind = latest ? String(latest.kind || 'unknown') : 'unknown';
-    const numOrNull = (value) => (value === null || value === undefined ? null : Math.max(0, Number(value) || 0));
+    const numOrNull = (value) => observedNumber(value);
     return {
       turnsTotal,
       exactTurns,
@@ -1607,6 +1748,97 @@
     setText('daTurnTokenStatus', 'Lượt mới nhất chưa đo');
   }
 
+  function renderTurnLog(operations) {
+    const container = byId('daTurnLog');
+    if (!container) return;
+    const section = operations?.turn_token_measurements;
+    const rows = turnTokenState(operations) && Array.isArray(section.recent_turns)
+      ? section.recent_turns.slice(0, 20)
+      : null;
+    container.replaceChildren();
+    if (!rows) {
+      const empty = document.createElement('div');
+      empty.className = 'da-turn-empty';
+      empty.textContent = 'Turn measurements unavailable';
+      container.append(empty);
+      return;
+    }
+    if (!rows.length) {
+      const empty = document.createElement('div');
+      empty.className = 'da-turn-empty';
+      empty.textContent = 'Chưa có lượt chat nào được đo';
+      container.append(empty);
+      return;
+    }
+    for (const row of rows) {
+      const item = document.createElement('div');
+      item.className = 'da-turn-row';
+      item.setAttribute('role', 'row');
+      const time = document.createElement('span');
+      time.className = 'da-turn-time';
+      const wallMs = observedNumber(row?.wall_time_ms);
+      time.textContent = wallMs !== null && wallMs > 0 && Number.isFinite(new Date(wallMs).getTime())
+        ? new Date(wallMs).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        : '—';
+      const kind = document.createElement('span');
+      const rawKind = String(row?.kind || 'unknown');
+      const kindName = rawKind === 'exact' || rawKind === 'structural_estimate' ? rawKind : 'unknown';
+      kind.className = `da-turn-kind ${kindName === 'exact' ? 'is-exact' : kindName === 'structural_estimate' ? 'is-estimated' : 'is-unknown'}`;
+      kind.textContent = kindName === 'exact' ? 'Exact' : kindName === 'structural_estimate' ? '≈ Ước lượng' : 'Chưa đo';
+      const tokens = document.createElement('span');
+      tokens.className = 'da-turn-tokens';
+      const point = observedNumber(row?.point);
+      if (point === null || kindName === 'unknown') {
+        tokens.textContent = '—';
+      } else if (kindName === 'exact') {
+        tokens.textContent = compact(point);
+      } else {
+        const lower = observedNumber(row?.lower);
+        const upper = observedNumber(row?.upper);
+        tokens.textContent = lower !== null && upper !== null
+          ? `≈${compact(point)} (${compact(lower)}–${compact(upper)})`
+          : `≈${compact(point)}`;
+      }
+      item.append(time, kind, tokens);
+      container.append(item);
+    }
+  }
+
+  // Pulse fast path (4-6s): the newest turn rides every overview pulse via
+  // live_control, bypassing the 30s analytics throttle. Session totals and
+  // history stay on the analytics path. An unavailable live read must clear
+  // the latest-turn card so an older analytics result cannot appear current.
+  function renderLiveTurnCard(orchestration) {
+    const live = orchestration?.latest_turn_measurement;
+    const valid = live && typeof live === 'object'
+      && live.measurement === 'chat_turn_measurements_v1'
+      && live.missing_measurement_policy === 'unknown_not_zero'
+      && live.content_free === true;
+    const latest = valid && live.latest_turn && typeof live.latest_turn === 'object' ? live.latest_turn : null;
+    const kind = String(latest?.kind || 'unknown');
+    const point = observedNumber(latest?.point);
+    if (point === null || (kind !== 'exact' && kind !== 'structural_estimate')) {
+      setText('daChatTurnValue', '—');
+      setText('daChatTurnDelta', 'Lượt mới nhất chưa có phép đo hợp lệ');
+      setText('daChatTurnMeta', 'Live measurement unavailable · lịch sử nằm trong nhật ký lượt chat');
+      setText('daTurnTokenStatus', 'Lượt mới nhất chưa đo');
+      return;
+    }
+    if (kind === 'exact') {
+      setText('daChatTurnValue', compact(point));
+      setText('daChatTurnDelta', 'Exact · live pulse · freshness chưa xác nhận');
+      setText('daChatTurnMeta', 'EXACT receipt · live pulse · timestamp chưa được transport expose');
+    } else {
+      const lower = observedNumber(latest.lower);
+      const upper = observedNumber(latest.upper);
+      const range = lower !== null && upper !== null ? ` (${compact(lower)}–${compact(upper)})` : '';
+      setText('daChatTurnValue', `≈${compact(point)}`);
+      setText('daChatTurnDelta', `Lượt mới nhất${range} · live pulse · freshness chưa xác nhận`);
+      setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · live pulse · timestamp chưa được transport expose');
+    }
+    setText('daTurnTokenStatus', kind === 'exact' ? `${compact(point)} Exact · trực tiếp` : `≈${compact(point)} · trực tiếp`);
+  }
+
   function renderChatTurnCard(operations) {
     const state = turnTokenState(operations);
     if (!state || state.turnsTotal < 1) {
@@ -1644,24 +1876,37 @@
     setText('daChatTurnMeta', 'Thiếu phép đo giữ unknown, không suy diễn từ 0');
   }
 
-  function renderTokenOverviewTiles(measured, operations, controllerUsage) {    const hasMeasured = Boolean(measured && measured.events > 0);
-    const accepted = Math.max(0, Number(operations?.outcomes?.accepted) || 0);
+  function renderTokenOverviewTiles(measured, operations, controllerUsage) {
+    const hasMeasured = Boolean(measured && measured.events > 0);
+    const accepted = observedNumber(operations?.outcomes?.accepted);
     const windowDays = Math.max(1, Number(operations?.window?.days) || 7);
     const controllerObserved = controllerUsage?.status === 'observed';
     const controllerUnobserved = controllerUsage?.status === 'unobserved';
     const controllerEstimate = controllerTokenEstimateState(operations);
     const estimateStatus = controllerEstimate?.status || 'unknown';
-    const estimatePrefix = controllerObserved ? `${Math.max(0, Number(controllerUsage?.eventCount) || 0)} exact · ` : '';
+    const estimatePrefix = controllerObserved && controllerUsage?.eventCount !== null
+      ? `${controllerUsage.eventCount} exact · `
+      : '';
+    const estimateRangeAvailable = controllerEstimate
+      && controllerEstimate.p10 !== null
+      && controllerEstimate.p50 !== null
+      && controllerEstimate.p90 !== null;
+    const calibrationSamples = controllerEstimate?.calibrationSamples;
+    const calibrationLabel = calibrationSamples === null || calibrationSamples === undefined
+      ? 'mẫu chưa xác nhận'
+      : `${calibrationSamples} mẫu`;
 
     setText('daProviderTokenStatus', hasMeasured ? 'Đã đo' : 'Chưa có dữ liệu');
-    if (estimateStatus === 'calibrated_estimate') {
+    if (estimateStatus === 'calibrated_estimate' && estimateRangeAvailable) {
       setText('daControllerTokenStatus', `${estimatePrefix}≈${compact(controllerEstimate.p50)} token bổ sung`);
-      setText('daEstimateConfidence', `${controllerEstimate.confidence.toUpperCase()} · ${controllerEstimate.calibrationSamples} mẫu · ${compact(controllerEstimate.p10)}–${compact(controllerEstimate.p90)}`);
-    } else if (estimateStatus === 'context_estimate') {
+      setText('daEstimateConfidence', `${controllerEstimate.confidence.toUpperCase()} · ${calibrationLabel} · ${compact(controllerEstimate.p10)}–${compact(controllerEstimate.p90)}`);
+    } else if (estimateStatus === 'context_estimate' && estimateRangeAvailable) {
       setText('daControllerTokenStatus', `${estimatePrefix}Context ≈${compact(controllerEstimate.p50)} token`);
       setText('daEstimateConfidence', `LOW · ${compact(controllerEstimate.p10)}–${compact(controllerEstimate.p90)} · không phải controller total`);
     } else if (estimateStatus === 'exact' || (controllerObserved && controllerEstimate?.missingExactRuns === 0)) {
-      setText('daControllerTokenStatus', `${Math.max(0, Number(controllerUsage?.eventCount) || 0)} exact receipt`);
+      setText('daControllerTokenStatus', controllerObserved && controllerUsage?.eventCount !== null
+        ? `${controllerUsage.eventCount} exact receipt`
+        : 'Exact receipt đã khai báo; coverage chưa xác nhận');
       setText('daEstimateConfidence', 'Không cần ước lượng');
     } else {
       setText('daControllerTokenStatus', controllerUnobserved ? 'Chưa đủ dữ liệu để ước lượng' : 'Chưa đủ dữ liệu');
@@ -1675,22 +1920,25 @@
       setText('daTokensOutDelta', 'Output token unknown');
       setText('daCostVnd', 'Chi phí unknown, không phải 0');
       setText('daEfficiencyDelta', 'Cached token unknown');
-      setText('daCallsDelta', accepted > 0 ? `${accepted} kết quả; token chưa đo` : 'Chưa có kết quả hoàn tất');
+      setText('daCallsDelta', accepted !== null && accepted > 0 ? `${accepted} kết quả; token chưa đo` : 'Chưa có kết quả hoàn tất');
       return;
     }
 
     animateText(byId('daTokensTotal'), compact, measured.total);
     animateText(byId('daTokensInTotal'), compact, measured.input);
     animateText(byId('daTokensOutTotal'), compact, measured.output);
-    animateText(byId('daEfficiencyTotal'), compact, measured.cached);
+    if (measured.cached === null) setText('daEfficiencyTotal', '—');
+    else animateText(byId('daEfficiencyTotal'), compact, measured.cached);
 
     setText('daTokensDelta', `${measured.events} UsageEvent · ${windowDays} ngày`);
-    setText('daTokensInDelta', `${compact(measured.cached)} cached`);
-    setText('daTokensOutDelta', measured.reasoning > 0 ? `${compact(measured.reasoning)} reasoning` : 'Output đã đo');
-    const cacheRatio = measured.input > 0 ? (measured.cached / measured.input) * 100 : null;
+    setText('daTokensInDelta', measured.cached === null ? 'Cached token unknown' : `${compact(measured.cached)} cached`);
+    setText('daTokensOutDelta', measured.reasoning === null
+      ? 'Reasoning token unknown'
+      : measured.reasoning > 0 ? `${compact(measured.reasoning)} reasoning` : 'Output đã đo');
+    const cacheRatio = measured.cached !== null && measured.input > 0 ? (measured.cached / measured.input) * 100 : null;
     setText('daEfficiencyDelta', cacheRatio === null ? 'Cache ratio unknown' : `${cacheRatio.toFixed(1)}% input cached`);
 
-    if (measured.costSource !== 'unobserved') {
+    if (measured.costSource !== 'unobserved' && measured.cost !== null) {
       animateText(byId('daCostTotal'), (value) => money(displayedCost(value)), measured.cost);
       setText(
         'daCostVnd',
@@ -1703,7 +1951,7 @@
       setText('daCostVnd', 'Chi phí unknown, không phải 0');
     }
 
-    if (accepted > 0) {
+    if (accepted !== null && accepted > 0) {
       animateText(byId('daCallsTotal'), compact, Math.round(measured.total / accepted));
       setText('daCallsDelta', `${accepted} kết quả · tỷ lệ tổng hợp ${windowDays} ngày`);
     } else {
@@ -1713,7 +1961,7 @@
 
     setText('daTokensMeta', `MEASURED · canonical non-overlap · ${measured.events} UsageEvent`);
     setText('daCostMeta', measured.costSource === 'pricing_derived' ? 'API-equivalent pricing estimate; not ChatGPT billing' : measured.costSource);
-    setText('daCallsMeta', accepted > 0 ? 'Aggregate token/accepted ratio; không phải causal per-run join' : 'Token/accepted unavailable');
+    setText('daCallsMeta', accepted !== null && accepted > 0 ? 'Aggregate token/accepted ratio; không phải causal per-run join' : 'Token/accepted unavailable');
   }
 
   function renderMeasurementCoverage(analytics) {
@@ -1752,7 +2000,7 @@
         const val = cells.get(`${day}:${hour}`) || 0;
         const intensity = val > 0 ? Math.min(1, 0.15 + 0.85 * (val / maxVal)) : 0.04;
         cell.style.background = `rgba(37, 99, 235, ${intensity.toFixed(2)})`;
-        cell.title = measured
+        cell.title = measured?.hours instanceof Map
           ? `${days[day]} ${hour}:00 — ${compact(val)} token canonical`
           : `${days[day]} ${hour}:00 — chưa có UsageEvent canonical`;
         container.appendChild(cell);
@@ -1792,11 +2040,13 @@
     renderTokenOverviewTiles(measured, operations, controllerUsage);
     renderTurnTokens(operations);
     renderChatTurnCard(operations);
+    renderLiveTurnCard(orchestration);
+    renderTurnLog(operations);
     renderSparkline(buckets);
     renderOperationsTable(operations);
     renderMeasurementCoverage(operations);
     renderChart(buckets, chartTimeMode);
-    renderDonut(entries);
+    renderDonut(entries, measured?.byModelStatus, measured?.byModelCachedComplete);
     renderBars(entries);
     renderModelTable(models, controllerUsage);
     renderFleetTable(models);
@@ -1805,7 +2055,7 @@
     updateAnomalyAlerts(summary, records);
     updateQuickSummary(summary, okRate, entries, measured);
     renderTicker();
-    setText('daLastSync', `Đồng bộ ${new Date().toLocaleTimeString('vi-VN')}`);
+    setText('daLastSync', snapshotFreshnessLabel());
     setText('daToolCostTotal', measured && measured.costSource !== 'unobserved' ? money(displayedCost(measured.cost)) : '—');
   }
 
@@ -1927,12 +2177,12 @@
 
   async function applyOverviewPulse(event) {
     const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
-    if (detail.snapshot) {
+    if (Object.prototype.hasOwnProperty.call(detail, 'snapshot')) {
       snapshot = detail.snapshot;
       loadCostSettings();
     }
-    if (detail.orchestration) orchestration = detail.orchestration;
-    if (detail.performance) perf = detail.performance;
+    if (Object.prototype.hasOwnProperty.call(detail, 'orchestration')) orchestration = detail.orchestration;
+    if (Object.prototype.hasOwnProperty.call(detail, 'performance')) perf = detail.performance;
     // Render the live pulse immediately. Analytics is an independent,
     // window-bounded read and must never hold the live Overview render behind
     // its IPC timeout or an in-flight request.
@@ -1947,6 +2197,9 @@
   byId('daRefreshButton')?.addEventListener('click', () => {
     lastAnalyticsReadAt = 0;
     requestOverviewRefresh();
+  });
+  byId('daTokenBoardButton')?.addEventListener('click', () => {
+    if (typeof api.openTokenDashboard === 'function') api.openTokenDashboard().catch(() => {});
   });
   byId('daApply')?.addEventListener('click', applyCostModel);
 

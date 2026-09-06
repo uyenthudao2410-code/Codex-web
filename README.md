@@ -129,7 +129,7 @@ sha256
 tool_count = 8
 ```
 
-Electron so fingerprint hiện tại với fingerprint đã được connector thực sự discover. Khi contract hoặc MCP process thay đổi, app yêu cầu **Refresh actions / Scan Tools / reconnect hoặc recreate MCP app trong ChatGPT** theo khả năng của workspace. Nút **“Kiểm tra lại trạng thái”** chỉ poll bằng chứng; Recovery Host chỉ tự ACK sau khi MCP process hiện tại nhận `tools/list` hoặc `server/discover` từ external ChatGPT connector qua managed Tunnel, có attestation hợp lệ và khớp exact activation epoch, process/server identity cùng contract SHA. Xác nhận thủ công, `tools/call`, persisted hash và raw localhost HTTP không thay thế receipt này.
+Electron so fingerprint hiện tại với fingerprint đã được connector thực sự discover. Khi contract hoặc MCP process thay đổi, app yêu cầu **Refresh actions / Scan Tools / reconnect hoặc recreate MCP app trong ChatGPT** theo khả năng của workspace. Nút **“Kiểm tra lại trạng thái”** chỉ poll bằng chứng. Recovery Host có thể guarded-ACK theo nhánh strict khi nhận `tools/list` hoặc `server/discover` từ external ChatGPT connector qua managed Tunnel với attestation khớp exact activation epoch, process/server identity và contract SHA hiện tại; ngoài ra, khi admission còn đóng và `workspace_accessed=false`, một `workspace_context` bootstrap có managed-tunnel attestation cũng có thể là receipt hợp lệ nếu nó khớp exact epoch/process/server/current SHA và SHA đã ACK trùng SHA hiện tại hoặc là compatible predecessor được khai báo. Trường hợp `CURRENT_COMPATIBLE_ACKNOWLEDGED` vẫn giữ `connector_rediscovered=false` và không được mô tả như strict rediscovery. Generic `tools/call`, xác nhận thủ công/persisted hash và raw localhost HTTP không thay thế một receipt hợp lệ theo hai nhánh này.
 
 Cơ chế này là **stale-schema detection fail-closed**, không giả định ChatGPT sẽ tự động nhận schema mới và repository không có API để tự ép connector phía ChatGPT rescan. Việc refresh/re-publish phía ChatGPT vẫn phụ thuộc khả năng của workspace/host.
 
@@ -512,8 +512,20 @@ npm install
 npm start
 ```
 
-`npm start` là lệnh **full-system refresh** cho đúng installation hiện tại. Nó
-gửi yêu cầu `full_clean_refresh` tới Recovery Host, đóng admission, dừng và
+`npm start` và `npm run dev` dùng cùng lifecycle **start/focus**. Lệnh kiểm tra
+receipt của Recovery Host cho đúng development installation, focus UI đang
+`CURRENT`, activate UI `STALE` qua checkpoint hợp lệ hoặc khởi chạy UI `MISSING`,
+rồi xác minh lại UI và runtime readiness. Lệnh không tự yêu cầu full-system
+refresh; Recovery Host phải có sẵn để chứng minh đúng installation.
+
+Khi cần **full-system refresh**, dùng lệnh riêng:
+
+```powershell
+npm run dev:refresh
+```
+
+`npm run dev:refresh` gửi yêu cầu `full_clean_refresh` tới Recovery Host của đúng
+installation hiện tại, đóng admission, dừng và
 thay thế Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và
 Electron UI bằng process mới trong cùng một `activation_epoch_id`, rồi kiểm tra
 PID/instance/revision trước khi trả quyền điều khiển. Lệnh không xoá
@@ -522,19 +534,26 @@ identity. Nếu canonical ledger, ownership hoặc runtime postflight không ch�
 minh được, lệnh fail-closed với `UPDATE_INCOMPLETE`.
 
 Completion của CLI và admission của connector là hai mốc khác nhau. Khi exact
-component census đã chứng minh toàn bộ process mới, `npm start` trả exit code 0
+component census đã chứng minh toàn bộ process mới, `npm run dev:refresh` trả exit code 0
 với `DEV_UI REFRESHED`, kể cả khi record durable còn
 `activation=VERIFYING admission=closed fully_ready=false connector=pending`.
 Trạng thái này không phải lỗi khởi động MCP/Tunnel và không được đổi thành
-`fullyReady=true`: Recovery Host chỉ chuyển epoch sang `READY`, mở admission và
-ACK contract sau receipt `tools/list`/`server/discover` thật của đúng MCP process
-hiện tại. Thiếu/sai PID, epoch, revision, workspace, device, projection hoặc
-health receipt vẫn làm `npm start` fail.
+`fullyReady=true`: Recovery Host chỉ chuyển epoch sang `READY` và mở admission
+sau guarded ACK cho một trong hai receipt hợp lệ. Nhánh strict dùng
+`tools/list`/`server/discover` có attestation của đúng MCP process hiện tại.
+Nhánh tương thích dùng `workspace_context` bootstrap có managed-tunnel attestation,
+khi admission còn đóng và `workspace_accessed=false`, gắn đúng activation epoch,
+MCP process instance, server instance và contract SHA hiện tại. Nhánh này chỉ áp
+dụng khi SHA đã ACK trùng SHA hiện tại hoặc là predecessor đã được khai báo tương
+thích. `CURRENT_COMPATIBLE_ACKNOWLEDGED` vẫn giữ
+`connector_rediscovered=false`; đây không phải strict rediscovery. Thiếu/sai PID,
+epoch, revision, workspace, device, projection hoặc health receipt vẫn làm
+`npm run dev:refresh` fail.
 
-`npm run dev` chỉ là lifecycle helper cho UI (focus/activate missing UI), còn
 `npm run dev:stop` chỉ đóng UI và giữ toàn bộ service nền. Connector discovery
 và ACK vẫn là gate riêng: refresh có thể khởi động process mới nhưng admission
-chỉ mở khi Recovery Host nhận được receipt discovery hiện tại.
+chỉ mở khi Recovery Host đã kiểm chứng và guarded ACK một trong hai nhánh receipt
+nêu trên, cùng các gate activation còn lại.
 
 Trên thanh công cụ có nút **Bảng điều khiển** để mở **Execution Control Center** ngay bên cạnh ChatGPT. Panel hiển thị theo thời gian thực:
 

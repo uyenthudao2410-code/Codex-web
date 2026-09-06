@@ -1,0 +1,125 @@
+[
+  {
+    "version": 2,
+    "task_id": "f54aec53ebef4285972b54c55fc19b12",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T01:02:54.688Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-06T01:02:14.977Z",
+    "updated_at": "2026-09-06T01:02:54.688Z",
+    "events": [
+      {
+        "time": "2026-09-06T01:02:14.977Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T01:02:14.988Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T01:02:54.688Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),c=require('crypto'); const a=['renderer/panel.html','renderer/panel.js','renderer/browser.js','tests/control-panel.test.js','tests/browser-runtime-truthfulness.test.js','resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py','resources/coding-tools-mcp/tests/test_operations_analytics.py','docs/RECOVERY_HOST.md']; for (const p of a) { const b=fs.readFileSync(p); const h=c.createHash('sha256').update(b).digest('hex'); const pid=c.createHash('sha256').u",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T01:02:54.688Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T01:03:00.315Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e623944429d54a078025ecbfb373de1f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T01:03:00.330Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-06T01:03:00.316Z",
+    "updated_at": "2026-09-06T01:03:00.330Z",
+    "events": [
+      {
+        "time": "2026-09-06T01:03:00.316Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T01:03:00.330Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),c=require('crypto'); const a=['renderer/panel.html','renderer/panel.js','renderer/browser.js','tests/control-panel.test.js','tests/browser-runtime-truthfulness.test.js','resources/coding-tools-mcp/coding_tools_mcp/operations_analytics.py','resources/coding-tools-mcp/tests/test_operations_analytics.py','docs/RECOVERY_HOST.md']; for (const p of a) { const b=fs.readFileSync(p); const h=c.createHash('sha256').update(b).digest('hex'); const pid=c.createHash('sha256').u",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T01:03:00.330Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T01:03:08.908Z",
+    "archive_reason": "finished"
+  }
+]

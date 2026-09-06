@@ -1,0 +1,380 @@
+{
+  "version": 2,
+  "task_id": "166306b29d6c454b939cdb76454cc6ad",
+  "orchestration": {
+    "run_id": "86ffded23343449dbd7e41c3a7ae08bd",
+    "wave_id": "9f4fda5e450c44b99a7056ed4db830a1",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "6cea96e7cef53cbcb5ddf5c275a7536101f4a046372fd0a36d6a7f232fc08429",
+    "contract_fp": ""
+  },
+  "objective": "Fast reissue of the already-proven Recovery Host component-classification bytes to avoid the observed transient dirty race. Adopt exactly electron/services/componentRevision.js SHA-256 eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db and tests/component-revision.test.js SHA-256 a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1. Current precheck confirms electron/services/recoveryHost.js and package.json are clean. Preserve renderer/token-dashboard.html unchanged and outside receipts. Do not rerun the long test suite; the exact bytes already have accepted full proof. Run only git diff --check, create a fresh proof/checkpoint quickly, and make no source mutation, restart, commit, push, reset, or clean.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:00:45.146Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:00:45.146Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:00:45.146Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "iA97P2QvhLf2U67lby3uxQ9G",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 733,
+    "finished_at": "2026-09-04T12:00:44.774Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/services/componentRevision.js",
+          "state": "file",
+          "sha256": "eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db",
+          "size_bytes": 13188,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "86ffded23343449dbd7e41c3a7ae08bd",
+          "wave_id": "9f4fda5e450c44b99a7056ed4db830a1"
+        },
+        {
+          "path": "tests/component-revision.test.js",
+          "state": "file",
+          "sha256": "a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1",
+          "size_bytes": 8367,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "86ffded23343449dbd7e41c3a7ae08bd",
+          "wave_id": "9f4fda5e450c44b99a7056ed4db830a1"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 28,
+        "head_hash": "05ff7eed223dde37e49894e037b5339a3666bd18a66a8c5d543467b0eb33b35a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-86ffded23343449dbd7e41c3a7ae08bd\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-86ffded23343449dbd7e41c3a7ae08bd\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "86ffded23343449dbd7e41c3a7ae08bd",
+      "wave_id": "9f4fda5e450c44b99a7056ed4db830a1",
+      "checkpoint_id": "eae61d6f5f6145af99153c5f469cee25",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "6cea96e7cef53cbcb5ddf5c275a7536101f4a046372fd0a36d6a7f232fc08429",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fast reissue of the already-proven Recovery Host component-classification bytes to avoid the observed transient dirty race. Adopt exactly electron/services/componentRevision.js SHA-256 eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db and tests/component-revision.test.js SHA-256 a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1. Current precheck confirms electron/services/recoveryHost.js and package.json are clean. Preserve renderer/token-dashboard.html unchanged and outside receipts. Do not rerun the long test suite; the exact bytes already have accepted full proof. Run only git diff --check, create a fresh proof/checkpoint quickly, and make no source mutation, restart, commit, push, reset, or clean.",
+        "objective_revision": 1,
+        "objective_sha256": "fe0191339ea74bb0c0b5daafcf2c2471f1f8c6d07d2c9d3a13d61272f7e94177",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "68d8d5a5331a4d9c8f19cd69dc98320d",
+          "stage_id": "check:a2b64d19658c495c",
+          "status": "passed",
+          "duration_ms": 1268,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "4bf0e8319a7ca71a90edb6276daaa9fd531ac56a5849a02f44648665ea099585",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-04T11:59:59.544Z",
+  "updated_at": "2026-09-04T12:01:09.119Z",
+  "events": [
+    {
+      "time": "2026-09-04T11:59:59.544Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-04T11:59:59.760Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run dev:status && cmd /c more +21200 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "session_id": "2DwnSjk6LNLeATvw1vLywVYt"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:00.511Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run dev:status && cmd /c more +21200 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:26.477Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js && certutil -hashfile electron\\services\\componentRevision.js SHA256 && certutil -hashfile tests\\component-revision.test.js SHA256",
+        "session_id": "Nvnv4-XjpFHlqzqRLoWWdN81"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:26.795Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js && certutil -hashfile electron\\services\\componentRevision.js SHA256 && certutil -hashfile tests\\component-revision.test.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:38.812Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:40.956Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:42.000Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:42.006Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:42.997Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:43.266Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:44.245Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- electron/services/componentRevision.js tests/component-revision.test.js",
+        "session_id": "iA97P2QvhLf2U67lby3uxQ9G"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:44.774Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- electron/services/componentRevision.js tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:45.144Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:45.146Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:45.697Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:45.700Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:46.120Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "fe8beac00f79dbefaf7dcedb314cdef19763048fa40533f7cd658ff6b7aea5e0"
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:46.238Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:56.451Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:58.945Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fe8beac00f79dbefaf7dcedb314cdef19763048fa40533f7cd658ff6b7aea5e0"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:06.791Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:08.964Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:08.968Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:09.115Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "4bf0e8319a7ca71a90edb6276daaa9fd531ac56a5849a02f44648665ea099585"
+      }
+    }
+  ]
+}

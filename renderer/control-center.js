@@ -25,6 +25,10 @@
   const CONTROL_CENTER_BUSY_POLL_MS = 4000;
   const CONTROL_CENTER_IDLE_POLL_MS = 6000;
   const CONTROL_CENTER_HIDDEN_POLL_MS = 15000;
+  // Recovery Host exposes a completed supervision projection. Its documented
+  // fallback freshness window is 30 seconds when the renderer has no explicit
+  // watchdog threshold from preload.
+  const SUPERVISION_STATUS_STALE_MS = 30000;
   const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
   let reducedMotion = motionQuery?.matches === true;
 
@@ -102,9 +106,27 @@
   }
 
   function finiteNumber(value) {
-    if (value === null || value === undefined || value === '') return null;
+    if (typeof value !== 'number' && typeof value !== 'string') return null;
+    if (typeof value === 'string' && !value.trim()) return null;
     const number = Number(value);
     return Number.isFinite(number) ? number : null;
+  }
+
+  function finiteNonNegativeNumber(value) {
+    const number = finiteNumber(value);
+    return number !== null && number >= 0 ? number : null;
+  }
+
+  function exactBoolean(value) {
+    return typeof value === 'boolean' ? value : null;
+  }
+
+  function observedBoolean(payload, ...keys) {
+    const values = keys
+      .map((key) => exactBoolean(payload?.[key]))
+      .filter((value) => value !== null);
+    if (!values.length) return null;
+    return values.every((value) => value === values[0]) ? values[0] : null;
   }
 
   function compactNumber(value) {
@@ -287,11 +309,13 @@
     const opencodeState = opencode?.online ? 'connected' : 'offline';
     const anyClientOnline = Boolean(chatweb?.online || desktop?.online || opencode?.online);
     const anyRouteActive = Object.values(routes).some((state) => state === 'active');
-    const mcpRunning = Boolean(snapshot?.status?.runtimeRunning || snapshot?.status?.mcpRunning);
+    const runtime = runtimeObservation(snapshot?.status);
+    const mcpRunning = runtime.runtimeRunning === true;
+    const runtimeUnknown = runtime.freshness !== 'fresh' || runtime.runtimeRunning === null;
     const hubOnline = Boolean(mcpRunning || anyClientOnline);
     const hubState = hubOnline && (activity.busy || taskStatus === 'active' || anyRouteActive || write.status === 'active')
-      ? 'active' : hubOnline ? 'connected' : 'offline';
-    const writerState = write.status === 'active' ? 'active' : hubOnline ? 'connected' : 'offline';
+      ? 'active' : hubOnline ? 'connected' : runtimeUnknown ? 'waiting' : 'offline';
+    const writerState = write.status === 'active' ? 'active' : hubOnline ? 'connected' : runtimeUnknown ? 'waiting' : 'offline';
 
     return {
       clients: { chatweb, desktop, opencode },
@@ -301,6 +325,7 @@
       routes,
       details,
       activity,
+      runtime,
       states: {
         chatweb: chatwebState,
         desktop: desktopState,
@@ -408,7 +433,7 @@
         ? `Codex Desktop · ${view.controllerOwner === 'codex-desktop' ? 'semantic controller' : 'worker'}` : 'Codex Desktop offline',
       opencode: view.clients.opencode?.online ? 'OpenCode frontend connected to Execution Hub' : 'OpenCode offline',
       fast: view.details.fast,
-      hub: `Execution Hub · ${view.hubOnline ? 'online' : 'offline'} · task ${view.taskStatus}${view.activity.busy ? ` · ${view.activity.label}` : ''}`,
+      hub: `Execution Hub · ${view.runtime.runtimeRunning === null ? 'unknown' : view.hubOnline ? 'online' : 'offline'} · task ${view.taskStatus}${view.activity.busy ? ` · ${view.activity.label}` : ''}`,
       deepseek: view.details.deepseek,
       terra: view.details.terra,
       writer: view.write.status === 'active'
@@ -561,9 +586,10 @@
   function renderCommandCenter(data) {
     const view = renderRouter('cc', data);
     renderActivity(data);
-    const ready = Boolean(snapshot?.status?.fullyReady);
-    const runtimeRunning = Boolean(snapshot?.status?.runtimeRunning);
-    const tunnelRunning = Boolean(snapshot?.status?.tunnelRunning);
+    const runtime = view.runtime;
+    const ready = runtime.fullyReady;
+    const runtimeRunning = runtime.runtimeRunning;
+    const tunnelRunning = runtime.tunnelRunning;
     const clientsOnline = Object.values(view.clients).filter((client) => client?.online).length;
     const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
     const activeDelegations = delegations.filter((item) => delegationState(item?.status) === 'active');
@@ -575,14 +601,26 @@
     const waves = Array.isArray(data?.waves) ? data.waves : [];
     const wave = waves[waves.length - 1] || null;
 
-    setPill('ccHealthBadge', ready ? 'Operational' : runtimeRunning ? 'Degraded' : 'Offline', ready ? 'active' : runtimeRunning ? 'waiting' : 'offline');
-    setText('ccHeadline', ready ? 'Execution Hub is operational' : runtimeRunning ? 'Runtime is online; connectivity is incomplete' : 'Execution Hub is not running');
+    const telemetryUnknown = runtime.freshness !== 'fresh' || runtimeRunning === null;
+    const readinessUnknown = runtimeRunning === true && ready === null;
+    setPill('ccHealthBadge', ready === true ? 'Operational' : telemetryUnknown || readinessUnknown ? 'UNKNOWN' : runtimeRunning === true ? 'Degraded' : 'Offline', ready === true ? 'active' : telemetryUnknown || readinessUnknown ? 'waiting' : runtimeRunning === true ? 'waiting' : 'offline');
+    setText('ccHeadline', ready === true
+      ? 'Execution Hub is operational'
+      : telemetryUnknown
+        ? `Runtime telemetry ${runtime.freshness === 'stale' ? 'is stale' : 'is unavailable'}`
+        : readinessUnknown
+          ? 'Runtime receipt is incomplete'
+          : runtimeRunning === true
+            ? 'Runtime is online; connectivity is incomplete'
+            : 'Execution Hub is not running');
     setText('ccSubline', ready
       ? 'Một control plane duy nhất đang giữ task, authority, routing và proof. Chỉ các đường có evidence thật mới được animation.'
       : 'Control Center vẫn hiển thị durable task state và client evidence hiện có; không suy đoán provider/model activity.');
 
-    setText('ccKpiRuntime', runtimeRunning ? 'Online' : 'Stopped');
-    setText('ccKpiRuntimeMeta', `MCP ${runtimeRunning ? 'ON' : 'OFF'} · Tunnel ${tunnelRunning ? 'ON' : 'OFF'}`);
+    setText('ccKpiRuntime', runtimeRunning === true ? 'Online' : runtimeRunning === false ? 'Stopped' : 'UNKNOWN');
+    setText('ccKpiRuntimeMeta', telemetryUnknown
+      ? `Telemetry ${runtime.freshness.toUpperCase()} · MCP UNKNOWN · Tunnel UNKNOWN`
+      : `MCP ${runtimeRunning === true ? 'ON' : runtimeRunning === false ? 'OFF' : 'UNKNOWN'} · Tunnel ${tunnelRunning === true ? 'ON' : tunnelRunning === false ? 'OFF' : 'UNKNOWN'}`);
     setText('ccKpiClients', `${clientsOnline}/3`);
     setText('ccKpiClientsMeta', ['ChatWeb', 'Codex', 'OpenCode'].filter((_, index) => [view.clients.chatweb, view.clients.desktop, view.clients.opencode][index]?.online).join(' · ') || 'No frontend online');
     setText('ccKpiRoute', activeDelegations.length ? (activeDelegations[0]?.model || activeDelegations[0]?.route_resolved || 'Active') : 'Idle');
@@ -640,18 +678,28 @@
 
   function renderRecovery(data) {
     const health = snapshot?.status || {};
+    const runtime = runtimeObservation(health);
+    if (runtime.freshness !== 'fresh') {
+      setText('ccRecoveryState', 'UNKNOWN');
+      setText('ccRecoveryMeta', `Runtime telemetry ${runtime.freshness}; recovery state is not inferred.`);
+      setText('ccContextPressure', 'Unknown');
+      setText('ccContextMeta', 'Runtime telemetry is unavailable or stale; context pressure was not refreshed.');
+      return;
+    }
     const pressure = data?.continuity?.context_pressure || {};
-    const failures = Number(health.failures || 0);
-    const attempts = Number(health.recoveryAttempts || 0);
-    const deferred = Number(health.deferredRecoveryCount || 0);
-    const recoveryState = health.recovering ? 'Recovering' : health.recoveryBlocked ? 'Blocked' : failures ? 'Degraded' : 'Stable';
+    const failures = finiteNonNegativeNumber(health.failures);
+    const attempts = finiteNonNegativeNumber(health.recoveryAttempts);
+    const deferred = finiteNonNegativeNumber(health.deferredRecoveryCount);
+    const recoveryKnown = observedBoolean(health, 'recovering') !== null && observedBoolean(health, 'recoveryBlocked') !== null;
+    const recoveryState = !recoveryKnown ? 'UNKNOWN'
+      : health.recovering ? 'Recovering' : health.recoveryBlocked ? 'Blocked' : failures === null ? 'UNKNOWN' : failures ? 'Degraded' : 'Stable';
     const detailParts = [];
     if (health.failureKind) detailParts.push(health.failureKind);
-    if (failures) detailParts.push(`${failures} consecutive fail${failures === 1 ? '' : 's'}`);
-    if (attempts) detailParts.push(`${attempts} recovery attempt${attempts === 1 ? '' : 's'}`);
-    if (deferred) detailParts.push(`${deferred} deferred`);
+    if (failures !== null && failures) detailParts.push(`${failures} consecutive fail${failures === 1 ? '' : 's'}`);
+    if (attempts !== null && attempts) detailParts.push(`${attempts} recovery attempt${attempts === 1 ? '' : 's'}`);
+    if (deferred !== null && deferred) detailParts.push(`${deferred} deferred`);
     if (health.lastStartFailure) detailParts.push(`start: ${String(health.lastStartFailure).slice(0, 120)}`);
-    const recoveryMeta = detailParts.join(' · ') || 'No local recovery evidence.';
+    const recoveryMeta = detailParts.join(' · ') || (recoveryKnown && failures !== null ? 'No local recovery evidence.' : 'Recovery telemetry is incomplete.');
     setText('ccRecoveryState', recoveryState);
     setText('ccRecoveryMeta', recoveryMeta);
     const pressureUnknown = String(pressure?.status || 'unknown').toLowerCase() === 'unknown';
@@ -672,10 +720,58 @@
   }
 
   function snapshotAgeMs(payload) {
-    const direct = Number(payload?.snapshotAgeMs);
-    if (Number.isFinite(direct) && direct >= 0) return direct;
-    const observedAt = Number(payload?.snapshotObservedAtUnixMs);
-    return Number.isFinite(observedAt) && observedAt > 0 ? Math.max(0, Date.now() - observedAt) : null;
+    const direct = finiteNonNegativeNumber(payload?.snapshotAgeMs);
+    const observedAt = finiteNumber(payload?.snapshotObservedAtUnixMs);
+    if (direct === null || observedAt === null || observedAt <= 0 || observedAt > Date.now()) return null;
+    return Math.max(direct, Math.max(0, Date.now() - observedAt));
+  }
+
+  function snapshotObservation(payload) {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return { freshness: 'unknown', reason: 'snapshot_missing', observedAtUnixMs: null, ageMs: null };
+    }
+    const observedAtUnixMs = finiteNumber(payload.snapshotObservedAtUnixMs);
+    const ageMs = snapshotAgeMs(payload);
+    if (payload.telemetryAvailable !== true) {
+      return { freshness: 'unknown', reason: 'telemetry_unavailable', observedAtUnixMs, ageMs };
+    }
+    if (observedAtUnixMs === null || observedAtUnixMs <= 0 || observedAtUnixMs > Date.now()) {
+      return { freshness: 'unknown', reason: 'snapshot_receipt_missing', observedAtUnixMs: null, ageMs };
+    }
+    if (ageMs === null) {
+      return { freshness: 'unknown', reason: 'snapshot_age_missing', observedAtUnixMs, ageMs: null };
+    }
+    if (payload.signalStale === true) {
+      return { freshness: 'stale', reason: 'signal_stale', observedAtUnixMs, ageMs };
+    }
+    const explicitStaleAfterMs = finiteNonNegativeNumber(payload.staleAfterMs);
+    const staleAfterMs = explicitStaleAfterMs !== null && explicitStaleAfterMs > 0
+      ? Math.min(explicitStaleAfterMs, SUPERVISION_STATUS_STALE_MS) : SUPERVISION_STATUS_STALE_MS;
+    if (ageMs > staleAfterMs) {
+      return { freshness: 'stale', reason: 'snapshot_age_expired', observedAtUnixMs, ageMs };
+    }
+    return { freshness: 'fresh', reason: 'receipt_current', observedAtUnixMs, ageMs };
+  }
+
+  function runtimeObservation(payload) {
+    const freshness = snapshotObservation(payload);
+    if (freshness.freshness !== 'fresh') {
+      return { ...freshness, runtimeRunning: null, tunnelRunning: null, fullyReady: null };
+    }
+    return {
+      ...freshness,
+      runtimeRunning: observedBoolean(payload, 'runtimeRunning', 'mcpRunning'),
+      tunnelRunning: observedBoolean(payload, 'tunnelRunning'),
+      fullyReady: observedBoolean(payload, 'fullyReady')
+    };
+  }
+
+  function snapshotSyncText(payload) {
+    const observation = snapshotObservation(payload);
+    if (observation.freshness !== 'fresh') {
+      return `Snapshot ${observation.freshness.toUpperCase()} · ${observation.reason}`;
+    }
+    return `Last receipt ${formatTime(observation.observedAtUnixMs)} · age ${formatDuration(observation.ageMs)}`;
   }
 
   function nextPaintDuration(startedAt) {
@@ -726,18 +822,23 @@
       if (snapshotResult.status === 'fulfilled') {
         try {
           const payload = unwrap(snapshotResult.value);
-          snapshot = { ...(snapshot || {}), status: payload };
+          snapshot = payload && typeof payload === 'object' && !Array.isArray(payload)
+            ? { ...(snapshot || {}), status: payload }
+            : null;
         } catch { snapshot = null; }
-      }
+      } else snapshot = null;
       if (orchestrationResult.status === 'fulfilled') {
-        try { orchestration = unwrap(orchestrationResult.value); } catch { orchestration = null; }
-      }
+        try {
+          const payload = unwrap(orchestrationResult.value);
+          orchestration = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
+        } catch { orchestration = null; }
+      } else orchestration = null;
       snapshotApplyMs = nowMs() - applyStartedAt;
       await refreshPerformance(force);
       const renderStartedAt = nowMs();
       renderAll();
       const renderMs = nowMs() - renderStartedAt;
-      setText('ccLastSync', `Last sync ${new Date().toLocaleTimeString('vi-VN')}`);
+      setText('ccLastSync', snapshotSyncText(snapshot?.status));
       const pulseStartedAt = nowMs();
       document.dispatchEvent(new CustomEvent('coding-tools:overview-pulse', {
         detail: { snapshot, orchestration, performance, force: force === true, observedAt: Date.now() }
@@ -819,18 +920,27 @@
   api.onHeartbeat?.((health) => {
     if (!snapshot) snapshot = { status: {} };
     snapshot.status ||= {};
-    snapshot.status.runtimeRunning = Boolean(health?.mcpRunning);
-    snapshot.status.tunnelRunning = Boolean(health?.tunnelRunning);
-    snapshot.status.fullyReady = Boolean(health?.fullyReady);
-    snapshot.status.recovering = Boolean(health?.recovering);
-    snapshot.status.failures = Number(health?.failures || 0);
-    snapshot.status.failureKind = String(health?.failureKind || '');
-    snapshot.status.recoveryAttempts = Number(health?.recoveryAttempts || 0);
-    snapshot.status.nextRecoveryAt = Number(health?.nextRecoveryAt || 0);
-    snapshot.status.recoveryBlocked = Boolean(health?.recoveryBlocked);
-    snapshot.status.lastStartFailure = String(health?.lastStartFailure || '');
-    snapshot.status.deferredRecoveryCount = Number(health?.deferredRecoveryCount || 0);
-    if (shouldPoll() && !refreshInFlight) renderAll();
+    snapshot.status.runtimeRunning = exactBoolean(health?.runtimeRunning);
+    snapshot.status.mcpRunning = exactBoolean(health?.mcpRunning);
+    snapshot.status.tunnelRunning = exactBoolean(health?.tunnelRunning);
+    snapshot.status.fullyReady = exactBoolean(health?.fullyReady);
+    snapshot.status.recovering = exactBoolean(health?.recovering);
+    snapshot.status.failures = finiteNonNegativeNumber(health?.failures);
+    snapshot.status.failureKind = typeof health?.failureKind === 'string' ? health.failureKind : '';
+    snapshot.status.recoveryAttempts = finiteNonNegativeNumber(health?.recoveryAttempts);
+    snapshot.status.nextRecoveryAt = finiteNonNegativeNumber(health?.nextRecoveryAt);
+    snapshot.status.recoveryBlocked = exactBoolean(health?.recoveryBlocked);
+    snapshot.status.lastStartFailure = typeof health?.lastStartFailure === 'string' ? health.lastStartFailure : '';
+    snapshot.status.deferredRecoveryCount = finiteNonNegativeNumber(health?.deferredRecoveryCount);
+    snapshot.status.telemetryAvailable = health?.telemetryAvailable === true;
+    snapshot.status.signalStale = health?.signalStale === true;
+    snapshot.status.staleAfterMs = finiteNonNegativeNumber(health?.staleAfterMs);
+    snapshot.status.snapshotObservedAtUnixMs = finiteNumber(health?.snapshotObservedAtUnixMs);
+    snapshot.status.snapshotAgeMs = finiteNonNegativeNumber(health?.snapshotAgeMs);
+    if (shouldPoll() && !refreshInFlight) {
+      renderAll();
+      setText('ccLastSync', snapshotSyncText(snapshot.status));
+    }
   });
 
   refresh(true).finally(() => setTimeout(pollControlCenter, controlCenterPollDelay()));

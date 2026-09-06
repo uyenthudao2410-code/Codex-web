@@ -3,11 +3,48 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
+from .errors import ToolFailure
 from .task_state import TaskStateStore
 
 
 class RuntimeStatelessContextMixin:
     """Exact-run recovery for stateless ChatWeb application contexts."""
+
+    def panel_handoff_state(self, run_id: object, wave_id: object = "") -> tuple[dict[str, Any], dict[str, Any], str, str]:
+        """Read the panel's exact projection without adopting a task context.
+
+        The authenticated panel reads this same unscoped workspace projection.
+        Its client label selects this adapter; it grants no controller or write
+        authority. A stale or missing selection must not fall back to another RUN.
+        """
+        requested_run = str(run_id or "").strip()
+        if not requested_run:
+            raise ToolFailure(
+                "HANDOFF_RUN_REQUIRED", "Panel handoff requires the displayed RUN.",
+                category="validation", retryable=False,
+            )
+        state = TaskStateStore(self._current_request_workspace_root()).get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        canonical_run = self.orchestration_ledger.get_run(requested_run)
+        context = self.orchestration_control.snapshot(requested_run)
+        current_wave = str(context.wave_id or "") if context is not None else ""
+        if (
+            not isinstance(canonical_run, dict)
+            or context is None or not current_wave
+            or str(projection.get("run_id") or "") != requested_run
+            or str(projection.get("wave_id") or "") != current_wave
+            or not str(canonical_run.get("task_id") or "").strip()
+            or str(state.get("task_id") or "") != str(canonical_run.get("task_id") or "")
+            or not str(state.get("objective") or "").strip()
+            or (str(wave_id or "").strip() and str(wave_id).strip() != current_wave)
+        ):
+            raise ToolFailure(
+                "HANDOFF_PANEL_BINDING_MISMATCH",
+                "The displayed panel RUN/WAVE no longer has an exact task binding; refresh the panel.",
+                category="runtime", retryable=False,
+                details={"run_id": requested_run},
+            )
+        return state, context.projection(), requested_run, current_wave
 
     def stateless_task_context_for_run(self, run_id: object, *, logical_client_id: str = "chatweb") -> str:
         expected_run_id = str(run_id or "").strip()

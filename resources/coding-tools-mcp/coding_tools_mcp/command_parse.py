@@ -461,9 +461,34 @@ def find_command_path_candidates(args: list[str]) -> list[str]:
     return candidates
 
 
+def explicit_python_pytest_arguments_start(args: list[str]) -> int | None:
+    # Recognize the explicit interpreter invocation independently of the generic
+    # candidate scanner. Script arguments must never establish module context.
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "-m":
+            return index + 2 if index + 1 < len(args) and args[index + 1] == "pytest" else None
+        if arg in {"-W", "-X", "--check-hash-based-pycs"}:
+            index += 2
+            continue
+        if arg.startswith(("-W", "-X")) or re.fullmatch(r"-[bBdEiIOPqsSuvx]+", arg):
+            index += 1
+            continue
+        # Includes script/stdin, --, inline code, another module in attached
+        # syntax, and unknown options. None authorizes selector normalization.
+        return None
+    return None
+
+
 def script_command_path_candidates(command_name: str, args: list[str]) -> list[str]:
     skip_next = False
-    for arg in args:
+    pytest_selector_index = explicit_python_pytest_arguments_start(args) if command_name in {"python", "python3"} else None
+    for index, arg in enumerate(args):
+        if index == pytest_selector_index and re.fullmatch(r"-[qvsx]+", arg):
+            # Only these known no-operand pytest flags preserve a proven node
+            # position. Unknown/plugin options may consume filesystem paths.
+            pytest_selector_index += 1
         if skip_next:
             skip_next = False
             continue
@@ -482,6 +507,12 @@ def script_command_path_candidates(command_name: str, args: list[str]) -> list[s
             continue
         if command_name.startswith("python") and arg == "-":
             return []
+        if index == pytest_selector_index and not arg.startswith("@"):
+            # Pytest node IDs append class/test selectors to a filesystem path.
+            # Only the path prefix belongs to filesystem authority; other
+            # interpreters, option operands, response files, and redirection
+            # targets retain their syntax.
+            arg = arg.partition("::")[0]
         return [arg] if is_inspectable_path_argument(arg) else []
     return []
 

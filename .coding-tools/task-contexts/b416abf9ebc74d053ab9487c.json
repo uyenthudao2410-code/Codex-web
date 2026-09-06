@@ -1,0 +1,176 @@
+{
+  "version": 2,
+  "task_id": "b091475207e645198aa575dfe8e4ff65",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "2pxl-mZWcJSAuJIbumbXZCY9",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 372,
+    "finished_at": "2026-09-06T01:03:49.378Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "A pre-existing dirty acceptance path must be present in the durable mutation surface.",
+  "next_step": "",
+  "created_at": "2026-09-06T01:03:08.910Z",
+  "updated_at": "2026-09-06T01:03:58.311Z",
+  "events": [
+    {
+      "time": "2026-09-06T01:03:08.910Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:09.227Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile renderer\\panel.html SHA256",
+        "session_id": "RJCpRJuP4mco7aQK-zWFDSW9"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:09.592Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile renderer\\panel.html SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:13.702Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile renderer\\panel.js SHA256",
+        "session_id": "EJ249qkVRTUhLYqbvRXw28OH"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:14.100Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile renderer\\panel.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:20.344Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile renderer\\browser.js SHA256",
+        "session_id": "etOhwh5kO64agUEVetY0hIGY"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:20.725Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile renderer\\browser.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:25.368Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile tests\\control-panel.test.js SHA256",
+        "session_id": "BUrazQqZIllnK3xeZWpMAuW9"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:25.593Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile tests\\control-panel.test.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:30.577Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile tests\\browser-runtime-truthfulness.test.js SHA256",
+        "session_id": "175Rj0oTpLhyofb1JZptkuXX"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:30.827Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile tests\\browser-runtime-truthfulness.test.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:36.744Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\operations_analytics.py SHA256",
+        "session_id": "Z_QzcQ4bjL9VyD7t9CcYAHnR"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:37.071Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\operations_analytics.py SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:42.677Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_operations_analytics.py SHA256",
+        "session_id": "DOMTi7d61YGU_6lQcdgZyQ1B"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:42.936Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_operations_analytics.py SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:49.103Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile docs\\RECOVERY_HOST.md SHA256",
+        "session_id": "2pxl-mZWcJSAuJIbumbXZCY9"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:49.378Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile docs\\RECOVERY_HOST.md SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T01:03:58.311Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    }
+  ]
+}

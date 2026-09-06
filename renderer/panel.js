@@ -290,10 +290,15 @@ function renderTruthConsole(truthSnapshot) {
 function renderRun(data) {
   renderTruthConsole(data?.truth_snapshot || {});
   const run = data?.run;
-  const runState = String(run?.status || 'idle');
+  const runState = String(run?.status || 'idle').toLowerCase();
   const runStatusMap = { idle: 'Đang rảnh', active: 'Hoạt động', running: 'Đang chạy', completed: 'Hoàn thành', failed: 'Lỗi' };
   $('#runStatus').textContent = runStatusMap[runState] || runState;
-  $('#runStatus').className = `badge kpi-mini-badge ${runState === 'idle' ? 'status-waiting' : 'status-active'}`;
+  const runTone = {
+    active: 'status-active', running: 'status-active', executing: 'status-active',
+    completed: 'status-neutral', accepted: 'status-neutral',
+    failed: 'status-hold', rejected: 'status-hold', aborted: 'status-hold'
+  }[runState] || 'status-waiting';
+  $('#runStatus').className = `badge kpi-mini-badge ${runTone}`;
   $('#runObjective').textContent = run?.objective || 'Chưa có run điều phối.';
 
   const waves = Array.isArray(data?.waves) ? data.waves : [];
@@ -357,7 +362,7 @@ function renderHub(data) {
   $('#continuityStatus').className = `badge kpi-mini-badge ${safe ? 'status-active' : 'status-hold'}`;
 }
 
-const TERMINAL_DELEGATION_STATUSES = new Set(['completed', 'failed', 'cancelled', 'stopped', 'rejected']);
+const ACTIVE_DELEGATION_STATUSES = new Set(['active', 'running', 'executing']);
 const LANE_MATCHERS = [
   { key: 'Fast', test: (text) => /(?:^|[^a-z])(mini|luna)(?:[^a-z]|$)/.test(text) },
   { key: 'DeepSeek', test: (text) => text.includes('deepseek') || /(?:^|\s)opencode(?:\s|$)/.test(text) },
@@ -413,26 +418,23 @@ function renderRouting(data) {
   if (writerLabel) writerLabel.textContent = writing ? '● ĐANG GHI' : hubReady ? '● SẴN SÀNG' : '● NGOẠI TUYẾN';
 
   const delegations = Array.isArray(data?.delegations) ? data.delegations : [];
-  const runningCount = delegations.filter((item) => {
-    const status = String(item?.status || '').toLowerCase();
-    return status !== '' && !TERMINAL_DELEGATION_STATUSES.has(status);
-  }).length;
+  const runningCount = delegations.filter((item) =>
+    ACTIVE_DELEGATION_STATUSES.has(String(item?.status || '').toLowerCase())
+  ).length;
   const laneEvidence = {};
   delegations.forEach((delegation) => {
     const text = `${delegation.route_resolved || ''} ${delegation.model || ''}`.toLowerCase();
     const lane = LANE_MATCHERS.find(({ test }) => test(text));
     if (!lane) return;
-    const terminal = TERMINAL_DELEGATION_STATUSES.has(String(delegation.status || '').toLowerCase());
-    if (!terminal) laneEvidence[lane.key] = 'active';
-    else if (!laneEvidence[lane.key]) laneEvidence[lane.key] = 'connected';
+    const status = String(delegation.status || '').toLowerCase();
+    if (ACTIVE_DELEGATION_STATUSES.has(status)) laneEvidence[lane.key] = 'active';
+    else if (status === 'completed' && !laneEvidence[lane.key]) laneEvidence[lane.key] = 'connected';
   });
-  const automatic = data?.provider_traffic?.automatic_routing || {};
   LANE_MATCHERS.forEach(({ key }) => {
     let state = laneEvidence[key] || '';
     let label = '';
     if (state === 'active') label = '● ĐANG HOẠT ĐỘNG';
     else if (state === 'connected') label = '● CÓ BẰNG CHỨNG';
-    else if (automatic.enabled) { state = 'connected'; label = '● SẴN SÀNG'; }
     else { state = 'waiting'; label = '● CHỜ EVIDENCE'; }
     setFabricState($(`#router${key}`), state);
     setFabricState($(`#routerEdge${key}`), state);
@@ -622,9 +624,20 @@ async function recordHandoff() {
   const button = $('#handoffButton');
   button.disabled = true;
   try {
-    const result = unwrap(await api.handoff());
+    const currentRunId = String(lastOrchestration?.run?.run_id || '').trim();
+    if (!currentRunId) throw new Error('Chưa có RUN hiện tại để ghi capsule handoff.');
+    const result = unwrap(await api.handoff({ runId: currentRunId }));
+    const structured = result?.structuredContent;
+    const capsule = structured?.capsule;
+    if (result?.isError === true || structured?.ok === false || structured?.recorded !== true
+      || !capsule || typeof capsule.capsule_id !== 'string' || !capsule.capsule_id.trim()
+      || typeof capsule.run_id !== 'string' || !capsule.run_id.trim()
+      || !Number.isInteger(capsule.version) || capsule.version <= 0
+      || (currentRunId && capsule.run_id !== currentRunId)) {
+      throw new Error('MCP không trả về capsule handoff hợp lệ.');
+    }
     await refreshOrchestration();
-    alert(`Đã ghi Capsule thành công (v${result.version}). Bạn có thể mở chat mới an toàn.`);
+    alert(`Đã ghi Capsule thành công (v${capsule.version}).`);
   } catch (error) {
     renderControlPlaneUnavailable(error);
     alert(`Lỗi ghi capsule: ${error.message}`);
@@ -640,7 +653,10 @@ async function transferController(target) {
     : 'Chuyển quyền điều khiển chính sang ChatWeb?';
   if (!window.confirm(confirmMsg)) return;
   try {
-    unwrap(await api.transferController(target));
+    unwrap(await api.transferController({
+      targetClientId: target,
+      runId: lastOrchestration?.run?.run_id
+    }));
     await refreshOrchestration();
   } catch (error) {
     renderControlPlaneUnavailable(error);
@@ -651,8 +667,10 @@ async function transferController(target) {
 async function copyCodexConfig() {
   if (controlPlaneState !== 'available') return;
   try {
-    const config = unwrap(await api.copyCodexConfig());
-    await navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+    const receipt = unwrap(await api.copyCodexConfig());
+    if (receipt?.copied !== true) {
+      throw new Error('Không nhận được xác nhận sao chép cấu hình MCP.');
+    }
     alert('Đã sao chép cấu hình MCP vào clipboard.');
   } catch (error) {
     alert(`Lỗi sao chép cấu hình: ${error.message}`);

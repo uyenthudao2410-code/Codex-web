@@ -1,0 +1,176 @@
+[
+  {
+    "version": 2,
+    "task_id": "853322babea9423394176a36bd9f5030",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "4lrT5TWrhbTjmVBifJzi_2Nf",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 323,
+      "finished_at": "2026-09-04T11:40:14.480Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:40:13.843Z",
+    "updated_at": "2026-09-04T11:40:14.480Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:40:13.843Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:14.121Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"token-dashboard\\.html|token-dashboard\" renderer electron tests package.json scripts",
+          "session_id": "4lrT5TWrhbTjmVBifJzi_2Nf"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:14.480Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"token-dashboard\\.html|token-dashboard\" renderer electron tests package.json scripts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:40:23.732Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bba1dd1448cd4e758700729425f42f1d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:40:23.741Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:40:23.733Z",
+    "updated_at": "2026-09-04T11:40:23.741Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:40:23.733Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:23.741Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 3 \"DOCTYPE|<title>|TOKEN CHATWEB|TOKEN PROVIDER|dashboard\\.js|dashboard\\.css|index\\.html\" renderer\\token-dashboard.html",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:23.741Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:40:31.448Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2e9f12e6cba64d8280623f90d71bfb95",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "oO00H82mP3boD5X_589W43JN",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 320,
+      "finished_at": "2026-09-04T11:40:32.090Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:40:31.454Z",
+    "updated_at": "2026-09-04T11:40:32.090Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:40:31.454Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:31.773Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"TOKEN CHATWEB\" renderer\\token-dashboard.html && rg -n \"TOKEN PROVIDER\" renderer\\token-dashboard.html && rg -n \"dashboard.js\" renderer\\token-dashboard.html && rg -n \"dashboard.css\" renderer\\token-dashboard.html",
+          "session_id": "oO00H82mP3boD5X_589W43JN"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:32.090Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"TOKEN CHATWEB\" renderer\\token-dashboard.html && rg -n \"TOKEN PROVIDER\" renderer\\token-dashboard.html && rg -n \"dashboard.js\" renderer\\token-dashboard.html && rg -n \"dashboard.css\" renderer\\token-dashboard.html",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:40:40.124Z",
+    "archive_reason": "finished"
+  }
+]

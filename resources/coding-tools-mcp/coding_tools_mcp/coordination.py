@@ -34,6 +34,7 @@ from .problem_lineage import ProblemLineageError
 from .problem_lineage_control import ProblemLineageControlMixin
 from .product_session_receipts import record_current_continuity_core
 from .solution_shadow_control import SolutionShadowControlMixin
+from .task_state import command_presentation
 from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
     SUPERVISOR_RESTART_TICKET_TTL_MS,
@@ -1098,9 +1099,13 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             unresolved_stale_runs = self.orchestration_ledger.stale_run_candidates(
                 stale_after_seconds=self.stale_run_seconds
             )
+            resources = self.execution_resource_governor.snapshot()
             return {
-                "state": self.task_state.get(),
-                "resources": self.execution_resource_governor.snapshot(),
+                "state": command_presentation(
+                    self.task_state.get(), governor=self.execution_resource_governor,
+                    workspace=self.task_state.current_workspace(),
+                ),
+                "resources": resources,
                 "operations": operations[-8:],
                 "recovery": {
                     "orphaned_background_operations": self.orphaned_background_operations,
@@ -1210,6 +1215,9 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     "problem_lineage is derived from exact PRL links and cannot be caller-supplied in a handoff payload.",
                     category="validation",
                 )
+            hub_identity = self._current_hub_client() or {}
+            if hub_identity.get("client_type") == "electron" and hub_identity.get("client_id") == "electron-panel":
+                state, projection, run_id, wave_id = self.panel_handoff_state(args.get("run_id"), args.get("wave_id"))
             pending_messages = self.orchestration_ledger.list_coordination_messages(
                 run_id=run_id,
                 status="pending",
@@ -1224,7 +1232,6 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 for item in self.orchestration_ledger.list_proofs(run_id, wave_id=wave_id or None)
                 if str(item.get("proof_id") or "").strip()
             ][:100]
-            hub_identity = self._current_hub_client() or {}
             problem_lineage = self.orchestration_ledger.problem_handoff_for_run(run_id) if run_id else None
             if problem_lineage is not None:
                 augmented["problem_lineage"] = problem_lineage

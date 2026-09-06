@@ -1,0 +1,446 @@
+{
+  "version": 2,
+  "task_id": "4413f64e4650459c83e8b6af0e3c9129",
+  "orchestration": {
+    "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+    "wave_id": "a819da65dc9647a389d18a9f858ef056",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "6cea96e7cef53cbcb5ddf5c275a7536101f4a046372fd0a36d6a7f232fc08429",
+    "contract_fp": ""
+  },
+  "objective": "Close the Recovery Host trust gap without changing any source bytes. Reuse the already-proven mapper/test bytes and establish exact accepted receipts for the clean committed Recovery Host delta that componentGate correctly reports since the running baseline head is 30b7d1b971b65034d3e4c95568c970fcc0e9380c while current HEAD is 8697ace8204e7e3da55d250d4a52d9b2b930116c. Adopt only electron/services/componentRevision.js SHA-256 eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db and tests/component-revision.test.js SHA-256 a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1. Preserve electron/services/recoveryHost.js and package.json unchanged for final exact-byte acceptance attestation, and preserve renderer/token-dashboard.html completely outside this wave/checkpoint. Run only git diff --check across the four trust-closure files. No source mutation, restart, commit, push, reset, clean, or design-file action.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:04:03.970Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:04:03.970Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-04T12:04:03.970Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "6GNafmSaOdJANYptXeqkW4uw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 616,
+    "finished_at": "2026-09-04T12:04:03.672Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/services/componentRevision.js",
+          "state": "file",
+          "sha256": "eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db",
+          "size_bytes": 13188,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+          "wave_id": "a819da65dc9647a389d18a9f858ef056"
+        },
+        {
+          "path": "tests/component-revision.test.js",
+          "state": "file",
+          "sha256": "a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1",
+          "size_bytes": 8367,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+          "wave_id": "a819da65dc9647a389d18a9f858ef056"
+        },
+        {
+          "path": "electron/services/recoveryHost.js",
+          "state": "file",
+          "sha256": "a1a1f62cb555abf5ba714eebb771e78c5a46249635c1f0d76d10d907caeffcb4",
+          "size_bytes": 131717,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+          "wave_id": "a819da65dc9647a389d18a9f858ef056"
+        },
+        {
+          "path": "package.json",
+          "state": "file",
+          "sha256": "f42349098450a2cc664edd21af81a92705c99e81a6f86078d5fcf3264f847709",
+          "size_bytes": 5815,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+          "wave_id": "a819da65dc9647a389d18a9f858ef056"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 28,
+        "head_hash": "09bdbfd3e1c94f748733795b7178e5fbd50017479494052046fb1dcf885f858c"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1bc7262eaf084b3fb9de02a8a1a59455\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1bc7262eaf084b3fb9de02a8a1a59455\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "1bc7262eaf084b3fb9de02a8a1a59455",
+      "wave_id": "a819da65dc9647a389d18a9f858ef056",
+      "checkpoint_id": "094f1225ff1342e2849172f31e837439",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "6cea96e7cef53cbcb5ddf5c275a7536101f4a046372fd0a36d6a7f232fc08429",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Close the Recovery Host trust gap without changing any source bytes. Reuse the already-proven mapper/test bytes and establish exact accepted receipts for the clean committed Recovery Host delta that componentGate correctly reports since the running baseline head is 30b7d1b971b65034d3e4c95568c970fcc0e9380c while current HEAD is 8697ace8204e7e3da55d250d4a52d9b2b930116c. Adopt only electron/services/componentRevision.js SHA-256 eafa9ee71bd6170cb1c4129c60659ff1214f20b780587f0f06ae05ea0fd925db and tests/component-revision.test.js SHA-256 a23dde53cf9343dec9dda64b86f5dd9f656b57d5a35759b1aebe6afac72a00c1. Preserve electron/services/recoveryHost.js and package.json unchanged for final exact-byte acceptance attestation, and preserve renderer/token-dashboard.html completely outside this wave/checkpoint. Run only git diff --check across the four trust-closure files. No source mutation, restart, commit, push, reset, clean, or design-file action.",
+        "objective_revision": 1,
+        "objective_sha256": "b36216d5a3f5238c3d250c05eec936fbeeb4822f27cf32d3e838bc89748088a9",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "c6ad8f42a7c647ee819db3e22cdd6e9c",
+          "stage_id": "check:d89d13e5ec037a59",
+          "status": "passed",
+          "duration_ms": 1109,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "621206af82707dbe9f2dc49ad6ae179f0b9791bcb1c45752fca3235c04ff181b",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-04T12:01:25.638Z",
+  "updated_at": "2026-09-04T12:04:30.008Z",
+  "events": [
+    {
+      "time": "2026-09-04T12:01:25.638Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:26.020Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c findstr /n /c:\"eae61d6f5f6145af99153c5f469cee25\" \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\" && npm run dev:status",
+        "session_id": "gPLrJ7raXdV1ZCdh6TMEQ35B"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:26.860Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c findstr /n /c:\"eae61d6f5f6145af99153c5f469cee25\" \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\" && npm run dev:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:33.835Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c more +21188 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "session_id": "puQuwar2u3vnPo7MunmL5eam"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:34.094Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c more +21188 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:00.415Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c findstr /n /c:\"baseline_head\" /c:\"\\\"baseline\\\"\" /c:\"recovery_host\" \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "session_id": "YRMRZK_Xi42g9IfW__3iD3J1"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:00.749Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c findstr /n /c:\"baseline_head\" /c:\"\\\"baseline\\\"\" /c:\"recovery_host\" \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:15.848Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c more +210 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "session_id": "WRojL4tl0ory6Yb4mBZzaxlw"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:16.205Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c more +210 \"%APPDATA%\\web-mcp-assistant\\accepted-code-activation.json\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:39.611Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- electron/services/recoveryHost.js package.json && certutil -hashfile electron\\services\\recoveryHost.js SHA256 && certutil -hashfile package.json SHA256 && git diff --check -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js",
+        "session_id": "l6mfiU6RjSEl1utE1tST3NeS"
+      }
+    },
+    {
+      "time": "2026-09-04T12:02:40.320Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- electron/services/recoveryHost.js package.json && certutil -hashfile electron\\services\\recoveryHost.js SHA256 && certutil -hashfile package.json SHA256 && git diff --check -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:03:57.994Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T12:03:59.755Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:01.206Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:01.216Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:01.955Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:02.235Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:03.186Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js",
+        "session_id": "6GNafmSaOdJANYptXeqkW4uw"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:03.672Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- electron/services/recoveryHost.js package.json electron/services/componentRevision.js tests/component-revision.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:03.968Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:03.970Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:04.414Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:04.417Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:04.549Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "63901d51c12c59cbc6aa5c1f41acd8149d8ea58c48261e2892933efd2c1c234a"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:04.674Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:17.544Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:19.518Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "63901d51c12c59cbc6aa5c1f41acd8149d8ea58c48261e2892933efd2c1c234a"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:27.864Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:29.857Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:29.862Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:04:30.003Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "621206af82707dbe9f2dc49ad6ae179f0b9791bcb1c45752fca3235c04ff181b"
+      }
+    }
+  ]
+}

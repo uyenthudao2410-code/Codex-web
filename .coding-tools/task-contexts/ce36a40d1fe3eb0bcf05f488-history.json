@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "b2e7da3cdbc14b35817404eaeb0eaff8",
+    "orchestration": {
+      "run_id": "bfb7bf2a343246d19d5d871ae67f9f2c",
+      "wave_id": "bb96071c540046238bc4f01716914aa7",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "e8d01624191f2e2a09b336df8f3f992794a49d81e37d85895f6127dc9c3ca98a",
+      "contract_fp": ""
+    },
+    "objective": "establish the exact preimage and focused proof plan for the Windows rustup/LSP hardlink identity fix already present in precisely those three files. Preserve all other dirty worktree paths.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T20:35:37.151Z",
+    "updated_at": "2026-09-04T20:35:44.891Z",
+    "events": [
+      {
+        "time": "2026-09-04T20:35:37.151Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "establish the exact preimage and focused proof plan for the Windows rustup/LSP hardlink identity fix already present in precisely those three files. Preserve all other dirty worktree paths."
+        }
+      },
+      {
+        "time": "2026-09-04T20:35:37.977Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T20:35:44.879Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T20:35:44.891Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T20:47:37.557Z",
+    "archive_reason": "superseded"
+  }
+]

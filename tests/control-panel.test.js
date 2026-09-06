@@ -371,3 +371,10 @@ test('browser loading placeholder follows the authoritative chat state', () => {
   assert.match(renderChatState, /loadingStage\.setAttribute\('aria-hidden', String\(!pending\)\);/);
   assert.doesNotMatch(renderChatState, /classList\.toggle\('ready', !state\.loading && !state\.error\)/);
 });
+
+test('panel CSP permits inline styles but rejects inline scripts', () => {
+  const csp = read('renderer/panel.html').match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1];
+  assert.ok(csp);
+  assert.equal(csp.match(/(?:^|;)script-src ([^;]+)/)?.[1], "'self'");
+  assert.match(csp, /style-src 'self' 'unsafe-inline'/);
+});

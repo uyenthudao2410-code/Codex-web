@@ -59,14 +59,25 @@ khóa app root, executable và SHA-256 executable; binary đổi thì yêu cầu
 Sau spawn có cooldown 20 giây; tối đa 4 lần trong 10 phút rồi suppress 5 phút.
 Status secret-free nằm ở `%APPDATA%\\web-mcp-assistant\\recovery-supervisor-status.json`.
 
-Trong development, `stop.request` chỉ được tạo ngay trước khi `ensureRecoveryHost`
-thực sự retire/handoff Recovery Host khác checkout hoặc spawn Host đang thiếu,
-và chỉ khi installed Supervisor chưa khớp exact app-root/executable hiện tại.
-Một Electron UI chỉ attach vào exact-checkout Recovery Host đang healthy không
-được suppress Supervisor; nếu suppress ở đường attach, Host có thể biến mất sau
-đó mà Scheduled Task cố ý không resurrect. Sau một mutation/handoff development
-thành công, cài lại Supervisor từ đúng checkout để refresh manifest/script và
-xóa sentinel.
+Trong đường `ensureRecoveryHost` development thông thường, `stop.request` chỉ
+được tạo ngay trước khi thực sự retire/handoff Recovery Host khác checkout hoặc
+spawn Host đang thiếu, và chỉ khi installed Supervisor chưa khớp exact
+app-root/executable hiện tại. Một Electron UI chỉ attach vào exact-checkout
+Recovery Host đang healthy không được suppress Supervisor; nếu suppress ở đường
+attach, Host có thể biến mất sau đó mà Scheduled Task cố ý không resurrect.
+
+Explicit `npm run dev:refresh` có đường suppression riêng: trước forced full-clean
+bootstrap/handoff, CLI gọi helper suppress installed development Supervisor mà
+không truyền expected app-root/executable filter, kể cả khi manifest đang khớp.
+Refresh chỉ tiếp tục khi suppression được xác nhận hoặc không có installed
+manifest (`manifest_unavailable`); kết quả không xác định bị từ chối bằng
+`DEV_UI_REFRESH_SUPERVISOR_UNCERTAIN`. Không áp dụng ngoại lệ này cho attach
+thông thường và không dùng nó để bỏ qua authenticated host/activation guards.
+
+Sau một mutation/handoff development thành công, operator chủ đích bật lại
+Supervisor bằng cách cài lại từ đúng checkout để refresh manifest/script và xóa
+sentinel qua supported install. Không tự xóa sentinel hoặc suy có automatic
+re-arm sau refresh; kiểm tra lại trạng thái Supervisor bằng lệnh status.
 
 ```text
 npm run recovery:supervisor:install
@@ -89,11 +100,16 @@ circuit break để tránh crash loop.
 
 Trong `full_clean_activation`, Recovery Host cũng là owner của bước connector ACK
 sau handoff. ACK chỉ được ghi khi tất cả component/projection gate khác đã pass và
-một health observation duy nhất chứng minh discovery thuộc đúng
-`activation_epoch_id`, `process_instance_id`, `server_instance_id` và tool-contract
-SHA hiện tại. Vì vậy deferred restart từ `task_control` không phụ thuộc vào một
-CLI worker còn sống để hoàn tất ACK, nhưng vẫn không thể dùng persisted SHA,
-`tools/call` hoặc receipt của process cũ để mở admission.
+một health observation duy nhất chứng minh đúng một trong hai freshness mode riêng
+biệt: strict discovery thuộc đúng `activation_epoch_id`, `process_instance_id`,
+`server_instance_id` và tool-contract SHA hiện tại; hoặc exact no-workspace
+compatibility bootstrap với receipt attested gồm `method=tools/call`,
+`tool_name=workspace_context`, `workspace_accessed=false`, khớp đúng
+`activation_epoch_id`, `process_instance_id`, `server_instance_id`, tool-contract
+SHA hiện tại và timestamp hợp lệ. Vì vậy deferred restart từ `task_control` không
+phụ thuộc vào một CLI worker còn sống để hoàn tất ACK, nhưng persisted SHA,
+`tools/call` bất kỳ ngoài receipt attested compatibility nêu trên, hoặc receipt của
+process cũ không thể thay thế hai freshness mode này để mở admission.
 
 Managed Coding Tunnel gắn một attestation capability tĩnh vào traffic MCP được
 forward cho đúng một lifecycle MCP/Tunnel. HMAC bind capability này với
@@ -173,12 +189,13 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 - Thao tác operator quit gửi authenticated `client.suppress_ui_recovery` cho đúng
   UI instance trước khi thoát. Suppression được lưu trong user-data và sống qua
   Recovery Host replacement; registration UI hợp lệ kế tiếp sẽ xóa suppression.
-- Development operators use `npm start` (full-system refresh), `npm run dev`,
+- Development operators use `npm start` or `npm run dev` for the same stable
+  start/focus lifecycle, `npm run dev:refresh` for a full-system refresh,
   `npm run dev:stop`, and `npm run dev:replace`. These commands bind every
   mutating signal to the exact
   `development` installation identity from the authenticated Recovery Host
   descriptor. They never scan by process name or accept an arbitrary PID.
-- `npm start` requests the explicit `full_clean_refresh` transaction. Recovery
+- `npm run dev:refresh` requests the explicit `full_clean_refresh` transaction. Recovery
   Host closes admission, captures the canonical ledger census, stops the exact
   owned child set, hands off to a new Recovery Host and starts fresh MCP,
   Tunnel, Recovery-plane and UI processes under one activation epoch. Durable
@@ -193,7 +210,7 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   admission-open boundary still rejects the epoch at or after the exact expiry.
   A cold Recovery Host bootstrap may take up to 90 seconds (120 seconds
   maximum). These bounds do not extend component-scoped activation requests.
-- After exact process replacement, `npm start` may report the truthful pending
+- After exact process replacement, `npm run dev:refresh` may report the truthful pending
   receipt `activation=VERIFYING admission=closed fully_ready=false
   connector=pending` while the external connector has not contacted the new MCP
   process yet. Recovery Host keeps the epoch closed and re-enters final census
@@ -234,7 +251,7 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
 - If a Recovery Host starts while a resumable activation epoch has already
   expired, it terminalizes that epoch as `FAILED` with admission closed but
   keeps authenticated control-plane IPC available. This is a recoverable
-  startup state: the next explicit `npm start` creates a new full-clean epoch;
+  startup state: the next explicit `npm run dev:refresh` creates a new full-clean epoch;
   the host does not auto-start child runtimes or report a late successful
   bootstrap for the expired operation.
 - `dev:stop` persists watchdog suppression before dispatching an Electron
@@ -448,7 +465,7 @@ C4/measurement không được nhập vào connector activation gate. Connector 
 có thể đóng trước trong khi C4 vẫn `HOLD_NATURAL_EVIDENCE`; không tạo synthetic
 PRL/C4 event chỉ để hoàn tất activation.
 
-For the ordinary development UI path, `npm run dev` automates only that supported
+For the ordinary development UI path, `npm start` and `npm run dev` automate that supported
 Electron component flow: `CURRENT` is focused, `STALE` goes through
 `code.activation_preflight` plus `code.activate_update`, and `MISSING` is launched.
 The `STALE` path must bind the exact `source_checkpoint` identity from
@@ -469,23 +486,28 @@ are now marked with `revision_scope=electron_ui`. The same line separately emits
 snapshot freshness, so an Electron UI `CURRENT` result cannot be mistaken for a
 current Coding MCP process or a fully ready connector-gated stack.
 
-Sau final acceptance, Recovery Host có accepted-code auto activation. Host không
-watch source file: nó chỉ xét task current/history đã `CHECKPOINTED`, yêu cầu
-checkpoint `accepted` trong canonical SQLite ledger, khớp exact final worktree
-fingerprint, rồi chạy thêm `git status --untracked-files=all` để chặn concurrent
-dirty source trong target component. Với checkpoint legacy được tạo khi Git ẩn
-untracked, target source vẫn còn untracked sẽ bị từ chối vì bytes chưa được
-fingerprint chứng minh; staged/tracked source không có giới hạn này. Khi các gate
-đều đúng, Host gọi lại chính Safe Code Activation theo thứ tự
-`recovery_host -> coding_mcp -> electron_ui`; busy/uncertain chỉ deferred, không
-restart. Queue nằm trong user-data nên Recovery Host mới tiếp tục được sau
-handoff và không cần ChatGPT gọi loopback IPC để kích hoạt mỗi lần.
+Sau final acceptance, Recovery Host xét các checkpoint accepted trong canonical
+SQLite ledger, xác minh nguồn receipt/proof và Git HEAD hiện tại. Với mỗi target
+component, Host đối chiếu receipt từng file với running baseline và hợp các
+accepted receipts tại cùng HEAD (running_baseline_accepted_receipts_v2). Phạm vi
+đối chiếu bao gồm cả dirty/untracked paths hiện tại lẫn committed delta từ
+baseline HEAD đang chạy đến HEAD hiện tại. Git sạch hoặc file đã commit không
+thay thế receipt nghiệm thu; receipt sai bytes, ngoài scope hoặc thiếu provenance
+vẫn bị chặn. Không sửa ledger/queue bằng tay để bỏ qua gate.
 
-Exact worktree identity ép Git trả toàn bộ untracked paths, loại `.coding-tools`
-không phân biệt casing trên Windows, không đưa bytes của symlink/reparse target
-ngoài workspace vào digest, và fail closed nếu bounded status bị truncate. Python
-acceptance và Electron verifier phải tạo cùng fingerprint trên cùng snapshot;
-không được reuse proof khi hai phía lệch hoặc source tiếp tục đổi.
+Khi source authority và lifecycle gates đều đúng, Host gọi Safe Code Activation
+theo thứ tự recovery_host -> coding_mcp -> electron_ui; busy/uncertain chỉ
+deferred, không restart. Queue bền vững trong user-data cho phép Host tiếp tục
+sau handoff. Một checkpoint không ảnh hưởng component có thể được xử lý như
+no-op, nhưng không cung cấp source checkpoint cho lệnh restart: source-bound
+activation yêu cầu closure authoritative có affected_components không rỗng.
+Không dùng full_clean_refresh với sourceCheckpoint null thay cho source authority.
+
+Exact worktree fingerprint vẫn ràng buộc proof/acceptance của EOCL; không reuse
+proof khi inputs đổi. Nó không phải phép so sánh toàn worktree mà auto activation
+hiện tại dùng thay cho receipt union. Workspace identity lấy đủ untracked paths,
+loại .coding-tools không phân biệt casing trên Windows, từ chối truncated status
+và không đọc bytes của symlink/reparse target ngoài workspace.
 
 Lần chuyển đầu tiên từ Recovery Host/Coding MCP legacy chưa expose activation
 RPC là một mixed-version bootstrap boundary. Process legacy không thể tự chứng

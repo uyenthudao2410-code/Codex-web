@@ -1009,6 +1009,7 @@ class AgentWorkflowMixin:
                 "paths": args.get("paths", []),
                 "max_files": args.get("max_files", 12),
                 "max_total_bytes": args.get("max_total_bytes", 262144),
+                "max_lines_per_file": args.get("max_lines_per_file", 2000),
                 "force_refresh": True,
             }
             context = self.prepare_coding_context(context_args)
@@ -1130,6 +1131,7 @@ class AgentWorkflowMixin:
                     "max_entries": args.get("max_entries", 120),
                     "max_matches_per_query": args.get("max_matches_per_query", 20),
                     "max_total_bytes": args.get("max_total_bytes", 262144),
+                    "max_lines_per_file": args.get("max_lines_per_file", 2000),
                     "force_refresh": args.get("force_refresh", False),
                 })
             except Exception:
@@ -1205,6 +1207,7 @@ class AgentWorkflowMixin:
                     "max_entries": args.get("max_entries", 120),
                     "max_matches_per_query": args.get("max_matches_per_query", 20),
                     "max_total_bytes": args.get("max_total_bytes", 262144),
+                    "max_lines_per_file": args.get("max_lines_per_file", 2000),
                     "force_refresh": args.get("force_refresh", False),
                 })
             preflight_timeout_ms = min(max(int(args.get("timeout_seconds", 600)) * 1_000, 1_000), 120_000)

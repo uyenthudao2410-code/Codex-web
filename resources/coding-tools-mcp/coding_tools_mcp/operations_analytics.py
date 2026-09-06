@@ -401,11 +401,21 @@ def operations_analytics(
             ]
             exact_controller_events = 0
             exact_controller_tokens = 0
+            invalid_controller_exact_event = False
             for usage_event in all_usage_events:
                 actor = str(usage_event.get("actor") or "provider").strip().lower()
                 measurement = usage_event.get("measurement") if isinstance(usage_event.get("measurement"), dict) else {}
                 attribution = usage_event.get("attribution") if isinstance(usage_event.get("attribution"), dict) else {}
                 exact = str(attribution.get("status") or "").strip().lower() == "exact" and str(measurement.get("usage") or "").strip().lower() == "measured"
+                controller_tokens = 0
+                if actor == "controller" and exact:
+                    try:
+                        controller_tokens = canonical_usage_payload(usage_event)["total_tokens"]
+                    except ValueError:
+                        # Retain observed coverage, but never calibrate a
+                        # run from a partial exact controller token sum.
+                        invalid_controller_exact_event = True
+                        exact = False
                 usage_observed += 1
                 usage_exact += int(exact)
                 if actor == "controller":
@@ -413,12 +423,12 @@ def operations_analytics(
                     controller_usage_exact += int(exact)
                     if exact:
                         exact_controller_events += 1
-                        exact_controller_tokens += max(0, int(canonical_usage_payload(usage_event).get("total_tokens") or 0))
+                        exact_controller_tokens += max(0, int(controller_tokens))
                 else:
                     provider_usage_observed += 1
                     provider_usage_exact += int(exact)
             model_visible_bytes = _observed_nonnegative_int(perf_metric.get("model_visible_bytes")) if isinstance(perf_metric, dict) else None
-            if exact_controller_events > 0:
+            if exact_controller_events > 0 and not invalid_controller_exact_event:
                 controller_exact_runs += 1
                 if exact_controller_tokens > 0 and model_visible_bytes is not None and model_visible_bytes > 0:
                     controller_calibration_ratios.append(exact_controller_tokens / model_visible_bytes)

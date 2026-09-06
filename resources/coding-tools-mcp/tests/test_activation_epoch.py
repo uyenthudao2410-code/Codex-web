@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import http.client
 import json
 import os
@@ -10,6 +11,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.projection_rebuild import (
+    PROJECTION_REBUILD_MAX_AGE_MS,
+    canonical_sha256,
+)
 from coding_tools_mcp.server import MCPHandler, Runtime, RuntimeHTTPServer
 
 
@@ -116,6 +121,68 @@ class ActivationEpochTests(unittest.TestCase):
             )
             allowed = runtime.call_tool("workspace_context", {"detail": "compact"})
             self.assertFalse(allowed["isError"])
+        finally:
+            runtime.close()
+
+    def test_workspace_bootstrap_deadline_is_terminal_without_workspace_access(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            self.assertTrue(runtime.tool_contract["compatible_predecessor_sha256"])
+            for offset_ms in (-1, 0, 1):
+                expired = offset_ms >= 0
+                with self.subTest(offset_ms=offset_ms), patch(
+                    "coding_tools_mcp.activation_lifecycle.time.time",
+                    return_value=(self.expires_at_unix_ms + offset_ms) / 1000,
+                ), patch.object(
+                    runtime, "_set_request_workspace_scope",
+                    side_effect=AssertionError("bootstrap must not select a workspace"),
+                ), patch.object(
+                    runtime, "_call_tool_dispatch",
+                    side_effect=AssertionError("bootstrap must not dispatch a workspace tool"),
+                ):
+                    result = runtime.call_tool(
+                        "workspace_context",
+                        {"path": "outside-bootstrap-workspace", "detail": "compact"},
+                    )
+                self.assertEqual(result["isError"], expired)
+                structured = result["structuredContent"]
+                self.assertFalse(structured["completed"])
+                self.assertFalse(structured["workspace_accessed"])
+                self.assertEqual(structured["ok"], not expired)
+                self.assertEqual(structured["retryable"], not expired)
+                self.assertEqual(runtime.activation_admission, "closed")
+                if expired:
+                    self.assertNotIn("activation_bootstrap", structured)
+                    self.assertEqual(structured["error"]["code"], "ACTIVATION_REQUEST_EXPIRED")
+                    self.assertFalse(structured["error"]["retryable"])
+                    self.assertEqual(
+                        structured["error"]["details"]["expires_at_unix_ms"],
+                        self.expires_at_unix_ms,
+                    )
+                    self.assertEqual(
+                        structured["error"]["details"]["activation_epoch_id"], "epoch-test-001"
+                    )
+                else:
+                    self.assertTrue(structured["activation_bootstrap"]["accepted"])
+                    self.assertTrue(structured["activation_bootstrap"]["retry_required"])
+        finally:
+            runtime.close()
+
+    def test_open_epoch_workspace_reads_survive_the_startup_deadline(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.complete_activation_epoch(
+                "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+            )
+            with patch(
+                "coding_tools_mcp.activation_lifecycle.time.time",
+                return_value=(self.expires_at_unix_ms + 1) / 1000,
+            ):
+                result = runtime.call_tool("workspace_context", {"detail": "compact"})
+            self.assertFalse(result["isError"])
+            self.assertTrue(result["structuredContent"]["ok"])
+            self.assertNotIn("activation_bootstrap", result["structuredContent"])
+            self.assertEqual(runtime.activation_admission, "open")
         finally:
             runtime.close()
 
@@ -316,6 +383,98 @@ class ActivationEpochTests(unittest.TestCase):
                         1_700_000_000_000,
                     )
             self.assertEqual(expired.exception.code, "ACTIVATION_REQUEST_EXPIRED")
+            self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
+        finally:
+            runtime.close()
+
+    def test_completion_recaptures_only_stale_projection_rebuild_receipt(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            initial = runtime.projection_rebuild_snapshot()
+            initial_receipt = initial["receipt"]
+            self.assertTrue(initial["current"])
+            self.assertIsInstance(initial_receipt, dict)
+            stale_now_seconds = (
+                int(initial_receipt["completed_at_unix_ms"]) + PROJECTION_REBUILD_MAX_AGE_MS + 1
+            ) / 1000
+
+            with patch("coding_tools_mcp.projection_rebuild.time.time", return_value=stale_now_seconds):
+                stale = runtime.projection_rebuild_snapshot()
+                self.assertEqual(stale["validation"]["reasons"], ["RECEIPT_STALE"])
+                with patch.object(runtime, "_projection_rebuild_census", wraps=runtime._projection_rebuild_census) as census:
+                    opened = runtime.complete_activation_epoch(
+                        "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+                    )
+                recaptured = runtime.projection_rebuild_snapshot()
+
+            self.assertTrue(opened["ok"])
+            self.assertEqual(opened["activation_admission"], "open")
+            self.assertEqual(census.call_count, 1)
+            self.assertTrue(recaptured["current"])
+            self.assertNotEqual(
+                initial_receipt["completed_at_unix_ms"],
+                recaptured["receipt"]["completed_at_unix_ms"],
+            )
+            self.assertNotEqual(initial_receipt["integrity_sha256"], recaptured["receipt"]["integrity_sha256"])
+        finally:
+            runtime.close()
+
+    def test_completion_keeps_non_stale_projection_failure_closed(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            receipt = copy.deepcopy(runtime._projection_rebuild_receipt)
+            self.assertIsInstance(receipt, dict)
+            receipt["process_instance_id"] = "unexpected-process-instance"
+            receipt["integrity_sha256"] = canonical_sha256(
+                {key: value for key, value in receipt.items() if key != "integrity_sha256"}
+            )
+            runtime._projection_rebuild_receipt = receipt
+
+            with patch.object(runtime, "_projection_rebuild_census", wraps=runtime._projection_rebuild_census) as census:
+                with self.assertRaises(ToolFailure) as failure:
+                    runtime.complete_activation_epoch(
+                        "epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms
+                    )
+
+            self.assertEqual(failure.exception.code, "UPDATE_INCOMPLETE")
+            self.assertEqual(failure.exception.details["reasons"], ["PROCESS_INSTANCE_ID_MISMATCH"])
+            self.assertEqual(census.call_count, 0)
+            self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
+        finally:
+            runtime.close()
+
+    def test_completion_rechecks_expiry_after_stale_receipt_recapture(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            initial = runtime.projection_rebuild_snapshot()
+            initial_receipt = initial["receipt"]
+            self.assertTrue(initial["current"])
+            self.assertIsInstance(initial_receipt, dict)
+            stale_now_seconds = (
+                int(initial_receipt["completed_at_unix_ms"]) + PROJECTION_REBUILD_MAX_AGE_MS + 1
+            ) / 1000
+            expiry = 1_700_000_000_000
+            runtime.activation_expires_at_unix_ms = expiry
+
+            with patch("coding_tools_mcp.activation_lifecycle.time") as lifecycle_time:
+                lifecycle_time.time.side_effect = [
+                    (expiry - 1) / 1000,
+                    (expiry - 1) / 1000,
+                    expiry / 1000,
+                ]
+                with patch("coding_tools_mcp.projection_rebuild.time.time", return_value=stale_now_seconds):
+                    with patch.object(
+                        runtime,
+                        "_projection_rebuild_census",
+                        wraps=runtime._projection_rebuild_census,
+                    ) as census:
+                        with self.assertRaises(ToolFailure) as expired:
+                            runtime.complete_activation_epoch(
+                                "epoch-test-001", self.ready_commit_digest, expiry
+                            )
+
+            self.assertEqual(expired.exception.code, "ACTIVATION_REQUEST_EXPIRED")
+            self.assertEqual(census.call_count, 1)
             self.assertFalse(runtime.activation_admission_snapshot()["admission_open"])
         finally:
             runtime.close()

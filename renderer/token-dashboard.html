@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Codex Hub · Trung tâm Điều hành · Tổng quan Vận hành</title>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="settings-compact.css">
+  <link rel="stylesheet" href="control-center.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: var(--cc-bg, #f6f7f9);
+      color: var(--cc-text, #17191d);
+      -webkit-font-smoothing: antialiased;
+    }
+    body[data-theme="light"] {
+      --cc-bg: #f6f7f9;
+      --cc-surface: #ffffff;
+      --cc-surface-soft: #f1f3f6;
+      --cc-border: #e2e5e9;
+      --cc-border-strong: #d3d8de;
+      --cc-text: #17191d;
+      --cc-muted: #69717c;
+      --cc-subtle: #8d96a3;
+      --da-bg: #f6f7f9;
+      --da-surface: #ffffff;
+      --da-surface-card: #ffffff;
+      --da-surface-soft: #f1f3f6;
+      --da-border: #e2e5e9;
+      --da-border-strong: #d3d8de;
+      --da-text: #17191d;
+      --da-muted: #69717c;
+      --da-subtle: #8d96a3;
+      --da-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.04);
+      --da-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 12px 32px rgba(0, 0, 0, 0.06);
+    }
+    body[data-theme="dark"] {
+      --cc-bg: #17191c;
+      --cc-surface: #202327;
+      --cc-surface-soft: #262a2f;
+      --cc-border: #30353b;
+      --cc-border-strong: #3a4149;
+      --cc-text: #f0f2f4;
+      --cc-muted: #a0a8b2;
+      --cc-subtle: #777f89;
+      --da-bg: #17191c;
+      --da-surface: #202327;
+      --da-surface-card: #202327;
+      --da-surface-soft: #262a2f;
+      --da-border: #30353b;
+      --da-border-strong: #3a4149;
+      --da-text: #f0f2f4;
+      --da-muted: #a0a8b2;
+      --da-subtle: #777f89;
+      --da-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+      --da-shadow-hover: 0 6px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Window Header Bar */
+    .manager-window-bar {
+      position: fixed;
+      z-index: 200;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      display: flex;
+      height: 38px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px 0 18px;
+      border: 1px solid var(--cc-border, #dedede);
+      border-bottom: 0;
+      border-radius: 14px 14px 0 0;
+      color: var(--cc-text, #3d3d3d);
+      background: var(--cc-surface, #fff);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: -0.2px;
+      -webkit-app-region: drag;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    .manager-window-bar .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      -webkit-app-region: no-drag;
+    }
+    .manager-window-bar button {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      place-items: center;
+      border: 0;
+      border-radius: 8px;
+      color: var(--cc-muted, #555);
+      background: transparent;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .manager-window-bar button:hover {
+      color: #fff;
+      background: #e25454;
+    }
+
+    /* Outer App Shell */
+    .app-shell {
+      position: fixed !important;
+      inset: 46px 8px 8px !important;
+      width: auto !important;
+      height: auto !important;
+      overflow: hidden;
+      border: 1px solid var(--cc-border, #dedede);
+      border-top: 0;
+      border-radius: 0 0 14px 14px;
+      background: var(--cc-bg, #f6f7f9);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+      display: grid;
+      grid-template-columns: 216px minmax(0, 1fr) !important;
+    }
+
+    /* Sidebar Refinements */
+    .sidebar {
+      padding: 18px 12px 14px !important;
+      background: var(--cc-bg, #f6f7f9) !important;
+      border-right: 1px solid var(--cc-border, #e2e5e9);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 2px 8px 18px !important;
+    }
+    .brand strong {
+      color: var(--cc-text);
+      font-size: 15px !important;
+      font-weight: 800;
+    }
+    .brand small {
+      color: var(--cc-subtle);
+      font-size: 9.5px !important;
+      letter-spacing: 0.9px !important;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 5px !important;
+    }
+    .nav-item {
+      min-height: 42px !important;
+      height: 42px !important;
+      padding: 0 11px !important;
+      border: 1px solid transparent !important;
+      border-radius: 10px !important;
+      color: var(--cc-muted) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 650;
+      transition: all 0.18s ease;
+    }
+    .nav-item:hover {
+      color: var(--cc-text) !important;
+      background: var(--cc-surface) !important;
+      border-color: var(--cc-border) !important;
+    }
+    .nav-item.active {
+      position: relative;
+      color: var(--cc-text) !important;
+      background: var(--cc-surface) !important;
+      border-color: var(--cc-border-strong) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+      font-weight: 750;
+    }
+    .nav-item.active::before {
+      content: '';
+      width: 3px;
+      height: 18px;
+      border-radius: 99px;
+      background: var(--cc-blue, #356ae6);
+      position: absolute;
+      left: -1px;
+    }
+    .nav-icon {
+      width: 28px !important;
+      height: 24px;
+      border: 1px solid var(--cc-border);
+      border-radius: 7px;
+      color: var(--cc-subtle);
+      background: var(--cc-surface-soft);
+      font-size: 9px !important;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      display: grid;
+      place-items: center;
+    }
+    .nav-item.active .nav-icon {
+      color: var(--cc-blue, #356ae6);
+      border-color: color-mix(in srgb, var(--cc-blue, #356ae6) 32%, var(--cc-border));
+      background: var(--cc-blue-soft, rgba(53, 106, 230, 0.09));
+    }
+
+    /* Sidebar Runtime Status Widget */
+    .sidebar-runtime {
+      margin-top: auto !important;
+      padding: 12px 14px;
+      border: 1px solid var(--cc-border);
+      border-radius: 12px;
+      background: var(--cc-surface) !important;
+      box-shadow: var(--da-shadow);
+    }
+    .runtime-orbit {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .runtime-orbit i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+    .runtime-orbit b {
+      font-size: 11px;
+      font-weight: 750;
+      color: var(--cc-text);
+    }
+    .sidebar-runtime p {
+      margin: 4px 0 8px;
+      font-size: 11px;
+      color: var(--cc-muted);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .mini-stats {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10.5px;
+      color: var(--cc-muted);
+    }
+    .mini-stats span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: var(--cc-surface-soft);
+      border: 1px solid var(--cc-border);
+    }
+    .mini-stats b {
+      color: #10b981;
+      font-weight: 800;
+    }
+    .sidebar-footer {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--cc-border);
+    }
+    .sidebar-footer .ghost-button {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid var(--cc-border);
+      border-radius: 8px;
+      background: var(--cc-surface-soft);
+      color: var(--cc-text);
+      font-size: 11px;
+      font-weight: 750;
+      text-align: center;
+      cursor: pointer;
+    }
+    .sidebar-footer small {
+      display: block;
+      margin-top: 6px;
+      font-size: 10px;
+      line-height: 1.4;
+      color: var(--cc-subtle);
+    }
+
+    /* Main Area & Topbar */
+    .main-area {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      background: var(--cc-bg, #f6f7f9) !important;
+    }
+    .topbar {
+      height: 78px !important;
+      flex-basis: 78px !important;
+      padding: 14px 24px !important;
+      background: color-mix(in srgb, var(--cc-bg, #f6f7f9) 94%, transparent) !important;
+      border-bottom: 1px solid var(--cc-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+    .eyebrow {
+      margin: 0;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.25px !important;
+      color: var(--cc-subtle) !important;
+      text-transform: uppercase;
+    }
+    .topbar h1 {
+      margin: 2px 0 0;
+      color: var(--cc-text);
+      font-size: 21px !important;
+      font-weight: 850;
+      letter-spacing: -0.4px !important;
+    }
+    .topbar p:last-child {
+      margin: 2px 0 0;
+      color: var(--cc-muted) !important;
+      font-size: 11.5px;
+      max-width: 650px;
+    }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .device-summary-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 9px;
+      border: 1px solid var(--cc-border);
+      background: var(--cc-surface);
+      color: var(--cc-text);
+      cursor: pointer;
+      text-align: left;
+    }
+    .device-summary-button i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+    }
+    .device-summary-button b {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+    .device-summary-button small {
+      display: block;
+      font-size: 9.5px;
+      color: var(--cc-muted);
+      line-height: 1.2;
+    }
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 1px solid var(--cc-border);
+      background: var(--cc-surface);
+      color: var(--cc-text);
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .icon-button:hover {
+      border-color: var(--cc-border-strong);
+      transform: translateY(-1px);
+    }
+    .secondary-button {
+      height: 34px;
+      padding: 0 14px;
+      border-radius: 9px;
+      border: 1px solid var(--cc-border);
+      background: var(--cc-surface);
+      color: var(--cc-text);
+      font-size: 11.5px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .secondary-button:hover {
+      border-color: var(--cc-border-strong);
+      transform: translateY(-1px);
+    }
+    .primary-button {
+      height: 34px;
+      padding: 0 16px;
+      border-radius: 9px;
+      border: 0;
+      background: #202123 !important;
+      color: #ffffff !important;
+      font-size: 11.5px;
+      font-weight: 750;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      transition: all 0.16s ease;
+    }
+    .primary-button:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    body[data-theme="dark"] .primary-button {
+      background: #3b82f6 !important;
+      color: #fff !important;
+    }
+
+    /* Content Viewport */
+    .content-viewport {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 12px 18px 20px !important;
+      scrollbar-width: thin;
+    }
+    .page {
+      max-width: 1360px !important;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Control Hero / Status Alert Banner (Sleek HUD Ribbon) */
+    .control-hero {
+      padding: 6px 14px;
+      border: 1px solid #fde68a;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(254, 243, 199, 0.55), rgba(253, 230, 138, 0.35));
+      box-shadow: var(--da-shadow);
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+    }
+    body[data-theme="dark"] .control-hero {
+      border-color: rgba(245, 158, 11, 0.3);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
+    }
+    .control-hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      width: 100%;
+    }
+    .control-hero-copy {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .control-hero-copy h2 {
+      margin: 0;
+      font-size: 12.5px;
+      font-weight: 750;
+      letter-spacing: -0.3px;
+      color: var(--cc-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .control-hero-copy p {
+      display: none;
+    }
+    .control-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Section Headings */
+    .da-basic-token-head {
+      margin-top: 2px;
+      margin-bottom: 2px;
+      padding: 0 2px;
+    }
+    .da-basic-token-head h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 850;
+      letter-spacing: -0.3px;
+      color: var(--cc-text);
+    }
+    .da-basic-token-head p {
+      display: none;
+    }
+
+    /* Toolbar Filter Bar */
+    .da-dashboard-filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+      padding: 6px 12px;
+      border: 1px solid var(--cc-border);
+      border-radius: 10px;
+      background: var(--cc-surface);
+      box-shadow: var(--da-shadow);
+    }
+    .da-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .da-filter-pill, .da-filter-pill-select {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      background: var(--cc-surface);
+      border: 1px solid var(--cc-border);
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .filter-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .filter-copy small {
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--cc-subtle);
+    }
+    .filter-copy b, .filter-copy select {
+      font-size: 11.5px;
+      font-weight: 750;
+      color: var(--cc-text);
+      background: transparent;
+      border: 0;
+      padding: 0;
+      outline: none;
+      cursor: pointer;
+    }
+    .env-dot-live {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      margin-right: 6px;
+    }
+    .da-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--cc-border);
+      background: var(--cc-surface);
+      color: var(--cc-text);
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .da-action-btn:hover {
+      border-color: var(--cc-border-strong);
+      transform: translateY(-1px);
+    }
+    .da-action-btn.primary-purple {
+      background: #356ae6 !important;
+      border-color: #356ae6 !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px rgba(53, 106, 230, 0.25);
+    }
+    .da-toggle-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--cc-border);
+      background: var(--cc-surface);
+      color: var(--cc-text);
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    /* 7 KPI Tiles Grid: Compact 1-View Row */
+    .da-grid-tiles {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .da-grid-tiles > article:nth-child(-n+3),
+    .da-tile-top,
+    .da-grid-tiles > article:nth-child(n+4),
+    .da-tile {
+      grid-column: span 1 !important;
+      min-height: 82px !important;
+      padding: 8px 10px !important;
+    }
+    .da-tile-value {
+      font-size: 20px !important;
+      margin: 2px 0 4px !important;
+    }
+    .da-tile.da-tile-hero {
+      grid-column: span 1 !important;
+      min-height: 82px !important;
+      border: 1.5px solid #a855f7 !important;
+      box-shadow: 0 4px 18px rgba(168, 85, 247, 0.18) !important;
+      background: var(--cc-surface) !important;
+      position: relative;
+    }
+    .da-tile.da-tile-hero .da-tile-value {
+      color: #9333ea !important;
+      font-weight: 900 !important;
+      font-size: 22px !important;
+    }
+    body[data-theme="dark"] .da-tile.da-tile-hero .da-tile-value {
+      color: #c084fc !important;
+    }
+    .da-tile.da-tile-hero .da-tile-delta {
+      color: #9333ea !important;
+      font-weight: 800;
+    }
+    body[data-theme="dark"] .da-tile.da-tile-hero .da-tile-delta {
+      color: #d8b4fe !important;
+    }
+    @media (max-width: 1080px) {
+      .da-grid-tiles { grid-template-columns: repeat(4, 1fr); }
+      .da-tile.da-tile-hero { grid-column: span 2 !important; }
+      .da-grid-tiles > article:nth-child(-n+3) { grid-column: span 2 !important; }
+      .da-grid-tiles > article:nth-child(n+4) { grid-column: span 2 !important; }
+    }
+    .da-tile-sub {
+      color: var(--cc-subtle);
+      font-size: 8.5px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      font-weight: 750;
+      margin-top: 2px;
+    }
+    /* Trust Strip */
+    .da-token-trust-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      background: var(--cc-surface);
+      border: 1px solid var(--cc-border);
+      box-shadow: var(--da-shadow);
+      margin-top: 4px;
+    }
+    .da-token-trust-strip span {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .da-token-trust-strip small {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--cc-subtle);
+    }
+    .da-token-trust-strip b {
+      font-size: 11.5px;
+      font-weight: 750;
+      color: var(--cc-text);
+    }
+
+    /* Chat Turn Log Table */
+    .da-turn-log {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .da-turn-row {
+      display: grid;
+      grid-template-columns: 90px 140px 1fr;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      background: var(--cc-surface-soft);
+      border: 1px solid var(--cc-border);
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .da-turn-time {
+      color: var(--cc-muted);
+    }
+    .da-turn-kind {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .da-turn-kind.is-estimated {
+      background: rgba(168, 85, 247, 0.12);
+      color: #a855f7;
+      border: 1px solid rgba(168, 85, 247, 0.25);
+    }
+    .da-turn-kind.is-exact {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+    .da-turn-tokens {
+      font-weight: 800;
+      color: var(--cc-text);
+      text-align: right;
+    }
+    .da-info-icon {
+      font-style: normal;
+      font-size: 11px;
+      color: var(--cc-subtle);
+      margin-left: 4px;
+      cursor: help;
+    }
+  
+
+/* ==========================================================================
+   Ultra-Compact 1-View Pixel Fitting Rules
+   ========================================================================== */
+.content-viewport:has(.da-basic-token-head) {
+  padding: 8px 16px 14px !important;
+}
+
+.control-hero {
+  padding: 4px 12px !important;
+  margin-bottom: 4px !important;
+  min-height: 32px !important;
+  height: 32px !important;
+}
+.control-hero-top {
+  gap: 8px !important;
+}
+.control-hero-copy h2 {
+  font-size: 11.5px !important;
+  margin: 0 !important;
+}
+.control-hero-copy p {
+  display: none !important;
+}
+.control-actions .cc-sync {
+  font-size: 10px !important;
+}
+.control-actions button {
+  padding: 2px 8px !important;
+  font-size: 10.5px !important;
+  height: 24px !important;
+}
+
+.da-basic-token-head {
+  margin: 0 !important;
+  padding: 0 2px !important;
+}
+.da-basic-token-head h2 {
+  font-size: 14px !important;
+}
+
+.da-dashboard-filter-bar {
+  padding: 4px 10px !important;
+  margin-bottom: 4px !important;
+}
+
+.da-grid-tiles {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  margin-top: 4px !important;
+}
+
+.da-grid-tiles > article,
+.da-tile,
+.da-tile-top,
+.da-tile.da-tile-hero {
+  grid-column: span 1 !important;
+  min-height: 88px !important;
+  max-height: 94px !important;
+  height: 92px !important;
+  padding: 6px 8px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
+}
+
+.da-tile-head {
+  margin-bottom: 1px !important;
+  gap: 5px !important;
+}
+.da-tile-icon {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 5px !important;
+}
+.da-tile-icon svg {
+  width: 11px !important;
+  height: 11px !important;
+}
+.da-tile-label {
+  font-size: 8.5px !important;
+  letter-spacing: 0.3px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.da-tile-value {
+  font-size: 19px !important;
+  margin: 1px 0 !important;
+  line-height: 1.1 !important;
+}
+.da-tile-hero .da-tile-value {
+  font-size: 20px !important;
+}
+.da-tile-foot-row {
+  margin-top: auto !important;
+  gap: 4px !important;
+}
+.da-tile-delta {
+  font-size: 8.5px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.da-tile-sub {
+  font-size: 8px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-top: 1px !important;
+}
+.da-mini-spark-wave {
+  height: 14px !important;
+}
+
+.da-token-trust-strip {
+  padding: 4px 10px !important;
+  margin-top: 4px !important;
+  margin-bottom: 4px !important;
+}
+.da-token-trust-strip small {
+  font-size: 8.5px !important;
+}
+.da-token-trust-strip b {
+  font-size: 10px !important;
+}
+
+.da-split-view-row {
+  display: grid !important;
+  grid-template-columns: 1.34fr 1fr !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  margin-top: 4px !important;
+}
+
+.da-split-left .da-chart-main-card {
+  padding: 8px 12px !important;
+}
+.da-split-left .da-chart-wrap {
+  height: 155px !important;
+}
+.da-split-right .cc-card {
+  padding: 8px 12px !important;
+}
+.da-split-right .da-turn-log {
+  max-height: 290px !important;
+}
+
+
+
+/* ==========================================================================
+   Zero-Scroll 1-View Pixel Calibration (Fits within 750px viewport)
+   ========================================================================== */
+.main-area .topbar {
+  padding: 4px 14px 4px !important;
+  min-height: 38px !important;
+  height: 38px !important;
+  margin-bottom: 2px !important;
+}
+.main-area .topbar .eyebrow {
+  display: none !important;
+}
+.main-area .topbar h1 {
+  font-size: 14px !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+.main-area .topbar p#pageSubtitle {
+  display: none !important;
+}
+.top-actions button {
+  height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+}
+.device-summary-button {
+  height: 26px !important;
+  padding: 0 8px !important;
+}
+
+.content-viewport {
+  padding: 6px 14px 10px !important;
+}
+.page {
+  gap: 4px !important;
+}
+
+.control-hero {
+  padding: 3px 10px !important;
+  margin-bottom: 2px !important;
+  min-height: 30px !important;
+  height: 30px !important;
+  border-radius: 8px !important;
+}
+.control-hero-top {
+  gap: 6px !important;
+}
+.control-hero-copy h2 {
+  font-size: 11px !important;
+  margin: 0 !important;
+}
+.control-hero-copy p {
+  display: none !important;
+}
+.control-actions .cc-sync {
+  font-size: 9.5px !important;
+}
+.control-actions button {
+  padding: 1px 7px !important;
+  font-size: 10px !important;
+  height: 22px !important;
+}
+
+.da-basic-token-head {
+  margin: 0 !important;
+  padding: 0 2px !important;
+}
+.da-basic-token-head h2 {
+  font-size: 13px !important;
+}
+.da-basic-token-head p {
+  display: none !important;
+}
+
+.da-dashboard-filter-bar {
+  padding: 3px 8px !important;
+  margin-bottom: 3px !important;
+  gap: 6px !important;
+}
+.da-filter-pill, .da-filter-pill-select {
+  padding: 2px 8px !important;
+  border-radius: 6px !important;
+}
+.filter-copy small {
+  font-size: 7.5px !important;
+}
+.filter-copy b, .filter-copy select {
+  font-size: 10.5px !important;
+}
+.da-action-btn, .da-toggle-badge {
+  height: 24px !important;
+  padding: 0 8px !important;
+  font-size: 10.5px !important;
+  border-radius: 6px !important;
+}
+
+.da-grid-tiles {
+  display: grid !important;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  margin-top: 2px !important;
+}
+
+.da-grid-tiles > article,
+.da-tile,
+.da-tile-top,
+.da-tile.da-tile-hero {
+  grid-column: span 1 !important;
+  min-height: 76px !important;
+  max-height: 80px !important;
+  height: 78px !important;
+  padding: 5px 7px !important;
+  border-radius: 8px !important;
+}
+
+.da-tile-head {
+  margin-bottom: 0px !important;
+  gap: 4px !important;
+}
+.da-tile-icon {
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 4px !important;
+}
+.da-tile-icon svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+.da-tile-label {
+  font-size: 8px !important;
+  letter-spacing: 0.2px !important;
+}
+.da-tile-value {
+  font-size: 17px !important;
+  margin: 0px 0 !important;
+  line-height: 1.05 !important;
+}
+.da-tile-hero .da-tile-value {
+  font-size: 18px !important;
+}
+.da-tile-foot-row {
+  margin-top: auto !important;
+  gap: 3px !important;
+}
+.da-tile-delta {
+  font-size: 8px !important;
+}
+.da-tile-sub {
+  font-size: 7.5px !important;
+  margin-top: 0px !important;
+}
+.da-mini-spark-wave {
+  height: 12px !important;
+}
+
+.da-token-trust-strip {
+  padding: 3px 8px !important;
+  margin-top: 2px !important;
+  margin-bottom: 3px !important;
+  gap: 6px !important;
+  border-radius: 6px !important;
+}
+.da-token-trust-strip small {
+  font-size: 8px !important;
+}
+.da-token-trust-strip b {
+  font-size: 9.5px !important;
+}
+
+.da-split-view-row {
+  display: grid !important;
+  grid-template-columns: 1.34fr 1fr !important;
+  gap: 6px !important;
+  align-items: stretch !important;
+  margin-top: 2px !important;
+}
+
+.da-split-left {
+  gap: 6px !important;
+}
+.da-split-left .da-chart-main-card {
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+}
+.da-split-left .da-chart-main-card .cc-card-head {
+  margin-bottom: 4px !important;
+}
+.da-split-left .da-chart-main-card h3 {
+  font-size: 11.5px !important;
+}
+.da-split-left .da-chart-wrap {
+  height: 125px !important;
+}
+
+.da-split-left .da-sub-charts-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 6px !important;
+}
+.da-split-left .da-sub-charts-row .cc-card {
+  padding: 6px 8px !important;
+  border-radius: 8px !important;
+}
+.da-split-left .da-sub-charts-row .cc-card-head {
+  margin-bottom: 4px !important;
+}
+.da-split-left .da-sub-charts-row h3 {
+  font-size: 10.5px !important;
+}
+.da-split-left .da-donut-horizontal-wrap {
+  gap: 6px !important;
+}
+.da-split-left .da-donut-horizontal-wrap .da-donut {
+  width: 68px !important;
+  height: 68px !important;
+}
+.da-split-left .da-donut-foot {
+  font-size: 9px !important;
+  margin-top: 2px !important;
+}
+.da-split-left .da-tools-card .da-bars {
+  max-height: 55px !important;
+  overflow: hidden !important;
+}
+.da-split-left .da-tools-foot {
+  font-size: 9px !important;
+  margin-top: 2px !important;
+}
+
+.da-split-right .cc-card {
+  padding: 6px 10px !important;
+  border-radius: 8px !important;
+}
+.da-split-right .cc-card-head {
+  margin-bottom: 4px !important;
+}
+.da-split-right .cc-card-head h3 {
+  font-size: 11.5px !important;
+}
+.da-split-right .cc-card-head p {
+  font-size: 9px !important;
+  margin: 1px 0 0 !important;
+}
+.da-split-right .da-turn-log {
+  max-height: 235px !important;
+}
+.da-split-right .da-turn-row {
+  padding: 3px 2px !important;
+  font-size: 9.5px !important;
+}
+
+/* Keep measured content reachable at the existing narrow-window breakpoint. */
+@media (max-width: 1080px) {
+  .da-grid-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .da-grid-tiles > article.da-tile {
+    grid-column: span 2 !important;
+  }
+  .da-split-view-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .da-split-left .da-tools-card .da-bars {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+</style>
+</head>
+<body data-theme="light">
+
+  <!-- Manager Window Title Bar -->
+  <div class="manager-window-bar">
+    <span>Execution Hub · Control Center</span>
+    <div class="window-controls">
+      <button id="themeToggleBtn" title="Chuyển đổi giao diện sáng / tối">◐</button>
+      <button id="closeManager" title="Đóng cửa sổ">×</button>
+    </div>
+  </div>
+
+  <!-- Outer Application Shell -->
+  <div class="app-shell">
+
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 120 120" width="32" height="32" fill="none">
+            <ellipse cx="60" cy="60" rx="52" ry="24" transform="rotate(-28 60 60)" stroke="#38bdf8" stroke-width="1.4" stroke-dasharray="8 6 2 6" opacity="0.6"/>
+            <polygon points="60,8 102,32 102,88 60,112 18,88 18,32" stroke="#3b82f6" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round"/>
+            <path d="M60,8 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M102,32 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M102,88 L60,60" stroke="#ec4899" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M60,112 L60,60" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M18,88 L60,60" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M18,32 L60,60" stroke="#00f2fe" stroke-width="2.2" stroke-linecap="round"/>
+            <path d="M60,26 L86,41 L86,71 L60,86 L34,71 L34,41 Z" stroke="#38bdf8" stroke-width="1.8" stroke-linejoin="round" fill="#0f172a" fill-opacity="0.2"/>
+            <polygon points="60,4 68,14 60,22 52,14" fill="#38bdf8"/>
+            <polygon points="106,30 106,42 96,36 96,24" fill="#a855f7"/>
+            <polygon points="106,90 96,96 96,84 106,78" fill="#ec4899"/>
+            <polygon points="60,116 52,106 60,98 68,106" fill="#8b5cf6"/>
+            <polygon points="14,90 24,96 24,84 14,78" fill="#38bdf8"/>
+            <polygon points="14,30 14,42 24,36 24,24" fill="#00f2fe"/>
+            <circle cx="60" cy="60" r="14" fill="#38bdf8" fill-opacity="0.3"/>
+            <circle cx="60" cy="60" r="4.5" fill="#ffffff"/>
+          </svg>
+        </div>
+        <div><strong>Codex Hub</strong><small>Control Center</small></div>
+      </div>
+
+      <div class="sidebar-runtime">
+        <div class="runtime-orbit"><i id="sideRuntimeDot"></i><b id="sideRuntimeText">Chưa có snapshot runtime</b></div>
+        <p id="sideWorkspace">Workspace chưa được xác nhận</p>
+        <div class="mini-stats"><span>MCP <b id="sideMcp">—</b></span><span>Tunnel <b id="sideTunnel">—</b></span></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <small>Bảng token độc lập chỉ hiển thị overview; điều hướng và thao tác runtime ở cửa sổ quản lý chính.</small>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-area">
+      <!-- Topbar Header -->
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="pageEyebrow">TRUNG TÂM ĐIỀU HÀNH</p>
+          <h1 id="pageTitle">Tổng quan Vận hành</h1>
+          <p id="pageSubtitle">Xem tập trung MCP cục bộ, OpenAI Tunnel và môi trường triển khai.</p>
+        </div>
+        <div class="top-actions">
+          <div class="device-summary-button" aria-label="Thiết bị hiện tại chưa xác nhận">
+            <i></i>
+            <span>
+              <b id="topDeviceName">Thiết bị chưa xác nhận</b>
+              <small id="topDeviceMeta">Chờ snapshot runtime</small>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Scrollable Content Viewport -->
+      <div class="content-viewport">
+        <section class="page active" data-page-view="overview">
+
+          <!-- Notice / Control Hero Status Banner -->
+          <div class="control-hero">
+            <div class="control-hero-top">
+              <div class="control-hero-copy">
+                <span id="ccHealthBadge" class="cc-pill is-waiting" style="background: rgba(245, 158, 11, 0.15); color: #d97706; border-color: rgba(245, 158, 11, 0.3); font-weight: 800;">UNKNOWN</span>
+                <h2 id="ccHeadline">Chưa có snapshot runtime</h2>
+                <p id="ccSubline">Chờ evidence hiện hành; không suy đoán runtime, provider hay model activity.</p>
+              </div>
+              <div class="control-actions">
+                <span id="ccLastSync" class="cc-sync">Chưa đồng bộ</span>
+                <button class="secondary-button" id="ccRefreshButton">Refresh</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Head: Định lượng Token & Hiệu quả -->
+          <div class="da-basic-token-head">
+            <div>
+              <h2>Định lượng Token &amp; Hiệu quả</h2>
+              <p>Ưu tiên số token đã đo, xu hướng sử dụng, cache, chi phí quy đổi và token trên mỗi kết quả hoàn tất. Số ước lượng luôn được đánh dấu riêng.</p>
+            </div>
+          </div>
+
+          <!-- 1. Top Filter & Action Header Toolbar -->
+          <div class="da-dashboard-filter-bar">
+            <div class="da-filter-group left">
+              <div class="da-filter-pill">
+                <div class="filter-copy">
+                  <small>WORKSPACE</small>
+                  <b id="daProjectText">Chưa xác nhận</b>
+                </div>
+              </div>
+
+              <div class="da-filter-pill">
+                <div class="filter-copy">
+                  <small>MÔI TRƯỜNG</small>
+                  <b><span id="daEnvText">Chưa xác nhận</span></b>
+                </div>
+              </div>
+
+              <div class="da-filter-pill date-pill" id="daDatePill">
+                <div class="filter-copy">
+                  <small id="daDateHeader">CỬA SỔ DỮ LIỆU</small>
+                  <b id="daDateValue">Chưa có snapshot analytics</b>
+                </div>
+              </div>
+            </div>
+
+            <div class="da-filter-group right">
+              <div class="da-toggle-badge" title="Chờ snapshot overview; không có dữ liệu được tự tạo">
+                <span class="refresh-icon">🔄</span>
+                <span>Chờ snapshot</span>
+              </div>
+
+              <button class="da-action-btn primary-purple" id="daRefreshButton" title="Làm mới dữ liệu từ MCP runtime">
+                <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 0111.6-4M16.5 10a6.5 6.5 0 01-11.6 4M16 3.5v3h-3M4 16.5v-3h3"/></svg>
+                <span>Làm mới dữ liệu</span>
+              </button>
+
+              <span id="daLastSync" class="cc-sync" hidden>Chưa đồng bộ</span>
+            </div>
+          </div>
+
+          <!-- Real-time Activity Ticker -->
+          <div class="da-ticker" id="daTicker" aria-label="Hoạt động gần đây" style="display: none;">
+            <div class="da-ticker-track" id="daTickerTrack"></div>
+          </div>
+
+          <!-- 2. Top 7 Metric KPI Cards (Balanced 3-Top + 4-Bottom Symmetry) -->
+          <div class="da-grid-tiles da-grid-6">
+
+            <!-- Card 1 (Hero): TOKEN CHATWEB -->
+            <article class="da-tile card-purple da-tile-hero" aria-label="Token ChatWeb">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-purple">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </div>
+                <span class="da-tile-label">TOKEN CHATWEB</span>
+              </div>
+              <div class="da-tile-value" id="daChatTurnValue">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daChatTurnDelta">Chưa có snapshot</span>
+              </div>
+              <div class="da-tile-sub" id="daChatTurnMeta">Thiếu phép đo giữ unknown, không suy diễn từ 0</div>
+            </article>
+
+            <!-- Card 2: TOKEN PROVIDER -->
+            <article class="da-tile card-blue" aria-label="Token provider">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-blue">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="da-tile-label">TOKEN PROVIDER</span>
+              </div>
+              <div class="da-tile-value" id="daTokensTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daTokensDelta">Chưa có UsageEvent canonical</span>
+                <div class="da-mini-spark-wave blue" id="daSpark" aria-hidden="true"></div>
+              </div>
+              <div class="da-tile-sub" id="daTokensSplit" hidden>—</div>
+              <div class="da-tile-sub" id="daTokensMeta" hidden>—</div>
+            </article>
+
+            <!-- Card 3: INPUT TOKEN -->
+            <article class="da-tile card-cyan" aria-label="Input token">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-cyan">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 3v12m0 0l-4-4m4 4l4-4"/></svg>
+                </div>
+                <span class="da-tile-label">INPUT TOKEN</span>
+              </div>
+              <div class="da-tile-value" id="daTokensInTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daTokensInDelta">Input token unknown</span>
+              </div>
+            </article>
+
+            <!-- Card 4: OUTPUT TOKEN -->
+            <article class="da-tile card-purple" aria-label="Output token">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-purple">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 8V7a2 2 0 012-2h12a2 2 0 012 2v1M12 21V9m0 0l-4 4m4-4l4 4"/></svg>
+                </div>
+                <span class="da-tile-label">OUTPUT TOKEN</span>
+              </div>
+              <div class="da-tile-value" id="daTokensOutTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daTokensOutDelta">Output token unknown</span>
+              </div>
+            </article>
+
+            <!-- Card 5: CHI PHÍ QUY ĐỔI -->
+            <article class="da-tile card-green is-cost" aria-label="Chi phí quy đổi">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-green">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+                <span class="da-tile-label">CHI PHÍ QUY ĐỔI</span>
+              </div>
+              <div class="da-tile-value" id="daCostTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta is-cost" id="daCostVnd">Quy đổi bảng giá • không phải ChatGPT billing</span>
+              </div>
+              <div class="da-tile-sub" id="daCostSplit" hidden>—</div>
+              <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
+            </article>
+
+            <!-- Card 6: CACHED TOKEN -->
+            <article class="da-tile card-amber is-health" aria-label="Cached token">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-amber">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <span class="da-tile-label">CACHED TOKEN</span>
+              </div>
+              <div class="da-tile-value" id="daEfficiencyTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daEfficiencyDelta">Cached token unknown</span>
+              </div>
+              <div class="da-tile-sub" id="daEfficiencyMeta" hidden>—</div>
+              <div class="da-tile-sub" id="daEfficiencySub" hidden>—</div>
+              <svg id="daCallsRing" width="36" height="36" style="position:absolute;right:14px;bottom:12px" aria-hidden="true" hidden></svg>
+            </article>
+
+            <!-- Card 7: TOKEN / KẾT QUẢ -->
+            <article class="da-tile card-teal is-health" aria-label="Token trên mỗi kết quả">
+              <div class="da-tile-head">
+                <div class="da-tile-icon icon-emerald">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                </div>
+                <span class="da-tile-label">TOKEN / KẾT QUẢ</span>
+              </div>
+              <div class="da-tile-value" id="daCallsTotal">—</div>
+              <div class="da-tile-foot-row">
+                <span class="da-tile-delta" id="daCallsDelta">Chưa có accepted-result evidence</span>
+              </div>
+              <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
+            </article>
+          </div>
+
+          <!-- Trust Strip / Horizontal Summary Strip -->
+          <div class="da-token-trust-strip" aria-label="Chất lượng số liệu token">
+            <span><small>AI thực thi</small><b id="daProviderTokenStatus">Chưa có snapshot</b></span>
+            <span><small>Context</small><b id="daEstimateConfidence">Chưa có ước lượng controller</b></span>
+            <span><small>Token lượt chat</small><b id="daTurnTokenStatus">Chưa đo lượt nào</b></span>
+            <span hidden><small>ChatWeb điều phối</small><b id="daControllerTokenStatus">Chưa đủ dữ liệu</b></span>
+          </div>
+
+          <!-- Chat Turn Log -->
+          <!-- Main 1-View Split Stage: Charts & Real-time Turn Stream Side-by-Side -->
+          <div class="da-split-view-row">
+            <div class="da-split-left">
+              <!-- Chart 1: Xu hướng sử dụng Token -->
+              <article class="cc-card da-chart-main-card">
+                <div class="cc-card-head">
+                  <div class="title-with-info">
+                    <h3>Biểu Đồ Lượng Từ Sử Dụng Theo Thời Gian <i class="da-info-icon" title="Xem lượng từ ngữ tăng giảm trong ngày">ⓘ</i></h3>
+                    <div class="da-chart-legend">
+                      <span class="leg-item total"><i class="dot-blue"></i>Tổng lượng từ</span>
+                      <span class="leg-item in"><i class="dot-cyan"></i>Câu hỏi gửi vào</span>
+                      <span class="leg-item out"><i class="dot-purple"></i>Câu trả lời nhận về</span>
+                    </div>
+                  </div>
+                  <div class="da-chart-head-controls">
+                    <select class="da-time-select" id="daChartTimeMode">
+                      <option value="hour" selected>Xem theo giờ</option>
+                      <option value="day">Xem theo ngày</option>
+                    </select>
+                    <span class="more-options-dot">⋮</span>
+                  </div>
+                </div>
+                <div class="cc-card-body">
+                  <div class="da-chart-wrap" id="daChartCard">
+                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Biểu đồ xu hướng token chưa có dữ liệu" role="img" hidden></svg>
+                    <div id="daChartEmpty" class="da-chart-empty">Chưa có dữ liệu — đang chờ snapshot.</div>
+                    <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
+                  </div>
+                </div>
+              </article>
+
+              <!-- Sub 2-Columns: Donut & Tools Side-by-side -->
+              <div class="da-sub-charts-row">
+                <!-- Chart 2: Phân bố theo Mô hình Donut -->
+                <article class="cc-card da-donut-card">
+                  <div class="cc-card-head">
+                    <div>
+                      <h3>Tỷ Lệ Giữa Các Mô Hình AI <i class="da-info-icon" title="Xem mô hình nào đang gánh nhiều việc nhất">ⓘ</i></h3>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-donut-horizontal-wrap">
+                      <svg id="daDonut" class="da-donut" width="100" height="100" viewBox="0 0 130 130" role="img" aria-label="Phân bố token chưa có dữ liệu"><text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text><text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Chưa có dữ liệu</text></svg>
+                      <div class="da-legend-list" id="daLegend"></div>
+                    </div>
+                  </div>
+                  <div class="da-donut-foot">
+                    <span id="daDonutFoot">—</span>
+                    <span id="daModelSummary" class="cc-pill">Chưa có dữ liệu</span>
+                  </div>
+                </article>
+
+                <!-- Chart 3: Chi phí theo Công cụ -->
+                <article class="cc-card da-tools-card">
+                  <div class="cc-card-head">
+                    <div>
+                      <h3>Chi Phí Theo Nhóm Công Việc <i class="da-info-icon" title="Loại công việc nào tiêu tốn nhiều chi phí nhất">ⓘ</i></h3>
+                    </div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-bars" id="daToolBars"></div>
+                  </div>
+                  <div class="da-tools-foot">
+                    <span>Tổng chi phí công việc</span>
+                    <strong id="daToolCostTotal">—</strong>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div class="da-split-right">
+              <!-- Chat Turn Log -->
+              <article class="cc-card" aria-labelledby="daTurnLogTitle">
+                <div class="cc-card-head">
+                  <div>
+                    <h3 id="daTurnLogTitle">Nhật ký lượt chat <i class="da-info-icon" title="Từng lượt ChatWeb mới nhất: số exact hoặc ước lượng có khoảng. Mỗi lượt một dòng, không cộng dồn.">ⓘ</i></h3>
+                    <p>Mỗi lượt một dòng · mới nhất trước · cập nhật theo nhịp đồng bộ analytics.</p>
+                  </div>
+                </div>
+                <div class="cc-card-body">
+                  <div class="da-turn-log" id="daTurnLog" role="table" aria-label="Nhật ký token từng lượt chat"><div class="da-turn-empty">Chưa có lượt chat nào được đo</div></div>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <!-- Collapsible Details Drawer for Deep Audit & Fleet Performance -->
+          <details class="cc-card da-drawer-card" id="daDrawerAnalytics">
+            <summary>
+              <span>📊 Bảng phân tích chi tiết &amp; Bằng chứng đo lường (Tốc độ, Heatmap, Accepted Result, Độ phủ)</span>
+              <span class="da-drawer-summary-badge">Mở rộng ▾</span>
+            </summary>
+            <div class="da-drawer-content">
+              <!-- 4. Sub-Grid: Speed & Heatmap -->
+              <div class="da-sub-grid-2">
+                <!-- Sub Card 1: Tốc độ & Thời gian phản hồi -->
+                <article class="cc-card da-sub-card">
+                  <div class="cc-card-head">
+                    <div><h3>Tốc Độ &amp; Thời Gian Chờ <i class="da-info-icon" title="Tốc độ tạo câu trả lời và thời gian chờ AI phản hồi">ⓘ</i></h3></div>
+                  </div>
+                  <div class="cc-card-body da-perf-split">
+                    <div class="sub-stat-block">
+                      <small>Tốc độ tạo câu trả lời</small>
+                      <strong id="daRealtimeTpm">—</strong>
+                      <span class="stat-change positive" id="daRealtimeTpmMeta">—</span>
+                    </div>
+                    <div class="sub-stat-block">
+                      <small>Thời gian bắt đầu trả lời</small>
+                      <strong id="daRealtimeLatency">—</strong>
+                      <span class="stat-change" id="daRealtimeLatencyMeta">—</span>
+                    </div>
+                  </div>
+                </article>
+
+                <!-- Sub Card 2: Heatmap -->
+                <article class="cc-card da-sub-card">
+                  <div class="cc-card-head">
+                    <div><h3>Khung Giờ Hoạt Động (24 Giờ x 7 Ngày) <i class="da-info-icon" title="Khung giờ nào bạn trao đổi với AI nhiều nhất">ⓘ</i></h3></div>
+                  </div>
+                  <div class="cc-card-body">
+                    <div class="da-heatmap-container" id="daHeatmapContainer">
+                      <div class="heatmap-day-labels">
+                        <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+                      </div>
+                      <div class="da-heatmap-grid" id="daHeatmapGrid"></div>
+                      <div class="heatmap-hour-labels">
+                        <span>00:00</span><span>04:00</span><span>08:00</span><span>12:00</span><span>16:00</span><span>20:00</span><span>23:00</span>
+                      </div>
+                      <div class="heatmap-scale">
+                        <span>Ít dùng</span>
+                        <div class="scale-bar-gradient"></div>
+                        <span>Dùng nhiều</span>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <!-- 5. Accepted Result Table -->
+              <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
+                <div class="cc-card-head">
+                  <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
+                </div>
+                <div class="cc-card-body">
+                  <div class="da-model-table-wrap">
+                    <table class="da-fleet-table">
+                      <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
+                      <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Chưa có accepted-result evidence.</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+              </article>
+
+              <!-- 6. Measurement Coverage Audit Panel -->
+              <article class="cc-card" aria-labelledby="daCoverageTitle">
+                <div class="cc-card-head">
+                  <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
+                  <span id="daCoveragePolicy" class="cc-pill is-waiting">—</span>
+                </div>
+                <div class="cc-card-body cc-evidence-summary" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;">
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
+                  <div class="cc-evidence-stat" style="background: var(--cc-surface-soft); padding: 10px; border-radius: 8px;"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
+                </div>
+              </article>
+            </div>
+          </details>
+
+          <!-- 7. Collapsible Pricing & Cost Model Settings -->
+          <details class="cc-card da-cost-details-disclosure" id="daCostDetailsDisclosure">
+            <summary class="cc-card-head">
+              <div>
+                <h3>Cài Đặt Bảng Giá &amp; Tùy Chỉnh Quy Đổi</h3>
+                <p>Điều chỉnh đơn giá token theo USD / VNĐ để tính toán chi phí chính xác theo gói tài khoản của bạn</p>
+              </div>
+              <span class="cc-pill" style="font-size: 11px; font-weight: 750; color: var(--da-blue);">Mở cài đặt giá ›</span>
+            </summary>
+            <div class="cc-card-body">
+              <div class="da-cost-model">
+                <div class="da-cost-form">
+                  <div class="da-field"><label>Mẫu giá định sẵn (USD / 1 triệu token)</label><select id="daPreset">
+                    <option value="gpt-4o-mini">GPT-4o mini (Giá rẻ, tiết kiệm nhất)</option>
+                    <option value="gpt-4o">GPT-4o (Thông dụng, chuẩn mực)</option>
+                    <option value="gpt-4.1">GPT-4.1 (Mới nhất, thông minh)</option>
+                    <option value="o3-mini">o3-mini (Tư duy suy luận nhanh)</option>
+                    <option value="o3">o3 (Tư duy suy luận chuyên sâu)</option>
+                    <option value="custom">Tự nhập đơn giá</option>
+                  </select></div>
+                  <div class="da-field"><label>Đơn giá gửi câu hỏi vào ($/1M token)</label><input id="daRateIn" type="number" min="0" step="0.01" inputmode="decimal" value="0.15"></div>
+                  <div class="da-field"><label>Đơn giá nhận câu trả lời ($/1M token)</label><input id="daRateOut" type="number" min="0" step="0.01" inputmode="decimal" value="0.60"></div>
+                  <div class="da-field"><label>Đơn vị tiền tệ hiển thị</label><select id="daCurrency"><option value="USD" selected>USD ($)</option><option value="VND">VNĐ (₫)</option></select></div>
+                  <div class="da-field" id="daFxField" hidden><label>Tỷ giá VNĐ / 1 USD</label><input id="daFx" type="number" min="1" step="100" inputmode="decimal" placeholder="25000"></div>
+                  <button class="da-apply" id="daApply">Lưu cài đặt</button>
+                </div>
+                <div class="da-lane-grid">
+                  <div class="da-lane-head"><span>Mô hình AI</span><span>Giá gửi $/1M</span><span>Giá nhận $/1M</span></div>
+                  <label class="da-lane-row"><span><i class="is-chatweb"></i>Khung Chat Web (ChatWeb)</span><input id="daLaneChatIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneChatOut" type="number" min="0" step="0.01" value="0.60"></label>
+                  <label class="da-lane-row"><span><i class="is-fast"></i>Phản Hồi Nhanh (Codex Fast)</span><input id="daLaneFastIn" type="number" min="0" step="0.01" value="0.15"><input id="daLaneFastOut" type="number" min="0" step="0.01" value="0.60"></label>
+                  <label class="da-lane-row"><span><i class="is-deepseek"></i>Lập Trình Sâu (OpenCode)</span><input id="daLaneDeepIn" type="number" min="0" step="0.01" value="0.28"><input id="daLaneDeepOut" type="number" min="0" step="0.01" value="0.42"></label>
+                  <label class="da-lane-row"><span><i class="is-terra"></i>Tác Vụ Phức Tạp (Codex Deep)</span><input id="daLaneTerraIn" type="number" min="0" step="0.01" value="2.50"><input id="daLaneTerraOut" type="number" min="0" step="0.01" value="10.00"></label>
+                  <label class="da-lane-row"><span><i class="is-sol"></i>Tối Quan Trọng (Codex Critical)</span><input id="daLaneSolIn" type="number" min="0" step="0.01" value="10.00"><input id="daLaneSolOut" type="number" min="0" step="0.01" value="40.00"></label>
+                </div>
+                <p class="da-cost-note"><b>Lưu ý:</b> Bảng chi phí là ước tính tham khảo quy đổi theo số từ ngữ trao đổi, không đại diện cho hóa đơn trừ tiền trực tiếp từ tài khoản dịch vụ AI của bạn.</p>
+              </div>
+            </div>
+          </details>
+
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="control-center.js"></script>
+  <script src="dashboard.js"></script>
+  <script>
+    // Theme follows the Electron query at creation time. The local toggle is
+    // intentionally presentation-only; it never manufactures data or writes settings.
+    (() => {
+      const themeBtn = document.getElementById('themeToggleBtn');
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.body.setAttribute('data-theme', theme);
+        document.body.dataset.theme = theme;
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const initialTheme = params.get('theme') || 'light';
+      applyTheme(initialTheme);
+
+      if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme') || 'light';
+          const next = current === 'light' ? 'dark' : 'light';
+          applyTheme(next);
+        });
+      }
+
+      const closeBtn = document.getElementById('closeManager');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', async () => {
+          if (window.mcpAssistant && typeof window.mcpAssistant.closeTokenDashboard === 'function') {
+            try {
+              const result = await window.mcpAssistant.closeTokenDashboard();
+              if (result && result.ok === false) window.close();
+            } catch {
+              window.close();
+            }
+          } else {
+            window.close();
+          }
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

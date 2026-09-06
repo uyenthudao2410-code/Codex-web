@@ -48,6 +48,7 @@ test('component revision hashes only the allowlisted component inputs determinis
   assert.equal(first.revision, second.revision);
   assert.equal(first.file_count, 3);
   assert.equal(first.missing_files, 0);
+  assert.equal(componentOwnsPath('demo', 'component/lib/a.js', specs), true);
   fs.writeFileSync(path.join(appRoot, 'component', 'lib', 'a.js'), 'changed\n');
   assert.notEqual(hashComponentRevision(appRoot, 'demo', specs).revision, first.revision);
 });
@@ -117,12 +118,50 @@ test('Recovery Host revision owns the connector attestation boundary it loads', 
   );
 });
 
-test('Electron UI revision owns its real-renderer performance collector', () => {
+test('Electron UI revision owns its real-renderer performance collector and loaded dashboard assets', () => {
   assert.equal(
     COMPONENT_SPECS.electron_ui.files.includes('electron/services/uiPerformanceMetrics.js'),
     true
   );
   assert.equal(componentOwnsPath('electron_ui', 'electron/services/uiPerformanceMetrics.js'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'renderer/token-dashboard.html'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'renderer/dashboard.js'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'renderer/fonts/PlusJakartaSans-latin.woff2'), true);
+  assert.equal(componentOwnsPath('electron_ui', 'renderer/not-a-runtime-resource.txt'), false);
+  assert.equal(COMPONENT_SPECS.electron_ui.excluded_files, undefined);
+});
+
+test('Electron UI revision changes when loaded token dashboard document or font bytes change', (t) => {
+  const { appRoot } = fixture(t);
+  for (const relative of COMPONENT_SPECS.electron_ui.files) {
+    const target = path.join(appRoot, ...relative.split('/'));
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${relative}\n`);
+  }
+  const rendererRoot = path.join(appRoot, 'renderer');
+  const dashboard = path.join(rendererRoot, 'token-dashboard.html');
+  const font = path.join(rendererRoot, 'fonts', 'fixture.woff2');
+  fs.mkdirSync(path.dirname(font), { recursive: true });
+  fs.writeFileSync(dashboard, '<link rel="stylesheet" href="fonts.css">\n');
+  fs.writeFileSync(path.join(rendererRoot, 'fonts.css'), '@font-face { src: url(./fonts/fixture.woff2); }\n');
+  fs.writeFileSync(font, Buffer.from([0x77, 0x4f, 0x46, 0x32, 0x01]));
+  fs.writeFileSync(path.join(rendererRoot, 'not-a-runtime-resource.txt'), 'unowned fixture\n');
+
+  const initial = hashComponentRevision(appRoot, 'electron_ui');
+  fs.appendFileSync(dashboard, '<!-- changed dashboard document -->\n');
+  const afterDashboard = hashComponentRevision(appRoot, 'electron_ui');
+  assert.notEqual(afterDashboard.revision, initial.revision);
+
+  fs.appendFileSync(font, Buffer.from([0x02]));
+  const afterFont = hashComponentRevision(appRoot, 'electron_ui');
+  assert.notEqual(afterFont.revision, afterDashboard.revision);
+
+  fs.appendFileSync(path.join(rendererRoot, 'not-a-runtime-resource.txt'), 'still unowned\n');
+  assert.equal(
+    hashComponentRevision(appRoot, 'electron_ui').revision,
+    afterFont.revision,
+    'an unsupported renderer fixture is not part of the Electron UI revision'
+  );
 });
 
 test('Recovery Host revision manifest owns stale-host bootstrap source', () => {

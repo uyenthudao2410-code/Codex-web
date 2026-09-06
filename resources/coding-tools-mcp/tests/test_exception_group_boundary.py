@@ -129,6 +129,7 @@ class ExceptionGroupBoundaryTests(unittest.TestCase):
         class FailingRuntime:
             def __init__(self) -> None:
                 self.request_context = SimpleNamespace()
+                self.task_state = SimpleNamespace(get=lambda: {})
 
             def activation_connector_bootstrap_allowed(self, _name: str) -> bool:
                 return False

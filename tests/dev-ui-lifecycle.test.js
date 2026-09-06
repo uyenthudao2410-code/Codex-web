@@ -640,7 +640,7 @@ test('dev:replace first activates a current handler, then stops and verifies a n
   assert.match(fixture.lines.at(-1), /DEV_UI REPLACED .*running_revision=.* disk_revision=/);
 });
 
-test('npm start refreshes the whole owned runtime and keeps connector readiness explicit', async () => {
+test('dev:refresh refreshes the whole owned runtime and keeps connector readiness explicit', async () => {
   const fixture = harness(observation('CURRENT'));
   const oldHost = fixture.current.descriptor.instance_id;
   const oldUi = fixture.current.ui.instanceId;
@@ -686,7 +686,7 @@ test('npm start refreshes the whole owned runtime and keeps connector readiness 
   assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*admission=closed fully_ready=false connector=pending connector_state=UNAVAILABLE/);
 });
 
-test('npm start exits successfully after exact process refresh while connector discovery remains pending', async () => {
+test('dev:refresh exits successfully after exact process refresh while connector discovery remains pending', async () => {
   const fixture = harness(observation('CURRENT'));
   const operationId = 'full-clean-refresh-exact-operation-0001';
   const epoch = 'full-clean-refresh-exact-epoch-0001';
@@ -781,7 +781,7 @@ test('npm start exits successfully after exact process refresh while connector d
   assert.match(fixture.lines.at(-1), /DEV_UI REFRESHED .*activation=VERIFYING .*mcp=ready tunnel=ready admission=closed fully_ready=false connector=pending connector_state=CHANGED_NEEDS_DISCOVERY/);
 });
 
-test('npm start bootstraps a missing Recovery Host and then performs the same full refresh', async () => {
+test('dev:refresh bootstraps a missing Recovery Host and then performs the same full refresh', async () => {
   const fixture = harness(unavailableObservation(Object.assign(new Error('missing'), { code: 'ENOENT' })));
   const epoch = 'full-clean-refresh-cold-0001';
   fixture.deps.ensureRefreshHost = async () => {

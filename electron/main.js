@@ -39,6 +39,7 @@ app.setPath('userData', path.join(app.getPath('appData'), 'web-mcp-assistant'));
 
 let chatWindow;
 let managerWindow;
+let tokenWindow;
 let chatController;
 let orchestrator;
 let forceQuit = false;
@@ -838,6 +839,39 @@ function openManagerWindow() {
   return managerWindow;
 }
 
+function openTokenWindow() {
+  if (tokenWindow && !tokenWindow.isDestroyed()) {
+    tokenWindow.show();
+    tokenWindow.focus();
+    return tokenWindow;
+  }
+
+  tokenWindow = new BrowserWindow({
+    width: 1100,
+    height: 800,
+    minWidth: 900,
+    minHeight: 620,
+    show: false,
+    autoHideMenuBar: true,
+    backgroundColor: '#0b0f19',
+    title: 'Coding Tools MCP · Bảng Token',
+    icon: appIconPath(),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+  tokenWindow.removeMenu();
+  const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
+  tokenWindow.once('ready-to-show', () => tokenWindow.show());
+  tokenWindow.loadFile(path.join(__dirname, '..', 'renderer', 'token-dashboard.html'), { query: { theme: initialTheme } });
+  // Destroy (not hide) on close so every open loads current disk files.
+  tokenWindow.on('closed', () => { tokenWindow = null; });
+  return tokenWindow;
+}
+
 function registerIpc() {
   secureHandle('app:snapshot', (_event, options) => invokeSafely(() => orchestrator.snapshot(options || {})));
   secureHandle('app:lightweight-snapshot', (event) => invokeSafely(async () => {
@@ -934,6 +968,11 @@ function registerIpc() {
     return true;
   }));
   secureHandle('manager:open', () => invokeSafely(async () => { openManagerWindow(); return true; }));
+  secureHandle('token-dashboard:open', () => invokeSafely(async () => { openTokenWindow(); return true; }));
+  secureHandle('token-dashboard:close', () => invokeSafely(async () => {
+    if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.close();
+    return true;
+  }));
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
   secureHandle('chat:status', () => invokeSafely(async () => chatController?.getState() || null));
   secureHandle('panel:toggle', () => invokeSafely(async () => ({ visible: togglePanel() })));
@@ -1010,6 +1049,8 @@ function registerIpc() {
     const current = settings.load();
     const token = secrets.get('mcpAuthToken');
     if (!token) throw new Error('MCP chưa sẵn sàng để ghi capsule handoff.');
+    const runId = typeof payload?.runId === 'string' ? payload.runId.trim() : '';
+    if (!runId) throw new Error('Chọn RUN hiện tại trước khi ghi capsule handoff.');
     const summaryText = String((payload && payload.summary) || '').slice(0, 600);
     const request = {
       jsonrpc: '2.0',
@@ -1017,7 +1058,7 @@ function registerIpc() {
       method: 'tools/call',
       params: {
         name: 'task_control',
-        arguments: { action: 'handoff', handoff_action: 'record', payload: { panel_summary: summaryText } },
+        arguments: { action: 'handoff', handoff_action: 'record', run_id: runId, payload: { panel_summary: summaryText } },
         _meta: {
           'io.modelcontextprotocol/protocolVersion': '2026-07-28',
           'io.modelcontextprotocol/clientCapabilities': {},
@@ -1168,6 +1209,7 @@ if (recoveryHostMode) {
         }
         sendManager('runtime:heartbeat', status);
         if (chatWindow && !chatWindow.isDestroyed()) chatWindow.webContents.send('runtime:heartbeat', status);
+        if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.webContents.send('runtime:heartbeat', status);
       }).then(() => registerUiRevision()).catch(() => {});
       runtimeHeartbeatInFlight = operation;
       return operation.finally(() => {

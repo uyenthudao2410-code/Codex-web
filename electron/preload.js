@@ -133,6 +133,8 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   inspectHealth: () => ipcRenderer.invoke('health:inspect'),
   repairHealth: () => ipcRenderer.invoke('health:repair'),
   closeManager: () => ipcRenderer.invoke('manager:close'),
+  openTokenDashboard: () => ipcRenderer.invoke('token-dashboard:open'),
+  closeTokenDashboard: () => ipcRenderer.invoke('token-dashboard:close'),
   saveSettings: (patch) => ipcRenderer.invoke('settings:save', patch),
   saveRuntimeKey: (value) => ipcRenderer.invoke('secrets:runtime-key', value),
   removeRuntimeKey: () => ipcRenderer.invoke('secrets:runtime-key-remove'),

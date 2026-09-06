@@ -1,0 +1,177 @@
+{
+  "version": 2,
+  "task_id": "8a9bf97c13644ea8a8204b55102eaaf5",
+  "orchestration": {
+    "run_id": "dad8554237094cc5a22ba50a794353c9",
+    "wave_id": "2d296cad75864c4ba7aec3efadebfedb",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "e8d01624191f2e2a09b336df8f3f992794a49d81e37d85895f6127dc9c3ca98a",
+    "contract_fp": ""
+  },
+  "objective": "Read-only semantic localization check for prepare_coding_context; do not edit files, run commands, tests, restart, publish, or deploy.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 8,
+        "head_hash": "28aacab3ed1aa988cc53b7fd8909e07e585f9c21329cc00d88f8d2cb96b4dd01"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dad8554237094cc5a22ba50a794353c9\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dad8554237094cc5a22ba50a794353c9\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "dad8554237094cc5a22ba50a794353c9",
+      "wave_id": "2d296cad75864c4ba7aec3efadebfedb",
+      "checkpoint_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "e8d01624191f2e2a09b336df8f3f992794a49d81e37d85895f6127dc9c3ca98a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only semantic localization check for prepare_coding_context; do not edit files, run commands, tests, restart, publish, or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "792592b7167fc47c533403dbd4516de8b35fb0afea0a2ff302a66d8c394df9c6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "01eb1cfd78c4420e1ab9df29238e0a8c73950d4d74aaede21d7d1eb1060ffa66",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-04T19:14:19.365Z",
+  "updated_at": "2026-09-04T19:31:10.465Z",
+  "events": [
+    {
+      "time": "2026-09-04T19:14:19.365Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only semantic localization check for prepare_coding_context; do not edit files, run commands, tests, restart, publish, or deploy."
+      }
+    },
+    {
+      "time": "2026-09-04T19:14:20.160Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:14:23.580Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:14:23.589Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T19:19:05.467Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:19:18.338Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:19:18.358Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T19:29:40.389Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:29:41.450Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:29:41.471Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T19:31:10.461Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "01eb1cfd78c4420e1ab9df29238e0a8c73950d4d74aaede21d7d1eb1060ffa66"
+      }
+    }
+  ]
+}

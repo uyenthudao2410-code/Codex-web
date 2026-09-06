@@ -1,0 +1,3 @@
+# Keep the manifest's pinned license-text hashes stable on Windows checkouts.
+JetBrainsMono-OFL.txt text eol=lf
+PlusJakartaSans-OFL.txt text eol=lf

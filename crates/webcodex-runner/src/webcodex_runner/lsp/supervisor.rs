@@ -1473,21 +1473,59 @@ fn looks_like_rustup_proxy(path: &Path) -> bool {
     if !sibling.exists() {
         return false;
     }
-    match (fs::metadata(path), fs::metadata(&sibling)) {
-        (Ok(left), Ok(right)) => {
-            #[cfg(unix)]
-            {
+    #[cfg(unix)]
+    {
+        match (fs::metadata(path), fs::metadata(&sibling)) {
+            (Ok(left), Ok(right)) => {
                 use std::os::unix::fs::MetadataExt;
                 left.dev() == right.dev() && left.ino() == right.ino()
             }
-            #[cfg(not(unix))]
-            {
-                let _ = (left, right);
-                false
-            }
+            _ => false,
         }
-        _ => false,
     }
+    #[cfg(windows)]
+    {
+        windows_files_share_identity(path, &sibling)
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        false
+    }
+}
+
+/// Compare the stable file identity Windows assigns to open file handles.
+///
+/// A failure to open either path or query either handle deliberately returns
+/// `false`: callers retain the prior available-command behavior when identity
+/// cannot be proven.
+#[cfg(windows)]
+fn windows_files_share_identity(left: &Path, right: &Path) -> bool {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::Storage::FileSystem::{
+        GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION,
+    };
+
+    let Ok(left) = fs::File::open(left) else {
+        return false;
+    };
+    let Ok(right) = fs::File::open(right) else {
+        return false;
+    };
+    let mut left_info = BY_HANDLE_FILE_INFORMATION::default();
+    let mut right_info = BY_HANDLE_FILE_INFORMATION::default();
+    // SAFETY: both `File`s own valid handles for these read-only calls, and
+    // each out-pointer targets initialized storage of the exact expected type.
+    let left_ok = unsafe { GetFileInformationByHandle(left.as_raw_handle(), &mut left_info) };
+    // SAFETY: both `File`s remain open, and `right_info` is valid writable
+    // storage of the exact type expected by the API.
+    let right_ok = unsafe { GetFileInformationByHandle(right.as_raw_handle(), &mut right_info) };
+    if left_ok == 0 || right_ok == 0 {
+        return false;
+    }
+
+    left_info.dwVolumeSerialNumber == right_info.dwVolumeSerialNumber
+        && left_info.nFileIndexHigh == right_info.nFileIndexHigh
+        && left_info.nFileIndexLow == right_info.nFileIndexLow
 }
 
 fn rustup_home_dir() -> Option<PathBuf> {

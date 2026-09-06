@@ -855,6 +855,7 @@ fn lsp_initialize_pre_exit_with_stderr_surfaces_component_missing_diagnostic() {
     assert_eq!(fixture.starts(), 2);
 }
 
+#[cfg(any(unix, windows))]
 #[test]
 fn lsp_rustup_proxy_without_component_is_not_available() {
     let _serial = super::super::serialize_fake_lsp_test();
@@ -869,24 +870,24 @@ fn lsp_rustup_proxy_without_component_is_not_available() {
         format!("default_toolchain = \"{toolchain}\"\n"),
     )
     .unwrap();
-    // Mimic cargo-bin rustup shims: rust-analyzer -> rustup.
-    let rustup_bin = bin.join("rustup");
+    // Mimic rustup shims: rust-analyzer links to rustup.
+    let rustup_bin = bin.join(format!("rustup{}", env::consts::EXE_SUFFIX));
     fs::write(&rustup_bin, b"#!/bin/sh\nexit 1\n").unwrap();
+    let analyzer = bin.join(format!("rust-analyzer{}", env::consts::EXE_SUFFIX));
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let mut perms = fs::metadata(&rustup_bin).unwrap().permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&rustup_bin, perms).unwrap();
-        std::os::unix::fs::symlink("rustup", bin.join("rust-analyzer")).unwrap();
+        std::os::unix::fs::symlink("rustup", &analyzer).unwrap();
     }
-    #[cfg(not(unix))]
+    #[cfg(windows)]
     {
-        // Non-unix CI: skip symlink-specific assertion.
-        return;
+        fs::hard_link(&rustup_bin, &analyzer).unwrap();
     }
 
-    let command = LspCommand::new(bin.join("rust-analyzer"));
+    let command = LspCommand::new(analyzer);
     // Point detection at the fixture rustup home without spawning anything.
     let previous_home = env::var_os("RUSTUP_HOME");
     let previous_toolchain = env::var_os("RUSTUP_TOOLCHAIN");
@@ -900,7 +901,7 @@ fn lsp_rustup_proxy_without_component_is_not_available() {
         .join("toolchains")
         .join(toolchain)
         .join("bin")
-        .join("rust-analyzer");
+        .join(format!("rust-analyzer{}", env::consts::EXE_SUFFIX));
     fs::write(&component, b"#!/bin/sh\nexit 0\n").unwrap();
     #[cfg(unix)]
     {
@@ -929,6 +930,23 @@ fn lsp_rustup_proxy_without_component_is_not_available() {
         available_installed,
         "rustup shim with installed component must report available"
     );
+}
+
+#[cfg(windows)]
+#[test]
+fn rustup_proxy_does_not_mistake_distinct_windows_files_for_hardlinks() {
+    let _serial = super::super::serialize_fake_lsp_test();
+    let temp = tempfile::tempdir().unwrap();
+    let bin = temp.path().join("bin");
+    fs::create_dir_all(&bin).unwrap();
+    let rustup = bin.join("rustup.exe");
+    let analyzer = bin.join("rust-analyzer.exe");
+
+    // Identical contents and a sibling rustup name are not file identity.
+    fs::write(&rustup, b"rustup fixture\n").unwrap();
+    fs::write(&analyzer, b"rustup fixture\n").unwrap();
+
+    assert!(!looks_like_rustup_proxy(&analyzer));
 }
 
 #[cfg(windows)]

@@ -1,0 +1,92 @@
+[
+  {
+    "version": 2,
+    "task_id": "b334c2b3398b4d6680af1548878d91a7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T01:05:41.290Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-06T01:05:25.146Z",
+    "updated_at": "2026-09-06T01:05:41.290Z",
+    "events": [
+      {
+        "time": "2026-09-06T01:05:25.146Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:25.463Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "4z7fLdXMyx8_TD7Xr1erVLfd"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:29.822Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:36.438Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"archived_matches|restoration_source|pending_completion_report_from_state\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "session_id": "ZcMhIjk35MLBMuKLIFSsAf4t"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:36.838Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"archived_matches|restoration_source|pending_completion_report_from_state\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:41.290Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"def history|history\\(|archive|acknowledg|completion_report_acknowledged|pending_completion_report\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T01:05:41.290Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T01:05:46.229Z",
+    "archive_reason": "finished"
+  }
+]

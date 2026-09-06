@@ -1,0 +1,405 @@
+{
+  "version": 2,
+  "task_id": "8dd46f3967324cf3916a149b0fff190e",
+  "orchestration": {
+    "run_id": "741b3ba2cd0a42a1bad8190a66cc94d9",
+    "wave_id": "231327f88f394b1da5e8f26f1a1d5b8d",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "c02a9c3673780047b0fc33df60c3acd4cd3f2954c04bf3267840df455383231f",
+    "contract_fp": ""
+  },
+  "objective": "G2 SOURCE REMEDIATION only: identify the narrow current smart-v3 phase=prepare source-materialization control point responsible for the observed 2000-lines-per-file cap, then prepare a minimal opt-in bounded fix that preserves the current default. Initial implementation scope is limited to resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py, context_tools.py, workflow_tools.py plus directly relevant existing focused tests and directly relevant current public-contract documentation if the source proves it is required. Protect unrelated dirty WIP and all Electron/renderer/componentRevision/token dashboard files. Do not mutate in this prepare call. No restart, commit, push, package, release, deploy, direct ledger/projection edits, or raw transport.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-04T20:53:15.846Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-04T20:53:15.846Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-04T20:53:15.846Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "7OPr8NlMaPHWFuRNVqW6lCqA",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-04T20:53:15.560Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 26,
+        "head_hash": "0cb7d7fd3ad30f6a0b3f719498a51ec05f105032eed79b3c95d0d787283cfd33"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-741b3ba2cd0a42a1bad8190a66cc94d9\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-741b3ba2cd0a42a1bad8190a66cc94d9\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "741b3ba2cd0a42a1bad8190a66cc94d9",
+      "wave_id": "231327f88f394b1da5e8f26f1a1d5b8d",
+      "checkpoint_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "c02a9c3673780047b0fc33df60c3acd4cd3f2954c04bf3267840df455383231f",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G2 SOURCE REMEDIATION only: identify the narrow current smart-v3 phase=prepare source-materialization control point responsible for the observed 2000-lines-per-file cap, then prepare a minimal opt-in bounded fix that preserves the current default. Initial implementation scope is limited to resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py, context_tools.py, workflow_tools.py plus directly relevant existing focused tests and directly relevant current public-contract documentation if the source proves it is required. Protect unrelated dirty WIP and all Electron/renderer/componentRevision/token dashboard files. Do not mutate in this prepare call. No restart, commit, push, package, release, deploy, direct ledger/projection edits, or raw transport.",
+        "objective_revision": 1,
+        "objective_sha256": "09f8acc945bef3ef9dfdbe05a3830c9c18ac15428d148f18be764eb827b2e8db",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "a208e3075028422ab57182870bb3e682",
+          "stage_id": "check:96abadc4ea70c239",
+          "status": "failed",
+          "duration_ms": 9977,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 40276
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "9eda0063f62bdf29f8f63f1761f106de59d9ba2dd6f132f0ee4d3b52a3d1a510",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"prepare_coding_context_max_lines_per_file_opt_in_materializes_2076_lines or agent_workflow_schema_exposes_final_execution_routes_without_new_tool or candidate_packet_includes_deep_query_centered_snippet or smart_mode_is_compact_and_contains_batch_document_tools or agent_workflow_prepares_bug_context_in_one_call\"",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "summary": "exit 1 | 0.0s | 50 lines | tail: '1 failed, 4 passed, 72 deselected, 2 subtests passed in 6.76s'",
+      "finished_at": "2026-09-04T20:53:15.560Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "7OPr8NlMaPHWFuRNVqW6lCqA"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "741b3ba2cd0a42a1bad8190a66cc94d9",
+        "owner_wave": "231327f88f394b1da5e8f26f1a1d5b8d",
+        "size_bytes": 2950,
+        "command_id": "7OPr8NlMaPHWFuRNVqW6lCqA",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:7OPr8NlMaPHWFuRNVqW6lCqA:stdout",
+            "total_stream_bytes": 2950,
+            "total_retained_bytes": 2950,
+            "head_retained_bytes": 2950,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:7OPr8NlMaPHWFuRNVqW6lCqA:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "operation": "update",
+      "updated_at": "2026-09-04T20:53:17.529Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+      "operation": "update",
+      "updated_at": "2026-09-04T20:53:17.529Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+      "operation": "update",
+      "updated_at": "2026-09-04T20:53:17.529Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+      "operation": "update",
+      "updated_at": "2026-09-04T20:53:17.529Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-04T20:50:23.236Z",
+  "updated_at": "2026-09-04T20:53:35.121Z",
+  "events": [
+    {
+      "time": "2026-09-04T20:50:23.236Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G2 SOURCE REMEDIATION only: identify the narrow current smart-v3 phase=prepare source-materialization control point responsible for the observed 2000-lines-per-file cap, then prepare a minimal opt-in bounded fix that preserves the current default. Initial implementation scope is limited to resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py, context_tools.py, workflow_tools.py plus directly relevant existing focused tests and directly relevant current public-contract documentation if the source proves it is required. Protect unrelated dirty WIP and all Electron/renderer/componentRevision/token dashboard files. Do not mutate in this prepare call. No restart, commit, push, package, release, deploy, direct ledger/projection edits, or raw transport."
+      }
+    },
+    {
+      "time": "2026-09-04T20:50:24.175Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:50:42.116Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:50:42.134Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T20:52:11.461Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-09-04T20:52:34.694Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:52:38.784Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:52:38.817Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:01.367Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:02.256Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:03.261Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:03.298Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:04.912Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:05.311Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:06.478Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"prepare_coding_context_max_lines_per_file_opt_in_materializes_2076_lines or agent_workflow_schema_exposes_final_execution_routes_without_new_tool or candidate_packet_includes_deep_query_centered_snippet or smart_mode_is_compact_and_contains_batch_document_tools or agent_workflow_prepares_bug_context_in_one_call\"",
+        "session_id": "7OPr8NlMaPHWFuRNVqW6lCqA"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:15.560Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_task_state_and_build.py -k \"prepare_coding_context_max_lines_per_file_opt_in_materializes_2076_lines or agent_workflow_schema_exposes_final_execution_routes_without_new_tool or candidate_packet_includes_deep_query_centered_snippet or smart_mode_is_compact_and_contains_batch_document_tools or agent_workflow_prepares_bug_context_in_one_call\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:15.846Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:16.810Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:16.813Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:16.816Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:17.407Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "9eda0063f62bdf29f8f63f1761f106de59d9ba2dd6f132f0ee4d3b52a3d1a510"
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:17.529Z",
+      "event": "files_modified",
+      "details": {
+        "count": 4
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:29.813Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:53:30.107Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

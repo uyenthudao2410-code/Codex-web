@@ -1,0 +1,154 @@
+{
+  "version": 2,
+  "task_id": "",
+  "orchestration": {
+    "run_id": "940b899099144478a1ffeef05549f627",
+    "wave_id": "ed2044f4829a49cfa7e8a53fd833e9ae",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "717c2946a6a2cff39959b4744ef7f6ade979e7732ac368693e9a16f0ae6b3177",
+    "contract_fp": ""
+  },
+  "objective": "",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 32,
+        "head_hash": "27b435afbc550161f05561d11c253e72b5ee2ec6b9b28833f7739e3ef28f1560"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-940b899099144478a1ffeef05549f627\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-940b899099144478a1ffeef05549f627\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "940b899099144478a1ffeef05549f627",
+      "wave_id": "ed2044f4829a49cfa7e8a53fd833e9ae",
+      "checkpoint_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "717c2946a6a2cff39959b4744ef7f6ade979e7732ac368693e9a16f0ae6b3177",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Unblock the already-accepted token Dashboard from official Electron UI activation by removing the unreferenced untracked renderer/token-dashboard.html mock/prototype. The file is not referenced by renderer/electron/tests/package/scripts, contains fabricated static sample metrics and random heatmap data, and is the only currently remaining unaccepted electron_ui dirty path from the activation gate. Preserve the accepted TOKEN CHATWEB/TOKEN PROVIDER implementation and all unrelated concurrent work. After deletion, prove dashboard behavior and accepted-code/dev-ui activation contracts; do not restart inside this workflow.",
+        "objective_revision": 1,
+        "objective_sha256": "582c71e2b869e9c37f6d08b49e6b55fa8c6688ab43746633814ea8c1d7812a0b",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "e7f2bdb582be4da7b00e2f199a0ac7be",
+          "stage_id": "check:371cafe643706043",
+          "status": "passed",
+          "duration_ms": 1151,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1444d4481c064c9db41a692e4969711b",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 47327,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "SUPERSEDED_BY_ACCEPTED_RUN_61D48FF8",
+      "event_seq": 39933
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "40106626de041726b75bd2df6e87158c4c9256d5505244e4915260c4281d04ff",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-04T12:00:27.368Z",
+  "updated_at": "2026-09-04T12:01:11.508Z",
+  "events": [
+    {
+      "time": "2026-09-04T12:00:27.368Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T12:00:27.536Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "40106626de041726b75bd2df6e87158c4c9256d5505244e4915260c4281d04ff"
+      }
+    },
+    {
+      "time": "2026-09-04T12:01:11.508Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

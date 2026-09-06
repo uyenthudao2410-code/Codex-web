@@ -34,6 +34,113 @@ The convergence sequence is intentionally finite:
 
 This section is the current sequencing and provenance authority for this maintained document. Older dated runtime paragraphs below remain immutable observation snapshots. If a historical block says `current`, `update_pending`, `connector blocked`, `source-only`, or names a process/epoch, read that language in the timestamped observation window unless a fresh supported runtime receipt re-establishes it. A present-day `CURRENT`/`fully_ready` local observation is still only local runtime evidence; compatible current access is not strict rediscovery, and neither is a package/release/production claim.
 
+### Baseline correction source checkpoint — 2026-09-05
+
+The implementation follow-up to the [05 September finish-line assessment](research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md)
+is tracked in the [source/test checkpoint](research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md).
+The user-approved closure decision on 06 September is recorded in checkpoint
+section 20: finish M1 engineering convergence separately from empirical M2/M3,
+upstream accounting and destination-specific delivery. Freeze source/features
+and these progress documents during the proof → acceptance → controlled activation
+batch. Compare accepted bytes once, close only demonstrated gaps in a combined
+integration scope, classify/reconcile eligible control debt through supported
+authority, and obtain exact live-current proof. Sections 21–22 supersede the early
+20.5–20.6 observations: the product 1.0.0 normalization is present in the existing
+version RUN. Node, Python and Rust commands are terminal exit 0, but consolidated
+exact-byte acceptance is still open. Python's retained task projection records
+930 passed, 5 skipped and 218 subtests; skips are not passes. The audited build
+verification has build_result=null and an existing older artifact inventory, so
+a fresh package build is not proven. Of 40 accepted receipt paths rehashed, 38
+still match and two have the requested version/policy drift. Section 22 records
+successful public exact-run context recovery: task_control get with the exact
+RUN and no supplied context returned its persisted owner handle, bound to the
+correct task/RUN/WAVE. Continue with that returned handle; no manual handoff or
+new RUN is required. Do not create a parallel writer or repeat completed broad
+commands to work around a missing canonical proof record.
+The latest advice retains mandatory .coding-tools evidence in Git; migration or
+untracking is not part of M1. Keep product-source cleanliness separate from
+allowed evidence mutations. This does not waive acceptance
+guards or authorize rerouting a denied oracle. Do not
+hold M1 open merely for natural-cohort counts, upstream billing or rendered 900px
+proof, and do not report any of those deferred claims as completed.
+That checkpoint's sections 9 and 12 record exact two-file dashboard and parser
+EOCL acceptance, respectively. Section 12 corrects the earlier unverified client
+block diagnosis and records successful current-context reads and revalidation
+after documentation-only worktree drift. Section 13 records exact-file acceptance
+of the Recovery Host and release runbooks, including the corrected strict versus
+attested compatibility ACK guidance. That document acceptance is not runtime
+proof; the independent Python metadata proof attempt stopped at the server's
+inline-script permission gate without a grant or accepted proof.
+Section 14 adds exact producer-measurement and three-file command-core acceptance.
+Section 15 separately closes exact two-file `live_control.py`/endpoint acceptance
+and its report ACK, backed by four focused temporary HTTP tests and four subtests.
+This current successful request does not erase the unverified historical refusal
+or clear the separate metadata permission gate. The latest recorded development
+check after the producer change reports Coding MCP `update_pending`; source and
+HTTP-harness acceptance are not loaded-revision or live-user journal proof.
+Section 16 closes the initial donut placeholder correction and its focused Node
+proof/ACK without reaccepting the dashboard core. The six hard-coded model rings
+are absent before the first snapshot. This does not accept the entire Electron
+integration. Section 17 closes the three-file responsive correction and static
+regressions: narrow KPI cards use the existing breakpoint, inner metadata no longer
+inherits outer-card sizing, and narrow split panels/tool rows remain reachable.
+Section 18 closes exact 16-file font/distributor-identity and renderer-revision
+adoption, focused proof and final report ACK. Historical distributor byte checks
+remain dated evidence, not a fresh font fetch or legal/rendering/installer proof.
+No rendered 900px/CSS-engine proof has been obtained; the browser URL-policy denial
+remains respected. Section 19 closes the exact main/preload window/bridge packet
+with focused source/VM proof and report ACK, without a live-window claim. Metadata
+official proof, consolidated provenance/control hygiene and accepted-to-loaded
+still have independent gates. Direct version-literal alignment review is not
+installed-distribution or executed runtime parity proof.
+Section 19.4 verifies that public `task_control audit` with `run_id` and without
+`wave_id`/`after_seq` exposes canonical checkpoint `metadata.accepted_files`;
+the wave-filtered projection omits those aggregate fields. Audit regenerates the
+target RUN reports, so it is not strictly read-only. This supported receipt source
+enables baseline comparison; one audited RUN is not whole-baseline/G1 closure.
+No-write adoption still requires exact passed proof; source review or verification
+`none` is not an exemption for the unresolved metadata acceptance.
+The latest recorded development check (2026-09-05T16:26:27.742Z) reports Electron
+`STALE` and MCP `update_pending` with fresh telemetry; no activation occurred in
+these waves. All further progress belongs in the existing checkpoint, not a new
+progress or handoff report; sections 18.4 and 19.3–19.4 distinguish the remaining gates.
+An explicit null/undefined performance pulse now clears the previous dashboard
+trace and reports unavailable data; an omitted field preserves the existing
+trace and a measured zero remains observed. The Codex-web product version is
+`1.0.0` across the Electron package and Python MCP package/runtime metadata.
+Protocol, schema, tool-contract, and data-format versions remain independent
+compatibility identities.
+The release checklist now uses `npm start`/`npm run dev` for start/focus and
+`npm run dev:refresh` for full refresh, with explicit Python proof when a release
+candidate changes MCP behavior.
+
+For EOCL-scoped commands, `task_control(get)`, `task_state_get`, and live control
+now derive command presentation from an exact checkout-local managed Job with
+matching command/RUN/WAVE identity. A verified terminal Job clears the presented
+active command and supplies `current_command_observation`; missing or conflicting
+identity stays unknown without disclosing another Job's result. This does not
+write task-state, append completion events, or synthesize proof/results. Raw
+persisted projection and `CHECKPOINTED` authority remain intact; ordinary
+commands without EOCL ownership keep their existing behavior. Focused source
+proof is recorded in the linked checkpoint; no loaded-runtime claim is made.
+
+The command path scanner now separates the filesystem prefix from a pytest node
+selector for explicit `python`/`python3 -m pytest` invocations when the candidate
+is the first node argument, optionally preceded by `-q`/`-v`/`-s`/`-x` flags.
+Interpreter operands, ambiguous/plugin option operands, response files and
+redirection targets keep their original path syntax and authority checks.
+This is a bounded selector correction, not a full pytest CLI parser or endpoint
+proof. The release checklist also distinguishes process-bound compatible
+connector freshness from strict rediscovery; retained contract ACK alone is not
+new-epoch readiness, and stale/missing telemetry remains unknown.
+
+These local changes do not extend an earlier EOCL acceptance receipt or prove
+that the running development processes loaded the new bytes. Consolidated
+baseline acceptance, accepted-to-loaded activation, natural Problem continuity
+and outcomes, controller accounting, and package/release evidence retain their
+own gates. See the linked checkpoint for exact scope, proof and remaining work;
+historical runtime observations below remain bound to their recorded timestamps.
+
 ## 1. Source of truth and document precedence
 
 When repository documents disagree, use this order:
@@ -46,7 +153,7 @@ When repository documents disagree, use this order:
 
 A source implementation can be newer than the process currently running. For Electron, Recovery Host, Coding Tools MCP, and other supervised components, distinguish **source present**, **focused proof passed**, **EOCL accepted**, **controlled activation completed**, and **packaged/released**.
 
-Development startup has two explicit contracts. `npm start` (and its alias `npm run dev:refresh`) is the operator full-system refresh: it authenticates the current Recovery Host, creates a durable `full_clean_refresh` activation epoch, replaces Recovery Host, Coding MCP/Tunnel, configured Recovery MCP/Tunnel and Electron UI, then verifies fresh process identities, matching revisions and epoch binding. It never deletes durable truth; it fails closed if ownership, canonical ledger state or postflight cannot be proven. `npm run dev` inspects the authenticated Recovery Host receipt for this exact development installation, classifies Electron UI as `CURRENT`, `STALE`, or `MISSING`, uses component activation for a stale UI, launches a missing UI, and succeeds only after `running_revision == disk_revision` is observed with PID/instance/mode metadata. Stale code activation remains authorized only from an eligible accepted closure checkpoint. `npm run dev:stop` suppresses UI watchdog recovery and asks the exact registered single instance to quit while preserving Recovery Host, MCP, and Tunnel. It refuses an initially unavailable Recovery Host and reports success only after that exact host reports the UI `MISSING` or the previously bound PID is proven dead; transient host loss is not stop proof. `npm run dev:replace` applies the same exact-instance stop postflight, then relaunches and verifies a different UI instance. Connector discovery/ACK remains a separate gate; a refresh does not invent a connector receipt or open admission early.
+Development startup has two explicit contracts. `npm start` and `npm run dev` use the same stable start/focus lifecycle: they inspect the authenticated Recovery Host receipt for this exact development installation, classify Electron UI as `CURRENT`, `STALE`, or `MISSING`, focus a current UI, use component activation for a stale UI, or launch a missing UI. Success requires `running_revision == disk_revision` with PID/instance/mode metadata and a ready runtime postflight. Stale code activation remains authorized only from an eligible accepted closure checkpoint. `npm run dev:refresh` is the separate operator full-system refresh: it authenticates the current Recovery Host, creates a durable `full_clean_refresh` activation epoch, replaces Recovery Host, Coding MCP/Tunnel, configured Recovery MCP/Tunnel and Electron UI, then verifies fresh process identities, matching revisions and epoch binding. It never deletes durable truth; it fails closed if ownership, canonical ledger state or postflight cannot be proven. `npm run dev:stop` suppresses UI watchdog recovery and asks the exact registered single instance to quit while preserving Recovery Host, MCP, and Tunnel. It refuses an initially unavailable Recovery Host and reports success only after that exact host reports the UI `MISSING` or the previously bound PID is proven dead; transient host loss is not stop proof. `npm run dev:replace` applies the same exact-instance stop postflight, then relaunches and verifies a different UI instance. Connector discovery/ACK remains a separate gate; a refresh does not invent a connector receipt or open admission early.
 
 The Command Center exposes loaded-source status for the three revisioned components—Electron UI, Recovery Host, and Coding MCP—and reports Tunnel health separately as `READY` or `STOPPED`. `CURRENT` is process/revision evidence only and never derives from Tunnel availability; it is not EOCL acceptance, release, deployment, production, or SLO proof. A source-update notice remains visible whenever a running component revision differs from disk.
 
@@ -636,7 +743,7 @@ verified `READY` epoch with `admission_open=true` may report `fullyReady=true`.
 The ledger, task history, acceptance state, settings, secrets handles,
 authorized roots, and device identity are never deleted by this transaction.
 
-The development `npm start` command treats exact process refresh completion and
+The development `npm run dev:refresh` command treats exact process refresh completion and
 connector acceptance as separate observable boundaries. It exits successfully
 after the new Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel and Electron
 UI have passed their exact identity/epoch/revision/health/projection census. If

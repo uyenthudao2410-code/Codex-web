@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "task_id": "56b40b34a3d5423982e50d5a41affaf0",
+  "orchestration": {
+    "run_id": "67d4bdb99cf340e3ac1f773bcfd13618",
+    "wave_id": "2c94534ae8ea4022abdeb251f9c625a2",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "",
+    "worktree_fp": "af4edd2387fc79f95dd30d346b193cd626f942e1a9413f90b2c5e24b1f22da2c",
+    "contract_fp": ""
+  },
+  "objective": "G5 controlled fresh-turn observability probe. Read only; do not edit files, run commands or tests, restart, ACK any completion report, publish, deploy, or create/mutate a Problem, cohort, experiment, source, Git state, ledger, projection, job, claim, package, release, or process.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Path is not a directory.",
+  "next_step": "",
+  "created_at": "2026-09-04T19:58:04.647Z",
+  "updated_at": "2026-09-04T19:58:05.927Z",
+  "events": [
+    {
+      "time": "2026-09-04T19:58:04.647Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G5 controlled fresh-turn observability probe. Read only; do not edit files, run commands or tests, restart, ACK any completion report, publish, deploy, or create/mutate a Problem, cohort, experiment, source, Git state, ledger, projection, job, claim, package, release, or process."
+      }
+    },
+    {
+      "time": "2026-09-04T19:58:05.434Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T19:58:05.927Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "NOT_A_DIRECTORY"
+      }
+    }
+  ]
+}

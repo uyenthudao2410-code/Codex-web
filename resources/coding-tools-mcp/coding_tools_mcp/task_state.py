@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import threading
 import time
 import uuid
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .artifact_refs import command_output_artifact_ref
+from .execution_resources import ExecutionResourceError
 from .landlock_exec import landlock_status_payload
 
 
@@ -62,6 +64,87 @@ def command_payload_succeeded(payload: dict[str, Any]) -> bool:
     if status not in {"exited", "completed", "passed"}:
         return False
     return payload.get("exit_code") == 0
+
+
+def command_presentation(
+    state: dict[str, Any], *, governor: Any, workspace: Path
+) -> dict[str, Any]:
+    """Derive command visibility without recording results or changing authority.
+
+    Ownership here is the exact command/RUN/WAVE in the selected workspace,
+    not a principal inferred from a legacy projection. Durable job observation
+    does not synthesize a task result, completion report, or completion event.
+    """
+    current = state.get("current_command")
+    if not isinstance(current, dict):
+        return state
+    projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+    owner = (str(current.get("owner_run") or ""), str(current.get("owner_wave") or ""))
+    projected_owner = (str(projection.get("run_id") or ""), str(projection.get("wave_id") or ""))
+    if not any((*owner, *projected_owner)):
+        # Ordinary commands legitimately have no orchestration ownership.
+        # Keep their existing presentation contract outside this scoped repair.
+        return state
+    presented = copy.deepcopy(state)
+    command = presented["current_command"]
+    command_id = str(current.get("session_id") or current.get("command_id") or "").strip()
+    observation: dict[str, Any] = {
+        "source": "managed_process_job",
+        "command_id": command_id or None,
+        "projected_status": current.get("status"),
+        "status": "unknown",
+    }
+    presented["current_command_observation"] = observation
+    command["status"] = "unknown"
+
+    def uncertain(reason: str, *, conflict: bool = False) -> dict[str, Any]:
+        observation["reason"] = reason
+        observation["status"] = "conflict" if conflict else "unknown"
+        return presented
+
+    if not command_id:
+        return uncertain("command_identity_missing")
+    if current.get("command_id") and str(current["command_id"]) != command_id:
+        return uncertain("command_identity_mismatch", conflict=True)
+    try:
+        same_workspace = os.path.normcase(str(workspace.resolve())) == os.path.normcase(
+            str(governor.workspace.resolve())
+        )
+    except (OSError, RuntimeError):
+        return uncertain("workspace_unavailable")
+    if not same_workspace:
+        return uncertain("workspace_mismatch", conflict=True)
+    if not all((*owner, *projected_owner)):
+        return uncertain("command_owner_missing")
+    if owner != projected_owner:
+        return uncertain("command_owner_mismatch", conflict=True)
+    try:
+        job = governor.find_exact_job(command_id=command_id)
+    except ExecutionResourceError as exc:
+        return uncertain(exc.code, conflict=True)
+    except (OSError, sqlite3.Error):
+        return uncertain("managed_job_unavailable")
+    if job is None:
+        return uncertain("managed_job_missing")
+    if (
+        str(job.get("command_id") or "") != command_id
+        or (str(job.get("run_id") or ""), str(job.get("wave_id") or "")) != owner
+    ):
+        return uncertain("managed_job_identity_mismatch", conflict=True)
+    if job.get("terminal") is not True and job.get("terminal") is not False:
+        return uncertain("managed_job_lifecycle_missing")
+    observation.update({
+        "status": "terminal" if job["terminal"] else "active",
+        **{key: job.get(key) for key in (
+            "job_id", "run_id", "wave_id", "lifecycle_state", "terminal",
+            "exit_code", "result_status", "finished_at",
+        )},
+    })
+    if job["terminal"]:
+        presented["current_command"] = None
+    else:
+        command["status"] = current.get("status") or "running"
+    return presented
 
 
 def _text(value: Any, limit: int = MAX_TEXT) -> str:
@@ -1055,7 +1138,13 @@ class TaskStateToolsMixin:
         }
 
     def task_state_get(self, args: dict[str, Any]) -> dict[str, Any]:
-        return {"state_file": self.task_state.state_file_display, "state": self.task_state.get()}
+        return {
+            "state_file": self.task_state.state_file_display,
+            "state": command_presentation(
+                self.task_state.get(), governor=self.execution_resource_governor,
+                workspace=self.task_state.current_workspace(),
+            ),
+        }
 
     def task_state_update(self, args: dict[str, Any]) -> dict[str, Any]:
         changes = dict(args)

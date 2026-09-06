@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "task_id": "4b9afeba3148490f9905d4b343a93f8e",
+  "orchestration": {
+    "run_id": "21ebc20b13434504a94294200ad0da9a",
+    "wave_id": "caecfe68727b412cbf8c5da2565da76a",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "e8d01624191f2e2a09b336df8f3f992794a49d81e37d85895f6127dc9c3ca98a",
+    "contract_fp": ""
+  },
+  "objective": "G2 controlled proof-only production-surface ownership proof. From current bytes only: (1) prove every Electron production path that loads/opens renderer/token-dashboard.html; (2) classify renderer/token-dashboard.html under current electron_ui/componentRevision ownership as INCLUDED, EXCLUDED, or AMBIGUOUS; (3) prove source identity unchanged; (4) prove superseded ownership RUNs remain inactive and no write lease owns this surface. Read-only evidence only: no commands/tests, no source/asset/font/todo/ledger/projection edits, no restart/ACK/checkpoint/acceptance/delivery.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "781201ededb2813609ade0af0e41f9b7376cf344a6595d2d0cae5eb24e736ef3"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-21ebc20b13434504a94294200ad0da9a\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-21ebc20b13434504a94294200ad0da9a\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "21ebc20b13434504a94294200ad0da9a",
+      "wave_id": "caecfe68727b412cbf8c5da2565da76a",
+      "checkpoint_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "e8d01624191f2e2a09b336df8f3f992794a49d81e37d85895f6127dc9c3ca98a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G2 controlled proof-only production-surface ownership proof. From current bytes only: (1) prove every Electron production path that loads/opens renderer/token-dashboard.html; (2) classify renderer/token-dashboard.html under current electron_ui/componentRevision ownership as INCLUDED, EXCLUDED, or AMBIGUOUS; (3) prove source identity unchanged; (4) prove superseded ownership RUNs remain inactive and no write lease owns this surface. Read-only evidence only: no commands/tests, no source/asset/font/todo/ledger/projection edits, no restart/ACK/checkpoint/acceptance/delivery.",
+        "objective_revision": 1,
+        "objective_sha256": "e2b5a202c3af93489b9034e73b919c01bdf1034fa6a71190b67d37d089ce7ab8",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "11de69bbabfeda9a26cc8ce4345c1aa10635f41eb8979290386d6a214ff4c813",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-04T20:41:16.436Z",
+  "updated_at": "2026-09-04T20:41:43.342Z",
+  "events": [
+    {
+      "time": "2026-09-04T20:41:16.436Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G2 controlled proof-only production-surface ownership proof. From current bytes only: (1) prove every Electron production path that loads/opens renderer/token-dashboard.html; (2) classify renderer/token-dashboard.html under current electron_ui/componentRevision ownership as INCLUDED, EXCLUDED, or AMBIGUOUS; (3) prove source identity unchanged; (4) prove superseded ownership RUNs remain inactive and no write lease owns this surface. Read-only evidence only: no commands/tests, no source/asset/font/todo/ledger/projection edits, no restart/ACK/checkpoint/acceptance/delivery."
+      }
+    },
+    {
+      "time": "2026-09-04T20:41:17.419Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:41:18.511Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:41:18.524Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-04T20:41:43.336Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "11de69bbabfeda9a26cc8ce4345c1aa10635f41eb8979290386d6a214ff4c813"
+      }
+    }
+  ]
+}

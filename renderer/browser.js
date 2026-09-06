@@ -115,32 +115,42 @@ function renderServiceState(state) {
   const deviceButton = $('#deviceState');
   const deviceName = String(device?.display_name || current?.recoveryHost?.device_display_name || 'Thiết bị');
   const deviceId = String(device?.device_id || current?.recoveryHost?.device_id || '');
-  deviceButton.classList.toggle('ready', Boolean(deviceId) && device?.online !== false);
-  deviceButton.classList.toggle('error', !deviceId);
+  deviceButton.classList.toggle('ready', !transient && Boolean(deviceId) && device?.online !== false);
+  deviceButton.classList.toggle('warn', transient);
+  deviceButton.classList.toggle('error', !transient && !deviceId);
   $('#deviceStateName').textContent = deviceName;
-  deviceButton.title = deviceId ? `Thiết bị hiện tại · ${deviceId}` : 'Không xác định được device_id';
+  deviceButton.title = transient ? 'Thiết bị: Chưa xác minh telemetry'
+    : deviceId ? `Thiết bị hiện tại · ${deviceId}` : 'Không xác định được device_id';
   const git = device?.git || {};
   const gitElement = $('#gitState');
   const gitText = git.available ? `${git.branch || 'detached'} @ ${git.head_short || 'no-head'}${git.dirty ? ' *' : ''}` : 'Git n/a';
   $('#gitStateText').textContent = gitText;
-  gitElement.classList.toggle('ready', Boolean(git.available) && git.dirty === false);
-  gitElement.classList.toggle('warn', Boolean(git.available) && git.dirty === true);
+  gitElement.classList.toggle('ready', !transient && Boolean(git.available) && git.dirty === false);
+  gitElement.classList.toggle('warn', transient || (Boolean(git.available) && git.dirty === true));
   gitElement.classList.toggle('error', false);
-  gitElement.title = git.available ? `Git: ${gitText}${git.dirty ? ' · dirty' : ' · clean'}` : 'Git: không có dữ liệu';
+  gitElement.title = transient ? 'Git: Chưa xác minh telemetry'
+    : git.available ? `Git: ${gitText}${git.dirty ? ' · dirty' : ' · clean'}` : 'Git: không có dữ liệu';
   renderWorkspaceHealth();
 }
 
 function renderWorkspaceHealth() {
   const button = $('#workspaceHealthButton');
   if (!button) return;
-  const synced = Boolean(activeWorkspace && lastRuntimeState?.mcpRunning);
+  const uncertain = !lastRuntimeState || lastRuntimeState.signalStale === true
+    || lastRuntimeState.telemetryAvailable === false || lastRuntimeState.recovering === true
+    || lastRuntimeState.recoveryDeferred === true || typeof lastRuntimeState.mcpRunning !== 'boolean';
+  const synced = Boolean(activeWorkspace && !uncertain && lastRuntimeState.mcpRunning === true);
   button.classList.toggle('ready', synced);
-  button.classList.toggle('error', Boolean(activeWorkspace) && !synced);
+  button.classList.toggle('warn', Boolean(activeWorkspace) && uncertain);
+  button.classList.toggle('error', Boolean(activeWorkspace) && !uncertain && !synced);
   $('#workspaceHealthName').textContent = baseName(activeWorkspace) || 'Chưa chọn workspace';
   $('#workspaceHealthPath').textContent = activeWorkspace || '-';
-  $('#workspaceHealthState').textContent = !activeWorkspace ? 'Chưa chọn' : synced ? '✓ Đã đồng bộ' : lastRuntimeState?.recovering ? 'Đang khôi phục' : 'Chờ đồng bộ';
+  $('#workspaceHealthState').textContent = !activeWorkspace ? 'Chưa chọn'
+    : uncertain ? 'Chưa xác nhận telemetry' : synced ? '✓ Đã đồng bộ' : 'Chờ đồng bộ';
   $('#workspaceHealthTime').textContent = lastRuntimeCheckAt ? new Date(lastRuntimeCheckAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '-';
-  button.title = !activeWorkspace ? 'Chưa chọn workspace' : synced ? 'Workspace đã đồng bộ với MCP' : 'Workspace đang chờ đồng bộ với MCP';
+  button.title = !activeWorkspace ? 'Chưa chọn workspace'
+    : uncertain ? 'Không thể xác nhận workspace khi telemetry gián đoạn'
+      : synced ? 'Workspace đã đồng bộ với MCP' : 'Workspace đang chờ đồng bộ với MCP';
 }
 
 async function refreshStatus() {

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+import re
 from typing import Any
 
 
@@ -13,6 +15,20 @@ REPORT_CONTRACT = [
     "WHAT REMAINS",
     "NEXT CRITICAL ACTION",
 ]
+
+_EVENT_ID_RE = re.compile(r"^[0-9a-fA-F]{32}$")
+_PATH_HASH_RE = re.compile(r"^[0-9a-f]{64}$")
+_EVENT_TIME_RE = re.compile(
+    r"^(?P<date>[0-9]{4}-[0-9]{2}-[0-9]{2})T"
+    r"(?P<time>[0-9]{2}:[0-9]{2}:[0-9]{2})"
+    r"(?:\.(?P<fraction>[0-9]{1,6}))?"
+    r"(?P<zone>Z|(?P<sign>[+-])(?P<offset_hour>[0-9]{2}):(?P<offset_minute>[0-9]{2}))$",
+    re.ASCII,
+)
+_MAX_PATCH_OBSERVATIONS = 100
+_MAX_PATCH_PATH_HASHES = 256
+_MAX_EVENT_TIME_LENGTH = 64
+_MAX_PATCH_COUNT = (1 << 63) - 1
 
 
 def build_orchestration_runtime_result(
@@ -144,6 +160,184 @@ def build_command_completion_report(
     }
 
 
+def _nonnegative_patch_count(value: Any) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return None
+    if value < 0 or value > _MAX_PATCH_COUNT:
+        return None
+    return value
+
+
+def _canonical_event_time(value: Any) -> str | None:
+    if not isinstance(value, str) or not value or len(value) > _MAX_EVENT_TIME_LENGTH:
+        return None
+    match = _EVENT_TIME_RE.fullmatch(value)
+    if match is None:
+        return None
+    if match.group("zone") != "Z":
+        if int(match.group("offset_hour")) > 23 or int(match.group("offset_minute")) > 59:
+            return None
+    candidate = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(candidate)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return value
+
+
+def _patch_surface_observation_projection(
+    events: list[dict[str, Any]],
+    *,
+    run_id: str,
+    wave_id: str,
+) -> dict[str, Any] | None:
+    matching = [
+        item
+        for item in events
+        if isinstance(item, dict)
+        and str(item.get("event_type") or "") == "patch_surface_observed"
+        and str(item.get("run_id") or "") == run_id
+        and str(item.get("wave_id") or "") == wave_id
+    ]
+    if not matching:
+        return None
+
+    selected = matching[-_MAX_PATCH_OBSERVATIONS:]
+    output_truncated = len(matching) > _MAX_PATCH_OBSERVATIONS
+    observations: list[dict[str, Any]] = []
+    rejected_event_count = 0
+
+    for event in selected:
+        event_id = event.get("event_id")
+        seq = event.get("seq")
+        event_time = _canonical_event_time(event.get("event_time"))
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else None
+        if (
+            not isinstance(event_id, str)
+            or _EVENT_ID_RE.fullmatch(event_id) is None
+            or isinstance(seq, bool)
+            or not isinstance(seq, int)
+            or seq <= 0
+            or event_time is None
+            or payload is None
+            or type(payload.get("schema_version")) is not int
+            or payload.get("schema_version") != 1
+            or payload.get("measurement") != "applied_patch_delta_v1"
+            or payload.get("content_free") is not True
+            or payload.get("production_behavior_changed") is not False
+            or not isinstance(payload.get("complete"), bool)
+        ):
+            rejected_event_count += 1
+            continue
+
+        invalid_fields: list[str] = []
+        counts: dict[str, int | None] = {}
+        for field in ("file_count", "additions", "removals", "line_changes"):
+            counts[field] = _nonnegative_patch_count(payload.get(field))
+            if counts[field] is None:
+                invalid_fields.append(field)
+
+        raw_ids = payload.get("file_ids")
+        row_truncated = False
+        path_hashes: list[str] = []
+        if not isinstance(raw_ids, list):
+            invalid_fields.append("file_ids")
+        else:
+            if len(raw_ids) > _MAX_PATCH_PATH_HASHES:
+                row_truncated = True
+                invalid_fields.append("file_ids")
+            seen: set[str] = set()
+            encountered: list[str] = []
+            ids_invalid = False
+            for item in raw_ids[:_MAX_PATCH_PATH_HASHES]:
+                if not isinstance(item, str) or _PATH_HASH_RE.fullmatch(item) is None:
+                    ids_invalid = True
+                    continue
+                if item in seen:
+                    ids_invalid = True
+                    continue
+                seen.add(item)
+                encountered.append(item)
+            if encountered != sorted(encountered):
+                ids_invalid = True
+            if ids_invalid:
+                invalid_fields.append("file_ids")
+            path_hashes = sorted(seen)
+        if not path_hashes:
+            invalid_fields.append("file_ids")
+
+        producer_complete = bool(payload["complete"])
+        file_count = counts["file_count"]
+        if file_count is not None:
+            if file_count == 0:
+                invalid_fields.append("file_count")
+            elif producer_complete:
+                if file_count != len(path_hashes) or "file_ids" in invalid_fields or row_truncated:
+                    counts["file_count"] = None
+                    invalid_fields.append("file_count")
+            elif file_count < len(path_hashes):
+                counts["file_count"] = None
+                invalid_fields.append("file_count")
+            elif file_count > len(path_hashes):
+                row_truncated = True
+
+        additions = counts["additions"]
+        removals = counts["removals"]
+        line_changes = counts["line_changes"]
+        if (
+            additions is not None
+            and removals is not None
+            and line_changes is not None
+            and line_changes != additions + removals
+        ):
+            counts["line_changes"] = None
+            invalid_fields.append("line_changes")
+
+        invalid_fields = sorted(set(invalid_fields))
+        observation_complete = (
+            producer_complete
+            and not row_truncated
+            and not invalid_fields
+            and all(counts[field] is not None for field in counts)
+        )
+        observations.append({
+            "event_id": event_id,
+            "seq": seq,
+            "event_time": event_time,
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": path_hashes,
+            "file_count": counts["file_count"],
+            "additions": counts["additions"],
+            "removals": counts["removals"],
+            "line_changes": counts["line_changes"],
+            "producer_complete": producer_complete,
+            "complete": observation_complete,
+            "truncated": row_truncated,
+            "invalid": bool(invalid_fields),
+            "invalid_fields": invalid_fields,
+        })
+
+    return {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": len(matching),
+        "observation_count": len(observations),
+        "rejected_event_count": rejected_event_count,
+        "complete": (
+            bool(observations)
+            and not output_truncated
+            and rejected_event_count == 0
+            and all(item["complete"] for item in observations)
+        ),
+        "truncated": output_truncated or any(item["truncated"] for item in observations),
+        "invalid": rejected_event_count > 0 or any(item["invalid"] for item in observations),
+        "observations": observations,
+    }
+
+
 def _changed_files(task_state: dict[str, Any], checkpoint: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
     metadata = checkpoint.get("metadata") if isinstance(checkpoint.get("metadata"), dict) else {}
     accepted_files = metadata.get("accepted_files") if isinstance(metadata.get("accepted_files"), dict) else {}
@@ -208,6 +402,17 @@ def build_operator_completion_report(
     task_projection = task_state.get("orchestration") if isinstance(task_state.get("orchestration"), dict) else {}
     aligned_task = task_state if str(task_projection.get("run_id") or "") == run_id else {}
     changed_files, change_source = _changed_files(aligned_task, checkpoint)
+    patch_surface_observations = _patch_surface_observation_projection(
+        events,
+        run_id=run_id,
+        wave_id=wave_id,
+    )
+    if (
+        not changed_files
+        and patch_surface_observations is not None
+        and patch_surface_observations["observation_count"] > 0
+    ):
+        change_source = "canonical_patch_surface_observations"
     proof_rows = [
         {
             "proof_id": str(item.get("proof_id") or ""),
@@ -250,15 +455,19 @@ def build_operator_completion_report(
     elif aligned_task.get("failure"):
         blocker = {"failure_class": None, "reason": str(aligned_task.get("failure") or ""), "event_seq": None}
 
+    what_changed: dict[str, Any] = {
+        "files": changed_files,
+        "source": change_source,
+        "raw_source_or_command_output_included": False,
+    }
+    if patch_surface_observations is not None:
+        what_changed["patch_surface_observations"] = patch_surface_observations
+
     return {
         "schema_version": 1,
         "operator_visible_required": True,
         "report_contract": list(REPORT_CONTRACT),
-        "what_changed": {
-            "files": changed_files,
-            "source": change_source,
-            "raw_source_or_command_output_included": False,
-        },
+        "what_changed": what_changed,
         "current_state": {
             "orchestration_state": orchestration_state,
             "run_status": str(run.get("status") or ""),

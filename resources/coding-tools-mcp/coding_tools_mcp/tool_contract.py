@@ -22,7 +22,7 @@ SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] =
     # optional/additive, existing maxima are only widened, and the public
     # smart-v3 surface remains exactly eight tools. Older requests therefore
     # remain valid when they omit the new fields.
-    "0a1a837eee066d5098074c7ff2174c472d08a4b1c869a0fce2c21cdb1d685482": (
+    "6420537a2150a7d8e0152eabde4b298c3c689645a4515ba17fd254d60fc43cdf": (
         "6bc9eaf623ada4b15c77f2926eb17a49dbcdb1606c407afddc97b9115ba397c1",
     ),
     # Reviewed 2026-09-01: Goal resolution and controller continuity add only

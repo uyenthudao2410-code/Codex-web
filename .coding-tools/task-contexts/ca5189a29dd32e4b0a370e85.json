@@ -1,0 +1,201 @@
+{
+  "version": 2,
+  "task_id": "686e65f69c4847d991139824d68c609a",
+  "orchestration": {
+    "run_id": "4135fb1a2afd49c787a8fa7f0dd87cb0",
+    "wave_id": "18004d86286a443781430706870ed561",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "92077f52bf6982ffc0e52427525dc3c6587c9c9e20181695b1a4eed6f8087d76",
+    "contract_fp": ""
+  },
+  "objective": "Add a focused isolated HTTP fixture regression test for latest-turn measurement envelope preservation, reader exception unknown state, and admission-closed journal non-read. Test-only maintenance; not usage instrumentation, real outcome, or natural Problem evidence.",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+          "state": "file",
+          "sha256": "ff2ea7ed694e9b2d91c8c9ba03528010a17b61d7d29aa4424ba9aa1f3831cad3",
+          "size_bytes": 21315,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4135fb1a2afd49c787a8fa7f0dd87cb0",
+          "wave_id": "18004d86286a443781430706870ed561"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_operator_report_isolation.py",
+          "state": "file",
+          "sha256": "36504682bf3064bb86f7479848dc1b5da12d99e632acd34799ee1b3a354bf917",
+          "size_bytes": 46777,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "4135fb1a2afd49c787a8fa7f0dd87cb0",
+          "wave_id": "18004d86286a443781430706870ed561"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 2,
+        "observation_count": 2,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "597b0e2318af46c58bb20b4b8c95b349",
+            "seq": 40396,
+            "event_time": "2026-09-05T07:32:57.194Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "d9658f10edb3d62c9d8b9e3d3f34217cd9ae4d245ba2bb180f4560f56c88f68d"
+            ],
+            "file_count": 1,
+            "additions": 18,
+            "removals": 3,
+            "line_changes": 21,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          },
+          {
+            "event_id": "fddfdcb8ce374e208e38efd77df46e63",
+            "seq": 40397,
+            "event_time": "2026-09-05T07:32:57.440Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "fe1b15ee518ad6cc2abc7674f6af819d90c82cbb23c964d9e03a1c2da308c92d"
+            ],
+            "file_count": 1,
+            "additions": 127,
+            "removals": 22,
+            "line_changes": 149,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 78,
+        "head_hash": "736a38f27e21bad55f4e9565dd11f6d227579187eb511c818545be70a128a251"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "4135fb1a2afd49c787a8fa7f0dd87cb0",
+      "wave_id": "18004d86286a443781430706870ed561",
+      "checkpoint_id": "914b8c816f1e42ffa793a8c7c976e90f",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "92077f52bf6982ffc0e52427525dc3c6587c9c9e20181695b1a4eed6f8087d76",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "REPORT-PARTIAL-01 corrective replan: inspect only operator_report.py and test_operator_report_isolation.py before applying the reviewed report-projection correction. Preserve all unrelated WIP and the rejected endpoint-test wave as unaccepted.",
+        "objective_revision": 3,
+        "objective_sha256": "454b5cf37691ac814ee40f13b5d344e60db7ad78807ee86de1bcdddc2eb8b20e",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "cf2a831951ba4e5b843fe0f05fbca81e",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 22844,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "b9f632a146bd7b2562ddfb73a87bd3e3b5143d839efb0780c7893852a56d4a66",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-05T16:47:36.066Z",
+  "updated_at": "2026-09-05T16:47:36.332Z",
+  "events": [
+    {
+      "time": "2026-09-05T16:47:36.067Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "4135fb1a2afd49c787a8fa7f0dd87cb0"
+      }
+    },
+    {
+      "time": "2026-09-05T16:47:36.118Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "b9f632a146bd7b2562ddfb73a87bd3e3b5143d839efb0780c7893852a56d4a66"
+      }
+    },
+    {
+      "time": "2026-09-05T16:47:36.332Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

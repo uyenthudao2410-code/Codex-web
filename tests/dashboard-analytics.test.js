@@ -26,7 +26,8 @@ test('operations dashboard consumes a coverage-qualified accepted-result project
   assert.match(js, /function renderOperationsTiles/);
   assert.match(js, /function renderOperationsTable/);
   assert.match(js, /function observedNumber\(value\)/);
-  assert.match(js, /value === null \|\| value === undefined \|\| value === ''/);
+  assert.match(js, /typeof value !== 'number' && typeof value !== 'string'/);
+  assert.match(js, /value\.trim\(\) === ''/);
   assert.match(js, /observedNumber\(outcomes\.acceptance_rate\)/);
   assert.match(js, /observedNumber\(providerCost\.total_usd\)/);
   assert.match(js, /mean_per_observed_accepted/);
@@ -96,7 +97,8 @@ test('dashboard visible token path uses canonical UsageEvents and never byte-der
 test('dashboard reads snapshot and live state only from the shared overview pulse', () => {
   const js = read('renderer/dashboard.js');
   assert.doesNotMatch(js, /api\.snapshot\(\)/);
-  assert.match(js, /if \(detail\.snapshot\) \{/);
+  assert.match(js, /Object\.prototype\.hasOwnProperty\.call\(detail, 'snapshot'\)/);
+  assert.match(js, /Object\.prototype\.hasOwnProperty\.call\(detail, 'orchestration'\)/);
   assert.match(js, /coding-tools:overview-pulse/);
   assert.match(js, /void refreshAnalytics\(detail\.force === true\)\.then\(\(\) => renderAll\(\)\)/);
 });
@@ -106,10 +108,65 @@ test('dashboard animation cancels the previous frame chain before scheduling a n
   assert.match(js, /element\.__dashboardAnimationFrame/);
   assert.match(js, /cancelAnimationFrame\(element\.__dashboardAnimationFrame\)/);
 });
+test('dashboard per-turn log lists newest turns without identity leakage', () => {
+  const js = read('renderer/dashboard.js');
+  const html = read('renderer/index.html');
+  const css = read('renderer/dashboard.css');
+  assert.match(html, /id="daTurnLog"/);
+  assert.match(html, /Nhật ký lượt chat/);
+  assert.match(js, /function renderTurnLog\(operations\)/);
+  assert.match(js, /renderTurnLog\(operations\)/);
+  assert.match(js, /recent_turns/);
+  assert.match(js, /da-turn-row/);
+  assert.match(css, /\.da-turn-log/);
+  assert.match(css, /\.da-turn-row/);
+  assert.match(css, /\.da-turn-kind\.is-exact/);
+  const start = js.indexOf('function renderTurnLog(operations)');
+  assert.ok(start >= 0);
+  const block = js.slice(start, start + 2600);
+  assert.doesNotMatch(block, /turn_id|trace_id/);
+  assert.match(block, /toLocaleTimeString\('vi-VN'/);
+});
+
+test('dashboard preserves unknown for malformed turn-measurement numerics', () => {
+  const js = read('renderer/dashboard.js');
+  const logStart = js.indexOf('function renderTurnLog(operations)');
+  const liveStart = js.indexOf('function renderLiveTurnCard(orchestration)');
+  const cardStart = js.indexOf('function renderChatTurnCard(operations)');
+  assert.ok(logStart >= 0 && liveStart > logStart && cardStart > liveStart);
+  const log = js.slice(logStart, liveStart);
+  const live = js.slice(liveStart, cardStart);
+  assert.match(log, /const point = observedNumber\(row\?\.point\);/);
+  assert.match(log, /const lower = observedNumber\(row\?\.lower\);/);
+  assert.match(log, /const upper = observedNumber\(row\?\.upper\);/);
+  assert.match(log, /if \(point === null \|\| kindName === 'unknown'\)/);
+  assert.doesNotMatch(log, /Number\(row\.point\) \|\| 0/);
+  assert.match(live, /const point = observedNumber\(latest\?\.point\);/);
+  assert.match(live, /const lower = observedNumber\(latest\.lower\);/);
+  assert.match(live, /const upper = observedNumber\(latest\.upper\);/);
+  assert.doesNotMatch(live, /Number\(latest\.point\) \|\| 0/);
+});
+
+test('dashboard does not claim a synchronized workspace before a snapshot', () => {
+  const js = read('renderer/dashboard.js');
+  const controlCenter = read('renderer/control-center.js');
+  const start = js.indexOf('function updateHeaderContext()');
+  const end = js.indexOf('function renderFleetTable', start);
+  assert.ok(start >= 0 && end > start);
+  const block = js.slice(start, end);
+  assert.match(block, /if \(!snapshot \|\| typeof snapshot !== 'object'\) return;/);
+  assert.match(block, /setText\('daProjectText', name\);/);
+  assert.match(js, /setText\('daLastSync', snapshotFreshnessLabel\(\)\)/);
+  assert.match(js, /Freshness snapshot chưa xác nhận/);
+  assert.match(controlCenter, /setText\('ccLastSync', snapshotSyncText\(snapshot\?\.status\)\)/);
+});
+
 test('dashboard per-turn tile shows effective turn measurement without double count', () => {
   const js = read('renderer/dashboard.js');
   const html = read('renderer/index.html');
   assert.match(html, /TOKEN CHATWEB/);
+  assert.match(html, /TOKEN PROVIDER/);
+  assert.ok(html.indexOf('TOKEN CHATWEB') < html.indexOf('TOKEN PROVIDER'));
   assert.match(html, /id="daTurnTokenStatus"/);
   assert.match(html, /id="daChatTurnValue"/);
   assert.match(html, /id="daChatTurnDelta"/);
@@ -118,6 +175,11 @@ test('dashboard per-turn tile shows effective turn measurement without double co
   assert.match(js, /renderChatTurnCard\(operations\)/);
   assert.match(js, /STRUCTURAL ESTIMATE · confidence none/);
   assert.match(js, /Chưa đo lượt chat nào/);
+  const chatCardStart = js.indexOf('function renderChatTurnCard(operations)');
+  const providerCardStart = js.indexOf('function renderTokenOverviewTiles', chatCardStart);
+  assert.ok(chatCardStart >= 0 && providerCardStart > chatCardStart);
+  const chatCardSource = js.slice(chatCardStart, providerCardStart);
+  assert.doesNotMatch(chatCardSource, /\bmeasured\b|daTokensTotal|daProviderTokenStatus/);
   assert.doesNotMatch(js, /measured\.total \+/);
   assert.match(html, /Token lượt chat/);
   assert.match(js, /function turnTokenState\(operations\)/);
@@ -257,6 +319,12 @@ test('dashboard styling is themed, animated and honors reduced motion', () => {
   assert.match(css, /\.da-model-row\.is-active/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(css, /@media \(max-width: 1080px\)/);
+  assert.match(css, /\.da-tile-hero/);
+  assert.match(css, /@keyframes daTileIn/);
+  assert.match(css, /@keyframes daHeroSheen/);
+  const html = read('renderer/index.html');
+  assert.match(html, /da-tile-hero/);
+  assert.doesNotMatch(html, /da-live-dot/);
 });
 
 test('operations overview renders measured token KPIs from canonical non-overlapping usage analytics', () => {
@@ -329,7 +397,7 @@ test('basic overview keeps token quantification primary while technical telemetr
   const html = read('renderer/index.html');
   const css = read('renderer/dashboard.css');
   const js = read('renderer/dashboard.js');
-  assert.match(html, /TỔNG TOKEN/);
+  assert.match(html, /TOKEN PROVIDER/);
   assert.match(html, /INPUT TOKEN/);
   assert.match(html, /OUTPUT TOKEN/);
   assert.match(html, /CACHED TOKEN/);

@@ -406,6 +406,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.runtime.activation_epoch_id = "activation-bootstrap-connector-0001"
         self.runtime.activation_gate_config = "closed"
         self.runtime.activation_admission = "closed"
+        self.runtime.activation_expires_at_unix_ms = int(time.time() * 1000) + 60_000
 
         status, _, body = self.tool_call(
             "workspace_context",
@@ -476,6 +477,130 @@ class StatelessHttp2026Tests(unittest.TestCase):
         after_open_retry = self.runtime.connector_activation_bootstrap()
         self.assertEqual(after_open_retry["observed_at"], first_observed_at)
         self.assertEqual(after_open_retry["client_id"], first_client_id)
+
+    def test_expired_epoch_workspace_context_returns_terminal_error_without_contact(self) -> None:
+        self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
+        self.runtime.activation_epoch_id = "activation-bootstrap-expired-0001"
+        self.runtime.activation_gate_config = "closed"
+        self.runtime.activation_admission = "closed"
+        self.runtime.activation_expires_at_unix_ms = 1
+        with patch.object(
+            self.runtime, "_set_request_workspace_scope",
+            side_effect=AssertionError("expired bootstrap must not select a workspace"),
+        ), patch.object(
+            self.runtime, "workspace_context",
+            side_effect=AssertionError("expired bootstrap must not read a workspace"),
+        ):
+            status, _, body = self.tool_call(
+                "workspace_context",
+                {"path": "outside-expired-bootstrap-workspace", "detail": "compact"},
+                request_id=8,
+            )
+        self.assertEqual(status, 200)
+        self.assertTrue(body["result"]["isError"])
+        structured = body["result"]["structuredContent"]
+        self.assertFalse(structured["ok"])
+        self.assertFalse(structured["completed"])
+        self.assertFalse(structured["retryable"])
+        self.assertFalse(structured["workspace_accessed"])
+        self.assertNotIn("activation_bootstrap", structured)
+        self.assertEqual(structured["error"]["code"], "ACTIVATION_REQUEST_EXPIRED")
+        self.assertFalse(structured["error"]["retryable"])
+        self.assertFalse(self.runtime.connector_activation_bootstrap()["observed"])
+        self.assertFalse(self.runtime.connector_client_contact()["observed"])
+        self.assertFalse(self.runtime.connector_tool_discovery()["observed"])
+        self.assertEqual(self.runtime.activation_admission, "closed")
+
+    def test_panel_handoff_binds_displayed_run_without_context_or_authority_adoption(self) -> None:
+        state = self.runtime.task_state.update({
+            "objective": "Continue the displayed panel task",
+            "status": "active",
+            "current_step": "Inspect focused result",
+            "next_step": "Finish the same task",
+        })
+        context = self.runtime.orchestration_control.begin(
+            objective=state["objective"], task_id=state["task_id"],
+            execution_mode="mcp_only", base_head="panel-head", worktree_fp="panel-fp",
+        )
+        projection = context.projection()
+        self.runtime.task_state.set_orchestration_projection(projection, event="panel-test-bound")
+        source_path = TaskStateStore(Path(self.temp.name)).path
+        source_before = source_path.read_bytes()
+        controller_before = self.runtime.orchestration_ledger.get_controller_lease(context.run_id)
+        headers = {
+            "X-Coding-Tools-Client-Id": "electron-panel",
+            "X-Coding-Tools-Client-Type": "electron",
+        }
+        with patch.object(
+            self.runtime, "stateless_task_context_for_run",
+            side_effect=AssertionError("panel must not recover a ChatWeb context"),
+        ):
+            status, _, response = self.tool_call(
+                "task_control",
+                {"action": "handoff", "handoff_action": "record", "run_id": context.run_id,
+                 "payload": {"panel_summary": "continue"}},
+                request_id=310, extra_headers=headers,
+            )
+        self.assertEqual(status, 200)
+        self.assertFalse(response["result"]["isError"], response)
+        structured = response["result"]["structuredContent"]
+        self.assertTrue(structured["recorded"])
+        capsule = structured["capsule"]
+        self.assertEqual(capsule["run_id"], context.run_id)
+        self.assertEqual(capsule["wave_id"], context.wave_id)
+        handoff = capsule["payload"]["runtime"]
+        for key in ("task_id", "objective", "current_step", "next_step"):
+            self.assertEqual(handoff[key], state[key])
+        self.assertEqual(handoff["task_status"], state["status"])
+        for key in ("run_id", "wave_id", "orchestration_state", "base_head", "worktree_fp", "write_owner", "write_lease_id"):
+            self.assertEqual(handoff[key], projection[key])
+        self.assertEqual(handoff["authority_from"], "electron-panel")
+        self.assertEqual(source_path.read_bytes(), source_before)
+        self.assertEqual(
+            self.runtime.orchestration_ledger.get_controller_lease(context.run_id), controller_before
+        )
+        returned_context = structured["task_context_id"]
+        panel_context_state = TaskStateStore(
+            Path(self.temp.name), scope_id=f"mcp2026:{returned_context}"
+        ).get()
+        self.assertFalse(panel_context_state.get("task_id"))
+        self.assertFalse(panel_context_state.get("orchestration", {}).get("run_id"))
+
+        for request_id, arguments, expected_code in (
+            (311, {}, "HANDOFF_RUN_REQUIRED"),
+            (312, {"run_id": context.run_id, "wave_id": "old-wave"}, "HANDOFF_PANEL_BINDING_MISMATCH"),
+        ):
+            with self.subTest(expected_code=expected_code):
+                _, _, rejected = self.tool_call(
+                    "task_control",
+                    {"action": "handoff", "handoff_action": "record", "payload": {}, **arguments},
+                    request_id=request_id, extra_headers=headers,
+                )
+                self.assertTrue(rejected["result"]["isError"])
+                self.assertEqual(rejected["result"]["structuredContent"]["error"]["code"], expected_code)
+        for field, value in (("task_id", "another-task"), ("run_id", "another-run"), ("wave_id", "another-wave")):
+            changes = {"task_id": state["task_id"], "orchestration": dict(projection)}
+            if field == "task_id":
+                changes["task_id"] = value
+            else:
+                changes["orchestration"][field] = value
+            source_store = TaskStateStore(Path(self.temp.name))
+            source_store._write({**source_store.get(), **changes})
+            with self.subTest(mismatched_field=field):
+                _, _, rejected = self.tool_call(
+                    "task_control",
+                    {"action": "handoff", "handoff_action": "record", "run_id": context.run_id, "payload": {}},
+                    request_id=313, extra_headers=headers,
+                )
+                self.assertTrue(rejected["result"]["isError"])
+                self.assertEqual(
+                    rejected["result"]["structuredContent"]["error"]["code"], "HANDOFF_PANEL_BINDING_MISMATCH"
+                )
+        self.assertEqual(
+            self.runtime.orchestration_ledger.latest_handoff_capsule(run_id=context.run_id)["capsule_id"],
+            capsule["capsule_id"],
+        )
+        self.assertEqual(len(self.runtime.orchestration_ledger.list_runs()), 1)
 
     def test_stateless_task_contexts_isolate_global_and_parallel_runs(self) -> None:
         global_state = self.runtime.task_state.ensure_started("global-sentinel")

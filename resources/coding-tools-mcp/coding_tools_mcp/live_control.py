@@ -10,7 +10,31 @@ from .context_observability import context_observability_projection, controller_
 from .controller_usage_ingress import CONTROLLER_USAGE_META_KEY
 from .envutils import ENV_PREFIX
 from .goal_pursuit import GoalPursuitError
+from .task_state import command_presentation
 from .truth_snapshot import build_truth_snapshot
+from .token_measurements import latest_turn_measurement as _latest_chat_turn_measurement
+
+
+def _latest_turn_projection(runtime: Any) -> dict[str, Any]:
+    """Newest ChatWeb turn for the 4-6s pulse path (journal tail only).
+
+    Fail-closed and allocation-bounded; never breaks the live snapshot.
+    """
+    try:
+        workspace = getattr(getattr(runtime, "orchestration_ledger", None), "workspace", None)
+        if workspace is None:
+            raise ValueError("ledger workspace unavailable")
+        return _latest_chat_turn_measurement(workspace)
+    except Exception:
+        return {
+            "schema_version": 1,
+            "measurement": "chat_turn_measurements_v1",
+            "missing_measurement_policy": "unknown_not_zero",
+            "content_free": True,
+            "journal_available": False,
+            "latest_turn": None,
+            "missing_reason": "chat_journal_unavailable",
+        }
 
 
 def _compact_command(value: Any) -> dict[str, Any] | None:
@@ -647,6 +671,11 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
             },
         }
     state = runtime.task_state.get()
+    if isinstance(state.get("current_command"), dict):
+        state = command_presentation(
+            state, governor=runtime.execution_resource_governor,
+            workspace=runtime.task_state.current_workspace(),
+        )
     projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
     ledger = runtime.orchestration_ledger
     run_id = str(projection.get("run_id") or "").strip()
@@ -752,6 +781,7 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
             "next_step": str(state.get("next_step") or "")[:300],
             "modified_files": [str(item) for item in list(state.get("modified_files") or [])[:10]],
             "current_command": _compact_command(state.get("current_command")),
+            "current_command_observation": state.get("current_command_observation"),
             "updated_at": state.get("updated_at"),
             "pause_reason": str(state.get("pause_reason") or ""),
         },
@@ -777,6 +807,7 @@ def live_control_snapshot(runtime: Any, *, client_online_seconds: float) -> dict
         },
         "direct_usage": direct_usage,
         "tool_call_metering": tool_call_metering,
+        "latest_turn_measurement": _latest_turn_projection(runtime),
         "chatweb_measurement": _chatweb_measurement_projection(
             runtime,
             direct_usage=direct_usage,

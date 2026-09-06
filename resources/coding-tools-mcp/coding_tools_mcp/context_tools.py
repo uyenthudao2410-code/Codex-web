@@ -199,6 +199,7 @@ class ContextToolsMixin:
         requested_paths = list(dict.fromkeys(str(item).strip() for item in raw_paths if str(item).strip()))[:40]
         max_files = min(max(int(args.get("max_files", 12)), 1), 30)
         max_total_bytes = min(max(int(args.get("max_total_bytes", 262144)), 4096), 1048576)
+        max_lines_per_file = min(max(int(args.get("max_lines_per_file", 2000)), 1), 5000)
         max_matches = min(max(int(args.get("max_matches_per_query", 20)), 1), 100)
 
         search_workers = min(4, len(queries)) if queries else 0
@@ -212,6 +213,7 @@ class ContextToolsMixin:
             "limits": {
                 "max_files": max_files,
                 "max_total_bytes": max_total_bytes,
+                "max_lines_per_file": max_lines_per_file,
                 "max_matches_per_query": max_matches,
             },
             "stages": [
@@ -422,7 +424,7 @@ class ContextToolsMixin:
                 break
             read_started = time.monotonic()
             try:
-                item = self.read_file({"path": path, "max_bytes": min(remaining, 131072), "max_lines": 2000})
+                item = self.read_file({"path": path, "max_bytes": min(remaining, 131072), "max_lines": max_lines_per_file})
             except (ToolFailure, OSError, UnicodeError) as exc:
                 files.append({"path": path, "error": str(exc)})
                 composite_operations.append({

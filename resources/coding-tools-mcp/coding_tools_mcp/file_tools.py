@@ -29,6 +29,9 @@ from .processes import hidden_process_popen_kwargs
 from .textutils import DEFAULT_MAX_LINES, truncate_text_head
 
 
+MAX_READ_LINES = 5000
+
+
 class FileToolsMixin:
     def _patch_scope_path(self, resolved: ResolvedPath) -> ResolvedPath:
         scope_root = self._current_request_workspace_root().resolve(strict=False)
@@ -60,13 +63,29 @@ class FileToolsMixin:
         max_bytes = int(args.get("max_bytes", 131072))
         start_line = int(args.get("start_line", 1))
         end_line = args.get("end_line")
-        max_lines = args.get("max_lines")
-        if end_line is not None and max_lines is not None:
-            calculated_end_line = start_line + int(max_lines) - 1
+        supplied_max_lines = args.get("max_lines")
+        try:
+            effective_max_lines = (
+                DEFAULT_MAX_LINES if supplied_max_lines is None else int(supplied_max_lines)
+            )
+        except (TypeError, ValueError) as exc:
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                "max_lines must be an integer.",
+                category="validation",
+            ) from exc
+        if not 1 <= effective_max_lines <= MAX_READ_LINES:
+            raise ToolFailure(
+                "INVALID_ARGUMENT",
+                f"max_lines must be between 1 and {MAX_READ_LINES}.",
+                category="validation",
+            )
+        if end_line is not None and supplied_max_lines is not None:
+            calculated_end_line = start_line + effective_max_lines - 1
             if int(end_line) != calculated_end_line:
                 raise ToolFailure("INVALID_ARGUMENT", "end_line and max_lines select different ranges.", category="validation")
-        if end_line is None and max_lines is not None:
-            end_line = start_line + int(max_lines) - 1
+        if end_line is None and supplied_max_lines is not None:
+            end_line = start_line + effective_max_lines - 1
         encoding = args.get("encoding", "utf-8")
         if encoding != "utf-8":
             raise ToolFailure("UNSUPPORTED_ENCODING", "Only utf-8 is supported.", category="validation")
@@ -92,20 +111,22 @@ class FileToolsMixin:
                         continue
                     selected_parts.append(line)
                     selected_bytes += len(line.encode("utf-8"))
-                    if len(selected_parts) > DEFAULT_MAX_LINES or selected_bytes > max_bytes:
+                    if len(selected_parts) > effective_max_lines or selected_bytes > max_bytes:
                         selection_complete = True
         except UnicodeDecodeError as exc:
             raise ToolFailure("UNSUPPORTED_ENCODING", "File is not valid utf-8.", category="validation") from exc
         selected = "".join(selected_parts)
-        truncation = truncate_text_head(selected, max_lines=DEFAULT_MAX_LINES, max_bytes=max_bytes)
+        truncation = truncate_text_head(selected, max_lines=effective_max_lines, max_bytes=max_bytes)
         selected = truncation.content
+        output_lines = len(selected.splitlines())
         truncated = truncation.truncated or selection_complete
         end = requested_end if requested_end is not None else total_lines
         if end < start_line:
             selected = ""
+            output_lines = 0
         actual_end = min(end, total_lines)
-        if truncated and truncation.output_lines > 0:
-            actual_end = min(total_lines, start_line + truncation.output_lines - 1)
+        if truncated and output_lines > 0:
+            actual_end = min(total_lines, start_line + output_lines - 1)
         next_start_line = actual_end + 1 if truncated and actual_end < total_lines else None
         warnings = []
         if truncated:
@@ -125,7 +146,7 @@ class FileToolsMixin:
             "truncated": truncated,
             "truncated_by": truncation.truncated_by or ("bytes" if selection_complete else None),
             "first_line_exceeds_limit": truncation.first_line_exceeds_limit,
-            "output_lines": truncation.output_lines,
+            "output_lines": output_lines,
             "output_bytes": truncation.output_bytes,
             "next_start_line": next_start_line,
             "warnings": warnings,
@@ -136,6 +157,7 @@ class FileToolsMixin:
                 "arguments": {
                     "path": requested_path,
                     "start_line": next_start_line,
+                    "max_lines": effective_max_lines,
                     "max_bytes": max_bytes,
                 },
             }

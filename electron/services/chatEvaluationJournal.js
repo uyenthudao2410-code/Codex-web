@@ -157,7 +157,7 @@ function buildChatEvaluationBootstrapScript() {
       schemaVersion: 1,
       queue: [],
       listeners: new Set(),
-      debug: { sseStreams: 0, sseEvents: 0, sseCompleted: 0, sseUsageHits: 0, sseUsageRejected: 0, usageKeySamples: [], sseTypeSamples: [], featuresFinalized: 0 },
+      debug: { sseStreams: 0, sseEvents: 0, sseCompleted: 0, sseUsageHits: 0, sseUsageRejected: 0, usageKeySamples: [], sseTypeSamples: [], featuresFinalized: 0, featuresInterim: 0 },
       dispose: null
     };
     const exactInteger = (value) => Number.isSafeInteger(value) && value >= 0 ? value : null;
@@ -667,7 +667,7 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       controllerUsageSeen: new Set(),
       buffer: [],
       sequence: 0,
-      debug: { sseStreams: 0, sseEvents: 0, sseCompleted: 0, sseUsageHits: 0, sseUsageRejected: 0, usageKeySamples: [], sseTypeSamples: [], featuresFinalized: 0 },
+      debug: { sseStreams: 0, sseEvents: 0, sseCompleted: 0, sseUsageHits: 0, sseUsageRejected: 0, usageKeySamples: [], sseTypeSamples: [], featuresFinalized: 0, featuresInterim: 0 },
       pendingUser: null,
       pendingUserMetrics: null,
       finalizing: null,
@@ -962,6 +962,7 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
           lastAsstChars: textMetrics(latest.roleNode).chars,
           lastAsstCode: textMetrics(latest.roleNode).codeBlocks,
           lastOrdinal: latest.ordinal,
+          lastInterimEmitMs: at.monotonic_ms,
           lastChangeMs: at.monotonic_ms,
           startMs: at.monotonic_ms
         };
@@ -982,6 +983,14 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       if (!fin) return;
       const at = sample();
       if (force !== true && at.monotonic_ms - fin.lastChangeMs < 1000) return;
+      pushFeaturesSnapshot(fin, at);
+      state.debug.featuresFinalized += 1;
+      state.finalizing = null;
+    };
+    // Shared snapshot builder: interim progress and the final measurement
+    // share one shape. Downstream keeps the latest snapshot per turn, so
+    // interim numbers tick live during streaming without double-counting.
+    const pushFeaturesSnapshot = (fin, at) => {
       let toolCards = 0;
       try {
         const turns = visibleTurns();
@@ -1013,8 +1022,6 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
         asst_chars: fin.lastAsstChars,
         asst_code_blocks: fin.lastAsstCode
       });
-      state.debug.featuresFinalized += 1;
-      state.finalizing = null;
     };
     const updateFinalizing = () => {
       const fin = state.finalizing;
@@ -1037,6 +1044,14 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
         fin.lastAsstChars = metrics.chars;
         fin.lastAsstCode = metrics.codeBlocks;
         fin.lastChangeMs = performance.now();
+        // Streaming interim: emit progress at most every 3s while the answer
+        // grows. Same shape as the final event; downstream keeps the latest
+        // snapshot per turn, so live numbers never double-count.
+        if (fin.lastChangeMs - (fin.lastInterimEmitMs || 0) >= 3000) {
+          fin.lastInterimEmitMs = fin.lastChangeMs;
+          pushFeaturesSnapshot(fin, sample());
+          state.debug.featuresInterim += 1;
+        }
       }
       if (current.ordinal !== null) fin.lastOrdinal = current.ordinal;
       if (performance.now() - fin.startMs >= 600000) finalizeTurnFeatures(true);
@@ -1153,7 +1168,8 @@ function chatEvaluationDebugScript() {
           sseUsageRejected: bootstrap.debug.sseUsageRejected || 0,
           usageKeySamples: (bootstrap.debug.usageKeySamples || []).slice(0, 8),
           sseTypeSamples: (bootstrap.debug.sseTypeSamples || []).slice(0, 16),
-          featuresFinalized: bootstrap.debug.featuresFinalized || 0
+          featuresFinalized: bootstrap.debug.featuresFinalized || 0,
+          featuresInterim: bootstrap.debug.featuresInterim || 0
         };
       }
     } catch (ignoredBootstrapDebug) {}
@@ -1168,7 +1184,8 @@ function chatEvaluationDebugScript() {
           sseUsageRejected: telemetry.debug.sseUsageRejected || 0,
           usageKeySamples: (telemetry.debug.usageKeySamples || []).slice(0, 8),
           sseTypeSamples: (telemetry.debug.sseTypeSamples || []).slice(0, 16),
-          featuresFinalized: telemetry.debug.featuresFinalized || 0
+          featuresFinalized: telemetry.debug.featuresFinalized || 0,
+          featuresInterim: telemetry.debug.featuresInterim || 0
         };
       }
     } catch (ignoredObserverDebug) {}

@@ -1,0 +1,1256 @@
+[
+  {
+    "version": 2,
+    "task_id": "5d8c724b476241a8a7ee5705bcf308ef",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:35:23.842Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:35:23.838Z",
+    "updated_at": "2026-09-04T11:35:23.842Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:35:23.838Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:23.842Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import hashlib,pathlib; paths=['resources/coding-tools-mcp/tests/test_efficiency_runtime.py','resources/coding-tools-mcp/tests/test_exception_group_boundary.py','resources/coding-tools-mcp/tests/test_live_restart_reconcile.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py']; [print(p, hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()) for p in paths]\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:23.842Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:35:30.954Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d704beb2399f40aa87a395720d20be69",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:35:30.964Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:35:30.955Z",
+    "updated_at": "2026-09-04T11:35:30.964Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:35:30.955Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:30.964Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import hashlib,pathlib; paths=['resources/coding-tools-mcp/tests/test_efficiency_runtime.py','resources/coding-tools-mcp/tests/test_exception_group_boundary.py','resources/coding-tools-mcp/tests/test_live_restart_reconcile.py','resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py']; [print(p, hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()) for p in paths]\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:30.964Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:35:38.901Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5b1270878a7a474fb54e03349d7c7f2e",
+    "orchestration": {
+      "run_id": "46ebec3dce7c4b4cb83ed3c503a1bdc8",
+      "wave_id": "07e02bc35fb442c9bc43ac3fd0730819",
+      "orchestration_state": "PROVING",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "f11cf897b190584f40940b5de45331321e75c755865f68be8679b5de3d10e7d3",
+      "contract_fp": "0a1a837eee066d5098074c7ff2174c472d08a4b1c869a0fce2c21cdb1d685482"
+    },
+    "objective": "G2 Wave 3 current-fingerprint proof-only closure on exact current HEAD 8697ace8204e7e3da55d250d4a52d9b2b930116c. Preserve all concurrent WIP and production behavior. Adopt only resources/coding-tools-mcp/tests/test_exception_group_boundary.py at exact SHA-256 912269c5fd0c87a34bddbf9010ba828215461785b697e281db8cf3d43e8a7408 with no source mutation. Wave 2 proofs are not current acceptance proof because their source fingerprint drifted after proof. Run fresh recovery-E2E, focused regression, full test:all, module-size, diff-check and exact target diff gates on the settled current fingerprint; stop/replan on any proof, HEAD, target or source-fingerprint drift.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-04T13:21:21.996Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "in_progress",
+        "updated_at": "2026-09-04T13:21:21.996Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-04T13:21:21.996Z"
+      }
+    ],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YwxAVI9BxJZMhFnZwCwtVYvp",
+      "kind": "command",
+      "status": "reconciled_terminal",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T13:44:19.237Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+            "operation": "update"
+          }
+        ],
+        "source": "aligned_task_modified_files",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 76,
+          "head_hash": "119529c3c27e05d609227934e6a228c657bcfb7a77f4dac881c6b7419b49943b"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-46ebec3dce7c4b4cb83ed3c503a1bdc8\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-46ebec3dce7c4b4cb83ed3c503a1bdc8\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-46ebec3dce7c4b4cb83ed3c503a1bdc8\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "46ebec3dce7c4b4cb83ed3c503a1bdc8",
+        "wave_id": "35e07b6c64fc4638ab0bb7cb145fd221",
+        "checkpoint_id": "",
+        "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+        "worktree_fp": "6cea96e7cef53cbcb5ddf5c275a7536101f4a046372fd0a36d6a7f232fc08429",
+        "contract_fp": "0a1a837eee066d5098074c7ff2174c472d08a4b1c869a0fce2c21cdb1d685482",
+        "objective_provenance": {
+          "effective_objective": "G2 corrective regression closure on current HEAD 8697ace8204e7e3da55d250d4a52d9b2b930116c: change only resources/coding-tools-mcp/tests/test_exception_group_boundary.py by adding self.task_state = SimpleNamespace(get=lambda: {}) inside FailingRuntime.__init__ for test_http_pre_dispatch_boundary_never_stringifies_exception_group. Preserve all concurrent WIP, keep production behavior unchanged, do not modify the two already-passing regression tests or any second path. Run focused three-test selection without pytest :: node IDs, then full npm test:all, module-size guard, git diff --check, and exact target-file diff inspection. Stop/replan on any drift or failed proof.",
+          "objective_revision": 1,
+          "objective_sha256": "5d69d18bd4ed6b5c9506c73045b7f7ddca62a113ac1ef3a7dde43e4aa191cbdc",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 6,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "360c4cf644d246c2824107346cfbb23a",
+            "stage_id": "check:61179c2f8b80c958",
+            "status": "passed",
+            "duration_ms": 17456,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "b9e30fb83f174f8e9cff96de0264d7ac",
+            "stage_id": "check:8f279add4b11d6dd",
+            "status": "passed",
+            "duration_ms": 5492,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "dc6d8e887d4c432ba042df1dcc1250c3",
+            "stage_id": "check:9aa3e2aac3285acc",
+            "status": "passed",
+            "duration_ms": 539597,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "36e9f912c1054ee5a2df8ae322ac9aca",
+            "stage_id": "check:80a1a46bd01d26a3",
+            "status": "passed",
+            "duration_ms": 1388,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "e63fed0d93ea4367a20d46c1163d961c",
+            "stage_id": "check:466c2f308b48c766",
+            "status": "passed",
+            "duration_ms": 1997,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "294f19297d6c4cdd9ea5c9c99758ca80",
+            "stage_id": "check:7c0a9b351b151400",
+            "status": "passed",
+            "duration_ms": 1158,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "SOL_REJECTED",
+        "reason": "SOURCE_OR_STATE_DRIFT_POST_PROOF_6CEA96E7_TO_010F1467_TARGET_UNCHANGED",
+        "event_seq": 40066
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "6c268b14410953c59fcd21f37253110a2f52106713183e66df00a64810c608b4",
+    "completion_report_acknowledged_id": "6c268b14410953c59fcd21f37253110a2f52106713183e66df00a64810c608b4",
+    "completion_report_acknowledged_at": "2026-09-04T13:20:39.870Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed, 26 deselected in 8.53s'",
+        "finished_at": "2026-09-04T11:36:53.903Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "8vcRXv16zwu8eKB0mlmIbzXt"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "46ebec3dce7c4b4cb83ed3c503a1bdc8",
+          "owner_wave": "1965ee5817064f999db57bc43083bf3b",
+          "size_bytes": 115,
+          "command_id": "8vcRXv16zwu8eKB0mlmIbzXt",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:8vcRXv16zwu8eKB0mlmIbzXt:stdout",
+              "total_stream_bytes": 115,
+              "total_retained_bytes": 115,
+              "head_retained_bytes": 115,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:8vcRXv16zwu8eKB0mlmIbzXt:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed, 26 deselected in 3.30s'",
+        "finished_at": "2026-09-04T12:02:22.891Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "F_YhoqB0x79fxflGbYxBNtHW"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "46ebec3dce7c4b4cb83ed3c503a1bdc8",
+          "owner_wave": "35e07b6c64fc4638ab0bb7cb145fd221",
+          "size_bytes": 115,
+          "command_id": "F_YhoqB0x79fxflGbYxBNtHW",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:F_YhoqB0x79fxflGbYxBNtHW:stdout",
+              "total_stream_bytes": 115,
+              "total_retained_bytes": 115,
+              "head_retained_bytes": 115,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:F_YhoqB0x79fxflGbYxBNtHW:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed, 26 deselected in 4.38s'",
+        "finished_at": "2026-09-04T13:21:48.059Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "_A3QEuy1eYUmdK1mThTi545k"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "46ebec3dce7c4b4cb83ed3c503a1bdc8",
+          "owner_wave": "07e02bc35fb442c9bc43ac3fd0730819",
+          "size_bytes": 115,
+          "command_id": "_A3QEuy1eYUmdK1mThTi545k",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:_A3QEuy1eYUmdK1mThTi545k:stdout",
+              "total_stream_bytes": 115,
+              "total_retained_bytes": 115,
+              "head_retained_bytes": 115,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:_A3QEuy1eYUmdK1mThTi545k:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+        "operation": "update",
+        "updated_at": "2026-09-04T11:38:25.941Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Run all requested checks and summarize the result.",
+    "created_at": "2026-09-04T11:35:38.903Z",
+    "updated_at": "2026-09-04T13:44:19.237Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:35:38.903Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:39.239Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256",
+          "session_id": "yw9PkWdqd8OcyQc4VN4d8YPP"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:39.689Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:44.881Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py SHA256",
+          "session_id": "CTAJkHbvd0PkGDMJsv2MeyEX"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:45.241Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:49.939Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_live_restart_reconcile.py SHA256",
+          "session_id": "8J9JwGkh3iQIh_y1mtWEMhrg"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:50.236Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_live_restart_reconcile.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:55.499Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py SHA256",
+          "session_id": "1oBnASWVsh8Ear5tA0lTA7IK"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:55.831Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:33.822Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:36.502Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:38.131Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:38.194Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:39.917Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:40.595Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:41.814Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "session_id": "8vcRXv16zwu8eKB0mlmIbzXt"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:53.903Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:55.234Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "session_id": "zeG-YSMdi-OnZOKTzXJz-U2w"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:24.012Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:24.319Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:25.262Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:25.266Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:25.270Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:25.780Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "9683ad2fcab0df11c6514cd8701573ee69faacdc40b82c3878689894f8e49d48"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:25.942Z",
+        "event": "files_modified",
+        "details": {
+          "count": 1
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:34.035Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:34.303Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:40:25.459Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-04T12:00:38.211Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "9683ad2fcab0df11c6514cd8701573ee69faacdc40b82c3878689894f8e49d48"
+        }
+      },
+      {
+        "time": "2026-09-04T12:00:45.154Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:55.670Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:56.748Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:57.872Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:57.883Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:58.881Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-04T12:01:59.111Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:02:00.271Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test --test-name-pattern=\"real primary Tunnel recovery replaces only the Tunnel PID and preserves the real Coding MCP identity|live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel|Recovery Supervisor recreates a killed Recovery Host process with a new authenticated identity\" ..\\..\\tests\\live-supervisor-e2e.test.js ..\\..\\tests\\recovery-supervisor.test.js",
+          "session_id": "FclwOkz3c1T3o6BHxx0sicaF"
+        }
+      },
+      {
+        "time": "2026-09-04T12:02:16.771Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test --test-name-pattern=\"real primary Tunnel recovery replaces only the Tunnel PID and preserves the real Coding MCP identity|live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel|Recovery Supervisor recreates a killed Recovery Host process with a new authenticated identity\" ..\\..\\tests\\live-supervisor-e2e.test.js ..\\..\\tests\\recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:02:18.485Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "session_id": "F_YhoqB0x79fxflGbYxBNtHW"
+        }
+      },
+      {
+        "time": "2026-09-04T12:02:22.891Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:02:24.788Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "session_id": "NDhJecEXcd99EfF9TiCGlrmk"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:23.198Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:24.753Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/check_module_size.py",
+          "session_id": "D-Um7lhUpR6AovWy3LPeZWNh"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:25.187Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/check_module_size.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:26.510Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check",
+          "session_id": "IrYNfF2YIurdwj-2FcqL8hra"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:27.672Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:28.852Z",
+        "event": "command_started",
+        "details": {
+          "command": "git -C ..\\.. diff -- resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "session_id": "mwYrK1o0Cl533BTfA1orAg-u"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:29.323Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git -C ..\\.. diff -- resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:29.609Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:29.612Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:29.940Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:29.944Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:30.122Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "d68afb390d4de812e5e2d7a784375ce074efb7f10b2ae4f8cdb84a113d60e6e4"
+        }
+      },
+      {
+        "time": "2026-09-04T12:11:30.332Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T12:12:09.619Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:15:29.011Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-04T12:15:29.013Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:15:29.201Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "6c268b14410953c59fcd21f37253110a2f52106713183e66df00a64810c608b4"
+        }
+      },
+      {
+        "time": "2026-09-04T12:15:47.073Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T12:15:47.916Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-04T13:04:22.349Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "RUNTIME_BUSY"
+        }
+      },
+      {
+        "time": "2026-09-04T13:20:39.870Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "6c268b14410953c59fcd21f37253110a2f52106713183e66df00a64810c608b4"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:15.898Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:17.366Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:18.866Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:20.132Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:20.144Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:21.573Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:21.996Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:22.841Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test --test-name-pattern=\"real primary Tunnel recovery replaces only the Tunnel PID and preserves the real Coding MCP identity|live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel|Recovery Supervisor recreates a killed Recovery Host process with a new authenticated identity\" ..\\..\\tests\\live-supervisor-e2e.test.js ..\\..\\tests\\recovery-supervisor.test.js",
+          "session_id": "pNGhD9foB6st0QOs4VCr2fmQ"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:40.958Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test --test-name-pattern=\"real primary Tunnel recovery replaces only the Tunnel PID and preserves the real Coding MCP identity|live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel|Recovery Supervisor recreates a killed Recovery Host process with a new authenticated identity\" ..\\..\\tests\\live-supervisor-e2e.test.js ..\\..\\tests\\recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:42.207Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "session_id": "_A3QEuy1eYUmdK1mThTi545k"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:48.059Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_efficiency_runtime.py tests/test_exception_group_boundary.py tests/test_live_restart_reconcile.py -q -k \"test_workspace_context_exposes_non_secret_runtime_activation_identity or test_http_pre_dispatch_boundary_never_stringifies_exception_group or test_mcp_restart_mid_call_reconciles_durable_state_and_kills_tree\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T13:21:49.187Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "session_id": "YwxAVI9BxJZMhFnZwCwtVYvp"
+        }
+      },
+      {
+        "time": "2026-09-04T13:44:19.237Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm --prefix ..\\.. run test:all",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T13:44:45.245Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "516a1af752fb482f9d1eae3b7b997f08",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T13:44:45.251Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-04T13:44:45.248Z",
+    "updated_at": "2026-09-04T13:44:45.251Z",
+    "events": [
+      {
+        "time": "2026-09-04T13:44:45.249Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T13:44:45.251Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py SHA256 && git diff -- resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T13:44:45.251Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T13:44:52.754Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b1f68ff8773f490a999907674fb43db2",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "W1nyyOI-XCi8icSvz8KOy1E4",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 737,
+      "finished_at": "2026-09-04T13:44:54.058Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-09-04T13:44:52.757Z",
+    "updated_at": "2026-09-04T13:47:38.407Z",
+    "events": [
+      {
+        "time": "2026-09-04T13:44:52.757Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T13:44:53.493Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py SHA256 && git diff -- resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "session_id": "W1nyyOI-XCi8icSvz8KOy1E4"
+        }
+      },
+      {
+        "time": "2026-09-04T13:44:54.058Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_exception_group_boundary.py SHA256 && git diff -- resources/coding-tools-mcp/tests/test_exception_group_boundary.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T13:45:38.633Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-04T13:46:05.675Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": ""
+        }
+      },
+      {
+        "time": "2026-09-04T13:46:27.227Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_EVENT_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-04T13:47:38.404Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-04T13:47:44.871Z",
+    "archive_reason": "cleared"
+  }
+]

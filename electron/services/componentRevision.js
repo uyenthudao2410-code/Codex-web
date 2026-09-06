@@ -72,7 +72,9 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/uiPerformanceMetrics.js'
     ]),
     directories: Object.freeze([
-      Object.freeze({ path: 'renderer', extensions: Object.freeze(['.css', '.html', '.js']) })
+      // These are loaded by the Electron renderer, including the local font
+      // binaries referenced by renderer/fonts.css.
+      Object.freeze({ path: 'renderer', extensions: Object.freeze(['.css', '.html', '.js', '.woff2']) })
     ])
   })
 });

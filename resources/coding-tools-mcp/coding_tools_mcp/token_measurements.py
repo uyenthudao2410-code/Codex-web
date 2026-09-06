@@ -34,6 +34,9 @@ STRUCTURAL_CHARS_PER_TOKEN_P50 = 4.0
 STRUCTURAL_CHARS_PER_TOKEN_P90 = 2.0
 MAX_TURNS = 200
 MAX_JOURNAL_LINES = 20000
+RECENT_TURNS = 20
+LIVE_TAIL_LINES = 400
+LIVE_TAIL_BYTES = 256 * 1024
 
 JOURNAL_RELATIVE = Path(".coding-tools") / "evaluation" / "chatweb-host-observations.jsonl"
 
@@ -111,6 +114,7 @@ def exact_measurement(receipt: dict[str, Any]) -> dict[str, Any] | None:
         "kind": "exact",
         "turn_id": turn_id,
         "trace_id": trace_id,
+        "wall_time_ms": _nonnegative_int(receipt.get("wall_time_ms")),
         "total": {"point": total, "lower": total, "upper": total},
         "input": {"point": input_tokens, "lower": input_tokens, "upper": input_tokens},
         "output": {"point": output_tokens, "lower": output_tokens, "upper": output_tokens},
@@ -145,6 +149,7 @@ def structural_estimate(features: dict[str, Any]) -> dict[str, Any] | None:
         "kind": "structural_estimate",
         "turn_id": turn_id,
         "trace_id": trace_id,
+        "wall_time_ms": _nonnegative_int(features.get("wall_time_ms")),
         "total": {
             "point": round(total_chars / STRUCTURAL_CHARS_PER_TOKEN_P50),
             "lower": round(total_chars / STRUCTURAL_CHARS_PER_TOKEN_P10),
@@ -159,10 +164,24 @@ def structural_estimate(features: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def effective_turn_measurements(events: list[Any], *, max_turns: int = MAX_TURNS) -> list[dict[str, Any]]:
-    """One effective measurement per (turn_id, trace_id): exact wins."""
+    """One effective measurement per (turn_id, trace_id): exact wins.
+
+    Journal append order is the freshness authority for structural snapshots.
+    A later ``turn_features`` event replaces an earlier interim snapshot for
+    the same turn.  If that latest snapshot is malformed, its measurement is
+    unknown rather than a stale interim value or a fabricated zero.
+    """
     features_by_turn: dict[tuple[str, str], dict[str, Any]] = {}
     exact_by_turn: dict[tuple[str, str], dict[str, Any]] = {}
-    order: list[tuple[str, str]] = []
+    # A regular dict preserves insertion order. Re-inserting a key lets a
+    # later journal event move that turn to the freshness position without an
+    # O(n) remove from a long history for every streaming update.
+    order: dict[tuple[str, str], None] = {}
+
+    def mark_fresh(key: tuple[str, str]) -> None:
+        order.pop(key, None)
+        order[key] = None
+
     for event in events:
         if not isinstance(event, dict):
             continue
@@ -173,23 +192,24 @@ def effective_turn_measurements(events: list[Any], *, max_turns: int = MAX_TURNS
             continue
         key = (turn_id, trace_id)
         if event_type == "turn_features":
-            if key not in features_by_turn:
-                features_by_turn[key] = event
-                order.append(key)
-            else:
-                features_by_turn[key] = event
+            # ``host_turn_span`` is normally appended before the first
+            # structural snapshot.  Keep exactly one ordered turn slot while
+            # replacing the raw snapshot on every later streaming/final emit.
+            # Keeping a malformed latest snapshot is deliberate: the
+            # structural gate below then fails closed to unknown instead of
+            # retaining a stale interim estimate.
+            mark_fresh(key)
+            features_by_turn[key] = event
         elif event_type == "host_turn_span":
             # Completion signal for turns that predate structural features:
             # they count as unknown, never zero.
-            if key not in features_by_turn and key not in order:
-                order.append(key)
+            mark_fresh(key)
         elif event_type == "controller_usage":
             measured = exact_measurement(event)
             if measured is not None:
                 exact_by_turn[key] = measured
-                if key not in features_by_turn and key not in order:
-                    order.append(key)
-    turns = order[-max(1, max_turns):]
+                mark_fresh(key)
+    turns = list(order)[-max(1, max_turns):]
     measurements: list[dict[str, Any]] = []
     for key in turns:
         if key in exact_by_turn:
@@ -203,6 +223,7 @@ def effective_turn_measurements(events: list[Any], *, max_turns: int = MAX_TURNS
             "kind": "unknown",
             "turn_id": key[0],
             "trace_id": key[1],
+            "wall_time_ms": None,
             "total": None,
             "input": None,
             "output": None,
@@ -237,6 +258,16 @@ def summarize_measurements(measurements: list[dict[str, Any]]) -> dict[str, Any]
             "upper": int(total_block["upper"]) if total_block else None,
         }
         break
+    recent_turns = []
+    for item in reversed(measurements[-RECENT_TURNS:]):
+        total_block = item.get("total") if isinstance(item.get("total"), dict) else None
+        recent_turns.append({
+            "wall_time_ms": item.get("wall_time_ms"),
+            "kind": str(item.get("kind") or "unknown"),
+            "point": int(total_block["point"]) if total_block else None,
+            "lower": int(total_block["lower"]) if total_block else None,
+            "upper": int(total_block["upper"]) if total_block else None,
+        })
     return {
         "turns_total": len(measurements),
         "turns_exact": exact,
@@ -244,6 +275,7 @@ def summarize_measurements(measurements: list[dict[str, Any]]) -> dict[str, Any]
         "turns_unknown": unknown,
         "session_total": total,
         "latest_turn": latest,
+        "recent_turns": recent_turns,
     }
 
 
@@ -296,3 +328,84 @@ def summarize_workspace(workspace: Any, *, max_turns: int = MAX_TURNS) -> dict[s
         "missing_reason": None if measurements and summary["turns_unknown"] == 0 else (
             "no_measured_turns" if not measurements else "some_turns_unmeasured"),
     }
+
+
+def latest_turn_measurement(workspace: Any, *, tail_lines: int = LIVE_TAIL_LINES) -> dict[str, Any]:
+    """Cheapest live read for the 4-6s pulse path: journal tail only.
+
+    The newest turn always appends to the main journal file, so rotation
+    can be ignored here. Input/read errors return unavailable; unknown stays
+    null, never zero.
+    """
+    base = {
+        "schema_version": 1,
+        "measurement": MEASUREMENT,
+        "missing_measurement_policy": MISSING_POLICY,
+        "content_free": True,
+        "journal_available": False,
+        "latest_turn": None,
+    }
+    try:
+        root = Path(workspace)
+        path = root / JOURNAL_RELATIVE
+        rows = _read_complete_journal_tail(path, tail_lines=tail_lines)
+    except (OSError, ValueError, TypeError, OverflowError):
+        return {**base, "missing_reason": "chat_journal_unavailable"}
+    events: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        row = row.strip()
+        if not row:
+            continue
+        try:
+            value = json.loads(row.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            if index == len(rows) - 1:
+                return {**base, "journal_available": True, "missing_reason": "latest_tail_record_invalid"}
+            continue
+        if not isinstance(value, dict):
+            if index == len(rows) - 1:
+                return {**base, "journal_available": True, "missing_reason": "latest_tail_record_invalid"}
+            continue
+        events.append(value)
+    base["journal_available"] = True
+    measurements = effective_turn_measurements(events, max_turns=MAX_TURNS)
+    if not measurements:
+        return {**base, "missing_reason": "no_turn_in_tail"}
+    latest = summarize_measurements(measurements)["latest_turn"]
+    if latest is None or latest.get("point") is None:
+        return {**base, "latest_turn": None, "missing_reason": "latest_turn_unmeasured"}
+    return {**base, "latest_turn": latest, "missing_reason": None}
+
+
+def _read_complete_journal_tail(path: Path, *, tail_lines: int, tail_bytes: int = LIVE_TAIL_BYTES) -> list[bytes]:
+    """Return only complete JSONL rows from a bounded file tail.
+
+    A journal can be appended while the live pulse reads it.  The first row in
+    a byte tail may have started before the window, and the final row may still
+    be mid-write, so both fragments are discarded.  This intentionally favors
+    ``unknown`` over a speculative latest measurement.
+    """
+    line_limit = max(1, int(tail_lines))
+    byte_limit = max(1, int(tail_bytes))
+    with open(path, "rb") as handle:
+        handle.seek(0, 2)
+        size = handle.tell()
+        start = max(0, size - byte_limit)
+        handle.seek(start)
+        payload = handle.read(min(byte_limit, size))
+
+    if not payload:
+        return []
+    if start > 0:
+        _, separator, payload = payload.partition(b"\n")
+        if not separator:
+            return []
+    if not payload.endswith(b"\n"):
+        payload, separator, _ = payload.rpartition(b"\n")
+        if not separator:
+            return []
+        payload += separator
+    rows = payload.split(b"\n")[:-1]
+    while rows and not rows[-1].strip():
+        rows.pop()
+    return rows[-line_limit:]

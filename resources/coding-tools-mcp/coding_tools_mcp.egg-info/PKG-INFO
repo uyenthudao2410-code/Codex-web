@@ -1,6 +1,6 @@
 Metadata-Version: 2.2
 Name: coding-tools-mcp
-Version: 0.4.1
+Version: 1.0.0
 Summary: Workspace-confined coding tools exposed as an MCP server.
 Author: Coding Tools MCP Contributors
 License:                                  Apache License

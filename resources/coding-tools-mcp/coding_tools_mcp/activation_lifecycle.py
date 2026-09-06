@@ -318,17 +318,20 @@ class ActivationLifecycleMixin:
                     retryable=False,
                     details=self.activation_admission_snapshot(),
                 )
-            if int(time.time() * 1000) >= expected_expiry:
-                raise ToolFailure(
-                    "ACTIVATION_REQUEST_EXPIRED",
-                    "The startup-bound activation epoch expired before admission opened.",
-                    category="runtime",
-                    retryable=False,
-                    details={
-                        "activation_epoch_id": expected or None,
-                        "expires_at_unix_ms": expected_expiry,
-                    },
-                )
+            def ensure_not_expired() -> None:
+                if int(time.time() * 1000) >= expected_expiry:
+                    raise ToolFailure(
+                        "ACTIVATION_REQUEST_EXPIRED",
+                        "The startup-bound activation epoch expired before admission opened.",
+                        category="runtime",
+                        retryable=False,
+                        details={
+                            "activation_epoch_id": expected or None,
+                            "expires_at_unix_ms": expected_expiry,
+                        },
+                    )
+
+            ensure_not_expired()
             if current_digest and not secrets.compare_digest(current_digest, supplied_digest):
                 raise ToolFailure(
                     "UPDATE_INCOMPLETE",
@@ -337,6 +340,17 @@ class ActivationLifecycleMixin:
                     retryable=False,
                 )
             projection_rebuild = self.projection_rebuild_snapshot()
+            validation = projection_rebuild.get("validation")
+            if (
+                projection_rebuild.get("current") is not True
+                and isinstance(validation, dict)
+                and validation.get("valid") is False
+                and validation.get("code") == "UPDATE_INCOMPLETE"
+                and validation.get("reasons") == ["RECEIPT_STALE"]
+            ):
+                self._projection_rebuild_census()
+                ensure_not_expired()
+                projection_rebuild = self.projection_rebuild_snapshot()
             if projection_rebuild.get("current") is not True:
                 raise ToolFailure(
                     "UPDATE_INCOMPLETE",
@@ -488,21 +502,46 @@ class ActivationLifecycleMixin:
             )
 
     def activation_connector_bootstrap_result(self, name: str) -> dict[str, Any] | None:
-        if not self.activation_connector_bootstrap_allowed(name):
-            return None
-        return {
-            "ok": True,
-            "completed": False,
-            "retryable": True,
-            "workspace_accessed": False,
-            "activation_bootstrap": {
-                "schema_version": 1,
-                "kind": "connector_compatibility_bootstrap",
-                "accepted": True,
-                "retry_required": True,
-                "activation_epoch_id": str(getattr(self, "activation_epoch_id", None) or ""),
-            },
-        }
+        with self.activation_lock:
+            if not self.activation_connector_bootstrap_allowed(name):
+                return None
+            epoch_id = str(getattr(self, "activation_epoch_id", None) or "")
+            expires_at = int(getattr(self, "activation_expires_at_unix_ms", 0) or 0)
+            if expires_at > 0 and int(time.time() * 1000) >= expires_at:
+                # An expired startup boundary cannot be completed in this process.
+                # Keep this early result workspace-free, but never request a retry.
+                return {
+                    "ok": False,
+                    "completed": False,
+                    "retryable": False,
+                    "workspace_accessed": False,
+                    "error": {
+                        "code": "ACTIVATION_REQUEST_EXPIRED",
+                        "message": (
+                            "The startup-bound activation epoch expired. "
+                            "Use supported Recovery Host recovery before retrying."
+                        ),
+                        "category": "runtime",
+                        "retryable": False,
+                        "details": {
+                            "activation_epoch_id": epoch_id,
+                            "expires_at_unix_ms": expires_at,
+                        },
+                    },
+                }
+            return {
+                "ok": True,
+                "completed": False,
+                "retryable": True,
+                "workspace_accessed": False,
+                "activation_bootstrap": {
+                    "schema_version": 1,
+                    "kind": "connector_compatibility_bootstrap",
+                    "accepted": True,
+                    "retry_required": True,
+                    "activation_epoch_id": epoch_id,
+                },
+            }
 
     def _activation_enter_tool_call(self, name: str = "", args: dict[str, Any] | None = None) -> None:
         with self.activation_lock:

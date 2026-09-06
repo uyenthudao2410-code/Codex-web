@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "c66b2da149a04f9db3f9d0f116b451e9",
+    "orchestration": {
+      "run_id": "08a47a0c3fcd41d4be92836812444747",
+      "wave_id": "48f059f246c144b6a9b3be97e3f36575",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "819f5ac83fdf1aa1b6556c68b4fa7035a544858c6fd036a8c1c8a5196adc8692",
+      "contract_fp": ""
+    },
+    "objective": "Preserve renderer/token-dashboard.html exactly as an active user design prototype, but remove its unintended ability to block Electron UI accepted-code activation. Diagnose the smallest safe production classification change so this exact design-only path is excluded from electron_ui component dirty/revision ownership while every other renderer .html/.js/.css path remains fail-closed and production-owned. Do not delete, move, rename, edit, adopt, package, or accept renderer/token-dashboard.html itself. Do not touch token measurement/backend behavior. Prepare only; no writes, restart, commit, push, reset, or clean.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:43:08.585Z",
+    "updated_at": "2026-09-04T11:43:11.737Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:43:08.585Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Preserve renderer/token-dashboard.html exactly as an active user design prototype, but remove its unintended ability to block Electron UI accepted-code activation. Diagnose the smallest safe production classification change so this exact design-only path is excluded from electron_ui component dirty/revision ownership while every other renderer .html/.js/.css path remains fail-closed and production-owned. Do not delete, move, rename, edit, adopt, package, or accept renderer/token-dashboard.html itself. Do not touch token measurement/backend behavior. Prepare only; no writes, restart, commit, push, reset, or clean."
+        }
+      },
+      {
+        "time": "2026-09-04T11:43:09.524Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:43:11.714Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-04T11:43:11.737Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:43:57.674Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -55,7 +55,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 0.4.3</button>
+        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.0</button>
         <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
       </div>
     </aside>
@@ -106,51 +106,41 @@
             <!-- 1. Top Filter & Action Header -->
             <div class="da-dashboard-filter-bar">
               <div class="da-filter-group left">
-                <div class="da-filter-pill-select">
+                <div class="da-filter-pill">
                   <div class="filter-copy">
-                    <small>Dự án</small>
-                    <select id="daProjectSelect">
-                      <option selected>Codex-web</option>
-                      <option>Nền tảng AI Doanh nghiệp</option>
-                      <option>Multi-Agent Workspace</option>
-                    </select>
+                    <small>WORKSPACE</small>
+                    <b id="daProjectText">Chưa xác nhận</b>
                   </div>
                 </div>
 
                 <div class="da-filter-pill">
                   <div class="filter-copy">
-                    <small>Môi trường</small>
-                    <b><i class="env-dot-live"></i><span id="daEnvText">Production</span></b>
+                    <small>MÔI TRƯỜNG</small>
+                    <b><span id="daEnvText">Chưa xác nhận</span></b>
                   </div>
                 </div>
 
                 <div class="da-filter-pill date-pill" id="daDatePill">
                   <div class="filter-copy">
-                    <small id="daDateHeader">📅 7 ngày gần nhất</small>
-                    <b id="daDateValue">00:00 - 23:59 (GMT+7)</b>
+                    <small id="daDateHeader">CỬA SỔ DỮ LIỆU</small>
+                    <b id="daDateValue">Chưa có snapshot analytics</b>
                   </div>
                 </div>
               </div>
 
               <div class="da-filter-group right">
-                <div class="da-toggle-badge active" title="Tự động cập nhật dữ liệu">
+                <div class="da-toggle-badge" title="Chờ snapshot overview; không có dữ liệu được tự tạo">
                   <span class="refresh-icon">🔄</span>
-                  <span>Tự động ▾</span>
+                  <span>Chờ snapshot</span>
                 </div>
-
-                <button class="da-action-btn" title="Bộ lọc nâng cao">
-                  <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h14M6 9h8M9 14h2"/></svg>
-                  <span>Bộ lọc</span>
-                </button>
-
-                <button class="da-action-btn" title="Xuất báo cáo dữ liệu">
-                  <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h8a2 2 0 002-2v-1M14 10l-4 4m0 0l-4-4m4 4V3"/></svg>
-                  <span>Xuất báo cáo</span>
-                </button>
 
                 <button class="da-action-btn primary-purple" id="daRefreshButton" title="Làm mới dữ liệu từ MCP runtime">
                   <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10a6.5 6.5 0 0111.6-4M16.5 10a6.5 6.5 0 01-11.6 4M16 3.5v3h-3M4 16.5v-3h3"/></svg>
                   <span>Làm mới dữ liệu</span>
+                </button>
+                <button class="da-action-btn" id="daTokenBoardButton" title="Mở bảng theo dõi token & chi phí trong cửa sổ riêng">
+                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l4-4 3 3 5-6"/><path d="M3 17h14"/></svg>
+                  <span>Bảng token</span>
                 </button>
                 <span id="daLastSync" class="cc-sync" hidden>Chưa đồng bộ</span>
               </div>
@@ -217,7 +207,7 @@
               <!-- Tile 0: CHATWEB TOKEN (primary) — per-turn ChatWeb measurement.
                    Provider UsageEvent tiles below are a separate scope and must
                    never be summed with this card. -->
-              <article class="da-tile card-purple">
+              <article class="da-tile card-purple da-tile-hero" aria-label="Token ChatWeb">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-purple">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
@@ -230,20 +220,18 @@
                 </div>
                 <div class="da-tile-sub" id="daChatTurnMeta">—</div>
               </article>
-              <!-- Tile 1: ACCEPTED RESULT -->
-              <article class="da-tile card-blue">
+              <!-- Tile 1: PROVIDER TOKEN / ACCEPTED RESULT — canonical UsageEvent scope only. -->
+              <article class="da-tile card-blue" aria-label="Token provider">
                 <div class="da-tile-head">
                   <div class="da-tile-icon icon-blue">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
                   </div>
-                  <span class="da-tile-label">TỔNG TOKEN</span>
+                  <span class="da-tile-label">TOKEN PROVIDER</span>
                 </div>
                 <div class="da-tile-value" id="daTokensTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta" id="daTokensDelta">—</span>
-                  <div class="da-mini-spark-wave blue" id="daSpark">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 16 Q15 6 30 12 T60 4" fill="none" stroke="#38bdf8" stroke-width="2.2"/></svg>
-                  </div>
+                  <div class="da-mini-spark-wave blue" id="daSpark" aria-hidden="true"></div>
                 </div>
                 <div class="da-tile-sub" hidden><span class="da-split in"><i></i>Model-visible</span><span id="daTokensSplit">—</span></div>
                 <div class="da-tile-sub" id="daTokensMeta" hidden>—<span id="daTokensRate"></span></div>
@@ -260,9 +248,6 @@
                 <div class="da-tile-value" id="daTokensInTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta" id="daTokensInDelta">—</span>
-                  <div class="da-mini-spark-wave cyan">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 15 Q15 18 30 8 T60 5" fill="none" stroke="#06b6d4" stroke-width="2.2"/></svg>
-                  </div>
                 </div>
               </article>
 
@@ -277,9 +262,6 @@
                 <div class="da-tile-value" id="daTokensOutTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta" id="daTokensOutDelta">—</span>
-                  <div class="da-mini-spark-wave purple">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 18 Q15 5 30 14 T60 6" fill="none" stroke="#a855f7" stroke-width="2.2"/></svg>
-                  </div>
                 </div>
               </article>
 
@@ -294,9 +276,6 @@
                 <div class="da-tile-value" id="daCostTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta is-cost" id="daCostVnd">—</span>
-                  <div class="da-mini-spark-wave green">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 14 Q15 18 30 10 T60 4" fill="none" stroke="#10b981" stroke-width="2.2"/></svg>
-                  </div>
                 </div>
                 <div class="da-tile-sub" id="daCostSplit" hidden>—</div>
                 <div class="da-tile-sub" id="daCostMeta" hidden>—</div>
@@ -313,9 +292,6 @@
                 <div class="da-tile-value" id="daEfficiencyTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta" id="daEfficiencyDelta">—</span>
-                  <div class="da-mini-spark-wave amber">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 8 Q15 16 30 11 T60 17" fill="none" stroke="#f59e0b" stroke-width="2.2"/></svg>
-                  </div>
                 </div>
                 <div class="da-tile-sub" id="daEfficiencyMeta" hidden>—</div>
                 <div class="da-tile-sub" id="daEfficiencySub" hidden>—</div>
@@ -333,9 +309,6 @@
                 <div class="da-tile-value" id="daCallsTotal">—</div>
                 <div class="da-tile-foot-row">
                   <span class="da-tile-delta" id="daCallsDelta">—</span>
-                  <div class="da-mini-spark-wave teal">
-                    <svg viewBox="0 0 60 20" width="60" height="20"><path d="M0 6 Q15 14 30 8 T60 16" fill="none" stroke="#14b8a6" stroke-width="2.2"/></svg>
-                  </div>
                 </div>
                 <div class="da-tile-sub" id="daCallsMeta" hidden>—</div>
               </article>
@@ -348,282 +321,239 @@
               <span><small>Token lượt chat</small><b id="daTurnTokenStatus">Chưa đo lượt nào</b></span>
             </div>
 
-            <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
-              <div class="cc-card-head">
-                <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
-              </div>
-              <div class="cc-card-body">
-                <div class="da-model-table-wrap">
-                  <table class="da-fleet-table">
-                    <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
-                    <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Đang chờ accepted-result evidence…</td></tr></tbody>
-                  </table>
-                </div>
-              </div>
-              <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
-            </article>
-
-            <article class="cc-card" aria-labelledby="daCoverageTitle">
-              <div class="cc-card-head">
-                <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
-                <span id="daCoveragePolicy" class="cc-pill is-waiting">unknown_not_zero</span>
-              </div>
-              <div class="cc-card-body cc-evidence-summary">
-                <div class="cc-evidence-stat"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
-                <div class="cc-evidence-stat"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
-                <div class="cc-evidence-stat"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
-                <div class="cc-evidence-stat"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
-                <div class="cc-evidence-stat"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
-                <div class="cc-evidence-stat"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
-              </div>
-            </article>
-
-            <!-- 3. Main 3-Column Charts Row (1:1 with Screenshot) -->
-            <div class="da-main-charts-row">
-              <!-- Chart 1 (50% width): Xu hướng sử dụng Token -->
-              <article class="cc-card da-chart-main-card">
-                <div class="cc-card-head">
-                  <div class="title-with-info">
-                    <h3>Xu hướng sử dụng Token <i class="da-info-icon" title="Biểu đồ phân bố lượng token theo dòng thời gian">ⓘ</i></h3>
-                    <div class="da-chart-legend">
-                      <span class="leg-item total"><i class="dot-blue"></i>Tổng token</span>
-                      <span class="leg-item in"><i class="dot-cyan"></i>Token đầu vào</span>
-                      <span class="leg-item out"><i class="dot-purple"></i>Token đầu ra</span>
+            <!-- Main 1-View Split Stage: Charts & Real-time Turn Stream Side-by-Side -->
+            <div class="da-split-view-row">
+              <div class="da-split-left">
+                <!-- Chart 1: Xu hướng sử dụng Token -->
+                <article class="cc-card da-chart-main-card">
+                  <div class="cc-card-head">
+                    <div class="title-with-info">
+                      <h3>Xu hướng sử dụng Token <i class="da-info-icon" title="Biểu đồ phân bố lượng token theo dòng thời gian">ⓘ</i></h3>
+                      <div class="da-chart-legend">
+                        <span class="leg-item total"><i class="dot-blue"></i>Tổng token</span>
+                        <span class="leg-item in"><i class="dot-cyan"></i>Token đầu vào</span>
+                        <span class="leg-item out"><i class="dot-purple"></i>Token đầu ra</span>
+                      </div>
+                    </div>
+                    <div class="da-chart-head-controls">
+                      <select class="da-time-select" id="daChartTimeMode">
+                        <option value="hour" selected>Theo giờ</option>
+                        <option value="day">Theo ngày</option>
+                      </select>
+                      <span class="more-options-dot">⋮</span>
                     </div>
                   </div>
-                  <div class="da-chart-head-controls">
-                    <select class="da-time-select" id="daChartTimeMode">
-                      <option value="hour" selected>Theo giờ</option>
-                      <option value="day">Theo ngày</option>
-                    </select>
-                    <span class="more-options-dot">⋮</span>
-                  </div>
-                </div>
-                <div class="cc-card-body">
-                  <div class="da-chart-wrap" id="daChartCard">
-                    <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Canonical measured token trend" role="img"></svg>
+                  <div class="cc-card-body">
+                    <div class="da-chart-wrap" id="daChartCard">
+                      <svg id="daChart" class="da-chart" viewBox="0 0 640 210" preserveAspectRatio="none" aria-label="Canonical measured token trend" role="img"></svg>
 
-                    <div id="daChartEmpty" class="da-chart-empty" hidden>Chưa có dữ liệu</div>
-                    <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
-                  </div>
-                </div>
-              </article>
-
-              <!-- Chart 2 (25% width): Phân bố Token theo mô hình -->
-              <article class="cc-card da-donut-card">
-                <div class="cc-card-head">
-                  <div>
-                    <h3>Phân bố Token theo mô hình <i class="da-info-icon" title="Tỷ lệ chia sẻ token theo từng model">ⓘ</i></h3>
-                  </div>
-                </div>
-                <div class="cc-card-body">
-                  <div class="da-donut-horizontal-wrap">
-                    <svg id="daDonut" class="da-donut" width="130" height="130" viewBox="0 0 130 130" role="img">
-                      <!-- Colored Segments -->
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#3b82f6" stroke-width="16" stroke-dasharray="137 301" stroke-dashoffset="0"/>
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#06b6d4" stroke-width="16" stroke-dasharray="62 301" stroke-dashoffset="-139"/>
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#eab308" stroke-width="16" stroke-dasharray="42 301" stroke-dashoffset="-203"/>
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#f97316" stroke-width="16" stroke-dasharray="29 301" stroke-dashoffset="-247"/>
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#8b5cf6" stroke-width="16" stroke-dasharray="22 301" stroke-dashoffset="-278"/>
-                      <circle cx="65" cy="65" r="48" fill="none" stroke="#6366f1" stroke-width="16" stroke-dasharray="10 301" stroke-dashoffset="-302"/>
-                      <text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text>
-                      <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Token measured</text>
-                    </svg>
-                    <div class="da-legend-list" id="daLegend">
-                      <div class="da-legend-item"><span class="legend-name">Đang chờ dữ liệu lưu lượng</span><b>—</b></div>
+                      <div id="daChartEmpty" class="da-chart-empty" hidden>Chưa có dữ liệu</div>
+                      <div id="daChartTooltip" class="da-chart-tooltip" hidden></div>
                     </div>
                   </div>
-                </div>
-                <div class="da-donut-foot">
-                  <span id="daDonutFoot">— mô hình</span>
-                  <span id="daModelSummary" class="cc-pill is-clickable">Xem chi tiết</span>
-                </div>
-              </article>
+                </article>
 
-              <!-- Chart 3 (25% width): Chi phí theo công cụ / Workflow -->
-              <article class="cc-card da-tools-card">
-                <div class="cc-card-head">
-                  <div>
-                    <h3>Chi phí theo công cụ / Workflow <i class="da-info-icon" title="Chi phí phân bổ theo từng công cụ">ⓘ</i></h3>
+                <!-- Sub 2-Columns: Donut & Tools Side-by-side -->
+                <div class="da-sub-charts-row">
+                  <!-- Chart 2: Phân bố Token theo mô hình -->
+                  <article class="cc-card da-donut-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Phân bố Token theo mô hình <i class="da-info-icon" title="Tỷ lệ chia sẻ token theo từng model">ⓘ</i></h3>
+                      </div>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-donut-horizontal-wrap">
+                        <svg id="daDonut" class="da-donut" width="100" height="100" viewBox="0 0 130 130" role="img">
+                          <text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text>
+                          <text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Token measured</text>
+                        </svg>
+                        <div class="da-legend-list" id="daLegend">
+                          <div class="da-legend-item"><span class="legend-name">Đang chờ dữ liệu lưu lượng</span><b>—</b></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="da-donut-foot">
+                      <span id="daDonutFoot">— mô hình</span>
+                      <span id="daModelSummary" class="cc-pill is-clickable">Xem chi tiết</span>
+                    </div>
+                  </article>
+
+                  <!-- Chart 3: Chi phí theo công cụ / Workflow -->
+                  <article class="cc-card da-tools-card">
+                    <div class="cc-card-head">
+                      <div>
+                        <h3>Chi phí theo công cụ <i class="da-info-icon" title="Chi phí phân bổ theo từng công cụ">ⓘ</i></h3>
+                      </div>
+                      <select class="da-time-select">
+                        <option>Hôm nay</option>
+                        <option selected>7 ngày qua</option>
+                      </select>
+                    </div>
+                    <div class="cc-card-body">
+                      <div class="da-bars" id="daToolBars">
+                        <div class="cc-empty">Chưa có bản ghi công cụ để xếp hạng.</div>
+                      </div>
+                    </div>
+                    <div class="da-tools-foot">
+                      <span>Tổng chi phí</span>
+                      <strong id="daToolCostTotal">—</strong>
+                    </div>
+                  </article>
+                </div>
+              </div>
+
+              <div class="da-split-right">
+                <!-- Chat Turn Log -->
+                <article class="cc-card" aria-labelledby="daTurnLogTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daTurnLogTitle">Nhật ký lượt chat <i class="da-info-icon" title="Từng lượt ChatWeb mới nhất: số exact hoặc ước lượng có khoảng. Mỗi lượt một dòng, không cộng dồn.">ⓘ</i></h3><p>Mỗi lượt một dòng · mới nhất trước · cập nhật theo nhịp đồng bộ analytics.</p></div>
                   </div>
-                  <select class="da-time-select">
-                    <option>Hôm nay</option>
-                    <option selected>7 ngày qua</option>
-                  </select>
-                </div>
-                <div class="cc-card-body">
-                  <div class="da-bars" id="daToolBars">
-                    <div class="cc-empty">Chưa có bản ghi công cụ để xếp hạng.</div>
-                  </div>
-                </div>
-                <div class="da-tools-foot">
-                  <span>Tổng chi phí</span>
-                  <strong id="daToolCostTotal">—</strong>
-                </div>
-              </article>
+                  <div class="cc-card-body"><div class="da-turn-log" id="daTurnLog" role="table" aria-label="Nhật ký token từng lượt chat"></div></div>
+                </article>
+              </div>
             </div>
 
-            <!-- 4. Sub 4-Grid Cards (1:1 with Screenshot) -->
-            <div class="da-sub-grid-4">
-              <!-- Sub Card 1: Hiệu suất thời gian thực -->
-              <article class="cc-card da-sub-card">
-                <div class="cc-card-head">
-                  <div><h3>Hiệu suất thời gian thực <i class="da-info-icon" title="Tốc độ xử lý và thời gian phản hồi">ⓘ</i></h3></div>
-                </div>
-                <div class="cc-card-body da-perf-split">
-                  <div class="sub-stat-block">
-                    <small>Thông lượng (TPM)</small>
-                    <strong id="daRealtimeTpm">—</strong>
-                    <span class="stat-change" id="daRealtimeTpmMeta">Chưa có dữ liệu 5 phút</span>
-                    <div class="mini-wave-chart">
-                      <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 20 Q25 5 50 14 T100 8" fill="none" stroke="#06b6d4" stroke-width="2.2"/></svg>
+            <!-- Collapsible Details Drawer for Deep Audit & Fleet Performance -->
+            <details class="cc-card da-drawer-card" id="daDrawerAnalytics">
+              <summary>
+                <span>📊 Bảng phân tích chi tiết &amp; Bằng chứng đo lường (Fleet, Accepted Result, Heatmap)</span>
+                <span class="da-drawer-summary-badge">Mở rộng ▾</span>
+              </summary>
+              <div class="da-drawer-content">
+                <!-- Sub-Grid: Realtime Speed & Heatmap -->
+                <div class="da-sub-grid-2">
+                  <!-- Sub Card 1: Hiệu suất thời gian thực -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Hiệu suất thời gian thực <i class="da-info-icon" title="Tốc độ xử lý và thời gian phản hồi">ⓘ</i></h3></div>
                     </div>
-                  </div>
-                  <div class="sub-stat-block">
-                    <small>Độ trễ trung bình</small>
-                    <strong id="daRealtimeLatency">—</strong>
-                    <span class="stat-change" id="daRealtimeLatencyMeta">Chưa có dữ liệu 5 phút</span>
-                    <div class="mini-wave-chart">
-                      <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 10 Q25 18 50 12 T100 16" fill="none" stroke="#f59e0b" stroke-width="2.2"/></svg>
+                    <div class="cc-card-body da-perf-split">
+                      <div class="sub-stat-block">
+                        <small>Thông lượng (TPM)</small>
+                        <strong id="daRealtimeTpm">—</strong>
+                        <span class="stat-change" id="daRealtimeTpmMeta">Chưa có dữ liệu 5 phút</span>
+                        <div class="mini-wave-chart">
+                          <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 20 Q25 5 50 14 T100 8" fill="none" stroke="#06b6d4" stroke-width="2.2"/></svg>
+                        </div>
+                      </div>
+                      <div class="sub-stat-block">
+                        <small>Độ trễ trung bình</small>
+                        <strong id="daRealtimeLatency">—</strong>
+                        <span class="stat-change" id="daRealtimeLatencyMeta">Chưa có dữ liệu 5 phút</span>
+                        <div class="mini-wave-chart">
+                          <svg viewBox="0 0 100 24" width="100%" height="24"><path d="M0 10 Q25 18 50 12 T100 16" fill="none" stroke="#f59e0b" stroke-width="2.2"/></svg>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </article>
+                  </article>
 
-              <!-- Sub Card 2: Phát hiện bất thường -->
-              <article class="cc-card da-sub-card">
-                <div class="cc-card-head">
-                  <div><h3>Phát hiện bất thường <i class="da-info-icon" title="Các tín hiệu biến động cần lưu ý">ⓘ</i></h3></div>
-                  <span class="da-alert-pill-red" id="daAlertBadge">0 cảnh báo</span>
-                </div>
-                <div class="cc-card-body da-alerts-list">
-                  <div class="da-alert-row">
-                    <div class="alert-icon-circle green"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
-                    <div class="alert-info">
-                      <b>Đang chờ dữ liệu đo</b>
-                      <small>Chưa có ghi nhận lỗi hoặc biến động nào từ runtime</small>
+                  <!-- Sub Card 2: Heatmap -->
+                  <article class="cc-card da-sub-card">
+                    <div class="cc-card-head">
+                      <div><h3>Bản đồ sử dụng theo giờ (Heatmap) <i class="da-info-icon" title="Mật độ hoạt động 7 ngày x 24 giờ">ⓘ</i></h3></div>
                     </div>
-                    <span class="tag-badge green">—</span>
-                  </div>
+                    <div class="cc-card-body">
+                      <div class="da-heatmap-container" id="daHeatmapContainer">
+                        <div class="heatmap-day-labels">
+                          <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+                        </div>
+                        <div class="da-heatmap-grid" id="daHeatmapGrid"></div>
+                        <div class="heatmap-hour-labels">
+                          <span>00</span><span>02</span><span>04</span><span>06</span><span>08</span><span>10</span><span>12</span><span>14</span><span>16</span><span>18</span><span>20</span><span>22</span>
+                        </div>
+                        <div class="heatmap-scale">
+                          <span>Thấp</span>
+                          <div class="scale-bar-gradient"></div>
+                          <span>Cao</span>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
                 </div>
-                <div class="da-card-foot-link">
-                  <a href="#">Xem tất cả cảnh báo ›</a>
-                </div>
-              </article>
 
-              <!-- Sub Card 3: Bản đồ sử dụng theo giờ (Heatmap) -->
-              <article class="cc-card da-sub-card">
-                <div class="cc-card-head">
-                  <div><h3>Bản đồ sử dụng theo giờ (Heatmap) <i class="da-info-icon" title="Mật độ hoạt động 7 ngày x 24 giờ">ⓘ</i></h3></div>
-                </div>
-                <div class="cc-card-body">
-                  <div class="da-heatmap-container" id="daHeatmapContainer">
-                    <div class="heatmap-day-labels">
-                      <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
-                    </div>
-                    <div class="da-heatmap-grid" id="daHeatmapGrid"></div>
-                    <div class="heatmap-hour-labels">
-                      <span>00</span><span>02</span><span>04</span><span>06</span><span>08</span><span>10</span><span>12</span><span>14</span><span>16</span><span>18</span><span>20</span><span>22</span>
-                    </div>
-                    <div class="heatmap-scale">
-                      <span>Thấp</span>
-                      <div class="scale-bar-gradient"></div>
-                      <span>Cao</span>
+                <!-- Bottom Model Fleet & Efficiency Table -->
+                <article class="cc-card da-model-card">
+                  <div class="cc-card-head">
+                    <div>
+                      <h3>Hiệu quả theo mô hình <i class="da-info-icon" title="Bảng phân tích hiệu suất và chi phí chi tiết theo từng mô hình">ⓘ</i></h3>
                     </div>
                   </div>
-                </div>
-              </article>
+                  <div class="cc-card-body">
+                    <div class="da-model-table-wrap">
+                      <table class="da-fleet-table">
+                        <thead>
+                          <tr>
+                            <th>MÔ HÌNH</th>
+                            <th>TOKEN (USAGE EVENT)</th>
+                            <th>TỶ LỆ</th>
+                            <th>CHI PHÍ (USAGE EVENT)</th>
+                            <th>PROVENANCE</th>
+                            <th>HIỆU SUẤT ⓘ</th>
+                            <th>P95 ĐỘ TRỄ</th>
+                            <th>TỶ LỆ LỖI</th>
+                            <th>XU HƯỚNG 24H</th>
+                            <th>TRẠNG THÁI</th>
+                            <th></th>
+                          </tr>
+                        </thead>
+                        <tbody id="daFleetTableBody">
+                          <tr class="da-fleet-row">
+                            <td class="cell-model"><span class="model-logo-icon">⋯</span><b>Đang chờ dữ liệu</b></td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-stars"><span class="stars-1">★<span class="dim">☆☆☆☆</span></span></td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-num">—</td>
+                            <td class="cell-trend">—</td>
+                            <td class="cell-status"><span class="status-pill good">● Chờ đo</span></td>
+                            <td class="cell-more">⋮</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
+                    </div>
+                  </div>
+                  <div class="da-model-table-foot">
+                    <a href="#" class="da-card-link">Xem thêm mô hình ›</a>
+                  </div>
+                </article>
 
-              <!-- Sub Card 4: Tóm tắt nhanh -->
-              <article class="cc-card da-sub-card">
-                <div class="cc-card-head">
-                  <div><h3>Tóm tắt nhanh <i class="da-info-icon" title="Tổng kết các chỉ số quan trọng">ⓘ</i></h3></div>
-                </div>
-                <div class="cc-card-body da-summary-list">
-                  <div class="da-summary-item">
-                    <div class="sum-icon-circle green">↑</div>
-                    <div class="sum-info">
-                      <b>Sử dụng Token</b>
-                      <small>—</small>
-                    </div>
-                    <span class="sum-link-btn green">Chờ dữ liệu ›</span>
+                <!-- Accepted result gần đây -->
+                <article class="cc-card da-model-card" aria-labelledby="daOperationsTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daOperationsTitle">Accepted result gần đây <i class="da-info-icon" title="Kết quả terminal trong cửa sổ 7 ngày; metric thiếu dữ liệu giữ unknown, không quy về 0">ⓘ</i></h3></div>
                   </div>
-                  <div class="da-summary-item">
-                    <div class="sum-icon-circle amber">$</div>
-                    <div class="sum-info">
-                      <b>Hiệu quả chi phí</b>
-                      <small>—</small>
+                  <div class="cc-card-body">
+                    <div class="da-model-table-wrap">
+                      <table class="da-fleet-table">
+                        <thead><tr><th>KẾT QUẢ</th><th>TTAR</th><th>FIRST PASS</th><th>REPLAN</th><th>WAVES</th><th>TOOL CALLS</th><th>PROVIDER COST</th><th>SYSTEM COST</th></tr></thead>
+                        <tbody id="daOperationsTableBody"><tr class="da-fleet-row"><td colspan="8" class="cell-num">Đang chờ accepted-result evidence…</td></tr></tbody>
+                      </table>
                     </div>
-                    <span class="sum-link-btn amber">Chờ dữ liệu ›</span>
                   </div>
-                  <div class="da-summary-item">
-                    <div class="sum-icon-circle cyan">☵</div>
-                    <div class="sum-info">
-                      <b>Phân bổ mô hình</b>
-                      <small>—</small>
-                    </div>
-                    <span class="sum-link-btn cyan">Chờ dữ liệu ›</span>
-                  </div>
-                  <div class="da-summary-item">
-                    <div class="sum-icon-circle purple">🛡️</div>
-                    <div class="sum-info">
-                      <b>Sức khỏe hệ thống</b>
-                      <small>—</small>
-                    </div>
-                    <span class="sum-link-btn green">Chờ dữ liệu ›</span>
-                  </div>
-                </div>
-              </article>
-            </div>
+                  <div class="da-model-table-foot"><span id="daOperationsCoverage">Chưa có coverage evidence</span></div>
+                </article>
 
-            <!-- 5. Bottom Model Fleet & Efficiency Table (1:1 with Screenshot) -->
-            <article class="cc-card da-model-card">
-              <div class="cc-card-head">
-                <div>
-                  <h3>Hiệu quả theo mô hình <i class="da-info-icon" title="Bảng phân tích hiệu suất và chi phí chi tiết theo từng mô hình">ⓘ</i></h3>
-                </div>
+                <!-- Measurement coverage -->
+                <article class="cc-card" aria-labelledby="daCoverageTitle">
+                  <div class="cc-card-head">
+                    <div><h3 id="daCoverageTitle">Measurement coverage</h3><p>Độ phủ bằng chứng exact/current. Thiếu phép đo giữ unknown, không quy về 0 và không suy diễn token từ byte telemetry.</p></div>
+                    <span id="daCoveragePolicy" class="cc-pill is-waiting">unknown_not_zero</span>
+                  </div>
+                  <div class="cc-card-body cc-evidence-summary">
+                    <div class="cc-evidence-stat"><span>ChatWeb controller usage</span><b id="daCoverageController">—</b><small id="daCoverageControllerMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat"><span>Provider usage</span><b id="daCoverageProvider">—</b><small id="daCoverageProviderMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat"><span>Tool invocation</span><b id="daCoverageInvocation">—</b><small id="daCoverageInvocationMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat"><span>Tool-card tokens</span><b id="daCoverageToolCard">—</b><small id="daCoverageToolCardMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat"><span>Cost</span><b id="daCoverageCost">—</b><small id="daCoverageCostMeta" class="cc-detail">UNOBSERVED</small></div>
+                    <div class="cc-evidence-stat"><span>Exact RUN attribution</span><b id="daCoverageRunAttribution">—</b><small id="daCoverageRunAttributionMeta" class="cc-detail">UNOBSERVED</small></div>
+                  </div>
+                </article>
               </div>
-              <div class="cc-card-body">
-                <div class="da-model-table-wrap">
-                  <table class="da-fleet-table">
-                    <thead>
-                      <tr>
-                        <th>MÔ HÌNH</th>
-                        <th>TOKEN (USAGE EVENT)</th>
-                        <th>TỶ LỆ</th>
-                        <th>CHI PHÍ (USAGE EVENT)</th>
-                        <th>PROVENANCE</th>
-                        <th>HIỆU SUẤT ⓘ</th>
-                        <th>P95 ĐỘ TRỄ</th>
-                        <th>TỶ LỆ LỖI</th>
-                        <th>XU HƯỚNG 24H</th>
-                        <th>TRẠNG THÁI</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody id="daFleetTableBody">
-                      <tr class="da-fleet-row">
-                        <td class="cell-model"><span class="model-logo-icon">⋯</span><b>Đang chờ dữ liệu</b></td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-stars"><span class="stars-1">★<span class="dim">☆☆☆☆</span></span></td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-num">—</td>
-                        <td class="cell-trend">—</td>
-                        <td class="cell-status"><span class="status-pill good">● Chờ đo</span></td>
-                        <td class="cell-more">⋮</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                  <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
-                </div>
-              </div>
-              <div class="da-model-table-foot">
-                <a href="#" class="da-card-link">Xem thêm mô hình ›</a>
-              </div>
-            </article>
+            </details>
 
             <!-- Hidden compatibility containers required by test contracts -->
             <div class="cc-kpi-grid" aria-label="Operational KPIs" hidden style="display: none !important;">

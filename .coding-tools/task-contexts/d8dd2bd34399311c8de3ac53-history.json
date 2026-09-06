@@ -1,0 +1,145 @@
+[
+  {
+    "version": 2,
+    "task_id": "d2a81d44bfec4f76bd15dea31b468eb2",
+    "orchestration": {
+      "run_id": "1ee41aa02e934bc087caf54ce6c5fd11",
+      "wave_id": "fd58deee2632449ebdcafe5a56eb0500",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "4866cde3d2de7714be300d65052c2c6166b3b2ac8a25ea3476ded937bf16991e",
+      "contract_fp": ""
+    },
+    "objective": "Read-only architecture assessment: determine whether Codex-web already implements the systems-level analogue of storage/access/computation separation and adaptive compute depth described by looped-transformer research; identify current mechanisms, gaps, and the smallest useful integration path without adding control-plane bloat.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T01:51:41.575Z",
+    "updated_at": "2026-09-06T01:52:10.248Z",
+    "events": [
+      {
+        "time": "2026-09-06T01:51:41.575Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only architecture assessment: determine whether Codex-web already implements the systems-level analogue of storage/access/computation separation and adaptive compute depth described by looped-transformer research; identify current mechanisms, gaps, and the smallest useful integration path without adding control-plane bloat."
+        }
+      },
+      {
+        "time": "2026-09-06T01:51:42.539Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T01:52:10.243Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T01:52:10.248Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T01:53:11.033Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "b6e5dac949e04dcb8886de456dcff3b9",
+    "orchestration": {
+      "run_id": "39c890b7de664ab094fff1216c6b3455",
+      "wave_id": "bad807ece7c84fefb065b1435c411b04",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "4866cde3d2de7714be300d65052c2c6166b3b2ac8a25ea3476ded937bf16991e",
+      "contract_fp": ""
+    },
+    "objective": "Read-only architecture mapping for Codex-web. Inspect the existing control plane and report evidence for: (1) external/durable storage and problem/task state, (2) bounded/semantic context retrieval and cache, (3) adaptive compute/model routing and lane continuation, (4) token/cost/accepted-result evaluation, (5) gaps preventing an evidence-driven adaptive reasoning-depth policy. Do not mutate files, Git, runtime, tasks, acceptance state, or restart anything.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T01:53:11.034Z",
+    "updated_at": "2026-09-06T01:53:15.904Z",
+    "events": [
+      {
+        "time": "2026-09-06T01:53:11.034Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T01:53:11.571Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T01:53:15.872Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T01:53:15.904Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T01:53:59.559Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -220,6 +220,88 @@ class OperationsAnalyticsTests(unittest.TestCase):
             self.assertEqual(estimate["estimate"]["p90_context_tokens"], 2000)
             self.assertTrue(estimate["estimate"]["not_controller_total"])
 
+    def test_malformed_controller_usage_does_not_calibrate_partial_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            ledger = OrchestrationLedger(Path(raw))
+            metrics = {}
+            cases = [
+                ("malformed-only", ("malformed",), 40),
+                ("mixed", ("valid", "malformed"), 50),
+                ("valid-only", ("valid",), 55),
+            ]
+            for label, kinds, minute in cases:
+                run_id = ledger.create_run(objective=label)
+                wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+                for index, kind in enumerate(kinds):
+                    delegation_id = f"{label}-{index}"
+                    if kind == "valid":
+                        ledger.record_usage_event(
+                            run_id=run_id,
+                            wave_id=wave_id,
+                            delegation_id=delegation_id,
+                            usage_event=build_usage_event(
+                                run_id=run_id,
+                                wave_id=wave_id,
+                                delegation_id=delegation_id,
+                                provider_id="openai",
+                                model_id="gpt-test",
+                                status="completed",
+                                source="chatweb:controller_usage",
+                                input_tokens=300,
+                                output_tokens=100,
+                                actor="controller",
+                                usage_provenance="client_reported",
+                                attribution_status="exact",
+                            ),
+                        )
+                    else:
+                        ledger.append_event(
+                            run_id,
+                            wave_id=wave_id,
+                            delegation_id=delegation_id,
+                            event_type="usage_event",
+                            payload={
+                                "usage_id": delegation_id,
+                                "run_id": run_id,
+                                "wave_id": wave_id,
+                                "delegation_id": delegation_id,
+                                "actor": "controller",
+                                "attribution": {"status": "exact"},
+                                "measurement": {"usage": "measured", "cost": "unobserved"},
+                                "provenance": {"source": "chatweb:controller_usage"},
+                                "usage": {"input_tokens": 300, "output_tokens": 100},
+                                "accounting": {"profile": "unsupported-profile"},
+                                "cost": {"provider_cost": None},
+                            },
+                        )
+                ledger.finish_wave(wave_id, status="accepted")
+                ledger.finish_run(run_id, status="accepted")
+                self._set_times(
+                    ledger, run_id,
+                    f"2026-08-19T07:{minute:02d}:00Z",
+                    f"2026-08-19T07:{minute:02d}:10Z",
+                )
+                metrics[run_id] = {"tool_calls": 1, "model_visible_bytes": 1600}
+
+            result = operations_analytics(
+                ledger, performance={"run_metrics": metrics},
+                days=7, now="2026-08-19T08:00:00Z",
+            )
+            self.assertEqual(result["outcomes"]["terminal_runs"], 3)
+            self.assertEqual(result["outcomes"]["accepted"], 3)
+            coverage = result["measurement_coverage"]["controller_usage"]
+            self.assertEqual(coverage["observed"], 4)
+            self.assertEqual(coverage["exact"], 2)
+            self.assertEqual(coverage["coverage"], 0.5)
+            estimate = result["controller_token_estimate"]
+            self.assertEqual(estimate["exact_runs"], 1)
+            self.assertEqual(estimate["missing_exact_runs"], 2)
+            self.assertEqual(estimate["eligible_missing_runs"], 2)
+            self.assertEqual(estimate["calibration_samples"], 1)
+            self.assertEqual(estimate["status"], "context_estimate")
+            self.assertEqual(estimate["measurement"], "CONTEXT_ESTIMATE")
+
+
 
 if __name__ == "__main__":
     unittest.main()

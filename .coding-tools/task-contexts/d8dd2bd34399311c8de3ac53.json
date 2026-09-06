@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "task_id": "334d177b7b6945eca2844d6c0a6ad5ca",
+  "orchestration": {
+    "run_id": "dccd2842f1554a36983da28c82b555cf",
+    "wave_id": "341165f8f6604c7fb1a915e344ed682e",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "4866cde3d2de7714be300d65052c2c6166b3b2ac8a25ea3476ded937bf16991e",
+    "contract_fp": ""
+  },
+  "objective": "Read-only architecture mapping only. Determine from the current Codex-web source/docs whether the system already separates durable storage/state, targeted context access, adaptive computation/model routing, and verification/evaluation; identify the smallest evidence-driven adaptive-depth policy that could reuse existing controls without adding a new subsystem. No mutation, no RUN/WAVE creation, no acceptance, no restart.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T01:53:59.560Z",
+  "updated_at": "2026-09-06T01:54:04.620Z",
+  "events": [
+    {
+      "time": "2026-09-06T01:53:59.560Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T01:54:00.203Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T01:54:04.614Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T01:54:04.620Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

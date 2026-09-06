@@ -27,7 +27,7 @@ const INSTANCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 // profile.  A full refresh also has to start MCP, prove its health, start the
 // tunnel, register the replacement UI, and run the exact identity census.  A
 // two-minute window was shorter than the observed cold-start path and caused
-// npm start to expire a perfectly valid handoff while its children were being
+// the refresh CLI to expire a perfectly valid handoff while its children were being
 // replaced.  Keep the operator poll and authenticated activation deadline
 // separate, but give both enough bounded room for that real startup path.
 const DEFAULT_TIMEOUT_MS = 300_000;
@@ -45,7 +45,7 @@ const DEFAULT_RUNTIME_READY_TIMEOUT_MS = 45_000;
 const DEFAULT_EPOCH_READ_RETRY_TIMEOUT_MS = 5_000;
 const REFRESH_OPERATION_ID_PATTERN = /^full-clean-refresh-[A-Za-z0-9_-]{15,127}$/;
 // These are the non-terminal coordinator states that own a refresh
-// transaction.  A second `npm start` must reconcile one of these records
+// transaction.  A second `npm run dev:refresh` must reconcile one of these records
 // instead of forcing the old host down and attempting to create a competing
 // epoch.  Keep this list aligned with ActivationEpochStore's ACTIVE_STATES;
 // the local copy lets the lifecycle CLI fail closed even when its store
@@ -68,7 +68,7 @@ function isFullCleanRefreshEpoch(record) {
   if (!intent || typeof intent !== 'object' || Array.isArray(intent)) return false;
   const mode = String(intent.mode || '').trim().toLowerCase();
   const metadata = intent.metadata;
-  // `npm start` owns only the explicit process-refresh transaction.  A normal
+  // `npm run dev:refresh` owns only the explicit process-refresh transaction.  A normal
   // accepted-code full-clean activation uses the same durable epoch state
   // machine, but its source checkpoint is a different authority and must not
   // be adopted/reconciled by this lifecycle command.
@@ -269,7 +269,7 @@ function classifyRefreshEpoch(record, now = Date.now()) {
   if (!isFullCleanRefreshEpoch(record)) {
     throw lifecycleError(
       'DEV_UI_REFRESH_EPOCH_CONFLICT',
-      'An active activation epoch belongs to a non-refresh operation; npm start will not adopt it as a process refresh.',
+      'An active activation epoch belongs to a non-refresh operation; npm run dev:refresh will not adopt it as a process refresh.',
       {
         activation_epoch_id: epochId || null,
         operation_id: operationId || null,
@@ -656,7 +656,7 @@ function createRuntimeDependencies(options = {}) {
     } catch (error) {
       // Descriptor + exact OS identity remain sufficient mutation authority
       // for the external bootstrap. A busy old event loop is precisely one of
-      // the states npm start must be able to replace.
+      // the states npm run dev:refresh must be able to replace.
       if (!['RECOVERY_REQUEST_TIMEOUT', 'ECONNRESET', 'ECONNREFUSED'].includes(String(error?.code || ''))) {
         throw error;
       }
@@ -1410,7 +1410,7 @@ async function refreshLifecycle(deps) {
     if (typeof deps.ensureRefreshHost !== 'function') {
       throw lifecycleError(
         'DEV_UI_HOST_UNAVAILABLE',
-        'Recovery Host is unavailable and npm start has no authenticated bootstrap path.'
+        'Recovery Host is unavailable and npm run dev:refresh has no authenticated bootstrap path.'
       );
     }
     deps.output('DEV_UI REFRESH bootstrap=RecoveryHost source=current-checkout');
@@ -1419,7 +1419,7 @@ async function refreshLifecycle(deps) {
     if (!before?.hostAvailable || !before?.client || !before?.descriptor) {
       throw lifecycleError(
         'DEV_UI_HOST_BOOTSTRAP_FAILED',
-        'npm start could not establish an authenticated current-checkout Recovery Host before refresh.'
+        'npm run dev:refresh could not establish an authenticated current-checkout Recovery Host before refresh.'
       );
     }
   }

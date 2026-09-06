@@ -18,6 +18,13 @@ Confirm `package.json` version and the verified `smart-v3` eight-tool surface: `
 
 Unless a separately accepted policy change says otherwise, `execution_route=auto` remains deterministic/evidence-gated, high-cost routes require acknowledgement, and provider availability does not silently expand write authority. Public schema changes require a connector-refresh/live-contract plan.
 
+Codex-web has one product version across the Electron package and Python MCP
+component. For the 1.0 release, root `package.json`,
+`resources/coding-tools-mcp/pyproject.toml`, `coding_tools_mcp.__version__`, and
+product-facing version labels must agree on `1.0.0`. Protocol, schema,
+tool-contract, ledger-format, and other compatibility identities remain
+independent and must not be rewritten to the product version.
+
 ## 3. Focused source validation
 
 Use the smallest relevant lane:
@@ -32,6 +39,12 @@ npm run canary:opencode-flash:preflight
 ```
 
 `npm run canary:opencode-flash` performs real provider dispatch and may incur external cost; run only with explicit authorization. Rust/LSP changes use the smallest affected Rust tests required by `AGENTS.md`.
+
+`npm run dist` runs the Node test lane before Electron Builder; it does not run
+the Python MCP tests. When the candidate changes Python MCP behavior, record the
+relevant MCP proof explicitly. An installer build alone does not cover that
+behavior. Choose focused MCP tests during implementation and the required
+affected-boundary tests for the release candidate.
 
 ## 4. EOCL and proof integrity
 
@@ -50,7 +63,10 @@ admission, checkpoints durable state, stops Electron UI/Coding MCP/Tunnel and
 the configured Recovery MCP/Tunnel, hands off to a replacement Recovery Host,
 then requires a final census with matching epoch, workspace, device, revisions,
 fresh process identities, real Tunnel health, UI/Recovery Plane health, and a
-fresh connector discovery/ACK before `fullyReady=true` can return. Automatic
+current-process connector freshness acknowledged through either strict discovery
+or the supported exact no-workspace compatibility bootstrap before
+`fullyReady=true` can return. Record the actual freshness mode; compatibility
+activation does not prove strict rediscovery. Automatic
 fault recovery remains `soft_recovery`; it must refuse any newer disk revision
 under an older epoch and may not be used as code-update proof.
 
@@ -62,19 +78,43 @@ exclusive through durable epoch creation. A changed ledger hash,
 workspace/source checkpoint, or runtime-state PID must fail closed without
 stopping a new component set.
 
-For development Electron changes, exercise the deterministic lifecycle with mocked tests first, then—only when local service operation is authorized—use `npm start` (full-system refresh) or `npm run dev`/`npm run dev:replace` (UI-only lifecycle). A refresh must record the exact development installation, old/new Recovery Host and UI instances, new Coding MCP/Tunnel process identities, one shared `activation_epoch_id`, PID ownership, runtime mode, and `running_revision == disk_revision`; it must never delete durable ledger/configuration/identity state. A stale code activation must still carry the exact checkpoint/run/wave/proof/accepted-HEAD identity from an eligible `auto_activation.closure_input`; capture the typed refusal if that durable authority is absent, incomplete, invalid, or does not own the component. Connector discovery/ACK is a separate gate, so do not call a refresh `fullyReady` while it is `UPDATE_INCOMPLETE`. Use `npm run dev:stop` for a graceful UI-only stop; require an observable exact Recovery Host at entry and either its `MISSING` UI receipt or proof that the prior exact PID exited. Confirm Recovery Host/MCP/Tunnel preservation and watchdog suppression rather than killing `electron.exe` by name.
+For development Electron changes, exercise the deterministic lifecycle with mocked tests first, then—only when local service operation is authorized—use `npm start` or `npm run dev` for the same stable start/focus lifecycle, `npm run dev:replace` for UI replacement, and `npm run dev:refresh` for full-system refresh. A refresh must record the exact development installation, old/new Recovery Host and UI instances, new Coding MCP/Tunnel process identities, one shared `activation_epoch_id`, PID ownership, runtime mode, and `running_revision == disk_revision`; it must never delete durable ledger/configuration/identity state. A stale code activation must still carry the exact checkpoint/run/wave/proof/accepted-HEAD identity from an eligible `auto_activation.closure_input`; capture the typed refusal if that durable authority is absent, incomplete, invalid, or does not own the component. Current-process connector freshness/ACK is a separate gate, so do not call a refresh `fullyReady` while it is `UPDATE_INCOMPLETE`. Use `npm run dev:stop` for a graceful UI-only stop; require an observable exact Recovery Host at entry and either its `MISSING` UI receipt or proof that the prior exact PID exited. Confirm Recovery Host/MCP/Tunnel preservation and watchdog suppression rather than killing `electron.exe` by name.
 
-For `npm start`, distinguish CLI process-refresh completion from durable connector
+For `npm run dev:refresh`, distinguish CLI process-refresh completion from durable connector
 acceptance. Exit 0 with `DEV_UI REFRESHED` is valid when every exact component
-receipt is fresh and the only remaining gate is external discovery; the same
+receipt is fresh and the only remaining gate is external connector freshness/ACK; the same
 line must still report `activation=VERIFYING admission=closed fully_ready=false
 connector=pending`. Verify that malformed contract identity, stale/failing
 component health, PID/epoch/revision/workspace/device mismatch, or projection
-failure still returns non-zero. After real discovery, separately capture the
-official transition to `READY`, admission open, exact contract ACK and
-`fullyReady=true`.
+failure still returns non-zero. After current-process discovery or an eligible
+compatibility bootstrap has been officially acknowledged, separately capture
+the transition to `READY`, admission open, the exact connector freshness mode
+and receipt timestamp, and `fullyReady=true`. A release gate that specifically
+requires strict rediscovery remains open until its own strict receipt exists.
 
-In the Command Center, capture the three loaded-source receipts for Electron UI, Recovery Host, and Coding MCP, the separate Tunnel `READY`/`STOPPED` health state, and any source-update notice. Service availability, Tunnel readiness, and `fullyReady` do not override a `STALE` component receipt. Connector status should be interpreted from `connectorContractState` when available; when both that enum and the legacy `connectorRefreshRequired` boolean are absent, the truthful state is `UNAVAILABLE`, not acknowledged. An unchanged acknowledged SHA survives process restart, while a changed SHA requires the discovery/acknowledgement sequence.
+In the Command Center, capture the three loaded-source receipts for Electron UI,
+Recovery Host, and Coding MCP, the separate Tunnel health state, and any
+source-update notice. Service availability, Tunnel readiness, and `fullyReady`
+do not override a `STALE` component receipt. Capture receipt time/age and
+telemetry freshness with the status. Missing or stale telemetry keeps component
+health `UNKNOWN`; it does not establish a stopped component. Report
+`Stopped`/`OFF` only from a fresh explicit false receipt, and require separate
+exact identity and authority before any service operation.
+
+Interpret connector status from a recognized current `connectorContractState`
+and consistent receipt fields. An absent or unrecognized enum remains
+`UNAVAILABLE`; a legacy `connectorRefreshRequired` boolean alone cannot establish
+acknowledgement or freshness. An acknowledged enum with acknowledgement still
+pending is contradictory and also remains unavailable until reconciled.
+
+A persisted matching SHA may retain `UNCHANGED_ACKNOWLEDGED` across process
+restart without forcing contract rediscovery. That retained contract ACK does
+not prove freshness for a new activation epoch or make the runtime fully ready.
+Verify an official current-process discovery or eligible no-workspace
+compatibility bootstrap and ACK bound to the current process/server/epoch,
+exact SHA, and receipt timestamp. For a changed SHA, require discovery or the
+explicitly supported exact-predecessor compatibility path. A matching or
+persisted hash alone cannot close the activation gate.
 
 ## 6. Recovery plane checks
 

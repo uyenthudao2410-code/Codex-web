@@ -1,0 +1,60 @@
+[
+  {
+    "version": 2,
+    "task_id": "4191fee1eb35482487dfe44c1d7fc6ee",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-05T17:03:50.840Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-05T17:03:50.838Z",
+    "updated_at": "2026-09-05T17:03:50.840Z",
+    "events": [
+      {
+        "time": "2026-09-05T17:03:50.838Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-05T17:03:50.840Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-05T17:03:50.840Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-05T17:03:59.600Z",
+    "archive_reason": "finished"
+  }
+]

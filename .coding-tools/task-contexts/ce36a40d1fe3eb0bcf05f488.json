@@ -1,0 +1,570 @@
+{
+  "version": 2,
+  "task_id": "26b154b8709e4d54bf89d6a5b25e4ba9",
+  "orchestration": {
+    "run_id": "03a0d2161bd8423c8368580706c2744c",
+    "wave_id": "5cdb075e119f45aabdbb024bea78f513",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+    "worktree_fp": "7acd98f44fba1f03c4fc7849871749f9226937b36cd62e90881779d622c3e8ea",
+    "contract_fp": ""
+  },
+  "objective": "establish the exact preimage and focused proof plan for the Windows rustup/LSP hardlink identity fix already present in precisely those three files.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-05T01:06:31.797Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-05T01:06:31.797Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-05T01:06:31.797Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "PWODnYbXHpYxOMJu9nnhRN-J",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 799,
+    "finished_at": "2026-09-05T01:16:18.417Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "crates/webcodex-runner/Cargo.toml",
+          "state": "file",
+          "sha256": "b922328a49a2e8f0849bc13dbc8ead4e8539ff1829a2fe4e835ba2118c421e44",
+          "size_bytes": 1596,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "03a0d2161bd8423c8368580706c2744c",
+          "wave_id": "5cdb075e119f45aabdbb024bea78f513"
+        },
+        {
+          "path": "crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs",
+          "state": "file",
+          "sha256": "716727987cc20c4ee1cbc96c304e45aae14c9bc60541b035b90691a617c55532",
+          "size_bytes": 103734,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "03a0d2161bd8423c8368580706c2744c",
+          "wave_id": "5cdb075e119f45aabdbb024bea78f513"
+        },
+        {
+          "path": "crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+          "state": "file",
+          "sha256": "d28076ac0af6b977e3af00d5d0f1a6ce02d26fafa16922a34d1cbc7bb623f59e",
+          "size_bytes": 77540,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "03a0d2161bd8423c8368580706c2744c",
+          "wave_id": "5cdb075e119f45aabdbb024bea78f513"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 50,
+        "head_hash": "71f59b96112ca14e0a52bf1b3f08d1668f76f9bdb8ed8d19ff2d4310d5684a65"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03a0d2161bd8423c8368580706c2744c\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03a0d2161bd8423c8368580706c2744c\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03a0d2161bd8423c8368580706c2744c\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "03a0d2161bd8423c8368580706c2744c",
+      "wave_id": "5cdb075e119f45aabdbb024bea78f513",
+      "checkpoint_id": "978f66e9c5c946b3a39df2d93e6201e5",
+      "base_head": "8697ace8204e7e3da55d250d4a52d9b2b930116c",
+      "worktree_fp": "7acd98f44fba1f03c4fc7849871749f9226937b36cd62e90881779d622c3e8ea",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "establish the exact preimage and focused proof plan for the Windows rustup/LSP hardlink identity fix already present in precisely those three files.",
+        "objective_revision": 1,
+        "objective_sha256": "e5a216942bc3e8e504608cb6819bcf9b511d623a7e50a3a44f85b593f1d2dee2",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "eab07492b96949feaa59d9128354277b",
+          "stage_id": "check:5232ece5a1d24359",
+          "status": "passed",
+          "duration_ms": 3493,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "2d655702a7834f53a250b09a52bce8fc",
+          "stage_id": "check:6825a8d203ab1b8e",
+          "status": "passed",
+          "duration_ms": 19612,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "0e41328fef9c6839254985bc0785be7be8e6f720ea11335f16d90a75458f3f5c",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "cargo test -p webcodex-runner rustup_proxy",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 115 lines | tail: 'Running unittests src\\\\main.rs (target\\\\debug\\\\deps\\\\webcodex_runner-1480d88646298969.exe)'",
+      "finished_at": "2026-09-05T01:06:11.349Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "oK1c0DTK4U3iG7jqbQxnAs8i"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "03a0d2161bd8423c8368580706c2744c",
+        "owner_wave": "5cdb075e119f45aabdbb024bea78f513",
+        "size_bytes": 4539,
+        "command_id": "oK1c0DTK4U3iG7jqbQxnAs8i",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:oK1c0DTK4U3iG7jqbQxnAs8i:stdout",
+            "total_stream_bytes": 340,
+            "total_retained_bytes": 340,
+            "head_retained_bytes": 340,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:oK1c0DTK4U3iG7jqbQxnAs8i:stderr",
+            "total_stream_bytes": 4199,
+            "total_retained_bytes": 4199,
+            "head_retained_bytes": 4199,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-04T20:47:37.561Z",
+  "updated_at": "2026-09-05T01:44:05.077Z",
+  "events": [
+    {
+      "time": "2026-09-04T20:47:37.561Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-04T20:47:38.384Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:47:39.557Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-04T20:47:39.579Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-05T00:55:09.207Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-05T00:55:09.624Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-05T00:55:10.498Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-05T00:55:10.503Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-05T01:02:15.692Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"Get-FileHash -Algorithm SHA256 -LiteralPath 'crates\\webcodex-runner\\Cargo.toml','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\supervisor.rs','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\tests.rs' | Select-Object Path,Hash\"",
+        "session_id": "8xMb_-CcwP_uEXmwC5OcFLFc"
+      }
+    },
+    {
+      "time": "2026-09-05T01:02:16.218Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"Get-FileHash -Algorithm SHA256 -LiteralPath 'crates\\webcodex-runner\\Cargo.toml','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\supervisor.rs','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\tests.rs' | Select-Object Path,Hash\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:04:57.117Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"Get-FileHash -Algorithm SHA256 -LiteralPath 'crates\\webcodex-runner\\Cargo.toml','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\supervisor.rs','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\tests.rs' | ForEach-Object { Write-Output ($_.Path + '|' + $_.Hash) }\"",
+        "session_id": "xv5RHO91QnRIBX8_obKilPAt"
+      }
+    },
+    {
+      "time": "2026-09-05T01:04:57.583Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"Get-FileHash -Algorithm SHA256 -LiteralPath 'crates\\webcodex-runner\\Cargo.toml','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\supervisor.rs','crates\\webcodex-runner\\src\\webcodex_runner\\lsp\\tests.rs' | ForEach-Object { Write-Output ($_.Path + '|' + $_.Hash) }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:04.645Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:05.441Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:06.324Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:06.331Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:07.490Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:07.680Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:08.582Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo test -p webcodex-runner rustup_proxy",
+        "session_id": "oK1c0DTK4U3iG7jqbQxnAs8i"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:11.349Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo test -p webcodex-runner rustup_proxy",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:12.637Z",
+      "event": "command_started",
+      "details": {
+        "command": "cargo check -p webcodex-runner",
+        "session_id": "5tylptVBQrugMzDZLlMv3Swu"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:31.474Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cargo check -p webcodex-runner",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:31.793Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:31.797Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:32.576Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:32.579Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:32.728Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "d4e85b90db0f77458387bfeed017adbbf31116ae3e433021490b55291cfd6005"
+      }
+    },
+    {
+      "time": "2026-09-05T01:06:32.816Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-05T01:07:56.505Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:07:57.705Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --no-ext-diff -- crates/webcodex-runner/Cargo.toml crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "session_id": "SBjxyfKCDwCER7ehXQcOMiah"
+      }
+    },
+    {
+      "time": "2026-09-05T01:07:58.058Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --no-ext-diff -- crates/webcodex-runner/Cargo.toml crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:16:16.555Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:16:18.046Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- crates/webcodex-runner/Cargo.toml crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "session_id": "PWODnYbXHpYxOMJu9nnhRN-J"
+      }
+    },
+    {
+      "time": "2026-09-05T01:16:18.417Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- crates/webcodex-runner/Cargo.toml crates/webcodex-runner/src/webcodex_runner/lsp/supervisor.rs crates/webcodex-runner/src/webcodex_runner/lsp/tests.rs",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-05T01:42:23.500Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:42:25.523Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-05T01:42:25.526Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-05T01:42:25.652Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "0e41328fef9c6839254985bc0785be7be8e6f720ea11335f16d90a75458f3f5c"
+      }
+    },
+    {
+      "time": "2026-09-05T01:44:05.077Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

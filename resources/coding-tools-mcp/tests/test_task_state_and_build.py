@@ -22,11 +22,12 @@ import coding_tools_mcp.server as server_module
 import coding_tools_mcp.coordination as coordination_module
 import coding_tools_mcp.task_state as task_state_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
-from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.errors import JsonRpcError, ToolFailure
 from coding_tools_mcp.task_state import TaskStateStore, classify_command, command_payload_succeeded
 from coding_tools_mcp.server import Runtime
 from coding_tools_mcp.restart_ticket import build_supervisor_restart_ticket, supervisor_restart_ticket_matches
 from coding_tools_mcp.textutils import DEFAULT_MAX_LINES, truncate_text_head
+from coding_tools_mcp.tool_schema import validate_arguments
 from coding_tools_mcp.protocol import dispatch_rpc
 from coding_tools_mcp.document_tools import create_docx, extract_docx
 
@@ -943,6 +944,74 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(first["files"][0]["path"], "app.py")
             self.assertIn("hello", first["files"][0]["content"])
 
+    def test_prepare_coding_context_max_lines_per_file_opt_in_materializes_2076_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            root = Path(temp)
+            source = root / "large.py"
+            source.write_text("".join(f"LINE_{index:04d} = {index}\n" for index in range(1, 2077)), encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                bounded = runtime.prepare_coding_context({
+                    "objective": "default bounded materialization",
+                    "paths": ["large.py"],
+                    "include_globs": ["large.py"],
+                    "max_files": 1,
+                    "max_total_bytes": 262144,
+                    "force_refresh": True,
+                })
+                bounded_file = bounded["files"][0]
+                self.assertTrue(bounded_file["truncated"])
+                self.assertEqual(bounded_file["truncated_by"], "lines")
+                self.assertEqual(bounded_file["output_lines"], 2000)
+                self.assertEqual(bounded_file["total_lines"], 2076)
+                self.assertEqual(bounded["composite_read"]["plan"]["limits"]["max_lines_per_file"], 2000)
+
+                with patch.object(runtime, "prepare_coding_context", wraps=runtime.prepare_coding_context) as prepare:
+                    expanded = runtime.agent_workflow({
+                        "workflow": "diagnose",
+                        "phase": "prepare",
+                        "objective": "opt-in complete materialization",
+                        "paths": ["large.py"],
+                        "include_globs": ["large.py"],
+                        "max_files": 1,
+                        "max_total_bytes": 262144,
+                        "max_lines_per_file": 2500,
+                        "force_refresh": True,
+                    })
+                self.assertEqual(prepare.call_args.args[0]["max_lines_per_file"], 2500)
+                expanded_file = expanded["context"]["files"][0]
+                self.assertFalse(expanded_file["truncated"])
+                self.assertIsNone(expanded_file["truncated_by"])
+                self.assertEqual(expanded_file["output_lines"], 2076)
+                self.assertEqual(expanded_file["total_lines"], 2076)
+                self.assertEqual(expanded_file["output_bytes"], expanded_file["total_bytes"])
+                self.assertIsNone(expanded_file["next_start_line"])
+                self.assertEqual(expanded["context"]["composite_read"]["plan"]["limits"]["max_lines_per_file"], 2500)
+
+                direct = runtime.read_file({"path": "large.py", "max_lines": 2500, "max_bytes": 262144})
+                self.assertFalse(direct["truncated"])
+                self.assertEqual(direct["output_lines"], 2076)
+                with self.assertRaises(ToolFailure) as too_many_lines:
+                    runtime.read_file({"path": "large.py", "max_lines": 5001})
+                self.assertEqual(too_many_lines.exception.code, "INVALID_ARGUMENT")
+
+                byte_limited = runtime.prepare_coding_context({
+                    "objective": "opt-in remains byte bounded",
+                    "paths": ["large.py"],
+                    "include_globs": ["large.py"],
+                    "max_files": 1,
+                    "max_total_bytes": 4096,
+                    "max_lines_per_file": 2500,
+                    "force_refresh": True,
+                })
+                byte_limited_file = byte_limited["files"][0]
+                self.assertTrue(byte_limited_file["truncated"])
+                self.assertEqual(byte_limited_file["truncated_by"], "bytes")
+                self.assertLessEqual(byte_limited_file["output_bytes"], 4096)
+                self.assertLessEqual(byte_limited["total_content_bytes"], 4096)
+            finally:
+                runtime.close()
+
     def test_prepare_coding_context_projects_measured_composite_read_without_duplicating_query_text(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(temp)
@@ -1710,6 +1779,21 @@ class ToolModeTests(unittest.TestCase):
         schemas = server_module.input_schemas()
         agent_schema = schemas["agent_workflow"]
         agent_properties = agent_schema["properties"]
+        max_lines_schema = agent_properties["max_lines_per_file"]
+        self.assertEqual(max_lines_schema["default"], 2000)
+        self.assertEqual(max_lines_schema["minimum"], 1)
+        self.assertEqual(max_lines_schema["maximum"], 5000)
+        validate_arguments("agent_workflow", {"max_lines_per_file": 2500})
+        for invalid in (0, 5001):
+            with self.subTest(max_lines_per_file=invalid), self.assertRaises(JsonRpcError):
+                validate_arguments("agent_workflow", {"max_lines_per_file": invalid})
+        read_file_lines_schema = schemas["read_file"]["properties"]["max_lines"]
+        self.assertEqual(read_file_lines_schema["default"], 2000)
+        self.assertEqual(read_file_lines_schema["minimum"], 1)
+        self.assertEqual(read_file_lines_schema["maximum"], 5000)
+        validate_arguments("read_file", {"path": "example.py", "max_lines": 5000})
+        with self.assertRaises(JsonRpcError):
+            validate_arguments("read_file", {"path": "example.py", "max_lines": 5001})
         route_schema = agent_properties["execution_route"]
         self.assertEqual(
             route_schema["enum"],
@@ -1730,6 +1814,7 @@ class ToolModeTests(unittest.TestCase):
             "max_entries",
             "max_matches_per_query",
             "max_total_bytes",
+            "max_lines_per_file",
             "force_refresh",
         ):
             self.assertIn(field, agent_properties)

@@ -1633,7 +1633,9 @@ class Runtime(
 
         activation_bootstrap = self.activation_connector_bootstrap_result(name)
         if activation_bootstrap is not None:
-            return traced(make_tool_result(name, activation_bootstrap, is_error=False))
+            return traced(make_tool_result(
+                name, activation_bootstrap, is_error=activation_bootstrap.get("ok") is False
+            ))
         had_workspace_root = hasattr(self.request_context, "workspace_root")
         previous_workspace_root = getattr(self.request_context, "workspace_root", None)
         try:

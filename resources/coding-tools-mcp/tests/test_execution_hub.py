@@ -400,6 +400,66 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertIn("operations_analytics", full)
         self.assertIn("routing_evidence", full)
 
+    def test_live_snapshot_transports_latest_turn_evidence_and_fails_closed(self) -> None:
+        base = {
+            "schema_version": 1,
+            "measurement": "chat_turn_measurements_v1",
+            "missing_measurement_policy": "unknown_not_zero",
+            "content_free": True,
+        }
+        reader_target = "coding_tools_mcp.live_control._latest_chat_turn_measurement"
+        cases = {
+            "measured_zero": {
+                **base,
+                "journal_available": True,
+                "latest_turn": {"kind": "exact", "point": 0, "lower": 0, "upper": 0},
+                "missing_reason": None,
+            },
+            "unknown": {
+                **base,
+                "journal_available": True,
+                "latest_turn": None,
+                "missing_reason": "latest_turn_unmeasured",
+            },
+        }
+        for label, expected in cases.items():
+            with self.subTest(case=label):
+                with patch(reader_target, return_value=expected) as reader:
+                    status, body = self.get_live_snapshot()
+                self.assertEqual(status, 200, body)
+                self.assertEqual(body["snapshot_scope"], "live_control")
+                self.assertEqual(body["latest_turn_measurement"], expected)
+                reader.assert_called_once_with(self.runtime.orchestration_ledger.workspace)
+
+        with self.subTest(case="reader_exception"):
+            with patch(reader_target, side_effect=OSError("test journal unavailable")) as reader:
+                status, body = self.get_live_snapshot()
+            self.assertEqual(status, 200, body)
+            self.assertEqual(body["latest_turn_measurement"], {
+                **base,
+                "journal_available": False,
+                "latest_turn": None,
+                "missing_reason": "chat_journal_unavailable",
+            })
+            reader.assert_called_once_with(self.runtime.orchestration_ledger.workspace)
+
+        with self.subTest(case="admission_closed"):
+            with patch.object(
+                self.runtime,
+                "activation_admission_snapshot",
+                return_value={"admission_open": False, "state": "UPDATE_INCOMPLETE"},
+            ), patch(
+                reader_target,
+                side_effect=AssertionError("closed admission must not read the chat journal"),
+            ) as reader:
+                status, body = self.get_live_snapshot()
+            self.assertEqual(status, 200, body)
+            self.assertEqual(body["snapshot_scope"], "live_control")
+            self.assertEqual(body["state"], "UPDATE_INCOMPLETE")
+            self.assertFalse(body["activation"]["admission_open"])
+            self.assertNotIn("latest_turn_measurement", body)
+            reader.assert_not_called()
+
     def test_live_snapshot_does_not_recover_a_cold_orchestration_context(self) -> None:
         # Simulate a process restart: the durable run remains, but the
         # in-memory context cache is empty.  The live read must stay bounded and

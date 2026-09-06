@@ -1,0 +1,716 @@
+[
+  {
+    "version": 2,
+    "task_id": "9ec1e9107dc74d0c811d56e289a6fb23",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:33:09.975Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:31:40.538Z",
+    "updated_at": "2026-09-04T11:33:09.975Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:31:40.539Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:31:40.854Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile renderer\\index.html SHA256 && certutil -hashfile renderer\\dashboard.css SHA256 && certutil -hashfile renderer\\dashboard.js SHA256 && certutil -hashfile tests\\dashboard-analytics.test.js SHA256",
+          "session_id": "4DExJ6JBVjvNi0rJznz5c72T"
+        }
+      },
+      {
+        "time": "2026-09-04T11:31:41.291Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile renderer\\index.html SHA256 && certutil -hashfile renderer\\dashboard.css SHA256 && certutil -hashfile renderer\\dashboard.js SHA256 && certutil -hashfile tests\\dashboard-analytics.test.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:32:02.277Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "Mf3N4vmAkp-lrz-J0X6iT7cQ"
+        }
+      },
+      {
+        "time": "2026-09-04T11:32:03.334Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:32:32.943Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "HK5BPuuFcXpeHIMCzJ586Hte"
+        }
+      },
+      {
+        "time": "2026-09-04T11:32:33.611Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:09.975Z",
+        "event": "command_finished",
+        "details": {
+          "command": "ping 127.0.0.1 -n 8 > nul",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:09.975Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:33:15.820Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3e15adfd01f64f15b6d9776901b2225b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "4qTErOVjyryL6X6ucyuKJigs",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 830,
+      "finished_at": "2026-09-04T11:35:13.456Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:33:15.823Z",
+    "updated_at": "2026-09-04T11:35:13.456Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:33:15.823Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:16.125Z",
+        "event": "command_started",
+        "details": {
+          "command": "ping 127.0.0.1 -n 8",
+          "session_id": "ncyapnF9huEy2aOSMJDa-QNW"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:23.334Z",
+        "event": "command_finished",
+        "details": {
+          "command": "ping 127.0.0.1 -n 8",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:56.740Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 2 \"dev:refresh|dev:status\" package.json scripts\\dev-ui-lifecycle.js",
+          "session_id": "vyPmXjyWhQ_ddIEL7KzoIGEf"
+        }
+      },
+      {
+        "time": "2026-09-04T11:33:57.041Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 2 \"dev:refresh|dev:status\" package.json scripts\\dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:34:54.997Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"refresh|replace|ACTIONS\" scripts\\dev-ui-lifecycle.js",
+          "session_id": "_n7mFQ7HX70FKa4eUUTmcJPY"
+        }
+      },
+      {
+        "time": "2026-09-04T11:34:55.263Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"refresh|replace|ACTIONS\" scripts\\dev-ui-lifecycle.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:12.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:replace",
+          "session_id": "4qTErOVjyryL6X6ucyuKJigs"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:13.456Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:replace",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:35:21.959Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2ac2275a004c4e4da5ea41dac3935f8a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "E3Tf0Th-9EjozmqV9xmhO3DH",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1052,
+      "finished_at": "2026-09-04T11:35:32.856Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:35:21.961Z",
+    "updated_at": "2026-09-04T11:35:32.856Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:35:21.961Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:22.221Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"DEV_UI_CHECKPOINT_NOT_ACTIVATABLE|CHECKPOINT_NOT_ACTIVATABLE|activatable|accepted-code closure|closure checkpoint\" scripts electron resources tests",
+          "session_id": "6t7yMcZTmMG087RndW2Go1OL"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:22.522Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"DEV_UI_CHECKPOINT_NOT_ACTIVATABLE|CHECKPOINT_NOT_ACTIVATABLE|activatable|accepted-code closure|closure checkpoint\" scripts electron resources tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:31.798Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:control-center",
+          "session_id": "E3Tf0Th-9EjozmqV9xmhO3DH"
+        }
+      },
+      {
+        "time": "2026-09-04T11:35:32.856Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:control-center",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:36:48.457Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "54e22c4f86a54886a4b819f6e3c3ec4e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:36:48.468Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:36:48.460Z",
+    "updated_at": "2026-09-04T11:36:48.468Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:36:48.460Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:48.468Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"function evaluateActivationEligibility|const RUNTIME_SENSITIVE|affected_components|electron_ui|renderer/|module\\.exports\" electron\\services\\recoveryActionStore.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:48.468Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:36:55.715Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "38bdf10ae82b4136a8f9aaca38ee2c1e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "OdzblS_803-qTmscW_IzO5Wx",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1436,
+      "finished_at": "2026-09-04T11:37:06.513Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:36:55.718Z",
+    "updated_at": "2026-09-04T11:37:06.513Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:36:55.718Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:55.787Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"evaluateActivationEligibility\" electron\\services\\recoveryActionStore.js",
+          "session_id": "-iOTk6rm8NdiOD3r28AZh5V9"
+        }
+      },
+      {
+        "time": "2026-09-04T11:36:56.542Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"evaluateActivationEligibility\" electron\\services\\recoveryActionStore.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:04.290Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"componentOwnersProvider\" electron\\services\\recoveryActionStore.js && rg -n -C 22 \"function componentOwners\" electron\\services\\recoveryActionStore.js",
+          "session_id": "OdzblS_803-qTmscW_IzO5Wx"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:06.513Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"componentOwnersProvider\" electron\\services\\recoveryActionStore.js && rg -n -C 22 \"function componentOwners\" electron\\services\\recoveryActionStore.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:37:13.786Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5d12dde2983c4aa084333ddd961039dd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:37:13.825Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:37:13.790Z",
+    "updated_at": "2026-09-04T11:37:13.825Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:37:13.790Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:13.825Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"componentOwners\" electron\\services electron\\*.js tests\\accepted-code-activation.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:13.825Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:37:20.804Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b90ff398cb5b4bc5914394e2e78ed535",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-04T11:37:49.182Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-04T11:37:20.808Z",
+    "updated_at": "2026-09-04T11:37:49.182Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:37:20.808Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:21.114Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"componentOwners\" electron tests\\accepted-code-activation.test.js",
+          "session_id": "jni4qcLFE9QkBCyZqHn0ue8Y"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:22.456Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"componentOwners\" electron tests\\accepted-code-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:30.382Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"COMPONENT_SPECS\" electron\\services\\componentRevision.js && rg -n -C 20 \"function componentOwners\" electron\\services\\componentRevision.js",
+          "session_id": "jkPiz6KPAOiRc7hu3k4b9DFQ"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:31.214Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"COMPONENT_SPECS\" electron\\services\\componentRevision.js && rg -n -C 20 \"function componentOwners\" electron\\services\\componentRevision.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:38.505Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"function readAcceptedCheckpoint\" electron\\services\\recoveryActionStore.js",
+          "session_id": "dM1o3XZAh3S0gkHlh1ptq0Dk"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:39.072Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"function readAcceptedCheckpoint\" electron\\services\\recoveryActionStore.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:49.182Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const r=require('./electron/services/recoveryActionStore'); const c=r.readAcceptedCheckpoint(process.cwd(),'9fb216f2c27742be9a15a785b144a8b1','c1c9c44105c04329b56c7691aa311924'); console.log(JSON.stringify(r.evaluateActivationEligibility(c,{workspace:process.cwd(),currentHead:'8697ace8204e7e3da55d250d4a52d9b2b930116c'}),null,2));\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:37:49.182Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:38:08.145Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a66329457cef46168e8fca9d21091a64",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YBdRtZIahnWM-fZFylCmTqhY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 258,
+      "finished_at": "2026-09-04T11:38:08.746Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:38:08.148Z",
+    "updated_at": "2026-09-04T11:38:08.746Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:38:08.148Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:08.429Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT metadata_json FROM checkpoints WHERE checkpoint_id='2c41456d21c1453db50c44a17b119ac6';\"",
+          "session_id": "YBdRtZIahnWM-fZFylCmTqhY"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:08.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 .coding-tools\\orchestration\\ledger.sqlite3 \"SELECT metadata_json FROM checkpoints WHERE checkpoint_id='2c41456d21c1453db50c44a17b119ac6';\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:38:15.933Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9985fe811d3743359261f1dd052fbcdf",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "g_v256kFD9DH5DmkKevBDNgO",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 375,
+      "finished_at": "2026-09-04T11:38:23.437Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-04T11:38:15.936Z",
+    "updated_at": "2026-09-04T11:38:23.437Z",
+    "events": [
+      {
+        "time": "2026-09-04T11:38:15.936Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:16.272Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"DEV_UI_CHECKPOINT_NOT_ACTIVATABLE\" scripts\\dev-ui-lifecycle.js electron\\services\\activationClosure.js electron\\services\\recoveryHost.js",
+          "session_id": "orhdjpC55PhxGwzv1Az8lAd4"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:16.595Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"DEV_UI_CHECKPOINT_NOT_ACTIVATABLE\" scripts\\dev-ui-lifecycle.js electron\\services\\activationClosure.js electron\\services\\recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:23.075Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"function sourceCheckpointForActivation\" electron\\services scripts",
+          "session_id": "g_v256kFD9DH5DmkKevBDNgO"
+        }
+      },
+      {
+        "time": "2026-09-04T11:38:23.437Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"function sourceCheckpointForActivation\" electron\\services scripts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-04T11:38:30.974Z",
+    "archive_reason": "finished"
+  }
+]
