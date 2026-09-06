@@ -1,0 +1,90 @@
+{
+  "version": 2,
+  "task_id": "1835074fddae45079253116f3ed37aff",
+  "orchestration": {
+    "run_id": "a46c9fc8054d4ec7b5b09dc333415f27",
+    "wave_id": "103f001c50c443fc8e06aea55da627d8",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "f702c2a4036d1d185337c14fe1f5cd03e14e3409",
+    "worktree_fp": "31640b20c26b036f4ffacee3c36f92a0058a54d3b621ee34a6cdffc9f3c30974",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "FTwPfU-VbLmCx8r-FKaOSZr3",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 628,
+    "finished_at": "2026-09-06T06:18:11.097Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T06:18:10.221Z",
+  "updated_at": "2026-09-06T06:18:26.949Z",
+  "events": [
+    {
+      "time": "2026-09-06T06:18:10.221Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T06:18:10.495Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-ChildItem '.coding-tools/orchestration/reports' -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 15 Name,LastWriteTime | Format-Table -AutoSize\"",
+        "session_id": "FTwPfU-VbLmCx8r-FKaOSZr3"
+      }
+    },
+    {
+      "time": "2026-09-06T06:18:11.097Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-ChildItem '.coding-tools/orchestration/reports' -Directory | Sort-Object LastWriteTime -Descending | Select-Object -First 15 Name,LastWriteTime | Format-Table -AutoSize\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T06:18:22.587Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T06:18:26.942Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T06:18:26.949Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

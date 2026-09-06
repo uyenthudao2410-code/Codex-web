@@ -1,0 +1,185 @@
+{
+  "version": 2,
+  "task_id": "871a499757ba44b7bc104dc9cfc7952c",
+  "orchestration": {
+    "run_id": "1977b0994bec43a2a96aec9b37cc1d13",
+    "wave_id": "fb41c495579f4bebae9711e59e139bf0",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "deep_single_lane",
+    "route_requested": "sol_xhigh",
+    "route_resolved": "sol_xhigh",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "49d222f7954f40c49905bef839a3eca6",
+    "base_head": "5a03e150c37042e5305a7b3e56d393b63751794a",
+    "worktree_fp": "b7fdb4dceab431cb553eaafdeabf98913e7dcf8f0b061ad2c20b25a16239b1bc",
+    "contract_fp": ""
+  },
+  "objective": "Implement the smallest coherent Codex-web 1.0 performance completion on current main@5a03e150c37042e5305a7b3e56d393b63751794a. The user's concrete complaint is that both npm-run dev Electron UI and normal packaged UI feel laggy. Diagnose from current bytes, then patch only demonstrated hot paths. Required outcomes: (1) renderer/browser.js, renderer/control-center.js, renderer/panel.js and renderer/dashboard.js must not run overlapping async polling cycles; coalesce high-frequency refresh work, skip no-op DOM/state rewrites, batch DOM work with requestAnimationFrame where appropriate, and reduce work while document is hidden/unfocused while doing an immediate refresh on focus/visibility resume; (2) expensive MutationObserver or DOM-scan paths must be coalesced and avoid repeated full scans when underlying state did not change; (3) electron/chatViewController.js must avoid redundant injection/state churn while preserving chat correctness; (4) package configuration may be slimmed only when repository evidence proves resources/locales are unnecessary at runtime—do not remove required MCP, Recovery Host, tunnel, native semantic, offline runtime, renderer, or installer resources; (5) preserve correctness-critical activation, recovery, lease, heartbeat and process-identity timers and preserve the public smart-v3 8-tool contract. Add focused regression tests for scheduling/coalescing/visibility/no-op behavior and any packaging exclusion introduced. Preserve all unrelated .coding-tools evidence and the pre-existing evidence-only commit. Do not commit or push in this phase. Produce exact modified paths and focused proof results; if any suspected optimization is not provably safe, leave it unchanged rather than weakening correctness.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 16,
+        "head_hash": "5d88ae8cb5e8ef9628cfda07c5348ecfb59c654c8349ba3d7803c90c16f022c6"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1977b0994bec43a2a96aec9b37cc1d13\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1977b0994bec43a2a96aec9b37cc1d13\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "1977b0994bec43a2a96aec9b37cc1d13",
+      "wave_id": "fb41c495579f4bebae9711e59e139bf0",
+      "checkpoint_id": "",
+      "base_head": "5a03e150c37042e5305a7b3e56d393b63751794a",
+      "worktree_fp": "b7fdb4dceab431cb553eaafdeabf98913e7dcf8f0b061ad2c20b25a16239b1bc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Implement the smallest coherent Codex-web 1.0 performance completion on current main@5a03e150c37042e5305a7b3e56d393b63751794a. The user's concrete complaint is that both npm-run dev Electron UI and normal packaged UI feel laggy. Diagnose from current bytes, then patch only demonstrated hot paths. Required outcomes: (1) renderer/browser.js, renderer/control-center.js, renderer/panel.js and renderer/dashboard.js must not run overlapping async polling cycles; coalesce high-frequency refresh work, skip no-op DOM/state rewrites, batch DOM work with requestAnimationFrame where appropriate, and reduce work while document is hidden/unfocused while doing an immediate refresh on focus/visibility resume; (2) expensive MutationObserver or DOM-scan paths must be coalesced and avoid repeated full scans when underlying state did not change; (3) electron/chatViewController.js must avoid redundant injection/state churn while preserving chat correctness; (4) package configuration may be slimmed only when repository evidence proves resources/locales are unnecessary at runtime—do not remove required MCP, Recovery Host, tunnel, native semantic, offline runtime, renderer, or installer resources; (5) preserve correctness-critical activation, recovery, lease, heartbeat and process-identity timers and preserve the public smart-v3 8-tool contract. Add focused regression tests for scheduling/coalescing/visibility/no-op behavior and any packaging exclusion introduced. Preserve all unrelated .coding-tools evidence and the pre-existing evidence-only commit. Do not commit or push in this phase. Produce exact modified paths and focused proof results; if any suspected optimization is not provably safe, leave it unchanged rather than weakening correctness.",
+        "objective_revision": 1,
+        "objective_sha256": "d05e0330ce79acab18baa0155816491fba62a548ad4d92dd93750945ebb09560",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "PROMPT_TOO_LARGE",
+      "reason": null,
+      "event_seq": 41901
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "b362cbabfaeca97bbf4f872242f9db22a5b9975247af746f6918d5fe713b7a40",
+  "completion_report_acknowledged_id": "b362cbabfaeca97bbf4f872242f9db22a5b9975247af746f6918d5fe713b7a40",
+  "completion_report_acknowledged_at": "2026-09-06T06:34:34.184Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-06T06:33:37.909Z",
+  "updated_at": "2026-09-06T06:34:34.184Z",
+  "events": [
+    {
+      "time": "2026-09-06T06:33:37.909Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:38.528Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:44.454Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:47.734Z",
+      "event": "candidate_blocked",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:47.734Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:47.869Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "b362cbabfaeca97bbf4f872242f9db22a5b9975247af746f6918d5fe713b7a40"
+      }
+    },
+    {
+      "time": "2026-09-06T06:33:48.059Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T06:34:17.224Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-06T06:34:34.184Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b362cbabfaeca97bbf4f872242f9db22a5b9975247af746f6918d5fe713b7a40"
+      }
+    }
+  ]
+}

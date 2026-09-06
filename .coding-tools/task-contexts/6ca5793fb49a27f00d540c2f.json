@@ -1,0 +1,122 @@
+{
+  "version": 2,
+  "task_id": "725207cb8a95446aa5703c6a983addff",
+  "orchestration": {
+    "run_id": "9f0e71aa819841ef8e3246a087787009",
+    "wave_id": "3a8d45df68f8471990197831cc5f23db",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "f702c2a4036d1d185337c14fe1f5cd03e14e3409",
+    "worktree_fp": "31640b20c26b036f4ffacee3c36f92a0058a54d3b621ee34a6cdffc9f3c30974",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "2g0ODdCP2NnfP1PoEsETE1VU",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 842,
+    "finished_at": "2026-09-06T06:15:42.727Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T06:15:21.225Z",
+  "updated_at": "2026-09-06T06:16:09.087Z",
+  "events": [
+    {
+      "time": "2026-09-06T06:15:21.225Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:21.553Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$d='.coding-tools/orchestration/reports/run-76571a1a2d6347dcbc5e61bb4adfdaad'; Write-Output '===FILES==='; Get-ChildItem $d -File | Sort-Object Name | Select-Object Name,Length,LastWriteTime | Format-Table -AutoSize; Write-Output '===SUMMARY==='; if(Test-Path (Join-Path $d 'run-summary.md')){Get-Content (Join-Path $d 'run-summary.md') -Raw}; Write-Output '===JSON==='; if(Test-Path (Join-Path $d 'run-summary.json')){Get-Content (Join-Path $d 'run-summary.json') -Ra",
+        "session_id": "Jjkfz000vSYO_eDFz5wtJ-DU"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:22.108Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$d='.coding-tools/orchestration/reports/run-76571a1a2d6347dcbc5e61bb4adfdaad'; Write-Output '===FILES==='; Get-ChildItem $d -File | Sort-Object Name | Select-Object Name,Length,LastWriteTime | Format-Table -AutoSize; Write-Output '===SUMMARY==='; if(Test-Path (Join-Path $d 'run-summary.md')){Get-Content (Join-Path $d 'run-summary.md') -Raw}; Write-Output '===JSON==='; if(Test-Path (Join-Path $d 'run-summary.json')){Get-Content (Join-Path $d 'run-summary.json') -Ra",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:31.719Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/reports/run-76571a1a2d6347dcbc5e61bb4adfdaad/wave-001.md' -Raw\"",
+        "session_id": "eoBZ-TFUy1ta663T1Y7WM3Z0"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:32.175Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/reports/run-76571a1a2d6347dcbc5e61bb4adfdaad/wave-001.md' -Raw\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:41.953Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '===COMMITS SINCE 9e752==='; git log --oneline --decorate 9e752e34..HEAD; Write-Output '===CHANGED PATHS==='; git diff --name-status 9e752e34..HEAD; Write-Output '===TIMERS/RAF/OBSERVERS==='; rg -n --glob '!node_modules/**' --glob '!dist/**' --glob '!release/**' --glob '!artifacts/**' 'setInterval|setTimeout|requestAnimationFrame|MutationObserver|webContents\\.send|ipcRenderer\\.(invoke|send|on)' renderer electron | Select-Object -First 350; Write-Outpu",
+        "session_id": "2g0ODdCP2NnfP1PoEsETE1VU"
+      }
+    },
+    {
+      "time": "2026-09-06T06:15:42.727Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Write-Output '===COMMITS SINCE 9e752==='; git log --oneline --decorate 9e752e34..HEAD; Write-Output '===CHANGED PATHS==='; git diff --name-status 9e752e34..HEAD; Write-Output '===TIMERS/RAF/OBSERVERS==='; rg -n --glob '!node_modules/**' --glob '!dist/**' --glob '!release/**' --glob '!artifacts/**' 'setInterval|setTimeout|requestAnimationFrame|MutationObserver|webContents\\.send|ipcRenderer\\.(invoke|send|on)' renderer electron | Select-Object -First 350; Write-Outpu",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T06:16:04.351Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T06:16:09.081Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T06:16:09.087Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,488 @@
+[
+  {
+    "version": 2,
+    "task_id": "8ead678adb154b6ba69e8127ec3af2c6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "VRwywUP8-O6pCZvFFP030eB4",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 289,
+      "finished_at": "2026-09-06T06:27:57.581Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T06:27:27.120Z",
+    "updated_at": "2026-09-06T06:27:57.581Z",
+    "events": [
+      {
+        "time": "2026-09-06T06:27:27.120Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:27.505Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -6 --oneline --decorate && echo ---RUN-SUMMARY--- && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\run-summary.md && echo ---WAVE-002--- && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\wave-002.md",
+          "session_id": "Sq9FQ_ht3areTobUpUen3zPP"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:27.980Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -6 --oneline --decorate && echo ---RUN-SUMMARY--- && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\run-summary.md && echo ---WAVE-002--- && type .coding-tools\\orchestration\\reports\\run-d623321a8ad542fc9592040eaa0a1976\\wave-002.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:37.712Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /n /c:\"d623321a8ad542fc9592040eaa0a1976\" .coding-tools\\task-contexts\\*.json .coding-tools\\orchestration\\task-context-workspaces.json",
+          "session_id": "D-llA-4u-Uk7zxqvqnOdrstS"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:38.083Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /n /c:\"d623321a8ad542fc9592040eaa0a1976\" .coding-tools\\task-contexts\\*.json .coding-tools\\orchestration\\task-context-workspaces.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:49.467Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/82f3d25954d6792a48167129.json' -TotalCount 30\"",
+          "session_id": "ViuKtRTJXw6IR-Zh-YdSaaTx"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:49.908Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/82f3d25954d6792a48167129.json' -TotalCount 30\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:57.364Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"2d664d5b05ab4e939c322cc5766a1634\" .coding-tools\\orchestration\\task-context-workspaces.json",
+          "session_id": "VRwywUP8-O6pCZvFFP030eB4"
+        }
+      },
+      {
+        "time": "2026-09-06T06:27:57.581Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"2d664d5b05ab4e939c322cc5766a1634\" .coding-tools\\orchestration\\task-context-workspaces.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T06:28:05.989Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "1220a2fa6f7042869b06d45420698a7a",
+    "orchestration": {
+      "run_id": "94924788357f40a1a5913e9de1d9360d",
+      "wave_id": "f551d9cfac874214b5b99b076da09c19",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "5a03e150c37042e5305a7b3e56d393b63751794a",
+      "worktree_fp": "b7fdb4dceab431cb553eaafdeabf98913e7dcf8f0b061ad2c20b25a16239b1bc",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "RrXYbBELQ926lLMPFYuw3_VM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1201,
+      "finished_at": "2026-09-06T06:33:03.733Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T06:28:05.990Z",
+    "updated_at": "2026-09-06T06:33:03.733Z",
+    "events": [
+      {
+        "time": "2026-09-06T06:28:05.990Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:06.245Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /n /c:\"task_context_id\" .coding-tools\\task-contexts\\*.json | findstr /c:\"82f3d25954d6792a48167129\"",
+          "session_id": "LDmH2mPhNxBYSvYYcqiHW0QO"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:06.525Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /n /c:\"task_context_id\" .coding-tools\\task-contexts\\*.json | findstr /c:\"82f3d25954d6792a48167129\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:24.100Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '82f3d25954d6792a48167129|ctx_' -Context 0,2 | Select-Object -First 80 | ForEach-Object { $_.Line }\"",
+          "session_id": "vCPwosi5hLUIn-7F8Tj5H77N"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:24.684Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '82f3d25954d6792a48167129|ctx_' -Context 0,2 | Select-Object -First 80 | ForEach-Object { $_.Line }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:34.831Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '82f3d25954d6792a48167129' -Context 3,6 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "session_id": "1V7LGTEo_WsTK7yHIo_vZU91"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:35.514Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '82f3d25954d6792a48167129' -Context 3,6 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:46.089Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$s='ctx_a654e2bb931d33a6cea1407f48e906ce'; $b=[Text.Encoding]::UTF8.GetBytes($s); $h=[Security.Cryptography.SHA256]::Create().ComputeHash($b); -join ($h | ForEach-Object { $_.ToString('x2') })\"",
+          "session_id": "uYM_DaRUJ5mALtjskG3sZ3m-"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:46.452Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$s='ctx_a654e2bb931d33a6cea1407f48e906ce'; $b=[Text.Encoding]::UTF8.GetBytes($s); $h=[Security.Cryptography.SHA256]::Create().ComputeHash($b); -join ($h | ForEach-Object { $_.ToString('x2') })\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:56.263Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json -AsHashtable; $e=$m['ctx_a654e2bb931d33a6cea1407f48e906ce']; $e | ConvertTo-Json -Depth 6\"",
+          "session_id": "EikbZRDhzSXvT0WCHQbFmo1A"
+        }
+      },
+      {
+        "time": "2026-09-06T06:28:56.948Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json -AsHashtable; $e=$m['ctx_a654e2bb931d33a6cea1407f48e906ce']; $e | ConvertTo-Json -Depth 6\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:05.910Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern 'ctx_a654e2bb931d33a6cea1407f48e906ce' -Context 0,12 | ForEach-Object { $_.Line; $_.Context.PostContext }\"",
+          "session_id": "1fgSWGZkU6DiunrNXfmbYESW"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:06.399Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern 'ctx_a654e2bb931d33a6cea1407f48e906ce' -Context 0,12 | ForEach-Object { $_.Line; $_.Context.PostContext }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:15.999Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '2026-09-06T06:19' -Context 1,4 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "session_id": "InQQo96Zg0clSD52uHYLMVlC"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:16.549Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/orchestration/task-context-workspaces.json' -Pattern '2026-09-06T06:19' -Context 1,4 | ForEach-Object { $_.Context.PreContext; $_.Line; $_.Context.PostContext }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:42.141Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $m.PSObject.Properties | Where-Object { $_.Value.created_at -ge '2026-09-06T06:19:00Z' -and $_.Value.created_at -le '2026-09-06T06:22:00Z' } | ForEach-Object { '{0} {1}' -f $_.Name,$_.Value.created_at }\"",
+          "session_id": "XwCrlKOkF4Tspu-oLDtxzBrS"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:43.209Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $m.PSObject.Properties | Where-Object { $_.Value.created_at -ge '2026-09-06T06:19:00Z' -and $_.Value.created_at -le '2026-09-06T06:22:00Z' } | ForEach-Object { '{0} {1}' -f $_.Name,$_.Value.created_at }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:50.968Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -TotalCount 12\"",
+          "session_id": "XKRtusX11iKDi5hhArYcL524"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:51.517Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -TotalCount 12\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:29:59.432Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $m.contexts.PSObject.Properties | Where-Object { $_.Value.created_at -like '2026-09-06T06:1*' -or $_.Value.created_at -like '2026-09-06T06:2*' } | Sort-Object { $_.Value.created_at } | ForEach-Object { '{0} {1}' -f $_.Name,$_.Value.created_at }\"",
+          "session_id": "Vo5lu_YhzABdghr-QzLjFmPK"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:00.669Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $m.contexts.PSObject.Properties | Where-Object { $_.Value.created_at -like '2026-09-06T06:1*' -or $_.Value.created_at -like '2026-09-06T06:2*' } | Sort-Object { $_.Value.created_at } | ForEach-Object { '{0} {1}' -f $_.Name,$_.Value.created_at }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:18.428Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/f63394dcdf856f58c9a2e04f.json' -TotalCount 6\"",
+          "session_id": "v4w2LSTosgMsmsMpJnf3rAxJ"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:19.055Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/f63394dcdf856f58c9a2e04f.json' -TotalCount 6\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:28.045Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"task-contexts\" -- resources electron scripts tests | more",
+          "session_id": "4J__z13_2-U4K21ISran_NJi"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:28.503Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"task-contexts\" -- resources electron scripts tests | more",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:36.345Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/task_state.py'; $c=Get-Content $p; $c[200..245]\"",
+          "session_id": "iBPgr1AF4wn0HyYzeD_OHuZS"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:36.929Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/task_state.py'; $c=Get-Content $p; $c[200..245]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:47.394Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$target='82f3d25954d6792a48167129'; $m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $sha=[Security.Cryptography.SHA256]::Create(); foreach($p in $m.contexts.PSObject.Properties){ $b=[Text.Encoding]::UTF8.GetBytes($p.Name); $h=-join ($sha.ComputeHash($b) | ForEach-Object { $_.ToString('x2') }); if($h.Substring(0,24) -eq $target){ $p.Name; break } }\"",
+          "session_id": "yo5LdfECCUiXrvTe9IKmtjaq"
+        }
+      },
+      {
+        "time": "2026-09-06T06:30:52.169Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$target='82f3d25954d6792a48167129'; $m=Get-Content '.coding-tools/orchestration/task-context-workspaces.json' -Raw | ConvertFrom-Json; $sha=[Security.Cryptography.SHA256]::Create(); foreach($p in $m.contexts.PSObject.Properties){ $b=[Text.Encoding]::UTF8.GetBytes($p.Name); $h=-join ($sha.ComputeHash($b) | ForEach-Object { $_.ToString('x2') }); if($h.Substring(0,24) -eq $target){ $p.Name; break } }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:04.360Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/task-contexts/82f3d25954d6792a48167129.json' -Pattern 'problem|completion_report|operator_report|context_id|scope_id' -CaseSensitive:$false | Select-Object -First 80 | ForEach-Object { $_.Line }\"",
+          "session_id": "S34h0rEuT5vlTFcQ9Y8HsYO6"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:04.995Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools/task-contexts/82f3d25954d6792a48167129.json' -Pattern 'problem|completion_report|operator_report|context_id|scope_id' -CaseSensitive:$false | Select-Object -First 80 | ForEach-Object { $_.Line }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:14.294Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"EXACT_RUN_RECOVERY_REFUSED\" -- resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "uL84Rpcl092BqDh70YEBMlFx"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:14.535Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"EXACT_RUN_RECOVERY_REFUSED\" -- resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:23.751Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[940..1035]\"",
+          "session_id": "gE7XEb1bNgnSyrRFomkOm9dV"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:24.270Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[940..1035]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:35.625Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n \"continuity_action\\|reattach\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp | more",
+          "session_id": "sh_G1WXhaif46X6YUmIRZVcc"
+        }
+      },
+      {
+        "time": "2026-09-06T06:31:35.911Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n \"continuity_action\\|reattach\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp | more",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T06:32:08.293Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T06:32:13.310Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-06T06:32:13.317Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-06T06:33:02.684Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -4 --oneline --decorate && echo ---AHEAD--- && git log --oneline origin/main..HEAD && echo ---DIFFSTAT--- && git diff --stat origin/main..HEAD && echo ---NAMESTATUS--- && git diff --name-status origin/main..HEAD && echo ---WORKTREE--- && git status --short",
+          "session_id": "RrXYbBELQ926lLMPFYuw3_VM"
+        }
+      },
+      {
+        "time": "2026-09-06T06:33:03.733Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -4 --oneline --decorate && echo ---AHEAD--- && git log --oneline origin/main..HEAD && echo ---DIFFSTAT--- && git diff --stat origin/main..HEAD && echo ---NAMESTATUS--- && git diff --name-status origin/main..HEAD && echo ---WORKTREE--- && git status --short",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T06:33:37.907Z",
+    "archive_reason": "superseded"
+  }
+]
