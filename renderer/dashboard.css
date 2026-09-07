@@ -1728,6 +1728,16 @@ article[aria-labelledby="daCoverageTitle"],
   font-size: 11px;
   padding: 4px 2px;
 }
+.da-turn-total {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border: 1px solid var(--da-border-strong, #d3d8de);
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.08);
+  font-variant-numeric: tabular-nums;
+}
 
 .da-tile.card-purple:hover {
   border-color: rgba(168, 85, 247, 0.6);

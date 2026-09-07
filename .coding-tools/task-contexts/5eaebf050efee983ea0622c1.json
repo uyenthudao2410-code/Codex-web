@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "42363be0c54c4f8595e94731d0bb37b9",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "eIjErVywrZ1Gi7L25Qy2_Brn",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 676,
+    "finished_at": "2026-09-07T11:03:20.725Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:03:19.761Z",
+  "updated_at": "2026-09-07T11:03:20.725Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:03:19.761Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:03:20.441Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"activationEpochFile\" electron",
+        "session_id": "eIjErVywrZ1Gi7L25Qy2_Brn"
+      }
+    },
+    {
+      "time": "2026-09-07T11:03:20.725Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"activationEpochFile\" electron",
+        "status": "passed"
+      }
+    }
+  ]
+}

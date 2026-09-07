@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "56fd9953685d43ddb29a3340934b1927",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "9F0ur2V6ZE5dtSNf-I44mlTl",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 299,
+    "finished_at": "2026-09-07T10:42:54.692Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T10:42:54.114Z",
+  "updated_at": "2026-09-07T10:42:54.692Z",
+  "events": [
+    {
+      "time": "2026-09-07T10:42:54.114Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T10:42:54.358Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 90 \"EXACT_STALE_RUN_RECEIPT_INVALID\" -- electron/services/fullCleanActivation.js && git grep -n -C 70 \"EXACT_STALE_RUN_REASON_PREFIX\" -- electron/services/runtimeOrchestrator.js",
+        "session_id": "9F0ur2V6ZE5dtSNf-I44mlTl"
+      }
+    },
+    {
+      "time": "2026-09-07T10:42:54.692Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 90 \"EXACT_STALE_RUN_RECEIPT_INVALID\" -- electron/services/fullCleanActivation.js && git grep -n -C 70 \"EXACT_STALE_RUN_REASON_PREFIX\" -- electron/services/runtimeOrchestrator.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

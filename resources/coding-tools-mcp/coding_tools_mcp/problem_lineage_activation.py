@@ -190,7 +190,12 @@ def _assert_preflight(preflight: dict[str, Any], *, activation_preflight: bool) 
         raise ProblemLineageActivationError("PRL activation preflight failed: " + ",".join(blockers))
 
 
-def preflight_problem_lineage_activation(workspace: Path, *, observed_at: float) -> dict[str, Any]:
+def preflight_problem_lineage_activation(
+    workspace: Path,
+    *,
+    observed_at: float,
+    allow_already_active: bool = False,
+) -> dict[str, Any]:
     """Read only: one immutable snapshot plus current resource readiness."""
     root = Path(workspace).resolve(strict=False)
     snapshot = _snapshot_projection(root, observed_at=observed_at)
@@ -215,7 +220,11 @@ def preflight_problem_lineage_activation(workspace: Path, *, observed_at: float)
             )
         },
     }
-    _assert_preflight(result, activation_preflight=True)
+    current_schema = int(result.get("schema", {}).get("user_version") or 0)
+    _assert_preflight(
+        result,
+        activation_preflight=not (allow_already_active and current_schema == PROBLEM_SCHEMA_VERSION),
+    )
     if result["maintenance"].get("blockers"):
         raise ProblemLineageActivationError(
             "PRL activation maintenance readiness failed: " + ",".join(str(item) for item in result["maintenance"]["blockers"])
@@ -239,7 +248,11 @@ def activate_problem_lineage_schema(
     """
     if runtime_stopped is not True:
         raise ProblemLineageActivationError("PRL canonical migration requires explicit stopped-runtime authority")
-    preflight = preflight_problem_lineage_activation(workspace, observed_at=observed_at)
+    preflight = preflight_problem_lineage_activation(
+        workspace,
+        observed_at=observed_at,
+        allow_already_active=True,
+    )
     snapshot = preflight["snapshot"]
     if str(snapshot.get("sha256") or "").lower() != str(expected_snapshot_sha256 or "").lower():
         raise ProblemLineageActivationError("PRL activation snapshot SHA-256 changed or was not explicitly acknowledged")
@@ -247,7 +260,10 @@ def activate_problem_lineage_schema(
         raise ProblemLineageActivationError("PRL activation logical SHA-256 changed or was not explicitly acknowledged")
     try:
         source_schema = int(preflight["schema"]["user_version"])
-        migration = OrchestrationLedger(Path(workspace)).migrate_problem_lineage_schema(expected_schema_version=source_schema)
+        if source_schema == PROBLEM_SCHEMA_VERSION:
+            migration = {"migrated": False, "schema_version": PROBLEM_SCHEMA_VERSION}
+        else:
+            migration = OrchestrationLedger(Path(workspace)).migrate_problem_lineage_schema(expected_schema_version=source_schema)
     except ProblemLineageError as exc:
         raise ProblemLineageActivationError(str(exc)) from exc
     postflight = _snapshot_projection(Path(workspace), observed_at=observed_at)

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "9a50fe80a2ae469eb980efbb1e15d708",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Yy9ARPnrKmxh2X6JObBcPB3-",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 358,
+    "finished_at": "2026-09-07T11:14:49.352Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:14:48.646Z",
+  "updated_at": "2026-09-07T11:14:49.352Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:14:48.646Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:48.996Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 40 \"function bootstrapCurrentRecoveryHost|async function bootstrapCurrentRecoveryHost|bootstrapRecoveryHost\" scripts\\dev-ui-lifecycle.js electron\\services\\recoveryHost.js electron\\services\\recoveryBootstrap.js",
+        "session_id": "Yy9ARPnrKmxh2X6JObBcPB3-"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:49.352Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 40 \"function bootstrapCurrentRecoveryHost|async function bootstrapCurrentRecoveryHost|bootstrapRecoveryHost\" scripts\\dev-ui-lifecycle.js electron\\services\\recoveryHost.js electron\\services\\recoveryBootstrap.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

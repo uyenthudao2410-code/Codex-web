@@ -1,0 +1,501 @@
+{
+  "version": 2,
+  "task_id": "b7e1398069c7442c8455ae7612648f97",
+  "orchestration": {
+    "run_id": "c98a0d6cd8c641c98d12a0df471c68a0",
+    "wave_id": "b5e1596beb9848ee8c75bd1915665d47",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+    "worktree_fp": "903ddaeba806d5b85268ecb55059fdd54046d297acb16a34c2229d4eb20d7d12",
+    "contract_fp": ""
+  },
+  "objective": "Apply deterministic Python PRL activation/restart-ticket source and focused Python tests. Preserve unrelated dirty work. No candidate model, no runtime restart, no ledger migration.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-07T10:55:05.687Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-07T10:55:05.687Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "GOm_tqxZeUlWOojKUSSORj8w",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2660,
+    "finished_at": "2026-09-07T10:55:20.485Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_problem_lineage_activation.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "864abb72d5ff4ca0a60f4a12ac29657a",
+            "seq": 43524,
+            "event_time": "2026-09-07T10:55:03.842Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "49b88bdf9b753820d624e4ec59313fe1ea2cf4c4434ebc8f07847e414d76d52e",
+              "6347bd62d6719c8fd7a6935bf0d92592508f5edadb85fcd0e052945c7addfec6",
+              "643f151d9fa9af603c9df3c351bdb9e18fae683bf459e9fa0210334e98d43372",
+              "7a8a562061135e5cc7a2049b230c99e92fcbbbca7dc5958b58942357d7d63078",
+              "9a61df4b2b21c37d4a71783c800eeaf7843c9d7f30308afc4410fbbc12d0f203"
+            ],
+            "file_count": 5,
+            "additions": 133,
+            "removals": 11,
+            "line_changes": 144,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 23,
+        "head_hash": "122e27eec2059d20f212c89f57dd57177fcd48a9ab580aca22e39d95ebe8daf2"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c98a0d6cd8c641c98d12a0df471c68a0\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c98a0d6cd8c641c98d12a0df471c68a0\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "c98a0d6cd8c641c98d12a0df471c68a0",
+      "wave_id": "b5e1596beb9848ee8c75bd1915665d47",
+      "checkpoint_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "903ddaeba806d5b85268ecb55059fdd54046d297acb16a34c2229d4eb20d7d12",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Apply deterministic Python PRL activation/restart-ticket source and focused Python tests. Preserve unrelated dirty work. No candidate model, no runtime restart, no ledger migration.",
+        "objective_revision": 1,
+        "objective_sha256": "6c14fbd44d9814e347fa3cd95efe950710e534d439e47a0b2b99f8186a83daa6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Do not accept yet: the focused pytest command passed, but EOCL did not register it as a canonical mutation-bearing proof for this exact RUN/WAVE. Replan to exact-adopt the current five intended files and run a supported verification command that produces a durable proof before acceptance.",
+      "event_seq": 43534
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "9ad161642ed79d884e248a1e3ea5e1cb2223312825dceaa30d7c418f9b9a82ff",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2660,
+      "summary": "exit 0 | 2.7s | 3 lines | tail: '9 passed, 5 subtests passed in 1.46s'",
+      "finished_at": "2026-09-07T10:55:20.485Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "GOm_tqxZeUlWOojKUSSORj8w"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "c98a0d6cd8c641c98d12a0df471c68a0",
+        "owner_wave": "b5e1596beb9848ee8c75bd1915665d47",
+        "size_bytes": 114,
+        "command_id": "GOm_tqxZeUlWOojKUSSORj8w",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:GOm_tqxZeUlWOojKUSSORj8w:stdout",
+            "total_stream_bytes": 114,
+            "total_retained_bytes": 114,
+            "head_retained_bytes": 114,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:GOm_tqxZeUlWOojKUSSORj8w:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py",
+      "operation": "update",
+      "updated_at": "2026-09-07T10:55:06.281Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py",
+      "operation": "update",
+      "updated_at": "2026-09-07T10:55:06.281Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+      "operation": "update",
+      "updated_at": "2026-09-07T10:55:06.281Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_problem_lineage_activation.py",
+      "operation": "update",
+      "updated_at": "2026-09-07T10:55:06.281Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+      "operation": "update",
+      "updated_at": "2026-09-07T10:55:06.281Z"
+    }
+  ],
+  "failure": "Present and acknowledge the pending operator completion report before starting or continuing a material agent workflow.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-07T10:55:00.148Z",
+  "updated_at": "2026-09-07T10:57:19.988Z",
+  "events": [
+    {
+      "time": "2026-09-07T10:55:00.148Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:00.800Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:01.840Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:03.063Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:03.072Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:04.589Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:05.679Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:05.687Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:05.998Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:06.001Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:06.183Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "2c957e0123e29a9bb3b1c7aa5f9ac23c7ec77a33bb129cea8ad1c037278b71f7"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:06.281Z",
+      "event": "files_modified",
+      "details": {
+        "count": 5
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:17.214Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:18.093Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+        "session_id": "GOm_tqxZeUlWOojKUSSORj8w"
+      }
+    },
+    {
+      "time": "2026-09-07T10:55:20.485Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:29.114Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:31.293Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "2c957e0123e29a9bb3b1c7aa5f9ac23c7ec77a33bb129cea8ad1c037278b71f7"
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:37.221Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:38.591Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_PROOF_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:56.565Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:57.904Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:57.904Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:56:58.038Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "9ad161642ed79d884e248a1e3ea5e1cb2223312825dceaa30d7c418f9b9a82ff"
+      }
+    },
+    {
+      "time": "2026-09-07T10:57:08.987Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T10:57:19.988Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    }
+  ]
+}

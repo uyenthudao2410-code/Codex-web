@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "cd6ed168e5784339bd1600649b8fbaea",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "JuRNMbEiWAhJhsAGi5U8aWcq",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 323,
+    "finished_at": "2026-09-07T11:14:56.993Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:14:56.296Z",
+  "updated_at": "2026-09-07T11:14:56.993Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:14:56.296Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:56.587Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 25 allow_acceptance_pending electron\\services\\recoveryBootstrap.js electron\\services\\recoveryHost.js",
+        "session_id": "JuRNMbEiWAhJhsAGi5U8aWcq"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:56.993Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 25 allow_acceptance_pending electron\\services\\recoveryBootstrap.js electron\\services\\recoveryHost.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

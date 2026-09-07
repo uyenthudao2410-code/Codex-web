@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "f357619710d244bf8e833bbd1be9bf25",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-07T11:02:16.718Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Command path could not be inspected safely.",
+  "next_step": "",
+  "created_at": "2026-09-07T11:02:16.713Z",
+  "updated_at": "2026-09-07T11:02:16.718Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:02:16.713Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:02:16.718Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 5 \"class ActivationEpochStore|activationEpochFile|current\\(|load\\(\" electron\\services\\activationEpoch.js electron\\paths.js electron\\services\\fullCleanActivation.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-07T11:02:16.718Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

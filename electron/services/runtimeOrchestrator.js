@@ -96,6 +96,7 @@ function validSupervisorRestartRequest(request, settings, now = Date.now()) {
     && request.server_instance_id.length > 0
     && typeof request.tool_contract_sha256 === 'string'
     && READY_COMMIT_DIGEST_PATTERN.test(request.tool_contract_sha256)
+    && (request.allow_acceptance_pending == null || typeof request.allow_acceptance_pending === 'boolean')
     && validSupervisorRestartReason(request.reason)
     && Number.isSafeInteger(requestedAt)
     && Number.isSafeInteger(notBefore)
@@ -1982,6 +1983,7 @@ class RuntimeOrchestrator {
           : { sourceCheckpoint }),
         expectedDiskRevision: expectedRevision,
         expiresAtUnixMs: Number(pending.request.expires_at_unix_ms || 0),
+        allowAcceptancePending: pending.request.allow_acceptance_pending === true,
         reason: pending.request.reason || 'task_control_restart_runtime',
         ...(maintenanceRefresh ? { maintenanceWorkspace } : {})
       });

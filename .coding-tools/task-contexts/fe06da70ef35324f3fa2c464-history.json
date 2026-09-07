@@ -1,0 +1,417 @@
+[
+  {
+    "version": 2,
+    "task_id": "f4d605ee9d034a82b7d6dda04fdc92c7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "xAwDbS-SzRGw3igWivLn4jEB",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 757,
+      "finished_at": "2026-09-07T10:57:03.998Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_restart_ticket_maintenance.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 1029,
+        "summary": "exit 0 | 1.0s | 3 lines | tail: '4 passed, 5 subtests passed in 0.07s'",
+        "finished_at": "2026-09-07T10:56:04.354Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "LP93BHJHHr9wjgeQEy6wZ5mC"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 114,
+          "command_id": "LP93BHJHHr9wjgeQEy6wZ5mC",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:LP93BHJHHr9wjgeQEy6wZ5mC:stdout",
+              "total_stream_bytes": 114,
+              "total_retained_bytes": 114,
+              "head_retained_bytes": 114,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:LP93BHJHHr9wjgeQEy6wZ5mC:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:55:09.885Z",
+    "updated_at": "2026-09-07T10:57:03.998Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:55:09.885Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T10:55:10.118Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py tests/runtime-lifecycle.test.js tests/full-clean-activation.test.js",
+          "session_id": "4Qv_nvAkfDEZzq_dVKctkYfl"
+        }
+      },
+      {
+        "time": "2026-09-07T10:55:10.382Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py tests/runtime-lifecycle.test.js tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:55:53.443Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "session_id": "Dkqiim-im8ijCd0HlEXjBP8u"
+        }
+      },
+      {
+        "time": "2026-09-07T10:55:53.700Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:56:03.378Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_restart_ticket_maintenance.py -q",
+          "session_id": "LP93BHJHHr9wjgeQEy6wZ5mC"
+        }
+      },
+      {
+        "time": "2026-09-07T10:56:04.354Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_restart_ticket_maintenance.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:56:21.317Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "ORCHESTRATION_STATE_UNCERTAIN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:03.363Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "xAwDbS-SzRGw3igWivLn4jEB"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:03.998Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:57:12.727Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d26141a25b994d22b9c4a413b274c19f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "QkM7ZK1D12flao-EqTCpKXKb",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 261,
+      "finished_at": "2026-09-07T11:01:29.359Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:57:12.729Z",
+    "updated_at": "2026-09-07T11:01:29.359Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:57:12.729Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:12.982Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\" --repair-owned-codex-sidecar",
+          "session_id": "H6zpiqq58oREIOEt4l4F47Z9"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:14.193Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\" --repair-owned-codex-sidecar",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:29.099Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"activationEpochFile|ActivationEpochStore|dataRoot\" electron scripts | Select-Object -First 80",
+          "session_id": "QkM7ZK1D12flao-EqTCpKXKb"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:29.359Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"activationEpochFile|ActivationEpochStore|dataRoot\" electron scripts | Select-Object -First 80",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T11:01:36.224Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d50b40ee431849cfa3f90c029b55f9f5",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T11:01:58.307Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-07T11:01:36.233Z",
+    "updated_at": "2026-09-07T11:01:58.307Z",
+    "events": [
+      {
+        "time": "2026-09-07T11:01:36.233Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:36.673Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -m 80 \"activationEpochFile|ActivationEpochStore|dataRoot\" electron scripts",
+          "session_id": "QLkonbET-uucbTkZgoAAaQL2"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:37.040Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -m 80 \"activationEpochFile|ActivationEpochStore|dataRoot\" electron scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:46.521Z",
+        "event": "command_started",
+        "details": {
+          "command": "type \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "session_id": "bDUoF0CKAFC_KnzhrJHDvHa_"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:46.795Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:58.307Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),p=require('path').join(process.env.APPDATA,'web-mcp-assistant','activation-epoch.json'),x=JSON.parse(fs.readFileSync(p,'utf8')),out=[]; const walk=v=>{if(!v||typeof v!=='object')return;if(v.operation_id==='restart-2dBhFai7vrWmvCMM'||v.activation_epoch_id==='activation-mtr4q91w-2af967393593e033868a6d12d6dcdb2b')out.push(v);for(const y of Object.values(v))walk(y)};walk(x);console.log(JSON.stringify(out.slice(0,6),null,2));\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:01:58.307Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T11:02:07.874Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "209d8bbf08604735b8d0d31b1fa0e324",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T11:02:31.460Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T11:02:07.876Z",
+    "updated_at": "2026-09-07T11:02:31.460Z",
+    "events": [
+      {
+        "time": "2026-09-07T11:02:07.876Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:08.144Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"restart-2dBhFai7vrWmvCMM|activation-mtr4q91w-2af967393593e033868a6d12d6dcdb2b\" \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "session_id": "DJRSwOUN25zRrepr6c4acg_e"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:08.425Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"restart-2dBhFai7vrWmvCMM|activation-mtr4q91w-2af967393593e033868a6d12d6dcdb2b\" \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:22.614Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 180 \"activation-mtr4mef1-f3eb034cea33db36c3152d145c880454\" \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "session_id": "jU367MG4kgJSmoml8vP--Bh8"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:22.868Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 180 \"activation-mtr4mef1-f3eb034cea33db36c3152d145c880454\" \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:31.460Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -B 5 \"2026-09-07T10:57:37.207Z\" \"%APPDATA%\\web-mcp-assistant\\activation-epoch.json\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T11:02:31.460Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T11:02:38.857Z",
+    "archive_reason": "finished"
+  }
+]

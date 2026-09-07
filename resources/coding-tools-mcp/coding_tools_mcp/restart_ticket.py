@@ -17,6 +17,7 @@ SUPERVISOR_RESTART_REASON_MAX_CHARS = 1_024
 EXACT_STALE_RUN_REASON_PREFIX = "exact_stale_runs:"
 EXACT_STALE_RUN_ID = re.compile(r"^[a-f0-9]{32}$")
 EXACT_STALE_RUN_MAX_IDS = 16
+PROBLEM_LINEAGE_SCHEMA_V12_REASON = "problem_lineage_schema_v12"
 
 
 def is_exact_stale_run_maintenance_reason(value: Any) -> bool:
@@ -33,12 +34,24 @@ def is_exact_stale_run_maintenance_reason(value: Any) -> bool:
     )
 
 
+def is_problem_lineage_schema_v12_maintenance_reason(value: Any) -> bool:
+    return isinstance(value, str) and value == PROBLEM_LINEAGE_SCHEMA_V12_REASON
+
+
+def is_workspace_maintenance_reason(value: Any) -> bool:
+    return is_exact_stale_run_maintenance_reason(value) or is_problem_lineage_schema_v12_maintenance_reason(value)
+
+
 def _restart_reason_valid(value: Any) -> bool:
     if value is None:
         return True
     if not isinstance(value, str) or len(value) > SUPERVISOR_RESTART_REASON_MAX_CHARS:
         return False
-    return not value.startswith(EXACT_STALE_RUN_REASON_PREFIX) or is_exact_stale_run_maintenance_reason(value)
+    if value.startswith(EXACT_STALE_RUN_REASON_PREFIX):
+        return is_exact_stale_run_maintenance_reason(value)
+    if value.startswith(PROBLEM_LINEAGE_SCHEMA_V12_REASON):
+        return is_problem_lineage_schema_v12_maintenance_reason(value)
+    return True
 
 
 def build_supervisor_restart_ticket(
@@ -50,12 +63,16 @@ def build_supervisor_restart_ticket(
     server_instance_id: str,
     tool_contract_sha256: str,
     reason: str,
+    allow_acceptance_pending: bool = False,
     target_workspace: str | None = None,
 ) -> dict[str, Any]:
     normalized_reason = str(reason or "")
     if normalized_reason.startswith(EXACT_STALE_RUN_REASON_PREFIX):
         if not is_exact_stale_run_maintenance_reason(normalized_reason):
             raise ValueError("exact stale-run maintenance reason is malformed or exceeds the bounded batch size")
+    elif normalized_reason.startswith(PROBLEM_LINEAGE_SCHEMA_V12_REASON):
+        if not is_problem_lineage_schema_v12_maintenance_reason(normalized_reason):
+            raise ValueError("problem-lineage schema-v12 maintenance reason is malformed")
     else:
         normalized_reason = normalized_reason[:SUPERVISOR_RESTART_REASON_MAX_CHARS]
     ticket = {
@@ -74,11 +91,12 @@ def build_supervisor_restart_ticket(
         "server_instance_id": server_instance_id,
         "tool_contract_sha256": tool_contract_sha256,
         "reason": normalized_reason,
+        "allow_acceptance_pending": allow_acceptance_pending is True,
     }
-    if normalized_reason.startswith(EXACT_STALE_RUN_REASON_PREFIX):
+    if is_workspace_maintenance_reason(normalized_reason):
         normalized_target = str(target_workspace or workspace).strip()
         if not normalized_target:
-            raise ValueError("exact stale-run maintenance target workspace is required")
+            raise ValueError("workspace maintenance target workspace is required")
         ticket["target_workspace"] = normalized_target
     return ticket
 
@@ -92,6 +110,7 @@ def supervisor_restart_ticket_matches(
     server_instance_id: str,
     tool_contract_sha256: str,
     fence_operation_id: str,
+    allow_acceptance_pending: bool = False,
     target_workspace: str | None = None,
 ) -> bool:
     if not isinstance(value, dict) or type(value.get("version")) is not int:
@@ -103,10 +122,11 @@ def supervisor_restart_ticket_matches(
     if not all(type(item) is int for item in (requested_at, not_before, expires_at)):
         return False
     reason = value.get("reason")
+    expected_allow_acceptance_pending = allow_acceptance_pending is True
     maintenance_target = str(value.get("target_workspace") or value.get("workspace") or "")
     expected_target = str(target_workspace or workspace)
     target_matches = (
-        not is_exact_stale_run_maintenance_reason(reason)
+        not is_workspace_maintenance_reason(reason)
         or maintenance_target.casefold() == expected_target.casefold()
     )
     return bool(
@@ -123,6 +143,8 @@ def supervisor_restart_ticket_matches(
         and value.get("process_instance_id") == process_instance_id
         and value.get("server_instance_id") == server_instance_id
         and value.get("tool_contract_sha256") == tool_contract_sha256
+        and type(value.get("allow_acceptance_pending", False)) is bool
+        and value.get("allow_acceptance_pending", False) is expected_allow_acceptance_pending
         and _restart_reason_valid(reason)
         and target_matches
         and fence_operation_id == ticket_id

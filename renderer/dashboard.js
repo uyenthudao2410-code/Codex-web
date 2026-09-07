@@ -1726,6 +1726,76 @@
     };
   }
 
+  function sumTurnEstimates(list) {
+    // Client-side cumulative total over loaded turns. Estimates stay
+    // estimates: exact rows contribute their point to both range bounds.
+    let count = 0, exact = 0, point = 0, lower = 0, upper = 0;
+    for (const row of Array.isArray(list) ? list : []) {
+      const turnPoint = observedNumber(row?.point);
+      if (turnPoint === null) continue;
+      const kind = String(row?.kind || '');
+      count += 1;
+      if (kind === 'exact') exact += 1;
+      point += turnPoint;
+      const turnLower = observedNumber(row?.lower);
+      const turnUpper = observedNumber(row?.upper);
+      if (kind === 'structural_estimate' && turnLower !== null && turnUpper !== null) {
+        lower += turnLower;
+        upper += turnUpper;
+      } else {
+        lower += turnPoint;
+        upper += turnPoint;
+      }
+    }
+    return count > 0 ? { count, exact, point, lower, upper } : null;
+  }
+
+  function formatCumulativeTotal(scope, count, exact, point, lower, upper) {
+    const ranged = lower !== null && upper !== null;
+    const amount = exact === count
+      ? `Exact ${compact(point)}`
+      : (ranged ? `ước lượng ≈${compact(point)} (${compact(lower)}–${compact(upper)})` : `ước lượng ≈${compact(point)}`);
+    return `Tổng ${scope} · ${count} lượt · ${amount}`;
+  }
+
+  // Cumulative hero total shared by the analytics and live-pulse paths.
+  // Backend session_total first, otherwise the sum of loaded turns.
+  let cachedTurnTotal = null;
+  function resolveTurnTotal(operations, state) {
+    const section = operations?.turn_token_measurements;
+    const session = section?.session_total && typeof section.session_total === 'object'
+      ? section.session_total
+      : null;
+    const sessionPoint = session ? observedNumber(session.point) : null;
+    if (sessionPoint !== null && state && state.turnsTotal > 0) {
+      return {
+        point: sessionPoint,
+        lower: observedNumber(session.lower),
+        upper: observedNumber(session.upper),
+        exact: state.exactTurns === state.turnsTotal,
+        scope: 'phiên',
+        count: state.turnsTotal
+      };
+    }
+    const loaded = sumTurnEstimates(section?.recent_turns);
+    if (loaded) {
+      return {
+        point: loaded.point,
+        lower: loaded.lower,
+        upper: loaded.upper,
+        exact: loaded.exact === loaded.count,
+        scope: `${loaded.count} lượt gần nhất`,
+        count: loaded.count
+      };
+    }
+    return null;
+  }
+
+  function formatTurnTotalValue(total) {
+    if (!total) return '—';
+    return total.exact ? compact(total.point) : `≈${compact(total.point)}`;
+  }
+
   function renderTurnTokens(operations) {
     const state = turnTokenState(operations);
     if (!state || state.turnsTotal < 1) {
@@ -1796,9 +1866,29 @@
     const container = byId('daTurnLog');
     if (!container) return;
     const section = operations?.turn_token_measurements;
-    const rows = turnTokenState(operations) && Array.isArray(section.recent_turns)
-      ? section.recent_turns.slice(0, 20)
-      : null;
+    const state = turnTokenState(operations);
+    const allTurns = state && Array.isArray(section.recent_turns) ? section.recent_turns : null;
+    const rows = allTurns ? allTurns.slice(0, 20) : null;
+    // Pinned cumulative total above the per-turn rows: backend session_total
+    // first, otherwise the sum of loaded turns. Estimates stay labeled.
+    if (state && allTurns) {
+      const sessionTotal = section.session_total && typeof section.session_total === 'object'
+        ? section.session_total
+        : {};
+      const sessionPoint = observedNumber(sessionTotal.point);
+      if (sessionPoint !== null) {
+        setText('daTurnTotal', formatCumulativeTotal(
+          'phiên', state.turnsTotal, state.exactTurns, sessionPoint,
+          observedNumber(sessionTotal.lower), observedNumber(sessionTotal.upper)));
+      } else {
+        const loaded = sumTurnEstimates(allTurns);
+        setText('daTurnTotal', loaded
+          ? formatCumulativeTotal('các lượt gần nhất', loaded.count, loaded.exact, loaded.point, loaded.lower, loaded.upper)
+          : 'Chưa có lượt nào để cộng dồn');
+      }
+    } else {
+      setText('daTurnTotal', 'Tổng số chưa có số liệu');
+    }
     container.replaceChildren();
     if (!rows) {
       const empty = document.createElement('div');
@@ -1876,7 +1966,8 @@
       const lower = observedNumber(latest.lower);
       const upper = observedNumber(latest.upper);
       const range = lower !== null && upper !== null ? ` (${compact(lower)}–${compact(upper)})` : '';
-      setText('daChatTurnValue', `≈${compact(point)}`);
+      // Hero value stays the cumulative total; without one yet, show this turn.
+      setText('daChatTurnValue', cachedTurnTotal ? formatTurnTotalValue(cachedTurnTotal) : `≈${compact(point)}`);
       setText('daChatTurnDelta', `Lượt mới nhất${range} · live pulse · freshness chưa xác nhận`);
       setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · live pulse · timestamp chưa được transport expose');
     }
@@ -1886,13 +1977,16 @@
   function renderChatTurnCard(operations) {
     const state = turnTokenState(operations);
     if (!state || state.turnsTotal < 1) {
+      cachedTurnTotal = null;
       setText('daChatTurnValue', '—');
       setText('daChatTurnDelta', 'Chưa đo lượt chat nào');
       setText('daChatTurnMeta', 'ChatWeb structural measurement · chờ turn FINAL đầu tiên');
       return;
     }
+    // Hero value is always the cumulative total, never just the latest turn.
+    cachedTurnTotal = resolveTurnTotal(operations, state);
+    setText('daChatTurnValue', formatTurnTotalValue(cachedTurnTotal));
     if (state.latestKind === 'exact' && state.latestPoint !== null) {
-      setText('daChatTurnValue', compact(state.latestPoint));
       setText('daChatTurnDelta', `Exact · lượt mới nhất · ${state.turnsTotal} lượt`);
       setText('daChatTurnMeta', 'EXACT receipt · provider/ChatGPT báo · không ước lượng');
       return;
@@ -1901,19 +1995,31 @@
       const range = state.latestLower !== null && state.latestUpper !== null
         ? ` (${compact(state.latestLower)}–${compact(state.latestUpper)})`
         : '';
-      const session = state.sessionPoint !== null && state.turnsTotal > 1
+      let session = state.sessionPoint !== null && state.turnsTotal > 1
         ? ` · phiên ≈${compact(state.sessionPoint)}`
         : '';
-      setText('daChatTurnValue', `≈${compact(state.latestPoint)}`);
+      if (!session) {
+        const loaded = sumTurnEstimates(operations?.turn_token_measurements?.recent_turns);
+        if (loaded && loaded.count > 1) {
+          session = ` · tổng ${loaded.count} lượt gần nhất ≈${compact(loaded.point)} (${compact(loaded.lower)}–${compact(loaded.upper)})`;
+        }
+      }
       setText('daChatTurnDelta', `Lượt mới nhất${range} · ${state.turnsTotal} lượt${session}`);
       setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · confidence none · exact chưa expose · không phải billing');
       return;
     }
     if (state.sessionPoint !== null) {
-      setText('daChatTurnValue', `≈${compact(state.sessionPoint)}`);
       setText('daChatTurnDelta', `Phiên · lượt mới nhất chưa đo · ${state.turnsTotal} lượt`);
       setText('daChatTurnMeta', 'STRUCTURAL ESTIMATE · session total các lượt đã đo');
       return;
+    }
+    {
+      const loaded = sumTurnEstimates(operations?.turn_token_measurements?.recent_turns);
+      if (loaded && loaded.count > 0) {
+        setText('daChatTurnDelta', `${formatCumulativeTotal('các lượt gần nhất', loaded.count, loaded.exact, loaded.point, loaded.lower, loaded.upper)} · lượt mới nhất chưa đo`);
+        setText('daChatTurnMeta', 'Cộng dồn các lượt đã tải · ước lượng giữ nhãn · không phải billing');
+        return;
+      }
     }
     setText('daChatTurnValue', '—');
     setText('daChatTurnDelta', 'Lượt mới nhất chưa đo');

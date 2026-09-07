@@ -2144,13 +2144,68 @@ class ToolModeTests(unittest.TestCase):
                     "test_command": f'"{sys.executable}" -m pytest',
                 })
                 readiness = result["completion_readiness"]
-                self.assertEqual(readiness["schema_version"], 1)
+                self.assertEqual(readiness["schema_version"], 2)
                 self.assertEqual(readiness["status"], "READY_FOR_EXECUTION")
                 self.assertEqual(readiness["verification"]["steps"][0]["status"], "AVAILABLE")
                 self.assertEqual(len(readiness["verification"]["steps"][0]["command_sha256"]), 64)
                 self.assertNotIn("command", readiness["verification"]["steps"][0])
+                self.assertFalse(readiness["verification"]["steps"][0]["module_checked"])
+                self.assertEqual(
+                    readiness["verification"]["steps"][0]["execution_environment"]["status"],
+                    "PREFLIGHT_REQUIRED",
+                )
+                self.assertTrue(readiness["verification"]["execution_environment_preflight_required"])
                 self.assertEqual(readiness["scope"]["understood_paths"], ["app.py"])
                 self.assertTrue(readiness["acceptance"]["business_outcome_not_inferred_from_build"])
+            finally:
+                runtime.close()
+
+    def test_completion_readiness_does_not_use_mcp_import_path_for_declared_workdir_module(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            module_name = "declared_environment_only"
+            (root / f"{module_name}.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "declared workdir module readiness",
+                    "paths": [f"{module_name}.py"],
+                    "verification": "tests",
+                    "test_command": f'"{sys.executable}" -m {module_name}',
+                })
+                step = result["completion_readiness"]["verification"]["steps"][0]
+                self.assertEqual(result["completion_readiness"]["status"], "READY_FOR_EXECUTION")
+                self.assertEqual(step["status"], "AVAILABLE")
+                self.assertFalse(step["module_checked"])
+                self.assertEqual(
+                    step["execution_environment"]["reason_code"],
+                    "MODULE_AVAILABILITY_REQUIRES_DECLARED_EXECUTION_ENV",
+                )
+            finally:
+                runtime.close()
+
+    def test_completion_readiness_does_not_claim_mcp_module_availability_for_declared_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            declared_interpreter = root / "project-python.exe"
+            declared_interpreter.write_text("not an executable interpreter\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "declared interpreter module readiness",
+                    "paths": [],
+                    "verification": "tests",
+                    "test_command": f'"{declared_interpreter}" -m unittest',
+                })
+                step = result["completion_readiness"]["verification"]["steps"][0]
+                self.assertEqual(step["status"], "AVAILABLE")
+                self.assertFalse(step["module_checked"])
+                self.assertEqual(step["execution_environment"]["status"], "PREFLIGHT_REQUIRED")
+                self.assertIn("declared working directory", step["execution_environment"]["next_action"])
             finally:
                 runtime.close()
 

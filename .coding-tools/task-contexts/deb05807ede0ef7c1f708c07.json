@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "17197f05c7754dea9f317d69c3f0ee67",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "IDUD_R969wO1Ev07fgjb8oUQ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 234,
+    "finished_at": "2026-09-07T11:04:22.435Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:04:21.913Z",
+  "updated_at": "2026-09-07T11:04:22.435Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:04:21.919Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:04:22.154Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c set APPDATA",
+        "session_id": "IDUD_R969wO1Ev07fgjb8oUQ"
+      }
+    },
+    {
+      "time": "2026-09-07T11:04:22.435Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c set APPDATA",
+        "status": "passed"
+      }
+    }
+  ]
+}

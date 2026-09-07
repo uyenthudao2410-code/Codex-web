@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "273467f7d25049ef82f262c4166668df",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "xRJVt-hKYy28wwLYn5xd-93W",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 288,
+    "finished_at": "2026-09-07T10:44:01.269Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T10:44:00.706Z",
+  "updated_at": "2026-09-07T10:44:01.269Z",
+  "events": [
+    {
+      "time": "2026-09-07T10:44:00.706Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T10:44:00.977Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 40 \"function status\\|case 'status'\\|action === 'status'\\|--json\" -- scripts/dev-ui-lifecycle.js",
+        "session_id": "xRJVt-hKYy28wwLYn5xd-93W"
+      }
+    },
+    {
+      "time": "2026-09-07T10:44:01.269Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 40 \"function status\\|case 'status'\\|action === 'status'\\|--json\" -- scripts/dev-ui-lifecycle.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

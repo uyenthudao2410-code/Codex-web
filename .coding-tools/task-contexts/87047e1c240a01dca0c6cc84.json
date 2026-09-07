@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "60d71bfb934d49beb7a056efd0f66a73",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "PftIj-PZKA0KtAoc3ReX3x7P",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 586,
+    "finished_at": "2026-09-07T10:43:42.361Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T10:43:41.430Z",
+  "updated_at": "2026-09-07T10:43:42.361Z",
+  "events": [
+    {
+      "time": "2026-09-07T10:43:41.430Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T10:43:42.023Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"dev:status\\|runtime:status\\|recovery.*status\" -- package.json scripts electron",
+        "session_id": "PftIj-PZKA0KtAoc3ReX3x7P"
+      }
+    },
+    {
+      "time": "2026-09-07T10:43:42.361Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"dev:status\\|runtime:status\\|recovery.*status\" -- package.json scripts electron",
+        "status": "passed"
+      }
+    }
+  ]
+}

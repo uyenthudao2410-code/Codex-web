@@ -8,7 +8,6 @@ proof, acceptance, or an independently confirmed product outcome.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import shlex
 import shutil
 from pathlib import Path
@@ -90,27 +89,43 @@ def _command_readiness(command: str, *, root: Path, kind: str) -> dict[str, Any]
             "command_sha256": command_hash,
             "reason_code": "VERIFICATION_TOOL_UNAVAILABLE",
         }
-    module_status = None
-    if len(argv) >= 3 and argv[1] == "-m":
-        module = argv[2]
-        try:
-            module_status = importlib.util.find_spec(module) is not None
-        except (ImportError, ModuleNotFoundError, ValueError):
-            module_status = False
-        if not module_status:
-            return {
-                "kind": kind,
-                "status": "UNAVAILABLE",
-                "command_sha256": command_hash,
-                "reason_code": "VERIFICATION_MODULE_UNAVAILABLE",
-            }
-    return {
+    module_requested = len(argv) >= 2 and argv[1] == "-m"
+    if module_requested and len(argv) < 3:
+        return {
+            "kind": kind,
+            "status": "UNAVAILABLE",
+            "command_sha256": command_hash,
+            "reason_code": "VERIFICATION_MODULE_TARGET_MISSING",
+        }
+    readiness: dict[str, Any] = {
         "kind": kind,
         "status": "AVAILABLE",
         "command_sha256": command_hash,
         "reason_code": None,
-        "module_checked": module_status is not None,
+        # Retain the established field for non-module commands; a true value
+        # is no longer emitted because this process cannot verify the later
+        # command environment.
+        "module_checked": False,
     }
+    if module_requested:
+        # The command runs later through ExecTools with its declared shell,
+        # workdir and filtered environment.  Checking this process's import
+        # path here would answer a different question and can both reject a
+        # valid project interpreter and accept an invalid one.  Readiness is
+        # intentionally non-executing, so retain the static executable check
+        # above and make the remaining environment proof explicit.
+        readiness.update({
+            "module_checked": False,
+            "execution_environment": {
+                "status": "PREFLIGHT_REQUIRED",
+                "reason_code": "MODULE_AVAILABILITY_REQUIRES_DECLARED_EXECUTION_ENV",
+                "next_action": (
+                    "Run the declared verification command in its declared working directory "
+                    "and use that result as the execution-environment proof."
+                ),
+            },
+        })
+    return readiness
 
 
 def completion_readiness(
@@ -147,7 +162,7 @@ def completion_readiness(
     if not artifact_paths:
         artifact_paths = [str(item) for item in project.get("artifact_paths", []) if str(item).strip()]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "BLOCKED" if blockers else "READY_FOR_EXECUTION",
         "blocking_reason_codes": list(dict.fromkeys(blockers)),
         "project": {
@@ -160,6 +175,10 @@ def completion_readiness(
             "steps": steps,
             "commands_are_hashed": True,
             "commands_are_not_execution_proof": True,
+            "execution_environment_preflight_required": any(
+                step.get("execution_environment", {}).get("status") == "PREFLIGHT_REQUIRED"
+                for step in steps
+            ),
         },
         "artifacts": {
             "required_after_build": required_build,

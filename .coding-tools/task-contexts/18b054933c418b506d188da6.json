@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "8f6a3579063d42bb889e29bbe992928a",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-07T11:12:08.772Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Command path could not be inspected safely.",
+  "next_step": "",
+  "created_at": "2026-09-07T11:12:08.767Z",
+  "updated_at": "2026-09-07T11:12:08.772Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:12:08.767Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:12:08.772Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 \"CONTROLLER_LEASE_REQUIRED|controller_lease|reattach_id|same-role|same_role|continuity_action.*reattach|def .*reattach\" resources\\coding-tools-mcp\\coding_tools_mcp",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-07T11:12:08.772Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "INVALID_ARGUMENT"
+      }
+    }
+  ]
+}

@@ -408,3 +408,58 @@ test('tool-call turns render estimated bands and never zero-fill missing windows
   d.renderToolCallTokens({ tool_call_token_measurements: { ...section, tool_calls: 0 } });
   assert.equal(d.element('daToolCallTokenStatus').textContent, 'Chưa đo lượt nào');
 });
+
+test('turn log pins a cumulative total preferring backend session totals', () => {
+  const d = dashboard();
+  const total = d.element('daTurnTotal');
+  const log = d.element('daTurnLog');
+  const base = {
+    measurement: 'chat_turn_measurements_v1', missing_measurement_policy: 'unknown_not_zero', content_free: true,
+    turns_total: 3, turns_exact: 1,
+    session_total: { point: 1000, lower: 800, upper: 1500 },
+    recent_turns: [
+      { kind: 'structural_estimate', point: 610, lower: 407, upper: 1200, wall_time_ms: Date.now() },
+      { kind: 'exact', point: 200, wall_time_ms: Date.now() },
+      { kind: 'structural_estimate', point: 100, lower: 50, upper: 300, wall_time_ms: Date.now() }
+    ]
+  };
+  d.renderTurnLog({ turn_token_measurements: base });
+  assert.match(total.textContent, /Tổng phiên/);
+  assert.match(total.textContent, /3 lượt/);
+  assert.match(total.textContent, /ước lượng/);
+  assert.match(total.textContent, /1\.0K/);
+  assert.match(total.textContent, /800–1\.5K/);
+  assert.equal(log.children.length, 3);
+  const noSession = { ...base, session_total: null };
+  d.renderTurnLog({ turn_token_measurements: noSession });
+  assert.match(total.textContent, /lượt gần nhất/);
+  assert.match(total.textContent, /910/);
+  assert.match(total.textContent, /657–1\.7K/);
+  assert.equal(log.children.length, 3);
+  const unmeasured = { ...base, session_total: null, recent_turns: [{ kind: 'unknown', wall_time_ms: Date.now() }] };
+  d.renderTurnLog({ turn_token_measurements: unmeasured });
+  assert.match(total.textContent, /Chưa có lượt nào để cộng dồn/);
+});
+
+test('chat turn card falls back to loaded-turn totals when the session total is missing', () => {
+  const d = dashboard();
+  for (const id of ['daChatTurnValue', 'daChatTurnDelta', 'daChatTurnMeta']) d.element(id);
+  const section = {
+    measurement: 'chat_turn_measurements_v1', missing_measurement_policy: 'unknown_not_zero', content_free: true,
+    turns_total: 2, turns_exact: 0,
+    latest_turn: { kind: 'structural_estimate', point: 610, lower: 407, upper: 1200 },
+    recent_turns: [
+      { kind: 'structural_estimate', point: 610, lower: 407, upper: 1200 },
+      { kind: 'structural_estimate', point: 300, lower: 250, upper: 500 }
+    ]
+  };
+  d.renderChatTurnCard({ turn_token_measurements: section });
+  assert.equal(d.element('daChatTurnValue').textContent, '≈910');
+  assert.match(d.element('daChatTurnDelta').textContent, /tổng 2 lượt gần nhất/);
+  assert.match(d.element('daChatTurnDelta').textContent, /910/);
+  assert.match(d.element('daChatTurnDelta').textContent, /Lượt mới nhất \(407–1\.2K\)/);
+  const unknownLatest = { ...section, latest_turn: { kind: 'unknown' } };
+  d.renderChatTurnCard({ turn_token_measurements: unknownLatest });
+  assert.match(d.element('daChatTurnDelta').textContent, /Tổng các lượt gần nhất/);
+  assert.match(d.element('daChatTurnDelta').textContent, /lượt mới nhất chưa đo/);
+});

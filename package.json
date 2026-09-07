@@ -45,7 +45,7 @@
     "canary:opencode-flash:preflight": "electron scripts/execution-hub-provider-canary.js --preflight",
     "canary:opencode-flash": "electron scripts/execution-hub-provider-canary.js",
     "audit:prod": "npm audit --omit=dev",
-    "dist": "npm run icon:build && npm test && node scripts/clean-dist.js && electron-builder --win nsis",
+    "dist": "npm run icon:build && npm run test:all && node scripts/clean-dist.js && electron-builder --win nsis",
     "dist:dir": "npm run icon:build && node scripts/clean-dist.js && electron-builder --dir"
   },
   "dependencies": {

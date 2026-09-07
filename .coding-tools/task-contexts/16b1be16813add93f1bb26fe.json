@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "b4269a2ccdb34ed29d9efd6a7b53d8dd",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "FO4nw8WdQUr_X1pmE_IMN2Wb",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": 2838,
+    "finished_at": "2026-09-07T11:05:35.079Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:05:31.903Z",
+  "updated_at": "2026-09-07T11:05:35.079Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:05:31.903Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:05:32.152Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py --workspace \"E:\\DEV\\Codex-web\" --run-id 73e2b11c37284f31864f73b497da1781",
+        "session_id": "FO4nw8WdQUr_X1pmE_IMN2Wb"
+      }
+    },
+    {
+      "time": "2026-09-07T11:05:35.079Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py --workspace \"E:\\DEV\\Codex-web\" --run-id 73e2b11c37284f31864f73b497da1781",
+        "status": "failed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "version": 2,
+  "task_id": "5871ab12120a469ea9eacfbe57f3a328",
+  "orchestration": {
+    "run_id": "bc9522f8f15647a08a042088b18f893a",
+    "wave_id": "08880811e11d4c19a97d6b1ef43fb2c2",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+    "worktree_fp": "67f22fcaa9749214438bf3e5d80314fcd9b86a49448d1cc31d275068492d3b88",
+    "contract_fp": ""
+  },
+  "objective": "Diagnose the exact current EOCL/controller-authority state blocking final acceptance of existing RUN 2fb97c02bc6b4125b7148785335c57d9 and identify the smallest runtime-supported recovery path that preserves existing proof and source. Do not mutate files. Focus on controller continuity, lease expiry/reattach, acceptance owner, existing proof fingerprint, and whether the runtime currently exposes a legal accept/reattach path. Also inspect the implementation/tests governing non-Goal technical RUN continuity only as needed to propose the smallest causal fix if no public recovery exists.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:28:42.197Z",
+  "updated_at": "2026-09-07T11:28:53.783Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:28:42.197Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose the exact current EOCL/controller-authority state blocking final acceptance of existing RUN 2fb97c02bc6b4125b7148785335c57d9 and identify the smallest runtime-supported recovery path that preserves existing proof and source. Do not mutate files. Focus on controller continuity, lease expiry/reattach, acceptance owner, existing proof fingerprint, and whether the runtime currently exposes a legal accept/reattach path. Also inspect the implementation/tests governing non-Goal technical RUN continuity only as needed to propose the smallest causal fix if no public recovery exists."
+      }
+    },
+    {
+      "time": "2026-09-07T11:28:43.260Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T11:28:44.885Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T11:28:44.894Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-07T11:28:53.783Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

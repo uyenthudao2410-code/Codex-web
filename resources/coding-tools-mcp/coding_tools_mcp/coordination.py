@@ -39,7 +39,7 @@ from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
     SUPERVISOR_RESTART_TICKET_TTL_MS,
     build_supervisor_restart_ticket,
-    is_exact_stale_run_maintenance_reason,
+    is_workspace_maintenance_reason,
     observe_installed_restart_ticket,
     supervisor_restart_response,
     supervisor_restart_ticket_matches,
@@ -833,9 +833,10 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 retryable=False,
             )
         reason = str(args.get("reason") or "User requested runtime restart")
+        allow_acceptance_pending = args.get("allow_acceptance_pending") is True
         target_workspace = (
             str(self._current_request_workspace_root())
-            if is_exact_stale_run_maintenance_reason(reason)
+            if is_workspace_maintenance_reason(reason)
             else str(self.workspace.root)
         )
         with self.sessions_lock:
@@ -880,6 +881,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     server_instance_id=self.server_instance_id,
                     tool_contract_sha256=str(self.tool_contract["sha256"]),
                     fence_operation_id=fence_operation_id,
+                    allow_acceptance_pending=allow_acceptance_pending,
                     target_workspace=target_workspace,
                 ):
                     return supervisor_restart_response(existing, already_pending=True)
@@ -901,6 +903,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 server_instance_id=self.server_instance_id,
                 tool_contract_sha256=str(self.tool_contract["sha256"]),
                 reason=reason,
+                allow_acceptance_pending=allow_acceptance_pending,
                 target_workspace=target_workspace,
             )
             serialized_ticket = json.dumps(ticket, ensure_ascii=False, sort_keys=True)
@@ -908,7 +911,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             preflight = self.activation_preflight(
                 operation_id=ticket_id,
                 expires_at_unix_ms=now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
-                allow_acceptance_pending=args.get("allow_acceptance_pending") is True,
+                allow_acceptance_pending=allow_acceptance_pending,
                 prepare=True,
                 ignore_active_tool_calls=1,
             )

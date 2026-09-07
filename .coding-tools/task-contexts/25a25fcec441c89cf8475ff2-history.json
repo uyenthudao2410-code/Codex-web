@@ -1,0 +1,1574 @@
+[
+  {
+    "version": 2,
+    "task_id": "2d8aba8cea2c43d489214ee4609587b7",
+    "orchestration": {
+      "run_id": "4bf9a64a5ee1457c81278490b7b146cc",
+      "wave_id": "699c397f2fef4a0dbd22d96c8a0967cb",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose the exact supported migration path that upgrades an existing workspace orchestration ledger from schema 9 to the PRL-capable schema 12, without manual SQLite edits, data loss, fake backfill, or disturbing unrelated dirty work. Identify the smallest coherent source/runtime/data change needed so E:/DEV/HR STA/HR can open natural Problem Revisions and bind exact RUN/Wave/proof/outcome lineage.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "LlLR5PE1UP4qJun_17oIsVgF",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 470,
+      "finished_at": "2026-09-07T10:33:39.215Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:32:37.427Z",
+    "updated_at": "2026-09-07T10:33:39.215Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:32:37.427Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose the exact supported migration path that upgrades an existing workspace orchestration ledger from schema 9 to the PRL-capable schema 12, without manual SQLite edits, data loss, fake backfill, or disturbing unrelated dirty work. Identify the smallest coherent source/runtime/data change needed so E:/DEV/HR STA/HR can open natural Problem Revisions and bind exact RUN/Wave/proof/outcome lineage."
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:38.356Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:39.350Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:39.357Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:50.236Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:50.955Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:32:50.960Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:38.807Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"migrate_problem_lineage_schema|GOAL_PRL_SCHEMA_INACTIVE|problem_action|PROBLEM_SCHEMA_VERSION|action.?=.problem|problem_event\" coding_tools_mcp tests",
+          "session_id": "LlLR5PE1UP4qJun_17oIsVgF"
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:39.215Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"migrate_problem_lineage_schema|GOAL_PRL_SCHEMA_INACTIVE|problem_action|PROBLEM_SCHEMA_VERSION|action.?=.problem|problem_event\" coding_tools_mcp tests",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:33:49.568Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "0f16d3867e7f4d89bcad2e00131deedf",
+    "orchestration": {
+      "run_id": "adf58e1737544f73a11415e951165854",
+      "wave_id": "e91e674b372a4406b6b9307e3b1d52d7",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose and implement the missing official activation path for PRL schema v12 so E:/DEV/HR STA/HR can safely migrate from schema 9 through existing activation controls and then use natural Problem Revision lineage prospectively.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "lDdS6AIoqUHMcT5meIIMdjOY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 794,
+      "finished_at": "2026-09-07T10:34:01.208Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:33:49.570Z",
+    "updated_at": "2026-09-07T10:34:01.208Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:33:49.570Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:50.265Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:51.246Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:51.254Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:33:59.290Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"activate_problem_lineage_schema|preflight_problem_lineage_activation|problem_lineage_activation\" .",
+          "session_id": "lDdS6AIoqUHMcT5meIIMdjOY"
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:01.208Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"activate_problem_lineage_schema|preflight_problem_lineage_activation|problem_lineage_activation\" .",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:34:26.608Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "f2fe7f8aebd74e0780e1229d7ffb9d04",
+    "orchestration": {
+      "run_id": "5e8bbdcee911430186a6258ca4ba04a0",
+      "wave_id": "ac188e23049a46be907c7ffb40a5554d",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Inspect the supported operator entrypoint and identify how the owning Electron/Recovery Host is expected to stop the runtime and invoke guarded PRL activation for an authorized secondary workspace without manual SQLite writes.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "veissTvOS82cNCvnpB-Niqp0",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 627,
+      "finished_at": "2026-09-07T10:37:49.150Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:34:26.610Z",
+    "updated_at": "2026-09-07T10:37:49.150Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:34:26.610Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:27.190Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:28.246Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:28.253Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:37.372Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/activate_problem_lineage.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "946umlCFB_N2rYI7KUkLdQco"
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:39.725Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/activate_problem_lineage.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:34:59.907Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem.lineage|PRL|activate_problem|restart.*maintenance|maintenance.*restart|runtime-stopped\" package.json electron scripts resources/coding-tools-mcp/scripts --glob \"!**/node_modules/**\"",
+          "session_id": "AK7jOTaqYItZU_j2K_jncbAf"
+        }
+      },
+      {
+        "time": "2026-09-07T10:35:00.331Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem.lineage|PRL|activate_problem|restart.*maintenance|maintenance.*restart|runtime-stopped\" package.json electron scripts resources/coding-tools-mcp/scripts --glob \"!**/node_modules/**\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:36:37.573Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"maintenanceWorkspace|runtime-stopped|reconcile_exact\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js",
+          "session_id": "ulZPrPr8Cn1xLCT4rJYo7gEF"
+        }
+      },
+      {
+        "time": "2026-09-07T10:36:38.160Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"maintenanceWorkspace|runtime-stopped|reconcile_exact\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:26.968Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"_reconcileExactStaleRunsWhileStopped|EXACT_STALE_RUN_REASON_PREFIX|exactStaleRunMaintenanceReason|exactStaleRunMaintenanceWorkspace|maintenance_workspace|maintenance_result\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js",
+          "session_id": "Sc22o-_YbUSoWA7YXw_ZGGWm"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:27.385Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"_reconcileExactStaleRunsWhileStopped|EXACT_STALE_RUN_REASON_PREFIX|exactStaleRunMaintenanceReason|exactStaleRunMaintenanceWorkspace|maintenance_workspace|maintenance_result\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:35.667Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 \"restart_runtime|target_workspace|exact_stale_runs|restart ticket|supervisor\" resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
+          "session_id": "ZgHqgXwFFgYp4RQ5-GCHxAa1"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:36.113Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 \"restart_runtime|target_workspace|exact_stale_runs|restart ticket|supervisor\" resources/coding-tools-mcp/coding_tools_mcp --glob \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:48.699Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 -e is_exact_stale_run_maintenance_reason -e build_supervisor_restart_ticket -e confirm_restart -e restart_runtime resources/coding-tools-mcp/coding_tools_mcp/task_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "veissTvOS82cNCvnpB-Niqp0"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:49.150Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 -e is_exact_stale_run_maintenance_reason -e build_supervisor_restart_ticket -e confirm_restart -e restart_runtime resources/coding-tools-mcp/coding_tools_mcp/task_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:37:57.000Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a2b9df6e0c94435fbfd8ffe4bf1efa1d",
+    "orchestration": {
+      "run_id": "ee75a7e5461b462da04875e54e80adc0",
+      "wave_id": "2c0d2757f3334af7ad190d4dc4f2ed21",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Y-G-T6wep-eWJKrJC2aiKfQh",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 548,
+      "finished_at": "2026-09-07T10:39:08.179Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:37:57.002Z",
+    "updated_at": "2026-09-07T10:39:08.179Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:37:57.002Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:57.274Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def task_control|restart_runtime\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "session_id": "6RSQDPnGSEUO6OlTpD3TpgwQ"
+        }
+      },
+      {
+        "time": "2026-09-07T10:37:57.507Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def task_control|restart_runtime\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:38:03.640Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:38:04.696Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:38:04.709Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:38:58.315Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"exactStaleRunMaintenanceReason\" -e \"exactStaleRunMaintenanceWorkspace\" -e \"_execExactStaleRunCli\" -e \"_reconcileExactStaleRunsWhileStopped\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js && rg -n -C 20 -e \"exact_stale_runs\" -e \"build_supervisor_restart_ticket\" -e \"supervisor_restart_ticket_matches\" resources/coding-tools-mcp/tests tests",
+          "session_id": "qW2LtAdFae3z79GKLQPHdSF5"
+        }
+      },
+      {
+        "time": "2026-09-07T10:38:58.808Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"exactStaleRunMaintenanceReason\" -e \"exactStaleRunMaintenanceWorkspace\" -e \"_execExactStaleRunCli\" -e \"_reconcileExactStaleRunsWhileStopped\" electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js && rg -n -C 20 -e \"exact_stale_runs\" -e \"build_supervisor_restart_ticket\" -e \"supervisor_restart_ticket_matches\" resources/coding-tools-mcp/tests tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:07.715Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 -e \"metadata: \\{\" -e \"maintenance_workspace\" electron/services/fullCleanActivation.js | head -n 260 && rg -n -C 35 -e \"target_workspace\" -e \"is_exact_stale_run_maintenance_reason\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "session_id": "Y-G-T6wep-eWJKrJC2aiKfQh"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:08.179Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 -e \"metadata: \\{\" -e \"maintenance_workspace\" electron/services/fullCleanActivation.js | head -n 260 && rg -n -C 35 -e \"target_workspace\" -e \"is_exact_stale_run_maintenance_reason\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:39:15.834Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "09858c3059844be0a58e03e484241089",
+    "orchestration": {
+      "run_id": "1cbe562cdf114d7eb1aef5833fa60d0b",
+      "wave_id": "7a897865138b44e38bd8075d52a83131",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sYb7qr8A3rQ-Lh8IA1ic-wvw",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 360,
+      "finished_at": "2026-09-07T10:42:22.858Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:39:15.837Z",
+    "updated_at": "2026-09-07T10:42:37.659Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:39:15.837Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:16.451Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"maintenance_workspace\" electron/services/fullCleanActivation.js && rg -n -C 30 -e \"target_workspace\" -e \"is_exact_stale_run_maintenance_reason\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "session_id": "ag9vGxLq3yOx_3tsq3z5Zgm-"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:16.982Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"maintenance_workspace\" electron/services/fullCleanActivation.js && rg -n -C 30 -e \"target_workspace\" -e \"is_exact_stale_run_maintenance_reason\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:26.018Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 -e \"def activate_problem_lineage_schema\" -e \"def preflight_problem_lineage_activation\" -e \"return \\{\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/scripts/activate_problem_lineage.py",
+          "session_id": "NRe82uEPNGOCvfMdXMNtf1Cw"
+        }
+      },
+      {
+        "time": "2026-09-07T10:39:26.775Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 -e \"def activate_problem_lineage_schema\" -e \"def preflight_problem_lineage_activation\" -e \"return \\{\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py resources/coding-tools-mcp/scripts/activate_problem_lineage.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:42:22.599Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"def migrate_problem_lineage_schema\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "sYb7qr8A3rQ-Lh8IA1ic-wvw"
+        }
+      },
+      {
+        "time": "2026-09-07T10:42:22.858Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"def migrate_problem_lineage_schema\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:42:35.583Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:42:37.647Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:42:37.659Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:43:40.952Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "1875f7af831a4a7b9a6908e7f22dc1db",
+    "orchestration": {
+      "run_id": "041abe97d81646e58f779e6fb03c13d9",
+      "wave_id": "d46898abf0e74d58a2a12cc1b1f5d91b",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "68bdcb9633783e0d14ae05d48d3290218fa240fb2921081e6baea6a1592791cc",
+      "contract_fp": ""
+    },
+    "objective": "Implement the supported one-time Natural HR Problem Lineage activation path for an authorized secondary workspace: safely activate PRL schema v12 only while the canonical runtime is stopped, preserve snapshot/logical hashes and event-chain integrity, make retry idempotent once v12 is reached, and reuse the existing Recovery Host maintenance/restart contract without adding a public tool or backfilling historical HR outcomes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:43:40.954Z",
+    "updated_at": "2026-09-07T10:43:43.880Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:43:40.954Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:43:41.909Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:43:43.872Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:43:43.880Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:44:47.456Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "f0d793a027a243ed948af43bbfc8de47",
+    "orchestration": {
+      "run_id": "07459502d5c84ee99ae1652df0032473",
+      "wave_id": "a419b79ef5ae419a8c5bf2038817e644",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+      "worktree_fp": "903ddaeba806d5b85268ecb55059fdd54046d297acb16a34c2229d4eb20d7d12",
+      "contract_fp": ""
+    },
+    "objective": "Implement the prepared Natural HR Problem Lineage activation fix. Requirements: (1) problem_lineage_activation.py must be retry-idempotent when a guarded stopped-runtime retry sees schema already at v12, while still enforcing exact snapshot/logical hashes and full postflight checks; (2) introduce an exact typed maintenance reason problem_lineage_schema_v12 and a generalized workspace-maintenance predicate in Python restart-ticket/coordination code so an authorized target workspace is preserved only for exact-stale or PRL-v12 maintenance, with malformed prefix variants rejected; (3) mirror that reason/target validation in runtimeOrchestrator.js without weakening ordinary restart checkpoint semantics; (4) in fullCleanActivation.js run the existing scripts/activate_problem_lineage.py preflight and activation only after the old canonical runtime is stopped, derive fresh exact snapshot and logical hashes from preflight, pass them into --activate --runtime-stopped, validate schema 12/postflight receipt, record bounded verification evidence, and make Recovery Host retry safe; (5) preserve existing exact-stale maintenance and all unrelated dirty work; (6) do not manually edit SQLite, do not backfill historical Problems/outcomes, do not add a public tool. Add focused Python and Node tests for exact PRL maintenance target propagation, malformed-reason rejection, already-v12 retry, and stopped-runtime activation sequencing/receipt.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "failed",
+        "updated_at": "2026-09-07T10:44:57.331Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "pending",
+        "updated_at": "2026-09-07T10:44:57.331Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-07T10:44:57.331Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "yaIV97X1w1VWgeVp5XTTNko2",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 620,
+      "finished_at": "2026-09-07T10:53:22.561Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 64,
+          "head_hash": "b0258294ff6ee721346c996e508fb0f8134825021c151ecc205fc3c1bdbfcce1"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-004.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-005.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-07459502d5c84ee99ae1652df0032473\\wave-006.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "07459502d5c84ee99ae1652df0032473",
+        "wave_id": "0be8558c43c343cb9b498730592907d3",
+        "checkpoint_id": "",
+        "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
+        "worktree_fp": "903ddaeba806d5b85268ecb55059fdd54046d297acb16a34c2229d4eb20d7d12",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Implement the Natural HR Problem Lineage activation source fix only. Add a typed problem_lineage_schema_v12 Recovery Host maintenance reason for an authorized target workspace; make guarded stopped-runtime PRL activation retry-idempotent when the ledger is already v12; propagate/validate maintenance target through Python restart-ticket/coordination and Electron runtime orchestrator; execute the existing activate_problem_lineage.py preflight+activation only after the canonical runtime is stopped; validate the v12 postflight receipt; preserve exact-stale maintenance and ordinary restart semantics. Add focused tests. Do not run or claim acceptance proof in this mutation wave; proof will be executed separately after writes because EOCL verification readiness cannot resolve the nested package verification module. Do not edit SQLite manually, do not backfill historical Problems/outcomes, do not add a public tool, and do not disturb unrelated dirty WIP.",
+          "objective_revision": 3,
+          "objective_sha256": "e78a0607643c55c65d567604523fe89ae27ede7573e40c98b808ee2f5ae4a672",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "CANDIDATE_MODEL_NOT_COMPLETED",
+        "reason": null,
+        "event_seq": 43492
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "3a9c14138441b6e13784192ff0aed842ad5ad314c0a5958df8fb2710f7687a3d",
+    "completion_report_acknowledged_id": "3a9c14138441b6e13784192ff0aed842ad5ad314c0a5958df8fb2710f7687a3d",
+    "completion_report_acknowledged_at": "2026-09-07T10:51:08.630Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+        "status": "failed",
+        "exit_code": 4,
+        "duration_ms": null,
+        "summary": "exit 4 | 0.0s | 7 lines | tail: 'ERROR: file or directory not found: tests/test_problem_lineage_activation.py'",
+        "finished_at": "2026-09-07T10:44:56.941Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "cpbIGsORchiLgeMplgJhZY5j"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "07459502d5c84ee99ae1652df0032473",
+          "owner_wave": "e554e600cfe94bb195bd648935bd1fe3",
+          "size_bytes": 105,
+          "command_id": "cpbIGsORchiLgeMplgJhZY5j",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:cpbIGsORchiLgeMplgJhZY5j:stdout",
+              "total_stream_bytes": 25,
+              "total_retained_bytes": 25,
+              "head_retained_bytes": 25,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:cpbIGsORchiLgeMplgJhZY5j:stderr",
+              "total_stream_bytes": 80,
+              "total_retained_bytes": 80,
+              "head_retained_bytes": 80,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Patch context matched 2 locations in electron/services/fullCleanActivation.js; add more context.",
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-09-07T10:44:47.459Z",
+    "updated_at": "2026-09-07T10:54:32.653Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:44:47.459Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:48.117Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:49.717Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:51.413Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:51.424Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:53.160Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:53.864Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:54.710Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+          "session_id": "cpbIGsORchiLgeMplgJhZY5j"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:56.941Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_problem_lineage_activation.py tests/test_restart_ticket_maintenance.py -q",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:57.331Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:58.141Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:58.146Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:58.149Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:58.325Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "7341275399c12367742a3d3302cf70a65a309a013690260af9520ce216f9f9b1"
+        }
+      },
+      {
+        "time": "2026-09-07T10:44:58.462Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:15.905Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:16.816Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:25.630Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "7341275399c12367742a3d3302cf70a65a309a013690260af9520ce216f9f9b1"
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:34.730Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:36.356Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:37.190Z",
+        "event": "completion_readiness_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:37.193Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:37.454Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "f5aec372977714b0d24b7faad8d0960e917303631fa41f7c09e130e3090bb85b"
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:37.645Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:52.607Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:45:55.820Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "f5aec372977714b0d24b7faad8d0960e917303631fa41f7c09e130e3090bb85b"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:06.053Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:07.452Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:08.205Z",
+        "event": "completion_readiness_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:08.207Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:08.418Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "029f15a85e10f4c21a1cde35feb1430e67f09bb0f32cde135da6313c07abad25"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:08.543Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:24.439Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:26.827Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "029f15a85e10f4c21a1cde35feb1430e67f09bb0f32cde135da6313c07abad25"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:42.864Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:44.347Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:46.894Z",
+        "event": "completion_readiness_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:46.900Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:47.332Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "dae26e3c5b5135c6cb00c059395e9c0f63b938714229d80a18a8d09a7ab52ace"
+        }
+      },
+      {
+        "time": "2026-09-07T10:46:47.340Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:23.190Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:37.448Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "dae26e3c5b5135c6cb00c059395e9c0f63b938714229d80a18a8d09a7ab52ace"
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:47.742Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:50.141Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:53.418Z",
+        "event": "completion_readiness_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:53.426Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:53.986Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "f75d2f9c743993401e34aef19112c9487addc61189fad6b03c8cf811db5a8b9b"
+        }
+      },
+      {
+        "time": "2026-09-07T10:48:53.996Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:49:35.906Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:49:57.595Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "f75d2f9c743993401e34aef19112c9487addc61189fad6b03c8cf811db5a8b9b"
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:10.342Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:11.548Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:14.141Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:16.998Z",
+        "event": "candidate_blocked",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:17.001Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:17.397Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "3a9c14138441b6e13784192ff0aed842ad5ad314c0a5958df8fb2710f7687a3d"
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:17.404Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:50:57.919Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:08.630Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "3a9c14138441b6e13784192ff0aed842ad5ad314c0a5958df8fb2710f7687a3d"
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:18.859Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:19.564Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:27.314Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:29.138Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T10:51:29.149Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:23.152Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 -e \"def activate_problem_lineage_schema\" -e \"def preflight_problem_lineage_activation\" -e \"migrate_problem_lineage_schema\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py && rg -n -C 70 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"is_exact_stale_run_maintenance_reason\" -e \"build_supervisor_restart_ticket\" -e \"target_workspace\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "bbi0PphtUBjThKrN5nsXAYOz"
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:23.623Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 -e \"def activate_problem_lineage_schema\" -e \"def preflight_problem_lineage_activation\" -e \"migrate_problem_lineage_schema\" resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_activation.py && rg -n -C 70 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"is_exact_stale_run_maintenance_reason\" -e \"build_supervisor_restart_ticket\" -e \"target_workspace\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:38.268Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 90 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"exactStaleRunMaintenanceReason\" -e \"validSupervisorRestartTarget\" -e \"maintenanceWorkspace\" electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js",
+          "session_id": "KhFF_lNk7NT4PHDvzGm6EzNw"
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:38.706Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 90 -e \"EXACT_STALE_RUN_REASON_PREFIX\" -e \"exactStaleRunMaintenanceReason\" -e \"validSupervisorRestartTarget\" -e \"maintenanceWorkspace\" electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:45.741Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 90 -e \"_reconcileExactStaleRunsWhileStopped\" -e \"continueReplacement\" -e \"replacement_recovery_host\" electron/services/fullCleanActivation.js",
+          "session_id": "ElUdayqkZTMud_R66xqDclqW"
+        }
+      },
+      {
+        "time": "2026-09-07T10:52:46.166Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 90 -e \"_reconcileExactStaleRunsWhileStopped\" -e \"continueReplacement\" -e \"replacement_recovery_host\" electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:53:14.251Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 100 -e \"def main\" -e \"print\" -e \"activate_problem_lineage_schema\" resources/coding-tools-mcp/scripts/activate_problem_lineage.py && rg -n -C 80 -e \"already\" -e \"migrated\" resources/coding-tools-mcp/tests/test_problem_lineage_activation.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "session_id": "Cw_SJZyiCwtMkh_e_ZQQJqlh"
+        }
+      },
+      {
+        "time": "2026-09-07T10:53:14.676Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 100 -e \"def main\" -e \"print\" -e \"activate_problem_lineage_schema\" resources/coding-tools-mcp/scripts/activate_problem_lineage.py && rg -n -C 80 -e \"already\" -e \"migrated\" resources/coding-tools-mcp/tests/test_problem_lineage_activation.py resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:53:22.105Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 60 -e \"exact_stale\" -e \"target_workspace\" -e \"restart_ticket\" resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py tests/runtime-lifecycle.test.js tests/full-clean-activation.test.js",
+          "session_id": "yaIV97X1w1VWgeVp5XTTNko2"
+        }
+      },
+      {
+        "time": "2026-09-07T10:53:22.561Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 60 -e \"exact_stale\" -e \"target_workspace\" -e \"restart_ticket\" resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py tests/runtime-lifecycle.test.js tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T10:54:32.653Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:55:00.140Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "8169d4496109490e9a5475c90214636b",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "jjB1-br2JP4jYUBgNlIjvBpq",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 378,
+    "finished_at": "2026-09-07T11:14:42.239Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T11:14:41.534Z",
+  "updated_at": "2026-09-07T11:14:42.239Z",
+  "events": [
+    {
+      "time": "2026-09-07T11:14:41.534Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:41.897Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"refresh:\" scripts\\dev-ui-lifecycle.js",
+        "session_id": "jjB1-br2JP4jYUBgNlIjvBpq"
+      }
+    },
+    {
+      "time": "2026-09-07T11:14:42.239Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"refresh:\" scripts\\dev-ui-lifecycle.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

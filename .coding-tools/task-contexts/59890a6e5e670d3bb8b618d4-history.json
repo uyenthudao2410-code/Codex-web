@@ -1,0 +1,60 @@
+[
+  {
+    "version": 2,
+    "task_id": "76833f5c36274c608f4977827ed3eda5",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "e67hu8logA9KC1wVnT4YR6xU",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 881,
+      "finished_at": "2026-09-07T10:57:04.124Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T10:57:02.918Z",
+    "updated_at": "2026-09-07T10:57:04.124Z",
+    "events": [
+      {
+        "time": "2026-09-07T10:57:02.918Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:03.526Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "e67hu8logA9KC1wVnT4YR6xU"
+        }
+      },
+      {
+        "time": "2026-09-07T10:57:04.124Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T10:57:13.106Z",
+    "archive_reason": "finished"
+  }
+]

@@ -2687,6 +2687,7 @@ test('authorized child exact stale maintenance preserves supervisor owner and pa
     tool_contract_sha256: 'e'.repeat(64),
     workspace,
     target_workspace: maintenanceWorkspace,
+    allow_acceptance_pending: true,
     reason,
     requested_at_unix_ms: now - 1000,
     not_before_unix_ms: now - 1,
@@ -2699,5 +2700,6 @@ test('authorized child exact stale maintenance preserves supervisor owner and pa
   assert.equal(restartCalls[0].mode, 'full_clean_refresh');
   assert.equal(restartCalls[0].sourceCheckpoint, null);
   assert.equal(restartCalls[0].maintenanceWorkspace, maintenanceWorkspace);
+  assert.equal(restartCalls[0].allowAcceptancePending, true);
   assert.equal(result.supervisorRequest.status, 'completed');
 });

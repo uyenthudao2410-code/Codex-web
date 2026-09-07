@@ -234,6 +234,36 @@ class ProblemLineageActivationTests(unittest.TestCase):
                 )
             self.assertEqual(OrchestrationLedger(root).problem_lineage_schema_version(), 9)
 
+    def test_guarded_activation_retry_is_idempotent_after_schema_reaches_v12(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            OrchestrationLedger(root)
+            before = preflight_problem_lineage_activation(root, observed_at=time.time())
+            first = activate_problem_lineage_schema(
+                root,
+                observed_at=time.time(),
+                expected_snapshot_sha256=str(before["snapshot"]["sha256"]),
+                expected_logical_sha256=str(before["snapshot"]["logical_sha256"]),
+                runtime_stopped=True,
+            )
+            self.assertTrue(first.migration["migrated"])
+            active = preflight_problem_lineage_activation(
+                root,
+                observed_at=time.time(),
+                allow_already_active=True,
+            )
+            retry = activate_problem_lineage_schema(
+                root,
+                observed_at=time.time(),
+                expected_snapshot_sha256=str(active["snapshot"]["sha256"]),
+                expected_logical_sha256=str(active["snapshot"]["logical_sha256"]),
+                runtime_stopped=True,
+            )
+            self.assertFalse(retry.migration["migrated"])
+            self.assertEqual(retry.migration["from_schema_version"], PROBLEM_SCHEMA_VERSION)
+            self.assertEqual(retry.migration["schema_version"], PROBLEM_SCHEMA_VERSION)
+            self.assertEqual(retry.postflight["schema"]["user_version"], PROBLEM_SCHEMA_VERSION)
+
 
 if __name__ == "__main__":
     unittest.main()
