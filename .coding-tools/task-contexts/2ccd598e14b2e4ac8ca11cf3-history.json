@@ -1,0 +1,682 @@
+[
+  {
+    "version": 2,
+    "task_id": "ce4282ef83ef4b3aa386651f2b177e12",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:07:09.823Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Capture pre-build production descriptor identity, run exactly one npm run dist job, then verify C3-C4 evidence.",
+    "created_at": "2026-09-06T04:04:49.463Z",
+    "updated_at": "2026-09-06T04:07:09.823Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:04:49.463Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T04:06:11.852Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T04:06:52.906Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"APPDATA.*descriptor|descriptor.*APPDATA|production.*descriptor|recovery.*descriptor|activation.*descriptor\" electron resources scripts package.json",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:06:52.906Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "TASK_STOPPED"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:04.112Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Capture pre-build production descriptor identity, run exactly one npm run dist job, then verify C3-C4 evidence."
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:09.823Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"APPDATA.*descriptor|descriptor.*APPDATA|production.*descriptor|recovery.*descriptor|activation.*descriptor\" electron resources scripts package.json",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:09.823Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-06T04:07:18.219Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "21c46a6826bf427fbf42cf3d4f812bcf",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "18y0i5D0eoVBqKoR0sA-9REy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:12:33.049Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "18y0i5D0eoVBqKoR0sA-9REy",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "failed",
+        "command": {
+          "command_id": "18y0i5D0eoVBqKoR0sA-9REy",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "failed",
+          "exit_code": 1,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "9b3241ddc963a77d916edc453ea7b7e8e4ae5391",
+          "branch": "main",
+          "worktree_fp": "fdd8e149738afdf61018d6d549f8cfa27ec4acd6f0b714ea56d1e423ae2eeeb6",
+          "dirty_paths": [
+            ".playwright-cli/console-2026-09-04T20-45-42-284Z.log",
+            ".playwright-cli/page-2026-09-04T20-45-44-704Z.yml",
+            "docs/research/260905_COMPREHENSIVE_PROJECT_ASSESSMENT_AND_FINISH_LINE.md",
+            "docs/research/260905_FINISH_LINE_IMPLEMENTATION_CHECKPOINT.md",
+            "docs/research/260905_REMAINING_ISSUES_CLOSURE_AUDIT.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "21c46a6826bf427fbf42cf3d4f812bcf",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_FAILED",
+      "blocker_or_failure": {
+        "failure_class": "EXECUTION_COMMAND_FAILED",
+        "reason": "The command reached a terminal non-success state.",
+        "exit_code": 1
+      },
+      "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+    },
+    "completion_report_id": "74911d5a26162c9fc533b364e9499e1238c08c7a2582ae991a9ed452cd473b3a",
+    "completion_report_acknowledged_id": "74911d5a26162c9fc533b364e9499e1238c08c7a2582ae991a9ed452cd473b3a",
+    "completion_report_acknowledged_at": "2026-09-06T04:12:46.711Z",
+    "test_results": [],
+    "build_results": [
+      {
+        "command": "npm run dist",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 2779 lines | tail: '• building block map  blockMapFile=dist\\\\coding-tools-mcp-setup-1.0.0.exe.blockmap'",
+        "finished_at": "2026-09-06T04:10:04.484Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "rop4ggvQbQGTGTrDyHegXJZs"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "3ddeec792a9e4ad589567f0e147c2630",
+          "owner_wave": "583a3b43b00e4037ad2c2b2da3fc0fcb",
+          "size_bytes": 312452,
+          "command_id": "rop4ggvQbQGTGTrDyHegXJZs",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:rop4ggvQbQGTGTrDyHegXJZs:stdout",
+              "total_stream_bytes": 312452,
+              "total_retained_bytes": 312452,
+              "head_retained_bytes": 65536,
+              "tail_retained_bytes": 246916,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:rop4ggvQbQGTGTrDyHegXJZs:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+    "created_at": "2026-09-06T04:07:18.220Z",
+    "updated_at": "2026-09-06T04:12:46.715Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:07:18.220Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:18.875Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i \"APPDATA.*descriptor|descriptor.*APPDATA|production.*descriptor|recovery.*descriptor|activation.*descriptor\" electron resources scripts package.json",
+          "session_id": "D4KP31n9AK3-mOuBH3GHtrpu"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:19.338Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"APPDATA.*descriptor|descriptor.*APPDATA|production.*descriptor|recovery.*descriptor|activation.*descriptor\" electron resources scripts package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:27.159Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"\\\"dist\\\"|afterPack|packaged-recovery-smoke|electron-builder|extraResources|files\" package.json electron scripts",
+          "session_id": "HvXjzP0p36Fi_v2EJ1EsTAZX"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:27.639Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"\\\"dist\\\"|afterPack|packaged-recovery-smoke|electron-builder|extraResources|files\" package.json electron scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:37.752Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $p){$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $s=(Get-Item -LiteralPath $p).Length; [pscustomobject]@{exists=$true;sha256=$h;size=$s}|ConvertTo-Json -Compress}else{[pscustomobject]@{exists=$false;sha256=$null;size=0}|ConvertTo-Json -Compress}\"",
+          "session_id": "O8BWLvd35REJR9AlbVb4fIV1"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:38.415Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $p){$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $s=(Get-Item -LiteralPath $p).Length; [pscustomobject]@{exists=$true;sha256=$h;size=$s}|ConvertTo-Json -Compress}else{[pscustomobject]@{exists=$false;sha256=$null;size=0}|ConvertTo-Json -Compress}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:07:54.727Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dist",
+          "session_id": "rop4ggvQbQGTGTrDyHegXJZs"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:04.484Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dist",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:05.190Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "rop4ggvQbQGTGTrDyHegXJZs",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "c93ad57716a2fb86f9f5fe7a00e381cabf86320dfdacab1abc24fedbf9faeeae"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:21.010Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 6 \"THIRD_PARTY|font|native-python|coding-tools-mcp|tunnel|resource|manifest|verify|throw|console\" scripts/verify-packaged-resources.js package.json",
+          "session_id": "AljcXGscNWof3vV1UEEN4Sq4"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:21.429Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 6 \"THIRD_PARTY|font|native-python|coding-tools-mcp|tunnel|resource|manifest|verify|throw|console\" scripts/verify-packaged-resources.js package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:36.849Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i \"THIRD_PARTY_NOTICES|font|woff|ttf|asar|native-python|coding-tools-mcp|tunnel-client|resources\" scripts/packaged-recovery-smoke.js tests scripts | head -n 240",
+          "session_id": "macfKY7ZJMSfu4WPwv6Cuz0L"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:37.263Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"THIRD_PARTY_NOTICES|font|woff|ttf|asar|native-python|coding-tools-mcp|tunnel-client|resources\" scripts/packaged-recovery-smoke.js tests scripts | head -n 240",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:43.857Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"THIRD_PARTY_NOTICES|font|woff|ttf|asar|native-python|coding-tools-mcp|tunnel-client|resources|productionBefore|productionAfter|isolation\" scripts/packaged-recovery-smoke.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:43.857Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-06T04:10:56.886Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "c93ad57716a2fb86f9f5fe7a00e381cabf86320dfdacab1abc24fedbf9faeeae"
+        }
+      },
+      {
+        "time": "2026-09-06T04:11:47.966Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Read-only artifact hash/version/asset verification from existing dist output."
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:06.004Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; if(-not (Test-Path -LiteralPath $installer)){throw 'INSTALLER_MISSING'}; $pkg=Get-Content -Raw -LiteralPath (Join-Path $root 'package.json')|ConvertFrom-Json; $i=Get-Item -LiteralPath $installer; $ih=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash.ToLowerInvariant(); $keys=@('dist\\win-unpacked\\resources\\resourc",
+          "session_id": "HCOYgiktTL2tGWLSTjj6cZu3"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:07.624Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $root=(Get-Location).Path; $installer=Join-Path $root 'dist\\coding-tools-mcp-setup-1.0.0.exe'; if(-not (Test-Path -LiteralPath $installer)){throw 'INSTALLER_MISSING'}; $pkg=Get-Content -Raw -LiteralPath (Join-Path $root 'package.json')|ConvertFrom-Json; $i=Get-Item -LiteralPath $installer; $ih=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash.ToLowerInvariant(); $keys=@('dist\\win-unpacked\\resources\\resourc",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:16.204Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "session_id": "18y0i5D0eoVBqKoR0sA-9REy"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:33.049Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:33.664Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "18y0i5D0eoVBqKoR0sA-9REy",
+          "accepted_or_not": "COMMAND_FAILED",
+          "report_id": "74911d5a26162c9fc533b364e9499e1238c08c7a2582ae991a9ed452cd473b3a"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:39.687Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-06T04:12:46.711Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "74911d5a26162c9fc533b364e9499e1238c08c7a2582ae991a9ed452cd473b3a"
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-06T04:12:50.818Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "744b6ea77fc340d1b7b6a73e87e8981f",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:16:31.205Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Read-only production descriptor hash and current development runtime status.",
+    "created_at": "2026-09-06T04:12:50.819Z",
+    "updated_at": "2026-09-06T04:16:31.205Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:12:50.819Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:00.584Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Read-only production descriptor hash and current development runtime status."
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:09.989Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $p){$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $s=(Get-Item -LiteralPath $p).Length; [pscustomobject]@{exists=$true;sha256=$h;size=$s}|ConvertTo-Json -Compress}else{[pscustomobject]@{exists=$false;sha256=$null;size=0}|ConvertTo-Json -Compress}\"",
+          "session_id": "XcAD0Qw7BORhQDLiIn775zlO"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:10.744Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $p){$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $s=(Get-Item -LiteralPath $p).Length; [pscustomobject]@{exists=$true;sha256=$h;size=$s}|ConvertTo-Json -Compress}else{[pscustomobject]@{exists=$false;sha256=$null;size=0}|ConvertTo-Json -Compress}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:16.188Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i \"dev:status|case ['\\\"]status['\\\"]|command.*status|status.*command|READY\" package.json scripts/dev-ui-lifecycle.js scripts/execution-hub-activation-probe.js",
+          "session_id": "y8aehDX32d8uWw1JY3BOnFPW"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:16.686Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"dev:status|case ['\\\"]status['\\\"]|command.*status|status.*command|READY\" package.json scripts/dev-ui-lifecycle.js scripts/execution-hub-activation-probe.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:24.906Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "A6gYY0HyzqVq8SFwFWCg8-PS"
+        }
+      },
+      {
+        "time": "2026-09-06T04:13:25.686Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:05.628Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:23.706Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='scripts/packaged-recovery-smoke.js'; $i=0; Get-Content -LiteralPath $p | ForEach-Object { $i++; '{0,4}: {1}' -f $i,$_ }\"",
+          "session_id": "Im1HZu2VVwuxSD2H-heCB05E"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:24.159Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='scripts/packaged-recovery-smoke.js'; $i=0; Get-Content -LiteralPath $p | ForEach-Object { $i++; '{0,4}: {1}' -f $i,$_ }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:31.205Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"recovery-host|WEBCODEX_PROCESS_ROLE|userData|user-data-dir|requestSingleInstanceLock|second-instance|app\\.setPath|app\\.isPackaged\" electron/main.js electron/services electron/paths.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:31.205Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-06T04:16:38.888Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a41b65139b0949d594f23a32a20c1627",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Rh-i7e3guQw8LHfkDo4f53zE",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 707,
+      "finished_at": "2026-09-06T04:17:09.268Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:16:38.891Z",
+    "updated_at": "2026-09-06T04:17:09.268Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:16:38.891Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:39.494Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 6 -e recovery-host -e WEBCODEX_PROCESS_ROLE -e userData -e user-data-dir -e requestSingleInstanceLock -e second-instance -e app.setPath -e app.isPackaged electron/main.js electron/services electron/paths.js",
+          "session_id": "xrDttmMcgHhE-e_6TXmdo6XR"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:39.893Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 6 -e recovery-host -e WEBCODEX_PROCESS_ROLE -e userData -e user-data-dir -e requestSingleInstanceLock -e second-instance -e app.setPath -e app.isPackaged electron/main.js electron/services electron/paths.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:49.162Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 -e recoveryHostLockFile -e RECOVERY_HOST_LOCK -e lockFile -e acquire -e owner_pid -e exitProcess -e startRecoveryHostApplication electron/recoveryHost.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimePaths.js",
+          "session_id": "SXrQIgbxZGL8JO9uzEmwo_vw"
+        }
+      },
+      {
+        "time": "2026-09-06T04:16:49.683Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 -e recoveryHostLockFile -e RECOVERY_HOST_LOCK -e lockFile -e acquire -e owner_pid -e exitProcess -e startRecoveryHostApplication electron/recoveryHost.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimePaths.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:17:02.386Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant'; $lock=Join-Path $d 'recovery-host.lock'; $desc=Join-Path $d 'recovery-host.json'; $l=if(Test-Path $lock){Get-Content -Raw $lock|ConvertFrom-Json}else{$null}; $x=if(Test-Path $desc){Get-Content -Raw $desc|ConvertFrom-Json}else{$null}; [pscustomobject]@{lock_exists=[bool]$l;lock_pid=if($l){[int]$l.pid}else{0};lock_instance=if($l){[string]$l.instance_id}else{''};descriptor_pid=if($x){[int]$x.owner_pid}els",
+          "session_id": "X_Buffe0Iu0zHbGGb6Z2YnD2"
+        }
+      },
+      {
+        "time": "2026-09-06T04:17:03.060Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant'; $lock=Join-Path $d 'recovery-host.lock'; $desc=Join-Path $d 'recovery-host.json'; $l=if(Test-Path $lock){Get-Content -Raw $lock|ConvertFrom-Json}else{$null}; $x=if(Test-Path $desc){Get-Content -Raw $desc|ConvertFrom-Json}else{$null}; [pscustomobject]@{lock_exists=[bool]$l;lock_pid=if($l){[int]$l.pid}else{0};lock_instance=if($l){[string]$l.instance_id}else{''};descriptor_pid=if($x){[int]$x.owner_pid}els",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:17:08.829Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 5 -e \"app.setPath('userData'\" -e user-data-dir -e web-mcp-assistant -e \"Version 1.0 has a new product identity\" tests electron scripts",
+          "session_id": "Rh-i7e3guQw8LHfkDo4f53zE"
+        }
+      },
+      {
+        "time": "2026-09-06T04:17:09.268Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 5 -e \"app.setPath('userData'\" -e user-data-dir -e web-mcp-assistant -e \"Version 1.0 has a new product identity\" tests electron scripts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:17:13.874Z",
+    "archive_reason": "finished"
+  }
+]

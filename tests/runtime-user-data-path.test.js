@@ -32,6 +32,7 @@ test('normal product launch keeps the version-1.0 production profile pin', () =>
     argv: ['Coding Tools MCP.exe', '--user-data-dir=C:\\isolated'],
     recoveryHostMode: false
   });
+
   const expected = path.join(appData, 'web-mcp-assistant');
   assert.equal(resolved, expected);
   assert.deepEqual(app.setCalls, [expected]);
@@ -44,6 +45,7 @@ test('Recovery Host without an explicit user-data override keeps the production 
     argv: ['Coding Tools MCP.exe', '--recovery-host'],
     recoveryHostMode: true
   });
+
   const expected = path.join(appData, 'web-mcp-assistant');
   assert.equal(resolved, expected);
   assert.deepEqual(app.setCalls, [expected]);
@@ -54,6 +56,7 @@ test('isolated Recovery Host preserves Electron userData when an explicit overri
   const isolated = path.join('C:', 'Temp', 'webmcp-packaged-recovery');
   const app = fakeApp({ appData, userData: isolated });
   const argv = ['Coding Tools MCP.exe', '--recovery-host', `--user-data-dir=${isolated}`];
+
   assert.equal(hasExplicitUserDataDirectory(argv), true);
   assert.equal(configureElectronUserDataPath(app, { argv, recoveryHostMode: true }), isolated);
   assert.deepEqual(app.setCalls, []);

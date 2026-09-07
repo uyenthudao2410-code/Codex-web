@@ -1,0 +1,483 @@
+[
+  {
+    "version": 2,
+    "task_id": "cc2b4eb7fd674e0c830c2c465ef39bda",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:23:04.237Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Read-only inspect supported exact-run recovery path; do not alter EOCL RUN/Wave.",
+    "created_at": "2026-09-06T04:19:53.441Z",
+    "updated_at": "2026-09-06T04:23:04.237Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:19:53.443Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:19:54.094Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 -F -e \"EXACT_RUN_RECOVERY_REFUSED\" -e \"acknowledged archived history\" -e \"continuity_action\" -e \"reattach_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "_E7fmLAtDdJBDjPcyiZSnwrY"
+        }
+      },
+      {
+        "time": "2026-09-06T04:19:54.598Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -F -e \"EXACT_RUN_RECOVERY_REFUSED\" -e \"acknowledged archived history\" -e \"continuity_action\" -e \"reattach_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:01.952Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $l=Get-Content -LiteralPath $p; for($i=1408;$i -le 1598;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "ajtX94SXiAtheteMgJGmPA57"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:02.398Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $l=Get-Content -LiteralPath $p; for($i=1408;$i -le 1598;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:08.635Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"def controller_knowledge_policy|_MATERIAL_KNOWLEDGE_EVENTS|CONSERVATIVE_UNKNOWN|EXACT\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "OLr2tbkJUTfVR9MgWiJa3M46"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:09.141Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"def controller_knowledge_policy|_MATERIAL_KNOWLEDGE_EVENTS|CONSERVATIVE_UNKNOWN|EXACT\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:14.177Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $l=Get-Content -LiteralPath $p; for($i=1;$i -le 90;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "UqmbWF2JbtdDIhU4_Uj3yeQh"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:14.749Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $l=Get-Content -LiteralPath $p; for($i=1;$i -le 90;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:20:48.155Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:00.427Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -e \"action == \\\"resume\\\"\" -e \"def _reconcile_task_orchestration_projection\" -e \"stateless_exact_run_recovery_id\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:00.427Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "TASK_STOPPED"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:06.494Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Read-only inspect supported exact-run recovery path; do not alter EOCL RUN/Wave."
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:12.779Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 -e \"action == \\\"resume\\\"\" -e \"def _reconcile_task_orchestration_projection\" -e \"stateless_exact_run_recovery_id\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "session_id": "5lCVsMvVgzgUjLIqI-AJVhbg"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:13.268Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 -e \"action == \\\"resume\\\"\" -e \"def _reconcile_task_orchestration_projection\" -e \"stateless_exact_run_recovery_id\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:20.016Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 -F \"stateless_exact_run_recovery_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "z-IG0tQ2KMpeMXkiNh_QQsr3"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:20.543Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 -F \"stateless_exact_run_recovery_id\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:26.546Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 -e \"def resolve_stateless_task_context\" -e \"def stateless_task_context_for_run\" -e \"recover_exact_run_context\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "y6cEFlNJ5qaMTMt17P_NpXh0"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:27.135Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e \"def resolve_stateless_task_context\" -e \"def stateless_task_context_for_run\" -e \"recover_exact_run_context\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:44.829Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=49;$i -le 105;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "wAGRhYD-KpLBN3pa4CDti_bQ"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:45.383Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=49;$i -le 105;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:50.996Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=105;$i -le 155;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "W6kOMnf48e51zwMU1P8_NDut"
+        }
+      },
+      {
+        "time": "2026-09-06T04:21:51.444Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py'; $l=Get-Content -LiteralPath $p; for($i=105;$i -le 155;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:22:13.105Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 -e \"replan_reason\" -e \"controller_lease\" -e \"goal_controller\" -e \"active_run\" -e \"existing_run\" resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"agent workflow orchestration run replan lease goal\"",
+          "session_id": "hedBp1ZA-1KLKF9Pe0gUD0Yp"
+        }
+      },
+      {
+        "time": "2026-09-06T04:22:13.520Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 -e \"replan_reason\" -e \"controller_lease\" -e \"goal_controller\" -e \"active_run\" -e \"existing_run\" resources/coding-tools-mcp/coding_tools_mcp | findstr /I \"agent workflow orchestration run replan lease goal\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:22:20.806Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $l=Get-Content -LiteralPath $p; for($i=330;$i -le 480;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "74CUTvzO0PlLyWrhtGVazZY-"
+        }
+      },
+      {
+        "time": "2026-09-06T04:22:21.371Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $l=Get-Content -LiteralPath $p; for($i=330;$i -le 480;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:04.237Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"if action == \\\"start\\\"\" -e \"if action == \\\"operation\\\"\" -e \"goal_action\" -e \"if action == \\\"handoff\\\"\" -e \"phase == \\\"resume\\\"\" -e \"workflow == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:04.237Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-06T04:23:13.075Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "eea9b7df25fd45ac90afe5ec45f84409",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "EL0GUvEuKqS2kr4SIFMaPZvM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 764,
+      "finished_at": "2026-09-06T04:24:24.474Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-06T04:23:13.077Z",
+    "updated_at": "2026-09-06T04:24:24.474Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:23:13.077Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:13.808Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e \"if action == \\\"start\\\"\" -e \"if action == \\\"operation\\\"\" -e \"goal_action\" -e \"if action == \\\"handoff\\\"\" -e \"phase == \\\"resume\\\"\" -e \"workflow == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "session_id": "lg6kBhHcJaFjCF6whuI6MbBD"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:14.238Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"if action == \\\"start\\\"\" -e \"if action == \\\"operation\\\"\" -e \"goal_action\" -e \"if action == \\\"handoff\\\"\" -e \"phase == \\\"resume\\\"\" -e \"workflow == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:24.774Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py'; $l=Get-Content -LiteralPath $p; for($i=864;$i -le 915;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "lnFZjv26UodYqNlu7YcHCOnr"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:25.231Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py'; $l=Get-Content -LiteralPath $p; for($i=864;$i -le 915;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:43.150Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $l=Get-Content -LiteralPath $p; for($i=1590;$i -le 1650;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "session_id": "X7bfUd41yUUDUVeTBGCiwrVk"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:43.740Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $l=Get-Content -LiteralPath $p; for($i=1590;$i -le 1650;$i++){ '{0,4}: {1}' -f $i,$l[$i-1] }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:23:59.883Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools/task-contexts",
+          "session_id": "9sN8jrOFipbLdc6fqadhXY1D"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:00.632Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l -F \"3ddeec792a9e4ad589567f0e147c2630\" .coding-tools/task-contexts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:11.310Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json','.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61-history.json','.coding-tools/task-contexts/2ccd598e14b2e4ac8ca11cf3-history.json'); foreach($p in $files){$j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; [pscustomobject]@{file=$p;task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;history_count=if($j ",
+          "session_id": "3NlVCFaRXMY9yTDHdsN5llGf"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:12.140Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61.json','.coding-tools/task-contexts/3c21a667f04a1b61a3f20d61-history.json','.coding-tools/task-contexts/2ccd598e14b2e4ac8ca11cf3-history.json'); foreach($p in $files){$j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; [pscustomobject]@{file=$p;task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;history_count=if($j ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:23.859Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); foreach($id in $ids){$b=[Text.Encoding]::UTF8.GetBytes($id);$h=[Security.Cryptography.SHA256]::HashData($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}\"",
+          "session_id": "EL0GUvEuKqS2kr4SIFMaPZvM"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:24.474Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); foreach($id in $ids){$b=[Text.Encoding]::UTF8.GetBytes($id);$h=[Security.Cryptography.SHA256]::HashData($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:24:29.537Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5d4aed2d9e1b431681371ac54c3350fb",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-06T04:24:38.506Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-06T04:24:29.539Z",
+    "updated_at": "2026-09-06T04:24:38.506Z",
+    "events": [
+      {
+        "time": "2026-09-06T04:24:29.539Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:30.260Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); $sha=[Security.Cryptography.SHA256]::Create(); foreach($id in $ids){$b=[Text.Encoding]::UTF8.GetBytes($id);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}; $sha.Dispose()\"",
+          "session_id": "XLrUFY7u7XFnb9A5cEYSRj0u"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:31.557Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); $sha=[Security.Cryptography.SHA256]::Create(); foreach($id in $ids){$b=[Text.Encoding]::UTF8.GetBytes($id);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}; $sha.Dispose()\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:38.506Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 -e \"task-contexts\" -e \"scope_id\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/task_context*.py resources/coding-tools-mcp/coding_tools_mcp/state*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-06T04:24:38.506Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-06T04:24:45.611Z",
+    "archive_reason": "finished"
+  }
+]

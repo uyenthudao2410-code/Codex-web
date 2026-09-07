@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "task_id": "ebbfec7156f542879ddfbc35162f55d4",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "wJzJwEfAWVTg_hXfJoOR3B2V",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1485,
+    "finished_at": "2026-09-06T04:25:29.192Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-06T04:24:45.614Z",
+  "updated_at": "2026-09-06T04:25:29.192Z",
+  "events": [
+    {
+      "time": "2026-09-06T04:24:45.614Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T04:24:46.310Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 10 -e \"task-contexts\" -e \"TaskStateStore\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "R_s6FDxOxahvE7XbarZSQi-w"
+      }
+    },
+    {
+      "time": "2026-09-06T04:24:46.833Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 10 -e \"task-contexts\" -e \"TaskStateStore\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:24:57.664Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); $sha=[Security.Cryptography.SHA256]::Create(); foreach($id in $ids){$s='mcp2026:'+$id;$b=[Text.Encoding]::UTF8.GetBytes($s);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}; $sha.Dispose()\"",
+        "session_id": "EzUy-Z6JjV8DVCSVpwzxdpBm"
+      }
+    },
+    {
+      "time": "2026-09-06T04:24:58.375Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ids=@('ctx_bd9801c4b3e0c232f12165caab6d76c4','ctx_35b5dbe29a3b02f3325d9dbb9c8a0336','ctx_daea20c78d20493525cc9f69fa306b01'); $sha=[Security.Cryptography.SHA256]::Create(); foreach($id in $ids){$s='mcp2026:'+$id;$b=[Text.Encoding]::UTF8.GetBytes($s);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant(); [pscustomobject]@{id=$id;sha24=$hex.Substring(0,24)}|ConvertTo-Json -Compress}; $sha.Dispose()\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:10.062Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; $out=@(); foreach($prop in $j.PSObject.Properties){$id=[string]$prop.Name;$sha=[Security.Cryptography.SHA256]::Create();$b=[Text.Encoding]::UTF8.GetBytes('mcp2026:'+$id);$h=$sha.ComputeHash($b);$sha.Dispose();$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant().Substring(0,24); if($hex -eq '3c21a667f04a1b61a3f20d61'",
+        "session_id": "oddD6dkgpXDlNJ-n4sEcs2e_"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:11.234Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; $out=@(); foreach($prop in $j.PSObject.Properties){$id=[string]$prop.Name;$sha=[Security.Cryptography.SHA256]::Create();$b=[Text.Encoding]::UTF8.GetBytes('mcp2026:'+$id);$h=$sha.ComputeHash($b);$sha.Dispose();$hex=([BitConverter]::ToString($h)).Replace('-','').ToLowerInvariant().Substring(0,24); if($hex -eq '3c21a667f04a1b61a3f20d61'",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:17.578Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; [pscustomobject]@{type=$j.GetType().FullName;keys=@($j.PSObject.Properties.Name)}|ConvertTo-Json -Depth 4 -Compress; if($j.contexts){$j.contexts|Select-Object -First 20|ConvertTo-Json -Depth 6 -Compress}; if($j.entries){$j.entries|Select-Object -First 20|ConvertTo-Json -Depth 6 -Compress}\"",
+        "session_id": "FST4one6nrUGUPFw5ZsNtWfb"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:19.117Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; [pscustomobject]@{type=$j.GetType().FullName;keys=@($j.PSObject.Properties.Name)}|ConvertTo-Json -Depth 4 -Compress; if($j.contexts){$j.contexts|Select-Object -First 20|ConvertTo-Json -Depth 6 -Compress}; if($j.entries){$j.entries|Select-Object -First 20|ConvertTo-Json -Depth 6 -Compress}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:27.945Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; $props=if($j.contexts){$j.contexts.PSObject.Properties}else{$j.PSObject.Properties}; $sha=[Security.Cryptography.SHA256]::Create(); foreach($prop in $props){$id=[string]$prop.Name; if(-not $id.StartsWith('ctx_')){continue};$b=[Text.Encoding]::UTF8.GetBytes('mcp2026:'+$id);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Re",
+        "session_id": "wJzJwEfAWVTg_hXfJoOR3B2V"
+      }
+    },
+    {
+      "time": "2026-09-06T04:25:29.192Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools/orchestration/task-context-workspaces.json'; $j=Get-Content -Raw -LiteralPath $p|ConvertFrom-Json; $props=if($j.contexts){$j.contexts.PSObject.Properties}else{$j.PSObject.Properties}; $sha=[Security.Cryptography.SHA256]::Create(); foreach($prop in $props){$id=[string]$prop.Name; if(-not $id.StartsWith('ctx_')){continue};$b=[Text.Encoding]::UTF8.GetBytes('mcp2026:'+$id);$h=$sha.ComputeHash($b);$hex=([BitConverter]::ToString($h)).Re",
+        "status": "passed"
+      }
+    }
+  ]
+}

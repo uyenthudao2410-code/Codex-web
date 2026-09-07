@@ -1,0 +1,228 @@
+{
+  "version": 2,
+  "task_id": "f54ab5c04ca44f359811791b3d634a57",
+  "orchestration": {
+    "run_id": "4046fb1438234a5f8ac6b67a2b4f6a3f",
+    "wave_id": "042f74305d9b4c27bd6cf6e767a156d6",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "9b3241ddc963a77d916edc453ea7b7e8e4ae5391",
+    "worktree_fp": "fdd8e149738afdf61018d6d549f8cfa27ec4acd6f0b714ea56d1e423ae2eeeb6",
+    "contract_fp": "4aada5917b37cd5c5064b1b1917a78d3ac21fae6f1d94004fcc6dc3222202822"
+  },
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "JA1p7EBLpY1wB3GgsXRKnqMk",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 621,
+    "finished_at": "2026-09-06T04:17:59.604Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "9e555cd7bd5ca353929430f26caa76d478e5640c2476f0dacd46d0230f6e5cdc"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4046fb1438234a5f8ac6b67a2b4f6a3f\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4046fb1438234a5f8ac6b67a2b4f6a3f\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "4046fb1438234a5f8ac6b67a2b4f6a3f",
+      "wave_id": "042f74305d9b4c27bd6cf6e767a156d6",
+      "checkpoint_id": "",
+      "base_head": "9b3241ddc963a77d916edc453ea7b7e8e4ae5391",
+      "worktree_fp": "fdd8e149738afdf61018d6d549f8cfa27ec4acd6f0b714ea56d1e423ae2eeeb6",
+      "contract_fp": "4aada5917b37cd5c5064b1b1917a78d3ac21fae6f1d94004fcc6dc3222202822",
+      "objective_provenance": {
+        "effective_objective": "C4 corrective wave only: preserve an explicit --user-data-dir for isolated packaged Recovery Host launches instead of unconditionally resetting userData to the production APPDATA profile; add the smallest focused regression oracle. Preserve default version-1.0 production profile behavior when no explicit override is supplied. No unrelated edits, no publish/deploy, and do not touch .coding-tools evidence.",
+        "objective_revision": 1,
+        "objective_sha256": "c1a6a3964880ccb294145e1cfcc5146323011961f6056131a9ef855da5962288",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "47b4b84a3c084ecd59b4e280b8e51e7da8e913f662174358cef9979cc6130cdf",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-06T04:17:13.876Z",
+  "updated_at": "2026-09-06T04:22:04.362Z",
+  "events": [
+    {
+      "time": "2026-09-06T04:17:13.876Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:14.597Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 4 -F -e \"app.setPath('userData'\" -e \"user-data-dir\" -e \"web-mcp-assistant\" -e \"Version 1.0 has a new product identity\" tests electron scripts",
+        "session_id": "udxO77bXglnnqvoxp30WYjzU"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:15.186Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 4 -F -e \"app.setPath('userData'\" -e \"user-data-dir\" -e \"web-mcp-assistant\" -e \"Version 1.0 has a new product identity\" tests electron scripts",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:24.133Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "FINAL_ACCEPTANCE_NOT_READY"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:44.214Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 5 -F -e \"createElectronRuntimePaths\" -e \"RuntimePaths\" tests | findstr /I \"runtime path userData\"",
+        "session_id": "2k89PtfMRnZJ2QtLwAWDB3eh"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:44.795Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 5 -F -e \"createElectronRuntimePaths\" -e \"RuntimePaths\" tests | findstr /I \"runtime path userData\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:51.481Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/runtimePaths.js'; $i=0; Get-Content -LiteralPath $p | ForEach-Object { $i++; '{0,4}: {1}' -f $i,$_ }\"",
+        "session_id": "ti3nDQPb5_D8krHNrRA6R5ZL"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:51.945Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/services/runtimePaths.js'; $i=0; Get-Content -LiteralPath $p | ForEach-Object { $i++; '{0,4}: {1}' -f $i,$_ }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:59.098Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/main.js'; $lines=Get-Content -LiteralPath $p; for($i=1;$i -le 70;$i++){ '{0,4}: {1}' -f $i,$lines[$i-1] }\"",
+        "session_id": "JA1p7EBLpY1wB3GgsXRKnqMk"
+      }
+    },
+    {
+      "time": "2026-09-06T04:17:59.605Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p='electron/main.js'; $lines=Get-Content -LiteralPath $p; for($i=1;$i -le 70;$i++){ '{0,4}: {1}' -f $i,$lines[$i-1] }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-06T04:18:12.466Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T04:18:18.678Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-06T04:18:18.684Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-06T04:19:20.876Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "47b4b84a3c084ecd59b4e280b8e51e7da8e913f662174358cef9979cc6130cdf"
+      }
+    },
+    {
+      "time": "2026-09-06T04:22:04.362Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

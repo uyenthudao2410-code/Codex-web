@@ -1,0 +1,79 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main"
+  - generic [ref=e6]:
+    - generic [ref=e8]:
+      - navigation "Sidebar":
+        - generic:
+          - generic:
+            - generic:
+              - button "Open sidebar"
+        - generic:
+          - generic:
+            - link "New chat":
+              - /url: /
+          - generic:
+            - button "Search chats"
+          - generic:
+            - link "Images":
+              - /url: /images
+        - generic:
+          - generic:
+            - button "Open profile menu"
+      - generic [ref=e9]:
+        - heading "Chat history" [level=2] [ref=e10]
+        - navigation "Chat history" [ref=e12]:
+          - generic [ref=e15]:
+            - link "Home" [ref=e16] [cursor=pointer]:
+              - /url: /
+            - generic [ref=e19]:
+              - button "Search chats" [ref=e20] [cursor=pointer]
+              - button "Close sidebar" [expanded] [ref=e23]
+          - list [ref=e27]:
+            - listitem [ref=e28]:
+              - link "New chat" [ref=e29] [cursor=pointer]:
+                - /url: /
+            - listitem
+          - link "Images" [ref=e36] [cursor=pointer]:
+            - /url: /images
+          - generic [ref=e43]:
+            - link "Plugins" [ref=e44] [cursor=pointer]:
+              - /url: /plugins
+            - generic [ref=e51] [cursor=pointer]: Deep research
+          - generic [ref=e58]:
+            - link "See plans and pricing" [ref=e59] [cursor=pointer]:
+              - /url: https://openai.com/chatgpt/pricing/
+            - generic [ref=e67] [cursor=pointer]: Settings
+            - generic [ref=e71] [cursor=pointer]: Help
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - paragraph [ref=e83]: Get responses tailored to you
+              - paragraph [ref=e84]: Log in to get answers based on saved chats, plus create images and upload files.
+            - button "Log in" [ref=e86] [cursor=pointer]
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - banner:
+          - button "Model selector" [ref=e93] [cursor=pointer]:
+            - generic [ref=e94]: ChatGPT
+          - generic [ref=e100]:
+            - button "Share" [disabled] [ref=e101]
+            - generic [ref=e106]:
+              - button "Log in" [ref=e107] [cursor=pointer]
+              - button "Sign up for free" [ref=e109] [cursor=pointer]
+      - main [ref=e112]:
+        - generic [ref=e114]:
+          - generic:
+            - generic:
+              - generic:
+                - button [aria-hidden]
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button [aria-hidden] [ref=e116]
+                          - button [aria-hidden] [ref=e117]
+  - alert [ref=e118]
+  - status [ref=e119]
