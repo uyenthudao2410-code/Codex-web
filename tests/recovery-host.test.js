@@ -525,6 +525,38 @@ test('invalid READY adoption supervision services only the explicit supervisor r
   assert.equal(lightweightCalls, 2);
 });
 
+test('healthy READY supervision services the explicit supervisor restart ticket', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  seedReadyEpoch(host);
+  let ticketCalls = 0;
+  let superviseCalls = 0;
+  let lightweightCalls = 0;
+  host.orchestrator.serviceSupervisorRestartRequest = async () => {
+    ticketCalls += 1;
+    return { ticket_id: 'restart-healthy-ready-test', expected_disconnect: true };
+  };
+  host.orchestrator.supervise = async () => {
+    superviseCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: true };
+  };
+  host.orchestrator.lightweightSnapshot = async () => {
+    lightweightCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: false };
+  };
+  host.recordSupervisionStatus = (value) => {
+    host.lastSupervisionStatus = value;
+    return value;
+  };
+
+  await host.start();
+  assert.equal(host.readyAdoptionBlocksAdmission(), false);
+  const ready = await host.superviseOnce();
+  assert.equal(ticketCalls, 1, 'healthy READY supervision must service an explicit restart ticket');
+  assert.equal(superviseCalls, 1, 'ordinary supervision may continue after the explicit restart request is serviced');
+  assert.equal(lightweightCalls, 0, 'healthy READY supervision must not fall back to the blocked lightweight snapshot path');
+  assert.equal(ready.supervisorRequest.ticket_id, 'restart-healthy-ready-test');
+});
+
 test('invalid READY adoption guard retires only after a different durable epoch becomes current', async (t) => {
   const { host } = readyAdoptionHost(t);
   const blocked = seedReadyEpoch(host, {

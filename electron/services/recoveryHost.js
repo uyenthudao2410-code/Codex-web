@@ -1837,14 +1837,14 @@ class RecoveryHost {
         pendingObservation = connectorPending
           ? await this.connectorPendingObservation(epoch)
           : null;
-        // An invalid terminal READY adoption intentionally blocks ordinary
-        // watchdog mutation until a replacement epoch is created.  The one
-        // exception is an explicit task_control restart_runtime ticket: its
+        // An explicit task_control restart_runtime ticket must remain
+        // serviceable under any terminal READY state, including the ordinary
+        // healthy READY path and a blocked READY-adoption diagnostic.  Its
         // consumer resolves the current accepted source checkpoint and enters
-        // FullCleanActivation, which is precisely the authority that can
-        // replace this blocked READY epoch.  Never consume a ticket while a
-        // non-READY epoch already owns the activation transaction.
-        const supervisorRequest = readyAdoptionBlocked && !epochBlocked
+        // FullCleanActivation, which is the sole authority for replacement.
+        // Never consume a ticket while a non-READY epoch already owns the
+        // activation transaction.
+        const supervisorRequest = !epochBlocked
           && typeof this.orchestrator.serviceSupervisorRestartRequest === 'function'
           ? await this.orchestrator.serviceSupervisorRestartRequest()
           : null;

@@ -1,0 +1,178 @@
+[
+  {
+    "version": 2,
+    "task_id": "29115d028fd249c0abf83922dc6569f2",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T04:12:18.721Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-07T04:06:44.024Z",
+    "updated_at": "2026-09-07T04:12:18.721Z",
+    "events": [
+      {
+        "time": "2026-09-07T04:06:44.024Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-07T04:06:44.065Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T04:07:30.037Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "document_workflow",
+          "code": "NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-07T04:07:37.085Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T04:07:56.148Z",
+        "event": "command_started",
+        "details": {
+          "command": "git log -8 --date=iso-strict --format=\"%h %ad %s\" && git diff --stat -- electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js && npm run dev:status",
+          "session_id": "rLNN-_lUMFIoTTtQEm-DvJcv"
+        }
+      },
+      {
+        "time": "2026-09-07T04:07:57.018Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git log -8 --date=iso-strict --format=\"%h %ad %s\" && git diff --stat -- electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js && npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:08:03.455Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_accepted_result_economics.py --workspace .",
+          "session_id": "ewQN9B0GJYuI0V1qb4L51HfV"
+        }
+      },
+      {
+        "time": "2026-09-07T04:08:07.850Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_accepted_result_economics.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:10:45.999Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace . --stale-after-seconds 86400",
+          "session_id": "69h6k3j-9Lly7ltTlgU_pujH"
+        }
+      },
+      {
+        "time": "2026-09-07T04:10:50.793Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace . --stale-after-seconds 86400",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:13.675Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_cross_session_continuity.py --help && python -B resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py --help && python -B resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help && git diff -- electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "session_id": "G8SthftLjLcp9tkc2vUM3fzH"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:14.735Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_cross_session_continuity.py --help && python -B resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py --help && python -B resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help && git diff -- electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:25.583Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_cross_session_continuity.py --workspace . --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1 && python -B resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py --workspace . --start-problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --start-problem-revision 1 --target-n 10",
+          "session_id": "bbaK2yNgawZdJHUzVAmUHvl6"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:31.506Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_cross_session_continuity.py --workspace . --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1 && python -B resources/coding-tools-mcp/scripts/report_natural_problem_cohort.py --workspace . --start-problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --start-problem-revision 1 --target-n 10",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:45.217Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . && git show --stat --oneline b2a34bb -- electron resources tests package.json && git diff d62c334..HEAD --stat -- electron resources tests package.json",
+          "session_id": "qG3_i1g8PUxOVX08cWUjsKV1"
+        }
+      },
+      {
+        "time": "2026-09-07T04:11:49.611Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -B resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace . && git show --stat --oneline b2a34bb -- electron resources tests package.json && git diff d62c334..HEAD --stat -- electron resources tests package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:12:18.721Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const fs=require('fs'),crypto=require('crypto'),p=require('./package.json'); console.log(JSON.stringify({extraResources:p.build.extraResources},null,2)); for(const f of ['dist/coding-tools-mcp-setup-1.0.0.exe','dist/coding-tools-mcp-setup-1.0.0.exe.blockmap','dist/win-unpacked/resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py']) { const exists=fs.existsSync(f); console.log(JSON.stringify({path:f,exists,bytes:exists?fs.statSync(f).size:null,sha256:exists?crypto.createHash('",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T04:12:18.721Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T04:14:58.511Z",
+    "archive_reason": "finished"
+  }
+]

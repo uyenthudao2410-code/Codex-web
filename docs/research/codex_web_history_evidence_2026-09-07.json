@@ -1,0 +1,288 @@
+{
+  "title": "Codex-web historical performance evidence extract",
+  "analysis_date": "2026-09-07",
+  "source_path": "E:\\DEV\\Codex-web\\.coding-tools\\performance.json",
+  "source_last_observation_utc": "2026-09-07T04:16:00.402Z",
+  "provenance": "Selected fields transcribed from official Coding-VP Live document reads; derived values calculated locally. Not a copy or export of the canonical ledger.",
+  "access_limits": [
+    "The connected workspace projected E:/DEV rather than E:/DEV/Codex-web in this turn.",
+    "Target report command was denied before execution by filesystem_escape permission checks. No bypass or new canonical reporter execution occurred.",
+    "Performance snapshot was read in full. Task-history was sampled, not read exhaustively. Four exact generated run summaries were read.",
+    "The accepted-run cohort below is the previously observed canonical reporter snapshot from the earlier 2026-09-07 assessment."
+  ],
+  "lifetime_projection": {
+    "calls": 44253,
+    "errors": 3183,
+    "local_ms": 100535622,
+    "gap_ms": 1177126188,
+    "response_bytes": 2460526559,
+    "visible_bytes": 68753855,
+    "request_bytes": 31469566
+  },
+  "error_categories": {
+    "VALIDATION": 1098,
+    "RUNTIME": 996,
+    "AUTHORITY_DENIED": 356,
+    "UNKNOWN": 53,
+    "IDEMPOTENCY": 65,
+    "USER_BLOCKED": 187,
+    "NOT_FOUND": 241,
+    "INTERNAL": 182,
+    "POLICY": 5
+  },
+  "lifetime_derived": {
+    "error_rate_pct": 7.1927326960884015,
+    "local_hours": 27.926561666666668,
+    "gap_hours": 326.97949666666665,
+    "gap_to_local": 11.708548319321086,
+    "response_GiB": 2.291543929837644,
+    "visible_MiB": 65.56878566741943,
+    "validation_notfound_error_share_pct": 42.06723217090795,
+    "required_idempotency_key_coverage_pct": 99.68895800933126,
+    "lsp_handled_query_pct": 0.06838386140870754,
+    "fallback_query_pct": 99.9316161385913
+  },
+  "semantic_localization": {
+    "samples": 1384,
+    "queries": 8774,
+    "available_samples": 26,
+    "attempted_queries": 2272,
+    "handled_queries": 6,
+    "fallback_queries": 8768
+  },
+  "by_tool_counter_extract": [
+    {
+      "tool": "workspace_context",
+      "calls": 986,
+      "errors": 203,
+      "call_share_pct": 2.228,
+      "error_rate_pct": 20.588,
+      "duration_ms": 895035,
+      "local_time_share_pct": 0.89,
+      "response_bytes": 2620693,
+      "model_visible_bytes": 619441,
+      "visible_share_pct": 0.901
+    },
+    {
+      "tool": "prepare_context",
+      "calls": 31,
+      "errors": 0,
+      "call_share_pct": 0.07,
+      "error_rate_pct": 0.0,
+      "duration_ms": 85978,
+      "local_time_share_pct": 0.086,
+      "response_bytes": 500499,
+      "model_visible_bytes": 500499,
+      "visible_share_pct": 0.728
+    },
+    {
+      "tool": "run_task",
+      "calls": 562,
+      "errors": 35,
+      "call_share_pct": 1.27,
+      "error_rate_pct": 6.228,
+      "duration_ms": 3445975,
+      "local_time_share_pct": 3.428,
+      "response_bytes": 7223913,
+      "model_visible_bytes": 7223913,
+      "visible_share_pct": 10.507
+    },
+    {
+      "tool": "task_status",
+      "calls": 3984,
+      "errors": 26,
+      "call_share_pct": 9.003,
+      "error_rate_pct": 0.653,
+      "duration_ms": 2087211,
+      "local_time_share_pct": 2.076,
+      "response_bytes": 54070431,
+      "model_visible_bytes": 53994377,
+      "visible_share_pct": 78.533
+    },
+    {
+      "tool": "task_control",
+      "calls": 14041,
+      "errors": 1129,
+      "call_share_pct": 31.729,
+      "error_rate_pct": 8.041,
+      "duration_ms": 6036008,
+      "local_time_share_pct": 6.004,
+      "response_bytes": 530419614,
+      "model_visible_bytes": 2352766,
+      "visible_share_pct": 3.422
+    },
+    {
+      "tool": "agent_workflow",
+      "calls": 3207,
+      "errors": 305,
+      "call_share_pct": 7.247,
+      "error_rate_pct": 9.51,
+      "duration_ms": 72402018,
+      "local_time_share_pct": 72.016,
+      "response_bytes": 775381351,
+      "model_visible_bytes": 1016856,
+      "visible_share_pct": 1.479
+    },
+    {
+      "tool": "command_control",
+      "calls": 11732,
+      "errors": 507,
+      "call_share_pct": 26.511,
+      "error_rate_pct": 4.322,
+      "duration_ms": 3525590,
+      "local_time_share_pct": 3.507,
+      "response_bytes": 987980419,
+      "model_visible_bytes": 1014734,
+      "visible_share_pct": 1.476
+    },
+    {
+      "tool": "exec_command",
+      "calls": 7330,
+      "errors": 922,
+      "call_share_pct": 16.564,
+      "error_rate_pct": 12.578,
+      "duration_ms": 11349333,
+      "local_time_share_pct": 11.289,
+      "response_bytes": 83045371,
+      "model_visible_bytes": 740620,
+      "visible_share_pct": 1.077
+    },
+    {
+      "tool": "request_permissions",
+      "calls": 55,
+      "errors": 20,
+      "call_share_pct": 0.124,
+      "error_rate_pct": 36.364,
+      "duration_ms": 107530,
+      "local_time_share_pct": 0.107,
+      "response_bytes": 6453025,
+      "model_visible_bytes": 27087,
+      "visible_share_pct": 0.039
+    },
+    {
+      "tool": "apply_patch",
+      "calls": 2,
+      "errors": 1,
+      "call_share_pct": 0.005,
+      "error_rate_pct": 50.0,
+      "duration_ms": 12933,
+      "local_time_share_pct": 0.013,
+      "response_bytes": 48,
+      "model_visible_bytes": 48,
+      "visible_share_pct": 0.0
+    },
+    {
+      "tool": "read_file",
+      "calls": 1,
+      "errors": 0,
+      "call_share_pct": 0.002,
+      "error_rate_pct": 0.0,
+      "duration_ms": 4,
+      "local_time_share_pct": 0.0,
+      "response_bytes": 105,
+      "model_visible_bytes": 105,
+      "visible_share_pct": 0.0
+    },
+    {
+      "tool": "build_and_verify",
+      "calls": 1,
+      "errors": 0,
+      "call_share_pct": 0.002,
+      "error_rate_pct": 0.0,
+      "duration_ms": 10,
+      "local_time_share_pct": 0.0,
+      "response_bytes": 231,
+      "model_visible_bytes": 231,
+      "visible_share_pct": 0.0
+    },
+    {
+      "tool": "document_workflow",
+      "calls": 331,
+      "errors": 32,
+      "call_share_pct": 0.748,
+      "error_rate_pct": 9.668,
+      "duration_ms": 310356,
+      "local_time_share_pct": 0.309,
+      "response_bytes": 19293073,
+      "model_visible_bytes": 283058,
+      "visible_share_pct": 0.412
+    },
+    {
+      "tool": "view_image",
+      "calls": 26,
+      "errors": 3,
+      "call_share_pct": 0.059,
+      "error_rate_pct": 11.538,
+      "duration_ms": 277641,
+      "local_time_share_pct": 0.276,
+      "response_bytes": 3235861,
+      "model_visible_bytes": 115,
+      "visible_share_pct": 0.0
+    }
+  ],
+  "counter_reconciliation": {
+    "header_calls": 44253,
+    "sum_extracted_by_tool_calls": 42289,
+    "header_local_ms": 100535622,
+    "sum_extracted_by_tool_local_ms": 100535622,
+    "header_errors": 3183,
+    "sum_extracted_by_tool_errors": 3183,
+    "status": "Scope and producer-version reconciliation required. Do not assume all counters share the same observation population."
+  },
+  "period_metrics_as_stored_not_a_matched_trend": {
+    "2026-09-06": {
+      "calls": 1873,
+      "errors": 100,
+      "local_ms": 5935220,
+      "gap_ms": 36613671,
+      "error_pct": 5.339,
+      "local_mean_ms_per_call": 3168.831,
+      "gap_to_local_ratio": 6.169
+    },
+    "2026-09-07_partial": {
+      "calls": 602,
+      "errors": 81,
+      "local_ms": 688345,
+      "gap_ms": 3203502,
+      "error_pct": 13.455,
+      "local_mean_ms_per_call": 1143.43,
+      "gap_to_local_ratio": 4.654
+    }
+  },
+  "previously_observed_canonical_accepted_cohort": {
+    "accepted_runs": 637,
+    "retained_performance_runs": 93,
+    "performance_coverage": 0.14599686028257458,
+    "first_pass": {
+      "n": 61,
+      "tool_calls": 701,
+      "median_tool_calls": 9,
+      "local_ms": 1729884,
+      "median_local_ms": 24279
+    },
+    "repaired": {
+      "n": 32,
+      "tool_calls": 1287,
+      "median_tool_calls": 28,
+      "local_ms": 6503773,
+      "median_local_ms": 79652
+    },
+    "derived_repaired_local_share": 0.789900890940684,
+    "not_causal": true,
+    "not_independent_user_problem_outcomes": true
+  },
+  "case_ids": {
+    "late_acceptance": "3ffefaffb2ad4bebb269c26c5f952ee7",
+    "post_terminal_resource_window": "f423d1ffaedd4c1d81dac0eb63af489c",
+    "proof_and_provenance_replanning": "1b75dbac11434514b5792cc09ab6e2b4",
+    "verification_envelope_replanning": "f7f34289300d42dda4a8d556a8183459"
+  },
+  "interpretation_limits": [
+    "Error counters include rejected requests and expected guard behavior, not only product defects.",
+    "Summed local durations are not CPU time and may include nested or overlapping activity.",
+    "Estimated wait is capped inter-tool gap and is not model latency, labor time, or proven avoidable delay.",
+    "Response bytes, model-visible text bytes, Unicode characters, tokens, provider billing and physical disk writes are different measures.",
+    "State-observation counts are not unique runs.",
+    "No code, source, canonical ledger, services, model routing or release was changed by this analysis."
+  ]
+}

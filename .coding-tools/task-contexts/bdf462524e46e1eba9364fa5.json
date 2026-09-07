@@ -1,0 +1,379 @@
+{
+  "version": 2,
+  "task_id": "00ebb7a0c60c4f93abea92092b962fca",
+  "orchestration": {
+    "run_id": "c6418ab801964281b87bebdeff009136",
+    "wave_id": "1587530f077948878937eef8cc1d4712",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "9255f94c9beff33f8c6c53d6745a08968f5a12bb",
+    "worktree_fp": "8e37ce49b4e1956ed036390bc8fd6202f719090e25b3a841ef4e1d71fd2ae4a4",
+    "contract_fp": ""
+  },
+  "objective": "Read only the host/runtime lifecycle surfaces needed for the final repair. Identify: (1) where task_control restart_runtime writes its one-shot ticket and where Electron/Recovery Host consumes it; (2) the exact point after MCP termination but before replacement start where a bounded maintenance command could run; (3) existing native-LSP/WebCodex setup/binding/supervision code, if any. Return exact files/symbols and current tests. Do not modify source, Git, ledger, runtime, machine state, or services.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-07T02:37:07.241Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-07T02:37:07.241Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "lppxv6yRBRbzaWhs8p-tSfZz",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 797,
+    "finished_at": "2026-09-07T02:37:06.851Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 36,
+        "head_hash": "251fdae8d31284fe2fb90c587c914aa5debb3a8ffffd87b401db51bdac75167a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c6418ab801964281b87bebdeff009136\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-c6418ab801964281b87bebdeff009136\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "c6418ab801964281b87bebdeff009136",
+      "wave_id": "1587530f077948878937eef8cc1d4712",
+      "checkpoint_id": "6692c89947b74c54ad7b33f052db6f1b",
+      "base_head": "9255f94c9beff33f8c6c53d6745a08968f5a12bb",
+      "worktree_fp": "8e37ce49b4e1956ed036390bc8fd6202f719090e25b3a841ef4e1d71fd2ae4a4",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read only the host/runtime lifecycle surfaces needed for the final repair. Identify: (1) where task_control restart_runtime writes its one-shot ticket and where Electron/Recovery Host consumes it; (2) the exact point after MCP termination but before replacement start where a bounded maintenance command could run; (3) existing native-LSP/WebCodex setup/binding/supervision code, if any. Return exact files/symbols and current tests. Do not modify source, Git, ledger, runtime, machine state, or services.",
+        "objective_revision": 1,
+        "objective_sha256": "82c2cd1d14fa2b5da74793ef081158f1063255c12436e4d18111f86d7cf2e9d0",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 3,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "475297815bdb4059833d8aa465161103",
+          "stage_id": "check:3a4713d17ffe0242",
+          "status": "passed",
+          "duration_ms": 1504,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "046f8b352e9e49af9fcc1a073488374b",
+          "stage_id": "check:206025690a84e339",
+          "status": "passed",
+          "duration_ms": 2001,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1eb2f1f45b2d4549a03d39b6131ad1bc",
+          "stage_id": "check:eb55f4f81af543c7",
+          "status": "passed",
+          "duration_ms": 1235,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "a68e37420ef5eb703a6814321ef356cccc055471b6c3148638b0f3c19ef823c4",
+  "completion_report_acknowledged_id": "a68e37420ef5eb703a6814321ef356cccc055471b6c3148638b0f3c19ef823c4",
+  "completion_report_acknowledged_at": "2026-09-07T03:29:46.093Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-07T02:36:42.501Z",
+  "updated_at": "2026-09-07T03:29:46.096Z",
+  "events": [
+    {
+      "time": "2026-09-07T02:36:42.501Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:36:55.193Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T02:36:57.398Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-07T02:36:58.884Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-07T02:36:58.891Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:00.337Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:00.520Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:01.684Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 16 -e \"restart_runtime\" -e \"restart ticket\" -e \"restart-ticket\" -e \"enqueue.*restart\" resources/coding-tools-mcp/coding_tools_mcp electron scripts tests",
+        "session_id": "yYzM8p6qhu9XMt9DjMYrhxE2"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:02.224Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 16 -e \"restart_runtime\" -e \"restart ticket\" -e \"restart-ticket\" -e \"enqueue.*restart\" resources/coding-tools-mcp/coding_tools_mcp electron scripts tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:04.448Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 16 -e \"reconcile_exact_stale_run\" -e \"stale_run_reconciliation\" -e \"runtime_stopped\" electron scripts resources/coding-tools-mcp tests",
+        "session_id": "PIubMrQmn4d8xZLVPl0fS_zN"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:04.941Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 16 -e \"reconcile_exact_stale_run\" -e \"stale_run_reconciliation\" -e \"runtime_stopped\" electron scripts resources/coding-tools-mcp tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:06.393Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 16 -e \"native-lsp-binding\" -e \"NATIVE_LSP\" -e \"g4-semantic\" -e \"webcodex.exe\" -e \"connector-key\" electron scripts resources/coding-tools-mcp tests",
+        "session_id": "lppxv6yRBRbzaWhs8p-tSfZz"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:06.851Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 16 -e \"native-lsp-binding\" -e \"NATIVE_LSP\" -e \"g4-semantic\" -e \"webcodex.exe\" -e \"connector-key\" electron scripts resources/coding-tools-mcp tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.239Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.241Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.658Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.660Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.755Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "4dfbebe04c63cf7c6792121f596a036d6d9edcc5bb84bc6c2501c737d38ab81b"
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:07.758Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-07T02:37:13.319Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T03:29:25.935Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-07T03:29:25.946Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T03:29:26.149Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "a68e37420ef5eb703a6814321ef356cccc055471b6c3148638b0f3c19ef823c4"
+      }
+    },
+    {
+      "time": "2026-09-07T03:29:37.347Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T03:29:46.093Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "a68e37420ef5eb703a6814321ef356cccc055471b6c3148638b0f3c19ef823c4"
+      }
+    }
+  ]
+}

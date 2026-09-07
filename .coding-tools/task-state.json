@@ -27,7 +27,7 @@
     "result_status": "failed",
     "exit_code": null,
     "duration_ms": null,
-    "finished_at": "2026-08-31T08:46:02.424Z"
+    "finished_at": "2026-09-07T03:17:18.338Z"
   },
   "completion_report": null,
   "completion_report_id": "",
@@ -40,7 +40,7 @@
   "failure": null,
   "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-08-30T03:30:56.457Z",
-  "updated_at": "2026-08-31T08:46:02.424Z",
+  "updated_at": "2026-09-07T03:17:18.338Z",
   "events": [
     {
       "time": "2026-08-30T03:30:56.457Z",
@@ -68,6 +68,14 @@
       "event": "command_finished",
       "details": {
         "command": "curl -s -L \"https://proxy5.net/vi/free-proxy/vietnam\" | Select-String -Pattern \"api|fetch|proxy|json\" | Select-Object -First 50",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-07T03:17:18.338Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Date -Format 'yyyy-MM-dd HH:mm:ss'; Get-PSDrive C,E | Select-Object Name,Used,Free | Format-Table -AutoSize | Out-String -Width 200\"",
         "status": "failed"
       }
     }

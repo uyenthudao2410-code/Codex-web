@@ -1557,6 +1557,91 @@ test('replacement startup failure terminalizes the activation epoch and keeps ad
   assert.equal(terminal.error.code, 'MCP_START_FAILED');
 });
 
+test('replacement reconciles exact stale runs sequentially before Coding MCP start', async (t) => {
+  const { root, paths } = fixture(t);
+  const store = epochStore(paths);
+  const firstRun = 'a'.repeat(32);
+  const secondRun = 'b'.repeat(32);
+  const created = store.create({
+    activation_epoch_id: id('activation-exact-stale', '0001'),
+    operation_id: id('operation-exact-stale', '0001'),
+    expiresAtUnixMs: 1_700_000_120_000,
+    components: ['recovery_host', 'coding_mcp', 'electron_ui'],
+    metadata: { reason: `exact_stale_runs:${firstRun},${secondRun}` }
+  });
+  const calls = [];
+  const failure = Object.assign(new Error('stop after maintenance proof'), { code: 'MCP_START_FAILED' });
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {
+      setActivationEpoch() {},
+      start: async () => { calls.push('start'); throw failure; }
+    },
+    now: () => 1_700_000_000_001
+  });
+  coordinator._execExactStaleRunCli = async ({ runId, reconcile, snapshotSha256, logicalSha256 }) => {
+    calls.push(`${runId}:${reconcile ? 'reconcile' : 'preflight'}`);
+    if (!reconcile) {
+      return { snapshot: { sha256: '1'.repeat(64), logical_sha256: '2'.repeat(64) } };
+    }
+    assert.equal(snapshotSha256, '1'.repeat(64));
+    assert.equal(logicalSha256, '2'.repeat(64));
+    return {
+      schema_version: 1,
+      reconciliation: { changed: true, idempotent: false, chain_ok: true },
+      postflight: {
+        target: { status: 'stale', classification: 'RECONCILED_STALE', already_reconciled: true }
+      }
+    };
+  };
+
+  await assert.rejects(
+    coordinator.continueReplacement({ activationEpochId: created.activation_epoch_id }),
+    { code: 'MCP_START_FAILED' }
+  );
+  assert.deepEqual(calls, [
+    `${firstRun}:preflight`,
+    `${firstRun}:reconcile`,
+    `${secondRun}:preflight`,
+    `${secondRun}:reconcile`,
+    'start'
+  ]);
+  assert.equal(store.current().state, 'FAILED');
+});
+
+test('replacement refuses malformed exact stale-run maintenance before Coding MCP start', async (t) => {
+  const { root, paths } = fixture(t);
+  const store = epochStore(paths);
+  const created = store.create({
+    activation_epoch_id: id('activation-exact-stale', '0002'),
+    operation_id: id('operation-exact-stale', '0002'),
+    expiresAtUnixMs: 1_700_000_120_000,
+    components: ['recovery_host', 'coding_mcp', 'electron_ui'],
+    metadata: { reason: 'exact_stale_runs:not-a-run-id' }
+  });
+  let startCalls = 0;
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {
+      setActivationEpoch() {},
+      start: async () => { startCalls += 1; }
+    },
+    now: () => 1_700_000_000_001
+  });
+
+  await assert.rejects(
+    coordinator.continueReplacement({ activationEpochId: created.activation_epoch_id }),
+    { code: 'EXACT_STALE_RUN_REQUEST_INVALID' }
+  );
+  assert.equal(startCalls, 0);
+  assert.equal(store.current().state, 'FAILED');
+  assert.equal(store.current().admission_state, 'CLOSED');
+});
+
 test('full-clean failure after epoch creation stops owned old components before terminalizing', async (t) => {
   const { root, paths } = fixture(t);
   const store = epochStore(paths);
