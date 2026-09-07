@@ -29,6 +29,7 @@ ALLOWLIST: dict[str, tuple[int, str]] = {
     "coordination.py": (1700, "Revision-4 PRL and task-control authority bridge"),
     "mcp_http_handler.py": (1750, "MCP-2026 stateless context and typed transport envelope"),
     "orchestration_ledger.py": (5300, "bounded live-run projection and acceptance telemetry"),
+    "run_continuation.py": (1900, "single durable grant, cursor, proof and controller-recovery contract"),
     "solution_economics.py": (1700, "Revision-4 descriptive problem-resolution analytics"),
 }
 

@@ -113,6 +113,22 @@ _PROFILE_SPECS: dict[str, dict[str, Any]] = {
         ),
         "developer_instructions": "Optimize for a correct minimal candidate and explicit proof; stop on unresolved shared semantics.",
     },
+    "continuation_proposal": {
+        "model": "gpt-5.6-sol",
+        "effort": "xhigh",
+        "recommended_deadline_ms": 30_000,
+        "features": {**_REVIEW_FEATURES, "shell_tool": False},
+        "locked_route": True,
+        "require_default_argv": True,
+        "base_instructions": (
+            "You are a no-tools continuation proposal generator. Use only the contract and evidence supplied in this turn. "
+            "Do not inspect repository files, run commands, browse, use tools, modify state, delegate, or request new authority."
+        ),
+        "developer_instructions": (
+            "Return exactly one object matching the supplied output schema. MCP, not you, validates scope, applies effects, "
+            "runs checks, records receipts, and decides whether a technical replan is permitted."
+        ),
+    },
     "consequential": {
         "model": "gpt-5.6-sol",
         "effort": "max",
@@ -438,6 +454,7 @@ class CodexAppServerBridge:
         self._latest_turn_by_thread: dict[str, str] = {}
         self._capacity_cooldowns: dict[str, dict[str, Any]] = {}
         self._recent_runs: deque[dict[str, Any]] = deque(maxlen=32)
+        self._launch_argv_is_default = True
         self._closing = False
 
     def handle(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -597,7 +614,6 @@ class CodexAppServerBridge:
         output_schema: dict[str, Any] | None = None,
         wait_ms: int = 0,
     ) -> dict[str, Any]:
-        self._ensure_connected()
         prompt = self._validate_prompt(prompt)
         workspace = self._workspace()
         lifetime = str(lifetime or "ephemeral").strip().lower()
@@ -608,6 +624,8 @@ class CodexAppServerBridge:
                 details={"supported": ["ephemeral", "persistent"]},
             )
         route = self._resolve_route(profile=profile, model=model, effort=effort, source_thread_id=source_thread_id)
+        self._ensure_connected()
+        self._assert_profile_launch_policy(route)
         self._check_capacity(route["model"])
         common_thread = self._thread_route_params(route, workspace)
         if source_thread_id:
@@ -687,11 +705,19 @@ class CodexAppServerBridge:
         resolve the thread from the durable orchestration lane registry so an
         arbitrary live Codex Desktop thread cannot be claimed by the bridge.
         """
-        self._ensure_connected()
         if not thread_id:
             raise CodexBridgeError("THREAD_ID_REQUIRED", "A persisted lane thread_id is required.")
         prompt = self._validate_prompt(prompt)
         workspace = self._workspace()
+        route = self._resolve_route(
+            profile=profile,
+            model=model,
+            effort=effort,
+            source_thread_id="history-source" if profile == "history" else None,
+            continuing=True,
+        )
+        self._ensure_connected()
+        self._assert_profile_launch_policy(route)
         source_result = self._request(
             "thread/read",
             {"threadId": thread_id, "includeTurns": False},
@@ -724,13 +750,6 @@ class CodexAppServerBridge:
                     "actual_session_id": actual_session_id,
                 },
             )
-        route = self._resolve_route(
-            profile=profile,
-            model=model,
-            effort=effort,
-            source_thread_id="history-source" if profile == "history" else None,
-            continuing=True,
-        )
         self._check_capacity(route["model"])
         resume_response = self._request(
             "thread/resume",
@@ -804,6 +823,7 @@ class CodexAppServerBridge:
             source_thread_id="history-source" if owned.get("profile") == "history" else None,
             continuing=True,
         )
+        self._assert_profile_launch_policy(route)
         self._check_capacity(route["model"])
         with self._condition:
             self._owned_threads[thread_id].update({"model": route["model"], "effort": route["effort"]})
@@ -952,6 +972,12 @@ class CodexAppServerBridge:
         resolved_effort = str(effort or spec["effort"]).strip().lower()
         if resolved_effort not in _VALID_EFFORTS:
             raise CodexBridgeError("INVALID_EFFORT", f"Unsupported reasoning effort: {resolved_effort}", details={"supported": sorted(_VALID_EFFORTS)})
+        if bool(spec.get("locked_route")) and (resolved_model != str(spec["model"]) or resolved_effort != str(spec["effort"])):
+            raise CodexBridgeError(
+                "PROFILE_ROUTE_LOCKED",
+                f"{profile_name} has a fixed model and effort; callers cannot override its continuation safety profile.",
+                details={"profile": profile_name, "model": spec["model"], "effort": spec["effort"]},
+            )
         return {
             "profile": profile_name,
             "model": resolved_model,
@@ -960,7 +986,18 @@ class CodexAppServerBridge:
             "features": dict(spec["features"]),
             "base_instructions": str(spec["base_instructions"]),
             "developer_instructions": str(spec["developer_instructions"]),
+            "require_default_argv": bool(spec.get("require_default_argv")),
         }
+
+    def _assert_profile_launch_policy(self, route: dict[str, Any]) -> None:
+        if not bool(route.get("require_default_argv")):
+            return
+        if os.environ.get("CODING_TOOLS_MCP_CODEX_ARGV", "").strip() or not self._launch_argv_is_default:
+            raise CodexBridgeError(
+                "CONTINUATION_PROFILE_UNCERTIFIED_LAUNCH",
+                "continuation_proposal requires the bridge's certified default App Server launch; custom argv is not accepted.",
+                details={"profile": route.get("profile")},
+            )
 
     def _thread_route_params(self, route: dict[str, Any], workspace: Path) -> dict[str, Any]:
         return {
@@ -1164,6 +1201,7 @@ class CodexAppServerBridge:
                     )
             else:
                 argv = [str(binary), "app-server", "--listen", "stdio://", *disable_args]
+            self._launch_argv_is_default = not bool(argv_override)
             creationflags = 0
             if os.name == "nt":
                 creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)

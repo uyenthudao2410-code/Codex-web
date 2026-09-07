@@ -23,6 +23,7 @@ class RuntimeBehaviorIdentityMixin:
             "routing_policy": runtime_type._select_agent_execution_route,
             "external_review_policy": runtime_type._maybe_agent_workflow_external_review,
             "committed_review": runtime_type.committed_review,
+            "run_continuation_policy": runtime_type._run_continuation_grant,
         }
         components = {
             name: hashlib.sha256(marshal.dumps(target.__code__)).hexdigest()

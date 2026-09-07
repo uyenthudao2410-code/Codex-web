@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import functools
+import json
 import os
 import shutil
 import stat
@@ -40,12 +41,29 @@ def main(argv: list[str] | None = None) -> int:
     if sys.platform != "linux":
         return fail("landlock_exec is only supported on Linux")
     args = list(sys.argv[1:] if argv is None else argv)
-    if len(args) != 2:
-        return fail("landlock_exec requires: <ruleset-fd> <command>")
+    if len(args) not in {2, 3}:
+        return fail("landlock_exec requires: <ruleset-fd> <command> or <ruleset-fd> --argv-json <argv-json>")
     try:
         ruleset_fd = int(args[0])
     except ValueError:
         return fail("landlock_exec received an invalid ruleset fd")
+    structured_argv: list[str] | None = None
+    if args[1] == "--argv-json":
+        if len(args) != 3:
+            return fail("landlock_exec structured argv requires one JSON array")
+        try:
+            decoded = json.loads(args[2])
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return fail("landlock_exec received invalid structured argv JSON")
+        if (
+            not isinstance(decoded, list)
+            or not decoded
+            or any(not isinstance(item, str) or not item or "\x00" in item for item in decoded)
+        ):
+            return fail("landlock_exec structured argv must be a non-empty string array")
+        structured_argv = list(decoded)
+    elif len(args) != 2:
+        return fail("landlock_exec legacy command mode takes exactly one command")
     cmd = args[1]
 
     rc = int(landlock_libc().prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
@@ -61,6 +79,8 @@ def main(argv: list[str] | None = None) -> int:
     except OSError:
         pass
 
+    if structured_argv is not None:
+        os.execvpe(structured_argv[0], structured_argv, os.environ)
     shell = os.environ.get("SHELL") or shutil.which("sh") or "/bin/sh"
     os.execvpe(shell, [shell, "-c", cmd], os.environ)
     return 127
@@ -310,8 +330,16 @@ def landlock_path_allowed_access(path: Path) -> int:
     )
 
 
-def landlock_exec_argv(ruleset_fd: int, cmd: str) -> list[str]:
+def landlock_exec_argv(ruleset_fd: int, cmd: str | list[str]) -> list[str]:
     helper = Path(__file__).with_name("landlock_exec.py")
+    if isinstance(cmd, list):
+        return [
+            sys.executable,
+            str(helper),
+            str(ruleset_fd),
+            "--argv-json",
+            json.dumps(cmd, ensure_ascii=False, separators=(",", ":")),
+        ]
     return [sys.executable, str(helper), str(ruleset_fd), cmd]
 
 

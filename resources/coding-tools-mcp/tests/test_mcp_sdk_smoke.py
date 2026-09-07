@@ -39,6 +39,10 @@ def assert_smart_task_control_schema(tools: list[object]) -> None:
     assert isinstance(actions, list)
     assert actions.count("problem") == 1
     assert actions.count("p5") == 1
+    assert actions.count("run_continuation") == 1
+    continuation_action = schema["properties"]["run_continuation_action"]
+    assert isinstance(continuation_action, dict)
+    assert set(continuation_action["enum"]) == {"get", "start", "observe", "reconcile", "pause", "resume", "revoke"}
     assert "allOf" not in json.dumps(schema, ensure_ascii=False, sort_keys=True)
 
 

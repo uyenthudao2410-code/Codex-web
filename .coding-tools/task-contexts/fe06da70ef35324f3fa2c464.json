@@ -4,7 +4,7 @@
   "orchestration": {
     "run_id": "2fb97c02bc6b4125b7148785335c57d9",
     "wave_id": "45a1d77efc014ce0b613043597f69d50",
-    "orchestration_state": "ACCEPTING",
+    "orchestration_state": "CHECKPOINTED",
     "execution_mode": "mcp_only",
     "route_requested": "deterministic",
     "route_resolved": "deterministic",
@@ -16,7 +16,7 @@
     "contract_fp": ""
   },
   "objective": "Fix controlled supervisor restart propagation so allow_acceptance_pending survives from task_control restart_runtime into the durable restart ticket and then into FullCleanActivation. Preserve authorized-child exact-stale target_workspace behavior and all unrelated PRL/dashboard WIP. Add focused regression proof; do not run a runtime restart in this engineering wave.",
-  "status": "waiting",
+  "status": "completed",
   "steps": [
     {
       "id": "apply",
@@ -37,16 +37,16 @@
       "updated_at": "2026-09-07T11:04:57.231Z"
     }
   ],
-  "current_step": "Waiting for ChatWeb Sol acceptance",
+  "current_step": "Completed - operator report required",
   "current_command": null,
   "last_command_result": {
-    "command_id": "fPSaJOG3-8zzTPN4yUWA7iDp",
+    "command_id": "H4ysL7ubr5MlOSAQx8H6q25Y",
     "kind": "command",
     "status": "exited",
-    "result_status": "failed",
-    "exit_code": 2,
-    "duration_ms": null,
-    "finished_at": "2026-09-07T11:14:24.224Z"
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 635,
+    "finished_at": "2026-09-07T11:34:04.817Z"
   },
   "completion_report": {
     "schema_version": 1,
@@ -61,8 +61,54 @@
       "NEXT CRITICAL ACTION"
     ],
     "what_changed": {
-      "files": [],
-      "source": "canonical_patch_surface_observations",
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py",
+          "state": "file",
+          "sha256": "3b8bfb5f3670232887cf49db2f1c83e190760f0dfd262de60db49ed9ad6e431d",
+          "size_bytes": 8325,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2fb97c02bc6b4125b7148785335c57d9",
+          "wave_id": "45a1d77efc014ce0b613043597f69d50"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "state": "file",
+          "sha256": "aae7c6221518c0149e46e569bbf865acf8f86709f958291760fb0128750727dd",
+          "size_bytes": 93312,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2fb97c02bc6b4125b7148785335c57d9",
+          "wave_id": "45a1d77efc014ce0b613043597f69d50"
+        },
+        {
+          "path": "electron/services/runtimeOrchestrator.js",
+          "state": "file",
+          "sha256": "f52d004b3e8168370c8a1e70ba273a4c3920b763dc7a8e4fcabc3d16acd54050",
+          "size_bytes": 137596,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2fb97c02bc6b4125b7148785335c57d9",
+          "wave_id": "45a1d77efc014ce0b613043597f69d50"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "state": "file",
+          "sha256": "6366f7d0cebbde1caa2964adb6ac023007518bf0c823cad8e1f3d8b8a73d57b6",
+          "size_bytes": 6801,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2fb97c02bc6b4125b7148785335c57d9",
+          "wave_id": "45a1d77efc014ce0b613043597f69d50"
+        },
+        {
+          "path": "tests/runtime-lifecycle.test.js",
+          "state": "file",
+          "sha256": "c20aeeba497305739d2988a7daa5e7f0cb91ee46e767353196f9751e19f2fae3",
+          "size_bytes": 122380,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2fb97c02bc6b4125b7148785335c57d9",
+          "wave_id": "45a1d77efc014ce0b613043597f69d50"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
       "raw_source_or_command_output_included": false,
       "patch_surface_observations": {
         "schema_version": 1,
@@ -101,14 +147,14 @@
       }
     },
     "current_state": {
-      "orchestration_state": "ACCEPTING",
-      "run_status": "active",
-      "wave_status": "active",
-      "task_status": "waiting",
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
       "integrity": {
         "ok": true,
-        "checked": 23,
-        "head_hash": "107297c2b63c57b8040e90a4c209c9d4616069b759729da7608b8c67eddb59b6"
+        "checked": 33,
+        "head_hash": "044917707d683af02abb8466dfb883c78396d60de73a06ab53e84907a3702e25"
       },
       "reports": {
         "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2fb97c02bc6b4125b7148785335c57d9\\run-summary.md",
@@ -120,7 +166,7 @@
     "source_run_wave": {
       "run_id": "2fb97c02bc6b4125b7148785335c57d9",
       "wave_id": "45a1d77efc014ce0b613043597f69d50",
-      "checkpoint_id": "",
+      "checkpoint_id": "42a72abf64d1427092677f97e2f32e32",
       "base_head": "58dfd3093d7a05f6999fe93e15c94050aa51d204",
       "worktree_fp": "011676ec3065255b19fd2ba0f0b77b4f4accfc973ab1db17a5e8ee042157ea5b",
       "contract_fp": "",
@@ -148,14 +194,14 @@
         }
       ]
     },
-    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "accepted_or_not": "ACCEPTED",
     "blocker_or_failure": null,
-    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
-    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
   },
-  "completion_report_id": "11241e26f4119ff252ef3d565e5e048fcaa1ccd91623fa64a5791812f356c4d4",
-  "completion_report_acknowledged_id": "11241e26f4119ff252ef3d565e5e048fcaa1ccd91623fa64a5791812f356c4d4",
-  "completion_report_acknowledged_at": "2026-09-07T11:32:55.589Z",
+  "completion_report_id": "b1d2b6bc68e6924a775de352c894477703c29077b419cb03c2bbc315842e154b",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
   "test_results": [
     {
       "command": "cmd /d /s /c \"cd resources\\coding-tools-mcp && python -m pytest tests\\test_restart_ticket_maintenance.py -q && cd ..\\.. && node --test tests\\runtime-lifecycle.test.js && git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py tests/runtime-lifecycle.test.js\"",
@@ -9130,9 +9176,9 @@
     }
   ],
   "failure": null,
-  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
   "created_at": "2026-09-07T11:02:38.859Z",
-  "updated_at": "2026-09-07T11:32:55.611Z",
+  "updated_at": "2026-09-07T11:34:15.688Z",
   "events": [
     {
       "time": "2026-09-07T11:02:38.859Z",
@@ -9400,6 +9446,98 @@
       "event": "operator_completion_report_acknowledged",
       "details": {
         "report_id": "11241e26f4119ff252ef3d565e5e048fcaa1ccd91623fa64a5791812f356c4d4"
+      }
+    },
+    {
+      "time": "2026-09-07T11:33:51.269Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T11:33:52.725Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:03.384Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:04.271Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd.exe /d /c \"certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py SHA256 & certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256 & certutil -hashfile electron\\services\\runtimeOrchestrator.js SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py SHA256 & certutil -hashfile tests\\runtime-lifecycle.test.js SHA256\"",
+        "session_id": "H4ysL7ubr5MlOSAQx8H6q25Y"
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:04.817Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd.exe /d /c \"certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py SHA256 & certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256 & certutil -hashfile electron\\services\\runtimeOrchestrator.js SHA256 & certutil -hashfile resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py SHA256 & certutil -hashfile tests\\runtime-lifecycle.test.js SHA256\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:13.269Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:15.468Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:15.490Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T11:34:15.660Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "b1d2b6bc68e6924a775de352c894477703c29077b419cb03c2bbc315842e154b"
       }
     }
   ]

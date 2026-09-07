@@ -80,6 +80,20 @@ def validate_arguments(tool_name: str, args: dict[str, Any]) -> None:
 
 
 def validate_schema_value(value: Any, schema: dict[str, Any], *, path: str) -> None:
+    alternatives = schema.get("oneOf")
+    if isinstance(alternatives, list):
+        matches = 0
+        for candidate in alternatives:
+            if not isinstance(candidate, dict):
+                continue
+            try:
+                validate_schema_value(value, candidate, path=path)
+            except ToolFailure:
+                continue
+            matches += 1
+        if matches != 1:
+            raise ToolFailure("INVALID_ARGUMENT", f"{path} must match exactly one supported input shape.", category="validation")
+        return
     expected_type = schema.get("type")
     if expected_type is not None and not schema_type_matches(value, expected_type):
         raise ToolFailure("INVALID_ARGUMENT", f"{path} must be {schema_type_name(expected_type)}.", category="validation")
@@ -90,6 +104,11 @@ def validate_schema_value(value: Any, schema: dict[str, Any], *, path: str) -> N
             raise ToolFailure("INVALID_ARGUMENT", f"{path} is shorter than {min_length}.", category="validation")
         if "enum" in schema and value not in schema["enum"]:
             raise ToolFailure("INVALID_ARGUMENT", f"{path} must be one of {schema['enum']!r}.", category="validation")
+        pattern = schema.get("pattern")
+        if isinstance(pattern, str):
+            import re
+            if re.fullmatch(pattern, value) is None:
+                raise ToolFailure("INVALID_ARGUMENT", f"{path} does not match the required pattern.", category="validation")
 
     if isinstance(value, int) and not isinstance(value, bool):
         minimum = schema.get("minimum")
@@ -99,10 +118,17 @@ def validate_schema_value(value: Any, schema: dict[str, Any], *, path: str) -> N
         if isinstance(maximum, (int, float)) and value > maximum:
             raise ToolFailure("INVALID_ARGUMENT", f"{path} must be <= {maximum}.", category="validation")
 
-    if isinstance(value, list) and isinstance(schema.get("items"), dict):
-        item_schema = schema["items"]
-        for index, item in enumerate(value):
-            validate_schema_value(item, item_schema, path=f"{path}[{index}]")
+    if isinstance(value, list):
+        minimum_items = schema.get("minItems")
+        maximum_items = schema.get("maxItems")
+        if isinstance(minimum_items, int) and len(value) < minimum_items:
+            raise ToolFailure("INVALID_ARGUMENT", f"{path} must contain at least {minimum_items} item(s).", category="validation")
+        if isinstance(maximum_items, int) and len(value) > maximum_items:
+            raise ToolFailure("INVALID_ARGUMENT", f"{path} must contain no more than {maximum_items} item(s).", category="validation")
+        if isinstance(schema.get("items"), dict):
+            item_schema = schema["items"]
+            for index, item in enumerate(value):
+                validate_schema_value(item, item_schema, path=f"{path}[{index}]")
 
     if isinstance(value, dict):
         properties = schema.get("properties", {})
@@ -223,7 +249,40 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             },
             "idempotency_key": {**string, "maxLength": 128, "description": "Optional durable mutation identity for execute/run. Reusing the same key+request deduplicates across MCP reconnect/restart; conflicting reuse fails closed."},
             "p5_assignment_id": {**string, "maxLength": 128, "description": "Optional immutable P5 assignment. Valid only for feature/bugfix execute or run after task_control p5 protocol_start; the runtime binds it to the acquired write lease before any write-capable call."},
-            "continuation": {**string, "maxLength": DIFF_CONTINUATION_TOKEN_MAX_CHARS, "description": "Opaque source-fenced continuation returned by a prior large agent_workflow diff. Use only with phase=resume; source/scope/options drift fails closed."},
+            "continuation": {
+                "oneOf": [
+                    {**string, "maxLength": DIFF_CONTINUATION_TOKEN_MAX_CHARS},
+                    {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "action": {**string, "enum": ["grant"]},
+                            "read_paths": {"type": "array", "minItems": 1, "maxItems": 256, "items": {**string, "minLength": 1, "maxLength": 2000}},
+                            "write_paths": {"type": "array", "minItems": 1, "maxItems": 128, "items": {**string, "minLength": 1, "maxLength": 2000}},
+                            "protected_paths": {"type": "array", "maxItems": 128, "items": {**string, "minLength": 1, "maxLength": 2000}},
+                            "approved_checks": {
+                                "type": "array", "minItems": 1, "maxItems": 16,
+                                "items": {
+                                    "type": "object", "additionalProperties": False,
+                                    "properties": {
+                                        "check_id": {**string, "minLength": 1, "maxLength": 128},
+                                        "argv": {"type": "array", "minItems": 1, "maxItems": 32, "items": {**string, "minLength": 1, "maxLength": 2000}},
+                                        "cwd": {**string, "minLength": 1, "maxLength": 2000},
+                                        "environment_hash": {**string, "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-fA-F]{64}$"},
+                                        "definition_hash": {**string, "minLength": 64, "maxLength": 64, "pattern": "^[0-9a-fA-F]{64}$"},
+                                    },
+                                    "required": ["check_id", "argv", "cwd", "environment_hash", "definition_hash"],
+                                },
+                            },
+                            "max_duration_seconds": {**integer, "minimum": 1, "maximum": 900},
+                            "max_decision_turns": {**integer, "minimum": 1, "maximum": 12},
+                            "max_patch_attempts": {**integer, "minimum": 1, "maximum": 3},
+                        },
+                        "required": ["action", "read_paths", "write_paths", "protected_paths", "approved_checks", "max_duration_seconds", "max_decision_turns", "max_patch_attempts"],
+                    },
+                ],
+                "description": "Either the legacy opaque source-fenced diff continuation (phase=resume), or an explicit bounded continuation grant request (phase=prepare, bugfix/feature only). A grant cannot choose route/profile/authority or carry environment values.",
+            },
             "committed_review": {
                 "type": "object",
                 "additionalProperties": False,
@@ -406,7 +465,7 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             "dry_run": {**boolean, "default": False},
         }),
         "task_control": object_schema({
-            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "quality", "observation", "solution_shadow", "problem", "goal", "continuity", "p5", "restart_runtime"], "default": "get"},
+            "action": {**string, "enum": ["get", "operation", "start", "update", "pause", "stop", "resume", "clear", "history", "audit", "accept", "reject", "lane", "events", "messages", "ack", "handoff", "quality", "observation", "solution_shadow", "problem", "goal", "continuity", "run_continuation", "p5", "restart_runtime"], "default": "get"},
             "goal_action": {**string, "enum": ["get", "resolve"], "default": "get", "description": "Resolve and read the current Problem-backed Goal without creating authority or selecting by timestamp."},
             "goal_event": {
                 "type": "object",
@@ -419,6 +478,8 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 "description": "Optional exact Goal/Problem or RUN binding. With multiple unresolved Goals, omission fails closed to a bounded candidate list.",
             },
             "continuity_action": {**string, "enum": ["policy", "get", "checkpoint", "ack", "reattach"], "default": "get", "description": "Read or advance bounded controller continuity, including exact same-role Goal reattach, without adding a public tool or granting write/acceptance authority."},
+            "run_continuation_action": {**string, "enum": ["get", "start", "observe", "reconcile", "pause", "resume", "revoke"], "default": "get", "description": "Read, start, observe, reconcile, pause, resume, or revoke one previously issued RUN continuation grant. start dispatches only the fixed no-tools proposal lane; observe only reports the exact MCP-owned driver and never grants authority; reconcile is controller-gated and never replays an unknown effect."},
+            "continuation_reason": {**string, "maxLength": 512, "description": "Bounded operator reason for pausing or revoking a RUN continuation grant."},
             "continuity_event": {
                 "type": "object",
                 "additionalProperties": False,

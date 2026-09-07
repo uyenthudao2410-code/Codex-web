@@ -114,6 +114,9 @@ from .workspace_context_registry import WorkspaceContextRegistry  # noqa: F401  
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH, PerformanceTraceStore, build_tool_invocation_context, utc_now  # noqa: F401  # composition-root namespace
 from .orchestration_control import OrchestrationControl, OrchestrationControlError, RunContext, normalize_failure_class  # noqa: F401  # composition-root namespace
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
+from .continuation_driver import ContinuationDriverMixin  # noqa: F401  # composition-root namespace
+from .run_continuation import RunContinuationMixin  # noqa: F401  # composition-root namespace
+from .coordination_status import CoordinationStatusMixin  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
 from .projection_rebuild import reconcile_task_orchestration_projection  # noqa: F401  # composition-root namespace
 from .operator_report import build_command_completion_report, build_orchestration_runtime_result  # noqa: F401  # composition-root namespace
@@ -239,7 +242,7 @@ _WORKSPACE_PREHEAT_STARTED: set[str] = set()
 
 class Runtime(
     FileToolsMixin, ExecToolsMixin, GitToolsMixin, SessionControlMixin, DocumentToolsMixin, TaskStateToolsMixin,
-    AgentCandidateMixin, ContextToolsMixin, AgentWorkflowMixin, CoordinationMixin, RuntimeActivityMixin,
+    AgentCandidateMixin, ContextToolsMixin, ContinuationDriverMixin, RunContinuationMixin, AgentWorkflowMixin, CoordinationStatusMixin, CoordinationMixin, RuntimeActivityMixin,
     BackgroundOperationsMixin, RuntimeCacheMixin, RuntimeBehaviorIdentityMixin, RuntimeStatelessContextMixin,
     ProviderRuntimeMixin,
 ):

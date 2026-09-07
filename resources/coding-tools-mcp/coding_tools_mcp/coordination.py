@@ -34,7 +34,6 @@ from .problem_lineage import ProblemLineageError
 from .problem_lineage_control import ProblemLineageControlMixin
 from .product_session_receipts import record_current_continuity_core
 from .solution_shadow_control import SolutionShadowControlMixin
-from .task_state import command_presentation
 from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
     SUPERVISOR_RESTART_TICKET_TTL_MS,
@@ -1090,45 +1089,10 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             result = self._controller_continuity_control(args)
             record_current_continuity_core(self, args, result)
             return result
+        if action == "run_continuation":
+            return self._run_continuation_control(args)
         if action == "get":
-            # The stream is not the source of truth after reconnect.  Repair
-            # the compact view from the SQLite ledger before returning status.
-            with self.background_operations_lock:
-                memory_operations = {
-                    item["operation_id"]: self._background_operation_snapshot(item)
-                    for item in self.background_operations.values()
-                    if item.get("workspace") == str(self.workspace.root)
-                }
-            durable_operations = {
-                item["operation_id"]: item
-                for item in self.orchestration_ledger.list_background_operations(limit=20)
-            }
-            durable_operations.update(memory_operations)
-            operations = sorted(
-                durable_operations.values(),
-                key=lambda item: str(item.get("updated_at") or item.get("started_at") or ""),
-            )
-            unresolved_stale_runs = self.orchestration_ledger.stale_run_candidates(
-                stale_after_seconds=self.stale_run_seconds
-            )
-            resources = self.execution_resource_governor.snapshot()
-            return {
-                "state": command_presentation(
-                    self.task_state.get(), governor=self.execution_resource_governor,
-                    workspace=self.task_state.current_workspace(),
-                ),
-                "resources": resources,
-                "operations": operations[-8:],
-                "recovery": {
-                    "orphaned_background_operations": self.orphaned_background_operations,
-                    "orphaned_idempotency_records": self.orphaned_idempotency_records,
-                    "stale_orchestration_runs": unresolved_stale_runs,
-                    "unresolved_stale_orchestration_runs": unresolved_stale_runs,
-                    "reconciled_stale_orchestration_runs": list(self.reconciled_stale_orchestration_runs),
-                    "task_orchestration_projection_reconciled": bool(self.reconciled_task_orchestration),
-                    "agent_lanes_waiting_after_restart": self.recovered_agent_lanes,
-                },
-            }
+            return self._coordination_get_state()
         if action == "lane":
             return self._coordination_lane(args)
         if action == "events":

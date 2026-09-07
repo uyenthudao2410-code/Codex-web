@@ -4,6 +4,7 @@ import tempfile
 import threading
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from coding_tools_mcp.codex_bridge import (
     CodexAppServerBridge,
@@ -283,6 +284,41 @@ class CodexBridgeTests(unittest.TestCase):
                 self.assertEqual(route["effort"], effort)
                 self.assertEqual(route["features"]["shell_tool"], shell_tool)
                 self.assertEqual(route["features"]["multi_agent"], multi_agent)
+
+    def test_continuation_profile_is_fixed_no_tools_and_rejects_custom_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/start":
+                    return {"thread": {"id": "continuation-thread", "sessionId": "continuation-session"}}
+                if method == "turn/start":
+                    return {"turn": {"id": "continuation-turn", "status": "inProgress"}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            result = bridge.run("proposal", profile="continuation_proposal", lifetime="persistent")
+            self.assertEqual(result["route"]["model"], "gpt-5.6-sol")
+            self.assertEqual(result["route"]["effort"], "xhigh")
+            thread_params = next(params for method, params in calls if method == "thread/start")
+            turn_params = next(params for method, params in calls if method == "turn/start")
+            self.assertFalse(thread_params["config"]["features"]["shell_tool"])
+            self.assertFalse(thread_params["config"]["features"]["multi_agent"])
+            self.assertEqual(turn_params["sandboxPolicy"], {"type": "readOnly", "networkAccess": False})
+            with self.assertRaises(CodexBridgeError) as override:
+                bridge._resolve_route(profile="continuation_proposal", model="gpt-5.6-luna", effort="high", source_thread_id=None)
+            self.assertEqual(override.exception.code, "PROFILE_ROUTE_LOCKED")
+
+            strict = CodexAppServerBridge(lambda: root)
+            strict._ensure_connected = lambda: None
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_CODEX_ARGV": '["codex","app-server"]'}):
+                with self.assertRaises(CodexBridgeError) as custom:
+                    strict.run("proposal", profile="continuation_proposal")
+            self.assertEqual(custom.exception.code, "CONTINUATION_PROFILE_UNCERTIFIED_LAUNCH")
     def test_continue_reuses_only_bridge_owned_thread_and_preserves_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

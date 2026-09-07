@@ -211,16 +211,41 @@ def truncate_evidence(text: str, limit: int = 240) -> str:
 class ExecToolsMixin:
     def exec_command(self, args: dict[str, Any]) -> dict[str, Any]:
         self._prune_sessions()
-        cmd = str(args.get("cmd", ""))
-        if not cmd:
-            raise ToolFailure("INVALID_ARGUMENT", "cmd is required.", category="validation")
+        raw_argv = args.get("_argv")
+        structured_argv: list[str] | None = None
+        if raw_argv is not None:
+            if args.get("_continuation_internal") is not True:
+                raise ToolFailure(
+                    "INTERNAL_STRUCTURED_ARGV_DENIED",
+                    "Structured argv execution is reserved for the continuation proof driver.",
+                    category="security",
+                )
+            if "cmd" in args:
+                raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv execution cannot also receive cmd.", category="validation")
+            if not isinstance(raw_argv, list) or not raw_argv or len(raw_argv) > 32:
+                raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv must be a bounded non-empty string array.", category="validation")
+            structured_argv = [str(item) for item in raw_argv]
+            if any(not item or "\x00" in item or "\r" in item or "\n" in item for item in structured_argv):
+                raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv contains an unsafe argument.", category="validation")
+            if len("\0".join(structured_argv).encode("utf-8")) > 8_192:
+                raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv exceeds its bounded size.", category="validation")
+            # This string is an audit/resource label only. It is never supplied
+            # to a shell: process creation below uses the original argv list.
+            cmd = " ".join(structured_argv)
+        else:
+            cmd = str(args.get("cmd", ""))
+            if not cmd:
+                raise ToolFailure("INVALID_ARGUMENT", "cmd is required.", category="validation")
         workdir_arg = args.get("workdir", args.get("cwd", "."))
         if "workdir" in args and "cwd" in args and str(args["workdir"]) != str(args["cwd"]):
             raise ToolFailure("INVALID_ARGUMENT", "workdir and cwd refer to different directories.", category="validation")
         workdir = self.resolve_existing(str(workdir_arg))
         if not workdir.path.is_dir():
             raise ToolFailure("NOT_A_DIRECTORY", "workdir is not a directory.", category="validation")
-        self._check_command_policy(cmd, args)
+        if structured_argv is None:
+            self._check_command_policy(cmd, args)
+        else:
+            self._check_structured_argv_policy(structured_argv, args)
         timeout_ms = int(args.get("timeout_ms", 30000))
         yield_ms = int(args.get("yield_time_ms", 10000))
         max_output_bytes = int(args.get("max_output_bytes", 65536))
@@ -231,8 +256,8 @@ class ExecToolsMixin:
         deadline = start + (timeout_ms / 1000.0)
         landlock_fd: int | None = None
         landlock_warning: str | None = None
-        popen_cmd: Any = cmd
-        popen_shell = True
+        popen_cmd: Any = structured_argv if structured_argv is not None else cmd
+        popen_shell = structured_argv is None
         popen_extra = process_group_popen_kwargs()
         if self.landlock_enabled():
             try:
@@ -241,7 +266,7 @@ class ExecToolsMixin:
                     guard_allow_roots(),
                     write_roots=self.landlock_write_roots(),
                 )
-                popen_cmd = landlock_exec_argv(landlock_fd, cmd)
+                popen_cmd = landlock_exec_argv(landlock_fd, popen_cmd)
                 popen_shell = False
                 popen_extra["pass_fds"] = (landlock_fd,)
             except ToolFailure as exc:
@@ -554,6 +579,30 @@ class ExecToolsMixin:
                 "details": {},
             }
         return report
+
+    def _check_structured_argv_policy(self, argv: list[str], args: dict[str, Any]) -> None:
+        """Validate the continuation driver's fixed argv without re-parsing it as shell text.
+
+        The continuation grant already binds the exact argv. This guard defends
+        the execution boundary itself: no caller can smuggle a public command
+        through the private path, no shell is selected, and network/destructive
+        command classes remain subject to the runtime permission posture.
+        """
+        if not argv:
+            raise ToolFailure("INVALID_ARGUMENT", "Internal structured argv is empty.", category="validation")
+        executable = Path(argv[0]).name.lower()
+        if executable in {"bash", "cmd", "cmd.exe", "powershell", "pwsh", "sh", "zsh"}:
+            raise ToolFailure("INTERNAL_STRUCTURED_ARGV_DENIED", "Internal structured argv cannot invoke a shell.", category="security")
+        compact = " ".join(argv).lower()
+        if not self.dangerously_skip_all_permissions:
+            env = args.get("env", {})
+            if isinstance(env, dict) and any(is_filtered_env_var(str(key), str(value)) for key, value in env.items()):
+                raise ToolFailure("PERMISSION_REQUIRED", "Sensitive environment variables require explicit permission.", category="permission")
+            if DESTRUCTIVE_RE.search(compact):
+                raise ToolFailure("PERMISSION_REQUIRED", "Destructive commands are blocked without explicit permission.", category="permission")
+            if not self.allow_network and NETWORK_RE.search(compact) and not is_literal_network_reference_command(compact):
+                raise ToolFailure("PERMISSION_REQUIRED", "Network access is denied by default.", category="permission")
+        self._reject_setuid_executable(argv[0])
 
     def _check_command_policy(self, cmd: str, args: dict[str, Any]) -> None:
         if self.dangerously_skip_all_permissions:

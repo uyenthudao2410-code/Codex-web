@@ -947,7 +947,9 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
                 category="validation",
             )
 
-        continuation = str(args.get("continuation", "") or "").strip()
+        continuation = self._run_continuation_value(args, workflow=workflow, phase=phase)
+        if isinstance(continuation, dict):
+            return continuation
         if continuation:
             if phase != "resume":
                 raise ToolFailure(

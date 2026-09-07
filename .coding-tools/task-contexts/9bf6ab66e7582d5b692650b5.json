@@ -1,0 +1,64 @@
+{
+  "version": 2,
+  "task_id": "afab047347274acf858ddf30fb879fa2",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "88Hhw5SrlAxpK5ioMQULAIQW",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1073,
+    "finished_at": "2026-09-07T12:03:38.400Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Controlled restart preflight refused: lifecycle_live_owned.",
+  "next_step": "",
+  "created_at": "2026-09-07T12:03:28.823Z",
+  "updated_at": "2026-09-07T12:04:04.321Z",
+  "events": [
+    {
+      "time": "2026-09-07T12:03:28.823Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-07T12:03:37.475Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\" --repair-owned-codex-sidecar",
+        "session_id": "88Hhw5SrlAxpK5ioMQULAIQW"
+      }
+    },
+    {
+      "time": "2026-09-07T12:03:38.400Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/reconcile_execution_resources.py --workspace \"E:\\DEV\\HR STA\\HR\" --repair-owned-codex-sidecar",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T12:04:04.321Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "RUNTIME_BUSY"
+      }
+    }
+  ]
+}

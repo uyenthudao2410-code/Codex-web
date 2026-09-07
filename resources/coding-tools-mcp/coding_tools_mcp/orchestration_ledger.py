@@ -25,6 +25,7 @@ from .observation_spans import ObservationSpanLedgerMixin
 from .p5_experiment_store import P5ExperimentLedgerMixin
 from .problem_lineage import ProblemLineageLedgerMixin
 from .quality_outcomes import QualityOutcomeLedgerMixin
+from .run_continuation import RunContinuationLedgerMixin
 from .usage_ledger import (
     CANONICAL_USAGE_KEYS,
     backfill_measured_provider_usage as _backfill_measured_provider_usage,
@@ -327,7 +328,7 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
         digest.update(_json(extra).encode("utf-8"))
     return digest.hexdigest()
 
-class OrchestrationLedger(ControllerContinuityLedgerMixin, GoalPursuitLedgerMixin, LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
+class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedgerMixin, GoalPursuitLedgerMixin, LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
     """Durable append-only orchestration audit source for one workspace.
     The ledger stores structured control/evidence identity, not raw prompts, patches,
     file contents, stdout, or stderr. Events are hash-chained per run so accidental
@@ -646,6 +647,7 @@ class OrchestrationLedger(ControllerContinuityLedgerMixin, GoalPursuitLedgerMixi
             )
             self._p5_ensure_schema(connection)
             self._controller_continuity_ensure_schema(connection)
+            self._run_continuation_ensure_schema(connection)
             for column in ("error_code TEXT NOT NULL DEFAULT ''", "workflow_patch_preflight INTEGER NOT NULL DEFAULT 0", "summary_codec TEXT NOT NULL DEFAULT 'plain_json'", "summary_blob BLOB"):
                 try:
                     connection.execute(f"ALTER TABLE idempotency_records ADD COLUMN {column}")
