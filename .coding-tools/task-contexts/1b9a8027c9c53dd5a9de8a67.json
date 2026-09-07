@@ -1,0 +1,139 @@
+{
+  "version": 2,
+  "task_id": "3bc35d0c83de40d48d5a9034e0226d7c",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-07T09:04:11.151Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The current task was stopped. Start or resume a task before continuing.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-07T09:00:47.789Z",
+  "updated_at": "2026-09-07T09:04:11.151Z",
+  "events": [
+    {
+      "time": "2026-09-07T09:00:47.789Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T09:00:48.121Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 12 CONTINUITY_IDENTITY_REQUIRED resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "VG29MoP5DtyodR4Wx81KXq0k"
+      }
+    },
+    {
+      "time": "2026-09-07T09:00:48.363Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 CONTINUITY_IDENTITY_REQUIRED resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:00:56.688Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"def .*reattach|reattach_controller|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "COj7R6IDQ43MhmDfSw6QQiqz"
+      }
+    },
+    {
+      "time": "2026-09-07T09:00:56.999Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"def .*reattach|reattach_controller|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:01:03.080Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 40 \"action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "dIGZ4QXvTR5w7OOLk8lZoB0C"
+      }
+    },
+    {
+      "time": "2026-09-07T09:01:03.375Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 40 \"action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:01:10.711Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 100 \"if action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "55yno2dqiuSKbgdJI67ksbvB"
+      }
+    },
+    {
+      "time": "2026-09-07T09:01:11.184Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 100 \"if action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:01:44.994Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-07T09:03:24.868Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ORCHESTRATION_STATE_UNCERTAIN"
+      }
+    },
+    {
+      "time": "2026-09-07T09:04:11.151Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"UNEXPLAINED_ACTIVE|unbound_live_resource_residues|owned_codex_sidecar_residues|managed_process_job|COMMAND_NOT_FOUND\" electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:04:11.151Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "TASK_STOPPED"
+      }
+    }
+  ]
+}

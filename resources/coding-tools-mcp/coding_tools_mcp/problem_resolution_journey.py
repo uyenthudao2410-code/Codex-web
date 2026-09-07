@@ -72,7 +72,20 @@ def _problem_context(wave: dict[str, Any]) -> dict[str, Any]:
     return context if isinstance(context, dict) else {}
 
 
-def _exact_revision_run_ids(ledger: Any, events: list[dict[str, Any]], problem_id: str, revision: int) -> tuple[list[str], list[str]]:
+def _exact_revision_attempts(
+    ledger: Any,
+    events: list[dict[str, Any]],
+    problem_id: str,
+    revision: int,
+) -> tuple[dict[str, tuple[str, ...]], list[str]]:
+    """Return exact Problem-Revision RUN -> eligible WAVE attribution.
+
+    An exact primary link establishes that a RUN belongs to the revision, but
+    it does not make every WAVE or usage event in that RUN attributable.  The
+    returned WAVE IDs therefore require their own durable Problem Resolution
+    context to match.  This keeps a later unrelated WAVE in a reused RUN from
+    being charged to the original Problem Revision.
+    """
     candidates = {
         _text(event.get("run_id"))
         for event in events
@@ -83,27 +96,57 @@ def _exact_revision_run_ids(ledger: Any, events: list[dict[str, Any]], problem_i
         and _text(event.get("relation_type")) in {"LINK", "ENGINEERING_ATTEMPT_BOUND"}
         and _text(event.get("run_id"))
     }
-    result: list[str] = []
+    result: dict[str, tuple[str, ...]] = {}
+    mismatched: list[str] = []
     for run_id in sorted(candidates):
-        if any(
-            _problem_context(wave).get("work_origin") == "problem"
-            and _problem_context(wave).get("problem_id") == problem_id
-            and _problem_context(wave).get("problem_revision") == revision
-            for wave in ledger.list_waves(run_id)
-        ):
-            result.append(run_id)
-    return result, sorted(candidates - set(result))
+        wave_ids = tuple(
+            sorted(
+                _text(wave.get("wave_id"))
+                for wave in ledger.list_waves(run_id)
+                if _text(wave.get("wave_id"))
+                and _problem_context(wave).get("work_origin") == "problem"
+                and _problem_context(wave).get("problem_id") == problem_id
+                and _problem_context(wave).get("problem_revision") == revision
+            )
+        )
+        if wave_ids:
+            result[run_id] = wave_ids
+        else:
+            mismatched.append(run_id)
+    return result, mismatched
 
 
-def _actor_usage(events: list[dict[str, Any]], actor: str, *, provider_dispatches: int = 0) -> dict[str, Any]:
-    selected = [event for event in events if _text(event.get("actor") or "provider").lower() == actor]
-    if not selected and actor == "provider" and provider_dispatches == 0:
+def _actor_usage(
+    events: list[dict[str, Any]],
+    actor: str,
+    *,
+    run_id: str,
+    eligible_wave_ids: set[str],
+    provider_dispatches: int = 0,
+) -> dict[str, Any]:
+    actor_events = [event for event in events if _text(event.get("actor") or "provider").lower() == actor]
+    selected: list[dict[str, Any]] = []
+    excluded = Counter()
+    for event in actor_events:
+        if _text(event.get("run_id")) != run_id:
+            excluded["run_id_mismatch"] += 1
+        elif _text(event.get("wave_id")) not in eligible_wave_ids:
+            excluded["wave_not_exact_problem_revision"] += 1
+        elif _text((event.get("attribution") or {}).get("status")).lower() != "exact":
+            excluded["attribution_not_exact"] += 1
+        else:
+            selected.append(event)
+    excluded_count = sum(excluded.values())
+    if not selected and not actor_events and actor == "provider" and provider_dispatches == 0:
         return {
             "status": "OBSERVED_ZERO",
             "event_count": 0,
+            "candidate_event_count": 0,
+            "excluded_event_count": 0,
+            "exclusion_reason_counts": {},
             "usage": {key: 0 for key in CANONICAL_USAGE_KEYS},
             "cost": {"value": 0.0, "complete": True, "measured_event_count": 0},
-            "source": "no_provider_delegation_or_usage_event_in_exact_run",
+            "source": "no_provider_delegation_or_usage_event_in_exact_problem_wave",
             "missing_reason": None,
             "unknown_is_not_zero": True,
         }
@@ -111,10 +154,17 @@ def _actor_usage(events: list[dict[str, Any]], actor: str, *, provider_dispatche
         return {
             "status": "UNOBSERVED",
             "event_count": 0,
+            "candidate_event_count": len(actor_events),
+            "excluded_event_count": excluded_count,
+            "exclusion_reason_counts": dict(sorted(excluded.items())),
             "usage": None,
             "cost": {"value": None, "complete": False, "measured_event_count": 0},
-            "source": "durable_usage_events",
-            "missing_reason": f"no_exact_{actor}_usage_event_for_run",
+            "source": "durable_usage_events_exact_problem_revision_wave",
+            "missing_reason": (
+                f"no_exact_{actor}_usage_event_for_exact_problem_wave"
+                if excluded_count
+                else f"no_exact_{actor}_usage_event_for_run"
+            ),
             "unknown_is_not_zero": True,
         }
     usage = {key: 0 for key in CANONICAL_USAGE_KEYS}
@@ -135,11 +185,23 @@ def _actor_usage(events: list[dict[str, Any]], actor: str, *, provider_dispatche
         measured = cost.get("provider_cost")
         if measurement.get("cost") == "measured" and isinstance(measured, (int, float)) and not isinstance(measured, bool) and measured >= 0:
             measured_costs.append(float(measured))
-    complete = invalid == 0
+    complete = invalid == 0 and excluded_count == 0
     cost_complete = complete and len(measured_costs) == len(selected)
+    if complete:
+        status = "OBSERVED"
+        missing_reason = None
+    elif invalid and not excluded_count:
+        status = "PARTIAL_INVALID_EVENT"
+        missing_reason = "invalid_usage_event_present"
+    else:
+        status = "PARTIAL"
+        missing_reason = "usage_event_attribution_or_payload_incomplete_for_problem_revision"
     return {
-        "status": "OBSERVED" if complete else "PARTIAL_INVALID_EVENT",
+        "status": status,
         "event_count": len(selected),
+        "candidate_event_count": len(actor_events),
+        "excluded_event_count": excluded_count,
+        "exclusion_reason_counts": dict(sorted(excluded.items())),
         "invalid_event_count": invalid,
         "usage": usage if complete else None,
         "cost": {
@@ -147,15 +209,16 @@ def _actor_usage(events: list[dict[str, Any]], actor: str, *, provider_dispatche
             "complete": cost_complete,
             "measured_event_count": len(measured_costs),
         },
-        "source": "durable_usage_events_separated_by_actor",
-        "missing_reason": None if complete else "invalid_usage_event_present",
+        "source": "durable_usage_events_exact_problem_revision_wave_separated_by_actor",
+        "missing_reason": missing_reason,
         "unknown_is_not_zero": True,
     }
 
 
-def _run_projection(ledger: Any, run_id: str) -> dict[str, Any]:
+def _run_projection(ledger: Any, run_id: str, *, eligible_wave_ids: set[str]) -> dict[str, Any]:
     run = ledger.get_run(run_id) or {}
-    waves = ledger.list_waves(run_id)
+    all_waves = ledger.list_waves(run_id)
+    waves = [wave for wave in all_waves if _text(wave.get("wave_id")) in eligible_wave_ids]
     events = ledger.list_events(run_id)
     delegations = [item for wave in waves for item in ledger.list_delegations(_text(wave.get("wave_id")))]
     usage_events = ledger.list_usage_events(run_id, limit=None)
@@ -166,9 +229,11 @@ def _run_projection(ledger: Any, run_id: str) -> dict[str, Any]:
     status = _text(run.get("status")).lower() or "unknown"
     phase = economics.get("phase_timing") if isinstance(economics.get("phase_timing"), dict) else {}
     methodology = phase.get("methodology_phase_ms") if isinstance(phase.get("methodology_phase_ms"), dict) else {}
+    phase_attribution_complete = len(waves) == len(all_waves)
     return {
         "run_id": run_id,
         "status": status,
+        "terminal": bool(run.get("finished_at")),
         "accepted": status == "accepted",
         "rejected_or_aborted": status in _REJECTED_RUN_STATES,
         "first_pass_accepted": bool(economics.get("first_pass_accepted")),
@@ -180,16 +245,29 @@ def _run_projection(ledger: Any, run_id: str) -> dict[str, Any]:
         "failure_event_count": int((economics.get("repair") or {}).get("failure_event_count") or 0),
         "tta_ms": economics.get("tta_ms"),
         "phase_timing": {
-            "complete": bool(phase.get("complete")),
-            "execution_ms": methodology.get("execution_window_ms"),
-            "proof_ms": methodology.get("proof_ms"),
-            "acceptance_ms": methodology.get("accept_wait_ms"),
-            "replan_ms": methodology.get("replan_ms"),
+            "complete": bool(phase.get("complete")) and phase_attribution_complete,
+            "attribution_complete": phase_attribution_complete,
+            "execution_ms": methodology.get("execution_window_ms") if phase_attribution_complete else None,
+            "proof_ms": methodology.get("proof_ms") if phase_attribution_complete else None,
+            "acceptance_ms": methodology.get("accept_wait_ms") if phase_attribution_complete else None,
+            "replan_ms": methodology.get("replan_ms") if phase_attribution_complete else None,
+            "missing_reason": None if phase_attribution_complete else "run_contains_non_exact_problem_waves",
         },
         "proof": dict(economics.get("proof") or {}),
         "resources": {
-            "controller": _actor_usage(usage_events, "controller"),
-            "provider": _actor_usage(usage_events, "provider", provider_dispatches=len(delegations)),
+            "controller": _actor_usage(
+                usage_events,
+                "controller",
+                run_id=run_id,
+                eligible_wave_ids=eligible_wave_ids,
+            ),
+            "provider": _actor_usage(
+                usage_events,
+                "provider",
+                run_id=run_id,
+                eligible_wave_ids=eligible_wave_ids,
+                provider_dispatches=len(delegations),
+            ),
             "token_planes_are_non_overlapping_but_not_summed": True,
             "combined_model_tokens": None,
         },
@@ -219,22 +297,48 @@ def _sum_phase(runs: list[dict[str, Any]], key: str) -> dict[str, Any]:
 def _combine_actor(runs: list[dict[str, Any]], actor: str) -> dict[str, Any]:
     planes = [run["resources"][actor] for run in runs]
     observed = [plane for plane in planes if plane.get("status") in {"OBSERVED", "OBSERVED_ZERO"}]
+    attribution_incomplete = [
+        plane
+        for plane in planes
+        if str(plane.get("status") or "").startswith("PARTIAL")
+        or int(plane.get("excluded_event_count") or 0) > 0
+    ]
     usage = {key: 0 for key in CANONICAL_USAGE_KEYS}
+    exclusion_reasons = Counter()
+    for plane in planes:
+        reasons = plane.get("exclusion_reason_counts") if isinstance(plane.get("exclusion_reason_counts"), dict) else {}
+        for reason, count in reasons.items():
+            if isinstance(count, int) and not isinstance(count, bool) and count > 0:
+                exclusion_reasons[_text(reason) or "unknown"] += count
     for plane in observed:
         for key in CANONICAL_USAGE_KEYS:
             usage[key] += int((plane.get("usage") or {}).get(key) or 0)
     cost_complete = bool(planes) and len(observed) == len(planes) and all(bool((plane.get("cost") or {}).get("complete")) for plane in planes)
+    complete = bool(planes) and len(observed) == len(planes)
+    partial = bool(observed or attribution_incomplete)
     return {
-        "status": "OBSERVED" if planes and len(observed) == len(planes) else ("PARTIAL" if observed else "UNAVAILABLE"),
+        "status": "OBSERVED" if complete else ("PARTIAL" if partial else "UNAVAILABLE"),
         "observed_runs": len(observed),
+        "attribution_incomplete_runs": len(attribution_incomplete),
         "run_count": len(planes),
-        "event_count": sum(int(plane.get("event_count") or 0) for plane in observed),
+        "event_count": sum(int(plane.get("event_count") or 0) for plane in planes),
+        "candidate_event_count": sum(int(plane.get("candidate_event_count") or 0) for plane in planes),
+        "excluded_event_count": sum(int(plane.get("excluded_event_count") or 0) for plane in planes),
+        "exclusion_reason_counts": dict(sorted(exclusion_reasons.items())),
         "usage": usage if observed else None,
         "cost": {
             "value": round(sum(float((plane.get("cost") or {}).get("value") or 0.0) for plane in planes), 12) if cost_complete else None,
             "complete": cost_complete,
         },
-        "missing_reason": None if planes and len(observed) == len(planes) else f"{actor}_usage_not_observed_for_every_exact_run",
+        "missing_reason": (
+            None
+            if complete
+            else (
+                f"{actor}_usage_attribution_incomplete_for_exact_problem_revision"
+                if attribution_incomplete
+                else f"{actor}_usage_not_observed_for_every_exact_run"
+            )
+        ),
         "unknown_is_not_zero": True,
     }
 
@@ -294,6 +398,93 @@ def _continuity_projection(problems: Any, problem_id: str, revision: int, run_id
     }
 
 
+def _lifecycle_economics(events: list[dict[str, Any]], time: dict[str, Any]) -> dict[str, Any]:
+    """Describe only lifecycle partitions that can be supported by exact facts.
+
+    The ledger records an active-stage union for exact primary RUNs and an
+    interval-censored Problem-Revision confirmation window.  It does not bind
+    an active span to a particular technical acceptance event, or bind a
+    reopened attempt to the reopen event clock.  Keep those allocations
+    unavailable instead of inventing a partition from timestamp proximity.
+    """
+    provisional = next(
+        (
+            event
+            for event in events
+            if _text(event.get("relation_type")) == "PROVISIONAL_RESOLUTION"
+            and bool(event.get("eligible_for_policy"))
+        ),
+        None,
+    )
+    confirmed = next(
+        (
+            event
+            for event in events
+            if _text(event.get("relation_type")) == "CONFIRMED_RESOLUTION"
+            and bool(event.get("eligible_for_policy"))
+        ),
+        None,
+    )
+    reopens = [
+        event
+        for event in events
+        if _text(event.get("relation_type")) == "REOPEN" and bool(event.get("eligible_for_policy"))
+    ]
+    active_union = time.get("restricted_ttpr_active_ms")
+    confirmation_interval = time.get("ttpr_wall_interval")
+    return {
+        "schema_version": 1,
+        "unit": "problem_revision",
+        "policy": {
+            "no_timestamp_proximity_partition": True,
+            "no_cross_clock_sum": True,
+            "unknown_is_not_zero": True,
+            "later_unrelated_observation_not_charged": True,
+        },
+        "segments": {
+            "pre_technical_acceptance": {
+                "status": "UNAVAILABLE",
+                "value_ms": None,
+                "technical_acceptance_event_observed": provisional is not None,
+                "active_stage_union": active_union,
+                "missing_reason": "exact_active_span_to_technical_acceptance_boundary_not_recorded",
+                "unknown_is_not_zero": True,
+            },
+            "post_technical_acceptance_confirmation_observation": {
+                "status": (
+                    _text(confirmation_interval.get("status"))
+                    if isinstance(confirmation_interval, dict)
+                    else "UNAVAILABLE"
+                ),
+                "value_ms": None,
+                "technical_acceptance_event_observed": provisional is not None,
+                "confirmation_event_observed": confirmed is not None,
+                "confirmation_interval": dict(confirmation_interval)
+                if isinstance(confirmation_interval, dict)
+                else _unknown("technical_acceptance_to_confirmation_interval_not_recorded", unit="millisecond", field="value_ms"),
+                "measurement": "interval_censored_attested_problem_event_clock",
+                "not_an_exact_real_world_resolution_time": True,
+                "unknown_is_not_zero": True,
+            },
+            "same_revision_reopened_rework": {
+                "status": "OBSERVED_STRUCTURE_ONLY",
+                "value_ms": None,
+                "reopen_event_count": len(reopens),
+                "first_reopen_event_seq": int(reopens[0].get("seq") or 0) if reopens else None,
+                "missing_reason": "reopen_to_exact_run_or_wave_clock_boundary_not_recorded",
+                "unknown_is_not_zero": True,
+            },
+            "later_unrelated_observation": {
+                "status": "OUT_OF_SCOPE_UNOBSERVED",
+                "value_ms": None,
+                "excluded_from_problem_revision_economics": True,
+                "missing_reason": "outside_exact_problem_revision_boundary",
+                "unknown_is_not_zero": True,
+            },
+        },
+    }
+
+
 def problem_revision_journeys(
     ledger: Any,
     problems: Any,
@@ -314,13 +505,17 @@ def problem_revision_journeys(
         if not problem_id or revision < 1:
             continue
         events = problems.events_for_revision(problem_id, revision)
-        run_ids, mismatched_run_ids = _exact_revision_run_ids(ledger, events, problem_id, revision)
+        attempts, mismatched_run_ids = _exact_revision_attempts(ledger, events, problem_id, revision)
+        run_ids = list(attempts)
         attribution_mismatches.update(mismatched_run_ids)
         for run_id in run_ids:
             if run_id in all_run_ids:
                 attribution_conflicts.add(run_id)
             all_run_ids.add(run_id)
-        runs = [_run_projection(ledger, run_id) for run_id in run_ids]
+        runs = [
+            _run_projection(ledger, run_id, eligible_wave_ids=set(attempts[run_id]))
+            for run_id in run_ids
+        ]
         waves = sum(run["wave_count"] for run in runs)
         controller = _combine_actor(runs, "controller")
         provider = _combine_actor(runs, "provider")
@@ -345,6 +540,21 @@ def problem_revision_journeys(
         confirmed = next((event for event in events if _text(event.get("relation_type")) == "CONFIRMED_RESOLUTION" and bool(event.get("eligible_for_policy"))), None)
         reopen_count = sum(1 for event in events if _text(event.get("relation_type")) == "REOPEN" and bool(event.get("eligible_for_policy")))
         time = time_by_revision.get((problem_id, revision), {})
+        lifecycle = _lifecycle_economics(events, time)
+        run_status_counts = Counter(run["status"] for run in runs)
+        terminal_run_status_counts = Counter(run["status"] for run in runs if run["terminal"])
+        wave_status_counts = Counter(
+            status
+            for run in runs
+            for status, count in run["wave_status_counts"].items()
+            for _ in range(int(count))
+        )
+        terminal_wave_status_counts = Counter(
+            _text(wave.get("status")).lower() or "unknown"
+            for run_id in run_ids
+            for wave in ledger.list_waves(run_id)
+            if _text(wave.get("wave_id")) in set(attempts[run_id]) and bool(wave.get("finished_at"))
+        )
         total_cost_complete = bool(runs) and controller["cost"]["complete"] and provider["cost"]["complete"]
         total_cost = round(float(controller["cost"]["value"]) + float(provider["cost"]["value"]), 12) if total_cost_complete else None
         journeys.append(
@@ -365,11 +575,16 @@ def problem_revision_journeys(
                     "replan_ms": _sum_phase(runs, "replan_ms"),
                     "controller_gap_ms_observed": _unknown("same_clock_controller_idle_gap_not_recorded", unit="millisecond", field="value_ms"),
                 },
+                "lifecycle_economics": lifecycle,
                 "topology": {
                     "run_count": len(runs),
                     "wave_count": waves,
                     "accepted_run_count": sum(int(run["accepted"]) for run in runs),
                     "rejected_or_aborted_run_count": sum(int(run["rejected_or_aborted"]) for run in runs),
+                    "run_status_counts": dict(sorted(run_status_counts.items())),
+                    "terminal_run_status_counts": dict(sorted(terminal_run_status_counts.items())),
+                    "wave_status_counts": dict(sorted(wave_status_counts.items())),
+                    "terminal_wave_status_counts": dict(sorted(terminal_wave_status_counts.items())),
                     "replan_wave_count": sum(run["replan_wave_count"] for run in runs),
                     "replan_event_count": sum(run["replan_event_count"] for run in runs),
                     "rejected_wave_count": sum(run["rejected_wave_count"] for run in runs),
@@ -458,7 +673,7 @@ def problem_revision_journeys(
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "unit": "problem_revision",
         "journeys": journeys,
         "summary": {

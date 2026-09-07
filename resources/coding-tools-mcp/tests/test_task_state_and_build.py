@@ -1122,6 +1122,57 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_prepare_coding_context_batches_native_queries_under_one_admission(self) -> None:
+        semantic_batches: list[list[str]] = []
+
+        class SemanticStub:
+            def status(self):
+                return {"available": True, "provider": "native-lsp-test", "read_only": True}
+
+            def localize(self, *, workspace, path, queries, max_results, resource_class):
+                del workspace, path, max_results, resource_class
+                semantic_batches.append(list(queries))
+                return [
+                    {
+                        "query_index": index,
+                        "handled": query != "query-08",
+                        "matches": ([] if query == "query-08" else [{"path": "semantic.py", "line": index + 1}]),
+                    }
+                    for index, query in enumerate(queries)
+                ]
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            queries = [f"query-{index:02d}" for index in range(12)]
+            (root / "semantic.py").write_text("\n".join(queries) + "\n", encoding="utf-8")
+            runtime = Runtime(root, semantic_localizer=SemanticStub())
+            try:
+                with (
+                    patch.object(
+                        runtime.execution_resource_governor,
+                        "semantic_native_claim",
+                        wraps=runtime.execution_resource_governor.semantic_native_claim,
+                    ) as native_claim,
+                    patch.object(runtime, "search_text", wraps=runtime.search_text) as search_text,
+                ):
+                    result = runtime.prepare_coding_context({
+                        "objective": "twelve semantic queries",
+                        "queries": queries,
+                        "paths": ["semantic.py"],
+                        "max_files": 4,
+                        "force_refresh": True,
+                    })
+                self.assertEqual(native_claim.call_count, 1)
+                self.assertEqual(semantic_batches, [queries[:8], queries[8:]])
+                self.assertEqual(search_text.call_count, 1)
+                self.assertEqual(search_text.call_args.args[0]["query"], "query-08")
+                localization = result["composite_read"]["execution"]["localization"]
+                self.assertEqual(localization["semantic_attempted"], 12)
+                self.assertEqual(localization["semantic_handled"], 11)
+                self.assertEqual(localization["text_fallback_queries"], 1)
+            finally:
+                runtime.close()
+
     def test_prepare_coding_context_falls_back_before_native_call_during_heavy(self) -> None:
         semantic_calls = []
 
@@ -2052,6 +2103,10 @@ class ToolModeTests(unittest.TestCase):
             self.assertTrue(result["execution"]["ok"])
             self.assertEqual(result["execution_route"]["selected"], "mini")
             self.assertEqual(result["execution_route"]["model"], "gpt-5.4-mini")
+            self.assertEqual(
+                result["completion_readiness"]["oracle_preflight"]["classification"],
+                "PRODUCT_ORACLE_REPRODUCED",
+            )
             self.assertEqual((root / "app.py").read_text(encoding="utf-8"), "VALUE = 2\n")
             self.assertEqual(bridge_run.call_args.kwargs["profile"], "candidate_mini")
             self.assertIn("preflight_test", bridge_run.call_args.args[0])
@@ -2073,6 +2128,85 @@ class ToolModeTests(unittest.TestCase):
             self.assertEqual(usage["usage"]["output_total_tokens"], 100)
             self.assertEqual(usage["usage"]["output_reasoning_tokens"], 20)
             runtime.close()
+
+    def test_agent_workflow_prepare_reports_hashed_static_completion_readiness(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "prepare readiness fixture",
+                    "paths": ["app.py"],
+                    "verification": "tests",
+                    "test_command": f'"{sys.executable}" -m pytest',
+                })
+                readiness = result["completion_readiness"]
+                self.assertEqual(readiness["schema_version"], 1)
+                self.assertEqual(readiness["status"], "READY_FOR_EXECUTION")
+                self.assertEqual(readiness["verification"]["steps"][0]["status"], "AVAILABLE")
+                self.assertEqual(len(readiness["verification"]["steps"][0]["command_sha256"]), 64)
+                self.assertNotIn("command", readiness["verification"]["steps"][0])
+                self.assertEqual(readiness["scope"]["understood_paths"], ["app.py"])
+                self.assertTrue(readiness["acceptance"]["business_outcome_not_inferred_from_build"])
+            finally:
+                runtime.close()
+
+    def test_agent_workflow_blocks_candidate_when_baseline_is_setup_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            test_cmd = (
+                f'"{sys.executable}" -c "import sys; '
+                "print('No module named baseline_fixture_missing'); sys.exit(2)\""
+            )
+            with patch.object(runtime._codex_bridge, "run") as bridge_run:
+                result = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "evaluation": {"provenance": "benchmark"},
+                    "phase": "run",
+                    "execution_route": "mini",
+                    "objective": "do not pay for a setup failure",
+                    "paths": ["app.py"],
+                    "verification": "tests",
+                    "test_command": test_cmd,
+                    "include_diff": False,
+                })
+            self.assertFalse(result["execution"]["ok"])
+            self.assertEqual(result["execution"]["reason"], "COMPLETION_READINESS_BLOCKED")
+            self.assertEqual(result["completion_readiness"]["status"], "BLOCKED")
+            self.assertEqual(
+                result["completion_readiness"]["oracle_preflight"]["classification"],
+                "ENVIRONMENT_UNAVAILABLE",
+            )
+            bridge_run.assert_not_called()
+            runtime.close()
+
+    def test_agent_workflow_blocks_candidate_when_required_command_is_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                with patch.object(runtime._codex_bridge, "run") as bridge_run:
+                    result = runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "evaluation": {"provenance": "benchmark"},
+                        "phase": "run",
+                        "execution_route": "mini",
+                        "objective": "do not route without a local test command",
+                        "paths": ["app.py"],
+                        "verification": "tests",
+                        "include_diff": False,
+                    })
+                self.assertEqual(result["execution"]["reason"], "COMPLETION_READINESS_BLOCKED")
+                self.assertIn("TEST_COMMAND_MISSING", result["completion_readiness"]["blocking_reason_codes"])
+                bridge_run.assert_not_called()
+            finally:
+                runtime.close()
 
     def test_agent_workflow_explicit_packet_review_uses_hidden_bridge(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

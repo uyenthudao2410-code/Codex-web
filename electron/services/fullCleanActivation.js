@@ -99,6 +99,23 @@ function canonicalWorkspace(value) {
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
+function exactStaleRunMaintenanceWorkspace(settings, reason, requestedWorkspace = '') {
+  if (!String(reason || '').startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return '';
+  const primary = text(settings?.workspace);
+  const requested = text(requestedWorkspace) || primary;
+  if (!primary || !requested || !path.isAbsolute(requested)) {
+    throw epochError('EXACT_STALE_RUN_WORKSPACE_INVALID', 'Exact stale-run maintenance requires an absolute workspace.');
+  }
+  const target = path.resolve(requested);
+  const allowed = [primary, ...(Array.isArray(settings?.authorizedRoots) ? settings.authorizedRoots : [])]
+    .filter((item) => text(item))
+    .some((item) => canonicalWorkspace(item) === canonicalWorkspace(target));
+  if (!allowed) {
+    throw epochError('EXACT_STALE_RUN_WORKSPACE_NOT_AUTHORIZED', 'Exact stale-run maintenance target is not an authorized workspace.');
+  }
+  return target;
+}
+
 function exactObjectFields(value, fields) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value)
     && Object.keys(value).length === fields.size
@@ -1474,11 +1491,15 @@ class FullCleanActivation {
     // checkpoint for an operation that is only refreshing the installation.
     const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
     const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
+    const maintenanceWorkspace = refresh
+      ? exactStaleRunMaintenanceWorkspace(this._settings(), options?.reason, options?.maintenanceWorkspace)
+      : '';
     const requestedOperationId = text(options.operationId) || operationId();
     const requestKey = canonicalJson({
       operation_id: requestedOperationId,
       source_checkpoint: sourceCheckpoint,
       refresh,
+      maintenance_workspace: maintenanceWorkspace || null,
       component: text(options.component) || 'coding_mcp',
       expected_disk_revision: text(options.expectedDiskRevision) || null,
       activation_epoch_id: text(options.activationEpochId) || null,
@@ -1492,7 +1513,7 @@ class FullCleanActivation {
       });
     }
     this.inFlightRequestKey = requestKey;
-    const tracked = this._restart({ ...options, refresh, operationId: requestedOperationId, sourceCheckpoint }).finally(() => {
+    const tracked = this._restart({ ...options, refresh, operationId: requestedOperationId, sourceCheckpoint, maintenanceWorkspace }).finally(() => {
       if (this.inFlight === tracked) {
         this.inFlight = null;
         this.inFlightRequestKey = null;
@@ -1505,7 +1526,10 @@ class FullCleanActivation {
   async _restart(options = {}) {
     const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
     const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
-    options = { ...options, refresh, sourceCheckpoint };
+    const maintenanceWorkspace = refresh
+      ? exactStaleRunMaintenanceWorkspace(this._settings(), options?.reason, options?.maintenanceWorkspace)
+      : '';
+    options = { ...options, refresh, sourceCheckpoint, maintenanceWorkspace };
     const operation_id = text(options.operationId) || operationId();
     const expiresAtUnixMs = Number(options.expiresAtUnixMs || (this.now() + DEFAULT_TTL_MS));
     if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
@@ -1639,6 +1663,7 @@ class FullCleanActivation {
           reason: options.reason || 'operator_restart',
           allow_acceptance_pending: options.allowAcceptancePending === true,
           refresh: options.refresh === true,
+          ...(options.maintenanceWorkspace ? { maintenance_workspace: options.maintenanceWorkspace } : {}),
           requested_at_unix_ms: this.now(),
           expires_at_unix_ms: expiresAtUnixMs,
           ...(text(heldCensus?.census_fingerprint)
@@ -1804,7 +1829,11 @@ class FullCleanActivation {
     const runIds = this._exactStaleRunIds(record);
     if (!runIds.length) return { requested: 0, reconciled: [] };
     const settings = this._settings();
-    const workspace = String(settings.workspace || '');
+    const workspace = exactStaleRunMaintenanceWorkspace(
+      settings,
+      record?.metadata?.reason,
+      record?.metadata?.maintenance_workspace
+    );
     const reconciled = [];
     for (const runId of runIds) {
       const preflight = await this._execExactStaleRunCli({ workspace, runId, expiresAtUnixMs });

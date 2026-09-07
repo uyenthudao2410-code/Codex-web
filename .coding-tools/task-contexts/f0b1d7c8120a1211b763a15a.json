@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "task_id": "25ca355e6b264955845e18a34fbcedf3",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "pyIwbJxDInUjx9F2WXQakvKK",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 318,
+    "finished_at": "2026-09-07T09:11:05.109Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T09:09:59.038Z",
+  "updated_at": "2026-09-07T09:11:05.109Z",
+  "events": [
+    {
+      "time": "2026-09-07T09:09:59.038Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T09:09:59.317Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 80 \"def process_identity_token\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "session_id": "aClZEWgAZNNyxxRB-_GY5quS"
+      }
+    },
+    {
+      "time": "2026-09-07T09:09:59.601Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 80 \"def process_identity_token\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:07.942Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 120 \"def attach_managed_process\" resources/coding-tools-mcp/coding_tools_mcp/processes.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "session_id": "BJXTNbCizN4_WWeGjw5aG-oq"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:08.235Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 120 \"def attach_managed_process\" resources/coding-tools-mcp/coding_tools_mcp/processes.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:49.586Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 25 ORCHESTRATION_STATE_UNCERTAIN resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "BkNoZTznaAbTYwxWD0HCGP-2"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:49.835Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 25 ORCHESTRATION_STATE_UNCERTAIN resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:56.292Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 ORCHESTRATION_STATE_UNCERTAIN resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "A5BTcKFKGAAB-ick9oiF4vt4"
+      }
+    },
+    {
+      "time": "2026-09-07T09:10:56.550Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 ORCHESTRATION_STATE_UNCERTAIN resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T09:11:04.801Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 45 \"if prepare and owned_codex_sidecars\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "pyIwbJxDInUjx9F2WXQakvKK"
+      }
+    },
+    {
+      "time": "2026-09-07T09:11:05.109Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 45 \"if prepare and owned_codex_sidecars\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    }
+  ]
+}

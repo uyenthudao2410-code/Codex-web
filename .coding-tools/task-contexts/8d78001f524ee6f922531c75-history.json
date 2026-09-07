@@ -1,0 +1,126 @@
+[
+  {
+    "version": 2,
+    "task_id": "8d40fdd2b10e4295888039a5606e4af2",
+    "orchestration": {
+      "run_id": "5f3987e64d1a4459bbcba0d99e892c8a",
+      "wave_id": "417e8d78689e4e7b81274826b2afb5a3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+      "worktree_fp": "2679c618f44773b45cc4bbec9e20d52badcaf61a2bf2f1a01ba44d3002ccf8c0",
+      "contract_fp": ""
+    },
+    "objective": "Add a fail-closed exact-identity maintenance path for a durable managed Codex App Server job whose owning MCP process/command handle is gone, so controlled restart can safely clear the one HR ownerless sidecar without PID-only kill or manual ledger edits. The path must require owner=codex-app-server, command_id codex-app-server-*, empty run_id/wave_id, active lifecycle, persisted root_pid+root_process_token, exact current OS identity match before terminating the process tree, post-termination identity proof, and guarded lifecycle reconciliation. Also provide a bounded repository-supported CLI that invokes the same logic for the current bootstrap circularity. Preserve all other unbound residues and acceptance/grace/P5 guards.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "TXJ6yWrdREML11AXKd1pa64-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 848,
+      "finished_at": "2026-09-07T09:13:39.356Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:11:37.992Z",
+    "updated_at": "2026-09-07T09:13:39.356Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:11:37.992Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Add a fail-closed exact-identity maintenance path for a durable managed Codex App Server job whose owning MCP process/command handle is gone, so controlled restart can safely clear the one HR ownerless sidecar without PID-only kill or manual ledger edits. The path must require owner=codex-app-server, command_id codex-app-server-*, empty run_id/wave_id, active lifecycle, persisted root_pid+root_process_token, exact current OS identity match before terminating the process tree, post-termination identity proof, and guarded lifecycle reconciliation. Also provide a bounded repository-supported CLI that invokes the same logic for the current bootstrap circularity. Preserve all other unbound residues and acceptance/grace/P5 guards."
+        }
+      },
+      {
+        "time": "2026-09-07T09:11:39.211Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:12:13.290Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:12:13.297Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:18.668Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 22 \"_select_owned_codex_sidecar|terminate|reconcile_gone_managed_process_job|argparse|def main\" resources/coding-tools-mcp/scripts/reconcile_execution_resources.py",
+          "session_id": "QIYzJevqaQ1btFJkYLm6iy_U"
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:19.201Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 22 \"_select_owned_codex_sidecar|terminate|reconcile_gone_managed_process_job|argparse|def main\" resources/coding-tools-mcp/scripts/reconcile_execution_resources.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:27.960Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 100 \"invocation_pids = _current_invocation_pids\" resources/coding-tools-mcp/scripts/reconcile_execution_resources.py",
+          "session_id": "a9kGTJH7RBCIj-_Ry04J2mbV"
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:28.448Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 100 \"invocation_pids = _current_invocation_pids\" resources/coding-tools-mcp/scripts/reconcile_execution_resources.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:38.926Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 \"repair_owned_codex_sidecar|identity_mismatch|tree_termination|active_scheduling_claims|ambiguous\" resources/coding-tools-mcp/tests/test_reconcile_execution_resources_script.py",
+          "session_id": "TXJ6yWrdREML11AXKd1pa64-"
+        }
+      },
+      {
+        "time": "2026-09-07T09:13:39.356Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 \"repair_owned_codex_sidecar|identity_mismatch|tree_termination|active_scheduling_claims|ambiguous\" resources/coding-tools-mcp/tests/test_reconcile_execution_resources_script.py",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:14:51.790Z",
+    "archive_reason": "superseded"
+  }
+]

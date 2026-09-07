@@ -1,0 +1,118 @@
+{
+  "observed_at": "2026-09-07T05:35:28.436567+00:00",
+  "source_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+  "canonical_snapshot": {
+    "snapshot_at": "2026-09-07T05:35:27.093Z",
+    "backup_api_copy": true,
+    "sha256": "f7f42d680745bb9e7b80b98554299c6e934f76114f95f0c51ea579c48ddd343f",
+    "logical_sha256": "deea81d9e316b7f3b06c5bf0df2d26b73cb47cacde156eb3036515009ab5aef9",
+    "size_bytes": 54427648,
+    "schema_version": 12,
+    "integrity_check": [
+      "ok"
+    ],
+    "foreign_key_check_rows": 0,
+    "immutable": true,
+    "query_only": true
+  },
+  "lifecycle": {
+    "run_classification_counts": {
+      "P5_EXPERIMENT_ANCHOR": 6,
+      "THRESHOLD_SENSITIVE_STALE_CANDIDATE": 36
+    },
+    "managed_job_classification_counts": {},
+    "ordinary_active_runs": 36,
+    "unexplained_active_runs": 0,
+    "unbound_live_resource_residues": 0,
+    "stale_background_operation_residues": 0,
+    "projection_drift": true,
+    "p5_epochs": 6
+  },
+  "active_counts": {
+    "runs": 273,
+    "waves": 388,
+    "proofs": 377,
+    "checkpoints": 116
+  },
+  "archives": [
+    {
+      "file": "ledger-archive-20260813-20260831-1118runs.sqlite3",
+      "manifest_hash_matches": true,
+      "unchanged_during_read": true,
+      "size_matches": true,
+      "run_count_matches": true,
+      "run_ids_match": true,
+      "integrity": [
+        "ok"
+      ],
+      "foreign_key_violations": 0,
+      "counts": {
+        "runs": 1118,
+        "waves": 1677,
+        "proofs": 1875,
+        "checkpoints": 555
+      }
+    }
+  ],
+  "cross_shard_duplicate_ids": {
+    "runs": 0,
+    "waves": 0,
+    "proofs": 0,
+    "checkpoints": 0
+  },
+  "distinct_counts": {
+    "runs": 1391,
+    "waves": 2065,
+    "proofs": 2252,
+    "checkpoints": 671
+  },
+  "manifest_unchanged": true,
+  "case_locations": {
+    "3ffefaffb2ad4bebb269c26c5f952ee7": [
+      "ledger-archive-20260813-20260831-1118runs.sqlite3"
+    ],
+    "f423d1ffaedd4c1d81dac0eb63af489c": [
+      "active_snapshot"
+    ],
+    "1b75dbac11434514b5792cc09ab6e2b4": [
+      "active_snapshot"
+    ],
+    "f7f34289300d42dda4a8d556a8183459": [
+      "active_snapshot"
+    ]
+  },
+  "limits": [
+    "not complete cross-shard causal join audit",
+    "no event chain revalidation",
+    "not runtime freshness or write authority",
+    "no model or natural workload created"
+  ],
+  "projection_drift_diagnosis": {
+    "projected_run_id": "037b642a187e4f098dc66e6dd1c9b3c1",
+    "projected_wave_id": "0742b3e58f714d6faac3835471840b1b",
+    "projected_state": "ABORTED",
+    "active_ledger_run_found": false,
+    "archive_locate": "ledger-archive-20260813-20260831-1118runs.sqlite3",
+    "archived_run_status": "stale",
+    "source": "second read-only census plus parameterized query-ledger-history locate"
+  },
+  "runtime_observation": {
+    "observed_window_utc": "2026-09-07T05:35Z",
+    "electron_state": "STALE",
+    "electron_update_pending": true,
+    "mcp_revision_state": "current",
+    "fully_ready": false,
+    "runtime_update_incomplete": true,
+    "connector_state": "UNCHANGED_ACKNOWLEDGED",
+    "connector_freshness_mode": null,
+    "connector_rediscovered": false
+  },
+  "authority": {
+    "coding_tools_mcp_tool_available": false,
+    "resource_count": 0,
+    "template_count": 0,
+    "write_lease_acquired": false,
+    "source_modified": false,
+    "acceptance_invoked": false
+  }
+}

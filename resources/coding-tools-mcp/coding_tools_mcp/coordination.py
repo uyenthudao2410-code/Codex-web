@@ -39,6 +39,7 @@ from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
     SUPERVISOR_RESTART_TICKET_TTL_MS,
     build_supervisor_restart_ticket,
+    is_exact_stale_run_maintenance_reason,
     observe_installed_restart_ticket,
     supervisor_restart_response,
     supervisor_restart_ticket_matches,
@@ -831,6 +832,12 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 category="permission",
                 retryable=False,
             )
+        reason = str(args.get("reason") or "User requested runtime restart")
+        target_workspace = (
+            str(self._current_request_workspace_root())
+            if is_exact_stale_run_maintenance_reason(reason)
+            else str(self.workspace.root)
+        )
         with self.sessions_lock:
             active_commands = sum(1 for session in self.sessions.values() if session.process.poll() is None)
             starting_commands = int(self.starting_sessions)
@@ -873,6 +880,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     server_instance_id=self.server_instance_id,
                     tool_contract_sha256=str(self.tool_contract["sha256"]),
                     fence_operation_id=fence_operation_id,
+                    target_workspace=target_workspace,
                 ):
                     return supervisor_restart_response(existing, already_pending=True)
 
@@ -892,7 +900,8 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 process_instance_id=self.process_instance_id,
                 server_instance_id=self.server_instance_id,
                 tool_contract_sha256=str(self.tool_contract["sha256"]),
-                reason=str(args.get("reason") or "User requested runtime restart"),
+                reason=reason,
+                target_workspace=target_workspace,
             )
             serialized_ticket = json.dumps(ticket, ensure_ascii=False, sort_keys=True)
             temporary = request_path.with_name(f".{request_path.name}.{ticket_id}.tmp")

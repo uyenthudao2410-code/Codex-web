@@ -1,0 +1,1535 @@
+[
+  {
+    "version": 2,
+    "task_id": "7cf247bf5b364f19bcd4995dace5722a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "upPlCXByi2L3ktas2HeoxuIa",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 2709,
+      "finished_at": "2026-09-07T09:37:37.220Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:37:01.048Z",
+    "updated_at": "2026-09-07T09:37:37.220Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:37:01.048Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:01.352Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"exact_stale_runs|stale_orchestration_runs|full_clean_refresh|sourceCheckpoint\" electron resources scripts tests",
+          "session_id": "WvWkWPTIUootCLw6ES3Epm5R"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:01.653Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"exact_stale_runs|stale_orchestration_runs|full_clean_refresh|sourceCheckpoint\" electron resources scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:10.132Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"EXACT_STALE_RUN_REASON_PREFIX|maintenanceRefresh|stale_orchestration_runs\" electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "dnP5jPMa0i5pQgIi9ylvGtgX"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:10.487Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"EXACT_STALE_RUN_REASON_PREFIX|maintenanceRefresh|stale_orchestration_runs\" electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:26.072Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"argparse|add_argument|def main|reconcile|eligible|acceptance|P5|grace|stale\" resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+          "session_id": "oC-grqcrhVBH3vdosT19_d-M"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:26.358Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"argparse|add_argument|def main|reconcile|eligible|acceptance|P5|grace|stale\" resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:34.472Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py --workspace \"E:\\DEV\\Codex-web\" --run-id 73e2b11c37284f31864f73b497da1781",
+          "session_id": "upPlCXByi2L3ktas2HeoxuIa"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:37.220Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py --workspace \"E:\\DEV\\Codex-web\" --run-id 73e2b11c37284f31864f73b497da1781",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:37:56.670Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "856d25ca71c14e4c8881a68451328526",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:37:56.677Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:37:56.672Z",
+    "updated_at": "2026-09-07T09:37:56.677Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:37:56.672Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:56.677Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"if action == \\\"audit\\\"|action == 'audit'|def .*audit\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:37:56.677Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:38:04.228Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2641801e47cf4dc1a22cd03acddb91d0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:38:49.007Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:38:04.231Z",
+    "updated_at": "2026-09-07T09:38:49.007Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:38:04.231Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:04.447Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"audit\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "g0Dzk2aWF7GNMgtHDKhGfk51"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:04.724Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"audit\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:17.788Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"_execExactStaleRunCli|_exactStaleRunIds|exactStaleRunIds|EXACT_STALE_RUN\" electron\\services\\fullCleanActivation.js",
+          "session_id": "w03NFE4aEKe5HPsqIGCm31Nq"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:18.094Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"_execExactStaleRunCli|_exactStaleRunIds|exactStaleRunIds|EXACT_STALE_RUN\" electron\\services\\fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:24.379Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"_reconcileExactStaleRunsWhileStopped\" electron\\services\\fullCleanActivation.js",
+          "session_id": "W2o5dJSD5J6brhR5O7pIp1GY"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:24.647Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"_reconcileExactStaleRunsWhileStopped\" electron\\services\\fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:31.455Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"def preflight_exact_stale_run_reconciliation|classification|AWAITING_ACCEPTANCE|P5|grace|eligible|stale\" resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py",
+          "session_id": "NDxelJS45i2iA_gkZ86RufWl"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:31.739Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"def preflight_exact_stale_run_reconciliation|classification|AWAITING_ACCEPTANCE|P5|grace|eligible|stale\" resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:49.007Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import sys,time,json; from pathlib import Path; sys.path.insert(0,r'resources\\coding-tools-mcp'); from coding_tools_mcp.lifecycle_census import open_lifecycle_census_snapshot,lifecycle_census,read_task_projection; root=Path(r'E:\\DEV\\Codex-web'); ids='73e2b11c37284f31864f73b497da1781,51ca0a74621e4502bfa3ce333209705d,ce16e4a42bb64de2822e35a9bdf7359c,1ee41aa02e934bc087caf54ce6c5fd11,39c890b7de664ab094fff1216c6b3455,dccd2842f1554a36983da28c82b555cf,29ea186cac88421abd990fe75eec310f,adf17d3",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:38:49.007Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:39:10.854Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "3506079aeb4c46289ea23f5a58262655",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:41:29.865Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:39:10.855Z",
+    "updated_at": "2026-09-07T09:41:29.865Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:39:10.855Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:39:11.132Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 \"def stale_run_candidates\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py",
+          "session_id": "kS3dCeCW5Um9b8bE-so9y-5H"
+        }
+      },
+      {
+        "time": "2026-09-07T09:39:11.431Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"def stale_run_candidates\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:39:17.255Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"def _stale_active_run_candidates\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py",
+          "session_id": "jRJFaUEnX_uwrBgWJs6YSEuB"
+        }
+      },
+      {
+        "time": "2026-09-07T09:39:17.613Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"def _stale_active_run_candidates\" resources\\coding-tools-mcp\\coding_tools_mcp\\orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:39:47.726Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "RUNTIME_BUSY"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:16.222Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "ACCEPTANCE_PENDING"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:29.865Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"restart_runtime|build_supervisor_restart_ticket|supervisor_restart\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py resources\\coding-tools-mcp\\coding_tools_mcp\\*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:29.865Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:41:34.978Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f176cd18ff564333a2c3f727ac65e63f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Msi3VcBxeTuGLLJMFnN83d4w",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 356,
+      "finished_at": "2026-09-07T09:43:00.831Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:41:34.982Z",
+    "updated_at": "2026-09-07T09:43:00.831Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:41:34.982Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:35.282Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"restart_runtime|build_supervisor_restart_ticket|supervisor_restart\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "TQeBXzZA11ogn5g3p3_mDnvr"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:35.591Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"restart_runtime|build_supervisor_restart_ticket|supervisor_restart\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:41.556Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 90 \"def activation_preflight\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "aLevcAcULVAJzQKYs-ubHaft"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:41.843Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 90 \"def activation_preflight\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:49.175Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 155 -First 150\"",
+          "session_id": "oVENOkQcoBHeQlDbmniT2akJ"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:49.795Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 155 -First 150\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:57.175Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"def _activation_lifecycle_summary\" resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "EQ1w0o1nYn-dbRkl69X6AQut"
+        }
+      },
+      {
+        "time": "2026-09-07T09:41:57.441Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"def _activation_lifecycle_summary\" resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:05.148Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"def _projection_rebuild_census|def projection_rebuild_snapshot\" resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py",
+          "session_id": "B-AS5X9JgI89SFuxfWGeDGvO"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:05.423Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"def _projection_rebuild_census|def projection_rebuild_snapshot\" resources\\coding-tools-mcp\\coding_tools_mcp\\activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:37.065Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"authorized|workspace_binding|workspace_generation|workspace_name|requested_path|scope_kind|primary\" resources\\coding-tools-mcp\\coding_tools_mcp electron tests resources\\coding-tools-mcp\\tests",
+          "session_id": "GxbKdQh-ZaE2KYSwR1Ks-Vhu"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:37.515Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"authorized|workspace_binding|workspace_generation|workspace_name|requested_path|scope_kind|primary\" resources\\coding-tools-mcp\\coding_tools_mcp electron tests resources\\coding-tools-mcp\\tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:49.106Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\tests\\test_workspace_session_isolation.py' | Select-Object -Skip 660 -First 140\"",
+          "session_id": "I_FN2UGD-6Xkt7NRNb1tCy2g"
+        }
+      },
+      {
+        "time": "2026-09-07T09:42:49.767Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\tests\\test_workspace_session_isolation.py' | Select-Object -Skip 660 -First 140\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:00.375Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"authorized_roots|requested_path_id|scope_kind|stateless_task_context|execution_context|workspace_context\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\runtime.py",
+          "session_id": "Msi3VcBxeTuGLLJMFnN83d4w"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:00.831Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"authorized_roots|requested_path_id|scope_kind|stateless_task_context|execution_context|workspace_context\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\runtime.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:43:08.562Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "65dde6c4144941e2ad024234a8b5e778",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:43:18.449Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:43:08.565Z",
+    "updated_at": "2026-09-07T09:43:18.449Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:43:08.565Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:09.169Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\server.py' | Select-Object -Skip 1580 -First 150\"",
+          "session_id": "di9vL3xHkUeNizCs5Nc9GbRj"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:10.313Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\server.py' | Select-Object -Skip 1580 -First 150\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:18.449Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"def _set_request_workspace_scope|def _preflight_tool_workspace_scope|request_context.workspace_root\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:18.449Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:43:23.526Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e930a6135fa54f33a38917bdf374a680",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:43:56.002Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:43:23.529Z",
+    "updated_at": "2026-09-07T09:43:56.002Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:43:23.529Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:23.862Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 \"request_workspace_scope\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "session_id": "CCLwfYzQFhqUk_RWxVxh9CWW"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:24.296Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"request_workspace_scope\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:35.331Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"request_context.*workspace_root|current_workspace_root|workspace_root.*request_context|_request.*workspace\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "c2-wu0FvgLPoPfS523LNVS8S"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:35.636Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"request_context.*workspace_root|current_workspace_root|workspace_root.*request_context|_request.*workspace\" resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:43.065Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\server.py' | Select-Object -Skip 480 -First 150\"",
+          "session_id": "A7J8zNpt-n1Fd_mJenlPAEAo"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:43.642Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\server.py' | Select-Object -Skip 480 -First 150\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:56.002Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"async restart|restart\\(|metadata.*reason|source_checkpoint|mode\" electron\\services\\fullCleanActivation.js electron\\services\\runtimeOrchestrator.js electron\\services\\restart* electron\\main.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:43:56.002Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:44:01.770Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8f368255ae014bcc95c14a4ad6f0eaec",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:44:25.718Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:44:01.776Z",
+    "updated_at": "2026-09-07T09:44:25.718Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:44:01.776Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:02.143Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"async restart\" electron\\services\\fullCleanActivation.js electron\\services\\runtimeOrchestrator.js",
+          "session_id": "NQhw0h5zxWjnA_gWVeqjtRO6"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:02.579Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"async restart\" electron\\services\\fullCleanActivation.js electron\\services\\runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:09.104Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1500 -First 210\"",
+          "session_id": "p88wy91-QIQFg81a_31fkyn4"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:10.163Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1500 -First 210\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:25.718Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"pending.request.reason|request.workspace|pending.*workspace|supervisor\" electron\\services\\runtimeOrchestrator.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:25.718Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:44:32.164Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "4c544b414ef74acd8d6d24fea3524831",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "fQiKiDb8ShW6Perdf8dwQ27_",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 363,
+      "finished_at": "2026-09-07T09:45:52.933Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:44:32.223Z",
+    "updated_at": "2026-09-07T09:45:52.933Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:44:32.223Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:33.131Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"request.workspace\" electron\\services\\runtimeOrchestrator.js",
+          "session_id": "wH8ns-h6fDWuuLFLTlGvra83"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:34.317Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"request.workspace\" electron\\services\\runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:53.711Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py' | Select-Object -First 320\"",
+          "session_id": "qWGXTL9b6vYFEgmR385LUeMO"
+        }
+      },
+      {
+        "time": "2026-09-07T09:44:55.471Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py' | Select-Object -First 320\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:03.102Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "0514K9YNclcirxzeZTp0CjeK"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:03.505Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:33.437Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"authorizedRoots|authorized_roots|authorizedFolders|authorized.*workspace|CODING_TOOLS_MCP_AUTHORIZED_ROOTS\" electron resources\\coding-tools-mcp\\coding_tools_mcp tests resources\\coding-tools-mcp\\tests",
+          "session_id": "bFnGBBzl6H6BsxoZAe8kFD3M"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:33.913Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"authorizedRoots|authorized_roots|authorizedFolders|authorized.*workspace|CODING_TOOLS_MCP_AUTHORIZED_ROOTS\" electron resources\\coding-tools-mcp\\coding_tools_mcp tests resources\\coding-tools-mcp\\tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:52.370Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"build_supervisor_restart_ticket|supervisor_restart_ticket_matches|exact_stale_runs\" resources\\coding-tools-mcp\\tests tests\\runtime-lifecycle.test.js tests\\*restart*",
+          "session_id": "fQiKiDb8ShW6Perdf8dwQ27_"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:52.933Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"build_supervisor_restart_ticket|supervisor_restart_ticket_matches|exact_stale_runs\" resources\\coding-tools-mcp\\tests tests\\runtime-lifecycle.test.js tests\\*restart*",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:45:58.780Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "66df809566c54588bb0643f18cc62884",
+    "orchestration": {
+      "run_id": "8c220b2539fa4fb0a521835880ff60f7",
+      "wave_id": "d9364536d6014627a0158d03e8e658e8",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+      "worktree_fp": "21ac3feecef501a61413da47c190f86ee096aab470e686427a5310eaa4331838",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "6htc4GEMzJLureCDLiNsT5Yo",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 559,
+      "finished_at": "2026-09-07T09:48:49.937Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:45:58.786Z",
+    "updated_at": "2026-09-07T09:48:49.937Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:45:58.786Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:45:59.154Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py'; Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Skip 1740 -First 120\"",
+          "session_id": "xp2LpAkcir0DqTuhuSE1Ti8S"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:01.067Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py'; Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Skip 1740 -First 120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:09.202Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'electron\\services\\fullCleanActivation.js' | Select-Object -First 90\"",
+          "session_id": "F4pEzd333623_5C5QHqQAIhp"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:09.710Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content -Path 'electron\\services\\fullCleanActivation.js' | Select-Object -First 90\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:15.576Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"exact stale|exact_stale|_reconcileExactStaleRunsWhileStopped|reconcile_exact\" tests resources\\coding-tools-mcp\\tests",
+          "session_id": "qi1n7OiAVJe9hTExYoKoXFuD"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:15.876Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"exact stale|exact_stale|_reconcileExactStaleRunsWhileStopped|reconcile_exact\" tests resources\\coding-tools-mcp\\tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:28.820Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:30.596Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:46:30.607Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:08.379Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('electron\\services\\runtimeOrchestrator.js','resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py','resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py','electron\\services\\fullCleanActivation.js','resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py','tests\\runtime-lifecycle.test.js'); git status --short -- $files; foreach($f in $files){ if(Test-Path $f){ $h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($",
+          "session_id": "cjF-qHE9xAcOWQ0M5vHBJflD"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:09.137Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('electron\\services\\runtimeOrchestrator.js','resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py','resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py','electron\\services\\fullCleanActivation.js','resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py','tests\\runtime-lifecycle.test.js'); git status --short -- $files; foreach($f in $files){ if(Test-Path $f){ $h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:16.529Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 500 -First 230; Write-Output '---ORCH---'; Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 1900 -First 130; Write-Output '---PY---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 520 -First 190\"",
+          "session_id": "XbM-kC7aDPrJRXoGnzcBeODB"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:17.088Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 500 -First 230; Write-Output '---ORCH---'; Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 1900 -First 130; Write-Output '---PY---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 520 -First 190\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:28.690Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"_reconcileExactStaleRunsWhileStopped|_exactStaleRunIds|_enqueue_runtime_restart|build_supervisor_restart_ticket\" electron\\services\\fullCleanActivation.js resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "N0StYE6xhM8m-dCzsuHui9dT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:29.087Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"_reconcileExactStaleRunsWhileStopped|_exactStaleRunIds|_enqueue_runtime_restart|build_supervisor_restart_ticket\" electron\\services\\fullCleanActivation.js resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:37.674Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1690 -First 165; Write-Output '---PY---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 810 -First 150\"",
+          "session_id": "tWODN7MiJimkpvBgGn2WbtX0"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:38.254Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1690 -First 165; Write-Output '---PY---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -Skip 810 -First 150\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:49.557Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"function canonicalWorkspace|canonicalWorkspace\\(\" electron\\services\\fullCleanActivation.js | Select-Object -First 20",
+          "session_id": "6htc4GEMzJLureCDLiNsT5Yo"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:49.937Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"function canonicalWorkspace|canonicalWorkspace\\(\" electron\\services\\fullCleanActivation.js | Select-Object -First 20",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:48:57.978Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "72cdc84869da4615a3dc948c38a02564",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:50:00.207Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:48:57.981Z",
+    "updated_at": "2026-09-07T09:50:00.208Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:48:57.981Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:58.629Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"canonicalWorkspace\" electron\\services\\fullCleanActivation.js",
+          "session_id": "oRd1zETqVWChpo5cObajVtt5"
+        }
+      },
+      {
+        "time": "2026-09-07T09:48:59.020Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"canonicalWorkspace\" electron\\services\\fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:49:41.337Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"reconcileExactStale|exact stale-run|exact_stale_runs\" tests\\full-clean-activation.test.js tests\\runtime-lifecycle.test.js",
+          "session_id": "X4esQRfPTyg9KTZGibSYyuGC"
+        }
+      },
+      {
+        "time": "2026-09-07T09:49:41.804Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"reconcileExactStale|exact stale-run|exact_stale_runs\" tests\\full-clean-activation.test.js tests\\runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:49:52.975Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\full-clean-activation.test.js' | Select-Object -Skip 1490 -First 170\"",
+          "session_id": "vmETX4KrEkwI1I8LmxjGGo5t"
+        }
+      },
+      {
+        "time": "2026-09-07T09:49:53.499Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\full-clean-activation.test.js' | Select-Object -Skip 1490 -First 170\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:00.207Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"metadata: \\{|reason: options.reason|mode: options.mode|full_clean_refresh\" electron\\services\\fullCleanActivation.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:00.208Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:50:08.236Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "676c60d5c1894bada801aa1f7c28b116",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sLe_2zNmciFl_ok-RVDxlSLM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 582,
+      "finished_at": "2026-09-07T09:52:38.389Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-09-07T09:50:08.240Z",
+    "updated_at": "2026-09-07T09:52:47.165Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:50:08.240Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:08.887Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reason: options.reason\" electron\\services\\fullCleanActivation.js",
+          "session_id": "n_Z3XFMNHaghNNbx1xQAtr6p"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:09.333Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reason: options.reason\" electron\\services\\fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:17.331Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1580 -First 100\"",
+          "session_id": "JZdCpc_MlH8VuBtWMQ44xFrT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:17.914Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1580 -First 100\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:26.097Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"async _restart|async restart\\(\" electron\\services\\fullCleanActivation.js",
+          "session_id": "WNY_8wCgdb_JfEQfmaDsltQX"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:26.505Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"async _restart|async restart\\(\" electron\\services\\fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:33.245Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1450 -First 105\"",
+          "session_id": "ltrDHI_r4FBzlrXwkegmxbR8"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:33.855Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 1450 -First 105\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:44.482Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 85 -First 35\"",
+          "session_id": "tD3AmI4v2uHAHtAA9FKXwCig"
+        }
+      },
+      {
+        "time": "2026-09-07T09:50:45.023Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\fullCleanActivation.js' | Select-Object -Skip 85 -First 35\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:51:40.604Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-07T09:52:37.839Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py' | Select-Object -First 180; Write-Output '---TEST---'; Get-Content 'resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py' | Select-Object -First 180\"",
+          "session_id": "sLe_2zNmciFl_ok-RVDxlSLM"
+        }
+      },
+      {
+        "time": "2026-09-07T09:52:38.389Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\restart_ticket.py' | Select-Object -First 180; Write-Output '---TEST---'; Get-Content 'resources\\coding-tools-mcp\\tests\\test_restart_ticket_maintenance.py' | Select-Object -First 180\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:52:47.163Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:52:51.761Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "66df809566c54588bb0643f18cc62884",
+    "orchestration": {
+      "run_id": "8c220b2539fa4fb0a521835880ff60f7",
+      "wave_id": "d9364536d6014627a0158d03e8e658e8",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+      "worktree_fp": "21ac3feecef501a61413da47c190f86ee096aab470e686427a5310eaa4331838",
+      "contract_fp": ""
+    },
+    "objective": "Fix exact-stale maintenance for authorized child workspaces. A task_context bound to E:\\DEV\\Codex-web currently scopes repository/ledger tools correctly, but task_control restart_runtime still preflights and tickets the primary supervisor workspace E:\\DEV\\HR STA\\HR, so exact stale IDs from Codex-web cannot be safely reconciled. Preserve the primary HR workspace as supervisor owner and preserve its AWAITING_ACCEPTANCE rows, while carrying an exact authorized maintenance target workspace for exact_stale_runs only; fail closed for unauthorized targets; keep all existing dirty WIP intact; do not change public tool count.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "W0rEqWdEREUlRBY1kEmTMwUr",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 792,
+      "finished_at": "2026-09-07T09:54:02.543Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:52:51.765Z",
+    "updated_at": "2026-09-07T09:54:02.543Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:52:51.765Z",
+        "event": "orchestration_projection_exact_run_restored",
+        "details": {
+          "source": "canonical_ledger",
+          "run_id": "8c220b2539fa4fb0a521835880ff60f7"
+        }
+      },
+      {
+        "time": "2026-09-07T09:53:01.924Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Skip 1768 -First 125; Write-Output '---ORCHTOP---'; Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 110 -First 85; Write-Output '---PYIMPORT---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -First 70\"",
+          "session_id": "ByE6-WCWVI2KIlEJnJijN8_L"
+        }
+      },
+      {
+        "time": "2026-09-07T09:53:02.500Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Skip 1768 -First 125; Write-Output '---ORCHTOP---'; Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 110 -First 85; Write-Output '---PYIMPORT---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py' | Select-Object -First 70\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:53:10.420Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 35 -First 105\"",
+          "session_id": "LODluqqwrKXG2fz5T-IykRVn"
+        }
+      },
+      {
+        "time": "2026-09-07T09:53:11.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron\\services\\runtimeOrchestrator.js' | Select-Object -Skip 35 -First 105\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:53:38.820Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-07T09:54:01.918Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Last 90\"",
+          "session_id": "W0rEqWdEREUlRBY1kEmTMwUr"
+        }
+      },
+      {
+        "time": "2026-09-07T09:54:02.543Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'tests\\runtime-lifecycle.test.js' | Select-Object -Last 90\"",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:54:37.145Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -37,6 +37,38 @@ const MAX_DEFERRED_RECOVERIES = 6;
 const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
 const READY_COMMIT_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
 const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
+const SUPERVISOR_RESTART_REASON_MAX_CHARS = 1024;
+const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
+const EXACT_STALE_RUN_ID_PATTERN = /^[a-f0-9]{32}$/;
+const EXACT_STALE_RUN_MAX_IDS = 16;
+
+function exactStaleRunMaintenanceReason(value) {
+  if (typeof value !== 'string' || !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return false;
+  if (value.length > SUPERVISOR_RESTART_REASON_MAX_CHARS) return false;
+  const rawIds = value.slice(EXACT_STALE_RUN_REASON_PREFIX.length);
+  const runIds = rawIds ? rawIds.split(',') : [];
+  return runIds.length >= 1
+    && runIds.length <= EXACT_STALE_RUN_MAX_IDS
+    && new Set(runIds).size === runIds.length
+    && runIds.every((runId) => EXACT_STALE_RUN_ID_PATTERN.test(runId));
+}
+
+function validSupervisorRestartReason(value) {
+  if (value == null) return true;
+  if (typeof value !== 'string' || value.length > SUPERVISOR_RESTART_REASON_MAX_CHARS) return false;
+  return !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX) || exactStaleRunMaintenanceReason(value);
+}
+
+function validSupervisorRestartTarget(request, settings) {
+  const raw = request?.target_workspace;
+  if (raw == null || raw === '') return true;
+  if (typeof raw !== 'string') return false;
+  if (!exactStaleRunMaintenanceReason(request?.reason)) {
+    return workspaceKey(raw) === workspaceKey(settings.workspace);
+  }
+  return [settings.workspace, ...(Array.isArray(settings.authorizedRoots) ? settings.authorizedRoots : [])]
+    .some((candidate) => workspaceKey(candidate) === workspaceKey(raw));
+}
 
 function validSupervisorRestartRequest(request, settings, now = Date.now()) {
   if (!request || typeof request !== 'object' || Array.isArray(request)) return false;
@@ -55,6 +87,7 @@ function validSupervisorRestartRequest(request, settings, now = Date.now()) {
     && request.full_clean_required === true
     && typeof request.workspace === 'string'
     && workspaceKey(request.workspace) === workspaceKey(settings.workspace)
+    && validSupervisorRestartTarget(request, settings)
     && typeof request.process_instance_id === 'string'
     && request.process_instance_id.trim() === request.process_instance_id
     && request.process_instance_id.length > 0
@@ -63,6 +96,7 @@ function validSupervisorRestartRequest(request, settings, now = Date.now()) {
     && request.server_instance_id.length > 0
     && typeof request.tool_contract_sha256 === 'string'
     && READY_COMMIT_DIGEST_PATTERN.test(request.tool_contract_sha256)
+    && validSupervisorRestartReason(request.reason)
     && Number.isSafeInteger(requestedAt)
     && Number.isSafeInteger(notBefore)
     && Number.isSafeInteger(expiresAt)
@@ -1926,23 +1960,30 @@ class RuntimeOrchestrator {
           code: 'FULL_CLEAN_ACTIVATION_UNAVAILABLE'
         });
       }
-      if (typeof this.resolveFullCleanSourceCheckpoint !== 'function') {
+      const maintenanceRefresh = exactStaleRunMaintenanceReason(pending.request.reason);
+      const maintenanceWorkspace = maintenanceRefresh
+        ? String(pending.request.target_workspace || this.settingsStore.load().workspace || '')
+        : '';
+      if (!maintenanceRefresh && typeof this.resolveFullCleanSourceCheckpoint !== 'function') {
         throw Object.assign(new Error('The supervisor restart ticket has no Recovery Host accepted-code checkpoint authority.'), {
           code: 'ACTIVATION_SOURCE_CHECKPOINT_UNAVAILABLE'
         });
       }
-      // Resolve the checkpoint only from the current authenticated Recovery Host
-      // closure.  The MCP ticket is an operation/deadline envelope, never a
-      // source-authority envelope, so a stale or caller-supplied checkpoint can
-      // never be smuggled into the full-clean transaction.
-      const sourceCheckpoint = await this.resolveFullCleanSourceCheckpoint();
+      // Ordinary code/revision restarts resolve authority only from the current
+      // authenticated Recovery Host closure. Exact stale-run maintenance is a
+      // process refresh: it carries no source authority and FullCleanActivation's
+      // stopped-runtime census/snapshot/hash-chain guards own that mutation.
+      const sourceCheckpoint = maintenanceRefresh ? null : await this.resolveFullCleanSourceCheckpoint();
       const expectedRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
       const result = await this.fullCleanActivation.restart({
         operationId: ticketId,
-        sourceCheckpoint,
+        ...(maintenanceRefresh
+          ? { refresh: true, mode: 'full_clean_refresh', sourceCheckpoint: null }
+          : { sourceCheckpoint }),
         expectedDiskRevision: expectedRevision,
         expiresAtUnixMs: Number(pending.request.expires_at_unix_ms || 0),
-        reason: pending.request.reason || 'task_control_restart_runtime'
+        reason: pending.request.reason || 'task_control_restart_runtime',
+        ...(maintenanceRefresh ? { maintenanceWorkspace } : {})
       });
       const binding = this.activationEpochBinding(ticketId);
       if (!binding.known || !binding.bound) {
@@ -1960,7 +2001,7 @@ class RuntimeOrchestrator {
         operationId: ticketId,
         status: ready ? 'completed' : 'accepted',
         component: 'full_system',
-        activation_mode: 'full_clean_activation',
+        activation_mode: maintenanceRefresh ? 'full_clean_refresh' : 'full_clean_activation',
         result
       };
     } catch (error) {

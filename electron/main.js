@@ -825,7 +825,7 @@ function openManagerWindow() {
   managerWindow.removeMenu();
   const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
   managerWindow.once('ready-to-show', () => managerWindow.show());
-  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), { query: { theme: initialTheme } });
+  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'token-dashboard.html'), { query: { theme: initialTheme } });
   managerWindow.on('close', (event) => {
     if (forceQuit) return;
     event.preventDefault();
@@ -971,6 +971,7 @@ function registerIpc() {
   secureHandle('token-dashboard:open', () => invokeSafely(async () => { openTokenWindow(); return true; }));
   secureHandle('token-dashboard:close', () => invokeSafely(async () => {
     if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.close();
+    if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close();
     return true;
   }));
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));

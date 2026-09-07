@@ -6,15 +6,15 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-test('manager overview embeds accepted-result KPIs plus secondary token/cost diagnostics', () => {
-  const html = read('renderer/index.html');
+test('standalone token overview embeds accepted-result KPIs plus secondary token/cost diagnostics', () => {
+  const html = read('renderer/token-dashboard.html');
   assert.match(html, /dashboard\.css/);
   assert.match(html, /dashboard\.js/);
   for (const id of ['daTokensTotal', 'daTokensSplit', 'daCostTotal', 'daCallsTotal', 'daEfficiencyTotal', 'daOperationsTableBody', 'daOperationsCoverage', 'daCoveragePolicy', 'daCoverageController', 'daCoverageControllerMeta', 'daCoverageProvider', 'daCoverageProviderMeta', 'daCoverageInvocation', 'daCoverageInvocationMeta', 'daCoverageToolCard', 'daCoverageToolCardMeta', 'daCoverageCost', 'daCoverageCostMeta', 'daCoverageRunAttribution', 'daCoverageRunAttributionMeta', 'daTurnTokenStatus', 'daChart', 'daChartEmpty', 'daDonut', 'daDonutTotal', 'daLegend', 'daToolBars', 'daSpark', 'daPreset', 'daRateIn', 'daRateOut', 'daCurrency', 'daFx', 'daApply', 'daRefreshButton', 'daLastSync', 'daModelTable', 'daModelSummary', 'daTicker', 'daTickerTrack', 'daLaneChatIn', 'daLaneFastIn', 'daLaneDeepIn', 'daLaneTerraIn', 'daLaneSolIn', 'daRealtimeTpm', 'daRealtimeTpmMeta', 'daRealtimeLatency', 'daRealtimeLatencyMeta']) {
     assert.match(html, new RegExp(`id="${id}"`), `missing analytics id ${id}`);
   }
   assert.doesNotMatch(html, /id="daBytesPerToken"/);
-  for (const label of ['ACCEPTED', 'TIME / ACCEPT', 'FIRST PASS', 'OBSERVED COST', 'TOOLS / ACCEPT', 'REWORK / REPLAN']) assert.match(html, new RegExp(label.replace('/', '\\/')));
+  for (const label of ['TOKEN CHATWEB', 'TOKEN PROVIDER', 'INPUT TOKEN', 'OUTPUT TOKEN', 'CHI PHÍ QUY ĐỔI', 'CACHED TOKEN', 'TOKEN / KẾT QUẢ', 'FIRST PASS']) assert.match(html, new RegExp(label.replace('/', '\\/')));
 });
 
 test('operations dashboard consumes a coverage-qualified accepted-result projection', () => {
@@ -40,7 +40,7 @@ test('operations dashboard consumes a coverage-qualified accepted-result project
 
 test('realtime performance uses exact rolling five-minute evidence without stale aggregate fallbacks', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(js, /REALTIME_WINDOW_MS = 5 \* 60 \* 1000/);
   assert.match(js, /analytics\.rolling_5m/);
   assert.match(js, /function rollingProviderUsage/);
@@ -110,7 +110,7 @@ test('dashboard animation cancels the previous frame chain before scheduling a n
 });
 test('dashboard per-turn log lists newest turns without identity leakage', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   const css = read('renderer/dashboard.css');
   assert.match(html, /id="daTurnLog"/);
   assert.match(html, /Nhật ký lượt chat/);
@@ -163,7 +163,7 @@ test('dashboard does not claim a synchronized workspace before a snapshot', () =
 
 test('dashboard per-turn tile shows effective turn measurement without double count', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(html, /TOKEN CHATWEB/);
   assert.match(html, /TOKEN PROVIDER/);
   assert.ok(html.indexOf('TOKEN CHATWEB') < html.indexOf('TOKEN PROVIDER'));
@@ -195,7 +195,7 @@ test('dashboard per-turn tile shows effective turn measurement without double co
 
 test('dashboard analytics never fabricate provider billing data', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(js, /not provider billing/);
   assert.match(html, /Phân tích Context & Chi phí/);
   assert.match(html, /Tool call của ChatGPT\/Coding-VP/);
@@ -207,7 +207,7 @@ test('dashboard analytics never fabricate provider billing data', () => {
 
 test('dashboard token trend uses canonical hourly UsageEvent evidence only', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(js, /function canonicalHourBuckets/);
   assert.match(js, /const hourly = canonicalHourBuckets\(measured, DASHBOARD_WINDOW_HOURS\) \|\| \[\]/);
   assert.doesNotMatch(js, /performanceBuckets\(records, DASHBOARD_WINDOW_HOURS\)/);
@@ -291,7 +291,7 @@ test('dashboard keeps canonical measured token economics while byte telemetry st
 
 test('measurement coverage panel exposes six evidence-qualified planes and preserves unknown-not-zero', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(js, /function renderMeasurementCoverage/);
   assert.match(js, /analytics\?\.measurement_coverage/);
   assert.match(js, /coverage\.missing_measurement_policy === 'unknown_not_zero'/);
@@ -322,7 +322,7 @@ test('dashboard styling is themed, animated and honors reduced motion', () => {
   assert.match(css, /\.da-tile-hero/);
   assert.match(css, /@keyframes daTileIn/);
   assert.match(css, /@keyframes daHeroSheen/);
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(html, /da-tile-hero/);
   assert.doesNotMatch(html, /da-live-dot/);
 });
@@ -373,11 +373,11 @@ test('operations overview uses canonical hourly and rolling evidence without byt
 });
 
 test('token trend time selector switches between full-window hourly and daily rendering', () => {
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   const js = read('renderer/dashboard.js');
   assert.match(html, /id="daChartTimeMode"/);
-  assert.match(html, /<option value="hour" selected>Theo giờ<\/option>/);
-  assert.match(html, /<option value="day">Theo ngày<\/option>/);
+  assert.match(html, /<option value="hour" selected>Xem theo giờ<\/option>/);
+  assert.match(html, /<option value="day">Xem theo ngày<\/option>/);
   assert.match(js, /byId\('daChartTimeMode'\)\?\.addEventListener\('change'/);
   assert.match(js, /chartTimeMode = event\.currentTarget\?\.value === 'day' \? 'day' : 'hour'/);
   assert.match(js, /const buckets = chartTrendBuckets\(measured, chartTimeMode\)/);
@@ -394,7 +394,7 @@ test('operations overview heatmap is built from real canonical hourly evidence',
 });
 
 test('basic overview keeps token quantification primary while technical telemetry stays retained but hidden', () => {
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   const css = read('renderer/dashboard.css');
   const js = read('renderer/dashboard.js');
   assert.match(html, /TOKEN PROVIDER/);
@@ -434,15 +434,15 @@ test('basic overview keeps token quantification primary while technical telemetr
 
 test('secondary model and fleet token economics fail closed without canonical lane mapping', () => {
   const js = read('renderer/dashboard.js');
-  const html = read('renderer/index.html');
+  const html = read('renderer/token-dashboard.html');
   assert.match(js, /Chưa có UsageEvent canonical đủ để gán token\/chi phí theo lane; không suy diễn từ bytes/);
   assert.match(js, /Token\/chi phí theo model chưa có mapping UsageEvent canonical; giữ unknown, không quy đổi từ bytes/);
   assert.doesNotMatch(js, /const models = modelBreakdown\(today\)/);
   assert.doesNotMatch(html, /TOKEN \(EST\.\)/);
   assert.doesNotMatch(html, /CHI PHÍ \(SCENARIO\)/);
   assert.doesNotMatch(html, /SCENARIO \/ 1K EST\. TOKEN/);
-  assert.match(html, /TOKEN \(USAGE EVENT\)/);
-  assert.match(html, /PROVENANCE/);
+  assert.match(html, /UsageEvent canonical/);
+  assert.match(html, /không phải ChatGPT billing/);
 });
 
 test('dead legacy measuredUsage helper is absent and dashboard rendering stays canonical', () => {

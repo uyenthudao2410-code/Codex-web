@@ -1,38 +1,98 @@
 # Tools-Codex-web — Coding Tools MCP Execution Hub
 
-> Bộ công cụ desktop Windows giúp kết nối ChatGPT với máy lập trình của bạn qua MCP, quản lý workspace, chạy lệnh/test/build, thao tác Git, xử lý tài liệu và điều phối Codex theo mức độ khó của công việc.
+> Desktop app Windows biến ChatGPT thành trợ lý coding làm việc trực tiếp với repository trên máy bạn qua MCP: quản lý workspace, đọc/sửa code, chạy lệnh/test/build, thao tác Git, xử lý tài liệu, tải file đính kèm, điều phối model theo độ khó và lưu toàn bộ evidence vận hành.
 
-> **Nguồn trạng thái hiện tại:** [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md). Các file có ngày dưới `docs/research/` là evidence/plan lịch sử và không được dùng để ghi đè source, test hoặc trạng thái vận hành mới hơn.
+> **Nguồn trạng thái hiện tại:** [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md). File có ngày dưới `docs/research/` là evidence/plan lịch sử, không dùng để ghi đè source, test hoặc trạng thái vận hành mới hơn.
 
-**Phiên bản desktop hiện tại:** `coding-tools-mcp 1.0.0`
-**Repository:** `uyenthudao2410-code/Tools-Codex-web`  
-**Nền tảng chính:** Windows + Electron  
-**MCP runtime chính:** `Coding Tools MCP`
+| | |
+|---|---|
+| **Phiên bản desktop** | `coding-tools-mcp 1.0.0` |
+| **Repository** | `uyenthudao2410-code/Tools-Codex-web` |
+| **Nền tảng** | Windows + Electron |
+| **MCP runtime** | `Coding Tools MCP` (Python, `resources/coding-tools-mcp`) |
+| **Tool profile** | `smart-v3` — 8 tool public |
 
 ---
 
-## 1. Công cụ này dùng để làm gì?
+## Mục lục
 
-`Tools-Codex-web` biến ChatGPT thành một trợ lý coding có thể làm việc trực tiếp với repository trên máy của bạn thay vì chỉ trả lời bằng văn bản.
+1. [App dùng để làm gì?](#1-app-dùng-để-làm-gì)
+2. [Bản đồ tính năng](#2-bản-đồ-tính-năng)
+3. [Kiến trúc](#3-kiến-trúc)
+4. [Smart Mode — 8 công cụ](#4-smart-mode--8-công-cụ)
+5. [`agent_workflow`](#5-agent_workflow--trung-tâm-coding)
+6. [Adaptive Model Routing](#6-adaptive-model-routing)
+7. [Codex App Server Bridge & Review plane](#7-codex-app-server-bridge--review-plane)
+8. [Task state, EOCL, command session](#8-task-state-eocl-command-session)
+9. [Document Workflow](#9-document-workflow)
+10. [Download & lưu file đính kèm](#10-download--lưu-file-đính-kèm)
+11. [Ledger evidence & archival](#11-ledger-evidence--archival)
+12. [Permission & Tool Mode](#12-permission--tool-mode)
+13. [Cài đặt, chạy, test, build](#13-cài-đặt-chạy-test-build)
+14. [Cấu trúc thư mục](#14-cấu-trúc-thư-mục)
+15. [Ví dụ dùng với ChatGPT](#15-ví-dụ-dùng-với-chatgpt)
+16. [Git workflow & delivery guard](#16-git-workflow--delivery-guard)
+17. [Bảo mật](#17-bảo-mật)
+18. [Tài liệu kỹ thuật](#18-tài-liệu-kỹ-thuật)
+19. [Nguyên tắc phát triển](#19-nguyên-tắc-phát-triển)
+20. [Nguồn gốc & License](#20-nguồn-gốc--license)
 
-Khi được kết nối qua MCP, ChatGPT có thể:
+---
+
+## 1. App dùng để làm gì?
+
+Khi kết nối qua MCP, ChatGPT có thể:
 
 - xem cấu trúc project và trạng thái Git;
-- đọc, tìm kiếm và sửa code trong workspace được cho phép;
-- chạy command, test, build và các bước verification;
-- theo dõi tiến trình command chạy lâu;
-- lưu trạng thái task để tiếp tục qua nhiều lượt chat;
-- tạo/đọc tài liệu Word, PDF, Markdown và text theo workflow chuyên dụng;
-- xem ảnh nằm trong workspace;
-- điều phối model phù hợp với độ khó của tác vụ;
-- dùng Codex App Server như một reviewer/worker độc lập ở chế độ chỉ đọc;
-- giữ các thao tác nguy hiểm trong ranh giới workspace và policy đã cấu hình.
+- đọc, tìm kiếm, sửa code trong workspace được cho phép;
+- chạy command, test, build và verification;
+- theo dõi command chạy lâu (poll / đọc thêm output / gửi stdin / kill);
+- lưu trạng thái task để tiếp tục qua nhiều lượt chat (kể cả sang cửa sổ chat mới qua handoff capsule);
+- tạo/đọc tài liệu Word, PDF, Markdown, text theo workflow chuyên dụng;
+- xem ảnh trong workspace;
+- nhận file bạn tải trong khung ChatGPT — app tự lưu vào workspace để agent dùng ngay;
+- điều phối model phù hợp độ khó tác vụ (Mini/Luna/Terra/Sol, fail-closed về deterministic);
+- dùng Codex App Server như reviewer/worker độc lập ở chế độ chỉ đọc;
+- giữ mọi thao tác trong ranh giới workspace và policy đã cấu hình.
 
-Đây là bản tùy biến phát triển từ WebCodex, nhưng trọng tâm hiện tại của desktop app là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + evidence-gated model routing**.
+Đây là bản tùy biến phát triển từ WebCodex; trọng tâm desktop hiện tại là **Execution Hub + Coding Tools MCP + ChatGPT/Codex Desktop + evidence-gated model routing**.
 
 ---
 
-## 2. Kiến trúc hiện tại
+## 2. Bản đồ tính năng
+
+### Giao diện desktop (Electron + renderer)
+
+| Màn hình | File | Chức năng |
+|---|---|---|
+| Trang chính / onboarding | `renderer/index.html` + `app.js` | Chọn workspace, cấu hình OpenAI Tunnel (Tunnel ID + Runtime Key), triển khai dịch vụ, checklist hướng dẫn 5 bước, thẻ trạng thái (workspace/MCP/tunnel), quản lý thư mục ủy quyền bổ sung |
+| Khung ChatGPT | `renderer/browser.html` + `browser.js` | Webview ChatGPT + thanh trạng thái download, badge trạng thái task/workspace, nút `＋ Thư mục ủy quyền` |
+| Execution Control Center | `renderer/panel.html`, `token-dashboard.html`, `control-center.js` | Realtime: objective/tiến độ/command đang chạy, run/wave/mode/base HEAD, event audit, proofs, delegations, MCP+Tunnel health, ChatWeb/Codex online + cursor/lag, controller lease/fencing/write authority, `SAFE TO ROTATE CHATWEB`, resume summary; điều khiển pause/resume/stop, **Ghi capsule handoff (≤8 KB)**, manual controller transfer có xác nhận, **Copy Codex MCP config** |
+| Styles/theme | `styles.css`, `dashboard.css`, `panel.css`, `control-center.css`, day/night background | Giao diện sáng/tối, font Plus Jakarta Sans |
+
+Dữ liệu Control Center lấy từ endpoint `GET /__control/orchestration` của Coding Tools MCP (yêu cầu Bearer token).
+
+### Backend Electron (`electron/`)
+
+| Service | Chức năng |
+|---|---|
+| `main.js`, `chatViewController.js` | Vòng đời cửa sổ, session webview riêng cho chat |
+| `services/downloadService.js` | Tự động lưu file đính kèm từ ChatGPT vào workspace (xem §10) |
+| `services/recoveryHost.js`, `fullCleanActivation.js`, `recoveryHostLauncher.js` | Recovery Host supervisor, full-clean activation/restart, activation epoch + connector ACK |
+| `services/tunnelService.js`, `proxyService.js`, `hubProxyGateway.js` | OpenAI Tunnel lifecycle, loopback gateway cho Codex Desktop stdio proxy |
+| `services/secretStore.js`, `settingsStore.js`, `config.js`, `deviceIdentity.js` | Secrets (Electron SecretStore, real MCP bearer không rời app), settings, device identity |
+| `services/codexDesktopConfig.js` | Sinh TOML thin-proxy cho Codex Desktop (chỉ loopback port + gateway token, không chứa bearer) |
+| `services/runtimeOrchestrator.js`, `nativeService.js`, `commandRunner.js` | Điều phối MCP runtime (Python bundled), native runtime, chạy command |
+| `services/healthService.js`, `mcpSemanticHealth.js`, `connectorAttestation.js` | Health check, attestation managed-tunnel, stale-schema detection |
+| `services/tokenMeasurement.js`, `uiPerformanceMetrics.js`, `chatEvaluationJournal.js` | Đo token theo turn, hiệu năng UI, journal đánh giá |
+
+### Coding Tools MCP (`resources/coding-tools-mcp/`)
+
+8 tool `smart-v3` (xem §4), `agent_workflow` đa workflow (bugfix/feature/greenfield/refactor/test_failure/build_release/diagnose/document/resume/custom), EOCL + task state bền vững, Codex bridge read-only, model routing, permission `safe|trusted|dangerous`, ledger audit SQLite + archival tự động (xem §11).
+
+---
+
+## 3. Kiến trúc
 
 ```text
 ┌──────────────────────────┐
@@ -48,17 +108,13 @@ Khi được kết nối qua MCP, ChatGPT có thể:
              ▼
 ┌──────────────────────────────────────────────┐
 │            Desktop Electron App              │
-│                                              │
-│  - quản lý workspace                        │
-│  - quản lý MCP runtime                      │
-│  - quản lý tunnel                           │
-│  - hiển thị trạng thái task / command       │
+│  workspace · MCP runtime · tunnel · task UI  │
+│  downloads · Control Center · recovery host  │
 └────────────┬─────────────────────────────────┘
              │
              ▼
 ┌──────────────────────────────────────────────┐
 │              Coding Tools MCP                │
-│                                              │
 │  workspace · files · Git · commands          │
 │  tests · builds · documents · task state     │
 │  adaptive agent_workflow                     │
@@ -77,769 +133,352 @@ Khi được kết nối qua MCP, ChatGPT có thể:
 └──────────────────────────┘
 ```
 
-Desktop có thể đổi workspace mà không cần khởi động lại toàn bộ MCP + tunnel khi runtime cho phép.
+### Một Runtime, hai client
 
-### Execution Hub — một Runtime, hai client
+Không cho ChatWeb và Codex Desktop tự spawn hai Runtime ngang hàng cùng ghi một ledger. Electron giữ **một Runtime authority**: ChatWeb qua tunnel, Codex Desktop qua stdio proxy mỏng tới loopback gateway của Electron. Không đồng bộ transcript giữa hai client; continuity rebuild từ ledger/task/proof/capsule + bounded resume packet. Desktop đổi workspace không cần restart toàn bộ MCP + tunnel khi runtime cho phép.
 
-Kiến trúc multi-client hiện tại không cho ChatWeb và Codex Desktop tự spawn hai Coding Tools Runtime ngang hàng cùng ghi một ledger. Electron giữ **một Runtime authority**; ChatWeb đi qua tunnel, còn Codex Desktop dùng một stdio proxy mỏng đi qua loopback gateway của Electron:
+### Kết nối Codex Desktop vào cùng Execution Hub
 
-```text
-ChatWeb ── Tunnel/MCP ───────┐
-                             ▼
-                      ONE Coding Tools Runtime ──> Repository
-                             ▲
-Codex Desktop ─ stdio proxy ─┘
-
-Electron = supervisor + secret owner + Execution Control Center
-```
-
-Runtime giữ durable client registry, per-client event cursor, controller lease/fencing, task/run/proof/capsule và repository write authority. Controller semantic và write lease là hai khái niệm riêng; chuyển controller không tự trao quyền mutation checkout.
-
-Không đồng bộ transcript giữa ChatWeb và Desktop. Continuity được rebuild từ ledger/task/proof/capsule + bounded resume packet.
+Không chạy trực tiếp `python -m coding_tools_mcp --stdio` trên cùng workspace (tạo Runtime authority thứ hai). Luồng đúng: chạy Electron app → mở Execution Control Center → **Copy Codex MCP config** → review rồi paste block `[mcp_servers.coding-tools]` vào config Codex Desktop → mở session mới → card Codex Desktop hiện `online`. App không tự sửa `~/.codex/config.toml`. Proxy heartbeat khi stdio còn attach, không tự claim controller khi ChatWeb giữ lease; chuyển controller là thao tác manual, auto-handoff OFF.
 
 ---
 
-## 3. Smart Mode — 8 công cụ chính
+## 4. Smart Mode — 8 công cụ
 
-Chế độ `smart` cố ý giữ tool surface nhỏ để ChatGPT chọn công cụ ổn định hơn và giảm số vòng gọi tool không cần thiết.
-
-Profile contract hiện tại là **`smart-v3`** và chỉ public đúng **8 tool**:
+Chế độ `smart` giữ tool surface nhỏ để model chọn tool ổn định, ít round-trip.
 
 | Tool | Mục đích |
 |---|---|
-| `workspace_context` | Xem nhanh workspace, project, thư mục gốc, Git, task hiện tại và diagnostics runtime khi dùng `detail=full`. |
-| `agent_workflow` | Công cụ chính cho công việc coding end-to-end: phân tích, sửa code, test, build, release verification và resume. |
-| `task_control` | Quản lý task/EOCL, background operation, audit/acceptance, coordination lane, handoff và restart runtime có xác nhận. |
-| `exec_command` | Chạy một command tập trung khi high-level workflow không phù hợp. |
-| `command_control` | Poll, gửi stdin, đọc thêm output hoặc dừng command session đang chạy. |
-| `document_workflow` | Đọc/tạo/chuyển đổi PDF, DOCX, Markdown và text bằng workflow chuyên dụng. |
-| `request_permissions` | Báo trạng thái yêu cầu quyền theo scope; không bao giờ tự biến host không hỗ trợ elicitation thành một permission grant. |
-| `view_image` | Trả ảnh trong workspace về MCP client để model có thể xem. |
+| `workspace_context` | Tổng quan workspace/project/Git/task; `detail=full` kèm diagnostics runtime |
+| `agent_workflow` | Coding end-to-end: phân tích → sửa → test/build → verify → resume |
+| `task_control` | Task lifecycle, background operation, EOCL audit/accept/reject, lane/events/messages/ack, handoff, `restart_runtime` |
+| `exec_command` | Chạy một command khi high-level workflow không phù hợp |
+| `command_control` | Poll / đọc thêm output / gửi stdin / kill command session |
+| `document_workflow` | PDF/DOCX/Markdown/text: inspect, tạo mới, chuyển đổi + metadata verification |
+| `request_permissions` | Báo trạng thái yêu cầu quyền (status-only, fail-closed — xem §12) |
+| `view_image` | Trả ảnh trong workspace cho model xem |
 
-Một số tool cũ vẫn được giữ dưới lớp **compatibility** để client cache cũ không bị gãy, nhưng agent mới không nên chủ động tìm hoặc gọi các tên legacy này.
+Tool cũ giữ lớp **compatibility** cho client cache cũ; agent mới không chủ động gọi tên legacy.
 
-### Tool contract fingerprint và connector refresh
+### Contract fingerprint & stale-schema detection
 
-Runtime tính một SHA-256 deterministic từ đúng tool contract đang expose và công bố cùng:
-
-```text
-schema_version
-profile = smart-v3
-sha256
-tool_count = 8
-```
-
-Electron so fingerprint hiện tại với fingerprint đã được connector thực sự discover. Khi contract hoặc MCP process thay đổi, app yêu cầu **Refresh actions / Scan Tools / reconnect hoặc recreate MCP app trong ChatGPT** theo khả năng của workspace. Nút **“Kiểm tra lại trạng thái”** chỉ poll bằng chứng. Recovery Host có thể guarded-ACK theo nhánh strict khi nhận `tools/list` hoặc `server/discover` từ external ChatGPT connector qua managed Tunnel với attestation khớp exact activation epoch, process/server identity và contract SHA hiện tại; ngoài ra, khi admission còn đóng và `workspace_accessed=false`, một `workspace_context` bootstrap có managed-tunnel attestation cũng có thể là receipt hợp lệ nếu nó khớp exact epoch/process/server/current SHA và SHA đã ACK trùng SHA hiện tại hoặc là compatible predecessor được khai báo. Trường hợp `CURRENT_COMPATIBLE_ACKNOWLEDGED` vẫn giữ `connector_rediscovered=false` và không được mô tả như strict rediscovery. Generic `tools/call`, xác nhận thủ công/persisted hash và raw localhost HTTP không thay thế một receipt hợp lệ theo hai nhánh này.
-
-Cơ chế này là **stale-schema detection fail-closed**, không giả định ChatGPT sẽ tự động nhận schema mới và repository không có API để tự ép connector phía ChatGPT rescan. Việc refresh/re-publish phía ChatGPT vẫn phụ thuộc khả năng của workspace/host.
-
-### Vì sao chỉ giữ 8 tool?
-
-Thay vì để model tự ghép hàng chục thao tác thấp cấp, bản hiện tại gom các bước thường dùng vào workflow lớn hơn:
-
-```text
-workspace_context
-      ↓
-agent_workflow
-      ↓
-localize → change → test/build → diff → task state
-```
-
-Cách này giảm round-trip, giảm thao tác lặp, hạn chế context dư thừa và làm kết quả dễ kiểm chứng hơn.
+Runtime công bố SHA-256 của đúng contract đang expose (`profile = smart-v3`, `tool_count = 8`). Electron so với fingerprint connector đã discover; khi lệch, app yêu cầu refresh/recreate MCP app phía ChatGPT. Nút **“Kiểm tra lại trạng thái”** chỉ poll bằng chứng. Recovery Host guarded-ACK khi nhận `tools/list`/`server/discover` attested đúng epoch/process/server/contract SHA (nhánh strict), hoặc `workspace_context` bootstrap attested khi admission đóng (nhánh tương thích, giữ `connector_rediscovered=false`). Generic `tools/call` hay xác nhận thủ công không thay thế receipt hợp lệ. Đây là fail-closed: repo không có API ép ChatGPT rescan.
 
 ---
 
-## 4. `agent_workflow` — trung tâm của Coding Tools MCP
+## 5. `agent_workflow` — trung tâm coding
 
-`agent_workflow` là tool nên dùng mặc định cho hầu hết tác vụ coding thực tế.
+Workflow: `bugfix`, `feature`, `greenfield`, `refactor`, `test_failure`, `build_release`, `diagnose`, `document`, `resume`, `custom`. Phase: `prepare` (context + evidence) → `execute` (change + verify) → `run` (gộp) → `resume` (khôi phục task cũ). Một lần gọi có thể gom: context, patch, command chuẩn bị/test/build, artifact verification, Git diff, task state, model routing, external review khi đáng giá.
 
-### Nhóm workflow hỗ trợ
-
-- `bugfix` — sửa lỗi;
-- `feature` — phát triển tính năng;
-- `greenfield` — tạo project/file mới;
-- `refactor` — tái cấu trúc;
-- `test_failure` — chẩn đoán và sửa test fail;
-- `build_release` — kiểm tra build/release;
-- `diagnose` — điều tra read-only;
-- `document` — luồng tài liệu;
-- `resume` — tiếp tục task đã lưu;
-- `custom` — workflow tùy chỉnh.
-
-### Các phase
-
-| Phase | Ý nghĩa |
-|---|---|
-| `prepare` | Thu thập context, search, đọc file liên quan và chuẩn bị bằng chứng. |
-| `execute` | Áp dụng change set đã xác định và verification. |
-| `run` | Prepare + execute trong một workflow liên tục. |
-| `resume` | Khôi phục task/context trước đó rồi tiếp tục. |
-
-### Một workflow có thể gom trong một lần gọi
-
-- context và project instructions;
-- file cần tạo hoặc patch cần áp dụng;
-- command chuẩn bị;
-- test command;
-- build command;
-- artifact verification;
-- Git diff;
-- task state;
-- model routing;
-- external review khi có giá trị.
-
-### Bounded candidate packet
-
-Khi Mini/Luna được dùng như candidate lane, MCP vẫn là writer/oracle owner. Candidate chỉ nhận bounded evidence packet. Với file lớn, packet hiện ưu tiên thêm các snippet quanh exact search matches để symbol nằm sâu trong file không bị mất chỉ vì phần đầu file đã chạm giới hạn đọc.
-
-Các invariant hiện tại:
-
-- tổng source evidence vẫn nằm trong budget candidate hiện có;
-- tối đa 4 query-centered deep snippets;
-- snippet chỉ đọc từ path nằm trong allowed candidate scope;
-- candidate không có quyền tự mutation checkout chính;
-- proof cuối vẫn do MCP chạy và ChatWeb/Sol quyết định acceptance.
+Candidate lane (Mini/Luna) chỉ nhận bounded evidence packet (tối đa 4 query-centered deep snippets, đúng allowed scope), không mutation checkout chính; proof cuối do MCP chạy, ChatWeb/Sol quyết định acceptance.
 
 ---
 
-## 5. Adaptive Model Routing
+## 6. Adaptive Model Routing
 
-Bản hiện tại hỗ trợ nhiều route xử lý, nhưng production policy đang **fail-closed**: `execution_route=auto` hiện resolve về `deterministic` trong khi chưa đủ representative accepted paired evidence. Mini/Luna/Terra/Sol vẫn là các route explicit/evaluation hợp lệ; việc chúng tồn tại không đồng nghĩa automatic routing đang bật.
+Production policy **fail-closed**: `execution_route=auto` resolve về `deterministic` cho tới khi đủ representative accepted paired evidence.
 
-### Các route đang được cấu hình
-
-| Route | Model cấu hình | Effort | Deadline gợi ý | Ghi chú |
+| Route | Model | Effort | Deadline | Dùng khi |
 |---|---|---:|---:|---|
-| `deterministic` | Không cần model phụ | — | — | Ưu tiên tool/test/compiler khi không cần phán đoán model. |
-| `mini` | `gpt-5.4-mini` | `low` | 10s | Leaf nhỏ, rõ, rẻ, có oracle mạnh. |
-| `luna` | `gpt-5.6-luna` | `high` | 15s | Tác vụ hẹp nhưng cần reasoning tốt hơn. |
-| `terra` | `gpt-5.6-terra` | `high` | 25s | Cross-file hoặc implementation reasoning. |
-| `sol_xhigh` | `gpt-5.6-sol` | `xhigh` | 30s | Tích hợp rộng, semantic phức tạp. |
-| `sol_max` | `gpt-5.6-sol` | `max` | 30s | Tác vụ hệ quả cao; yêu cầu xác nhận high-cost. |
-| `sol_ultra` | `gpt-5.6-sol` | `ultra` | 30s | Chỉ dùng khi được yêu cầu rõ; high-cost và có thể dùng parallel reasoning. |
+| `deterministic` | — | — | — | Ưu tiên tool/test/compiler, không cần model phụ |
+| `mini` | `gpt-5.4-mini` | `low` | 10s | Leaf nhỏ, rõ, oracle mạnh |
+| `luna` | `gpt-5.6-luna` | `high` | 15s | Hẹp nhưng cần reasoning tốt hơn |
+| `terra` | `gpt-5.6-terra` | `high` | 25s | Cross-file / implementation reasoning |
+| `sol_xhigh` | `gpt-5.6-sol` | `xhigh` | 30s | Tích hợp rộng, semantic phức tạp |
+| `sol_max` / `sol_ultra` | `gpt-5.6-sol` | `max`/`ultra` | 30s | Hệ quả cao; **chặn mặc định, cần `allow_high_cost=true`** |
 
-> Đây là route cấu hình của repository hiện tại. Model thực tế còn phụ thuộc khả năng mà Codex runtime tại máy cung cấp.
-
-### Strong oracle và ROI gate hiện tại
-
-Strong oracle vẫn là một dimension quan trọng để đánh giá một candidate lane, ví dụ:
-
-- `verification=tests`;
-- `verification=build`;
-- `verification=all`;
-- hoặc có `test_command` / `build_command` cụ thể.
-
-Tuy nhiên strong oracle **không vượt qua ROI evidence gate hiện tại**. Cho tới khi có representative accepted paired cohorts đủ chất lượng, `auto` vẫn chọn `deterministic` với fail-closed reason tương ứng; không được mô tả bug nhỏ như đang tự động bị đẩy xuống Mini/Luna trong production.
-
-### High-cost gate
-
-`sol_max` và `sol_ultra` bị chặn mặc định. Muốn gọi trực tiếp phải truyền xác nhận `allow_high_cost=true`.
-
-Điều này tránh việc một tác vụ bình thường vô tình chạy route đắt nhất.
-
-### Production routing calibration
-
-Router có telemetry/cohort support, nhưng production threshold **không nên được mở rộng chỉ từ vài sample nhỏ hoặc scenario simulation**. Calibration phải dựa trên các real accepted task cùng class với route, first-pass/repair status, cost, TTA và defect evidence đủ đại diện.
+Strong oracle (`tests`/`build`/`all` hoặc command cụ thể) là tín hiệu quan trọng nhưng **không vượt ROI evidence gate**. Calibration threshold phải dựa trên real accepted task cùng class (first-pass/repair, cost, TTA, defect) — không mở rộng từ vài sample hay simulation.
 
 ---
 
-## 6. Codex App Server Bridge
+## 7. Codex App Server Bridge & Review plane
 
-Repository hiện có `codex_bridge.py` để kết nối Coding Tools MCP với một **Codex App Server sidecar độc lập**.
+`codex_bridge` không public ở smart mode; workflow dùng nội bộ. Sidecar an toàn: auth Codex Desktop/CLI của máy, không chiếm turn Codex đang chạy, đúng workspace hiện tại, `approvalPolicy=never`, sandbox read-only, tắt network, không sửa file, không MCP lồng nhau — chỉ trả candidate/review để MCP kiểm tra. Profile: `candidate_mini`, `candidate_luna`, `cross_file`, `deep_code`, `consequential`, `parallel_extreme`, `packet`, `scoped`, `critical`, `history`. Bridge theo dõi token usage, cache ratio, estimated credits, thời gian chạy, capacity cooldown.
 
-Trong `smart` mode, `codex_bridge` không được public như một tool thứ 9. Nó được dùng nội bộ bởi workflow và vẫn tồn tại cho compatibility khi cần.
-
-### Nguyên tắc an toàn của bridge
-
-Codex sidecar:
-
-- dùng Codex Desktop/CLI auth và persisted history trên máy;
-- không chiếm hoặc điều khiển turn đang chạy trong Codex Desktop;
-- chỉ làm việc trong workspace hiện tại;
-- `approvalPolicy=never`;
-- sandbox `read-only`;
-- tắt network;
-- không tự sửa file;
-- không dùng MCP server lồng nhau từ Codex config;
-- chỉ trả về candidate/review để Coding Tools MCP kiểm tra và áp dụng theo đường chính.
-
-### Profile bridge hiện có
-
-- `candidate_mini`;
-- `candidate_luna`;
-- `cross_file`;
-- `deep_code`;
-- `consequential`;
-- `parallel_extreme`;
-- `packet`;
-- `scoped`;
-- `critical`;
-- `history`.
-
-Bridge còn theo dõi token usage, cache ratio, estimated credits, thời gian chạy và capacity cooldown để router có thêm tín hiệu vận hành.
+Review plane: deterministic proof trước; đủ bằng chứng thì bỏ qua review ngoài; cần độc lập thì `packet`/`scoped`/`critical` theo rủi ro. Mục tiêu là độ tin cậy, không phải gọi nhiều model.
 
 ---
 
-## 7. Review plane
+## 8. Task state, EOCL, command session
 
-Không phải thay đổi nào cũng cần một model thứ hai review.
+Task bền vững theo workspace: objective, bước hiện tại/tiếp theo, command đang chạy, kết quả test/build, file đã sửa, lỗi, lịch sử. `task_control`: lifecycle (`get/start/update/pause/stop/resume/clear/history`), `operation` (background), EOCL (`audit/accept/reject`), coordination (`lane/events/messages/ack`), `handoff` (capsule ≤8 KB chuyển chat mới không replay transcript), `restart_runtime`.
 
-Workflow hiện ưu tiên:
+EOCL: `PREFLIGHT → READY → ROUTED → EXECUTING → PROVING → ACCEPTING → CHECKPOINTED`; `REPLAN/BLOCKED/ABORTED` fail-closed. Wave ở `ACCEPTING` phải được ChatWeb/Sol accept/reject — test xanh không phải final acceptance. Workflow lâu hand-off thành background operation (`operation_id`, poll bằng `task_control`).
 
-```text
-Deterministic proof trước
-        ↓
-Nếu bằng chứng đã đủ → không gọi review ngoài
-        ↓
-Nếu cần review độc lập → packet/scoped/critical tùy rủi ro
-```
+**Restart production-safe** (`task_control` + `confirm_restart=true`, hoặc nút **“Khởi động lại toàn bộ dịch vụ”**): kiểm tra idle → ghi one-shot ticket bound workspace/process/server + fence → Recovery Host supervisor consume ticket (journal `.processing` để resume sau crash) → resolve exact accepted checkpoint → `FullCleanActivation` thay toàn bộ process cùng `activation_epoch_id` → final census + connector ACK → READY. Không `taskkill` từ MCP; ticket hết hạn nhanh, không replay; watchdog chỉ `soft_recovery` cục bộ.
 
-Ví dụ, một bug cục bộ đã có test mạnh và verification pass có thể bỏ qua external review. Một feature rộng hơn có thể dùng packet review độc lập.
-
-Mục tiêu là **độ tin cậy của kết quả**, không phải gọi càng nhiều model càng tốt.
-
----
-
-## 8. Task state, EOCL và công việc chạy lâu
-
-Coding Tools MCP có persistent task state theo workspace và một enforced orchestration control loop (EOCL) cho các workflow có mutation/proof.
-
-Task có thể lưu:
-
-- objective;
-- bước hiện tại;
-- bước tiếp theo;
-- command đang chạy;
-- test/build result;
-- file đã sửa;
-- lỗi;
-- lịch sử task.
-
-`task_control` hiện hỗ trợ các nhóm action:
-
-- task lifecycle: `get`, `start`, `update`, `pause`, `stop`, `resume`, `clear`, `history`;
-- background operation: `operation`;
-- EOCL: `audit`, `accept`, `reject`;
-- coordination: `lane`, `events`, `messages`, `ack`;
-- durable state transfer: `handoff`;
-- runtime control: `restart_runtime`.
-
-EOCL bình thường đi qua:
-
-```text
-PREFLIGHT → READY → ROUTED → EXECUTING → PROVING → ACCEPTING → CHECKPOINTED
-```
-
-`REPLAN`, `BLOCKED` và `ABORTED` là các nhánh fail-closed. Một wave ở `ACCEPTING` phải được ChatWeb/Sol accept hoặc reject thay vì tự coi test xanh là final acceptance.
-
-### Long-running workflow
-
-`agent_workflow` có thể hand-off thành background operation nếu chạy lâu. Agent nhận `operation_id` rồi tiếp tục poll bằng `task_control` mà không phải chạy lại từ đầu.
-
-### Durable handoff capsule
-
-`task_control(handoff)` có thể ghi/đọc capsule bounded để chuyển sang chat/window mới mà không cần replay toàn transcript. Capsule dùng cho rollover/recovery; auto-handoff không nên bật chỉ từ một vài sample nhỏ.
-
-### Production-safe runtime restart
-
-`task_control(action="restart_runtime")` là control-plane operation, không phải `taskkill` trực tiếp từ MCP.
-
-Yêu cầu:
-
-```text
-confirm_restart = true
-```
-
-Flow:
-
-```text
-ChatGPT / MCP call
-      ↓
-MCP kiểm tra explicit confirmation + runtime idle
-      ↓
-ghi delayed, short-lived, workspace/process/server-bound one-shot ticket
-và fence cùng operation_id
-      ↓
-trả response với expected_disconnect=true
-      ↓
-Recovery Host supervisor consume ticket, xác minh exact MCP instance
-      ↓
-resolve exact accepted source checkpoint từ closure hiện hành
-      ↓
-FullCleanActivation.restart(operation_id=ticket_id)
-      ↓
-đóng admission → handoff Recovery Host → thay toàn bộ process
-      ↓
-final census cùng activation_epoch_id → connector ACK → READY
-      ↓
-reconnect → workspace_context(full) → xác minh epoch/process/server id mới
-```
-
-Ticket hiện được collapse khi có concurrent request, hết hạn nhanh và không được replay từ JSON backup. Khi Recovery Host bắt đầu xử lý, ticket được claim sang journal cùng thư mục với hậu tố `.processing`; journal này được giữ cho tới khi cùng `operation_id` đã bind vào durable activation epoch hoặc fence được xác nhận hủy. Vì vậy host có thể resume sau crash giữa lúc claim và lúc tạo epoch; `RUNTIME_BUSY` do tool response chưa rời admission chỉ làm deferred retry, không làm mất ticket. Lỗi đọc/xác nhận không chắc chắn không bị diễn giải thành ticket vắng mặt và không mở lại admission. Ticket không mang source authority: Recovery Host chỉ lấy checkpoint từ `auto_activation.closure_input` đã `ACCEPTED/CHECKPOINTED`, và từ chối trước mutation nếu closure thiếu, stale hoặc không activatable. Signed post-tool-call preflight giữ đúng `operation_id` nhưng không trừ active tool call đang khởi tạo restart: transaction chỉ được admit khi count thật sự về `0`. Electron/Recovery Host là owner của service lifecycle; MCP không tự kill process phục vụ chính request của nó. Watchdog/health repair vẫn dùng `soft_recovery` cục bộ và bị revision-continuity guard chặn nếu disk source đã đổi.
-
-Sau replacement, Recovery Host tự hoàn tất connector ACK cho deferred `task_control` restart chỉ khi các component/projection gate khác đã pass và exact health receipt chứng minh `tools/list`/`server/discover` thuộc cùng epoch, MCP process/server ID và contract SHA. Persisted SHA, compatibility-only contact và một `tools/call` thông thường không đủ điều kiện ACK; thiếu receipt này thì epoch tiếp tục `UPDATE_INCOMPLETE` và admission vẫn đóng.
-
-Auto-recovery giữ semantics component-scoped: Tunnel chết chỉ thay Tunnel; MCP chết hoặc semantic hang quá ngưỡng defer chỉ thay exact owned MCP PID và giữ Tunnel. Soft MCP replacement khóa expected revision cả trước spawn lẫn postflight; disk drift làm replacement bị dừng và yêu cầu full-clean activation thay vì chạy mixed revision.
-
-### Command session
-
-Command dài được quản lý bằng session riêng:
-
-```text
-exec_command
-    ↓
-command_id / output_ref
-    ↓
-command_control
-    ├─ poll
-    ├─ read
-    ├─ write stdin
-    └─ kill
-```
-
-Nhờ vậy một build hoặc test dài không cần bị hủy chỉ vì một lượt chat đã kết thúc.
+**Command session:** `exec_command` → `command_id/output_ref` → `command_control` (`poll/read/write-stdin/kill`). Build/test dài không bị hủy khi chat kết thúc.
 
 ---
 
 ## 9. Document Workflow
 
-`document_workflow` là đường chính cho các tác vụ tài liệu.
-
-Hỗ trợ:
-
-- inspect PDF;
-- inspect DOCX;
-- inspect Markdown/text;
-- tạo DOCX;
-- tạo Markdown;
-- tạo text;
-- chuyển đổi tài liệu sang DOCX;
-- trả metadata verification như kích thước, số dòng, SHA-256 và preview khi tạo file.
-
-Nguyên tắc của workflow:
-
-```text
-inspect nguồn một lần
-        ↓
-model xử lý nội dung
-        ↓
-create output hoàn chỉnh một lần
-```
-
-Không nên dùng shell hoặc nhiều patch nhỏ để dựng tài liệu nếu `document_workflow` đã xử lý được trực tiếp.
+`document_workflow`: inspect PDF/DOCX/Markdown/text, tạo DOCX/Markdown/text, convert sang DOCX, kèm metadata verification (size, số dòng, SHA-256, preview). Nguyên tắc: inspect nguồn một lần → model xử lý → create output hoàn chỉnh một lần. Không dùng shell/patch nhỏ lẻ khi workflow đã xử lý được.
 
 ---
 
-## 10. Permission Mode của Coding Tools MCP
+## 10. Download & lưu file đính kèm
 
-Coding Tools MCP hiện có ba permission mode ở runtime Python:
+Khi bạn tải file trong khung ChatGPT của app (ví dụ ChatGPT xuất báo cáo, ảnh, tài liệu), Electron tự động lưu file vào máy qua `DownloadService` (`electron/services/downloadService.js` + sự kiện `will-download` của session chat).
 
-| Mode | Network | Shell expansion / inline script | Secret env filter | Landlock trên Linux | Mức sử dụng |
-|---|---|---|---|---|---|
-| `safe` | Tắt mặc định | Chặn | Bật | Bật khi host hỗ trợ | Mặc định an toàn. |
-| `trusted` | Cho phép | Cho phép | Bật | Bật khi host hỗ trợ | Máy/dev workspace tin cậy. |
-| `dangerous` | Cho phép | Cho phép | Tắt | Tắt | Bỏ qua phần lớn permission gate; chỉ dùng khi hiểu rõ rủi ro. |
+### File được lưu ở đâu?
 
-Ngoài permission mode, runtime còn có:
+> **Mặc định: thư mục gốc của workspace đang chọn.** Không có folder download riêng của app — file nằm ngay trong workspace nên Coding Tools MCP/agent thấy và dùng được ngay trong ranh giới đã ủy quyền.
 
-- workspace boundary;
-- authorized roots;
-- symlink escape protection;
-- lọc biến môi trường nhạy cảm;
-- command policy;
-- destructive-command detection;
-- runtime HOME/TMP/CACHE riêng;
-- giới hạn output/session;
-- kiểm tra path trước khi đọc/ghi.
+- Tên file trùng sẽ tự đánh số: `báo cáo.docx`, `báo cáo (1).docx`, `báo cáo (2).docx`, ...
+- Tên file được sanitize: ký tự `<>:"/\|?*`, ký tự điều khiển và dấu `.`/khoảng trắng cuối tên bị thay bằng `_`, tối đa 180 ký tự.
+- **Chưa chọn workspace hợp lệ → download bị hủy** kèm thông báo lỗi (phải chọn workspace trước).
 
-### Khi MCP host không hỗ trợ permission elicitation
+### Hiển thị nơi lưu trữ
 
-`request_permissions` là **status-reporting tool**, không phải cơ chế bypass server policy.
+- Badge `#downloadState` trên khung chat hiện tiến độ theo % (`T?p d�nh k�m ...%` — chuỗi đang lỗi font, xem lưu ý dưới) và khi xong hiện `Da luu: <tên file>`.
+- Payload đầy đủ gồm **đường dẫn tuyệt đối `path`**, `size`, **`sha256`**, `durationMs` được gửi qua IPC `chat:download` và ghi log (`ChatGPT 附件已自动保存到工作区`).
+- Muốn biết file nằm ở đâu: lấy tên file trên badge + ghép với workspace đang chọn (xem ở sidebar hoặc `workspace_context`).
 
-Nếu client/host hiện tại không hỗ trợ interactive elicitation, runtime trả một kết quả thành công ở cấp MCP với semantics:
+### Lưu ý
 
-```text
-status = unsupported
-grant_id = null
-error.code = ELICITATION_UNSUPPORTED
-fallback.mode = server_policy
-fallback.granted = false
-fallback.fail_closed = true
-```
-
-Điều này có nghĩa: tool đã báo trạng thái thành công, **permission vẫn không được cấp**. Client không nên retry y hệt vô hạn và server không được biến `ELICITATION_UNSUPPORTED` thành implicit grant.
-
-> Landlock chỉ có ý nghĩa trên Linux khi kernel/host hỗ trợ. Trên Windows, runtime vẫn áp dụng các policy/path guard tương ứng nhưng không có Linux Landlock sandbox.
+- File tải về nằm trong workspace nên sẽ xuất hiện trong Git status — thêm vào `.gitignore` của project nếu không muốn commit file đính kèm.
+- Chỉ file từ session chat của app mới được auto-save; download từ trình duyệt ngoài không liên quan.
+- Thông báo tiến độ/hiển thị hiện lẫn tiếng Việt không dấu và chuỗi log tiếng Trung — dự kiến chuẩn hóa i18n trong bản sau (không ảnh hưởng chức năng lưu file và hash).
 
 ---
 
-## 11. Tool Mode
+## 11. Ledger evidence & archival
 
-Ngoài `smart`, server còn có các tool mode khác:
+Mọi vận hành (run/wave/event/proof/delegation/task) được ghi vào audit ledger SQLite:
 
-| Mode | Mục đích |
+```text
+.coding-tools/orchestration/ledger.sqlite3          # canonical — bắt buộc có trong Git
+.coding-tools/orchestration/archives/               # shard archive + manifest.json
+.coding-tools/delivery-snapshot.json                # receipt snapshot giao hàng
+```
+
+### Retention policy (tóm tắt cho operator)
+
+- Mọi file dưới `.coding-tools/` đều là evidence phải version-control, **ngoại trừ đúng 2 sidecar tạm**: `ledger.sqlite3-shm`, `ledger.sqlite3-wal`.
+- Trước **mỗi commit/push**: `npm run stage:coding-tools-delivery` rồi `npm run check:coding-tools-delivery`. Script stage snapshot canonical bằng Backup API (WAL-safe) + ghi receipt bound đúng blob/hash/size.
+- **GitHub chặn cứng file >100MB.** Ledger tăng vô hạn nên repo có cơ chế archive tự động bên dưới — không xóa history, không dùng Git LFS (pointer LFS làm vỡ guard SQLite integrity).
+
+### Archive tự động (`scripts/archive-ledger.py`)
+
+Archive theo **run hoàn chỉnh** (chain hash là per-run nên không bao giờ gãy verify), chỉ lấy runs đã `finished` và quá cutoff, luôn giữ runs bị FK RESTRICT trỏ tới (ví dụ runs p5):
+
+```powershell
+# Dry-run read-only: mô phỏng trên bản copy, in số shard/size dự kiến
+npm run archive:ledger -- --older-than 2026-09-01T00:00:00.000Z
+
+# Thực thi (yêu cầu dừng runtime + xác nhận đúng digest đã kiểm tra)
+python scripts/archive-ledger.py --older-than 2026-09-01T00:00:00.000Z --apply --runtime-stopped --expected-sha256 <digest>
+```
+
+Ngưỡng: canonical mục tiêu ≤90MB, mỗi shard ≤95MB (tự chia nhiều shard khi ước lượng >80MB/shard), fail-closed khi reconcile `archive + canonical == source` lệch, integrity/FK/active-lease vi phạm, hoặc live DB đổi giữa chừng. Shard ở DELETE journal-mode (không sidecar), manifest ghi SHA-256 + time-range + danh sách run. Backup pre-archive giữ **ngoài repo** (thư mục temp).
+
+### Tra cứu liên shard (`scripts/query-ledger-history.py`)
+
+Máy khác chỉ cần clone/pull là có đủ history:
+
+```powershell
+npm run ledger:history                                        # liệt kê shard + time-range
+python scripts/query-ledger-history.py counts                 # đếm theo bảng
+python scripts/query-ledger-history.py locate <run_id>        # run nằm ở shard nào
+python scripts/query-ledger-history.py sql --table events --where "run_id='<id>'" --limit 20
+```
+
+Bảng query được: `runs, waves, events, proofs, checkpoints, delegations, idempotency_records, managed_process_jobs, background_operations, controller_leases, handoff_capsules, coordination_messages` (read-only, mỗi row gắn `_source_file`).
+
+---
+
+## 12. Permission & Tool Mode
+
+### Permission mode (Coding Tools MCP runtime)
+
+| Mode | Network | Shell expansion/inline script | Secret env filter | Dùng khi |
+|---|---|---|---|---|
+| `safe` | Tắt | Chặn | Bật | Mặc định an toàn |
+| `trusted` | Cho phép | Cho phép | Bật | Máy/workspace tin cậy |
+| `dangerous` | Cho phép | Cho phép | Tắt (+tắt Landlock) | Chỉ khi hiểu rõ rủi ro |
+
+Kèm theo: workspace boundary, authorized roots, symlink-escape protection, command policy, destructive-command detection, runtime HOME/TMP/CACHE riêng, giới hạn output/session, pre-check path. Landlock chỉ có hiệu lực trên Linux có hỗ trợ; Windows áp dụng policy/path guard tương ứng.
+
+`request_permissions` là **status-reporting tool**, không phải bypass. Host không hỗ trợ elicitation → trả `status=unsupported`, `ELICITATION_UNSUPPORTED`, `fail_closed=true` — **permission vẫn không được cấp**, client không retry vô hạn, server không biến thành implicit grant.
+
+### Tool mode
+
+| Mode | Dùng khi |
 |---|---|
-| `smart` | Surface nhỏ 8 tool (`smart-v3`), khuyến nghị cho ChatGPT hiện tại. |
-| `readonly` | Chỉ inspection/Git/read tools. |
-| `coding` | Đọc + sửa code + command + build verification. |
-| `build` | Tập trung inspection/command/build, không expose patch write như coding mode. |
-| `full` | Expose toàn bộ tool registry; chủ yếu phục vụ debug/compatibility/advanced use. |
+| `smart` | Mặc định cho ChatGPT (8 tool `smart-v3`) |
+| `readonly` | Chỉ inspection/Git/read |
+| `coding` | Đọc + sửa + command + build verify |
+| `build` | Inspection/command/build, không patch write |
+| `full` | Toàn registry — debug/compatibility/advanced |
 
-Khuyến nghị: **dùng `smart` cho luồng agent bình thường**.
+### Authority WebCodex core (phân biệt rõ)
+
+Đừng trộn với permission MCP ở trên. WebCodex core/server có authority riêng: `WEBCODEX_AUTHORITY_MODE=trusted_agent|restricted` (`trusted_agent` tự thực thi sau hard-safety checks; `restricted` cần authorization flow). `WEBCODEX_PERMISSION_MODE` legacy đã bỏ, không dùng làm alias. Chạy desktop MCP hiện tại thì chỉ cần quan tâm bảng permission ở trên.
 
 ---
 
-## 12. Cách chạy desktop app từ source
+## 13. Cài đặt, chạy, test, build
 
 ### Yêu cầu
 
-- Windows;
-- Node.js + npm;
-- Git;
-- Codex Desktop/CLI nếu muốn dùng adaptive Codex bridge;
-- các toolchain riêng của project mà bạn định làm việc với ChatGPT.
+Windows, Node.js + npm, Git; Codex Desktop/CLI nếu dùng Codex bridge; toolchain của project bạn làm việc cùng ChatGPT.
 
-### Cài dependency
+### Cài & chạy
 
 ```powershell
 Set-Location <path-to-Tools-Codex-web>
 npm install
+npm start            # = npm run dev: start/focus lifecycle (start UI MISSING, activate STALE, focus CURRENT)
 ```
 
-### Chạy desktop app
+Các lệnh vòng đời UI: `npm run dev:status`, `npm run dev:control-center`, `npm run dev:stop` (chỉ đóng UI, giữ service nền), `npm run dev:replace`, `npm run dev:refresh` (`full_clean_refresh`: thay toàn bộ process cùng epoch, **không xóa** ledger/task/settings/secrets/identity; fail-closed `UPDATE_INCOMPLETE` khi postflight không chứng minh được).
 
-```powershell
-npm start
-```
+### npm scripts hay dùng
 
-`npm start` và `npm run dev` dùng cùng lifecycle **start/focus**. Lệnh kiểm tra
-receipt của Recovery Host cho đúng development installation, focus UI đang
-`CURRENT`, activate UI `STALE` qua checkpoint hợp lệ hoặc khởi chạy UI `MISSING`,
-rồi xác minh lại UI và runtime readiness. Lệnh không tự yêu cầu full-system
-refresh; Recovery Host phải có sẵn để chứng minh đúng installation.
+| Lệnh | Mục đích |
+|---|---|
+| `npm start` / `dev` | Chạy desktop app |
+| `npm test` | Test desktop (`tests/*.test.js` + check source-root + secret scan) |
+| `npm run test:mcp` | pytest Coding Tools MCP |
+| `npm run test:all` | Cả hai suite |
+| `npm run stage:coding-tools-delivery` | Stage evidence + snapshot ledger + receipt (trước mọi commit/push) |
+| `npm run check:coding-tools-delivery` | Guard giao hàng (secret + stage + history `--require-staged`) |
+| `npm run check:coding-tools-history` | Guard policy evidence `.coding-tools` |
+| `npm run archive:ledger` | Dry-run archive ledger (xem §11) |
+| `npm run ledger:history` | Liệt kê shard ledger |
+| `npm run dist` | Build installer Windows (`dist\`, `coding-tools-mcp-setup-<version>.exe`) |
+| `npm run dist:dir` | Build dạng thư mục chưa đóng gói |
+| `npm run report:ui-performance` | Báo cáo hiệu năng UI |
+| `npm run check:repository-secrets` | Quét secret bị track |
 
-Khi cần **full-system refresh**, dùng lệnh riêng:
+### Chuyển máy / restart Windows
 
-```powershell
-npm run dev:refresh
-```
-
-`npm run dev:refresh` gửi yêu cầu `full_clean_refresh` tới Recovery Host của đúng
-installation hiện tại, đóng admission, dừng và
-thay thế Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và
-Electron UI bằng process mới trong cùng một `activation_epoch_id`, rồi kiểm tra
-PID/instance/revision trước khi trả quyền điều khiển. Lệnh không xoá
-`ledger.sqlite3`, task history, acceptance state, settings, secrets hay device
-identity. Nếu canonical ledger, ownership hoặc runtime postflight không chứng
-minh được, lệnh fail-closed với `UPDATE_INCOMPLETE`.
-
-Khi chuyển máy hoặc khởi động lại Windows, PID lưu trong runtime state có thể
-được cấp lại cho một ứng dụng khác. Census và lifecycle MCP/Tunnel đối chiếu
-PID **kèm OS process-start token**: token khác chứng minh tiến trình cũ đã mất,
-không phải runtime đang bận. Census chỉ đọc; khi start/stop, service chỉ gỡ
-receipt cũ nếu receipt chưa bị cập nhật đồng thời, không dừng tiến trình đang
-giữ PID đó. Thiếu token hoặc không đọc được danh tính vẫn bị chặn an toàn.
-Không xoá `.coding-tools`/ledger hoặc tắt ứng dụng khác để vượt lỗi này.
-
-Completion của CLI và admission của connector là hai mốc khác nhau. Khi exact
-component census đã chứng minh toàn bộ process mới, `npm run dev:refresh` trả exit code 0
-với `DEV_UI REFRESHED`, kể cả khi record durable còn
-`activation=VERIFYING admission=closed fully_ready=false connector=pending`.
-Trạng thái này không phải lỗi khởi động MCP/Tunnel và không được đổi thành
-`fullyReady=true`: Recovery Host chỉ chuyển epoch sang `READY` và mở admission
-sau guarded ACK cho một trong hai receipt hợp lệ. Nhánh strict dùng
-`tools/list`/`server/discover` có attestation của đúng MCP process hiện tại.
-Nhánh tương thích dùng `workspace_context` bootstrap có managed-tunnel attestation,
-khi admission còn đóng và `workspace_accessed=false`, gắn đúng activation epoch,
-MCP process instance, server instance và contract SHA hiện tại. Nhánh này chỉ áp
-dụng khi SHA đã ACK trùng SHA hiện tại hoặc là predecessor đã được khai báo tương
-thích. `CURRENT_COMPATIBLE_ACKNOWLEDGED` vẫn giữ
-`connector_rediscovered=false`; đây không phải strict rediscovery. Thiếu/sai PID,
-epoch, revision, workspace, device, projection hoặc health receipt vẫn làm
-`npm run dev:refresh` fail.
-
-`npm run dev:stop` chỉ đóng UI và giữ toàn bộ service nền. Connector discovery
-và ACK vẫn là gate riêng: refresh có thể khởi động process mới nhưng admission
-chỉ mở khi Recovery Host đã kiểm chứng và guarded ACK một trong hai nhánh receipt
-nêu trên, cùng các gate activation còn lại.
-
-Trên thanh công cụ có nút **Bảng điều khiển** để mở **Execution Control Center** ngay bên cạnh ChatGPT. Panel hiển thị theo thời gian thực:
-
-- trạng thái nhiệm vụ (objective, bước hiện tại, tiến độ, command đang chạy kèm thời gian);
-- trình tự điều phối (run/wave, execution mode, base HEAD, số sự kiện/wave/checkpoint);
-- luồng sự kiện audit mới nhất, bằng chứng (proofs), ủy quyền model (delegations);
-- trạng thái MCP + Tunnel và cảnh báo khi đang tự khôi phục;
-- ChatWeb/Codex Desktop online state, per-client cursor/lag, controller lease/fencing và write authority;
-- `SAFE TO ROTATE CHATWEB: YES/NO` cùng reason codes; context pressure chỉ hiện khi có nguồn thật, nếu host không expose thì ghi `unknown`;
-- bounded resume summary;
-- điều khiển: tạm dừng / tiếp tục / dừng nhiệm vụ qua MCP/EOCL, **Ghi capsule handoff** (≤8 KB), và manual controller transfer có xác nhận;
-- **Copy Codex MCP config** để lấy cấu hình thin-proxy không chứa bearer.
-
-Dữ liệu panel lấy từ endpoint `GET /__control/orchestration` của Coding Tools MCP (yêu cầu Bearer token).
-
-### Kết nối Codex Desktop vào cùng Execution Hub
-
-Không khuyến nghị cấu hình Codex Desktop chạy trực tiếp `python -m coding_tools_mcp --stdio` trên cùng workspace, vì cách đó tạo một Runtime authority thứ hai.
-
-Luồng khuyến nghị:
-
-1. chạy Electron app để Execution Hub/gateway sẵn sàng;
-2. mở **Execution Control Center** và bấm **Copy Codex MCP config**;
-3. review đoạn TOML vừa copy rồi tự paste/replace block `[mcp_servers.coding-tools]` trong cấu hình Codex Desktop;
-4. restart/mở session Codex Desktop mới;
-5. kiểm tra card **Codex Desktop** chuyển thành `online` trong Hub.
-
-Config được sinh từ Python mà Electron đã verify, bundled `resources/coding-tools-mcp` và descriptor trong app `userData`. Descriptor chỉ có loopback port + gateway-scoped token của process Electron; **real MCP bearer vẫn nằm trong Electron SecretStore**. App không tự sửa `~/.codex/config.toml`.
-
-Desktop proxy gửi heartbeat định kỳ khi stdio còn attach, nhưng không mở workspace/ledger và không tự claim controller khi ChatWeb đang giữ lease. Chuyển controller vẫn là thao tác manual có xác nhận; auto-handoff hiện OFF.
-
-### Khởi động lại dịch vụ
-
-Trong desktop app, nút **“Khởi động lại toàn bộ dịch vụ”** luôn yêu cầu exact accepted source checkpoint và chạy `full_clean_activation`: đóng admission, thay Recovery Host, Coding MCP/Tunnel, Recovery MCP/Tunnel đã cấu hình và Electron UI bằng process mới cùng một `activation_epoch_id`, rồi chỉ báo READY sau final census + connector discovery/ACK. Nút này không còn là stop/start riêng MCP và Tunnel.
-
-Nếu MCP tool contract thay đổi, sau restart app có thể hiện cảnh báo connector stale. Khi đó refresh/recreate MCP app phía ChatGPT theo khả năng workspace, mở chat mới nếu cần, rồi dùng **“Kiểm tra lại trạng thái”**. Desktop chỉ tự ACK khi nhận exact managed-attested `tools/list`/`server/discover` receipt; thao tác của operator không tự nó xác nhận contract.
-
-### Chạy test của desktop app
-
-```powershell
-npm test
-```
-
-### Chạy test Coding Tools MCP từ repository root
-
-```powershell
-npm run test:mcp
-```
-
-Script này tự chuyển vào `resources/coding-tools-mcp` trước khi chạy pytest để import path ổn định. Có thể chạy cả hai suite chính bằng:
-
-```powershell
-npm run test:all
-```
-
-### Build installer Windows
-
-```powershell
-npm run dist
-```
-
-Output của Electron Builder nằm trong:
-
-```text
-dist\
-```
-
-Có thể build dạng thư mục chưa đóng gói bằng:
-
-```powershell
-npm run dist:dir
-```
+PID lưu trong runtime state có thể bị OS cấp lại cho app khác. Census đối chiếu PID **kèm OS process-start token**; token khác = tiến trình cũ đã mất. Không xóa `.coding-tools`/ledger, không kill app khác để vượt lỗi. Completion của CLI và admission của connector là hai mốc riêng: refresh có thể exit 0 (`DEV_UI REFRESHED`) trong khi epoch vẫn `VERIFYING/admission=closed` chờ connector ACK — đây không phải lỗi.
 
 ---
 
-## 13. Cấu trúc thư mục quan trọng
+## 14. Cấu trúc thư mục
 
 ```text
 Tools-Codex-web/
-├─ electron/                         # main process và runtime orchestrator
-├─ renderer/                         # giao diện desktop
+├─ electron/                     # main process, orchestrator
+│  ├─ main.js, chatViewController.js, preload(s)
+│  └─ services/                  # download, recovery-host, tunnel, secrets,
+│                                # health, token-measure, codex-config, ...
+├─ renderer/                     # UI: index, browser (chat), panel,
+│                                # token-dashboard, control-center
 ├─ resources/
-│  ├─ coding-tools-mcp/              # Coding Tools MCP Python runtime
-│  │  ├─ coding_tools_mcp/
-│  │  │  ├─ server.py               # tool registry, schemas, workflow, policy
-│  │  │  ├─ codex_bridge.py         # Codex App Server sidecar
-│  │  │  └─ ...
-│  │  └─ tests/
-│  ├─ native-python/                 # Python runtime đóng gói cho desktop
-│  └─ tools/                         # helper/tunnel binaries
-├─ tests/                            # stability/source tests cho desktop
+│  ├─ coding-tools-mcp/          # Python MCP runtime (server.py + mixins) + tests
+│  ├─ native-python/             # Python bundled cho desktop
+│  └─ tools/                     # helper / tunnel binaries
+├─ scripts/                      # archive-ledger.py, query-ledger-history.py,
+│                                # stage/check-coding-tools-*, dev lifecycle, dist
+├─ tests/                        # test desktop
+├─ tasks/                        # todo/lessons vận hành
 ├─ docs/
-│  ├─ agent/                         # kiến trúc, authority, session decisions
-│  └─ research/                      # benchmark/research model routing
-├─ scripts/
+│  ├─ CURRENT_STATE.md           # snapshot vận hành (nguồn sự thật số 1 sau code)
+│  ├─ ARCHITECTURE.md  RECOVERY_HOST.md  ...
+│  ├─ agent/                     # architecture-decisions, permission-model, ...
+│  └─ research/                  # evidence/benchmark theo ngày (bất biến)
+├─ .coding-tools/                # evidence vận hành (ledger, archives, reports, ...)
+├─ AGENTS.md                     # luật cho coding agent trong repo
+├─ SECURITY.md  LICENSE  THIRD_PARTY_NOTICES.md
 ├─ package.json
 └─ README.md
 ```
 
-Repo vẫn chứa nhiều thành phần WebCodex upstream như Rust crates, server/deployment docs và các thành phần liên quan. Desktop app hiện đóng gói phần `electron`, `renderer` và `resources` làm sản phẩm chạy trực tiếp trên Windows.
+Repo còn chứa thành phần WebCodex upstream (Rust crates, server, deploy docs). Desktop app đóng gói `electron` + `renderer` + `resources` để chạy trực tiếp trên Windows.
 
 ---
 
-## 14. Ví dụ dùng với ChatGPT
-
-### Kiểm tra project
+## 15. Ví dụ dùng với ChatGPT
 
 ```text
 Kiểm tra workspace hiện tại, Git status và cho tôi biết file nào đang thay đổi.
-```
+→ agent bắt đầu bằng workspace_context
 
-Agent nên bắt đầu bằng `workspace_context`.
-
-### Sửa bug và test
-
-```text
 Tìm nguyên nhân test đăng nhập đang fail, sửa đúng nguyên nhân và chạy lại test liên quan.
-```
+→ agent_workflow, workflow bugfix hoặc test_failure
 
-Agent nên dùng `agent_workflow` với workflow `bugfix` hoặc `test_failure`.
+Thêm tính năng X, chỉ sửa file cần thiết, chạy test và build trước khi kết luận.
+→ agent_workflow gom context + change + verification
 
-### Làm feature
+Build project và báo tiến độ cho đến khi hoàn tất.
+→ exec_command + command_control (hoặc background operation)
 
-```text
-Thêm tính năng X, chỉ sửa các file cần thiết, chạy test và build trước khi kết luận.
-```
-
-`agent_workflow` sẽ gom context, change set và verification vào một luồng.
-
-### Theo dõi build dài
-
-```text
-Build project và báo tiến độ cho tôi cho đến khi hoàn tất.
-```
-
-Command dài sẽ được quản lý qua `exec_command` + `command_control` hoặc background operation của `agent_workflow`.
-
-### Làm tài liệu
-
-```text
 Đọc file PDF yêu cầu, tóm tắt và tạo report.docx trong workspace.
+→ document_workflow (đừng tự ghép shell/Python)
 ```
-
-Agent nên dùng `document_workflow`, không tự ghép shell/Python nếu không cần.
 
 ---
 
-## 15. Git workflow khuyến nghị
+## 16. Git workflow & delivery guard
 
-Coding Tools MCP có thể kiểm tra Git và hỗ trợ chuẩn bị commit, nhưng trước khi push nên luôn đảm bảo:
+Agent có thể hỗ trợ commit, nhưng trước push luôn đảm bảo: đúng workspace, không stage file tạm, test/build liên quan pass, `git diff` đúng phạm vi, không force-push khi chưa rõ remote, chỉ push khi task yêu cầu. Nhánh chính: `main`.
 
-1. workspace đúng;
-2. không có file tạm/tooling vô tình bị stage;
-3. test/build liên quan đã pass;
-4. `git diff` đúng phạm vi;
-5. không force-push nếu chưa xác định rõ lịch sử remote;
-6. chỉ push khi task của người dùng thực sự yêu cầu push.
+Riêng repo này, trước **mọi commit/push** phải chạy (policy trong `AGENTS.md`):
 
-Với repository này, `main` là nhánh đang dùng cho bản Tools-Codex-web hiện tại.
-
----
-
-## 16. Phân biệt permission của Coding Tools MCP và authority của WebCodex core
-
-Repository có hai lớp khái niệm khác nhau, không nên trộn lẫn:
-
-### Coding Tools MCP Python runtime
-
-Dùng:
-
-```text
-safe | trusted | dangerous
+```powershell
+npm run stage:coding-tools-delivery
+npm run check:coding-tools-delivery
 ```
 
-Đây là policy trực tiếp cho command/network/sandbox của runtime MCP desktop.
-
-### WebCodex core/server
-
-Phần WebCodex core trong repo có authority model riêng:
-
-```text
-WEBCODEX_AUTHORITY_MODE=trusted_agent|restricted
-```
-
-`trusted_agent` là chế độ tự thực thi sau hard-safety checks; `restricted` yêu cầu luồng authorization phù hợp. Legacy `WEBCODEX_PERMISSION_MODE` đã bị loại bỏ trong contract WebCodex core và không nên được dùng làm alias.
-
-Nếu bạn chỉ chạy desktop Coding Tools MCP hiện tại thì phần cần quan tâm trực tiếp nhất vẫn là permission mode của Coding Tools MCP.
+Guard sẽ fail khi: thiếu receipt mới, evidence chưa stage hết, sidecar lạ bị track, nested Git dưới `.coding-tools`, hoặc blob staged không phải SQLite hợp lệ.
 
 ---
 
 ## 17. Bảo mật
 
-Công cụ này có khả năng sửa file và chạy command thật trên máy.
+MCP client đã kết nối = coding agent có quyền thực thi thật trong scope cấu hình:
 
-Hãy coi một MCP client đã kết nối như một coding agent có quyền thực thi trong phạm vi được cấu hình.
+- chỉ chọn workspace thật sự cần; dùng thư mục ủy quyền bổ sung thay vì mở rộng workspace chính;
+- không đưa token/API key/credential vào Git (`npm run check:repository-secrets`);
+- không dùng `dangerous` cho repo/command không tin cậy;
+- giữ source trong Git để rollback; review diff trước commit/push;
+- không mở tunnel public lâu hơn cần thiết; không chia sẻ endpoint/token;
+- giữ Codex bridge read-only; release/deploy/xóa dữ liệu cần scope + target rõ ràng;
+- file đính kèm tải về nằm trong workspace — đưa vào `.gitignore` nếu không muốn commit.
 
-Khuyến nghị:
-
-- chỉ chọn workspace thật sự cần thiết;
-- không đưa token/API key/credential vào Git;
-- không dùng `dangerous` cho repository hoặc command không tin cậy;
-- giữ source trong Git để có thể rollback;
-- kiểm tra diff trước commit/push;
-- không mở tunnel public lâu hơn cần thiết;
-- không chia sẻ endpoint/token của MCP cho người không có quyền;
-- giữ Codex bridge ở read-only như thiết kế hiện tại;
-- với thao tác release/deploy/delete dữ liệu, luôn yêu cầu scope và target rõ ràng.
-
-Xem thêm: [`SECURITY.md`](SECURITY.md).
+Xem thêm [`SECURITY.md`](SECURITY.md).
 
 ---
 
-## 18. Tài liệu kỹ thuật trong repository
+## 18. Tài liệu kỹ thuật
 
-Các tài liệu hữu ích cho kiến trúc hiện tại:
-
-- [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) — snapshot vận hành hiện tại và thứ tự ưu tiên tài liệu;
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc desktop hiện tại ở phần đầu và WebCodex core ở phần subsystem;
-- [`docs/RECOVERY_HOST.md`](docs/RECOVERY_HOST.md) — Recovery Host, Supervisor và independent Recovery MCP/Tunnel;
-- [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md) — quyết định kiến trúc bền vững;
-- [`docs/agent/permission-model.md`](docs/agent/permission-model.md) — authority/safety model của WebCodex core;
-- [`docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md`](docs/research/EXECUTOR_ROUTING_BENCHMARK_2026-08-12.md) — benchmark executor routing;
-- [`docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md`](docs/research/MODEL_ORCHESTRATION_RESEARCH_PHASE2_2026-08-12.md) — nghiên cứu orchestration/model routing;
-- [`docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md`](docs/research/2026-08-14_POST_P1_FOLLOWUP_TRACKER.md) — trạng thái proof-cache, handoff, runtime activation và routing evidence hiện tại;
-- [`AGENTS.md`](AGENTS.md) — hướng dẫn cho coding agent trong repository.
-
-Các file `docs/research/*` giữ giá trị chronology/evidence tại thời điểm chúng được viết. Nếu một tracker cũ nói một capability còn ở roadmap nhưng source hiện tại đã triển khai, dùng `docs/CURRENT_STATE.md` + implementation/test hiện tại làm nguồn kết luận mới.
+- [`docs/CURRENT_STATE.md`](docs/CURRENT_STATE.md) — snapshot vận hành, thứ tự ưu tiên tài liệu
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — kiến trúc desktop + WebCodex core subsystem
+- [`docs/RECOVERY_HOST.md`](docs/RECOVERY_HOST.md) — Recovery Host, Supervisor, Recovery MCP/Tunnel
+- [`docs/agent/architecture-decisions.md`](docs/agent/architecture-decisions.md) — quyết định kiến trúc
+- [`docs/agent/permission-model.md`](docs/agent/permission-model.md) — authority/safety WebCodex core
+- [`docs/research/`](docs/research/) — benchmark/model-routing theo ngày (bất biến; không dùng để ghi đè hiện tại)
+- [`AGENTS.md`](AGENTS.md) — luật cho coding agent (ưu tiên: implementation/tests hiện tại → CURRENT_STATE → docs sản phẩm → agent docs → research)
 
 ---
 
-## 19. Nguyên tắc phát triển của bản hiện tại
+## 19. Nguyên tắc phát triển
 
-Bản Tools-Codex-web này ưu tiên:
-
-1. **High-level workflow trước low-level tool.**
-2. **Test/compiler/deterministic evidence trước model debate.**
-3. **Model rẻ chỉ dùng khi đủ chắc chắn.**
-4. **Sol giữ phần semantic/integration quan trọng.**
-5. **Không tạo nhiều worker nếu công việc thực chất là tuần tự.**
-6. **Không lặp lại inspection/test đã có bằng chứng hợp lệ.**
-7. **Không ghi đè workspace ngoài scope.**
-8. **Không để Codex sidecar tự mutation repository.**
-9. **Không force-push chỉ để giải quyết lịch sử Git bị lệch.**
-10. **Kết luận dựa trên verification đã thực sự chạy.**
+1. High-level workflow trước low-level tool.
+2. Test/compiler/deterministic evidence trước model debate.
+3. Model rẻ chỉ khi đủ chắc chắn; Sol giữ phần semantic/integration quan trọng.
+4. Không tạo nhiều worker cho việc thực chất tuần tự; không lặp inspection/test đã có bằng chứng.
+5. Không ghi đè workspace ngoài scope; Codex sidecar không tự mutation repo.
+6. Không force-push để chữa lệch history; kết luận dựa trên verification đã thực chạy.
 
 ---
 
-## 20. Nguồn gốc và ghi nhận
+## 20. Nguồn gốc & License
 
-Project này kế thừa nhiều thành phần và ý tưởng từ **WebCodex** upstream, sau đó được tùy biến cho workflow desktop cá nhân, Coding Tools MCP và model orchestration.
+Kế thừa nhiều thành phần/ý tưởng từ **WebCodex** upstream (`https://github.com/yyjeqhc/webcodex`), tùy biến cho workflow desktop cá nhân, Coding Tools MCP và model orchestration. Cảm ơn các dự án MCP, WebCodex, Codex và cộng đồng open-source.
 
-Upstream WebCodex:
-
-```text
-https://github.com/yyjeqhc/webcodex
-```
-
-Repository tùy biến hiện tại:
-
-```text
-https://github.com/uyenthudao2410-code/Tools-Codex-web
-```
-
-Cảm ơn các dự án MCP, WebCodex, Codex và cộng đồng mã nguồn mở đã tạo nền tảng cho bộ công cụ này.
+- Repo hiện tại: `https://github.com/uyenthudao2410-code/Tools-Codex-web`
+- License: [`LICENSE`](LICENSE), third-party: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
 
 ---
 
-## 21. License
+### Tóm tắt (4 điểm)
 
-Xem file [`LICENSE`](LICENSE) và [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) trong repository để biết điều khoản áp dụng cho source và các thành phần bên thứ ba.
-
----
-
-### Tóm tắt
-
-Nếu chỉ cần nhớ bốn điểm về bản hiện tại:
-
-> **1. `smart-v3` chỉ public 8 tool và có contract fingerprint để phát hiện connector stale.**
-> **2. `agent_workflow` là đường chính cho coding; `auto` hiện fail-closed về deterministic cho tới khi representative accepted paired evidence đủ mạnh.**
-> **3. `task_control` quản lý EOCL/handoff và có production-safe `restart_runtime` qua Electron supervisor.**
-> **4. `request_permissions` fail-closed: host không hỗ trợ elicitation không bao giờ đồng nghĩa permission được cấp.**
+> **1. `smart-v3` public đúng 8 tool, có contract fingerprint phát hiện connector stale.**
+> **2. `agent_workflow` là đường coding chính; `auto` fail-closed về deterministic.**
+> **3. `task_control` quản lý EOCL/handoff + `restart_runtime` an toàn qua supervisor; file tải từ ChatGPT tự lưu vào workspace kèm SHA-256.**
+> **4. Ledger là evidence bắt buộc trong Git, archive theo shard + manifest để không bao giờ vượt giới hạn 100MB của GitHub.**

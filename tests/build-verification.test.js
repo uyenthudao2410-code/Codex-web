@@ -54,12 +54,18 @@ test('electron packaging excludes volatile resource evidence and validates the p
   for (const filter of requiredFilters) {
     assert.ok(codingResources.filter?.includes(filter), `missing packaging sanitation filter: ${filter}`);
   }
+  const staleRunHelper = resources.find((entry) => entry.from === 'resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py');
+  assert.deepEqual(staleRunHelper, {
+    from: 'resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py',
+    to: 'resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py'
+  }, 'the exact stale-run helper must be packaged independently of the excluded scripts tree');
   assert.deepEqual(packageJson.build?.electronLanguages, ['en-US', 'vi']);
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
   const packagedSmoke = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'packaged-recovery-smoke.js'), 'utf8');
   assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
+  assert.match(packagedSmoke, /reconcile_exact_stale_run\.py/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
 });
 
@@ -84,6 +90,10 @@ test('packaged resources must be byte-identical to the current allowed source pr
     fs.writeFileSync(path.join(source, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
     fs.mkdirSync(path.join(source, 'coding-tools-mcp', '.coding-tools'), { recursive: true });
     fs.writeFileSync(path.join(source, 'coding-tools-mcp', '.coding-tools', 'performance.json'), 'runtime-only');
+    fs.mkdirSync(path.join(source, 'coding-tools-mcp', 'scripts'), { recursive: true });
+    fs.mkdirSync(path.join(packaged, 'coding-tools-mcp', 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(source, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py'), 'official helper');
+    fs.writeFileSync(path.join(packaged, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py'), 'official helper');
     fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
     assert.equal(assertExactPackagedResources(source, packaged).exact_source, true);
 
@@ -109,6 +119,15 @@ test('packaged resource sanitation rejects raw reports and Python cache metadata
   try {
     writeCleanFixture();
     assert.equal(assertSanitizedPackagedResources(root).sanitized, true);
+
+    const sanctionedHelper = path.join(root, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py');
+    fs.mkdirSync(path.dirname(sanctionedHelper), { recursive: true });
+    fs.writeFileSync(sanctionedHelper, 'official helper');
+    assert.equal(assertSanitizedPackagedResources(root).sanitized, true);
+    fs.writeFileSync(path.join(path.dirname(sanctionedHelper), 'report_runtime.py'), 'forbidden');
+    assert.throws(() => assertSanitizedPackagedResources(root), /packaged resources sanitation failed/);
+    fs.rmSync(path.join(root, 'coding-tools-mcp'), { recursive: true, force: true });
+    writeCleanFixture();
 
     const cases = [
       ['coding-tools-mcp', 'tests', 'test_runtime.py'],

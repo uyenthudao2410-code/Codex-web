@@ -446,6 +446,82 @@ class NativeSemanticLocalizationTests(unittest.TestCase):
             self.assertNotIn(VALID_CREDENTIAL, serialized)
             self.assertNotIn(str(workspace), serialized)
 
+    def test_public_twelve_queries_are_batched_sequentially_with_partial_fallback(self) -> None:
+        calls: list[list[str]] = []
+
+        class Provider:
+            def status(self):
+                return {"available": True, "provider": "native-lsp-test", "read_only": True}
+
+            def localize(self, *, workspace, path, queries, max_results, resource_class):
+                del workspace, path, max_results, resource_class
+                calls.append(list(queries))
+                return [
+                    {
+                        "query_index": index,
+                        "handled": query != "query-08",
+                        "definitive": False,
+                        "matches": ([] if query == "query-08" else [{"path": "app.py", "line": index + 1}]),
+                    }
+                    for index, query in enumerate(queries)
+                ]
+
+        queries = [f"query-{index:02d}" for index in range(12)]
+        projected = run_semantic_localization(
+            Provider(),
+            workspace=Path("."),
+            path=".",
+            queries=queries,
+            max_results=10,
+            resource_class="HEAVY",
+        )
+        self.assertEqual(calls, [queries[:8], queries[8:]])
+        self.assertEqual([item["query_index"] for item in projected["results"]], list(range(12)))
+        self.assertFalse(projected["results"][8]["handled"])
+        self.assertTrue(projected["results"][9]["handled"])
+        self.assertEqual(projected["batching"], {
+            "mode": "sequential",
+            "max_queries_per_batch": 8,
+            "batch_count": 2,
+            "completed_batch_count": 2,
+            "failed_batches": [],
+        })
+
+    def test_native_batches_share_one_total_deadline(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            provider = NativeRustSemanticLocalizationProvider(
+                origin="http://127.0.0.1:45819",
+                credential=VALID_CREDENTIAL,
+            )
+            queries = [f"query-{index:02d}" for index in range(12)]
+            first_batch_rows = [
+                {"query_index": index, "handled": True, "matches": [{"path": "app.py", "line": index + 1}]}
+                for index in range(8)
+            ]
+            with (
+                patch.object(semantic_module.time, "monotonic", side_effect=[0.0, 0.0, 36.0]),
+                patch.object(provider, "localize", return_value=first_batch_rows) as localize,
+            ):
+                projected = run_semantic_localization(
+                    provider,
+                    workspace=Path(temp),
+                    path=".",
+                    queries=queries,
+                    max_results=10,
+                    resource_class="HEAVY",
+                )
+            localize.assert_called_once()
+            self.assertEqual(localize.call_args.kwargs["queries"], queries[:8])
+            self.assertEqual(localize.call_args.kwargs["timeout_seconds"], NATIVE_LSP_TIMEOUT_SECONDS)
+            self.assertTrue(projected["provider"]["partial_failure"])
+            self.assertEqual(projected["provider"]["reason"], "SEMANTIC_PROVIDER_DEADLINE_EXCEEDED")
+            self.assertFalse(projected["results"][8]["handled"])
+            self.assertEqual(projected["batching"]["failed_batches"], [{
+                "batch_start": 8,
+                "query_count": 4,
+                "reason": "SEMANTIC_PROVIDER_DEADLINE_EXCEEDED",
+            }])
+
     def test_oversized_response_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             provider = NativeRustSemanticLocalizationProvider(

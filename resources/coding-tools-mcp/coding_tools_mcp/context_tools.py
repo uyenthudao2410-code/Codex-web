@@ -26,7 +26,7 @@ from .semantic_localization import (
 from .semantic_graph import SemanticRepositoryGraph
 from .context_compiler import compile_context, context_compiler_treatment
 from .endpoint_identity import endpoint_identity_payload
-from .acceptance_receipts import validate_existing_file_adoptions
+from .acceptance_receipts import passed_proof_fingerprint, validate_existing_file_adoptions
 from .solution_economics import record_existing_file_adoption, record_patch_surface
 from .tool_contract import tool_metadata_contract
 
@@ -1108,7 +1108,11 @@ class ContextToolsMixin:
             if ctx is not None
             else "Review the verified changes or continue with the next task."
         )
-        proof_fingerprint = hashlib.sha256("|".join(proof_ids).encode("utf-8")).hexdigest() if proof_ids else ""
+        proof_fingerprint = (
+            passed_proof_fingerprint(self.orchestration_ledger.list_proofs(ctx.run_id, wave_id=ctx.wave_id))
+            if ctx is not None
+            else ""
+        )
         self.task_state.update({
             "status": final_status,
             "steps": workflow_steps,

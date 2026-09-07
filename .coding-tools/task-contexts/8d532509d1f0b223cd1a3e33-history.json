@@ -1,0 +1,904 @@
+[
+  {
+    "version": 2,
+    "task_id": "bdde231bfa5b42f09a0326d9bed4b309",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:32:51.260Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:32:22.096Z",
+    "updated_at": "2026-09-07T07:32:51.260Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:32:22.096Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:22.421Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"stale_orchestration_runs|unresolved_stale_orchestration_runs|reconciled_stale_orchestration_runs|task_orchestration_projection_reconciled|EXACT_RUN_RECOVERY_REFUSED|reconcile.*orchestration\" electron scripts src tests docs -g \"*.js\" -g \"*.cjs\" -g \"*.mjs\" -g \"*.py\" -g \"*.ts\" -g \"*.md\"",
+          "session_id": "wZLSyhMw4Act3Ke3HYUWzeNs"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:22.742Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"stale_orchestration_runs|unresolved_stale_orchestration_runs|reconciled_stale_orchestration_runs|task_orchestration_projection_reconciled|EXACT_RUN_RECOVERY_REFUSED|reconcile.*orchestration\" electron scripts src tests docs -g \"*.js\" -g \"*.cjs\" -g \"*.mjs\" -g \"*.py\" -g \"*.ts\" -g \"*.md\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:29.795Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reconcile_task_orchestration_projection|stale_orchestration_runs|unresolved_stale_orchestration_runs|reconciled_stale_orchestration_runs\" . -g \"!node_modules/**\" -g \"!.git/**\" -g \"!dist/**\" -g \"!artifacts/**\" -g \"!tmp/**\"",
+          "session_id": "QsuQ5vHnWbFv7s5ZamDKTu2v"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:30.135Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reconcile_task_orchestration_projection|stale_orchestration_runs|unresolved_stale_orchestration_runs|reconciled_stale_orchestration_runs\" . -g \"!node_modules/**\" -g \"!.git/**\" -g \"!dist/**\" -g \"!artifacts/**\" -g \"!tmp/**\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:39.318Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 220 -B 30 \"def reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "session_id": "NG8xsbfdJdX7Z0IvBZpWvFs6"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:39.585Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 220 -B 30 \"def reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:51.260Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"reconciled_stale_orchestration_runs|unresolved_stale_runs|mark_run_stale|status=.stale.|\\\"stale\\\"\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:32:51.260Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:33:00.772Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7d113cfa30684d01bf3f33ec920ae772",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:41:45.224Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:33:00.773Z",
+    "updated_at": "2026-09-07T07:41:45.224Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:33:00.773Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:33:01.121Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 reconciled_stale_orchestration_runs resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "ky7y48VOONFQw8jls3nTPzuI"
+        }
+      },
+      {
+        "time": "2026-09-07T07:33:01.402Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 reconciled_stale_orchestration_runs resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:10.662Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 terminalize resources/coding-tools-mcp/coding_tools_mcp electron/services",
+          "session_id": "CaX0ryLaW5ciWJYIouX0uFYo"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:11.012Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 terminalize resources/coding-tools-mcp/coding_tools_mcp electron/services",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:19.364Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 reconcile_exact_stale_run resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services",
+          "session_id": "VHeQKxCgRze2pkETFkew-_P4"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:19.697Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 reconcile_exact_stale_run resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron/services",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:30.097Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 210 -B 20 _execExactStaleRunCli electron/services/fullCleanActivation.js",
+          "session_id": "yh01_Zxh0ODrZct6BAm6HnO3"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:30.371Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 210 -B 20 _execExactStaleRunCli electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:37.513Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 EXACT_STALE_RUN_REASON_PREFIX electron resources/coding-tools-mcp",
+          "session_id": "H09HgCDZa8DPxG8CIVBG7D-f"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:37.873Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 EXACT_STALE_RUN_REASON_PREFIX electron resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:47.880Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 exact_stale_runs electron tests resources/coding-tools-mcp",
+          "session_id": "5vGgPf7qaCCjPtjj8XLEfHuV"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:48.146Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 exact_stale_runs electron tests resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:56.937Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 restart_runtime resources/coding-tools-mcp/coding_tools_mcp electron/services electron/main.js",
+          "session_id": "iskIE-f5VNCX04iOG2FrmrHi"
+        }
+      },
+      {
+        "time": "2026-09-07T07:34:57.229Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 restart_runtime resources/coding-tools-mcp/coding_tools_mcp electron/services electron/main.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:04.971Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 130 -B 25 _enqueue_runtime_restart resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "rhHVEP_YO8dCGCJa0z-a0MxY"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:05.254Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 130 -B 25 _enqueue_runtime_restart resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:19.129Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"lifecycle_census|Gate 0|run_classification_counts\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp/__main__.py resources/coding-tools-mcp/pyproject.toml",
+          "session_id": "CO4VghEbRjPwjBVhwWMkCXcM"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:19.378Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"lifecycle_census|Gate 0|run_classification_counts\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp/__main__.py resources/coding-tools-mcp/pyproject.toml",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:25.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 120 -B 5 \"def main|ArgumentParser|add_argument\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "y-7DaNsKE-snSNFsCwBuamVv"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:25.827Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 120 -B 5 \"def main|ArgumentParser|add_argument\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:38.927Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "session_id": "uHVCFAobPAUIWxSJko11fMOX"
+        }
+      },
+      {
+        "time": "2026-09-07T07:35:39.919Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace \"E:\\DEV\\HR STA\\HR\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:40:48.752Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"restart_ticket|restart-request|restart_request|runtime restart ticket|pendingRestart|fullCleanActivation\" electron resources/coding-tools-mcp -g \"*.js\" -g \"*.py\"",
+          "session_id": "_B8tfe5Wdk9a6hw2nedG6YlY"
+        }
+      },
+      {
+        "time": "2026-09-07T07:40:49.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"restart_ticket|restart-request|restart_request|runtime restart ticket|pendingRestart|fullCleanActivation\" electron resources/coding-tools-mcp -g \"*.js\" -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:02.744Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"exact_stale_runs|EXACT_STALE_RUN_REASON_PREFIX|MAX_EXACT_STALE_RUN\" electron/services/fullCleanActivation.js",
+          "session_id": "BrQETnluTH1S_qYwEhyc_LCE"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:03.662Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"exact_stale_runs|EXACT_STALE_RUN_REASON_PREFIX|MAX_EXACT_STALE_RUN\" electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:45.224Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"logFile|logs|dataRoot\\(\\)|runtime-supervisor-request\" electron/services/runtimePaths.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:45.224Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:41:52.125Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2e9c935918dd48919a5eb927c2855109",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:43:34.668Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:41:52.128Z",
+    "updated_at": "2026-09-07T07:43:34.668Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:41:52.128Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:52.470Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 dataRoot electron/services/runtimePaths.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "session_id": "9VW3le22XCEr2kEbFt5-GuLA"
+        }
+      },
+      {
+        "time": "2026-09-07T07:41:52.829Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 dataRoot electron/services/runtimePaths.js electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:42:00.659Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content (Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log') -Tail 220\"",
+          "session_id": "MFGzI_S_u8YO_EC4hyueUbva"
+        }
+      },
+      {
+        "time": "2026-09-07T07:42:01.282Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content (Join-Path $env:APPDATA 'web-mcp-assistant\\logs\\assistant.log') -Tail 220\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:34.668Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"accepted-code closure checkpoint is not eligible|closure checkpoint.*eligible|eligible for the requested component\" electron resources/coding-tools-mcp tests",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:34.668Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:43:44.258Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "388c7d13d8e34c47a3d22b82cffcf2c4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "WAtcFC-Miks9o4reXXhPMXXl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 299,
+      "finished_at": "2026-09-07T07:44:46.462Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T07:43:44.261Z",
+    "updated_at": "2026-09-07T07:44:46.462Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:43:44.261Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:44.580Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"closure checkpoint\" electron resources tests",
+          "session_id": "76nLkXRXGq0LjViCguO5ac0l"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:44.876Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"closure checkpoint\" electron resources tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:53.881Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"resolveFullCleanSourceCheckpoint\" electron tests",
+          "session_id": "9Rjd2lMXout7UOFBZUtLV0rD"
+        }
+      },
+      {
+        "time": "2026-09-07T07:43:54.157Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"resolveFullCleanSourceCheckpoint\" electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:05.976Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if (Test-Path $p) { Get-Content $p } else { Write-Output 'MISSING' }\"",
+          "session_id": "7JV8nodw7r2afAKlPzbn3QGP"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:07.929Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; if (Test-Path $p) { Get-Content $p } else { Write-Output 'MISSING' }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:19.063Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; $j.psobject.Properties.Name\"",
+          "session_id": "p_j-S1U3IW9CsGLl_IaDYt-P"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:19.705Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; $j.psobject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:26.679Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; $c=$j.closure_input; [pscustomobject]@{active_checkpoint_id=$j.active_checkpoint_id; updated_at=$j.updated_at; schema_version=$c.schema_version; source_checkpoint_id=$c.source_checkpoint_id; run_id=$c.run_id; wave_id=$c.wave_id; accepted_head=$c.accepted_head; source_accepted=$c.source_accepted; accepted_receipts_complete=$c.accepted_receipts_com",
+          "session_id": "pWNWZNpTQwO-y07MUKguB766"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:28.639Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=Join-Path $env:APPDATA 'web-mcp-assistant\\accepted-code-activation.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; $c=$j.closure_input; [pscustomobject]@{active_checkpoint_id=$j.active_checkpoint_id; updated_at=$j.updated_at; schema_version=$c.schema_version; source_checkpoint_id=$c.source_checkpoint_id; run_id=$c.run_id; wave_id=$c.wave_id; accepted_head=$c.accepted_head; source_accepted=$c.source_accepted; accepted_receipts_complete=$c.accepted_receipts_com",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:46.130Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"closure_input|active_checkpoint_id|baseline\" electron/services/acceptedCodeActivation.js electron/services/recoveryHost.js electron/services/activationClosure.js tests/accepted-code-activation.test.js tests/recovery-host.test.js",
+          "session_id": "WAtcFC-Miks9o4reXXhPMXXl"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:46.462Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"closure_input|active_checkpoint_id|baseline\" electron/services/acceptedCodeActivation.js electron/services/recoveryHost.js electron/services/activationClosure.js tests/accepted-code-activation.test.js tests/recovery-host.test.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:44:55.922Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bea8d63b81ff4c6c80bfff1538261e37",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:46:20.126Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:44:55.924Z",
+    "updated_at": "2026-09-07T07:46:20.126Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:44:55.924Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:56.208Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"class .*Activation|acceptedCodeActivationFile|evaluateActivationEligibility\" electron/services tests/accepted-code-activation.test.js",
+          "session_id": "x3wC5zuuhCUZfRTmKk4uagr8"
+        }
+      },
+      {
+        "time": "2026-09-07T07:44:56.454Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"class .*Activation|acceptedCodeActivationFile|evaluateActivationEligibility\" electron/services tests/accepted-code-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:45:04.041Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/recoveryActionStore.js' | Select-Object -Skip 1030 -First 410\"",
+          "session_id": "AHRk5AvauYE9k2BteS9Gp7tK"
+        }
+      },
+      {
+        "time": "2026-09-07T07:45:04.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/recoveryActionStore.js' | Select-Object -Skip 1030 -First 410\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:45:15.512Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"full_clean_refresh|sourceCheckpoint\" electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "session_id": "sxqsLmIeYz7PBb2GWKz6elrZ"
+        }
+      },
+      {
+        "time": "2026-09-07T07:45:15.770Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"full_clean_refresh|sourceCheckpoint\" electron/services/fullCleanActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-host.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:20.126Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 180 -B 35 \"serviceSupervisorRestartRequest\" electron/services/runtimeOrchestrator.js tests scripts package.json && rg -n -C 35 \"reason\\[:500\\]|restart_ticket|full_clean_refresh|npm_start_refresh|runtime\\.restart\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py package.json scripts electron -g \"*.py\" -g \"*.js\" -g \"*.json\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:20.126Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:46:26.253Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "98c1413efc124ece836d759b9a37f745",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:46:37.230Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:46:26.255Z",
+    "updated_at": "2026-09-07T07:46:37.230Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:46:26.255Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:26.562Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 180 -B 35 serviceSupervisorRestartRequest electron/services/runtimeOrchestrator.js tests scripts package.json",
+          "session_id": "NQH_Lz7Inoz3_cFNEDU0iQed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:26.804Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 180 -B 35 serviceSupervisorRestartRequest electron/services/runtimeOrchestrator.js tests scripts package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:37.230Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"reason\\[:500\\]|restart_ticket|full_clean_refresh|npm_start_refresh|runtime\\.restart\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py package.json scripts electron -g \"*.py\" -g \"*.js\" -g \"*.json\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:37.230Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:46:46.209Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "23a2c5568f9b43eeb947fdf7b117fee5",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T07:47:26.134Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T07:46:46.211Z",
+    "updated_at": "2026-09-07T07:47:26.134Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:46:46.211Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:46.487Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 restart_ticket resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py package.json scripts electron",
+          "session_id": "zHNwNAKvr8zMFrjJqA9-MA_G"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:46.738Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 restart_ticket resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py package.json scripts electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:55.212Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 full_clean_refresh package.json scripts electron -g \"*.js\" -g \"*.json\"",
+          "session_id": "DHnD7E53DMy0vWHjAhXV-m8P"
+        }
+      },
+      {
+        "time": "2026-09-07T07:46:55.473Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 full_clean_refresh package.json scripts electron -g \"*.js\" -g \"*.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:04.406Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 RecoveryIpcClient scripts electron package.json -g \"*.js\" -g \"*.json\"",
+          "session_id": "ybHV-PaHyC_LoA1S0wjYS0KS"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:04.654Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 RecoveryIpcClient scripts electron package.json -g \"*.js\" -g \"*.json\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:16.322Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"dev:refresh|full-clean|activation\" package.json scripts/full-clean-activation.js",
+          "session_id": "gfmRAP7rqX0Llmph5baP_ukU"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:16.579Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"dev:refresh|full-clean|activation\" package.json scripts/full-clean-activation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:26.134Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 180 -B 30 \"async function refresh|case 'refresh'|ACTION.*refresh|npm_start_refresh\" scripts/dev-ui-lifecycle.js package.json",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T07:47:26.134Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T07:47:32.656Z",
+    "archive_reason": "finished"
+  }
+]

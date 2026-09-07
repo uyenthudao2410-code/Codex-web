@@ -14,11 +14,19 @@ const DEV_ONLY_CODING_MCP_DIRECTORIES = new Set([
   "benchmarks",
   "scripts",
 ]);
+const SANCTIONED_CODING_MCP_RUNTIME_FILES = new Set([
+  "coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+]);
 
 function forbiddenReason(relativePath, isDirectory) {
   const normalized = relativePath.split(path.sep).join("/");
   const parts = normalized.split("/").filter(Boolean);
   if (parts[0] === "coding-tools-mcp" && DEV_ONLY_CODING_MCP_DIRECTORIES.has(parts[1])) {
+    if (parts[1] === "scripts"
+      && ((isDirectory && parts.length === 2)
+        || (!isDirectory && SANCTIONED_CODING_MCP_RUNTIME_FILES.has(normalized)))) {
+      return "";
+    }
     return "development-only Coding MCP directory";
   }
   if (parts.some((part) => FORBIDDEN_DIRECTORY_NAMES.has(part))) {
@@ -122,3 +130,4 @@ exports.default = afterPack;
 exports.assertSanitizedPackagedResources = assertSanitizedPackagedResources;
 exports.assertExactPackagedResources = assertExactPackagedResources;
 exports.forbiddenReason = forbiddenReason;
+exports.SANCTIONED_CODING_MCP_RUNTIME_FILES = SANCTIONED_CODING_MCP_RUNTIME_FILES;

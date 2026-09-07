@@ -869,17 +869,36 @@ class RecoveryPlaneService {
 
   async stop(idleProof = {}) {
     const initial = this.readState();
+    const receipts = {
+      recoveryTunnel: storedProcessReceipt(initial, 'recoveryTunnel'),
+      recoveryTunnelCandidate: storedProcessReceipt(initial, 'recoveryTunnelCandidate'),
+      recoveryMcp: storedProcessReceipt(initial, 'recoveryMcp')
+    };
     const healthPort = Number(idleProof?.recoveryHealthPort) || 0;
     const mcpPort = Number(idleProof?.recoveryMcpPort) || 0;
     const tunnelIdentity = await this.ownedIdentity(initial, 'recoveryTunnel', 'RECOVERY_TUNNEL', healthPort);
     const candidateIdentity = await this.ownedIdentity(initial, 'recoveryTunnelCandidate', 'RECOVERY_TUNNEL', healthPort);
     const mcpIdentity = await this.ownedIdentity(initial, 'recoveryMcp', 'RECOVERY_MCP', mcpPort);
     const state = this.readState();
-    const receipts = {
-      recoveryTunnel: storedProcessReceipt(state, 'recoveryTunnel'),
-      recoveryTunnelCandidate: storedProcessReceipt(state, 'recoveryTunnelCandidate'),
-      recoveryMcp: storedProcessReceipt(state, 'recoveryMcp')
-    };
+    for (const [prefix, identity] of [
+      ['recoveryTunnel', tunnelIdentity],
+      ['recoveryTunnelCandidate', candidateIdentity],
+      ['recoveryMcp', mcpIdentity]
+    ]) {
+      if (sameStoredProcessReceipt(state, prefix, receipts[prefix])) continue;
+      const currentReceipt = storedProcessReceipt(state, prefix);
+      // ownedIdentity may have just forgotten an unverifiable receipt after
+      // independently proving its service port idle. That self-clearing path
+      // is safe only when no identity remains; any new receipt is a concurrent
+      // replacement and must not be cleared or terminated by this stop call.
+      if (!identity && !currentReceipt.pid && !currentReceipt.process_start_token) {
+        receipts[prefix] = currentReceipt;
+        continue;
+      }
+      throw Object.assign(new Error('Recovery Plane process state changed during stop preflight.'), {
+        code: 'RECOVERY_PROCESS_STATE_CHANGED'
+      });
+    }
     const terminated = [];
     for (const [prefix, identity, kind] of [
       ['recoveryTunnel', tunnelIdentity, 'RECOVERY_TUNNEL'],

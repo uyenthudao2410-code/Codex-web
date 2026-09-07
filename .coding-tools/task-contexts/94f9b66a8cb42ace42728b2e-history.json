@@ -1,0 +1,765 @@
+[
+  {
+    "version": 2,
+    "task_id": "7320e92cdb4442b09f3cd32346722d05",
+    "orchestration": {
+      "run_id": "d08c2990833147e9ab519bc4fbcde463",
+      "wave_id": "6be126afcb18416d86643fa95cc8d77c",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+      "worktree_fp": "44bf43712788971ffd06fede4cc474d4374515acee14850242c4dd05e425f7aa",
+      "contract_fp": ""
+    },
+    "objective": "Fix exact stale-run maintenance so user-authorized cleanup can use full_clean_refresh with sourceCheckpoint=null instead of an accepted source checkpoint, prevent exact stale RUN IDs from being truncated by restart-ticket reason length, preserve stopped-runtime/census/hash-chain guards, then reconcile all currently eligible stale RUNs without deleting audit history.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "n8yb5mghPNbStI-_yGtCMWj-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 627,
+      "finished_at": "2026-09-07T08:00:39.144Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T07:59:03.682Z",
+    "updated_at": "2026-09-07T08:00:39.144Z",
+    "events": [
+      {
+        "time": "2026-09-07T07:59:03.682Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Fix exact stale-run maintenance so user-authorized cleanup can use full_clean_refresh with sourceCheckpoint=null instead of an accepted source checkpoint, prevent exact stale RUN IDs from being truncated by restart-ticket reason length, preserve stopped-runtime/census/hash-chain guards, then reconcile all currently eligible stale RUNs without deleting audit history."
+        }
+      },
+      {
+        "time": "2026-09-07T07:59:04.745Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T07:59:06.659Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T07:59:06.671Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:29.420Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"restart_runtime|build_supervisor_restart_ticket|exact_stale_runs|serviceSupervisorRestartRequest\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests tests electron/services",
+          "session_id": "KTYYVlhb8Z8L9L5gYcZACxZH"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:29.921Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"restart_runtime|build_supervisor_restart_ticket|exact_stale_runs|serviceSupervisorRestartRequest\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests tests electron/services",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:38.695Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"pendingSupervisorRestartRequest\\(|validate.*restart|activation_mode|reason\" electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_task_state_and_build.py | head -n 900",
+          "session_id": "n8yb5mghPNbStI-_yGtCMWj-"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:39.144Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"pendingSupervisorRestartRequest\\(|validate.*restart|activation_mode|reason\" electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/tests/test_task_state_and_build.py | head -n 900",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T08:00:48.284Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "481b808a3ce449b7a3a6beb27fb48d6c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T08:01:05.297Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T08:00:48.286Z",
+    "updated_at": "2026-09-07T08:01:05.297Z",
+    "events": [
+      {
+        "time": "2026-09-07T08:00:48.286Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:48.965Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"Harness|verification|verify|Coding-VP|agent_workflow\" AGENTS.md",
+          "session_id": "AtR8nkM7SSsG8g2nzESj-RZw"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:49.437Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"Harness|verification|verify|Coding-VP|agent_workflow\" AGENTS.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:56.770Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py electron/services/runtimeOrchestrator.js tests/full-clean-activation.test.js tests/runtime-orchestrator.test.js resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "session_id": "D8kM8zTRNpyNyyhQsZPEsHzv"
+        }
+      },
+      {
+        "time": "2026-09-07T08:00:57.332Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py electron/services/runtimeOrchestrator.js tests/full-clean-activation.test.js tests/runtime-orchestrator.test.js resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:05.297Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 \"function.*SupervisorRestart|pendingSupervisorRestartRequest|SUPERVISOR_RESTART\" electron/services/runtimeOrchestrator.js tests -g \"*.js\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:05.297Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T08:01:13.726Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e2456f37d5314cc58e15a1b68850852d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ezdqx6FP-H_P1sa96F4M-9A2",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 872,
+      "finished_at": "2026-09-07T08:01:57.414Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T08:01:13.727Z",
+    "updated_at": "2026-09-07T08:01:57.414Z",
+    "events": [
+      {
+        "time": "2026-09-07T08:01:13.727Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:14.978Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 80 pendingSupervisorRestartRequest electron/services/runtimeOrchestrator.js",
+          "session_id": "M38_9sgjhreBsCdQp1zAKlZz"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:15.851Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 80 pendingSupervisorRestartRequest electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:23.115Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 readSupervisorRestartRequest electron/services/runtimeOrchestrator.js tests",
+          "session_id": "eqI_OVQUTRH9vDgFPXWEe9Fs"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:23.946Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 readSupervisorRestartRequest electron/services/runtimeOrchestrator.js tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:31.557Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"def supervisor_restart_ticket_matches\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py",
+          "session_id": "YwqILgT53jzpDpjrhOpkHHt5"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:32.242Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"def supervisor_restart_ticket_matches\" resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:56.858Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"supervisor restart|serviceSupervisorRestartRequest|validSupervisorRestartRequest\" tests/runtime-orchestrator.test.js tests -g \"*.test.js\"",
+          "session_id": "ezdqx6FP-H_P1sa96F4M-9A2"
+        }
+      },
+      {
+        "time": "2026-09-07T08:01:57.414Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"supervisor restart|serviceSupervisorRestartRequest|validSupervisorRestartRequest\" tests/runtime-orchestrator.test.js tests -g \"*.test.js\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T08:02:03.390Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d75cd356316340798a6afeef5a9a398f",
+    "orchestration": {
+      "run_id": "f50672428d784bf88c8cf211d6ec7809",
+      "wave_id": "e27372ed7e2f4c238aab003a9219dadb",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+      "worktree_fp": "f0b8a07ea9686b31f0bbfbd16a4a5856cee14960beea3c2319146fe425be2a43",
+      "contract_fp": ""
+    },
+    "objective": "Make exact stale-run maintenance restart use checkpoint-free full_clean_refresh while preserving ordinary restart accepted-checkpoint authority; preserve all exact stale IDs up to the existing 16-ID bound instead of truncating the maintenance reason; validate maintenance reason structure before any mutation; add regressions proving 16 IDs survive and maintenance refresh does not require source-checkpoint authority.",
+    "status": "waiting",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-07T08:04:47.648Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-07T08:04:47.648Z"
+      },
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "in_progress",
+        "updated_at": "2026-09-07T08:04:47.648Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-07T08:04:47.648Z"
+      }
+    ],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "VGPdjg0u87ylP2tFR0T-ObrC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 623,
+      "finished_at": "2026-09-07T08:07:45.913Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "canonical_patch_surface_observations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 2,
+          "observation_count": 2,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "a83f785daae7439eab9608ffe96ec543",
+              "seq": 43159,
+              "event_time": "2026-09-07T08:04:44.726Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "7a8a562061135e5cc7a2049b230c99e92fcbbbca7dc5958b58942357d7d63078"
+              ],
+              "file_count": 1,
+              "additions": 71,
+              "removals": 0,
+              "line_changes": 71,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            },
+            {
+              "event_id": "c0afbac8259a4b458e265ec3166ab7b7",
+              "seq": 43160,
+              "event_time": "2026-09-07T08:04:45.027Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "1c4f515518acc39f09ecb0f7ddaa38841f09b053fcf02c8145274a02e8a3281c",
+                "49b88bdf9b753820d624e4ec59313fe1ea2cf4c4434ebc8f07847e414d76d52e",
+                "ff68fc0bac26925ace10bd92faa61548865df5d93f838af71bbf2bdca002b984"
+              ],
+              "file_count": 3,
+              "additions": 130,
+              "removals": 9,
+              "line_changes": 139,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 25,
+          "head_hash": "fbdeb4e62125ae45fc96daee7059d88ba5c5c13c7d425c9703f07e194b63a0ab"
+        },
+        "reports": {}
+      },
+      "source_run_wave": {
+        "run_id": "f50672428d784bf88c8cf211d6ec7809",
+        "wave_id": "35334d87bb4147d9a9b44aa76085f6a4",
+        "checkpoint_id": "",
+        "base_head": "24186fefbdbb9c1dca450ae5e96df167be93c87e",
+        "worktree_fp": "44bf43712788971ffd06fede4cc474d4374515acee14850242c4dd05e425f7aa",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Make exact stale-run maintenance restart use checkpoint-free full_clean_refresh while preserving ordinary restart accepted-checkpoint authority; preserve all exact stale IDs up to the existing 16-ID bound instead of truncating the maintenance reason; validate maintenance reason structure before any mutation; add regressions proving 16 IDs survive and maintenance refresh does not require source-checkpoint authority.",
+          "objective_revision": 1,
+          "objective_sha256": "ea82f006ba5d1284d38401222b0db3188d8b4bb2485294cc947abfe5ec318d8d",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "5891928d148541e084a1a8c2dcc457c8",
+            "stage_id": "check:676da3863891edd1",
+            "status": "passed",
+            "duration_ms": 902,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "PERMISSION_REQUIRED",
+        "reason": null,
+        "event_seq": 43171
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "4076c40398a1c7a833ab5568ae75cf936e1a319d34096300869f8b4e8e602773",
+    "completion_report_acknowledged_id": "4076c40398a1c7a833ab5568ae75cf936e1a319d34096300869f8b4e8e602773",
+    "completion_report_acknowledged_at": "2026-09-07T08:07:09.144Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-09-07T08:02:03.390Z",
+    "updated_at": "2026-09-07T08:07:45.913Z",
+    "events": [
+      {
+        "time": "2026-09-07T08:02:03.390Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T08:02:04.215Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- tests/runtime-lifecycle.test.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js",
+          "session_id": "guGLsm7z75wvNNkC2nO0g8RX"
+        }
+      },
+      {
+        "time": "2026-09-07T08:02:04.736Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- tests/runtime-lifecycle.test.js resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:02:33.283Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"supervisor restart ticket\" tests/runtime-lifecycle.test.js",
+          "session_id": "4NHvOC5itxodKk_mjK-yrpxb"
+        }
+      },
+      {
+        "time": "2026-09-07T08:02:33.936Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"supervisor restart ticket\" tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:03:18.879Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-07T08:03:52.543Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T08:03:53.009Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:42.444Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:43.216Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:44.233Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:44.240Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:45.768Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:46.262Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:46.976Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "session_id": "H5UAp25ESwrXtCzPwxaYr7F9"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:47.380Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:47.648Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:48.679Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:48.682Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:04:48.788Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PERMISSION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-07T08:05:24.991Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:05:25.623Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_FAILED"
+        }
+      },
+      {
+        "time": "2026-09-07T08:06:54.638Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "4076c40398a1c7a833ab5568ae75cf936e1a319d34096300869f8b4e8e602773"
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:07.239Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:09.144Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "4076c40398a1c7a833ab5568ae75cf936e1a319d34096300869f8b4e8e602773"
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:19.244Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:20.522Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:21.894Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:21.902Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:45.469Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py && certutil -hashfile resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py SHA256 && certutil -hashfile electron/services/runtimeOrchestrator.js SHA256 && certutil -hashfile tests/runtime-lifecycle.test.js SHA256 && certutil -hashfile resources/coding-tools-mcp/test",
+          "session_id": "VGPdjg0u87ylP2tFR0T-ObrC"
+        }
+      },
+      {
+        "time": "2026-09-07T08:07:45.913Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py electron/services/runtimeOrchestrator.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/tests/test_restart_ticket_maintenance.py && certutil -hashfile resources/coding-tools-mcp/coding_tools_mcp/restart_ticket.py SHA256 && certutil -hashfile electron/services/runtimeOrchestrator.js SHA256 && certutil -hashfile tests/runtime-lifecycle.test.js SHA256 && certutil -hashfile resources/coding-tools-mcp/test",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T08:08:04.817Z",
+    "archive_reason": "superseded"
+  }
+]

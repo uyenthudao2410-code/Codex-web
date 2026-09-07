@@ -760,6 +760,55 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
                 finally:
                     runtime.close()
 
+    def test_cross_wave_cache_reuse_receipt_satisfies_mutation_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 2\n", encoding="utf-8")
+            runtime = Runtime(root)
+            try:
+                source_run_id = runtime.orchestration_ledger.create_run(objective="proof cache source fixture")
+                source_wave_id = runtime.orchestration_ledger.create_wave(
+                    source_run_id,
+                    execution_mode="mcp_only",
+                    base_head="fixture",
+                    worktree_fp="fixture",
+                )
+                calls = {"count": 0}
+
+                def runner() -> dict:
+                    calls["count"] += 1
+                    return {"ok": True, "status": "passed", "exit_code": 0, "duration_ms": 1}
+
+                _, source_proof_id = runtime.proof_ledger.run_cached(
+                    run_id=source_run_id,
+                    wave_id=source_wave_id,
+                    stage_id="cross-wave-acceptance-fixture",
+                    input_fingerprint="cross-wave-acceptance-fixture-fingerprint",
+                    command="fixture",
+                    runner=runner,
+                )
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["app.py"],
+                    patch_paths=["app.py"],
+                    proof_statuses=[],
+                )
+                reused, receipt_proof_id = runtime.proof_ledger.run_cached(
+                    run_id=ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    stage_id="cross-wave-acceptance-fixture",
+                    input_fingerprint="cross-wave-acceptance-fixture-fingerprint",
+                    command="fixture",
+                    runner=runner,
+                )
+                self.assertEqual(calls["count"], 1)
+                self.assertTrue(reused["cache_hit"])
+                self.assertEqual(reused["proof_cache_source_proof_id"], source_proof_id)
+                self.assertNotEqual(receipt_proof_id, source_proof_id)
+                self.assertTrue(runtime.task_control({"action": "accept", "run_id": ctx.run_id, "wave_id": ctx.wave_id})["accepted"])
+            finally:
+                runtime.close()
+
     def test_mixed_proof_checkpoint_fingerprint_uses_only_passed_set(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

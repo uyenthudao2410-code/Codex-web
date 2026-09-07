@@ -75,6 +75,11 @@
   const $ = (selector) => document.querySelector(selector);
   const byId = (id) => document.getElementById(id);
 
+  // Manager overview tab embeds the standalone token window instead of
+  // hosting dashboard markup: skip its analytics fetch/render there so each
+  // pulse is not queried twice. Button bindings below stay active.
+  const embeddedDashboardHost = () => !byId('daChart') && !!byId('overviewTokenFrame');
+
   function unwrap(result) {
     if (!result?.ok) throw new Error(result?.error || 'Dashboard request failed');
     return result.data;
@@ -2217,6 +2222,7 @@
 
   async function applyOverviewPulse(event) {
     const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    if (embeddedDashboardHost()) return;
     if (Object.prototype.hasOwnProperty.call(detail, 'snapshot')) {
       snapshot = detail.snapshot;
       loadCostSettings();
@@ -2274,7 +2280,7 @@
 
   reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
 
-  Promise.all([Promise.resolve(loadCostSettings()), refreshAnalytics(true)])
+  Promise.all([Promise.resolve(loadCostSettings()), embeddedDashboardHost() ? Promise.resolve(null) : refreshAnalytics(true)])
     .then(() => renderAll())
     .finally(requestOverviewRefresh);
 })();

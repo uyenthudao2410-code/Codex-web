@@ -1768,6 +1768,68 @@ test('supervisor restart ticket fails closed without Recovery Host checkpoint au
   assert.equal(errors.at(-1)?.details?.ticketId, 'ticket-no-authority');
 });
 
+test('exact stale-run supervisor maintenance uses checkpoint-free full-clean refresh', async () => {
+  const workspace = 'C:\\work\\one';
+  const ticketId = 'restart-exact-stale-maintenance-0001';
+  const runIds = Array.from({ length: 16 }, (_value, index) => index.toString(16).padStart(32, '0'));
+  const reason = `exact_stale_runs:${runIds.join(',')}`;
+  const restartCalls = [];
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    fullCleanActivation: {
+      restart: async (options) => {
+        restartCalls.push(options);
+        return {
+          full_clean_activation: true,
+          activation_epoch_id: 'epoch-exact-stale-maintenance-0001',
+          state: 'READY',
+          admission_open: true,
+          fully_ready: true
+        };
+      }
+    }
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: { activation_epoch_id: 'epoch-exact-stale-maintenance-0001', operation_id: ticketId, state: 'READY' },
+      history: []
+    })
+  };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    reason,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+
+  const result = await orchestrator.supervise();
+  assert.equal(restartCalls.length, 1);
+  assert.equal(restartCalls[0].refresh, true);
+  assert.equal(restartCalls[0].mode, 'full_clean_refresh');
+  assert.equal(restartCalls[0].sourceCheckpoint, null);
+  assert.equal(restartCalls[0].reason, reason);
+  assert.equal(result.supervisorRequest.status, 'completed');
+  assert.equal(result.supervisorRequest.activation_mode, 'full_clean_refresh');
+});
+
 test('supervisor never cancels or reopens a fence after a durable epoch binds the ticket operation', async () => {
   const workspace = 'C:\\work\\one';
   const ticketId = 'restart-epoch-bound-0001';
@@ -2577,3 +2639,65 @@ for (const [label, ServiceClass, prefix] of [
     assert.deepEqual(JSON.parse(fs.readFileSync(missing.file, 'utf8')), missing.fields);
   });
 }
+
+test('authorized child exact stale maintenance preserves supervisor owner and passes target workspace to full-clean', async () => {
+  const workspace = 'C:\\work\\one';
+  const maintenanceWorkspace = 'C:\\work\\two';
+  const ticketId = 'restart-authorized-child-stale-0001';
+  const reason = `exact_stale_runs:${'a'.repeat(32)}`;
+  const restartCalls = [];
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace, authorizedRoots: [maintenanceWorkspace], autoStartServices: true }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    fullCleanActivation: {
+      restart: async (options) => {
+        restartCalls.push(options);
+        return {
+          full_clean_activation: true,
+          activation_epoch_id: 'epoch-authorized-child-stale-0001',
+          state: 'READY',
+          admission_open: true,
+          fully_ready: true
+        };
+      }
+    }
+  });
+  orchestrator.lightweightSnapshot = async () => ({ fullyReady: true, mcpRunning: true, nativeAlive: true, tunnelRunning: true });
+  orchestrator.currentMcpHealth = async () => ({ process_instance_id: 'process-one', instance_id: 'server-one', tool_contract: { sha256: 'e'.repeat(64) } });
+  orchestrator.revisions.disk = () => ({ revision: 'a'.repeat(64) });
+  orchestrator.activationEpochStore = {
+    load: () => ({
+      current: { activation_epoch_id: 'epoch-authorized-child-stale-0001', operation_id: ticketId, state: 'READY' },
+      history: []
+    })
+  };
+  const now = Date.now();
+  fs.writeFileSync(supervisorRequestPath, JSON.stringify({
+    version: 1,
+    action: 'restart',
+    ticket_id: ticketId,
+    operation_id: ticketId,
+    activation_mode: 'full_clean_activation',
+    full_clean_required: true,
+    process_instance_id: 'process-one',
+    server_instance_id: 'server-one',
+    tool_contract_sha256: 'e'.repeat(64),
+    workspace,
+    target_workspace: maintenanceWorkspace,
+    reason,
+    requested_at_unix_ms: now - 1000,
+    not_before_unix_ms: now - 1,
+    expires_at_unix_ms: now + 30000
+  }), 'utf8');
+
+  const result = await orchestrator.supervise();
+  assert.equal(restartCalls.length, 1);
+  assert.equal(restartCalls[0].refresh, true);
+  assert.equal(restartCalls[0].mode, 'full_clean_refresh');
+  assert.equal(restartCalls[0].sourceCheckpoint, null);
+  assert.equal(restartCalls[0].maintenanceWorkspace, maintenanceWorkspace);
+  assert.equal(result.supervisorRequest.status, 'completed');
+});

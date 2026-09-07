@@ -9,7 +9,7 @@
 
 ## Outcome metrics
 
-- Waves: **1**
+- Waves: **2**
 - Route decisions: **1**
 - Failures observed: **1**
 - REPLAN transitions: **1**
@@ -21,7 +21,8 @@
 
 | # | Wave | Objective rev | Objective source | Mode | Base | Status |
 |---:|---|---:|---|---|---|---|
-| 1 | `f31850651ee04998ab87c9bca3ddf3c6` | 1 | `run_initial_objective` | `deep_single_lane` | `8697ace8204e7e3da55d250d4a52d9b2b930116c` | active |
+| 1 | `f31850651ee04998ab87c9bca3ddf3c6` | 1 | `run_initial_objective` | `deep_single_lane` | `8697ace8204e7e3da55d250d4a52d9b2b930116c` | replanned |
+| 2 | `2c55ca2956e74f8e8fe1a6091b08a494` | 2 | `replan_request` | `mcp_only` | `8697ace8204e7e3da55d250d4a52d9b2b930116c` | active |
 
 ## Acceptance checkpoints
 
@@ -44,7 +45,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `16`
-- Chain head: `59eb492f05c89527630dc61d1b01e41e14d726940ce3b9b7525fd3f01af067cd`
+- Events checked: `68`
+- Chain head: `0184f55e30bd51c6adcb9a83ded143d05e4b251535539e9a74e6a30e529de168`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

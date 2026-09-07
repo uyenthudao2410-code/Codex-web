@@ -1,0 +1,104 @@
+{
+  "version": 2,
+  "task_id": "ab93485979964c9e839d239206e01098",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Ao3Fwj9kmbFrzCfs9owRVVZx",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 277,
+    "finished_at": "2026-09-07T08:35:17.889Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-07T08:34:33.692Z",
+  "updated_at": "2026-09-07T08:35:17.899Z",
+  "events": [
+    {
+      "time": "2026-09-07T08:34:33.692Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T08:34:33.966Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 20 \"runtime.stop\" scripts",
+        "session_id": "wg7Py_OawxTVU4gfymcAH5-3"
+      }
+    },
+    {
+      "time": "2026-09-07T08:34:34.216Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 20 \"runtime.stop\" scripts",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T08:34:43.692Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "session_id": "8rm-RbfGaoZ7-Tg7oIJvtxl6"
+      }
+    },
+    {
+      "time": "2026-09-07T08:34:46.673Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T08:35:03.284Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"current_for_full_clean|full_clean_capability_available|ensureSoleCurrentRecoveryHost|forceRefresh|full_clean_refresh\" scripts/full-clean-activation.js scripts/dev-ui-lifecycle.js electron/services",
+        "session_id": "5xF_pn6F4hz-EdBlZxObgKGp"
+      }
+    },
+    {
+      "time": "2026-09-07T08:35:03.549Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"current_for_full_clean|full_clean_capability_available|ensureSoleCurrentRecoveryHost|forceRefresh|full_clean_refresh\" scripts/full-clean-activation.js scripts/dev-ui-lifecycle.js electron/services",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T08:35:17.616Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 120 \"function parseArgs|sourceCheckpoint|SOURCE_CHECKPOINT|checkpoint\" scripts/full-clean-activation.js",
+        "session_id": "Ao3Fwj9kmbFrzCfs9owRVVZx"
+      }
+    },
+    {
+      "time": "2026-09-07T08:35:17.899Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 120 \"function parseArgs|sourceCheckpoint|SOURCE_CHECKPOINT|checkpoint\" scripts/full-clean-activation.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

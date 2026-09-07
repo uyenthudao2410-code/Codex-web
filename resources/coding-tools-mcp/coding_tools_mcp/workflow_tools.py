@@ -9,6 +9,7 @@ from typing import Any
 
 from . import __version__
 from .controller_continuity import ControllerContinuityError
+from .completion_readiness import CompletionReadinessWorkflowMixin
 from .errors import ToolFailure
 from .git_utils import DIFF_CONTINUATION_OPERATION
 from .host_correlation import (
@@ -37,7 +38,7 @@ from .tool_contract import AGENT_EXECUTION_ROUTES
 from .tool_schema import EVALUATION_SCHEMA_VERSION
 
 
-class AgentWorkflowMixin:
+class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
     @staticmethod
     def _host_correlation_record(value: Any) -> dict[str, Any] | None:
         return validate_pending_host_turn(value)
@@ -1166,26 +1167,42 @@ class AgentWorkflowMixin:
                     },
                 },
             )
+        verification, completion_readiness, problem_resolution, command_root, planned_write_paths = self._workflow_completion_readiness(
+            args,
+            workflow=workflow,
+            ctx=ctx,
+            workspace_identity=initial_identity,
+            prepared=prepared,
+            explicit_patches=explicit_patches,
+        )
         if not should_execute:
             self._project_orchestration(ctx, event="orchestration_prepared")
             return {
                 "workflow": workflow,
                 "phase": "prepare",
                 "context": prepared,
+                "completion_readiness": completion_readiness,
                 "solution_shadow_enrollment": solution_shadow_enrollment,
                 "orchestration": self._orchestration_result(ctx, write_reports=False),
                 "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set and verification plan.",
             }
 
         patches = list(explicit_patches)
-        default_verification = {
-            "bugfix": "tests", "feature": "tests", "greenfield": "all", "refactor": "tests",
-            "test_failure": "tests", "build_release": "all", "diagnose": "none", "custom": "tests",
-        }[workflow]
-        verification = str(args.get("verification", default_verification)).lower()
+        explicit_model_route = requested_execution_route not in {"auto", "deterministic"}
+        candidate_branch = not patches and (phase == "run" or explicit_model_route) and not directories
+        if completion_readiness.get("status") == "BLOCKED" and candidate_branch:
+            return self._completion_readiness_blocked(
+                ctx,
+                workflow=workflow,
+                phase=phase,
+                prepared=prepared,
+                readiness=completion_readiness,
+                event="completion_readiness_blocked",
+                next_step="Correct the reported verification environment, target, or command and provide replan_reason; do not spend a model route first.",
+                static=True,
+            )
 
         routing_started_ms = time.perf_counter() * 1_000.0
-        explicit_model_route = requested_execution_route not in {"auto", "deterministic"}
         execution_route: dict[str, Any]
         candidate_result: dict[str, Any] | None = None
         candidate_proof: dict[str, Any] = {
@@ -1195,39 +1212,23 @@ class AgentWorkflowMixin:
             "build_command": str(args.get("build_command", "")),
         }
         strong_oracle = False
-        candidate_branch = not patches and (phase == "run" or explicit_model_route) and not directories
         if candidate_branch:
-            if prepared is None:
-                prepared = self.prepare_coding_context({
-                    "objective": objective,
-                    "path": args.get("path", "."),
-                    "queries": args.get("queries", []),
-                    "paths": args.get("paths", []),
-                    "max_files": args.get("max_files", 12),
-                    "max_entries": args.get("max_entries", 120),
-                    "max_matches_per_query": args.get("max_matches_per_query", 20),
-                    "max_total_bytes": args.get("max_total_bytes", 262144),
-                    "max_lines_per_file": args.get("max_lines_per_file", 2000),
-                    "force_refresh": args.get("force_refresh", False),
-                })
-            preflight_timeout_ms = min(max(int(args.get("timeout_seconds", 600)) * 1_000, 1_000), 120_000)
-            candidate_workdir = str(args.get("workdir", args.get("path", ".")))
-            if candidate_proof["test_command"]:
-                candidate_proof["preflight_test"] = self._run_continuous_check(candidate_proof["test_command"], candidate_workdir, preflight_timeout_ms)
-            elif candidate_proof["build_command"]:
-                candidate_proof["preflight_build"] = self._run_continuous_check(candidate_proof["build_command"], candidate_workdir, preflight_timeout_ms)
-            strong_oracle = any(
-                isinstance(candidate_proof.get(key), dict) and candidate_proof[key].get("exit_code") not in {None, 0}
-                for key in ("preflight_test", "preflight_build")
+            prepared, strong_oracle, completion_readiness, blocked_result = self._preflight_candidate_readiness(
+                args,
+                workflow=workflow,
+                phase=phase,
+                ctx=ctx,
+                verification=verification,
+                command_root=command_root,
+                workspace_identity=initial_identity,
+                problem_resolution=problem_resolution,
+                prepared=prepared,
+                planned_write_paths=planned_write_paths,
+                objective=objective,
+                candidate_proof=candidate_proof,
             )
-            self.orchestration_ledger.append_event(
-                ctx.run_id,
-                wave_id=ctx.wave_id,
-                event_type="oracle_preflight",
-                state_before=ctx.state,
-                state_after=ctx.state,
-                payload={"strong_oracle": strong_oracle, "verification": verification},
-            )
+            if blocked_result is not None:
+                return blocked_result
 
         if patches:
             execution_route = {
@@ -1354,6 +1355,7 @@ class AgentWorkflowMixin:
                     "workflow": workflow,
                     "phase": "run" if phase == "run" else "execute",
                     "prepared": prepared,
+                    "completion_readiness": completion_readiness,
                     "directories": None,
                     "execution_route": execution_route,
                     "execution": execution,
@@ -1374,6 +1376,7 @@ class AgentWorkflowMixin:
                 "workflow": workflow,
                 "phase": "run" if phase == "run" else "execute",
                 "prepared": prepared,
+                "completion_readiness": completion_readiness,
                 "execution_route": execution_route,
                 "execution": {"ok": False, "status": "blocked", "reason": "BASE_DRIFT"},
                 "orchestration": self._orchestration_result(ctx),
@@ -1540,6 +1543,7 @@ class AgentWorkflowMixin:
                 "workflow": workflow,
                 "phase": "run" if phase == "run" else "execute",
                 "prepared": prepared,
+                "completion_readiness": completion_readiness,
                 "directories": directory_result,
                 "execution_route": execution_route,
                 "execution": execution,
@@ -1580,6 +1584,7 @@ class AgentWorkflowMixin:
             "workflow": workflow,
             "phase": "run" if phase == "run" else "execute",
             "prepared": prepared,
+            "completion_readiness": completion_readiness,
             "directories": directory_result,
             "execution_route": execution_route,
             "execution": execution,

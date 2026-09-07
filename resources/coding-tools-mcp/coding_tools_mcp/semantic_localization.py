@@ -5,6 +5,7 @@ import json
 import os
 import re
 import stat
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -23,10 +24,11 @@ NATIVE_LSP_STATUS_ENDPOINT_PATH = "/api/connector/internal/semantic/status"
 NATIVE_LSP_URL_ENV = f"{ENV_PREFIX}_NATIVE_LSP_URL"
 NATIVE_LSP_CREDENTIAL_FILE_ENV = f"{ENV_PREFIX}_NATIVE_LSP_CREDENTIAL_FILE"
 # The Rust ToolRuntime gives one agent LSP request a 30s wait budget plus a
-# 2s waiter margin. The Connector fans a bounded semantic query batch out
-# concurrently, so the loopback HTTP client only needs to outlive one such
-# request rather than multiplying the deadline by the query count.
+# 2s waiter margin. Public context may contain up to twelve queries, while the
+# native endpoint accepts at most eight. Keep all sequential native batches
+# within one shared loopback deadline rather than multiplying the deadline.
 NATIVE_LSP_TIMEOUT_SECONDS = 35.0
+NATIVE_LSP_MAX_QUERIES_PER_REQUEST = 8
 NATIVE_LSP_MAX_RESPONSE_BYTES = 1024 * 1024
 NATIVE_LSP_MACHINE_BINDING_SCHEMA_VERSION = 1
 NATIVE_LSP_MACHINE_BINDING_MAX_BYTES = 16 * 1024
@@ -331,8 +333,9 @@ class NativeRustSemanticLocalizationProvider:
         queries: list[str],
         max_results: int,
         resource_class: str,
+        timeout_seconds: float | None = None,
     ) -> list[dict[str, Any]]:
-        if not 1 <= len(queries) <= 8:
+        if not 1 <= len(queries) <= NATIVE_LSP_MAX_QUERIES_PER_REQUEST:
             raise ValueError("native semantic query count is out of bounds")
         clean_queries = [str(query).strip() for query in queries]
         if any(not query or len(query.encode("utf-8")) > 200 for query in clean_queries):
@@ -360,6 +363,7 @@ class NativeRustSemanticLocalizationProvider:
                 "max_results": bounded_results,
                 "resource_class": normalized_resource_class,
             },
+            timeout_seconds=timeout_seconds,
         )
         if (
             data.get("schema_version") != 1
@@ -396,7 +400,13 @@ class NativeRustSemanticLocalizationProvider:
             raise RuntimeError("native semantic status response contract mismatch")
         return resource
 
-    def _request_data(self, endpoint_path: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def _request_data(
+        self,
+        endpoint_path: str,
+        payload: dict[str, Any],
+        *,
+        timeout_seconds: float | None = None,
+    ) -> dict[str, Any]:
         body = json.dumps(
             payload,
             ensure_ascii=False,
@@ -413,8 +423,14 @@ class NativeRustSemanticLocalizationProvider:
                 "User-Agent": "coding-tools-mcp-native-lsp/1",
             },
         )
+        effective_timeout = NATIVE_LSP_TIMEOUT_SECONDS
+        if timeout_seconds is not None:
+            try:
+                effective_timeout = min(NATIVE_LSP_TIMEOUT_SECONDS, max(0.001, float(timeout_seconds)))
+            except (TypeError, ValueError):
+                raise ValueError("native semantic timeout is invalid") from None
         try:
-            with self._opener.open(request, timeout=NATIVE_LSP_TIMEOUT_SECONDS) as response:
+            with self._opener.open(request, timeout=effective_timeout) as response:
                 raw = response.read(NATIVE_LSP_MAX_RESPONSE_BYTES + 1)
         except (OSError, TimeoutError, urllib.error.URLError, urllib.error.HTTPError) as exc:
             raise RuntimeError("native semantic transport failed") from exc
@@ -616,65 +632,91 @@ def run_semantic_localization(
     max_results: int,
     resource_class: str,
 ) -> dict[str, Any]:
-    """Call one read-only provider batch and normalize results for deterministic fallback."""
+    """Run bounded sequential provider batches and normalize per-query fallback."""
     status = semantic_provider_status(provider)
     if not status["available"] or not queries:
         return {"provider": status, "results": []}
-    try:
-        raw_rows = provider.localize(
-            workspace=workspace,
-            path=path,
-            queries=list(queries),
-            max_results=max(1, int(max_results)),
-            resource_class=str(resource_class or "").strip().upper(),
-        )
-    except Exception as exc:
-        failed = dict(status)
-        failed.update({
-            "available": False,
-            "reason": "SEMANTIC_PROVIDER_CALL_FAILED",
-            "error_class": type(exc).__name__,
-        })
-        return {
-            "provider": failed,
-            "results": [
-                {"query_index": index, "query": query, "handled": False, "definitive": False, "matches": []}
-                for index, query in enumerate(queries)
-            ],
-        }
-
-    rows = raw_rows if isinstance(raw_rows, list) else []
     by_index: dict[int, dict[str, Any]] = {}
-    for row in rows:
-        if not isinstance(row, dict):
+    batch_failures: list[dict[str, Any]] = []
+    completed_batches = 0
+    deadline = time.monotonic() + NATIVE_LSP_TIMEOUT_SECONDS
+    bounded_results = max(1, int(max_results))
+
+    for batch_start in range(0, len(queries), NATIVE_LSP_MAX_QUERIES_PER_REQUEST):
+        batch_queries = list(queries[batch_start:batch_start + NATIVE_LSP_MAX_QUERIES_PER_REQUEST])
+        remaining_seconds = deadline - time.monotonic()
+        if remaining_seconds <= 0:
+            batch_failures.append({
+                "batch_start": batch_start,
+                "query_count": len(batch_queries),
+                "reason": "SEMANTIC_PROVIDER_DEADLINE_EXCEEDED",
+            })
             continue
-        raw_index = row.get("query_index")
-        index = raw_index if isinstance(raw_index, int) and not isinstance(raw_index, bool) else -1
-        if index < 0 or index >= len(queries):
-            raw_query = str(row.get("query") or "")
-            try:
-                index = queries.index(raw_query)
-            except ValueError:
+        try:
+            kwargs = {
+                "workspace": workspace,
+                "path": path,
+                "queries": batch_queries,
+                "max_results": bounded_results,
+                "resource_class": str(resource_class or "").strip().upper(),
+            }
+            if isinstance(provider, NativeRustSemanticLocalizationProvider):
+                raw_rows = provider.localize(**kwargs, timeout_seconds=remaining_seconds)
+            else:
+                raw_rows = provider.localize(**kwargs)
+        except Exception as exc:
+            batch_failures.append({
+                "batch_start": batch_start,
+                "query_count": len(batch_queries),
+                "reason": "SEMANTIC_PROVIDER_CALL_FAILED",
+                "error_class": type(exc).__name__,
+            })
+            continue
+        completed_batches += 1
+        rows = raw_rows if isinstance(raw_rows, list) else []
+        for row in rows:
+            if not isinstance(row, dict):
                 continue
-        matches: list[dict[str, Any]] = []
-        for match in row.get("matches", []) if isinstance(row.get("matches"), list) else []:
-            normalized = _normalize_match(match)
-            if normalized is not None:
-                matches.append(normalized)
-            if len(matches) >= max_results:
-                break
-        definitive = row.get("definitive") is True
-        handled = row.get("handled") is True and (bool(matches) or definitive)
-        by_index[index] = {
-            "query_index": index,
-            "query": queries[index],
-            "handled": handled,
-            "definitive": definitive,
-            "matches": matches,
-        }
+            raw_index = row.get("query_index")
+            local_index = raw_index if isinstance(raw_index, int) and not isinstance(raw_index, bool) else -1
+            if local_index < 0 or local_index >= len(batch_queries):
+                raw_query = str(row.get("query") or "")
+                try:
+                    local_index = batch_queries.index(raw_query)
+                except ValueError:
+                    continue
+            matches: list[dict[str, Any]] = []
+            for match in row.get("matches", []) if isinstance(row.get("matches"), list) else []:
+                normalized = _normalize_match(match)
+                if normalized is not None:
+                    matches.append(normalized)
+                if len(matches) >= bounded_results:
+                    break
+            definitive = row.get("definitive") is True
+            handled = row.get("handled") is True and (bool(matches) or definitive)
+            index = batch_start + local_index
+            by_index[index] = {
+                "query_index": index,
+                "query": queries[index],
+                "handled": handled,
+                "definitive": definitive,
+                "matches": matches,
+            }
+
+    provider_result = dict(status)
+    if batch_failures:
+        first_failure = batch_failures[0]
+        provider_result.update({
+            "available": completed_batches > 0,
+            "reason": first_failure["reason"],
+            "partial_failure": completed_batches > 0,
+            "failed_batch_count": len(batch_failures),
+        })
+        if first_failure.get("error_class"):
+            provider_result["error_class"] = first_failure["error_class"]
 
     return {
-        "provider": status,
+        "provider": provider_result,
         "results": [
             by_index.get(index, {
                 "query_index": index,
@@ -685,4 +727,11 @@ def run_semantic_localization(
             })
             for index, query in enumerate(queries)
         ],
+        "batching": {
+            "mode": "sequential",
+            "max_queries_per_batch": NATIVE_LSP_MAX_QUERIES_PER_REQUEST,
+            "batch_count": (len(queries) + NATIVE_LSP_MAX_QUERIES_PER_REQUEST - 1) // NATIVE_LSP_MAX_QUERIES_PER_REQUEST,
+            "completed_batch_count": completed_batches,
+            "failed_batches": batch_failures,
+        },
     }

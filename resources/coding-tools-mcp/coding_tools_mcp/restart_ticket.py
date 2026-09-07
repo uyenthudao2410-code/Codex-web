@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import stat
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,32 @@ SUPERVISOR_RESTART_TICKET_TTL_MS = 60_000
 SUPERVISOR_RESTART_RESPONSE_GRACE_MS = 2_000
 SUPERVISOR_RESTART_TICKET_PREFIX = "restart-"
 SUPERVISOR_RESTART_MAX_CLOCK_SKEW_MS = 5_000
+SUPERVISOR_RESTART_REASON_MAX_CHARS = 1_024
+EXACT_STALE_RUN_REASON_PREFIX = "exact_stale_runs:"
+EXACT_STALE_RUN_ID = re.compile(r"^[a-f0-9]{32}$")
+EXACT_STALE_RUN_MAX_IDS = 16
+
+
+def is_exact_stale_run_maintenance_reason(value: Any) -> bool:
+    if not isinstance(value, str) or not value.startswith(EXACT_STALE_RUN_REASON_PREFIX):
+        return False
+    if len(value) > SUPERVISOR_RESTART_REASON_MAX_CHARS:
+        return False
+    raw_ids = value[len(EXACT_STALE_RUN_REASON_PREFIX):]
+    run_ids = raw_ids.split(",") if raw_ids else []
+    return bool(
+        1 <= len(run_ids) <= EXACT_STALE_RUN_MAX_IDS
+        and len(set(run_ids)) == len(run_ids)
+        and all(EXACT_STALE_RUN_ID.fullmatch(run_id) for run_id in run_ids)
+    )
+
+
+def _restart_reason_valid(value: Any) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, str) or len(value) > SUPERVISOR_RESTART_REASON_MAX_CHARS:
+        return False
+    return not value.startswith(EXACT_STALE_RUN_REASON_PREFIX) or is_exact_stale_run_maintenance_reason(value)
 
 
 def build_supervisor_restart_ticket(
@@ -23,8 +50,15 @@ def build_supervisor_restart_ticket(
     server_instance_id: str,
     tool_contract_sha256: str,
     reason: str,
+    target_workspace: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    normalized_reason = str(reason or "")
+    if normalized_reason.startswith(EXACT_STALE_RUN_REASON_PREFIX):
+        if not is_exact_stale_run_maintenance_reason(normalized_reason):
+            raise ValueError("exact stale-run maintenance reason is malformed or exceeds the bounded batch size")
+    else:
+        normalized_reason = normalized_reason[:SUPERVISOR_RESTART_REASON_MAX_CHARS]
+    ticket = {
         "version": 1,
         "action": "restart",
         "ticket_id": ticket_id,
@@ -39,8 +73,14 @@ def build_supervisor_restart_ticket(
         "process_instance_id": process_instance_id,
         "server_instance_id": server_instance_id,
         "tool_contract_sha256": tool_contract_sha256,
-        "reason": reason[:500],
+        "reason": normalized_reason,
     }
+    if normalized_reason.startswith(EXACT_STALE_RUN_REASON_PREFIX):
+        normalized_target = str(target_workspace or workspace).strip()
+        if not normalized_target:
+            raise ValueError("exact stale-run maintenance target workspace is required")
+        ticket["target_workspace"] = normalized_target
+    return ticket
 
 
 def supervisor_restart_ticket_matches(
@@ -52,6 +92,7 @@ def supervisor_restart_ticket_matches(
     server_instance_id: str,
     tool_contract_sha256: str,
     fence_operation_id: str,
+    target_workspace: str | None = None,
 ) -> bool:
     if not isinstance(value, dict) or type(value.get("version")) is not int:
         return False
@@ -61,6 +102,13 @@ def supervisor_restart_ticket_matches(
     expires_at = value.get("expires_at_unix_ms")
     if not all(type(item) is int for item in (requested_at, not_before, expires_at)):
         return False
+    reason = value.get("reason")
+    maintenance_target = str(value.get("target_workspace") or value.get("workspace") or "")
+    expected_target = str(target_workspace or workspace)
+    target_matches = (
+        not is_exact_stale_run_maintenance_reason(reason)
+        or maintenance_target.casefold() == expected_target.casefold()
+    )
     return bool(
         value.get("version") == 1
         and value.get("action") == "restart"
@@ -75,6 +123,8 @@ def supervisor_restart_ticket_matches(
         and value.get("process_instance_id") == process_instance_id
         and value.get("server_instance_id") == server_instance_id
         and value.get("tool_contract_sha256") == tool_contract_sha256
+        and _restart_reason_valid(reason)
+        and target_matches
         and fence_operation_id == ticket_id
         and requested_at > 0
         and requested_at <= now_ms + SUPERVISOR_RESTART_MAX_CLOCK_SKEW_MS
@@ -96,6 +146,7 @@ def supervisor_restart_response(ticket: dict[str, Any], *, already_pending: bool
         "supervisor": "electron",
         "not_before_unix_ms": int(ticket["not_before_unix_ms"]),
         "expires_at_unix_ms": int(ticket["expires_at_unix_ms"]),
+        **({"target_workspace": str(ticket["target_workspace"])} if ticket.get("target_workspace") else {}),
         "recommended_next_action": (
             "Allow the Electron supervisor to consume the pending ticket, then reconnect and verify runtime instance ids changed."
             if already_pending else

@@ -40,6 +40,18 @@ _CREDIT_RATES_PER_MILLION = {
     "gpt-5.6-luna": (25.0, 2.5, 150.0),
     "gpt-5.4-mini": (18.75, 1.875, 113.0),
 }
+
+
+def _is_meaningful_observation_event(item: dict[str, Any]) -> bool:
+    """Keep observation delivery and its wake predicate on one event contract."""
+    return (
+        item.get("server_request") is True
+        or item.get("method") in {"turn/started", "turn/completed"}
+        or (
+            item.get("method") == "item/completed"
+            and item.get("item_type") not in {None, "userMessage", "agentMessage"}
+        )
+    )
 _REVIEW_FEATURES = {
     "multi_agent": False,
     "apps": False,
@@ -832,6 +844,8 @@ class CodexAppServerBridge:
                     break
                 self._condition.wait(timeout=remaining)
             state = dict(self._turn_states.get(selected_turn, {}))
+            retained_floor_cursor = int(self._events[0].get("cursor", 0)) if self._events else self._event_cursor + 1
+            history_gap = bool(self._events) and after_cursor < retained_floor_cursor - 1
             raw_events = [
                 dict(item)
                 for item in self._events
@@ -842,18 +856,19 @@ class CodexAppServerBridge:
             meaningful = [
                 item
                 for item in raw_events
-                if item.get("server_request") is True
-                or item.get("method") in {"turn/started", "turn/completed"}
-                or (
-                    item.get("method") == "item/completed"
-                    and item.get("item_type") not in {None, "userMessage", "agentMessage"}
-                )
+                if _is_meaningful_observation_event(item)
             ]
             events = meaningful[:max_events]
             if len(meaningful) > max_events and events:
                 next_cursor = int(events[-1]["cursor"])
+            elif raw_events:
+                next_cursor = int(raw_events[-1]["cursor"])
+            elif history_gap:
+                # A stale consumer must rebaseline at the live ring head rather
+                # than repeatedly polling an evicted cursor forever.
+                next_cursor = self._event_cursor
             else:
-                next_cursor = int(raw_events[-1]["cursor"]) if raw_events else after_cursor
+                next_cursor = after_cursor
         status = str(state.get("status", "inProgress"))
         terminal = status in {"completed", "interrupted", "failed"}
         if terminal:
@@ -872,6 +887,8 @@ class CodexAppServerBridge:
             "economics": state.get("economics"),
             "events": events,
             "next_cursor": next_cursor,
+            "history_gap": history_gap,
+            "history_floor_cursor": retained_floor_cursor,
             "requires_progress_report": not terminal,
         }
 
@@ -1485,6 +1502,6 @@ class CodexAppServerBridge:
             int(item.get("cursor", 0)) > after_cursor
             and item.get("thread_id") == thread_id
             and item.get("turn_id") in {None, turn_id}
-            and item.get("server_request") is True
+            and _is_meaningful_observation_event(item)
             for item in self._events
         )

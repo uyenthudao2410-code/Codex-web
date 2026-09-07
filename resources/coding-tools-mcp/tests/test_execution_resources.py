@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from coding_tools_mcp.acceptance_receipts import passed_proof_fingerprint
 from coding_tools_mcp.execution_resources import (
     ExecutionResourceError,
     ExecutionResourceGovernor,
@@ -981,6 +982,11 @@ class ExecutionResourceGovernorTests(unittest.TestCase):
 
             self.assertTrue(result["ok"])
             self.assertEqual(result["check_results"][0]["status"], "passed")
+            current_wave_proofs = runtime.orchestration_ledger.list_proofs(ctx.run_id, wave_id=ctx.wave_id)
+            self.assertEqual(
+                result["proof_summary"]["proof_fingerprint"],
+                passed_proof_fingerprint(current_wave_proofs),
+            )
             session_id = str(result["check_results"][0]["session_id"])
             row = next(
                 item

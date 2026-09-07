@@ -1,0 +1,798 @@
+[
+  {
+    "version": 2,
+    "task_id": "12d34ca894c5448386694b0e55d9c2e1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:04:39.757Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:04:23.034Z",
+    "updated_at": "2026-09-07T09:04:39.757Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:04:23.034Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:23.311Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"UNEXPLAINED_ACTIVE|unbound_live_resource_residues|owned_codex_sidecar_residues|managed_process_job|COMMAND_NOT_FOUND\" electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "session_id": "2A1-Orh63Ix7T_Ur_JNV_cWd"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:23.614Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"UNEXPLAINED_ACTIVE|unbound_live_resource_residues|owned_codex_sidecar_residues|managed_process_job|COMMAND_NOT_FOUND\" electron resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:32.245Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"reconcile_gone_managed_process_job|owned_codex_sidecar_residues|codex-app-server\" resources/coding-tools-mcp/coding_tools_mcp electron/services",
+          "session_id": "4bMrSb2KZO27CyiCnh2w2HLd"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:32.554Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"reconcile_gone_managed_process_job|owned_codex_sidecar_residues|codex-app-server\" resources/coding-tools-mcp/coding_tools_mcp electron/services",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:39.757Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"_activation_owned_codex_sidecar_rows|owned_codex_sidecar|quiesce.*sidecar|terminate.*sidecar\" resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:39.757Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:04:46.111Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6380a113029448c4bf80de189dd0ada7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:05:48.072Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:04:46.112Z",
+    "updated_at": "2026-09-07T09:05:48.072Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:04:46.112Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:47.380Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 _activation_owned_codex_sidecar_rows resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "aW1UhxGh_y_EBsL5b9Be0Thd"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:47.687Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 _activation_owned_codex_sidecar_rows resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:55.703Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 120 _activation_unbound_residue_counts resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "sBeYfdTj9pDbw-iggUda1K04"
+        }
+      },
+      {
+        "time": "2026-09-07T09:04:55.983Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 120 _activation_unbound_residue_counts resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:03.516Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 owned_sidecar_residues resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "oSYtce1od_lvliqN4gA4H8ED"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:03.816Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 owned_sidecar_residues resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:08.993Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n _activation_unbound_residue_counts resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "5e1lq-B-jwIo5g2l_1WdIDN1"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:09.515Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n _activation_unbound_residue_counts resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:15.502Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n _activation_owned_codex_sidecar_rows resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "session_id": "bVNt_AWV2XO8PDuYFoAH2TSU"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:15.783Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n _activation_owned_codex_sidecar_rows resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:27.537Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def .*terminate.*managed|terminate_managed|kill_managed|managed.*terminate|root_pid.*terminate|TerminateProcess|taskkill|Stop-Process\" resources/coding-tools-mcp/coding_tools_mcp electron",
+          "session_id": "cyeX1Rx0AomnYu-P6NeaoOp3"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:28.082Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def .*terminate.*managed|terminate_managed|kill_managed|managed.*terminate|root_pid.*terminate|TerminateProcess|taskkill|Stop-Process\" resources/coding-tools-mcp/coding_tools_mcp electron",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:34.078Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 90 \"recycled PID or an unavailable probe can never reach taskkill\" electron/services/processIdentity.js",
+          "session_id": "K5AXPjSd0QYCx-3Z44COBLLd"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:34.353Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 90 \"recycled PID or an unavailable probe can never reach taskkill\" electron/services/processIdentity.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:41.834Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n terminateExactProcessTree electron resources/coding-tools-mcp/coding_tools_mcp tests",
+          "session_id": "rPVn7RH3Var4z8BIWGzQ0Baj"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:42.312Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n terminateExactProcessTree electron resources/coding-tools-mcp/coding_tools_mcp tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:48.072Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 160 \"async function.*terminate|exactProcessTerminator|terminateExactProcessTree\" electron/services/recoveryPlaneService.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:48.072Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:05:55.176Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d8ceb298233e46d7a43567cd85eef0c1",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:06:18.638Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T09:05:55.178Z",
+    "updated_at": "2026-09-07T09:06:18.638Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:05:55.178Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:55.538Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 140 exactProcessTerminator electron/services/recoveryPlaneService.js",
+          "session_id": "ryoempCo-MxYE3-oXEzcnQAi"
+        }
+      },
+      {
+        "time": "2026-09-07T09:05:55.983Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 140 exactProcessTerminator electron/services/recoveryPlaneService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:02.189Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 stopExactTree electron/services/recoveryPlaneService.js electron/services/recoveryHost.js electron/services/recoveryBootstrap.js",
+          "session_id": "MOvELVaabdVk3zFd77nZ9A3_"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:02.573Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 stopExactTree electron/services/recoveryPlaneService.js electron/services/recoveryHost.js electron/services/recoveryBootstrap.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:11.364Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"recovery\" package.json scripts electron/services/recoveryHost.js electron/services/recoveryBootstrap.js",
+          "session_id": "zxFoMXmcvJCxWjcWKZ8QPuJe"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:11.774Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"recovery\" package.json scripts electron/services/recoveryHost.js electron/services/recoveryBootstrap.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:18.638Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"Action Once|param\\(|Once|Status\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:06:18.638Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:07:20.304Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "9b76f665cf234f01a3d578b1ac9ec728",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "KaHoZtos0UFon2UgBPJnFHlb",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 336,
+      "finished_at": "2026-09-07T09:08:11.046Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:07:20.305Z",
+    "updated_at": "2026-09-07T09:08:11.046Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:07:20.305Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:20.614Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"Once\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "session_id": "IIuqc7nqSWHcWSLOHuN8gFES"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:20.897Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"Once\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:26.988Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"function Run-Supervisor\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "session_id": "85YjjwWl6jzUU9jdL_o6oXUV"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:27.230Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"function Run-Supervisor\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:33.074Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"function Invoke-Cycle\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "session_id": "CYkyP1kdmyRdCLYJb_IVK5FY"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:33.357Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"function Invoke-Cycle\" resources/recovery-supervisor/recovery-supervisor.ps1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:43.423Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -B 35 -A 80 exactProcessTerminator electron/services/nativeService.js",
+          "session_id": "g3w37zgLkkWFEzWcaSPo_04G"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:43.701Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -B 35 -A 80 exactProcessTerminator electron/services/nativeService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:49.641Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 95 \"async stop\" electron/services/nativeService.js",
+          "session_id": "5wwYFpUfddMKJLJs9AFSZvqF"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:49.901Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 95 \"async stop\" electron/services/nativeService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:55.986Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 80 terminateOwnedIdentity electron/services/nativeService.js",
+          "session_id": "80ynvuIEEA9b_C9Ph7krqcLf"
+        }
+      },
+      {
+        "time": "2026-09-07T09:07:56.726Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 80 terminateOwnedIdentity electron/services/nativeService.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:02.495Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 _managed_job_id resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "session_id": "P4O3WGc4ZNqpCmQcWqo2Sxji"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:02.795Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 _managed_job_id resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:10.779Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"CREATE TABLE managed_process_jobs\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "KaHoZtos0UFon2UgBPJnFHlb"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:11.046Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CREATE TABLE managed_process_jobs\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:08:17.669Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "93a54c74a68f48f98648b56ff6f9740d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "yKTpVr-MbemPL1t7toQV-JxQ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 353,
+      "finished_at": "2026-09-07T09:09:13.612Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:08:17.671Z",
+    "updated_at": "2026-09-07T09:09:13.613Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:08:17.671Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:17.937Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 managed_process_jobs resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "session_id": "bKK2Qr2hOzz1lj2QeIqNvOWB"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:18.221Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 managed_process_jobs resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:24.862Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n process_start resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "session_id": "1E9UDVB_upt2RDzIBQjxZkou"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:25.104Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n process_start resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:37.060Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 root_pid resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "session_id": "RJ9uGQfSwxzSi_bGqqE-3Dji"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:37.352Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 root_pid resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:44.278Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 32 \"CREATE TABLE IF NOT EXISTS managed_process_jobs\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "uCkQAKg82c1ipHntZ0kZH_Mf"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:44.535Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 32 \"CREATE TABLE IF NOT EXISTS managed_process_jobs\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:53.853Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 root_process_token resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "session_id": "zH87JrhdIQvcPFTFuzkQz4I2"
+        }
+      },
+      {
+        "time": "2026-09-07T09:08:54.245Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 root_process_token resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:04.408Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 120 \"def reconcile\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "session_id": "BMZanXeeFVd8EXWbhGq8CLVT"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:04.758Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 120 \"def reconcile\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:13.242Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 95 \"def reconcile(self\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "session_id": "yKTpVr-MbemPL1t7toQV-JxQ"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:13.613Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 95 \"def reconcile(self\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:09:20.702Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "b8c3548a06bd43a8b02dd204a264debe",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "KKu_w9FjyRU4z0lXF6hSPkcD",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 261,
+      "finished_at": "2026-09-07T09:09:50.498Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-07T09:09:20.704Z",
+    "updated_at": "2026-09-07T09:09:50.498Z",
+    "events": [
+      {
+        "time": "2026-09-07T09:09:20.704Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:20.993Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -A 95 \"def reconcile(self\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "session_id": "F1LztB71d51FWmx81y6GfeO-"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:21.325Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -A 95 \"def reconcile(self\" resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:42.309Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"LifecycleReconciliation\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "5WpkKY3mqWOPW1OIaZdHpVCc"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:42.621Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"LifecycleReconciliation\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:50.162Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reconcile_gone_managed_process_job\" resources/coding-tools-mcp/coding_tools_mcp --glob \"!lifecycle_reconciliation.py\"",
+          "session_id": "KKu_w9FjyRU4z0lXF6hSPkcD"
+        }
+      },
+      {
+        "time": "2026-09-07T09:09:50.498Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reconcile_gone_managed_process_job\" resources/coding-tools-mcp/coding_tools_mcp --glob \"!lifecycle_reconciliation.py\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:09:59.037Z",
+    "archive_reason": "finished"
+  }
+]

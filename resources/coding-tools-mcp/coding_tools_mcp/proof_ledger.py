@@ -124,6 +124,42 @@ class ProofLedger:
         cached = lookup.get("source_proof") if lookup.get("hit") else None
         if cached is not None:
             cached_result = cached.get("metadata", {}).get("result") if isinstance(cached.get("metadata"), dict) else None
+            source_proof_id = str(cached["proof_id"])
+            source_run_id = str(cached.get("run_id") or "")
+            source_wave_id = str(cached.get("wave_id") or "")
+            same_wave = source_run_id == run_id and source_wave_id == wave_id
+            proof_id = source_proof_id
+            if not same_wave:
+                receipt_upstreams = list(dict.fromkeys([
+                    *(str(item) for item in (upstream_proof_ids or []) if str(item)),
+                    source_proof_id,
+                ]))
+                receipt_metadata = {
+                    **(metadata or {}),
+                    "result": dict(cached_result) if isinstance(cached_result, dict) else {},
+                    "proof_reuse": {
+                        "source_proof_id": source_proof_id,
+                        "source_run_id": source_run_id,
+                        "source_wave_id": source_wave_id,
+                        "cache_hit": True,
+                        "executed": False,
+                        "execution_duration_ms": 0,
+                    },
+                }
+                proof_id = self.record(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    stage_id=stage_id,
+                    stage_version=stage_version,
+                    input_fingerprint=input_fingerprint,
+                    status="passed",
+                    command=command,
+                    duration_ms=0,
+                    exit_code=cached.get("exit_code"),
+                    cache_hit=True,
+                    upstream_proof_ids=receipt_upstreams,
+                    metadata=receipt_metadata,
+                )
             result = dict(cached_result) if isinstance(cached_result, dict) else {}
             result.update({
                 "ok": True,
@@ -135,8 +171,8 @@ class ProofLedger:
                 "cache_saved_ms": max(0, int(cached.get("duration_ms") or 0)),
                 "proof_cache_eligible": True,
                 "proof_cache_miss_reason": None,
-                "proof_cache_source_proof_id": cached["proof_id"],
-                "proof_id": cached["proof_id"],
+                "proof_cache_source_proof_id": source_proof_id,
+                "proof_id": proof_id,
                 "input_fingerprint": input_fingerprint,
             })
             self.ledger.append_event(
@@ -147,10 +183,12 @@ class ProofLedger:
                     "stage_id": stage_id,
                     "stage_version": stage_version,
                     "input_fingerprint": input_fingerprint,
-                    "source_proof_id": cached["proof_id"],
+                    "source_proof_id": source_proof_id,
+                    "proof_id": proof_id,
+                    "reuse_receipt_created": not same_wave,
                 },
             )
-            return result, str(cached["proof_id"])
+            return result, proof_id
 
         source_proof = lookup.get("source_proof") if isinstance(lookup.get("source_proof"), dict) else None
         miss_reason = str(lookup.get("reason") or "cold")

@@ -90,6 +90,10 @@
           "!**/*.pyc",
           "!**/*.pyo"
         ]
+      },
+      {
+        "from": "resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+        "to": "resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py"
       }
     ],
     "afterPack": "scripts/verify-packaged-resources.js",

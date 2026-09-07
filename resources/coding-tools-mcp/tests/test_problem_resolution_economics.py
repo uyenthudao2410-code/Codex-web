@@ -83,7 +83,7 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
                 facts = ProblemLineageFacts.load(snapshot.reader)
                 report = problem_resolution_economics_report(snapshot.ledger, facts)
             self.assertEqual(report["status"], "DESCRIPTIVE_ONLY")
-            self.assertEqual(report["schema_version"], 6)
+            self.assertEqual(report["schema_version"], 7)
             self.assertEqual(report["denominators"]["problem_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["confirmed_threads"], 1)
             self.assertEqual(report["resolution_outcomes"]["trusted_resolution"]["true"], 1)
@@ -439,6 +439,8 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
             self.assertEqual(journeys["summary"]["replan_wave_count"], 1)
             journey = journeys["journeys"][0]
             self.assertEqual(len(journey["nested_per_run_economics"]), 2)
+            self.assertEqual(journey["topology"]["terminal_run_status_counts"], {"accepted": 1, "rejected": 1})
+            self.assertEqual(journey["topology"]["terminal_wave_status_counts"], {"accepted": 1, "replanned": 1})
             controller = journey["resources"]["controller_tokens_exact_when_available"]
             provider = journey["resources"]["provider_tokens"]
             self.assertEqual(controller["usage"]["input_total_tokens"], 15)
@@ -448,6 +450,143 @@ class ProblemResolutionEconomicsTests(unittest.TestCase):
             self.assertEqual(
                 journey["avoided_duplicate_read_or_localization"]["missing_reason"],
                 "causal_avoidance_receipt_not_recorded",
+            )
+
+    def test_problem_journey_excludes_wrong_wave_and_partial_usage_attribution(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            problem = ledger.problem_get("problem-fixture")
+            first_link = next(
+                event for event in problem["events"]
+                if event["relation_type"] == "ENGINEERING_ATTEMPT_BOUND"
+            )
+            run_id, exact_wave_id = first_link["run_id"], first_link["wave_id"]
+            unrelated_wave_id = ledger.create_wave(
+                run_id,
+                execution_mode="mcp_only",
+                metadata={
+                    "problem_resolution": {
+                        "schema_version": 1,
+                        "work_origin": "problem",
+                        "resolution_claim": "full_problem",
+                        "problem_id": "different-problem",
+                        "problem_revision": 1,
+                    },
+                },
+            )
+            for wave_id, delegation_id, tokens, attribution_status in (
+                (exact_wave_id, "controller-exact", 10, "exact"),
+                (unrelated_wave_id, "controller-wrong-wave", 20, "exact"),
+                (exact_wave_id, "", 30, "partial"),
+            ):
+                event = build_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=delegation_id,
+                    provider_id="chatweb",
+                    model_id="controller-model",
+                    status="completed",
+                    source="chatweb:mcp_meta",
+                    input_tokens=tokens,
+                    output_tokens=1,
+                    provider_cost=0.10,
+                    actor="controller",
+                    usage_provenance="client_reported",
+                    attribution_status=attribution_status,
+                )
+                ledger.record_usage_event(
+                    run_id=run_id,
+                    wave_id=wave_id,
+                    delegation_id=delegation_id,
+                    usage_event=event,
+                )
+
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )
+            journey = report["problem_revision_journeys"]["journeys"][0]
+            controller = journey["resources"]["controller_tokens_exact_when_available"]
+            self.assertEqual(report["problem_revision_journeys"]["summary"]["exact_linked_wave_count"], 1)
+            self.assertEqual(journey["topology"]["wave_count"], 1)
+            self.assertEqual(controller["status"], "PARTIAL")
+            self.assertEqual(controller["event_count"], 1)
+            self.assertEqual(controller["candidate_event_count"], 3)
+            self.assertEqual(controller["excluded_event_count"], 2)
+            self.assertEqual(
+                controller["exclusion_reason_counts"],
+                {"attribution_not_exact": 1, "wave_not_exact_problem_revision": 1},
+            )
+            self.assertIsNone(controller["usage"])
+            self.assertFalse(controller["cost"]["complete"])
+            lifecycle = journey["lifecycle_economics"]
+            self.assertEqual(lifecycle["schema_version"], 1)
+            self.assertIsNone(lifecycle["segments"]["pre_technical_acceptance"]["value_ms"])
+            self.assertEqual(
+                lifecycle["segments"]["later_unrelated_observation"]["status"],
+                "OUT_OF_SCOPE_UNOBSERVED",
+            )
+
+    def test_problem_journey_keeps_full_terminal_status_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._fixture(root)
+            ledger = OrchestrationLedger(root)
+            problem = ledger.problem_get("problem-fixture")
+            context = {
+                "schema_version": 1,
+                "work_origin": "problem",
+                "resolution_claim": "full_problem",
+                "problem_id": "problem-fixture",
+                "problem_revision": 1,
+                "contract_fingerprint": problem["current_revision"]["contract_fingerprint"],
+                "engineering_floor": "REQUIRED",
+                "policy_eligible": False,
+            }
+            for index, status in enumerate(("blocked", "timeout", "unresolved"), start=1):
+                run_id = ledger.create_run(
+                    objective=f"{status} attempt",
+                    metadata={"problem_resolution": context},
+                )
+                wave_id = ledger.create_wave(
+                    run_id,
+                    execution_mode="mcp_only",
+                    metadata={"problem_resolution": context},
+                )
+                ledger.problem_record_event({
+                    "operation": "link",
+                    "event_id": f"link-terminal-{index}",
+                    "problem_id": "problem-fixture",
+                    "problem_revision": 1,
+                    "run_id": run_id,
+                    "wave_id": wave_id,
+                    "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                    "provenance": "DETERMINISTIC_EVIDENCE",
+                    "evidence_level": "OBSERVED",
+                }, now=f"2026-08-25T00:0{index}:10Z", authority_context="RUNTIME_BINDING")
+                ledger.finish_wave(wave_id, status=status)
+                ledger.finish_run(run_id, status=status)
+
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_resolution_economics_report(
+                    snapshot.ledger,
+                    ProblemLineageFacts.load(snapshot.reader),
+                )
+            topology = report["problem_revision_journeys"]["journeys"][0]["topology"]
+            self.assertEqual(
+                topology["terminal_run_status_counts"],
+                {"blocked": 1, "timeout": 1, "unresolved": 1},
+            )
+            self.assertEqual(
+                topology["terminal_wave_status_counts"],
+                {"blocked": 1, "timeout": 1, "unresolved": 1},
+            )
+            self.assertEqual(
+                topology["run_status_counts"],
+                {"active": 1, "blocked": 1, "timeout": 1, "unresolved": 1},
             )
 
     def test_problem_journey_projects_exact_knowledge_recovery_and_capsule_overhead(self) -> None:

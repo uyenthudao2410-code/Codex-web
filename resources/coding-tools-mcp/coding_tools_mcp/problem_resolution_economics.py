@@ -25,7 +25,7 @@ from .problem_lineage import (
 from .problem_resolution_journey import problem_revision_journeys
 
 
-PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 6
+PROBLEM_RESOLUTION_ECONOMICS_SCHEMA_VERSION = 7
 _ACTIVE_STAGES = frozenset({"preflight", "localization", "routing", "execution", "replan", "proof", "acceptance"})
 _ADMINISTRATIVE_RELATIONS = frozenset({"BLOCK", "ABANDON"})
 _FACT_LIMITS = {

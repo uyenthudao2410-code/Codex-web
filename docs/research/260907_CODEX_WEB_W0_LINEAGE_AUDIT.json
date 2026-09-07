@@ -1,0 +1,51 @@
+{
+  "observed_at": "2026-09-07T05:39:07.893806+00:00",
+  "active_snapshot_sha256": "f7f42d680745bb9e7b80b98554299c6e934f76114f95f0c51ea579c48ddd343f",
+  "manifest_unchanged": true,
+  "shards": [
+    {
+      "shard": "active_snapshot",
+      "runs_checked": 273,
+      "events_checked": 9113,
+      "chain_failures": []
+    },
+    {
+      "shard": "ledger-archive-20260813-20260831-1118runs.sqlite3",
+      "runs_checked": 1118,
+      "events_checked": 34000,
+      "chain_failures": [],
+      "matches_manifest": true,
+      "hash_stable": true
+    }
+  ],
+  "reference_checks": {
+    "waves_missing_run": 0,
+    "proofs_missing_run": 0,
+    "checkpoints_missing_run": 0,
+    "proofs_missing_wave": 0,
+    "proofs_wave_run_mismatch": 0,
+    "checkpoints_missing_wave": 0,
+    "checkpoints_wave_run_mismatch": 0,
+    "delegations_missing_wave": 0,
+    "delegations_missing_parent": 0,
+    "events_missing_run": 0,
+    "events_missing_nonempty_wave": 0,
+    "events_wave_run_mismatch": 1,
+    "events_missing_nonempty_delegation": 0,
+    "proof_upstream_references_missing": 0
+  },
+  "scope": "all RUN event hash chains and structural references in active snapshot plus manifest archive; not business semantics or all metadata payload references",
+  "canonical_writer_instantiated": false,
+  "source_modified": false,
+  "anomaly": {
+    "event_id": "6c63e76a233c4370822db15112670801",
+    "event_type": "terminal_parent_lane_reconciled",
+    "event_time": "2026-08-23T15:12:28.617Z",
+    "run_id": "6852041e20904481a077e86dea866cba",
+    "wave_id": "5c59c237603448129ceae0265665f2d5",
+    "wave_owner_run": "3d1f2b244cce4f029f6122e5e9e247a1",
+    "classification": "historical_structural_mismatch_requires_semantic_classification_not_hash_chain_corruption",
+    "source": "archive",
+    "producer_path": "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_reconciliation.py:626"
+  }
+}

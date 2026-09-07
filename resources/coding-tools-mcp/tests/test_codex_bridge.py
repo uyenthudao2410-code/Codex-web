@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 
@@ -344,6 +345,58 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertEqual(result["status"], "deadline")
             self.assertTrue(result["observation"]["terminal"])
             self.assertEqual(result["observation"]["deadline_resolution"], "app_server_reports_no_active_turn")
+
+    def test_observe_wakes_for_meaningful_turn_started_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            bridge = CodexAppServerBridge(lambda: Path(temp))
+            bridge._ensure_connected = lambda: None
+            bridge._owned_threads["owned"] = {"workspace": temp}
+            bridge._latest_turn_by_thread["owned"] = "turn"
+            bridge._turn_states["turn"] = {"thread_id": "owned", "status": "inProgress"}
+            waiting = threading.Event()
+            original_wait = bridge._condition.wait
+
+            def signal_wait(timeout=None):
+                waiting.set()
+                return original_wait(timeout)
+
+            bridge._condition.wait = signal_wait
+            result: dict = {}
+            observer = threading.Thread(
+                target=lambda: result.update(
+                    bridge.observe(thread_id="owned", turn_id="turn", after_cursor=0, wait_ms=1_000)
+                ),
+            )
+            observer.start()
+            self.assertTrue(waiting.wait(timeout=1))
+            bridge._append_event(
+                "turn/started",
+                {"threadId": "owned", "turn": {"id": "turn", "status": "inProgress"}},
+                server_request=False,
+            )
+            observer.join(timeout=1)
+            self.assertFalse(observer.is_alive())
+            self.assertEqual([item["method"] for item in result["events"]], ["turn/started"])
+            self.assertFalse(result["history_gap"])
+
+    def test_observe_reports_evicted_cursor_gap_and_rebaselines(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            bridge = CodexAppServerBridge(lambda: Path(temp))
+            bridge._ensure_connected = lambda: None
+            bridge._owned_threads["owned"] = {"workspace": temp}
+            bridge._latest_turn_by_thread["owned"] = "turn"
+            bridge._turn_states["turn"] = {"thread_id": "owned", "status": "inProgress"}
+            for _ in range(401):
+                bridge._append_event(
+                    "turn/started",
+                    {"threadId": "owned", "turn": {"id": "turn", "status": "inProgress"}},
+                    server_request=False,
+                )
+            result = bridge.observe(thread_id="owned", turn_id="turn", after_cursor=0, max_events=5)
+            self.assertTrue(result["history_gap"])
+            self.assertEqual(result["history_floor_cursor"], 2)
+            self.assertEqual([item["cursor"] for item in result["events"]], [2, 3, 4, 5, 6])
+            self.assertEqual(result["next_cursor"], 6)
 
     def test_credit_estimate_uses_uncached_cached_and_output_rates(self) -> None:
         economics = _usage_economics({"last": {"inputTokens": 10_000, "cachedInputTokens": 8_000, "outputTokens": 100, "reasoningOutputTokens": 50}}, "gpt-5.6-luna")

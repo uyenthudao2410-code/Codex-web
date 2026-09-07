@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "task_id": "2212e1eed80f4a3094aefec68a68cbf8",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "U-w79nemIR3_DYkv1LZ0rdnw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 512,
+    "finished_at": "2026-09-07T08:24:39.701Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Controlled restart preflight refused: lifecycle_unexplained_or_unbound.",
+  "next_step": "",
+  "created_at": "2026-09-07T08:24:29.282Z",
+  "updated_at": "2026-09-07T08:25:43.334Z",
+  "events": [
+    {
+      "time": "2026-09-07T08:24:29.282Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-07T08:24:29.607Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"background operation|background_operations|get_background_operation|list_background\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "A6v3C_9zs_j-zDsEY--hl91e"
+      }
+    },
+    {
+      "time": "2026-09-07T08:24:30.130Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"background operation|background_operations|get_background_operation|list_background\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T08:24:39.345Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 28 \"list_background_operations\\(limit=20\\)\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "session_id": "U-w79nemIR3_DYkv1LZ0rdnw"
+      }
+    },
+    {
+      "time": "2026-09-07T08:24:39.701Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 28 \"list_background_operations\\(limit=20\\)\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-07T08:25:43.334Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ORCHESTRATION_STATE_UNCERTAIN"
+      }
+    }
+  ]
+}

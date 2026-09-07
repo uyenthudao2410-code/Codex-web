@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "6a018fdc67104b278530b20013ab5b0b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-07T09:00:41.394Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-07T08:58:26.142Z",
+    "updated_at": "2026-09-07T09:00:41.394Z",
+    "events": [
+      {
+        "time": "2026-09-07T08:58:26.142Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-07T08:58:26.438Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "session_id": "k3sAzCqcpAdD0pzZUwDg7Kn7"
+        }
+      },
+      {
+        "time": "2026-09-07T08:58:28.569Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:00:41.394Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"CONTINUITY_IDENTITY_REQUIRED|reattach_id is required|continuity_action == \\\"reattach\\\"|continuity_action.*reattach\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-07T09:00:41.394Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-07T09:00:47.788Z",
+    "archive_reason": "finished"
+  }
+]

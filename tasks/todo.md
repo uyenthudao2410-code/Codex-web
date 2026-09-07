@@ -143,3 +143,16 @@
    - `docker images`: Hiển thị đầy đủ 11 image (alpine, postgres, redis, minio, sub2api, kirogo, ds2api...).
    - `docker run --rm alpine:latest echo ...`: Chạy thử container thành công 100%.
    - Dung lượng ổ C: Giữ vững ở mức **165.59 GiB trống** (đã giải phóng triệt để 22.79 GB đĩa ảo Docker khỏi ổ SSD C:).
+
+---
+
+## Giai đoạn 9: Thiết lập `token-dashboard.html` làm Giao diện Chính Duy nhất
+
+- [x] 15. Tối ưu kiến trúc UI: Thiết lập `token-dashboard.html` làm giao diện chính duy nhất <!-- id: ui-consolidate-1 -->
+  - [x] 15.1. Khảo sát cấu trúc DOM và CSS của `renderer/index.html` và `renderer/token-dashboard.html` <!-- id: ui-consolidate-1-1 -->
+  - [x] 15.2. Cấu hình `electron/main.js` để `managerWindow` tải trực tiếp `renderer/token-dashboard.html` làm cửa sổ chính <!-- id: ui-consolidate-1-2 -->
+  - [x] 15.3. Loại bỏ iframe lồng ghép `overviewTokenFrame` và dọn dẹp CSS thừa khỏi `index.html` và `control-center.css` <!-- id: ui-consolidate-1-3 -->
+  - [x] 15.4. Đồng bộ logic đóng cửa sổ (`token-dashboard:close`) hỗ trợ đóng cả `managerWindow` và `tokenWindow` <!-- id: ui-consolidate-1-4 -->
+  - [x] 15.5. Tinh chỉnh ghi chú sidebar footer trong `token-dashboard.html` phản ánh đúng vai trò giao diện chính <!-- id: ui-consolidate-1-5 -->
+  - [x] 15.6. Chạy bộ kiểm thử tự động (`token-dashboard.test.js`, `dashboard-analytics.test.js`, `control-center-manager.test.js`, `npm test`) <!-- id: ui-consolidate-1-6 -->
+  - [x] 15.7. Tổng kết và bàn giao kết quả trực quan cho người dùng <!-- id: ui-consolidate-1-7 -->

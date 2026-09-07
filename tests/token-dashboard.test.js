@@ -123,8 +123,8 @@ test('final narrow rules retain readable KPI tracks and populated analytics', ()
   }
 });
 
-test('manager and standalone donuts have no measured segments before the first snapshot', () => {
-  for (const relative of ['renderer/index.html', 'renderer/token-dashboard.html']) {
+test('standalone donut has no measured segments before the first snapshot', () => {
+  for (const relative of ['renderer/token-dashboard.html']) {
     const html = read(relative);
     const donut = html.match(/<svg id="daDonut"[\s\S]*?<\/svg>/)?.[0];
     assert.ok(donut, relative + ' donut missing');
@@ -237,8 +237,8 @@ test('runtime heartbeat reaches a live token window and skips a destroyed one', 
   assert.equal(destroyed.tokenMessages.length, 0);
 });
 
-test('manager and standalone token headers wait for real workspace data', () => {
-  for (const relative of ['renderer/index.html', 'renderer/token-dashboard.html']) {
+test('standalone token header waits for real workspace data', () => {
+  for (const relative of ['renderer/token-dashboard.html']) {
     const html = read(relative);
     assert.match(html, /id="daProjectText">Chưa xác nhận</);
     assert.match(html, /id="daEnvText">Chưa xác nhận</);

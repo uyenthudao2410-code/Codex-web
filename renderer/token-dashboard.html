@@ -1177,7 +1177,7 @@
 }
 </style>
 </head>
-<body data-theme="light">
+<body data-theme="light" class="token-board-window">
 
   <!-- Manager Window Title Bar -->
   <div class="manager-window-bar">
@@ -1225,7 +1225,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <small>Bảng token độc lập chỉ hiển thị overview; điều hướng và thao tác runtime ở cửa sổ quản lý chính.</small>
+        <small>Codex Hub · Trung tâm Điều hành &amp; Định lượng Token Vận hành.</small>
       </div>
     </aside>
 
@@ -1273,6 +1273,7 @@
             <div>
               <h2>Định lượng Token &amp; Hiệu quả</h2>
               <p>Ưu tiên số token đã đo, xu hướng sử dụng, cache, chi phí quy đổi và token trên mỗi kết quả hoàn tất. Số ước lượng luôn được đánh dấu riêng.</p>
+              <p class="da-technical-note">Phân tích Context & Chi phí: model-visible bytes giữ nguyên ở đơn vị byte. Token/chi phí model chỉ hiển thị từ UsageEvent canonical có provenance. Token trên từng card Tool call của ChatGPT/Coding-VP là metric riêng của host; MCP hiện chưa nhận receipt hậu-call chứa con số đó nên hiển thị "—"/unknown thay vì ước lượng. Không quy đổi byte→token và request/response transport bytes không được coi là token.</p>
             </div>
           </div>
 
@@ -1353,7 +1354,7 @@
                 <div class="da-mini-spark-wave blue" id="daSpark" aria-hidden="true"></div>
               </div>
               <div class="da-tile-sub" id="daTokensSplit" hidden>—</div>
-              <div class="da-tile-sub" id="daTokensMeta" hidden>—</div>
+              <div class="da-tile-sub" id="daTokensMeta" hidden>—<span id="daTokensRate"></span></div>
             </article>
 
             <!-- Card 3: INPUT TOKEN -->
@@ -1486,7 +1487,8 @@
                   <div class="cc-card-body">
                     <div class="da-donut-horizontal-wrap">
                       <svg id="daDonut" class="da-donut" width="100" height="100" viewBox="0 0 130 130" role="img" aria-label="Phân bố token chưa có dữ liệu"><text id="daDonutTotal" class="da-donut-center" x="65" y="60" text-anchor="middle" dominant-baseline="central">—</text><text id="daDonutSub" class="da-donut-sub" x="65" y="76" text-anchor="middle">Chưa có dữ liệu</text></svg>
-                      <div class="da-legend-list" id="daLegend"></div>
+                        <div class="da-legend-list" id="daLegend"></div>
+                        <div class="da-model-table" id="daModelTable" role="table" aria-label="Token và chi phí theo UsageEvent canonical" hidden></div>
                     </div>
                   </div>
                   <div class="da-donut-foot">
