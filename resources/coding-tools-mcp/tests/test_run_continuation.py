@@ -19,6 +19,7 @@ from coding_tools_mcp.continuation_driver import (
 )
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.run_continuation import (
+    RUN_CONTINUATION_PROPOSAL_SCHEMA,
     RunContinuationError,
     RunContinuationLedgerMixin,
     build_run_continuation_policy,
@@ -588,8 +589,12 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 self.assertIn("one JSON object", encoding["format"])
                 self.assertIn("begin with {", encoding["format"])
                 self.assertIn("invalid JSON is rejected", encoding["format"])
-                self.assertEqual(encoding["common_required"], ["kind", "reason", "evidence_hash"])
-                self.assertEqual(encoding["kinds"]["PATCH"]["required"], ["selected_check_hashes"])
+                self.assertEqual(encoding["canonical_json_schema"], RUN_CONTINUATION_PROPOSAL_SCHEMA)
+                variants = {item["properties"]["kind"]["enum"][0]: item for item in encoding["canonical_json_schema"]["oneOf"]}
+                self.assertEqual(variants["READ"]["properties"]["read_requests"]["items"]["required"], ["path"])
+                self.assertEqual(variants["PATCH"]["properties"]["replacements"]["items"]["required"], ["path", "old", "new"])
+                self.assertEqual(variants["PATCH"]["properties"]["new_files"]["items"]["required"], ["path", "content"])
+                self.assertIn("every distinct value", encoding["policy_rules"][-1])
                 self.assertEqual(packet["evidence_hash"], "1" * 64)
                 with self.assertRaises(RunContinuationError) as malformed:
                     parse_run_continuation_proposal(

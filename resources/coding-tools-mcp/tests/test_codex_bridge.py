@@ -362,6 +362,7 @@ class CodexBridgeTests(unittest.TestCase):
             root = Path(temp)
             bridge = CodexAppServerBridge(lambda: root)
             bridge._ensure_connected = lambda: None
+            clock = [0.0]
             def fake_request(method, params):
                 if method == "thread/start":
                     return {"thread": {"id": "deadline-thread"}}
@@ -373,15 +374,49 @@ class CodexBridgeTests(unittest.TestCase):
                 {"terminal": False, "status": "inProgress", "next_cursor": 1},
                 {"terminal": False, "status": "inProgress", "next_cursor": 2},
             ]
-            bridge.observe = lambda **_kwargs: observations.pop(0)
+            def fake_observe(**_kwargs):
+                clock[0] = 0.002
+                return observations.pop(0)
+            bridge.observe = fake_observe
             def raced_interrupt(**_kwargs):
                 raise CodexBridgeError("APP_SERVER_ERROR", "no active turn to interrupt")
             bridge.interrupt = raced_interrupt
-            result = bridge.run("review", profile="packet", deadline_ms=1)
+            with patch("coding_tools_mcp.codex_bridge.time.monotonic", side_effect=lambda: clock[0]):
+                result = bridge.run("review", profile="packet", deadline_ms=1)
             self.assertTrue(result["deadline_hit"])
             self.assertEqual(result["status"], "deadline")
             self.assertTrue(result["observation"]["terminal"])
             self.assertEqual(result["observation"]["deadline_resolution"], "app_server_reports_no_active_turn")
+
+    def test_deadline_keeps_observing_after_turn_started_until_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            def fake_request(method, params):
+                if method == "thread/start":
+                    return {"thread": {"id": "deadline-thread"}}
+                if method == "turn/start":
+                    return {"turn": {"id": "deadline-turn", "status": "inProgress"}}
+                raise AssertionError(method)
+            bridge._request = fake_request
+            observations = [
+                {"terminal": False, "status": "inProgress", "next_cursor": 1},
+                {"terminal": True, "status": "completed", "next_cursor": 2},
+            ]
+            observed = []
+            def fake_observe(**kwargs):
+                observed.append(kwargs)
+                return observations.pop(0)
+            bridge.observe = fake_observe
+            bridge.interrupt = lambda **_kwargs: self.fail("turn/started must not be treated as a deadline")
+            with patch("coding_tools_mcp.codex_bridge.time.monotonic", return_value=0.0):
+                result = bridge.run("review", profile="packet", deadline_ms=100)
+            self.assertEqual(len(observed), 2)
+            self.assertEqual([item["after_cursor"] for item in observed], [0, 1])
+            self.assertFalse(result["deadline_hit"])
+            self.assertEqual(result["status"], "completed")
+            self.assertTrue(result["observation"]["terminal"])
 
     def test_observe_wakes_for_meaningful_turn_started_event(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

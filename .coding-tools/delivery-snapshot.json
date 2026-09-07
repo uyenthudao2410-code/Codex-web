@@ -1,9 +1,9 @@
 {
   "canonical_ledger": ".coding-tools/orchestration/ledger.sqlite3",
-  "captured_at_utc": "2026-09-07T15:03:55.358215Z",
-  "ledger_blob": "74aaddb175cef4165a416260cb16bdad199e49de",
+  "captured_at_utc": "2026-09-07T23:10:24.522626Z",
+  "ledger_blob": "c81698b1d5ab62c5887ee61555ae545d91e90c52",
   "schema_version": 1,
   "size_bytes": 56360960,
-  "snapshot_id": "1788793435358215500",
+  "snapshot_id": "1788822624522626400",
   "user_version": 12
 }

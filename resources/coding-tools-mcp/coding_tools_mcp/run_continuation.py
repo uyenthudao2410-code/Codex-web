@@ -1732,13 +1732,13 @@ class RunContinuationMixin:
                 # effect is possible.
                 "response_encoding": {
                     "format": "the entire response must be one JSON object: begin with {, end with }, and contain no Markdown, code fence, label, or surrounding prose; invalid JSON is rejected without an effect",
-                    "common_required": ["kind", "reason", "evidence_hash"],
-                    "kinds": {
-                        "READ": {"required": ["read_requests"], "allowed": ["kind", "reason", "evidence_hash", "read_requests"]},
-                        "PATCH": {"required": ["selected_check_hashes"], "allowed": ["kind", "reason", "evidence_hash", "replacements", "new_files", "selected_check_hashes"], "rule": "include at least one replacement or new file and every approved check hash"},
-                        "READY": {"required": [], "allowed": ["kind", "reason", "evidence_hash"]},
-                        "BLOCKED": {"required": [], "allowed": ["kind", "reason", "evidence_hash"]},
-                    },
+                    "canonical_json_schema": RUN_CONTINUATION_PROPOSAL_SCHEMA,
+                    "policy_rules": [
+                        "The JSON Schema is part of this prompt, not a provider outputSchema; it defines every nested object and forbids extra fields.",
+                        "READ paths must be distinct values from evidence.available_read_paths.",
+                        "PATCH replacement and new-file paths must be in evidence.write_paths and outside evidence.protected_paths; every replacement old value must be the exact current preimage.",
+                        "PATCH must include at least one replacement or new file and selected_check_hashes must contain every distinct value in evidence.approved_check_hashes exactly once.",
+                    ],
                 },
             },
             "evidence_hash": evidence_hash,

@@ -1069,9 +1069,33 @@ class CodexAppServerBridge:
         }
         bounded_deadline = max(0, min(_MAX_DEADLINE_MS, int(deadline_ms)))
         if bounded_deadline > 0:
-            observation = self.observe(thread_id=thread_id, turn_id=turn_id, after_cursor=0, wait_ms=bounded_deadline, max_events=50)
-            if not observation.get("terminal"):
-                deadline_cursor = int(observation.get("next_cursor", 0))
+            # `observe()` intentionally wakes on meaningful progress such as
+            # turn/started. A launch deadline is different: it covers the full
+            # interval in which the turn can reach a terminal state.
+            deadline_at = time.monotonic() + (bounded_deadline / 1000.0)
+            deadline_cursor = 0
+            observation: dict[str, Any] | None = None
+            while time.monotonic() < deadline_at:
+                remaining_ms = max(1, int((deadline_at - time.monotonic()) * 1000))
+                observation = self.observe(
+                    thread_id=thread_id,
+                    turn_id=turn_id,
+                    after_cursor=deadline_cursor,
+                    wait_ms=min(30_000, remaining_ms),
+                    max_events=50,
+                )
+                if observation.get("terminal"):
+                    observation["deadline_hit"] = False
+                    break
+                next_cursor = int(observation.get("next_cursor", deadline_cursor))
+                if next_cursor <= deadline_cursor:
+                    # A non-terminal observation without a later cursor has
+                    # consumed its wait interval, so do not busy-loop on it.
+                    break
+                deadline_cursor = next_cursor
+            if observation is None or not observation.get("terminal"):
+                if observation is not None:
+                    deadline_cursor = int(observation.get("next_cursor", deadline_cursor))
                 try:
                     self.interrupt(thread_id=thread_id, turn_id=turn_id)
                 except CodexBridgeError as exc:
@@ -1091,8 +1115,6 @@ class CodexAppServerBridge:
                 else:
                     observation = self.observe(thread_id=thread_id, turn_id=turn_id, after_cursor=deadline_cursor, wait_ms=2_000, max_events=50)
                 observation["deadline_hit"] = True
-            else:
-                observation["deadline_hit"] = False
             payload["observation"] = observation
             payload["status"] = observation.get("status", payload["status"])
             payload["deadline_hit"] = bool(observation.get("deadline_hit"))
