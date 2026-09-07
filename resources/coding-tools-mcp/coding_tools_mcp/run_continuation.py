@@ -1724,6 +1724,22 @@ class RunContinuationMixin:
                 "profile": policy.get("profile"),
                 "acceptance_mode": policy.get("acceptance_mode"),
                 "instruction": "Choose exactly one proposal kind: READ, PATCH, READY, or BLOCKED. Never ask for expanded scope, a new check, a new budget, or authority. Copy evidence_hash exactly.",
+                # The observed App Server profile fails a turn when supplied
+                # an outputSchema. The response remains typed at the MCP
+                # boundary: this inline contract plus
+                # parse_run_continuation_proposal() rejects every malformed,
+                # stale, out-of-scope, or incomplete proposal before any
+                # effect is possible.
+                "response_encoding": {
+                    "format": "the entire response must be one JSON object: begin with {, end with }, and contain no Markdown, code fence, label, or surrounding prose; invalid JSON is rejected without an effect",
+                    "common_required": ["kind", "reason", "evidence_hash"],
+                    "kinds": {
+                        "READ": {"required": ["read_requests"], "allowed": ["kind", "reason", "evidence_hash", "read_requests"]},
+                        "PATCH": {"required": ["selected_check_hashes"], "allowed": ["kind", "reason", "evidence_hash", "replacements", "new_files", "selected_check_hashes"], "rule": "include at least one replacement or new file and every approved check hash"},
+                        "READY": {"required": [], "allowed": ["kind", "reason", "evidence_hash"]},
+                        "BLOCKED": {"required": [], "allowed": ["kind", "reason", "evidence_hash"]},
+                    },
+                },
             },
             "evidence_hash": evidence_hash,
             "evidence": evidence,
@@ -1786,7 +1802,9 @@ class RunContinuationMixin:
                 self._run_continuation_prompt(policy=policy, evidence=evidence, evidence_hash=evidence_hash),
                 profile=RUN_CONTINUATION_PROFILE,
                 lifetime="persistent",
-                output_schema=RUN_CONTINUATION_PROPOSAL_SCHEMA,
+                # The model has no tool or write capability and its response
+                # is parsed fail-closed before MCP can consider an effect.
+                output_schema=None,
             )
             thread_id, turn_id = str(bridge.get("thread_id") or ""), str(bridge.get("turn_id") or "")
             if not thread_id or not turn_id:

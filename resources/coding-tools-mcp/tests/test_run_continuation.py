@@ -574,6 +574,36 @@ class RunContinuationLedgerTests(unittest.TestCase):
 
 
 class RunContinuationSurfaceTests(unittest.TestCase):
+    def test_prompt_requires_one_json_object_while_mcp_retains_strict_typed_parser(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                prompt = runtime._run_continuation_prompt(
+                    policy=policy("run-test"),
+                    evidence={"source_identity": {"base_head": "a" * 40}},
+                    evidence_hash="1" * 64,
+                )
+                packet = json.loads(prompt.removeprefix("Bounded durable continuation packet:\n"))
+                encoding = packet["continuation_contract"]["response_encoding"]
+                self.assertIn("one JSON object", encoding["format"])
+                self.assertIn("begin with {", encoding["format"])
+                self.assertIn("invalid JSON is rejected", encoding["format"])
+                self.assertEqual(encoding["common_required"], ["kind", "reason", "evidence_hash"])
+                self.assertEqual(encoding["kinds"]["PATCH"]["required"], ["selected_check_hashes"])
+                self.assertEqual(packet["evidence_hash"], "1" * 64)
+                with self.assertRaises(RunContinuationError) as malformed:
+                    parse_run_continuation_proposal(
+                        "not a JSON object",
+                        expected_evidence_hash="1" * 64,
+                        read_paths=[],
+                        write_paths=[],
+                        protected_paths=[],
+                        approved_check_hashes=[],
+                    )
+                self.assertEqual(malformed.exception.code, "RUN_CONTINUATION_PROPOSAL_INVALID")
+            finally:
+                runtime.close()
+
     def test_proposal_contract_binds_current_evidence_and_cannot_expand_scope(self) -> None:
         evidence_hash = "1" * 64
         accepted = parse_run_continuation_proposal(
@@ -901,6 +931,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 self.assertEqual(result["status"], "PROPOSING")
                 self.assertEqual(result["turn_id"], "turn-two")
                 continued.assert_called_once()
+                self.assertIsNone(continued.call_args.kwargs["output_schema"])
                 updated = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
                 assert updated is not None
                 self.assertEqual(updated["thread_id"], "thread-test")
@@ -1181,6 +1212,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 self.assertNotEqual(failed["wave_id"], original_wave_id)
                 self.assertEqual((root / "target.py").read_text(encoding="utf-8"), "wrong\n")
                 continued.assert_called_once()
+                self.assertIsNone(continued.call_args.kwargs["output_schema"])
                 repair_record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
                 assert repair_record is not None
                 self.assertEqual(repair_record["pending_replan"]["failure"], "CHECK_FAILED")

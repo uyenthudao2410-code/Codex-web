@@ -26,7 +26,6 @@ from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .run_continuation import (
     RUN_CONTINUATION_PROFILE,
-    RUN_CONTINUATION_PROPOSAL_SCHEMA,
     RunContinuationError,
     _canonical_json,
     _normalize_effect_artifact_path,
@@ -413,7 +412,7 @@ class ContinuationDriverMixin:
         bridge = self._codex_bridge.continue_thread(
             thread_id=str(record["thread_id"]),
             prompt=self._run_continuation_prompt(policy=record["policy"], evidence=evidence, evidence_hash=evidence_hash),
-            output_schema=RUN_CONTINUATION_PROPOSAL_SCHEMA,
+            output_schema=None,
         )
         thread_id, turn_id = str(bridge.get("thread_id") or ""), str(bridge.get("turn_id") or "")
         if thread_id != str(record["thread_id"]) or not turn_id:
@@ -544,7 +543,7 @@ class ContinuationDriverMixin:
         bridge = self._codex_bridge.continue_thread(
             thread_id=str(record["thread_id"]),
             prompt=self._run_continuation_prompt(policy=policy, evidence=evidence, evidence_hash=evidence_hash),
-            output_schema=RUN_CONTINUATION_PROPOSAL_SCHEMA,
+            output_schema=None,
         )
         thread_id, turn_id = str(bridge.get("thread_id") or ""), str(bridge.get("turn_id") or "")
         if thread_id != str(record["thread_id"]) or not turn_id:

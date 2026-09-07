@@ -309,6 +309,7 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertFalse(thread_params["config"]["features"]["shell_tool"])
             self.assertFalse(thread_params["config"]["features"]["multi_agent"])
             self.assertEqual(turn_params["sandboxPolicy"], {"type": "readOnly", "networkAccess": False})
+            self.assertNotIn("outputSchema", turn_params)
             with self.assertRaises(CodexBridgeError) as override:
                 bridge._resolve_route(profile="continuation_proposal", model="gpt-5.6-luna", effort="high", source_thread_id=None)
             self.assertEqual(override.exception.code, "PROFILE_ROUTE_LOCKED")

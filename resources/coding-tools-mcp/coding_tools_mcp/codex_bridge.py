@@ -125,8 +125,9 @@ _PROFILE_SPECS: dict[str, dict[str, Any]] = {
             "Do not inspect repository files, run commands, browse, use tools, modify state, delegate, or request new authority."
         ),
         "developer_instructions": (
-            "Return exactly one object matching the supplied output schema. MCP, not you, validates scope, applies effects, "
-            "runs checks, records receipts, and decides whether a technical replan is permitted."
+            "Return exactly one JSON object matching the response contract in the prompt, with no Markdown or surrounding prose. "
+            "A provider output schema may be absent for compatibility; MCP, not you, validates the complete JSON object, "
+            "scope, effects, checks, receipts, and every technical replan decision."
         ),
     },
     "consequential": {
