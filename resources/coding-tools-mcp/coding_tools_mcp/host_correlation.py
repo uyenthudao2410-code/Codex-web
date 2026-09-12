@@ -11,6 +11,7 @@ uses the identical validation and one-shot filesystem semantics.
 
 import json
 import os
+import re
 import secrets
 import time
 from pathlib import Path
@@ -21,6 +22,31 @@ HOST_CORRELATION_SCHEMA_VERSION = 1
 HOST_CORRELATION_PENDING_TTL_MS = 120_000
 HOST_CORRELATION_PENDING_RELATIVE = Path(".coding-tools") / "evaluation" / "chatweb-host-turn-pending.json"
 HOST_CORRELATION_BINDING_RELATIVE = Path(".coding-tools") / "evaluation" / "chatweb-host-turn-binding.json"
+CONTINUATION_CONSENT_SCHEMA_VERSION = 1
+CONTINUATION_CONSENT_PENDING_TTL_MS = 120_000
+CONTINUATION_CONSENT_PENDING_RELATIVE = Path(".coding-tools") / "evaluation" / "chatweb-continuation-consent-pending.json"
+
+
+def _opaque(value: Any, *, maximum: int) -> str | None:
+    normalized = str(value or "").strip()
+    if not normalized or len(normalized) > maximum or any(ord(char) < 32 for char in normalized):
+        return None
+    return normalized
+
+
+def _sha256(value: Any) -> str | None:
+    normalized = str(value or "").strip().lower()
+    return normalized if re.fullmatch(r"[0-9a-f]{64}", normalized) else None
+
+
+def _exact_string_list(value: Any, *, maximum_items: int, item_maximum: int) -> list[str] | None:
+    if not isinstance(value, list) or len(value) > maximum_items:
+        return None
+    normalized = [_opaque(item, maximum=item_maximum) for item in value]
+    if any(item is None for item in normalized):
+        return None
+    result = [str(item) for item in normalized]
+    return result if result == sorted(set(result)) else None
 
 
 def validate_pending_host_turn(value: Any, *, now_ms: float | None = None) -> dict[str, Any] | None:
@@ -92,6 +118,84 @@ def validate_pending_host_turn(value: Any, *, now_ms: float | None = None) -> di
     }
 
 
+def validate_pending_continuation_consent(
+    value: Any,
+    *,
+    expected_descriptor: dict[str, Any],
+    now_ms: float | None = None,
+) -> dict[str, Any] | None:
+    """Validate one explicit host-visible bounded-continuation consent.
+
+    A generic ``user_turn_visible`` correlation proves only that a turn was
+    observed. The Electron host stages this distinct receipt only for the
+    exact structured consent command, and the MCP runtime independently
+    matches every scope, check, budget, and epoch field before granting work.
+    """
+    if not isinstance(value, dict) or not isinstance(expected_descriptor, dict):
+        return None
+    allowed = {"schema_version", "receipt_id", "turn_id", "trace_id", "staged_at_unix_ms", "descriptor"}
+    if set(value) != allowed or value.get("schema_version") != CONTINUATION_CONSENT_SCHEMA_VERSION:
+        return None
+    receipt_id = _opaque(value.get("receipt_id"), maximum=128)
+    turn_id = _opaque(value.get("turn_id"), maximum=128)
+    trace_id = _opaque(value.get("trace_id"), maximum=128)
+    staged_at = value.get("staged_at_unix_ms")
+    if not receipt_id or not turn_id or not trace_id or isinstance(staged_at, bool) or not isinstance(staged_at, (int, float)):
+        return None
+    current_ms = time.time() * 1000 if now_ms is None else float(now_ms)
+    if float(staged_at) > current_ms + 5_000 or current_ms - float(staged_at) > CONTINUATION_CONSENT_PENDING_TTL_MS:
+        return None
+    descriptor = value.get("descriptor")
+    if not isinstance(descriptor, dict):
+        return None
+    required = {
+        "action", "run_id", "wave_id", "workspace_id", "problem_id", "problem_revision",
+        "contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint",
+        "activation_epoch_id", "activation_admission", "issuer_client_id", "scope_sha256",
+        "read_paths", "write_paths", "protected_paths", "approved_check_hashes",
+        "max_duration_seconds", "max_decision_turns", "max_patch_attempts",
+    }
+    if set(descriptor) != required or descriptor.get("action") != "authorize_bounded_continuation":
+        return None
+    for field, maximum in {
+        "run_id": 128,
+        "wave_id": 128,
+        "workspace_id": 512,
+        "problem_id": 128,
+        "activation_epoch_id": 128,
+        "activation_admission": 32,
+        "issuer_client_id": 512,
+    }.items():
+        if not _opaque(descriptor.get(field), maximum=maximum):
+            return None
+    for field in {"contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint", "scope_sha256"}:
+        if not _sha256(descriptor.get(field)):
+            return None
+    if isinstance(descriptor.get("problem_revision"), bool) or not isinstance(descriptor.get("problem_revision"), int) or int(descriptor["problem_revision"]) < 1:
+        return None
+    for field in {"max_duration_seconds", "max_decision_turns", "max_patch_attempts"}:
+        if isinstance(descriptor.get(field), bool) or not isinstance(descriptor.get(field), int) or int(descriptor[field]) < 1:
+            return None
+    if _exact_string_list(descriptor.get("read_paths"), maximum_items=256, item_maximum=512) is None:
+        return None
+    if _exact_string_list(descriptor.get("write_paths"), maximum_items=256, item_maximum=512) is None:
+        return None
+    if _exact_string_list(descriptor.get("protected_paths"), maximum_items=256, item_maximum=512) is None:
+        return None
+    hashes = _exact_string_list(descriptor.get("approved_check_hashes"), maximum_items=16, item_maximum=64)
+    if hashes is None or any(_sha256(item) is None for item in hashes):
+        return None
+    if descriptor != expected_descriptor:
+        return None
+    return {
+        "receipt_id": receipt_id,
+        "turn_id": turn_id,
+        "trace_id": trace_id,
+        "staged_at_unix_ms": int(staged_at),
+        "descriptor": descriptor,
+    }
+
+
 def peek_pending_host_turn(workspace: Path, *, now_ms: float | None = None) -> dict[str, Any] | None:
     """Read a pending identity without consuming it."""
     path = workspace / HOST_CORRELATION_PENDING_RELATIVE
@@ -136,6 +240,40 @@ def claim_pending_host_turn(
     return {**record, "_claim_path": claim}
 
 
+def claim_pending_continuation_consent(
+    workspace: Path,
+    *,
+    process_instance_id: str,
+    expected_descriptor: dict[str, Any],
+    now_ms: float | None = None,
+) -> dict[str, Any] | None:
+    """Atomically claim an exact explicit consent receipt, never a turn receipt."""
+    pending = workspace / CONTINUATION_CONSENT_PENDING_RELATIVE
+    claim = pending.with_name(f".{pending.name}.{process_instance_id}.{secrets.token_urlsafe(6)}.claim")
+    try:
+        os.replace(pending, claim)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return None
+    try:
+        value = json.loads(claim.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        value = None
+    record = validate_pending_continuation_consent(
+        value,
+        expected_descriptor=expected_descriptor,
+        now_ms=now_ms,
+    )
+    if record is None:
+        try:
+            claim.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return None
+    return {**record, "_claim_path": claim}
+
+
 def discard_pending_host_turn(workspace: Path, *, process_instance_id: str, now_ms: float | None = None) -> None:
     claimed = claim_pending_host_turn(workspace, process_instance_id=process_instance_id, now_ms=now_ms)
     claim_path = claimed.get("_claim_path") if claimed else None
@@ -171,6 +309,35 @@ def consume_pending_host_turn(claimed: dict[str, Any]) -> None:
     touching a newer pending turn that the host may already have staged.
     """
 
+    claim = claimed.get("_claim_path")
+    if not isinstance(claim, Path):
+        return
+    try:
+        claim.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def restore_pending_continuation_consent(workspace: Path, claimed: dict[str, Any]) -> None:
+    """Restore an unspent consent only when no newer consent has replaced it."""
+    claim = claimed.get("_claim_path")
+    if not isinstance(claim, Path) or not claim.exists():
+        return
+    pending = workspace / CONTINUATION_CONSENT_PENDING_RELATIVE
+    try:
+        if pending.exists():
+            claim.unlink(missing_ok=True)
+        else:
+            os.replace(claim, pending)
+    except OSError:
+        try:
+            claim.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def consume_pending_continuation_consent(claimed: dict[str, Any]) -> None:
+    """Consume exactly the private claim created for a successful grant."""
     claim = claimed.get("_claim_path")
     if not isinstance(claim, Path):
         return

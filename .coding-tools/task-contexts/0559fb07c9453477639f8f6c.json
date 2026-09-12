@@ -1,0 +1,563 @@
+{
+  "version": 2,
+  "task_id": "854733f9ff2f4138ade2993f5d3004b7",
+  "orchestration": {
+    "run_id": "625dd5a9698047518dad221e5fb06bd6",
+    "wave_id": "d54307b678a34757a7b29f441bb5dade",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "887ef40a6f16205fb342d2b86864bc7590f7ea919079a44ad729b2514de4342b",
+    "contract_fp": ""
+  },
+  "objective": "Packet C2 controller-mediated bugfix on exact base HEAD 7bc1caee37107a15e74eb078b52fe314e5fa33ab in E:/DEV/Codex-web. Prepare only; do not write a patch, run acceptance, commit, push, restart, or alter .coding-tools evidence. Scope is exactly four paths: resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py, resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py, resources/coding-tools-mcp/tests/test_codex_bridge.py, resources/coding-tools-mcp/tests/test_run_continuation.py. Diagnose and plan the smallest causal fix for exactly two bugs: (1) when _record_notification receives turn/completed before the turn/start response, _launch_turn state.update must not overwrite terminal completed/failed/interrupted state; preserve terminal status, error, token usage, agent_text, finalized, and any existing started_monotonic. (2) revoke/regrant resets policy authorization but currently retains lane_id/thread_id/last_turn_id, so a later start creating a different thread is rejected; after the gate has no pending effect/job and the old grant has no authority, a newly granted policy revision must reset exactly the three dispatch IDs lane_id/thread_id/last_turn_id, without clearing effect history and without bypassing fencing. Plan only focused regressions: three terminal statuses arriving before start response, plus revoke/regrant followed by successful bind of a new thread and verification of the chain. Preserve deadline max30000 and integer schema, observe semantics, permission boundaries, the eight-public-tool contract, all .coding-tools evidence, effect history, and fencing.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T00:03:02.604Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T00:03:02.604Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T00:03:02.604Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "vMkmrCdAZC9yiBYABwRqTwp8",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-08T00:03:01.533Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "state": "file",
+          "sha256": "ec73f9318ec772188fa839f9318016ab683928abb3f4e7e232d2e0dc604a32cf",
+          "size_bytes": 74507,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "625dd5a9698047518dad221e5fb06bd6",
+          "wave_id": "d54307b678a34757a7b29f441bb5dade"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "state": "file",
+          "sha256": "73884e688f21aeef882119ec184e0a89b76570a4944d024f61a8e3a9e7f68297",
+          "size_bytes": 107747,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "625dd5a9698047518dad221e5fb06bd6",
+          "wave_id": "d54307b678a34757a7b29f441bb5dade"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+          "state": "file",
+          "sha256": "22e570ab876816b629f1e3498acb26d478e47aae27b80335f6c4c85a4b020325",
+          "size_bytes": 29906,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "625dd5a9698047518dad221e5fb06bd6",
+          "wave_id": "d54307b678a34757a7b29f441bb5dade"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "state": "file",
+          "sha256": "bd3b3383c71b5365176466645a60df99b65b7dfce2914eaf2375119d93cd9022",
+          "size_bytes": 75211,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "625dd5a9698047518dad221e5fb06bd6",
+          "wave_id": "d54307b678a34757a7b29f441bb5dade"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "386d6e9ee8d44038b567be661ed19044",
+            "seq": 43586,
+            "event_time": "2026-09-08T00:02:43.207Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "1d875cea79560177f2527407639819a4ee15656e93078c6457f39cb82d315803",
+              "280d8fad30cbd2f4eb45e1125935e230fc893ca0f9c6e2f9fba4bf5975113f4e",
+              "4fdeb084dce61b3057ef10ca1435b9586150d2f2aefc62974e3aa663860768e8",
+              "78ade7132613ef0cb45a25e925082ad6a94daf9bacdf46ce928404278d7a095d"
+            ],
+            "file_count": 4,
+            "additions": 171,
+            "removals": 6,
+            "line_changes": 177,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 42,
+        "head_hash": "90fdb16dcc84dba61f59656c67cd0bd7c01b1b480e02357f48b8ec8bf017983a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-625dd5a9698047518dad221e5fb06bd6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-625dd5a9698047518dad221e5fb06bd6\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "625dd5a9698047518dad221e5fb06bd6",
+      "wave_id": "d54307b678a34757a7b29f441bb5dade",
+      "checkpoint_id": "3e302f65288441a09af8daff77656e3f",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "887ef40a6f16205fb342d2b86864bc7590f7ea919079a44ad729b2514de4342b",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Packet C2 controller-mediated bugfix on exact base HEAD 7bc1caee37107a15e74eb078b52fe314e5fa33ab in E:/DEV/Codex-web. Prepare only; do not write a patch, run acceptance, commit, push, restart, or alter .coding-tools evidence. Scope is exactly four paths: resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py, resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py, resources/coding-tools-mcp/tests/test_codex_bridge.py, resources/coding-tools-mcp/tests/test_run_continuation.py. Diagnose and plan the smallest causal fix for exactly two bugs: (1) when _record_notification receives turn/completed before the turn/start response, _launch_turn state.update must not overwrite terminal completed/failed/interrupted state; preserve terminal status, error, token usage, agent_text, finalized, and any existing started_monotonic. (2) revoke/regrant resets policy authorization but currently retains lane_id/thread_id/last_turn_id, so a later start creating a different thread is rejected; after the gate has no pending effect/job and the old grant has no authority, a newly granted policy revision must reset exactly the three dispatch IDs lane_id/thread_id/last_turn_id, without clearing effect history and without bypassing fencing. Plan only focused regressions: three terminal statuses arriving before start response, plus revoke/regrant followed by successful bind of a new thread and verification of the chain. Preserve deadline max30000 and integer schema, observe semantics, permission boundaries, the eight-public-tool contract, all .coding-tools evidence, effect history, and fencing.",
+        "objective_revision": 1,
+        "objective_sha256": "7ffe1dd9f2bf999776834484146018347d4e88e135fc89b65946b005bfd4b4a6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "0aceb28307c148eb88f2388dfd12c1c3",
+          "stage_id": "check:8b9407bc23abeeb5",
+          "status": "passed",
+          "duration_ms": 11311,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "b19ff422fb3e410fba5c11fb25f0e554",
+          "stage_id": "check:3599fb76d8389bab",
+          "status": "passed",
+          "duration_ms": 1192,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "2c7505cac0c34d0cb0addef1aeb14bac",
+          "stage_id": "check:80a1a46bd01d26a3",
+          "status": "passed",
+          "duration_ms": 1093,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "ea49eb6c43f24ed68a15fa473babd900",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1520,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "7c0c9927b7bfc966ceb2798064283ca3c9ca2dc432bff58b950796c166d25b92",
+  "completion_report_acknowledged_id": "7c0c9927b7bfc966ceb2798064283ca3c9ca2dc432bff58b950796c166d25b92",
+  "completion_report_acknowledged_at": "2026-09-08T00:06:52.527Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_codex_bridge.py tests/test_run_continuation.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '46 passed, 8 subtests passed in 9.19s'",
+      "finished_at": "2026-09-08T00:02:56.090Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "dzTTQL9NvVkLwcJFa0Od7ROY"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "625dd5a9698047518dad221e5fb06bd6",
+        "owner_wave": "d54307b678a34757a7b29f441bb5dade",
+        "size_bytes": 112,
+        "command_id": "dzTTQL9NvVkLwcJFa0Od7ROY",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:dzTTQL9NvVkLwcJFa0Od7ROY:stdout",
+            "total_stream_bytes": 112,
+            "total_retained_bytes": 112,
+            "head_retained_bytes": 112,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:dzTTQL9NvVkLwcJFa0Od7ROY:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+      "operation": "update",
+      "updated_at": "2026-09-08T00:03:03.396Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+      "operation": "update",
+      "updated_at": "2026-09-08T00:03:03.396Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+      "operation": "update",
+      "updated_at": "2026-09-08T00:03:03.396Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_run_continuation.py",
+      "operation": "update",
+      "updated_at": "2026-09-08T00:03:03.396Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-07T23:58:12.864Z",
+  "updated_at": "2026-09-08T00:06:52.533Z",
+  "events": [
+    {
+      "time": "2026-09-07T23:58:12.864Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Packet C2 controller-mediated bugfix on exact base HEAD 7bc1caee37107a15e74eb078b52fe314e5fa33ab in E:/DEV/Codex-web. Prepare only; do not write a patch, run acceptance, commit, push, restart, or alter .coding-tools evidence. Scope is exactly four paths: resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py, resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py, resources/coding-tools-mcp/tests/test_codex_bridge.py, resources/coding-tools-mcp/tests/test_run_continuation.py. Diagnose and plan the smallest causal fix for exactly two bugs: (1) when _record_notification receives turn/completed before the turn/start response, _launch_turn state.update must not overwrite terminal completed/failed/interrupted state; preserve terminal status, error, token usage, agent_text, finalized, and any existing started_monotonic. (2) revoke/regrant resets policy authorization but currently retains lane_id/thread_id/last_turn_id, so a later start creating a different thread is rejected; after the gate has no pending effect/job and the old grant has no authority, a newly granted policy revision must reset exactly the three dispatch IDs lane_id/thread_id/last_turn_id, without clearing effect history and without bypassing fencing. Plan only focused regressions: three terminal statuses arriving before start response, plus revoke/regrant followed by successful bind of a new thread and verification of the chain. Preserve deadline max30000 and integer schema, observe semantics, permission boundaries, the eight-public-tool contract, all .coding-tools evidence, effect history, and fencing."
+      }
+    },
+    {
+      "time": "2026-09-07T23:58:13.998Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T23:58:22.136Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-07T23:58:22.162Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:40.507Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:41.284Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:42.447Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:42.456Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:44.092Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:44.589Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:45.615Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_codex_bridge.py tests/test_run_continuation.py -q",
+        "session_id": "dzTTQL9NvVkLwcJFa0Od7ROY"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:56.090Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_codex_bridge.py tests/test_run_continuation.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:57.340Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m compileall -q coding_tools_mcp/codex_bridge.py coding_tools_mcp/run_continuation.py",
+        "session_id": "sRVxq3qFJDW-l3HF3Dqty3mM"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:57.805Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m compileall -q coding_tools_mcp/codex_bridge.py coding_tools_mcp/run_continuation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:58.989Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "session_id": "SldjohN2IQpa4UOYGriQUl_g"
+      }
+    },
+    {
+      "time": "2026-09-08T00:02:59.422Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:00.731Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "vMkmrCdAZC9yiBYABwRqTwp8"
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:01.533Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:02.595Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:02.604Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:03.115Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:03.118Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:03.263Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "5a76baf966bfa7188bac67cb35c3f33a1cef8058e1177d68b9e34de11bc19b0c"
+      }
+    },
+    {
+      "time": "2026-09-08T00:03:03.396Z",
+      "event": "files_modified",
+      "details": {
+        "count": 4
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:30.082Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:32.496Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:32.500Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:32.719Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "7c0c9927b7bfc966ceb2798064283ca3c9ca2dc432bff58b950796c166d25b92"
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:44.187Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T00:06:52.527Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7c0c9927b7bfc966ceb2798064283ca3c9ca2dc432bff58b950796c166d25b92"
+      }
+    }
+  ]
+}

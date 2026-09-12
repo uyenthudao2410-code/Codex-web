@@ -1,0 +1,554 @@
+[
+  {
+    "version": 2,
+    "task_id": "d27fa2a7e1ae44cd944d2d318906a19a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "w-7WZaTR04ioEue8kbTvnSKn",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 331,
+      "finished_at": "2026-09-12T07:49:54.949Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T07:47:39.529Z",
+    "updated_at": "2026-09-12T07:49:54.949Z",
+    "events": [
+      {
+        "time": "2026-09-12T07:47:39.529Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:39.857Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "session_id": "YuStzw0dPuvzdfZRtc5Cy3-S"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:40.493Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:49.492Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"runtime_stopped\" /c:\"runtime-stopped\" /c:\"reconcile=\" resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py",
+          "session_id": "Yurrl4xWpxTYcqUo7guMf1qA"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:49.834Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"runtime_stopped\" /c:\"runtime-stopped\" /c:\"reconcile=\" resources\\coding-tools-mcp\\scripts\\reconcile_exact_stale_run.py resources\\coding-tools-mcp\\coding_tools_mcp\\stale_run_reconciliation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:55.984Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py'; $c=Get-Content $p; $c[328..414]\"",
+          "session_id": "geg5ufc_bmQvaphhVRjgkqYz"
+        }
+      },
+      {
+        "time": "2026-09-12T07:47:58.332Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py'; $c=Get-Content $p; $c[328..414]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:09.405Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"reconcile_exact_stale|stale-run reconciliation|runtime_stopped|runtime-stopped\" -- electron resources scripts tests",
+          "session_id": "RRgHlQC1hBNYhqAKEVV2_dXb"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:10.174Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"reconcile_exact_stale|stale-run reconciliation|runtime_stopped|runtime-stopped\" -- electron resources scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:15.863Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/fullCleanActivation.js'; $c=Get-Content $p; $c[1738..1815]\"",
+          "session_id": "IkXsfDPvG-zVcdqpvFHWcVuJ"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:17.783Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/fullCleanActivation.js'; $c=Get-Content $p; $c[1738..1815]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:24.590Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"_execExactStaleRunCli|EXACT_STALE_RUN_REASON_PREFIX|exact stale-run maintenance|EXACT_STALE_RUN\" -- electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js scripts/full-clean-activation.js tests/full-clean-activation.test.js tests/full-clean-activation-command.test.js",
+          "session_id": "Gp2AKHkUW1GNegyrv_zWsrxd"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:24.932Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"_execExactStaleRunCli|EXACT_STALE_RUN_REASON_PREFIX|exact stale-run maintenance|EXACT_STALE_RUN\" -- electron/services/fullCleanActivation.js electron/services/runtimeOrchestrator.js scripts/full-clean-activation.js tests/full-clean-activation.test.js tests/full-clean-activation-command.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:32.213Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/fullCleanActivation.js'; $c=Get-Content $p; $c[1838..1880]; ''; $p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[2075..2140]\"",
+          "session_id": "kpy2t-9VoV3efpihIT85KsT2"
+        }
+      },
+      {
+        "time": "2026-09-12T07:48:34.190Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/fullCleanActivation.js'; $c=Get-Content $p; $c[1838..1880]; ''; $p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[2075..2140]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:03.440Z",
+        "event": "command_started",
+        "details": {
+          "command": "git ls-files resources/coding-tools-mcp/scripts | findstr /i \"problem prl lineage report\"",
+          "session_id": "o41BFcPC7IbNtLsm4t8m7iZX"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:03.770Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git ls-files resources/coding-tools-mcp/scripts | findstr /i \"problem prl lineage report\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:10.966Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --help",
+          "session_id": "yTaBZ-9T_Ao-sXJBFqOJcp3I"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:11.642Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:17.515Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace E:\\DEV\\Codex-web",
+          "session_id": "lsrP-uJMr58eH5HyXaDAt3dE"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:23.900Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace E:\\DEV\\Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:33.907Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"exact_attempt_binding_missing|manifest_contract_invalid|criterion_to_proof_structural_coverage|exact_revision_binding\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "session_id": "tL5wggmo5rBeOi_bl0tqWWll"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:34.341Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"exact_attempt_binding_missing|manifest_contract_invalid|criterion_to_proof_structural_coverage|exact_revision_binding\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:42.832Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_canary.py'; $c=Get-Content $p; $c[90..235]\"",
+          "session_id": "SKo1JR5BxOMQiAqv4rNb0W56"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:45.576Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_canary.py'; $c=Get-Content $p; $c[90..235]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:54.484Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"CREATE TABLE.*problem|problem_events|problem_revisions|problem_threads\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "session_id": "w-7WZaTR04ioEue8kbTvnSKn"
+        }
+      },
+      {
+        "time": "2026-09-12T07:49:54.949Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"CREATE TABLE.*problem|problem_events|problem_revisions|problem_threads\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T07:50:02.406Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "1907911f9876437688e4c96024018794",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T07:51:55.069Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-12T07:50:02.407Z",
+    "updated_at": "2026-09-12T07:51:55.069Z",
+    "events": [
+      {
+        "time": "2026-09-12T07:50:02.407Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:03.210Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"class ProblemLineageFacts|events_for_revision|problem.*event|revision.*event|CREATE TABLE\" -- resources/coding-tools-mcp/coding_tools_mcp | findstr /i \"problem lineage revision event\"",
+          "session_id": "dNqZNpJzHKXKPIu6-B2LTEWy"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:03.517Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"class ProblemLineageFacts|events_for_revision|problem.*event|revision.*event|CREATE TABLE\" -- resources/coding-tools-mcp/coding_tools_mcp | findstr /i \"problem lineage revision event\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:09.897Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $c=Get-Content $p; $c[130..240]\"",
+          "session_id": "h7yLmkOs-DPuVPt_h6HtCTMU"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:11.625Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py'; $c=Get-Content $p; $c[130..240]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:19.047Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"CREATE TABLE IF NOT EXISTS (runs|waves)|CREATE TABLE.*waves|metadata_json\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py | findstr /i \"waves metadata\"",
+          "session_id": "0YV7VUajPATlGl4wff2ZitQS"
+        }
+      },
+      {
+        "time": "2026-09-12T07:50:19.368Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"CREATE TABLE IF NOT EXISTS (runs|waves)|CREATE TABLE.*waves|metadata_json\" -- resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py | findstr /i \"waves metadata\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:06.073Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $c=Get-Content $p; $c[365..410]\"",
+          "session_id": "QvsScub_Gvy8arvRZmFCZRB_"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:07.520Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py'; $c=Get-Content $p; $c[365..410]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:15.740Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"coverage_manifest|problem_coverage_manifest|coverage_manifest_sha256|criterion_dispositions_sha256\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | findstr /v \"problem_lineage_canary.py\"",
+          "session_id": "EzbY7JY41vgOORue_suMVQYL"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:16.040Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"coverage_manifest|problem_coverage_manifest|coverage_manifest_sha256|criterion_dispositions_sha256\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | findstr /v \"problem_lineage_canary.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:26.509Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py'; $c=Get-Content $p; $c[810..1098]\"",
+          "session_id": "epSWhc9lMTU5jCqDEscjiVVy"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:27.842Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py'; $c=Get-Content $p; $c[810..1098]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:34.300Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[1540..1645]\"",
+          "session_id": "hxyaePd9FU_28FhIEupqi5ke"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:35.465Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[1540..1645]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:44.272Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py'; $c=Get-Content $p; $c[0..80]\"",
+          "session_id": "6rlPTJDjbWZ90htfQh8O3haC"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:45.646Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py'; $c=Get-Content $p; $c[0..80]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:55.069Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"from pathlib import Path; from collections import Counter,defaultdict; from coding_tools_mcp.ledger_analysis import open_ledger_analysis_snapshot; from coding_tools_mcp.problem_resolution_economics import ProblemLineageFacts; from coding_tools_mcp.problem_lineage_canary import _revision_integrity_index,_full_claim_unit; root=Path(r'E:\\DEV\\Codex-web'); cm=open_ledger_analysis_snapshot(root); s=cm.__enter__(); p=ProblemLineageFacts.load(s.reader); idx,_=_revision_integrity_index(p); row",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T07:51:55.069Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T07:52:02.354Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fdcbe2b958814306bd53748b6800585d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "TiJMtTgXxZRblO-O39ua25zh",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 361,
+      "finished_at": "2026-09-12T07:52:02.986Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T07:52:02.358Z",
+    "updated_at": "2026-09-12T07:52:02.986Z",
+    "events": [
+      {
+        "time": "2026-09-12T07:52:02.358Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T07:52:02.702Z",
+        "event": "command_started",
+        "details": {
+          "command": "where sqlite3",
+          "session_id": "TiJMtTgXxZRblO-O39ua25zh"
+        }
+      },
+      {
+        "time": "2026-09-12T07:52:02.986Z",
+        "event": "command_finished",
+        "details": {
+          "command": "where sqlite3",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T07:52:17.719Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d259c9775b074fd79a479fbf0ecb04e8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3p-y-MNgc1QZtp1VZBHODFwf",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 254,
+      "finished_at": "2026-09-12T07:52:18.272Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T07:52:17.719Z",
+    "updated_at": "2026-09-12T07:52:18.272Z",
+    "events": [
+      {
+        "time": "2026-09-12T07:52:17.719Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T07:52:17.985Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /s /i /n /c:\"full_problem\" /c:\"coverage_manifest\" .coding-tools\\orchestration\\reports\\run-*\\wave-*.md",
+          "session_id": "3p-y-MNgc1QZtp1VZBHODFwf"
+        }
+      },
+      {
+        "time": "2026-09-12T07:52:18.272Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /s /i /n /c:\"full_problem\" /c:\"coverage_manifest\" .coding-tools\\orchestration\\reports\\run-*\\wave-*.md",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T07:52:26.436Z",
+    "archive_reason": "finished"
+  }
+]

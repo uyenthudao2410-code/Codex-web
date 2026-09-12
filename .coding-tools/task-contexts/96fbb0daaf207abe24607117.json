@@ -1,0 +1,502 @@
+{
+  "version": 2,
+  "task_id": "00d90357ba1a4fbd9a86c87e3c765d66",
+  "orchestration": {
+    "run_id": "54f3828441a747fa94aca227a10f1dac",
+    "wave_id": "632362e0077d4fcd89e488bfb37f080a",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Fix the Recovery Supervisor deferred-envelope contract mismatch so Get-DeferredRequest continues requiring source_checkpoint but treats trusted_recovery_bootstrap as optional: read it via Get-OptionalProperty and fail closed only when a present value is not a PSCustomObject. Update only the existing deferred-worker supervisor test so the canonical live request omits trusted_recovery_bootstrap and still launches exactly one worker, preserving expired-request and all other checks. Preserve all unrelated pre-existing WIP bytes in exactly these two already-dirty files.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T19:36:42.830Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T19:36:42.830Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T19:36:42.830Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "KqTBRuja4lFr_c8raHOS_ZVd",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 982,
+    "finished_at": "2026-09-08T19:37:04.634Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "state": "file",
+          "sha256": "4bb6d6ed8ea68051189c3914369aa14cca737ca6528b5e1b1c9a4be09d76118c",
+          "size_bytes": 28317,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "54f3828441a747fa94aca227a10f1dac",
+          "wave_id": "632362e0077d4fcd89e488bfb37f080a"
+        },
+        {
+          "path": "tests/recovery-supervisor.test.js",
+          "state": "file",
+          "sha256": "7f759a06245f698e8b761bdb7522ba30b4d9732ca5f99a6ca97c5025e0d4897e",
+          "size_bytes": 25776,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "54f3828441a747fa94aca227a10f1dac",
+          "wave_id": "632362e0077d4fcd89e488bfb37f080a"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "d426486383334313983ba50b9fbf49bd",
+            "seq": 44623,
+            "event_time": "2026-09-08T19:36:16.130Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "34afc36b733460bf94dbb4ffa59b7af6cb18ce09850cf950c39228bbac8daa91",
+              "f9dc4f487352ac577cb511b8eca382d57f0dfbb27374f5b94e6cda39dd6eefc5"
+            ],
+            "file_count": 2,
+            "additions": 3,
+            "removals": 3,
+            "line_changes": 6,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 38,
+        "head_hash": "374a1c3f5c8bb7c8261acf45f514ec6a4ab7dfa5eeecd76437dfe20d13bdf8df"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54f3828441a747fa94aca227a10f1dac\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-54f3828441a747fa94aca227a10f1dac\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "54f3828441a747fa94aca227a10f1dac",
+      "wave_id": "632362e0077d4fcd89e488bfb37f080a",
+      "checkpoint_id": "16b78589129447da882f39ce58ede8e8",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix the Recovery Supervisor deferred-envelope contract mismatch so Get-DeferredRequest continues requiring source_checkpoint but treats trusted_recovery_bootstrap as optional: read it via Get-OptionalProperty and fail closed only when a present value is not a PSCustomObject. Update only the existing deferred-worker supervisor test so the canonical live request omits trusted_recovery_bootstrap and still launches exactly one worker, preserving expired-request and all other checks. Preserve all unrelated pre-existing WIP bytes in exactly these two already-dirty files.",
+        "objective_revision": 1,
+        "objective_sha256": "a2097abf936b40dba654e63743b9163b690cd0d2f475ef47e0440e511601b1f7",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "e374e1f61b0541918d264ce3f826022d",
+          "stage_id": "check:fe3ffbf7aa7a92a6",
+          "status": "passed",
+          "duration_ms": 22452,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "32f428cfa43d41c89b00d2a1d379b2ad",
+          "stage_id": "check:d748b3f2c2065ed5",
+          "status": "passed",
+          "duration_ms": 1021,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "742b7934b62c8284712294a5692b0e0bf853cb4592c2c216699fa36617f45418",
+  "completion_report_acknowledged_id": "742b7934b62c8284712294a5692b0e0bf853cb4592c2c216699fa36617f45418",
+  "completion_report_acknowledged_at": "2026-09-08T19:37:44.229Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+      "operation": "update",
+      "updated_at": "2026-09-08T19:36:43.804Z"
+    },
+    {
+      "path": "tests/recovery-supervisor.test.js",
+      "operation": "update",
+      "updated_at": "2026-09-08T19:36:43.804Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-08T19:34:44.510Z",
+  "updated_at": "2026-09-08T19:37:54.152Z",
+  "events": [
+    {
+      "time": "2026-09-08T19:34:44.510Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fix the Recovery Supervisor deferred-envelope contract mismatch so Get-DeferredRequest continues requiring source_checkpoint but treats trusted_recovery_bootstrap as optional: read it via Get-OptionalProperty and fail closed only when a present value is not a PSCustomObject. Update only the existing deferred-worker supervisor test so the canonical live request omits trusted_recovery_bootstrap and still launches exactly one worker, preserving expired-request and all other checks. Preserve all unrelated pre-existing WIP bytes in exactly these two already-dirty files."
+      }
+    },
+    {
+      "time": "2026-09-08T19:34:45.676Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:34:56.307Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:34:56.316Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T19:35:30.241Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PATCH_CONTEXT_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-09-08T19:35:41.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/recovery-supervisor/recovery-supervisor.ps1';(Get-Content -LiteralPath $p)|Where-Object{$_ -like 'function Get-DeferredRequest*'}; $t='tests/recovery-supervisor.test.js';(Get-Content -LiteralPath $t)|Where-Object{$_ -like '*Recovery Supervisor launches one*' -or $_ -like '*writeJson(requestPath*'}\"",
+        "session_id": "0eoTKa1JZEfPyTEwDMUFxGPW"
+      }
+    },
+    {
+      "time": "2026-09-08T19:35:41.696Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/recovery-supervisor/recovery-supervisor.ps1';(Get-Content -LiteralPath $p)|Where-Object{$_ -like 'function Get-DeferredRequest*'}; $t='tests/recovery-supervisor.test.js';(Get-Content -LiteralPath $t)|Where-Object{$_ -like '*Recovery Supervisor launches one*' -or $_ -like '*writeJson(requestPath*'}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:13.535Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:14.367Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:15.547Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:15.554Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:17.056Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:17.588Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:18.622Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/recovery-supervisor.test.js",
+        "session_id": "VeUdCEXtxQ2593RwuG2LFwmX"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:40.355Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:41.522Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+        "session_id": "AljXxdVeEx664gCZ-dz_kq58"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:41.923Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:42.813Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:42.830Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:43.550Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:43.553Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:43.654Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "6b14efec3ff513b9855e620431d3891b4981704e9063f5e827d47ce1fcbe6835"
+      }
+    },
+    {
+      "time": "2026-09-08T19:36:43.804Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:02.903Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:04.085Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/recovery-supervisor/recovery-supervisor.ps1','tests/recovery-supervisor.test.js'); foreach($p in $paths){$f=Get-Item -LiteralPath $p;$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); Write-Output ('FILE|'+$p+'|'+$f.Length+'|'+$h)}; $s=Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-supervisor.ps1'; $s|Where-Object{$_ -like 'function Get-DeferredRequest*'}; $t=Get-Content -LiteralPath 'tests/recovery-s",
+        "session_id": "KqTBRuja4lFr_c8raHOS_ZVd"
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:04.634Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$paths=@('resources/recovery-supervisor/recovery-supervisor.ps1','tests/recovery-supervisor.test.js'); foreach($p in $paths){$f=Get-Item -LiteralPath $p;$h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); Write-Output ('FILE|'+$p+'|'+$f.Length+'|'+$h)}; $s=Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-supervisor.ps1'; $s|Where-Object{$_ -like 'function Get-DeferredRequest*'}; $t=Get-Content -LiteralPath 'tests/recovery-s",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:18.909Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:21.269Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:21.274Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:21.384Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "742b7934b62c8284712294a5692b0e0bf853cb4592c2c216699fa36617f45418"
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:32.677Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:44.229Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "742b7934b62c8284712294a5692b0e0bf853cb4592c2c216699fa36617f45418"
+      }
+    },
+    {
+      "time": "2026-09-08T19:37:54.152Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

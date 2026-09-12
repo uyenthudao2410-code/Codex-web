@@ -1,0 +1,422 @@
+[
+  {
+    "version": 2,
+    "task_id": "750411b0c11f424ebba1ab114da52e9b",
+    "orchestration": {
+      "run_id": "5ed4115abd52443fbc4a5b1034cbe0dd",
+      "wave_id": "a93d2c5e325a4d22a8fb5b9341eae4f5",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "8ce6e50a994c7a89260f52b668edc8f91df316388b88d084ad47c5d2af940540",
+      "contract_fp": "5f5ab95312751d2577cc6cabb17afe507976a8085af893af87e1fac6394826e8"
+    },
+    "objective": "Make Recovery Supervisor reinstall replace an orphaned prior supervisor cooperatively and fail closed unless the exact newly installed capability-bearing process publishes a fresh heartbeat.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:28:08.654Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:28:08.654Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:28:08.654Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "zy8nRaIm5iB_lwttpWh92WnG",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 776,
+      "finished_at": "2026-09-08T14:28:08.345Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "docs/RECOVERY_HOST.md",
+            "state": "file",
+            "sha256": "9728adfb6d890e5bbb6a99c6f0d485f94c40ab72482031f4b7db8fd18fb7cc22",
+            "size_bytes": 43029,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "5ed4115abd52443fbc4a5b1034cbe0dd",
+            "wave_id": "a93d2c5e325a4d22a8fb5b9341eae4f5"
+          },
+          {
+            "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+            "state": "file",
+            "sha256": "9614c2f64c3bec53656648cd80e6dcab2397d980672930cda200f147e966bc67",
+            "size_bytes": 27976,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "5ed4115abd52443fbc4a5b1034cbe0dd",
+            "wave_id": "a93d2c5e325a4d22a8fb5b9341eae4f5"
+          },
+          {
+            "path": "tests/recovery-supervisor.test.js",
+            "state": "file",
+            "sha256": "260eac0f86bce5112a71ec74add1338e0cb709b1e355d1ce9cd4feb8445274a9",
+            "size_bytes": 25720,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "5ed4115abd52443fbc4a5b1034cbe0dd",
+            "wave_id": "a93d2c5e325a4d22a8fb5b9341eae4f5"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 35,
+          "head_hash": "0e578347e0823b6f5388a5aa3490a7565e9eb99c52caa4ed28906655f08c871a"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5ed4115abd52443fbc4a5b1034cbe0dd\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5ed4115abd52443fbc4a5b1034cbe0dd\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "5ed4115abd52443fbc4a5b1034cbe0dd",
+        "wave_id": "a93d2c5e325a4d22a8fb5b9341eae4f5",
+        "checkpoint_id": "fc1fc9b52c1d4d1a9b699bcb9aa26dae",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "8ce6e50a994c7a89260f52b668edc8f91df316388b88d084ad47c5d2af940540",
+        "contract_fp": "5f5ab95312751d2577cc6cabb17afe507976a8085af893af87e1fac6394826e8",
+        "objective_provenance": {
+          "effective_objective": "Make Recovery Supervisor reinstall replace an orphaned prior supervisor cooperatively and fail closed unless the exact newly installed capability-bearing process publishes a fresh heartbeat.",
+          "objective_revision": 1,
+          "objective_sha256": "492b4f484834f87ed90d12aa1821695fd1e01cd1d5fcf5f1ca5d18011d557398",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 3,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "8262baf02b1d477aac2bce81b3e15857",
+            "stage_id": "check:fe3ffbf7aa7a92a6",
+            "status": "passed",
+            "duration_ms": 24188,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "6111d413d0b44db49f4df04f3df00c94",
+            "stage_id": "check:46508d374f5d93c2",
+            "status": "passed",
+            "duration_ms": 1303,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "83bf2c01bf354f2c88a9970150dec9a1",
+            "stage_id": "check:9bb70a158b1c7dcc",
+            "status": "passed",
+            "duration_ms": 1212,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "6488010c5e23c38fc3f8e5586b876cc18f932dc8ef4b0707eb66b00a1281eeb1",
+    "completion_report_acknowledged_id": "6488010c5e23c38fc3f8e5586b876cc18f932dc8ef4b0707eb66b00a1281eeb1",
+    "completion_report_acknowledged_at": "2026-09-08T14:29:05.638Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T14:27:34.603Z",
+    "updated_at": "2026-09-08T14:29:16.461Z",
+    "events": [
+      {
+        "time": "2026-09-08T14:27:34.603Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Make Recovery Supervisor reinstall replace an orphaned prior supervisor cooperatively and fail closed unless the exact newly installed capability-bearing process publishes a fresh heartbeat."
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:36.051Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:37.242Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:38.458Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:38.467Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:39.841Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:40.419Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:27:41.220Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "session_id": "IPIH-E7YWdZp-36hxn2ihKzt"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:04.761Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:06.107Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$errors=$null;[void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'resources/recovery-supervisor/recovery-supervisor.ps1'),[ref]$null,[ref]$errors);if($errors.Count){exit 1}\"",
+          "session_id": "T8UWp2BSQQ78dTxlxaLSNwuA"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:06.681Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$errors=$null;[void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'resources/recovery-supervisor/recovery-supervisor.ps1'),[ref]$null,[ref]$errors);if($errors.Count){exit 1}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:07.917Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "session_id": "zy8nRaIm5iB_lwttpWh92WnG"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:08.345Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:08.645Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:08.654Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:09.013Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:09.019Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:09.299Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "4f0fa2af99231916f355d0ee46200bdffc8bef8ad7110e79cfd77e810683282e"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:09.479Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:20.038Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:45.507Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:45.511Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:45.671Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "6488010c5e23c38fc3f8e5586b876cc18f932dc8ef4b0707eb66b00a1281eeb1"
+        }
+      },
+      {
+        "time": "2026-09-08T14:28:55.309Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:29:05.638Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "6488010c5e23c38fc3f8e5586b876cc18f932dc8ef4b0707eb66b00a1281eeb1"
+        }
+      },
+      {
+        "time": "2026-09-08T14:29:16.461Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T14:29:16.611Z",
+    "archive_reason": "finished"
+  }
+]

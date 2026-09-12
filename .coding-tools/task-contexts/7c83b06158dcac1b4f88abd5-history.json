@@ -1,0 +1,509 @@
+[
+  {
+    "version": 2,
+    "task_id": "04806564bebf4c7db141d41904fe3203",
+    "orchestration": {
+      "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+      "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3b5e1fffb56ec8322e1e6786aa64c03223eaa3ed7c446b20358e523530c7cd89",
+      "contract_fp": "85c452de1bdba5f568643637bd82c1d8edb2a0e610d2ad15afb1a31495c6c3af"
+    },
+    "objective": "Replace the Windows kill-on-close detached activation child with a capability-gated Recovery Supervisor-owned durable worker, prove single-launch and credential isolation, and prepare a new trusted recovery_host bootstrap without replaying the expired operation.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:14:58.717Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:14:58.717Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:14:58.717Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "pYFsMs6mwav3mBom89NWjPKa",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 596,
+      "finished_at": "2026-09-08T14:14:58.350Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "docs/RECOVERY_HOST.md",
+            "state": "file",
+            "sha256": "d0a4898eb6e5bfd884dd6716f2b9926601bc7f45f989a340ff30ced1d5d7e53b",
+            "size_bytes": 42312,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "electron/services/componentRevision.js",
+            "state": "file",
+            "sha256": "49507f88aefed388c7753aac55a624e38417e09a931ac501087dcc44a71dfde8",
+            "size_bytes": 13053,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+            "state": "file",
+            "sha256": "8f3261cf4105a9e379dd4b96d3c162bdddedcd18e17d6d1ad336eae414c7766c",
+            "size_bytes": 25928,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "scripts/full-clean-activation.js",
+            "state": "file",
+            "sha256": "7ffb87c309882310088a0fe9e823406444a8ac35069a8f3efbf9687e173acc4a",
+            "size_bytes": 79875,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "scripts/trusted-recovery-bootstrap.js",
+            "state": "file",
+            "sha256": "23c75e758f165f5674edb9453b952b3df7368253e7bcbefcdacc9be2408b6cff",
+            "size_bytes": 4051,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "tests/accepted-code-activation.test.js",
+            "state": "file",
+            "sha256": "b84aa77d96aa32fc0358f94fd9009ed68452b5324dbc880f9f7a5c07335f4956",
+            "size_bytes": 56388,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "tests/component-revision.test.js",
+            "state": "file",
+            "sha256": "6594c76dc2da2434e6d14e7a9bc08ae7558b0478ac54fbefc788a7a737a6a0c5",
+            "size_bytes": 10267,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "tests/full-clean-activation-command.test.js",
+            "state": "file",
+            "sha256": "d62392cbf527c0217d6a7b5fa84dd688bb443e0425ec010e0f2aebce9edb4787",
+            "size_bytes": 49081,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "tests/recovery-supervisor.test.js",
+            "state": "file",
+            "sha256": "d5139b6324905e5ccd6702b380db53321be90c8650a798b6c551bf4a3bf51157",
+            "size_bytes": 23631,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          },
+          {
+            "path": "tests/trusted-recovery-bootstrap.test.js",
+            "state": "file",
+            "sha256": "e197d9f95fc2e2ae13054032ebbdd78a6ec0f82e61c9b198a4fb06de08ff5801",
+            "size_bytes": 9596,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+            "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 40,
+          "head_hash": "818a9951abb668c40139413613dc2f5147a42f0549544ba1cb637bbdf84ffea5"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1a696a5607aa42b1a0272a10a72b7178\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1a696a5607aa42b1a0272a10a72b7178\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "1a696a5607aa42b1a0272a10a72b7178",
+        "wave_id": "3ba6e77ba7144cc19accf1e7ed3e8a64",
+        "checkpoint_id": "f92afffa5e89407286906e1f1ef82bdf",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3b5e1fffb56ec8322e1e6786aa64c03223eaa3ed7c446b20358e523530c7cd89",
+        "contract_fp": "85c452de1bdba5f568643637bd82c1d8edb2a0e610d2ad15afb1a31495c6c3af",
+        "objective_provenance": {
+          "effective_objective": "Replace the Windows kill-on-close detached activation child with a capability-gated Recovery Supervisor-owned durable worker, prove single-launch and credential isolation, and prepare a new trusted recovery_host bootstrap without replaying the expired operation.",
+          "objective_revision": 1,
+          "objective_sha256": "538cff1f2d442f83507d13b5db28b166b844d1b01920c9d4663f5a2359d1f456",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 4,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "3d60ae0ad9744ca393f0e82c65971871",
+            "stage_id": "check:fac1bdd7a8e41556",
+            "status": "passed",
+            "duration_ms": 16248,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "248d3c6b27e8435d99be10a2d4116de2",
+            "stage_id": "check:7a28619f5e0fb586",
+            "status": "passed",
+            "duration_ms": 6380,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "70de50999e3b45d29611a5280766d75a",
+            "stage_id": "check:5b28da7b52290f53",
+            "status": "passed",
+            "duration_ms": 4862,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "f78ea7b92a584e04a2d060ee094528fd",
+            "stage_id": "check:d27f10e61eb0c25a",
+            "status": "passed",
+            "duration_ms": 1013,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "509a8641f218c668c6b2d53d28045a54cdfdcd9a3f63611becd1d7e2dc4bd40f",
+    "completion_report_acknowledged_id": "509a8641f218c668c6b2d53d28045a54cdfdcd9a3f63611becd1d7e2dc4bd40f",
+    "completion_report_acknowledged_at": "2026-09-08T14:16:21.458Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T14:14:22.423Z",
+    "updated_at": "2026-09-08T14:16:31.680Z",
+    "events": [
+      {
+        "time": "2026-09-08T14:14:22.423Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Replace the Windows kill-on-close detached activation child with a capability-gated Recovery Supervisor-owned durable worker, prove single-launch and credential isolation, and prepare a new trusted recovery_host bootstrap without replaying the expired operation."
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:23.904Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:25.392Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:26.440Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:26.447Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:27.664Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:28.146Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:28.869Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/full-clean-activation-command.test.js tests/trusted-recovery-bootstrap.test.js tests/recovery-supervisor.test.js tests/component-revision.test.js",
+          "session_id": "4M9yv3WzxdZigYNXQHpuEwCz"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:44.536Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/full-clean-activation-command.test.js tests/trusted-recovery-bootstrap.test.js tests/recovery-supervisor.test.js tests/component-revision.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:45.839Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/recovery-bootstrap.test.js tests/full-clean-activation.test.js",
+          "session_id": "eSjxZ1hoxG95Cxfc81tgreb_"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:51.470Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/recovery-bootstrap.test.js tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:52.511Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test --test-name-pattern \"component ownership|newer component-bearing|processed component source\" tests/accepted-code-activation.test.js",
+          "session_id": "b0twU1a-p5W7RzroYvRPAqYp"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:56.772Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test --test-name-pattern \"component ownership|newer component-bearing|processed component source\" tests/accepted-code-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:57.941Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md electron/services/componentRevision.js resources/recovery-supervisor/recovery-supervisor.ps1 scripts/full-clean-activation.js scripts/trusted-recovery-bootstrap.js tests/accepted-code-activation.test.js tests/component-revision.test.js tests/full-clean-activation-command.test.js tests/recovery-supervisor.test.js tests/trusted-recovery-bootstrap.test.js",
+          "session_id": "pYFsMs6mwav3mBom89NWjPKa"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:58.350Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md electron/services/componentRevision.js resources/recovery-supervisor/recovery-supervisor.ps1 scripts/full-clean-activation.js scripts/trusted-recovery-bootstrap.js tests/accepted-code-activation.test.js tests/component-revision.test.js tests/full-clean-activation-command.test.js tests/recovery-supervisor.test.js tests/trusted-recovery-bootstrap.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:58.708Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:58.717Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:59.110Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:59.112Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:59.258Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "e3f83e37fcc7fca8ebdd4576313fb2bd49a9ba7f5fc5f386e05fd7bb0b3ddc44"
+        }
+      },
+      {
+        "time": "2026-09-08T14:14:59.368Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T14:15:22.762Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:00.734Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:00.738Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:00.850Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "509a8641f218c668c6b2d53d28045a54cdfdcd9a3f63611becd1d7e2dc4bd40f"
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:11.840Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:21.458Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "509a8641f218c668c6b2d53d28045a54cdfdcd9a3f63611becd1d7e2dc4bd40f"
+        }
+      },
+      {
+        "time": "2026-09-08T14:16:31.680Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T14:16:31.815Z",
+    "archive_reason": "finished"
+  }
+]

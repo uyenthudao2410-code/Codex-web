@@ -849,9 +849,13 @@ Low-level/legacy tools may still exist in compatibility or non-smart modes, but 
 
 `agent_workflow` is the primary end-to-end coding path. Mutation/proof workflows are governed by the EOCL state machine and durable orchestration ledger. A successful command or green test does not by itself equal final acceptance; an `ACCEPTING` wave still requires the authorized semantic controller to accept or reject it.
 
+Bounded RUN continuation has two explicit consent adapters over the same exact descriptor contract. The embedded Electron ChatGPT view can stage its existing one-shot DOM-observed command receipt. An attested external ChatWeb controller that cannot produce that Electron event instead receives a short-lived loopback approval URL: its fragment token is process-local and absent from HTTP request targets/logs, the page renders the exact RUN/WAVE/workspace/epoch/fingerprint/scope/check/budget terms, and an explicit local button press grants and starts only that continuation. The endpoint rejects forwarded/tunnel-shaped traffic, controller transfer, runtime or WAVE drift, expiry, and replay. Neither a generic visible turn nor a copied descriptor grants background authority, and final acceptance remains controller-owned.
+
 For a selected read-only review, `agent_workflow(phase="prepare")` also accepts an optional `committed_review` object. It requires exact local 40-hex base/head commits, computes an explicit local merge-base range, disables external diff/textconv and system/global attributes, bounds and redacts returned evidence, and signs any continuation to the immutable range. It adds no ninth MCP tool, cannot run in a mutation/resume phase, does not fetch history, and does not itself establish execution or acceptance evidence.
 
 For ordinary context collection, `agent_workflow` phase `prepare`/`run` exposes the existing bounded context controls and forwards them unchanged to `prepare_coding_context`. The public `smart-v3` surface remains exactly eight tools; this does not create a second index or authority.
+
+The split `prepare -> execute` path is explicitly lineage-bound. `prepare` returns `prepared_binding.run_id` and `prepared_binding.wave_id`; callers should pass both values to `execute`. The runtime requires the pair to match the caller-scoped current `PREFLIGHT`/`READY` prepare lineage and fails closed before creating a new RUN or write lease when a refined execute objective omits or mismatches that binding. The prepare RUN objective remains the immutable authority; an execute objective is only a narrower implementation plan.
 
 Current authority rules:
 

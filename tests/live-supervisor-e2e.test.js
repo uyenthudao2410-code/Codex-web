@@ -27,18 +27,84 @@ const { installTunnelProcessFixture, withWorkingDirectory } = require('./helpers
 const MCP_ROOT = path.resolve(__dirname, '..', 'resources', 'coding-tools-mcp');
 const PYTHON = process.env.PYTHON || 'python';
 
-function removeTempTree(target) {
-  fs.rmSync(target, {
-    recursive: true,
-    force: true,
-    // Windows can keep a just-exited child process directory briefly locked,
-    // especially while the broader test suite is releasing concurrent process
-    // handles. Keep cleanup deterministic with a bounded retry window instead
-    // of an unbounded sleep or masking a persistent lifecycle leak.
-    maxRetries: process.platform === 'win32' ? 20 : 0,
-    retryDelay: process.platform === 'win32' ? 100 : 0
-  });
+const transientTempCleanupCodes = new Set(['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM']);
+
+function sleepSync(ms) {
+  if (ms > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
+
+function removeTempTree(target, options = {}) {
+  const remove = options.remove || fs.rmSync;
+  const sleep = options.sleep || sleepSync;
+  const platform = options.platform || process.platform;
+  const maxOuterRetries = Number.isInteger(options.maxOuterRetries) ? options.maxOuterRetries : 4;
+  const retryBaseDelayMs = Number.isInteger(options.retryBaseDelayMs) ? options.retryBaseDelayMs : 250;
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      remove(target, {
+        recursive: true,
+        force: true,
+        maxRetries: platform === 'win32' ? 8 : 0,
+        retryDelay: platform === 'win32' ? 50 : 0
+      });
+      return;
+    } catch (error) {
+      const retryable = platform === 'win32' && transientTempCleanupCodes.has(String(error?.code || ''));
+      if (!retryable || attempt >= maxOuterRetries) throw error;
+      sleep(Math.min(1000, retryBaseDelayMs * (attempt + 1)));
+    }
+  }
+}
+
+test('live supervisor test cleanup retries only bounded transient Windows teardown failures', () => {
+  const transientDelays = [];
+  let transientAttempts = 0;
+  removeTempTree('ignored-transient', {
+    platform: 'win32',
+    maxOuterRetries: 2,
+    retryBaseDelayMs: 10,
+    sleep: (ms) => transientDelays.push(ms),
+    remove: () => {
+      transientAttempts += 1;
+      if (transientAttempts < 3) throw Object.assign(new Error('transient'), { code: 'EPERM' });
+    }
+  });
+  assert.equal(transientAttempts, 3);
+  assert.deepEqual(transientDelays, [10, 20]);
+
+  let terminalAttempts = 0;
+  const terminal = Object.assign(new Error('terminal'), { code: 'EINVAL' });
+  assert.throws(() => removeTempTree('ignored-terminal', {
+    platform: 'win32',
+    maxOuterRetries: 4,
+    sleep: () => assert.fail('non-transient cleanup must not sleep or retry'),
+    remove: () => { terminalAttempts += 1; throw terminal; }
+  }), (error) => error === terminal);
+  assert.equal(terminalAttempts, 1);
+
+  let nonWindowsAttempts = 0;
+  const nonWindows = Object.assign(new Error('non-windows'), { code: 'EPERM' });
+  assert.throws(() => removeTempTree('ignored-non-windows', {
+    platform: 'linux',
+    maxOuterRetries: 4,
+    sleep: () => assert.fail('non-Windows cleanup must not sleep or retry'),
+    remove: () => { nonWindowsAttempts += 1; throw nonWindows; }
+  }), (error) => error === nonWindows);
+  assert.equal(nonWindowsAttempts, 1);
+
+  const exhaustedDelays = [];
+  let exhaustedAttempts = 0;
+  const exhausted = Object.assign(new Error('exhausted'), { code: 'EBUSY' });
+  assert.throws(() => removeTempTree('ignored-exhausted', {
+    platform: 'win32',
+    maxOuterRetries: 2,
+    retryBaseDelayMs: 7,
+    sleep: (ms) => exhaustedDelays.push(ms),
+    remove: () => { exhaustedAttempts += 1; throw exhausted; }
+  }), (error) => error === exhausted);
+  assert.equal(exhaustedAttempts, 3);
+  assert.deepEqual(exhaustedDelays, [7, 14]);
+});
 
 function waitForHealth(port, timeoutMs = 30000, token = '') {
   return new Promise((resolve, reject) => {

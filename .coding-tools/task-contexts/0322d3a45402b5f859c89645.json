@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "d360e8032f04440ea59ee70e8f2f3d42",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "U4nmClSj6U1fnFzpl6l9uDnS",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 390,
+    "finished_at": "2026-09-09T23:25:42.067Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T23:25:41.429Z",
+  "updated_at": "2026-09-09T23:25:42.067Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:25:41.429Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:41.759Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -S -C 3 \"EPERM|EBUSY|ENOTEMPTY|live-supervisor-e2e|recovery-supervisor\" .coding-tools\\orchestration\\reports --glob \"wave-*.md\"",
+        "session_id": "U4nmClSj6U1fnFzpl6l9uDnS"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:42.067Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -S -C 3 \"EPERM|EBUSY|ENOTEMPTY|live-supervisor-e2e|recovery-supervisor\" .coding-tools\\orchestration\\reports --glob \"wave-*.md\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

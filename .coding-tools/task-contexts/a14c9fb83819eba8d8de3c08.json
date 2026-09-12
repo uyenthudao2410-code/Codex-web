@@ -1,0 +1,361 @@
+{
+  "version": 2,
+  "task_id": "d98d15c412d14af3ac83381f8730647b",
+  "orchestration": {
+    "run_id": "fdaf4ddb69c6486193379ffa94dcc52a",
+    "wave_id": "c25181c475d943c5b08bea16f8fc793a",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "2ff63d7520c62d5f2d51a2cf5119b17841377c5a7e838d4732287a157a41f9f6",
+    "contract_fp": ""
+  },
+  "objective": "Record exact no-patch provenance of the existing two-file H0 attested-ChatWeb PRL delta for source review only; no natural Problem outcome, no continuation grant, no activation or restart.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T09:28:52.935Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T09:28:52.935Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T09:28:52.935Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "XUqWOIOsngo77e-tjCPl6W8m",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 731,
+    "finished_at": "2026-09-08T09:28:52.602Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "state": "file",
+          "sha256": "754aa06ea870933d874d0dc42314693f304759e180a9ee30428fdebbcfe1fb38",
+          "size_bytes": 17856,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "fdaf4ddb69c6486193379ffa94dcc52a",
+          "wave_id": "c25181c475d943c5b08bea16f8fc793a"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "state": "file",
+          "sha256": "c3a95ea1c485f2d7433c9ccfcfa070c029f3ab196c2c86a6578e80bfdaa84293",
+          "size_bytes": 73131,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "fdaf4ddb69c6486193379ffa94dcc52a",
+          "wave_id": "c25181c475d943c5b08bea16f8fc793a"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 27,
+        "head_hash": "736ae8769acc77177261232d6b4303abc4770a886c19ab5613d57c0bbbcbd461"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-fdaf4ddb69c6486193379ffa94dcc52a\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-fdaf4ddb69c6486193379ffa94dcc52a\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "fdaf4ddb69c6486193379ffa94dcc52a",
+      "wave_id": "c25181c475d943c5b08bea16f8fc793a",
+      "checkpoint_id": "6b90b08ba9bd4c1a8076dbfbdee1b91f",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "2ff63d7520c62d5f2d51a2cf5119b17841377c5a7e838d4732287a157a41f9f6",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Record exact no-patch provenance of the existing two-file H0 attested-ChatWeb PRL delta for source review only; no natural Problem outcome, no continuation grant, no activation or restart.",
+        "objective_revision": 1,
+        "objective_sha256": "5b435f9501396192891949f5506df267cec55d5ef16a51fb4f2d593c9f523e23",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "a913aba319a84d2c8e8a2a903cc76fc6",
+          "stage_id": "check:776eae5296253d34",
+          "status": "passed",
+          "duration_ms": 1246,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "fb5a396d52f2db49d1a49ab77efcd77ea582477b43c02df65a2e7f665af02db4",
+  "completion_report_acknowledged_id": "fb5a396d52f2db49d1a49ab77efcd77ea582477b43c02df65a2e7f665af02db4",
+  "completion_report_acknowledged_at": "2026-09-08T09:33:36.516Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-08T09:28:44.540Z",
+  "updated_at": "2026-09-08T09:55:31.897Z",
+  "events": [
+    {
+      "time": "2026-09-08T09:28:44.540Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Record exact no-patch provenance of the existing two-file H0 attested-ChatWeb PRL delta for source review only; no natural Problem outcome, no continuation grant, no activation or restart."
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:45.943Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:48.016Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:49.221Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:49.230Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:50.577Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:51.166Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:52.027Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m compileall -q coding_tools_mcp/problem_lineage_control.py tests/test_problem_lineage.py",
+        "session_id": "XUqWOIOsngo77e-tjCPl6W8m"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:52.602Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m compileall -q coding_tools_mcp/problem_lineage_control.py tests/test_problem_lineage.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:52.926Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:52.935Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:53.289Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:53.292Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:53.438Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "620ba5c70d44218e0d82ab1650dfd9a54550867fe3920f3856fb3c8147b6a16e"
+      }
+    },
+    {
+      "time": "2026-09-08T09:28:53.568Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T09:30:45.831Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:30:48.340Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-08T09:30:48.346Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:30:48.533Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "fb5a396d52f2db49d1a49ab77efcd77ea582477b43c02df65a2e7f665af02db4"
+      }
+    },
+    {
+      "time": "2026-09-08T09:32:11.859Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T09:33:36.516Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fb5a396d52f2db49d1a49ab77efcd77ea582477b43c02df65a2e7f665af02db4"
+      }
+    },
+    {
+      "time": "2026-09-08T09:45:32.349Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

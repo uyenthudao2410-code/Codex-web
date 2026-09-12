@@ -23,8 +23,7 @@ class RestartTicketMaintenanceTests(unittest.TestCase):
     def test_full_exact_stale_batch_is_preserved_without_truncation(self) -> None:
         now_ms = 1_700_000_000_000
         reason = self._reason(EXACT_STALE_RUN_MAX_IDS)
-        self.assertGreater(len(reason), 500)
-        self.assertLessEqual(len(reason), SUPERVISOR_RESTART_REASON_MAX_CHARS)
+        self.assertGreater(len(reason), SUPERVISOR_RESTART_REASON_MAX_CHARS)
         self.assertTrue(is_exact_stale_run_maintenance_reason(reason))
 
         ticket = build_supervisor_restart_ticket(
@@ -100,6 +99,19 @@ class RestartTicketMaintenanceTests(unittest.TestCase):
                         tool_contract_sha256="e" * 64,
                         reason=reason,
                     )
+
+    def test_ordinary_restart_reason_limit_is_unchanged(self) -> None:
+        long_reason = "x" * (SUPERVISOR_RESTART_REASON_MAX_CHARS + 100)
+        ticket = build_supervisor_restart_ticket(
+            ticket_id="restart-ordinary-reason-0001",
+            now_ms=1_700_000_000_000,
+            workspace="C:\\work\\one",
+            process_instance_id="process-one",
+            server_instance_id="server-one",
+            tool_contract_sha256="e" * 64,
+            reason=long_reason,
+        )
+        self.assertEqual(len(ticket["reason"]), SUPERVISOR_RESTART_REASON_MAX_CHARS)
 
     def test_problem_lineage_v12_maintenance_preserves_exact_target_workspace(self) -> None:
         now_ms = 1_700_000_000_000

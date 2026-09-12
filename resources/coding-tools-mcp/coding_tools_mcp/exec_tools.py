@@ -521,6 +521,21 @@ class ExecToolsMixin:
                     category="security",
                     retryable=False,
                 ) from exc
+            continuous_check = getattr(self, "_run_continuous_check", None)
+            if callable(continuous_check):
+                # Automatic build verification is part of the same workflow
+                # budget as the checks before it. Reusing the cancellation-aware
+                # command runner prevents a late build from receiving a fresh,
+                # independent 600-second deadline.
+                return continuous_check(
+                    command,
+                    relative,
+                    min(timeout_seconds * 1000, 600000),
+                    owner_run_id=owner_run,
+                    owner_wave_id=owner_wave,
+                )
+
+            # Compatibility fallback for a narrow non-Runtime embedding.
             started = time.time()
             exec_args: dict[str, Any] = {
                 "cmd": command,
@@ -541,14 +556,15 @@ class ExecToolsMixin:
                     "max_output_bytes": 131072,
                     "verbosity": "summary",
                 })
-            result = {
+            return {
                 "command": command,
                 "status": "passed" if command_payload_succeeded(payload) else "failed",
                 "exit_code": payload.get("exit_code"),
                 "duration_ms": int((time.time() - started) * 1000),
                 "summary": str(payload.get("summary") or payload.get("stderr") or payload.get("stdout") or "")[:4000],
+                "cancelled": bool(payload.get("cancelled")),
+                "timed_out": bool(payload.get("timed_out")),
             }
-            return result
 
         report = run_build_verification(resolved.path, args, runner, command_root=command_root.path)
         hash_algorithm = str(report.get("hash_algorithm") or "sha256")
@@ -571,12 +587,41 @@ class ExecToolsMixin:
         report["ok"] = passed
         report["status"] = "passed" if passed else "failed"
         if not passed:
+            failed_stage = next(
+                (
+                    (name, result)
+                    for name, result in (("test", report.get("test_result")), ("build", report.get("build_result")))
+                    if isinstance(result, dict) and result.get("status") != "passed"
+                ),
+                ("verification", {}),
+            )
+            failed_stage_name, failed_stage_result = failed_stage
+            if bool(failed_stage_result.get("cancelled")):
+                code = "WORKFLOW_RUNTIME_EXCEEDED"
+                category = "policy"
+                retryable = False
+                message = "Build verification was cancelled because the enclosing workflow runtime budget expired."
+            elif bool(failed_stage_result.get("timed_out")):
+                code = "BUILD_VERIFICATION_TIMEOUT"
+                category = "runtime"
+                retryable = True
+                message = "Build verification command exceeded its own bounded runtime."
+            else:
+                code = "BUILD_VERIFICATION_FAILED"
+                category = "runtime"
+                retryable = True
+                message = str(report.get("failure") or "Build verification failed.")
             report["error"] = {
-                "code": "BUILD_VERIFICATION_FAILED",
-                "message": str(report.get("failure") or "Build verification failed."),
-                "category": "runtime",
-                "retryable": True,
-                "details": {},
+                "code": code,
+                "message": message,
+                "category": category,
+                "retryable": retryable,
+                "details": {
+                    "stage": failed_stage_name,
+                    "timed_out": bool(failed_stage_result.get("timed_out")),
+                    "cancelled": bool(failed_stage_result.get("cancelled")),
+                    "budget_limited": bool(failed_stage_result.get("budget_limited")),
+                },
             }
         return report
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -12,6 +13,7 @@ from coding_tools_mcp.lifecycle_census import (
     ProcessIdentityObservation,
     lifecycle_census,
     open_lifecycle_census_snapshot,
+    read_task_projection,
 )
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 
@@ -152,6 +154,59 @@ class LifecycleCensusTests(unittest.TestCase):
             self.assertTrue(LIFECYCLE_CLASSES.issuperset({
                 item["classification"] for item in first["runs"]
             }))
+
+    def test_terminal_run_releases_controller_lease_without_hiding_real_contradictions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(objective="terminal controller lease")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only")
+            ledger.upsert_hub_client(client_id="chatweb:test", client_type="chatweb", role="controller")
+            lease = ledger.acquire_controller_lease(
+                run_id=run_id,
+                owner_client_id="chatweb:test",
+                lease_id="terminal-lease",
+                ttl_seconds=100_000_000,
+            )
+            self.assertTrue(lease["acquired"], lease)
+
+            ledger.finish_wave(wave_id, status="aborted")
+            ledger.finish_run(run_id, status="aborted")
+
+            released = ledger.get_controller_lease(run_id)
+            self.assertIsNotNone(released)
+            self.assertEqual(released["status"], "released")
+            with open_lifecycle_census_snapshot(root) as snapshot:
+                result = lifecycle_census(
+                    snapshot,
+                    workspace=root,
+                    observed_at=float(lease["expires_at"]) - 1,
+                    process_probe=self._probe,
+                )
+            classifications = {item["run_id"]: item["classification"] for item in result["runs"]}
+            self.assertNotIn(run_id, classifications)
+
+            checkpoint_run = ledger.create_run(objective="atomic checkpoint controller lease")
+            checkpoint_wave = ledger.create_wave(checkpoint_run, execution_mode="mcp_only")
+            checkpoint_lease = ledger.acquire_controller_lease(
+                run_id=checkpoint_run,
+                owner_client_id="chatweb:test",
+                lease_id="checkpoint-lease",
+                ttl_seconds=100_000_000,
+            )
+            self.assertTrue(checkpoint_lease["acquired"], checkpoint_lease)
+            ledger.accept_checkpoint_atomic(
+                run_id=checkpoint_run,
+                wave_id=checkpoint_wave,
+                git_head="head",
+                proof_fingerprint="proof",
+            )
+            released_checkpoint = ledger.get_controller_lease(checkpoint_run)
+            self.assertIsNotNone(released_checkpoint)
+            self.assertEqual(released_checkpoint["status"], "released")
+
+            # The existing fixture assertion above still proves a terminal parent
+            # with a genuinely active child wave remains a hard contradiction.
 
     def test_process_token_mismatch_never_becomes_live_ownership(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -348,6 +403,82 @@ class LifecycleCensusTests(unittest.TestCase):
                     process_probe=self._probe,
                 )
             self.assertEqual(drift["projection"]["classification"], "PROJECTION_DRIFT")
+
+    def test_read_task_projection_prefers_contextual_over_nonempty_stale_global(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            context_dir = state_dir / "task-contexts"
+            context_dir.mkdir(parents=True)
+            stale_global = {
+                "orchestration": {
+                    "run_id": "accepted-run",
+                    "wave_id": "wave-1",
+                    "orchestration_state": "ACCEPTING",
+                },
+            }
+            terminal_context = {
+                "orchestration": {
+                    "run_id": "accepted-run",
+                    "wave_id": "wave-1",
+                    "orchestration_state": "CHECKPOINTED",
+                },
+            }
+            (state_dir / "task-state.json").write_text(json.dumps(stale_global), encoding="utf-8")
+            (context_dir / "terminal.json").write_text(json.dumps(terminal_context), encoding="utf-8")
+
+            projection = read_task_projection(root)
+
+            self.assertTrue(projection["available"])
+            self.assertEqual(projection["status"], "contextual")
+            self.assertEqual(projection["mode"], "contextual")
+            self.assertEqual(projection["context_count"], 1)
+            self.assertEqual(projection["orchestration"], {})
+            self.assertEqual(projection["contextual_projections"][0]["orchestration_state"], "CHECKPOINTED")
+
+    def test_read_task_projection_uses_global_only_without_contextual_projections(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            state_dir.mkdir(parents=True)
+            global_projection = {
+                "orchestration": {
+                    "run_id": "active-run",
+                    "wave_id": "wave-1",
+                    "orchestration_state": "PROVING",
+                },
+            }
+            (state_dir / "task-state.json").write_text(json.dumps(global_projection), encoding="utf-8")
+
+            projection = read_task_projection(root)
+
+            self.assertTrue(projection["available"])
+            self.assertEqual(projection["status"], "readable")
+            self.assertEqual(projection["mode"], "global")
+            self.assertEqual(projection["orchestration"], global_projection["orchestration"])
+
+    def test_read_task_projection_fails_closed_on_invalid_contextual_projection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            state_dir = root / ".coding-tools"
+            context_dir = state_dir / "task-contexts"
+            context_dir.mkdir(parents=True)
+            global_projection = {
+                "orchestration": {
+                    "run_id": "active-run",
+                    "wave_id": "wave-1",
+                    "orchestration_state": "PROVING",
+                },
+            }
+            (state_dir / "task-state.json").write_text(json.dumps(global_projection), encoding="utf-8")
+            (context_dir / "invalid.json").write_text("{not-json", encoding="utf-8")
+
+            projection = read_task_projection(root)
+
+            self.assertFalse(projection["available"])
+            self.assertEqual(projection["status"], "contextual_invalid")
+            self.assertEqual(projection["mode"], "contextual")
+            self.assertEqual(projection["invalid_context_count"], 1)
 
     def test_unavailable_or_empty_projection_does_not_hide_an_active_ledger_run(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

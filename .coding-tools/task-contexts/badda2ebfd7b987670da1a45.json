@@ -1,0 +1,104 @@
+{
+  "version": 2,
+  "task_id": "a8cf21753d184cd19f4160ae2f8fdeba",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "htNPzh8KENmcmGZyfJo5JCse",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1210,
+    "finished_at": "2026-09-08T14:40:11.168Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-08T14:39:24.899Z",
+  "updated_at": "2026-09-08T14:40:11.168Z",
+  "events": [
+    {
+      "time": "2026-09-08T14:39:24.899Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-08T14:39:25.227Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm.cmd run recovery:supervisor:install",
+        "session_id": "gJj0kn9ICe06H4OsSzVYFpgv"
+      }
+    },
+    {
+      "time": "2026-09-08T14:39:31.877Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm.cmd run recovery:supervisor:install",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T14:39:44.587Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm.cmd run recovery:supervisor:status",
+        "session_id": "wD-pVnf8sc2x6pIxTyCgUuln"
+      }
+    },
+    {
+      "time": "2026-09-08T14:39:48.453Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm.cmd run recovery:supervisor:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T14:40:01.717Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js --preflight",
+        "session_id": "yrp2DRzB7D9waADZLKztOGcG"
+      }
+    },
+    {
+      "time": "2026-09-08T14:40:03.069Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js --preflight",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T14:40:09.900Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js",
+        "session_id": "htNPzh8KENmcmGZyfJo5JCse"
+      }
+    },
+    {
+      "time": "2026-09-08T14:40:11.168Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

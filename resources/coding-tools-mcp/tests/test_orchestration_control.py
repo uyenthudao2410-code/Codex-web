@@ -140,6 +140,71 @@ class OrchestrationControlTests(unittest.TestCase):
             )
             self.assertEqual(terminal_callbacks, [])
 
+    def test_recovered_acceptance_records_same_clock_wait_and_controller_processing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            control = OrchestrationControl(root, ledger)
+            ctx = control.begin(objective="same clock acceptance", task_id="t", execution_mode="mcp_only", base_head="h", worktree_fp="w")
+            control.mark_ready(ctx)
+            control.select_route(ctx, {"requested": "deterministic", "selected": "deterministic"})
+            control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            control.begin_proof(ctx)
+            control.mark_accepting(ctx)
+
+            control._contexts.clear()
+            recovered = control.snapshot(ctx.run_id)
+            self.assertIsNotNone(recovered)
+            assert recovered is not None
+            self.assertEqual(recovered.state, "ACCEPTING")
+            self.assertNotIn("acceptance", recovered.observation_stage_starts)
+            controller_started = control.observation_now_ms()
+            control.checkpoint_with_receipt(recovered, git_head="h")
+            recorded = control.record_controller_acceptance_observations(
+                recovered,
+                controller_started_ms=controller_started,
+            )
+
+            self.assertTrue(recorded["same_clock"])
+            self.assertTrue(recorded["controller_processing"])
+            self.assertTrue(recorded["acceptance_wait"])
+            spans = ledger.list_observation_spans(ctx.run_id)
+            measurements = [item.get("measurement") for item in spans if item.get("stage") == "acceptance"]
+            self.assertEqual(measurements.count("controller_processing"), 1)
+            self.assertEqual(measurements.count("acceptance_wait"), 1)
+            self.assertNotIn("observed_stage_duration", measurements)
+
+    def test_cross_clock_recovery_keeps_acceptance_wait_unknown(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            first = OrchestrationControl(root, ledger)
+            ctx = first.begin(objective="cross clock acceptance", task_id="t", execution_mode="mcp_only", base_head="h", worktree_fp="w")
+            first.mark_ready(ctx)
+            first.select_route(ctx, {"requested": "deterministic", "selected": "deterministic"})
+            first.acquire_write_lease(ctx, owner="MCP", mode="mcp_only")
+            first.begin_proof(ctx)
+            first.mark_accepting(ctx)
+
+            restored = OrchestrationControl(root, OrchestrationLedger(root))
+            recovered = restored.recover(ctx.run_id)
+            self.assertIsNotNone(recovered)
+            assert recovered is not None
+            controller_started = restored.observation_now_ms()
+            restored.checkpoint_with_receipt(recovered, git_head="h")
+            recorded = restored.record_controller_acceptance_observations(
+                recovered,
+                controller_started_ms=controller_started,
+            )
+
+            self.assertFalse(recorded["same_clock"])
+            self.assertTrue(recorded["controller_processing"])
+            self.assertFalse(recorded["acceptance_wait"])
+            spans = restored.ledger.list_observation_spans(ctx.run_id)
+            measurements = [item.get("measurement") for item in spans if item.get("stage") == "acceptance"]
+            self.assertEqual(measurements.count("controller_processing"), 1)
+            self.assertEqual(measurements.count("acceptance_wait"), 0)
+
     def test_recovery_reconstructs_active_write_lease(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

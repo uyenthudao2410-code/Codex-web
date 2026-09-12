@@ -1,0 +1,479 @@
+{
+  "version": 2,
+  "task_id": "7c317886857e4f0aa59ffe3b3de868b0",
+  "orchestration": {
+    "run_id": "d07cc568e2b345bb946754e565a026df",
+    "wave_id": "d9284c7392b24ef5a7dead543014adc7",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+    "contract_fp": ""
+  },
+  "objective": "Implement Natural #4 exactly: add an opt-in CLI flag --stale-details to the empirical readiness reporter. Default output must remain backward-compatible and compact. When requested, stale_run_audit must include a bounded detail row for every THRESHOLD_SENSITIVE_STALE_CANDIDATE, including both over-threshold and below-threshold candidates, with run_id, activity_age_seconds, meets_current_stale_threshold boolean, latest_state_after, evidence-based subtype via the existing _stale_subtype logic, and last_event. Keep existing sample behavior unchanged. Add focused tests proving default omission/backward compatibility, full candidate coverage including a below-threshold candidate, reuse of existing subtype semantics, and unchanged read-only/no-reconciliation/no-P5 contract. Modify only the two authorized files and preserve unrelated WIP.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-09T09:33:20.974Z"
+    },
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "pending",
+      "updated_at": "2026-09-09T09:33:20.974Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-09T09:33:20.974Z"
+    }
+  ],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "U2E_ZpVZIMlpyPSHcWttD9wD",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 718,
+    "finished_at": "2026-09-09T09:40:17.776Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 28,
+        "head_hash": "129d686079a9380d951fd83077fae718ee951aacd0b1a47280d4e7a9d562d045"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d07cc568e2b345bb946754e565a026df\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d07cc568e2b345bb946754e565a026df\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d07cc568e2b345bb946754e565a026df",
+      "wave_id": "32d4b12f908e45029b412f29eb599cf4",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Implement Natural #4 exactly: add an opt-in CLI flag --stale-details to the empirical readiness reporter. Default output must remain backward-compatible and compact. When requested, stale_run_audit must include a bounded detail row for every THRESHOLD_SENSITIVE_STALE_CANDIDATE, including both over-threshold and below-threshold candidates, with run_id, activity_age_seconds, meets_current_stale_threshold boolean, latest_state_after, evidence-based subtype via the existing _stale_subtype logic, and last_event. Keep existing sample behavior unchanged. Add focused tests proving default omission/backward compatibility, full candidate coverage including a below-threshold candidate, reuse of existing subtype semantics, and unchanged read-only/no-reconciliation/no-P5 contract. Modify only the two authorized files and preserve unrelated WIP.",
+        "objective_revision": 1,
+        "objective_sha256": "81b5c7cb57b3593ccb589270961ff33fc383ba6f7dd65f83d86f8c272c453957",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "369a0cc42bf74d7f80076ffcb2ff83b1",
+          "stage_id": "check:282ba5486f185742",
+          "status": "failed",
+          "duration_ms": 1051,
+          "exit_code": 2,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 45412
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "5a41a7163ffcb81107d3fabc69a4e439136c357f7b6d68f4298f3b5456e1b1ae",
+  "completion_report_acknowledged_id": "5a41a7163ffcb81107d3fabc69a4e439136c357f7b6d68f4298f3b5456e1b1ae",
+  "completion_report_acknowledged_at": "2026-09-09T09:33:38.456Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_empirical_readiness.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '4 passed in 0.12s'",
+      "finished_at": "2026-09-09T09:33:15.379Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "lGwSkaObe6Xp7tJpIEs63a4G"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d07cc568e2b345bb946754e565a026df",
+        "owner_wave": "32d4b12f908e45029b412f29eb599cf4",
+        "size_bytes": 100,
+        "command_id": "lGwSkaObe6Xp7tJpIEs63a4G",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:lGwSkaObe6Xp7tJpIEs63a4G:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:lGwSkaObe6Xp7tJpIEs63a4G:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-09T09:31:31.098Z",
+  "updated_at": "2026-09-09T09:41:09.128Z",
+  "events": [
+    {
+      "time": "2026-09-09T09:31:31.098Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T09:31:31.379Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A100 -B20 \"stale_audit|threshold_sensitive\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+        "session_id": "vS_oqUbxok_B6_OWa8Q3LrpB"
+      }
+    },
+    {
+      "time": "2026-09-09T09:31:31.753Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A100 -B20 \"stale_audit|threshold_sensitive\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:32:24.760Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_EVENT_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:07.183Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:14.064Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_empirical_readiness.py -q",
+        "session_id": "lGwSkaObe6Xp7tJpIEs63a4G"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:15.379Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_empirical_readiness.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:16.310Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:17.542Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:17.551Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:18.821Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:19.351Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:20.125Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/report_empirical_readiness.py --workspace ../.. --stale-details",
+        "session_id": "QpnOJphV6Z3cERA5xFLGQREZ"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:20.559Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/report_empirical_readiness.py --workspace ../.. --stale-details",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:20.974Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:21.822Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:21.825Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:21.830Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:21.942Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "5a41a7163ffcb81107d3fabc69a4e439136c357f7b6d68f4298f3b5456e1b1ae"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:22.108Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:36.572Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:38.456Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "5a41a7163ffcb81107d3fabc69a4e439136c357f7b6d68f4298f3b5456e1b1ae"
+      }
+    },
+    {
+      "time": "2026-09-09T09:33:50.203Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T09:34:05.809Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_INCOMPLETE"
+      }
+    },
+    {
+      "time": "2026-09-09T09:34:17.265Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_PHASE_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-09T09:34:31.517Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T09:34:38.877Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T09:34:38.885Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T09:36:39.919Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-09T09:39:30.543Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A80 -B40 \"PREPARED_RUN_BINDING_MISMATCH|PREPARED_RUN_BINDING_PHASE_INVALID|PREPARED_RUN_BINDING_INCOMPLETE\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "SrUxkQ3TWqjDzllSXEExFBei"
+      }
+    },
+    {
+      "time": "2026-09-09T09:39:31.018Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A80 -B40 \"PREPARED_RUN_BINDING_MISMATCH|PREPARED_RUN_BINDING_PHASE_INVALID|PREPARED_RUN_BINDING_INCOMPLETE\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:40:05.423Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_GUARD_RUNTIME_ONLY"
+      }
+    },
+    {
+      "time": "2026-09-09T09:40:17.259Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A80 -B20 \"validate_prepared_workflow_binding|PREPARED_RUN_BINDING_MISMATCH|prepared workflow binding|prepared_phase\" resources/coding-tools-mcp/tests",
+        "session_id": "U2E_ZpVZIMlpyPSHcWttD9wD"
+      }
+    },
+    {
+      "time": "2026-09-09T09:40:17.776Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A80 -B20 \"validate_prepared_workflow_binding|PREPARED_RUN_BINDING_MISMATCH|prepared workflow binding|prepared_phase\" resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:40:53.571Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+      }
+    }
+  ]
+}

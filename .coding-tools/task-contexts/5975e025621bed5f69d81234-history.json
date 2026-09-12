@@ -1,0 +1,190 @@
+[
+  {
+    "version": 2,
+    "task_id": "a367ad6a472e49f1914f62038f13a889",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "_8IKMuxERTzVgCxPWyzyF2Kl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 327,
+      "finished_at": "2026-09-10T16:16:58.374Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T16:16:57.807Z",
+    "updated_at": "2026-09-10T16:16:58.374Z",
+    "events": [
+      {
+        "time": "2026-09-10T16:16:57.807Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T16:16:58.134Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_state|resolution_state|problem_threads\" resources\\coding-tools-mcp\\scripts",
+          "session_id": "_8IKMuxERTzVgCxPWyzyF2Kl"
+        }
+      },
+      {
+        "time": "2026-09-10T16:16:58.374Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_state|resolution_state|problem_threads\" resources\\coding-tools-mcp\\scripts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T16:17:11.330Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "733fa49f11174269ab698014297eaedd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T16:39:06.922Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-10T16:17:11.331Z",
+    "updated_at": "2026-09-10T16:39:06.922Z",
+    "events": [
+      {
+        "time": "2026-09-10T16:17:11.331Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T16:17:11.619Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-de6e9424448ffa9ef199317aa1383378 --problem-revision 1",
+          "session_id": "Q2MfwxohZQ_geJ0XvFPj_JZB"
+        }
+      },
+      {
+        "time": "2026-09-10T16:17:14.521Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-de6e9424448ffa9ef199317aa1383378 --problem-revision 1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:17:23.912Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-10T16:17:58.433Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_natural_problem_cohort.py --help",
+          "session_id": "0JjWNgxlJZ9GnfuAftd2wHJJ"
+        }
+      },
+      {
+        "time": "2026-09-10T16:17:58.740Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_natural_problem_cohort.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:18:15.434Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_IDENTITY_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-10T16:18:31.112Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1",
+          "session_id": "RkaQ9SICyi_JnjbZW7PTE1jx"
+        }
+      },
+      {
+        "time": "2026-09-10T16:18:34.234Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:19:44.296Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-10T16:39:06.922Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:39:06.922Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T16:39:17.587Z",
+    "archive_reason": "finished"
+  }
+]

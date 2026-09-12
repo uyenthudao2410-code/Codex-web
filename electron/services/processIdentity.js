@@ -20,6 +20,14 @@ const MAX_BROKER_LINE_BYTES = 1_024;
 const MAX_BROKER_BUFFER_BYTES = 4_096;
 const DEFAULT_PROBE_TIMEOUT_MS = 3_000;
 const DEFAULT_WAIT_TIMEOUT_MS = 5_000;
+// Lifecycle ownership transitions run while Electron, MCP and tunnel process
+// trees are stopping.  Windows can take longer than the ordinary read-only
+// probe budget to start/respond from PowerShell in that window.  Keep the
+// presentation/watchdog probe short, but give destructive boundaries a
+// separate bounded retry budget so a transient timeout cannot strand an
+// otherwise authenticated Recovery Host after its children have stopped.
+const LIFECYCLE_PROBE_TIMEOUT_MS = 10_000;
+const LIFECYCLE_PROBE_ATTEMPTS = 2;
 const POWERSHELL_OBSERVE_SCRIPT = [
   '& { param([int]$processId)',
   '$ErrorActionPreference = "Stop"',
@@ -431,6 +439,49 @@ async function observeProcessIdentityAsync(pidValue, options = {}) {
   return observed;
 }
 
+/**
+ * Observe an identity at a lifecycle mutation boundary.
+ *
+ * Only an unavailable observation is retried.  A live, absent, or live token
+ * mismatch is returned immediately so callers retain the exact PID/start-token
+ * fail-closed decision.  The default uses the persistent Windows broker; this
+ * avoids paying a fresh PowerShell startup cost for every handoff recheck.
+ */
+async function observeLifecycleProcessIdentity(pidValue, {
+  observer = observeProcessIdentityAsync,
+  timeoutMs = LIFECYCLE_PROBE_TIMEOUT_MS,
+  attempts = LIFECYCLE_PROBE_ATTEMPTS,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+} = {}) {
+  const pid = normalizePid(pidValue);
+  if (!pid) return unavailableIdentity(null, 'PROCESS_IDENTITY_INVALID');
+  const boundedTimeoutMs = Math.min(30_000, Math.max(500, Number(timeoutMs) || LIFECYCLE_PROBE_TIMEOUT_MS));
+  const boundedAttempts = Math.min(3, Math.max(1, Number(attempts) || LIFECYCLE_PROBE_ATTEMPTS));
+  let last = unavailableIdentity(pid);
+  for (let attempt = 1; attempt <= boundedAttempts; attempt += 1) {
+    try {
+      last = normalizeObservation(await observer(pid, {
+        noCache: true,
+        timeoutMs: boundedTimeoutMs
+      }), pid);
+    } catch (error) {
+      last = unavailableIdentity(pid, 'PROCESS_IDENTITY_UNVERIFIED', {
+        cause_code: error?.code || ''
+      });
+    }
+    if (last.state !== 'unavailable') return last;
+    if (attempt < boundedAttempts) await sleep(50);
+  }
+  return {
+    ...last,
+    details: {
+      ...(last.details || {}),
+      attempts: boundedAttempts,
+      timeout_ms: boundedTimeoutMs
+    }
+  };
+}
+
 function sameProcessIdentity(expectedValue, observedValue) {
   let expected;
   try { expected = processIdentityFrom(expectedValue); } catch { return false; }
@@ -550,21 +601,27 @@ async function terminateExactProcessTree(identityValue, {
       });
     }
     if (Number(result?.code) !== 0) {
-      // A non-zero taskkill may mean the exact target exited concurrently.  A
-      // fresh identity observation decides that case; never infer success from
-      // the exit code alone.
-      let after;
-      try { after = normalizeObservation(await observer(identity.pid), identity.pid); }
+      // /T can return 128 for descendants already exiting even after it has
+      // terminated the root. Windows may still expose that root briefly.
+      // Use the same bounded exact-exit proof as the zero-exit path, without
+      // issuing a second kill or trusting localized taskkill output.
+      let waited;
+      try {
+        waited = await waitForExactProcessExit(identity, {
+          observeProcessIdentity: observer,
+          sleep,
+          timeoutMs
+        });
+      }
       catch (error) {
-        throw identityError('PROCESS_IDENTITY_UNVERIFIED', 'Process identity could not be verified after termination failure.', { pid: identity.pid, cause_code: error?.code || '' });
+        if (error?.code === 'PROCESS_IDENTITY_UNVERIFIED') throw error;
+        throw identityError('PROCESS_TERMINATION_FAILED', 'Exact process tree termination command failed and the target did not exit.', {
+          pid: identity.pid,
+          exit_code: result?.code ?? null,
+          cause_code: error?.code || ''
+        });
       }
-      if (after.state === 'absent' || (after.state === 'live' && !sameProcessIdentity(identity, after))) {
-        return { state: 'already_exited', identity, observed: after };
-      }
-      throw identityError('PROCESS_TERMINATION_FAILED', 'Exact process tree termination command failed.', {
-        pid: identity.pid,
-        exit_code: result?.code ?? null
-      });
+      return { ...waited, state: 'already_exited', exit_state: waited.state };
     }
   } else {
     try { processKill(identity.pid, 'SIGTERM'); }
@@ -607,6 +664,7 @@ module.exports = {
   processIdentityFrom,
   observeProcessIdentity,
   observeProcessIdentityAsync,
+  observeLifecycleProcessIdentity,
   sameProcessIdentity,
   requireLiveProcessIdentity,
   terminateExactProcessTree,

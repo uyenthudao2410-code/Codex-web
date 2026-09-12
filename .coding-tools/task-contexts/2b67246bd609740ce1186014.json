@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "2caaf63bab2748ac95135547b0da6528",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "mjEEpZcov2HsxFIeCTNQU2iZ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 687,
+    "finished_at": "2026-09-09T23:25:52.909Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T23:25:51.978Z",
+  "updated_at": "2026-09-09T23:25:52.909Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:25:51.978Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:52.309Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files = rg -l -S 'live-supervisor-e2e' '.coding-tools\\orchestration\\reports' --glob 'wave-*.md'; foreach($f in $files){ $m = Select-String -LiteralPath $f -Pattern 'EPERM|EBUSY|ENOTEMPTY|EACCES'; if($m){ Write-Output ('FILE|'+$f); $m | Select-Object -First 8 | ForEach-Object { Write-Output (($_.LineNumber).ToString()+'|'+$_.Line.Trim()) } } }\"",
+        "session_id": "mjEEpZcov2HsxFIeCTNQU2iZ"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:52.909Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files = rg -l -S 'live-supervisor-e2e' '.coding-tools\\orchestration\\reports' --glob 'wave-*.md'; foreach($f in $files){ $m = Select-String -LiteralPath $f -Pattern 'EPERM|EBUSY|ENOTEMPTY|EACCES'; if($m){ Write-Output ('FILE|'+$f); $m | Select-Object -First 8 | ForEach-Object { Write-Output (($_.LineNumber).ToString()+'|'+$_.Line.Trim()) } } }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

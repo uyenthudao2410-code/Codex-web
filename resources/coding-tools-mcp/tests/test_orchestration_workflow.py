@@ -4,16 +4,239 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.prepared_workflow_binding import validate_prepared_workflow_binding
 from coding_tools_mcp.server import Runtime
+from coding_tools_mcp.tool_schema import input_schemas, validate_arguments
 
 
 class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
+    def test_prepare_execute_exact_binding_reuses_one_run_for_refined_objective(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            root = Path(temp)
+            target = root / "app.py"
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                prepared = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "investigate the exact value defect",
+                    "queries": ["VALUE"],
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                binding = prepared["prepared_binding"]
+                self.assertEqual(binding["run_id"], prepared["orchestration"]["run_id"])
+                self.assertEqual(binding["wave_id"], prepared["orchestration"]["wave_id"])
+                self.assertIn("run_id", input_schemas()["agent_workflow"]["properties"])
+                self.assertIn("wave_id", input_schemas()["agent_workflow"]["properties"])
+
+                execute_args = {
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "set the proven value to two",
+                    "run_id": binding["run_id"],
+                    "wave_id": binding["wave_id"],
+                    "execution_route": "deterministic",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "evaluation": {"provenance": "synthetic"},
+                }
+                validate_arguments("agent_workflow", execute_args)
+                executed = runtime.call_tool("agent_workflow", execute_args)["structuredContent"]
+
+                self.assertEqual(executed["orchestration"]["run_id"], binding["run_id"])
+                self.assertEqual(executed["orchestration"]["wave_id"], binding["wave_id"])
+                self.assertEqual(len(runtime.orchestration_ledger.list_runs(limit=10)), 1)
+                self.assertEqual(target.read_text(encoding="utf-8"), "VALUE = 2\n")
+            finally:
+                runtime.close()
+
+    def test_prepare_execute_refined_objective_without_binding_fails_before_rebind(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "app.py"
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                prepared = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "investigate the exact value defect",
+                    "queries": ["VALUE"],
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                with self.assertRaises(ToolFailure) as caught:
+                    runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "execute",
+                        "objective": "set the proven value to two",
+                        "execution_route": "deterministic",
+                        "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                        "verification": "none",
+                        "evaluation": {"provenance": "synthetic"},
+                    })
+                self.assertEqual(caught.exception.code, "PREPARED_RUN_BINDING_REQUIRED")
+                self.assertEqual(caught.exception.details, prepared["prepared_binding"])
+                self.assertEqual(len(runtime.orchestration_ledger.list_runs(limit=10)), 1)
+                self.assertEqual(target.read_text(encoding="utf-8"), "VALUE = 1\n")
+            finally:
+                runtime.close()
+
+    def test_prepare_execute_wrong_exact_binding_fails_before_new_run(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                prepared = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "investigate the exact value defect",
+                    "queries": ["VALUE"],
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                with self.assertRaises(ToolFailure) as caught:
+                    runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "execute",
+                        "objective": "set the proven value to two",
+                        "run_id": prepared["prepared_binding"]["run_id"],
+                        "wave_id": "wrong-wave",
+                        "execution_route": "deterministic",
+                        "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                        "verification": "none",
+                        "evaluation": {"provenance": "synthetic"},
+                    })
+                self.assertEqual(caught.exception.code, "PREPARED_RUN_BINDING_MISMATCH")
+                self.assertEqual(len(runtime.orchestration_ledger.list_runs(limit=10)), 1)
+            finally:
+                runtime.close()
+
+    def test_prepared_binding_requires_a_pair_and_execute_phase(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                with self.assertRaises(ToolFailure) as incomplete:
+                    runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "execute",
+                        "run_id": "prepared-run",
+                    })
+                self.assertEqual(incomplete.exception.code, "PREPARED_RUN_BINDING_INCOMPLETE")
+
+                with self.assertRaises(ToolFailure) as wrong_phase:
+                    runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "run",
+                        "run_id": "prepared-run",
+                        "wave_id": "prepared-wave",
+                    })
+                self.assertEqual(wrong_phase.exception.code, "PREPARED_RUN_BINDING_PHASE_INVALID")
+                self.assertEqual(runtime.orchestration_ledger.list_runs(limit=10), [])
+            finally:
+                runtime.close()
+
+    def test_prepared_binding_requires_canonical_exact_wave_prepare_evidence(self) -> None:
+        class LedgerWithoutPrepare:
+            @staticmethod
+            def list_events(run_id: str, *, wave_id: str) -> list[dict[str, str]]:
+                self.assertEqual(run_id, "prepared-run")
+                self.assertEqual(wave_id, "prepared-wave")
+                return []
+
+        current_ctx = type(
+            "PreparedContext",
+            (),
+            {"run_id": "prepared-run", "wave_id": "prepared-wave", "state": "PREFLIGHT"},
+        )()
+        with self.assertRaises(ToolFailure) as caught:
+            validate_prepared_workflow_binding(
+                {
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "run_id": "prepared-run",
+                    "wave_id": "prepared-wave",
+                },
+                current_task={"task_id": "task-1"},
+                projection={"run_id": "prepared-run", "wave_id": "prepared-wave"},
+                current_ctx=current_ctx,
+                current_run={
+                    "task_id": "task-1",
+                    "metadata": {"workflow": "bugfix", "phase": "prepare"},
+                },
+                ledger=LedgerWithoutPrepare(),
+            )
+        self.assertEqual(caught.exception.code, "PREPARED_RUN_BINDING_MISMATCH")
+        self.assertFalse(caught.exception.details["exact_wave_context_prepared"])
+
+    def test_replanned_run_prepare_execute_binding_uses_exact_wave_prepare_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "app.py"
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                blocked = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "run",
+                    "objective": "change value with unavailable coordination",
+                    "execution_mode": "coordinated_multi_worktree",
+                    "evaluation": {"provenance": "synthetic"},
+                    "verification": "none",
+                })
+                self.assertEqual(blocked["orchestration"]["orchestration_state"], "REPLAN")
+                run_id = blocked["orchestration"]["run_id"]
+                self.assertEqual(runtime.orchestration_ledger.get_run(run_id)["metadata"]["phase"], "run")
+
+                report_id = runtime.task_state.pending_completion_report()["report_id"]
+                acknowledged = runtime.task_control({
+                    "action": "update",
+                    "payload": {"extension": "operator_report_ack_v1", "report_id": report_id},
+                })
+                self.assertTrue(acknowledged["acknowledged"])
+
+                prepared = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "prepare deterministic value repair",
+                    "execution_mode": "mcp_only",
+                    "replan_reason": "coordination is unavailable; prepare the deterministic repair",
+                    "queries": ["VALUE"],
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                binding = prepared["prepared_binding"]
+                self.assertEqual(binding["run_id"], run_id)
+                self.assertEqual(runtime.orchestration_ledger.get_run(run_id)["metadata"]["phase"], "run")
+                events = runtime.orchestration_ledger.list_events(run_id, wave_id=binding["wave_id"])
+                self.assertTrue(any(item["event_type"] == "context_prepared" for item in events))
+
+                executed = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "apply deterministic value repair",
+                    "run_id": binding["run_id"],
+                    "wave_id": binding["wave_id"],
+                    "execution_mode": "mcp_only",
+                    "execution_route": "deterministic",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                self.assertEqual(executed["orchestration"]["run_id"], run_id)
+                self.assertEqual(executed["orchestration"]["wave_id"], binding["wave_id"])
+                self.assertEqual(target.read_text(encoding="utf-8"), "VALUE = 2\n")
+            finally:
+                runtime.close()
+
     def test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -12,12 +12,17 @@ from . import __version__
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .performance_trace import IDEMPOTENCY_POLICY_EPOCH
-from .rework_diagnosis import p2_build_verification_failure_detail, p2_check_failure_detail
+from .rework_diagnosis import (
+    p2_build_verification_failure_detail,
+    p2_check_failure_detail,
+    p2_permission_failure_detail,
+)
 from .task_state import command_payload_succeeded
 from .task_state import ContextualTaskStateStore
 from .fs_utils import normalize_rel_display
 from .semantic_localization import (
     run_semantic_localization,
+    semantic_provider_health_status,
     semantic_provider_resource_status,
     semantic_provider_status,
     semantic_resource_cost,
@@ -55,7 +60,7 @@ class ContextToolsMixin:
         cache_key = self._fast_cache_key("workspace_context", cache_args)
         cached = self._fast_cache_get(cache_key, 30)
         if cached is not None:
-            return cached
+            return self._workspace_context_completed(cached)
         root_entries = self.list_dir({
             "path": str(resolved.path),
             "max_entries": min(int(args.get("max_entries", 40)), 500),
@@ -150,7 +155,11 @@ class ContextToolsMixin:
                 },
                 "tool_contract": dict(self.tool_contract),
                 "tool_metadata": tool_metadata_contract(),
-                "semantic_localization": semantic_provider_status(self.semantic_localizer),
+                "semantic_localization": semantic_provider_health_status(
+                    self.semantic_localizer,
+                    workspace=scope_root,
+                    path=str(resolved.path),
+                ),
                 "stale_orchestration_runs": len(unresolved_stale_runs),
                 "unresolved_stale_orchestration_runs": len(unresolved_stale_runs),
                 "reconciled_stale_orchestration_runs": len(self.reconciled_stale_orchestration_runs),
@@ -161,7 +170,18 @@ class ContextToolsMixin:
                 "agent_lanes_waiting_after_restart": int(self.recovered_agent_lanes),
             }
         self._fast_cache_put(cache_key, payload)
-        return payload
+        return self._workspace_context_completed(payload)
+
+    def _workspace_context_completed(self, payload: dict[str, Any]) -> dict[str, Any]:
+        # Admission is current process state, never part of the 30s content
+        # cache. Completion describes this read, not a RUN/Problem acceptance.
+        return {
+            **payload,
+            "completed": True,
+            "retryable": False,
+            "workspace_accessed": True,
+            "activation": self.activation_admission_snapshot(),
+        }
 
     def _context_bundle_cache_key(self, args: dict[str, Any]) -> str:
         normalized = {key: value for key, value in args.items() if key != "force_refresh"}
@@ -729,7 +749,14 @@ class ContextToolsMixin:
             )
         adopt_existing_files = list(raw_adoptions)
         checks = list(dict.fromkeys(str(item).strip() for item in args.get("checks", []) if str(item).strip()))[:8]
-        verification = str(args.get("verification", "tests")).lower()
+        requested_verification = args.get("verification")
+        if requested_verification is None and adopt_existing_files and not patches:
+            # The public low-level workflow must preserve the same no-patch
+            # provenance behavior as agent_workflow. Callers can still opt
+            # into tests/build/all explicitly.
+            verification = "none"
+        else:
+            verification = str(requested_verification if requested_verification is not None else "tests").lower()
         if verification not in {"none", "tests", "build", "all"}:
             raise ToolFailure("INVALID_ARGUMENT", "verification must be none, tests, build, or all.", category="validation")
         if not patches and not adopt_existing_files and not checks and verification == "none":
@@ -852,7 +879,11 @@ class ContextToolsMixin:
                         # evidence stays unknown rather than changing mutation/proof behavior.
                         pass
         except ToolFailure as exc:
-            record_failure(exc.code, message=str(exc))
+            failure_details: dict[str, Any] = {"message": str(exc)}
+            permission_detail = p2_permission_failure_detail(exc.code, exc.details)
+            if permission_detail is not None:
+                failure_details["p2_failure_detail"] = permission_detail
+            record_failure(exc.code, **failure_details)
             raise
         if patches and not bool(args.get("dry_run", False)):
             self._clear_context_bundle_cache()
@@ -866,7 +897,20 @@ class ContextToolsMixin:
             str(item.get("path", "")).strip().replace("\\", "/")
             for item in affected_files
             if isinstance(item, dict) and str(item.get("path", "")).strip()
-        })
+        }.union(
+            str(item.get("path", "")).strip().replace("\\", "/")
+            for item in adopted_files
+            if isinstance(item, dict) and str(item.get("path", "")).strip()
+        ))
+        proof_source_binding = (
+            self.proof_ledger.source_binding(
+                base_head=str(proof_identity.get("base_head") or ctx.base_head),
+                contract_fp=ctx.contract_fp,
+                input_paths=affected_paths,
+            )
+            if ctx is not None
+            else None
+        )
         proof_ids: list[str] = []
         proof_cache_eligible = 0
         proof_cache_hits = 0
@@ -901,7 +945,11 @@ class ContextToolsMixin:
         command_results: list[dict[str, Any]] = []
         timeout_ms = min(max(int(args.get("timeout_ms", 600000)), 1000), 600000)
 
-        def cancelled_workflow_result(stage_id: str) -> dict[str, Any]:
+        def cancelled_workflow_result(
+            stage_id: str,
+            *,
+            build_report: dict[str, Any] | None = None,
+        ) -> dict[str, Any]:
             failure = "Background workflow runtime budget expired; remaining proof execution was cancelled."
             set_stage(stage_id, "Workflow runtime budget exceeded", failed=True)
             record_failure("WORKFLOW_RUNTIME_EXCEEDED", stage=stage_id)
@@ -918,7 +966,7 @@ class ContextToolsMixin:
                 "patch_results": patch_results,
                 "affected_files": affected_files,
                 "check_results": command_results,
-                "build_report": None,
+                "build_report": build_report,
                 "proof_summary": current_proof_summary(),
                 "error": {
                     "code": "WORKFLOW_RUNTIME_EXCEEDED",
@@ -967,6 +1015,7 @@ class ContextToolsMixin:
                         "kind": "check",
                         "workdir": workdir,
                         "workspace_identity": dict(proof_identity.get("workspace_identity") or {}),
+                        "proof_source_binding": dict(proof_source_binding or {}),
                     },
                     runner=lambda command=command, command_timeout_ms=command_timeout_ms: self._run_continuous_check(
                         command,
@@ -1029,13 +1078,18 @@ class ContextToolsMixin:
                 build_report = self.verify_build(verify_args)
             else:
                 stage_id = f"verify:{verification}"
+                proof_config = {
+                    key: value
+                    for key, value in verify_args.items()
+                    if key not in {"run_id", "wave_id"}
+                }
                 proof_fp = self.proof_ledger.fingerprint(
                     stage_id=stage_id,
                     base_head=str(proof_identity.get("base_head") or ctx.base_head),
                     worktree_fp=str(proof_identity.get("worktree_fp") or ""),
                     contract_fp=ctx.contract_fp,
                     input_paths=affected_paths,
-                    config=verify_args,
+                    config=proof_config,
                     upstream_proof_ids=upstream_proof_ids,
                 )
                 build_report, proof_id = self.proof_ledger.run_cached(
@@ -1049,6 +1103,7 @@ class ContextToolsMixin:
                         "kind": "verify",
                         "verification": verification,
                         "workspace_identity": dict(proof_identity.get("workspace_identity") or {}),
+                        "proof_source_binding": dict(proof_source_binding or {}),
                     },
                     runner=lambda: self.verify_build(verify_args),
                 )
@@ -1059,6 +1114,8 @@ class ContextToolsMixin:
                 set_stage("verify", "Verification failed", failed=True)
                 error = build_report.get("error") if isinstance(build_report.get("error"), dict) else {}
                 failure_code = str(error.get("code") or "VERIFICATION_FAILED")
+                if failure_code == "WORKFLOW_RUNTIME_EXCEEDED" or background_cancelled():
+                    return cancelled_workflow_result("verify", build_report=build_report)
                 failure_details: dict[str, Any] = {"verification": verification}
                 if failure_code == "BUILD_VERIFICATION_FAILED":
                     failure_details["p2_failure_detail"] = p2_build_verification_failure_detail(build_report, verification)

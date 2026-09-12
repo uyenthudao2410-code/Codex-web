@@ -26,7 +26,12 @@ from .orchestration_control import OrchestrationControlError, RunContext
 from .patching import parse_patch
 from .p5_experiment import P5ExperimentError
 from .problem_lineage import ProblemLineageError
+from .prepared_workflow_binding import (
+    resolve_prepared_objective_boundary,
+    validate_prepared_workflow_binding,
+)
 from .product_session_receipts import record_problem_product_session
+from .rework_diagnosis import p2_permission_failure_detail
 from .resolution_contract import (
     ResolutionContractError,
     contract_sha256,
@@ -353,42 +358,28 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
         contract_fp = self.orchestration_control.stable_contract_fingerprint(args.get("contract_fingerprint", ""))
         replan_reason = str(args.get("replan_reason", "")).strip()
         explicit_objective = str(args.get("objective") or "").strip()
+        current_run = self.orchestration_ledger.get_run(current_ctx.run_id) if current_ctx is not None else {}
+        prepared_binding = validate_prepared_workflow_binding(
+            args,
+            current_task=current_task,
+            projection=projection,
+            current_ctx=current_ctx,
+            current_run=current_run or {},
+            ledger=self.orchestration_ledger,
+        )
 
-        # An explicit workflow objective is a request identity boundary. A stale/global
-        # task projection may point at another PREFLIGHT/READY run from a different
-        # ChatWeb turn. Reusing that run would persist the foreign objective even though
-        # the caller supplied a new one. Detach the compact task projection and start a
-        # new task/run instead; do not abort or rewrite the unrelated durable run.
-        if current_ctx is not None and explicit_objective and current_ctx.state in {"PREFLIGHT", "READY"}:
-            current_run = self.orchestration_ledger.get_run(current_ctx.run_id) or {}
-            provenance = self.orchestration_ledger.wave_objective_provenance(
-                current_ctx.run_id,
-                current_ctx.wave_id,
-            )
-            current_objective = str(
-                (provenance or {}).get("effective_objective")
-                or current_run.get("objective")
-                or ""
-            ).strip()
-            current_task_id = str(current_task.get("task_id") or "").strip()
-            run_task_id = str(current_run.get("task_id") or "").strip()
-            task_mismatch = bool(current_task_id and run_task_id and current_task_id != run_task_id)
-            objective_mismatch = bool(current_objective and current_objective != explicit_objective)
-            if task_mismatch or objective_mismatch:
-                current_task = self.task_state.update(
-                    {
-                        "objective": explicit_objective,
-                        "status": "active",
-                        "failure": None,
-                        "current_step": "Orchestration preflight",
-                        "next_step": "",
-                        "new_task": True,
-                    },
-                    event="task_started",
-                )
-                projection = {}
-                run_id = ""
-                current_ctx = None
+        # A new explicit objective detaches stale/foreign projections. The one
+        # exception is an exact caller-scoped prepare binding, which keeps the
+        # immutable prepare objective as RUN authority for a refined execute plan.
+        current_task, projection, run_id, current_ctx = resolve_prepared_objective_boundary(
+            prepared_binding,
+            explicit_objective=explicit_objective,
+            current_task=current_task,
+            current_run=current_run or {},
+            current_ctx=current_ctx,
+            ledger=self.orchestration_ledger,
+            task_state=self.task_state,
+        )
 
         if current_ctx is not None:
             if current_ctx.state == "ACCEPTING":
@@ -1186,7 +1177,8 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
                 "completion_readiness": completion_readiness,
                 "solution_shadow_enrollment": solution_shadow_enrollment,
                 "orchestration": self._orchestration_result(ctx, write_reports=False),
-                "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set and verification plan.",
+                "prepared_binding": {"run_id": ctx.run_id, "wave_id": ctx.wave_id},
+                "recommended_next_action": "Reason once over this bundle, then call agent_workflow phase=execute with the complete change set, verification plan, and this exact prepared_binding run_id/wave_id.",
             }
 
         patches = list(explicit_patches)
@@ -1531,7 +1523,12 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
         except (ToolFailure, OrchestrationControlError) as exc:
             code = getattr(exc, "code", type(exc).__name__)
             if ctx.state not in {"REPLAN", "BLOCKED", "ABORTED"}:
-                self.orchestration_control.record_failure(ctx, code)
+                failure_payload = None
+                if isinstance(exc, ToolFailure):
+                    permission_detail = p2_permission_failure_detail(code, exc.details)
+                    if permission_detail is not None:
+                        failure_payload = {"p2_failure_detail": permission_detail}
+                self.orchestration_control.record_failure(ctx, code, payload=failure_payload)
             self._project_orchestration(ctx, event="execution_exception")
             self.task_state.update({"status": "waiting", "failure": str(code), "current_step": "Replan required", "next_step": "Provide replan_reason after correcting the failure cause."})
             raise

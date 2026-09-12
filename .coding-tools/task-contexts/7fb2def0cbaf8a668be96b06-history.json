@@ -1,0 +1,431 @@
+[
+  {
+    "version": 2,
+    "task_id": "e335554e0324435190c552631ab8256c",
+    "orchestration": {
+      "run_id": "6dacd9e0edc9482ab18bf711f6f5376b",
+      "wave_id": "8e770686b6a74f6e90fc6030e357c5ed",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+      "contract_fp": ""
+    },
+    "objective": "Final read-only closeout proof for the exact stale-run maintenance completed in this session. Collect a fresh immutable lifecycle census after restart #3, then exact read-only probes for c9a67701e8554ce2b21e3117212797f6, 9c633d2185d84ed4b86fa60f6bfb38ef, 6559ba677eb742139c6f111e760edc78, and separately 85aebc6dcb0d4cdbab3c1f91c813eae4. Confirm SQLite integrity, foreign-key status, projection drift, live ownership/unbound-resource residue, stale/unresolved status, and whether 85a remains below threshold or has changed eligibility. Do not reconcile, mutate source, restart runtime, edit ledger history, commit, push, clean, reset, package, or release.",
+    "status": "stopped",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "failed",
+        "updated_at": "2026-09-12T09:43:06.982Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-12T09:43:06.982Z"
+      }
+    ],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "H-GtbnjberX86fr6sVFgKFHY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T09:43:06.578Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 44,
+          "head_hash": "5b4c8051c4f16937eb48b9547823ffd3e28744f4cb99619a53e39b7148d102ab"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6dacd9e0edc9482ab18bf711f6f5376b\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-6dacd9e0edc9482ab18bf711f6f5376b\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "6dacd9e0edc9482ab18bf711f6f5376b",
+        "wave_id": "8e770686b6a74f6e90fc6030e357c5ed",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Final read-only closeout proof for the exact stale-run maintenance completed in this session. Collect a fresh immutable lifecycle census after restart #3, then exact read-only probes for c9a67701e8554ce2b21e3117212797f6, 9c633d2185d84ed4b86fa60f6bfb38ef, 6559ba677eb742139c6f111e760edc78, and separately 85aebc6dcb0d4cdbab3c1f91c813eae4. Confirm SQLite integrity, foreign-key status, projection drift, live ownership/unbound-resource residue, stale/unresolved status, and whether 85a remains below threshold or has changed eligibility. Do not reconcile, mutate source, restart runtime, edit ledger history, commit, push, clean, reset, package, or release.",
+          "objective_revision": 1,
+          "objective_sha256": "8e1185a1efbac1ddabcefd7104739aef516e707002a7a06ca7097c59e634dc04",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 5,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "024f21653c87480cac4ce7c2a4fe84ca",
+            "stage_id": "check:c1bc583779db604b",
+            "status": "passed",
+            "duration_ms": 5785,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "edb8720a7a3f43b0a3b970b9f3ffe85d",
+            "stage_id": "check:38d71a711ab9a633",
+            "status": "passed",
+            "duration_ms": 4976,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "5fbb6c20be694b2ba870b29cdcda6322",
+            "stage_id": "check:d71a5d8400a37add",
+            "status": "passed",
+            "duration_ms": 4791,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "ae910282a6e841eea044a9a2c57e7568",
+            "stage_id": "check:3a4ed2f0dfd33bca",
+            "status": "passed",
+            "duration_ms": 5092,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "e6dbd207619b45d5b330cfdb30dc88e8",
+            "stage_id": "check:8f32766ea3162a0a",
+            "status": "failed",
+            "duration_ms": 4528,
+            "exit_code": 2,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "CHECK_FAILED",
+        "reason": null,
+        "event_seq": 51149
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "60a9b6ff85d50c719ee60a628ece7c6d03155e4a069eb618d3d4dfdeea0c8362",
+    "completion_report_acknowledged_id": "60a9b6ff85d50c719ee60a628ece7c6d03155e4a069eb618d3d4dfdeea0c8362",
+    "completion_report_acknowledged_at": "2026-09-12T09:44:10.118Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Stopped by user",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-12T09:42:30.704Z",
+    "updated_at": "2026-09-12T09:44:26.989Z",
+    "events": [
+      {
+        "time": "2026-09-12T09:42:30.704Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Final read-only closeout proof for the exact stale-run maintenance completed in this session. Collect a fresh immutable lifecycle census after restart #3, then exact read-only probes for c9a67701e8554ce2b21e3117212797f6, 9c633d2185d84ed4b86fa60f6bfb38ef, 6559ba677eb742139c6f111e760edc78, and separately 85aebc6dcb0d4cdbab3c1f91c813eae4. Confirm SQLite integrity, foreign-key status, projection drift, live ownership/unbound-resource residue, stale/unresolved status, and whether 85a remains below threshold or has changed eligibility. Do not reconcile, mutate source, restart runtime, edit ledger history, commit, push, clean, reset, package, or release."
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:32.254Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:34.695Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:36.191Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:36.198Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:37.807Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:38.413Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:39.377Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "session_id": "gfMNkJlw492_ZY6Z4RuYVNpk"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:44.398Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:45.782Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id c9a67701e8554ce2b21e3117212797f6",
+          "session_id": "YGVqamt96yqc_x2se7WWEQp8"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:50.010Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id c9a67701e8554ce2b21e3117212797f6",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:51.815Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 9c633d2185d84ed4b86fa60f6bfb38ef",
+          "session_id": "OLWN695bQdYBAdo_TEthOpVw"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:55.794Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 9c633d2185d84ed4b86fa60f6bfb38ef",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:42:57.252Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 6559ba677eb742139c6f111e760edc78",
+          "session_id": "aO_aUmkZRIGeyjH_2CTuiyHB"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:01.559Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 6559ba677eb742139c6f111e760edc78",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:02.714Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 85aebc6dcb0d4cdbab3c1f91c813eae4",
+          "session_id": "H-GtbnjberX86fr6sVFgKFHY"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:06.578Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 85aebc6dcb0d4cdbab3c1f91c813eae4",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:06.982Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:07.979Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:07.982Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:07.992Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:08.092Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "60a9b6ff85d50c719ee60a628ece7c6d03155e4a069eb618d3d4dfdeea0c8362"
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:08.092Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:19.307Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:43:19.573Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:44:10.118Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "60a9b6ff85d50c719ee60a628ece7c6d03155e4a069eb618d3d4dfdeea0c8362"
+        }
+      },
+      {
+        "time": "2026-09-12T09:44:18.896Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:44:20.100Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:44:20.102Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:44:26.989Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T09:44:27.136Z",
+    "archive_reason": "cleared"
+  }
+]

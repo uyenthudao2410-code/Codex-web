@@ -3,9 +3,9 @@
 - Run: `833b600f9a1b418ba7c2aafede1f65b6`
 - Task: `21dc7efd18834b2092ff02980924cd65`
 - Objective: Performance wave 1 only. On current clean product source at main HEAD 58ee20d3a5b2607016b1880f4276437eb2dcf5df, make renderer/browser.js and renderer/control-center.js materially lighter in dev and packaged use without changing user-visible semantics or correctness-critical activation/recovery behavior. Eliminate overlapping async polling cycles, coalesce repeated refreshes/DOM scans, skip no-op DOM/state rewrites where safe, reduce nonessential refresh work while document is hidden/unfocused, and perform an immediate refresh on resume. Preserve existing API contracts and event behavior. Add or adjust only focused tests directly needed for these two renderer surfaces. Do not touch unrelated renderer files, Electron activation/recovery code, .coding-tools evidence, package configuration, Git history, or releases. Run the smallest authoritative focused tests plus git diff --check. Return exact modified paths and proof results.
-- Status: **active**
+- Status: **aborted**
 - Started: `2026-09-06T08:00:46.703Z`
-- Finished: `None`
+- Finished: `2026-09-09T10:47:55.332Z`
 
 ## Outcome metrics
 
@@ -22,7 +22,7 @@
 | # | Wave | Objective rev | Objective source | Mode | Base | Status |
 |---:|---|---:|---|---|---|---|
 | 1 | `ea533b3239e04bad9f806db9563ff63d` | 1 | `run_initial_objective` | `deep_single_lane` | `58ee20d3a5b2607016b1880f4276437eb2dcf5df` | replanned |
-| 2 | `5122df2533764d9eaaab2e79c0b8d7dd` | 2 | `replan_request` | `mcp_only` | `58ee20d3a5b2607016b1880f4276437eb2dcf5df` | active |
+| 2 | `5122df2533764d9eaaab2e79c0b8d7dd` | 2 | `replan_request` | `mcp_only` | `58ee20d3a5b2607016b1880f4276437eb2dcf5df` | aborted |
 
 ## Acceptance checkpoints
 
@@ -47,7 +47,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `46`
-- Chain head: `7b048299e7107c0598546ca4bb4b679160930f615777e3941b5e8456ced9fdc6`
+- Events checked: `48`
+- Chain head: `61147204dabf38e67dcbb3f9fa546b28af5ce44e17bf6369f9fd32072693fb69`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

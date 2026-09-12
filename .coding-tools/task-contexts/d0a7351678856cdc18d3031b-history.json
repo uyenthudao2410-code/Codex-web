@@ -1,0 +1,802 @@
+[
+  {
+    "version": 2,
+    "task_id": "4c992735740246399d5ab44131502607",
+    "orchestration": {
+      "run_id": "f455bda4374c4bf889fc479c8cb9c94c",
+      "wave_id": "05bf811741d84e1eaf3de42c1733b552",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "106a86d0fc02094d1f8459e3f2182db3f4f50042902f6d7f0f2dd641f0396fe8",
+      "contract_fp": ""
+    },
+    "objective": "Natural #20 candidate diagnostic: use the repository's immutable LedgerFacts reader rather than shell-search heuristics to obtain exact accepted-cohort generic failure/replan pairs. No source mutation.",
+    "status": "failed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "failed",
+        "updated_at": "2026-09-10T08:38:02.270Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "pending",
+        "updated_at": "2026-09-10T08:38:02.270Z"
+      }
+    ],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "pIQM_KBankvnKswmc-WXaEG_",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 690,
+      "finished_at": "2026-09-10T08:41:03.642Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 81,
+          "head_hash": "1f82a1ead5e940eda529373c9b13d297ac6067e3c7a66df40b85dddf412e7eb5"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f455bda4374c4bf889fc479c8cb9c94c\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f455bda4374c4bf889fc479c8cb9c94c\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f455bda4374c4bf889fc479c8cb9c94c\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f455bda4374c4bf889fc479c8cb9c94c\\wave-003.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "f455bda4374c4bf889fc479c8cb9c94c",
+        "wave_id": "e3b52b2347844408811cab3a036b1a74",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "106a86d0fc02094d1f8459e3f2182db3f4f50042902f6d7f0f2dd641f0396fe8",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Natural #20 candidate diagnostic: use the repository's immutable LedgerFacts reader rather than shell-search heuristics to obtain exact accepted-cohort generic failure/replan pairs. No source mutation.",
+          "objective_revision": 3,
+          "objective_sha256": "d0517412b607623a361cd2f6f4465e800b2c731512d275b6139df4b1d56bf870",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": false,
+        "proofs": [
+          {
+            "proof_id": "d5d09d7afec34710a95842395a21dffc",
+            "stage_id": "check:5b036058348df6c8",
+            "status": "failed",
+            "duration_ms": 1178,
+            "exit_code": 1,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "CHECK_FAILED",
+        "reason": null,
+        "event_seq": 47381
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "dfb6264dc26743f811e207ca7583a7bea460ed9b282be954a50ae3596109aaab",
+    "completion_report_acknowledged_id": "dfb6264dc26743f811e207ca7583a7bea460ed9b282be954a50ae3596109aaab",
+    "completion_report_acknowledged_at": "2026-09-10T08:38:47.864Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+    "created_at": "2026-09-10T08:28:51.568Z",
+    "updated_at": "2026-09-10T08:41:03.642Z",
+    "events": [
+      {
+        "time": "2026-09-10T08:28:51.568Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Natural #20 candidate diagnostic only: investigate the remaining causal-unknown P2 cohort after Natural #19 closure, prioritizing CHECK_FAILED and BUILD_VERIFICATION_FAILED. Determine from existing immutable ledger facts and exact failure_observed-to-wave_replanned pairing whether any of these generic failures have narrow high-confidence durable replan reasons that support a semantic repair-cause label. Do not open a Problem, do not change source, do not weaken fail-closed attribution, and keep process nonzero outcome non-causal by itself."
+        }
+      },
+      {
+        "time": "2026-09-10T08:28:52.948Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:28:59.171Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:28:59.180Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:05.555Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:06.337Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:07.555Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:07.560Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:08.660Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:09.209Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:10.039Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/report_p2_rework_diagnosis.py --help",
+          "session_id": "Vc90Lx45fhDujakJThdnR8EH"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:10.488Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/report_p2_rework_diagnosis.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:11.583Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/report_p2_rework_diagnosis.py --workspace E:/DEV/Codex-web --limit 5000",
+          "session_id": "Ki4PxMZ0yhhzX5LQ_e5aVDtW"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:14.932Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/report_p2_rework_diagnosis.py --workspace E:/DEV/Codex-web --limit 5000",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.312Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.320Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.691Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.696Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.824Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "ed595a8337e2dc0691f7cb7ba6ae06969a036098b54802b1635ebbd38df28f8f"
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:15.984Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:25.957Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:30:53.509Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "ed595a8337e2dc0691f7cb7ba6ae06969a036098b54802b1635ebbd38df28f8f"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:02.684Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:04.284Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:04.288Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:04.423Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "0ffa2ec213c50b57d3de9cc2ca1de8519ff8ac1599f530119f28588b1f86bb96"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:14.469Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:33.227Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0ffa2ec213c50b57d3de9cc2ca1de8519ff8ac1599f530119f28588b1f86bb96"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:45.136Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:46.534Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:52.647Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:31:52.656Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:53.419Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:54.188Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:56.006Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:56.015Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:57.295Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:57.985Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:59.084Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l \"open_ledger_analysis_snapshot|LedgerFacts\" scripts coding_tools_mcp",
+          "session_id": "O9_7YXz2kvGjXAMo5z9r6A44"
+        }
+      },
+      {
+        "time": "2026-09-10T08:32:59.517Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l \"open_ledger_analysis_snapshot|LedgerFacts\" scripts coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:00.617Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"wave_replanned|failure_observed\" scripts",
+          "session_id": "Q3Nu5AXeyd-sn4klH5sNT7UI"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:01.077Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"wave_replanned|failure_observed\" scripts",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:01.362Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:02.093Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:02.095Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:02.106Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:02.259Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "e597cdc13ded7a5c1115ae165f8d5f57346b53400c7c02f851b98607a45abb46"
+        }
+      },
+      {
+        "time": "2026-09-10T08:33:02.414Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:36:17.189Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:36:41.555Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "e597cdc13ded7a5c1115ae165f8d5f57346b53400c7c02f851b98607a45abb46"
+        }
+      },
+      {
+        "time": "2026-09-10T08:36:58.012Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:36:59.981Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:05.753Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:05.762Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:56.295Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:57.108Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:58.524Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:37:58.540Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:00.006Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:00.566Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:01.466Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m sqlite3 -h",
+          "session_id": "4ZJD4TBjUD5REIeDd_cH5dx9"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:01.940Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m sqlite3 -h",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:02.270Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:02.995Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:02.995Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:03.007Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:03.182Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "dfb6264dc26743f811e207ca7583a7bea460ed9b282be954a50ae3596109aaab"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:03.333Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:45.418Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:47.864Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "dfb6264dc26743f811e207ca7583a7bea460ed9b282be954a50ae3596109aaab"
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:56.857Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T08:38:58.243Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:39:04.845Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T08:39:04.855Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T08:41:03.200Z",
+        "event": "command_started",
+        "details": {
+          "command": "where sqlite3",
+          "session_id": "pIQM_KBankvnKswmc-WXaEG_"
+        }
+      },
+      {
+        "time": "2026-09-10T08:41:03.642Z",
+        "event": "command_finished",
+        "details": {
+          "command": "where sqlite3",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T08:41:44.550Z",
+    "archive_reason": "finished"
+  }
+]

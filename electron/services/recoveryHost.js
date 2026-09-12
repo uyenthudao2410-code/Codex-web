@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
+const path = require('node:path');
 const { RuntimeOrchestrator } = require('./runtimeOrchestrator');
 const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
@@ -14,9 +15,11 @@ const { computeActivationClosure, activationSourceCheckpoint } = require('./acti
 const { FullCleanActivation, canonicalLedgerCensus } = require('./fullCleanActivation');
 const { ActivationEpochStore, ACTIVE_STATES } = require('./activationEpoch');
 const { writeBootstrapResult, readBootstrapResult, removeBootstrapEnvelope } = require('./recoveryBootstrap');
+const { revalidateTrustedRecoveryHostSource } = require('./trustedRecoveryBootstrap');
 const {
   normalizeProcessStartToken,
   observeProcessIdentity,
+  observeLifecycleProcessIdentity,
   observeProcessIdentityAsync,
   processIdentityFrom,
   sameProcessIdentity,
@@ -377,8 +380,10 @@ class RecoveryHost {
     deviceIdentity = null, bootstrap = null, processAlive = isProcessAlive,
     processIdentityObserver = observeProcessIdentity,
     asyncProcessIdentityObserver = null,
+    lifecycleProcessIdentityObserver = null,
     exactProcessTerminator = terminateExactProcessTree,
-    canonicalLedgerCensusFn = canonicalLedgerCensus
+    canonicalLedgerCensusFn = canonicalLedgerCensus,
+    trustedRecoverySourceValidator = revalidateTrustedRecoveryHostSource
   }) {
     this.paths = paths;
     this.settings = settings;
@@ -447,12 +452,20 @@ class RecoveryHost {
       : this.processIdentityObserver === observeProcessIdentity
         ? observeProcessIdentityAsync
         : this.processIdentityObserver;
+    this.lifecycleProcessIdentityObserver = typeof lifecycleProcessIdentityObserver === 'function'
+      ? lifecycleProcessIdentityObserver
+      : this.processIdentityObserver === observeProcessIdentity
+        ? observeLifecycleProcessIdentity
+        : this.processIdentityObserver;
     this.exactProcessTerminator = typeof exactProcessTerminator === 'function'
       ? exactProcessTerminator
       : terminateExactProcessTree;
     this.canonicalLedgerCensus = typeof canonicalLedgerCensusFn === 'function'
       ? canonicalLedgerCensusFn
       : null;
+    this.trustedRecoverySourceValidator = typeof trustedRecoverySourceValidator === 'function'
+      ? trustedRecoverySourceValidator
+      : revalidateTrustedRecoveryHostSource;
     this.processIdentity = null;
     this.exitProcess = exitProcess || (() => {});
     this.handoffStarted = false;
@@ -555,7 +568,7 @@ class RecoveryHost {
         }
         try {
           await this.exactProcessTerminator(identity, {
-            observeProcessIdentity: this.processIdentityObserver,
+            observeProcessIdentity: this.lifecycleProcessIdentityObserver,
             timeoutMs: 5000
           });
         } catch (error) {
@@ -868,7 +881,7 @@ class RecoveryHost {
       });
     }
 
-    const observedSelf = await this.processIdentityObserver(process.pid);
+    const observedSelf = await this.lifecycleProcessIdentityObserver(process.pid);
     if (observedSelf?.state !== 'live' || !sameProcessIdentity(this.processIdentity, observedSelf)) {
       throw Object.assign(new Error('Recovery Host process identity changed before terminal bootstrap reconciliation.'), {
         code: 'RECOVERY_BOOTSTRAP_RECONCILIATION_IDENTITY_CHANGED',
@@ -983,7 +996,7 @@ class RecoveryHost {
       });
     }
     let observedOldHost;
-    try { observedOldHost = await this.processIdentityObserver(oldPid); }
+    try { observedOldHost = await this.lifecycleProcessIdentityObserver(oldPid); }
     catch (error) {
       throw Object.assign(new Error('Previous Recovery Host process identity could not be observed.'), {
         code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED',
@@ -1024,6 +1037,33 @@ class RecoveryHost {
           revision_state: revision.state || null
         }
       });
+    }
+    if (this.bootstrap.trusted_recovery_bootstrap) {
+      const workspace = String(this.settings?.load?.()?.workspace || '').trim();
+      const appRoot = typeof this.paths?.appRoot === 'function' ? String(this.paths.appRoot() || '').trim() : '';
+      if (!workspace || !appRoot || path.resolve(workspace).toLowerCase() !== path.resolve(appRoot).toLowerCase()) {
+        throw Object.assign(new Error('Trusted Recovery Supervisor bootstrap workspace does not match this installation.'), {
+          code: 'TRUSTED_BOOTSTRAP_WORKSPACE_MISMATCH'
+        });
+      }
+      let verified;
+      try {
+        verified = await this.trustedRecoverySourceValidator(
+          workspace,
+          this.bootstrap.source_checkpoint,
+          this.bootstrap.trusted_recovery_bootstrap
+        );
+      } catch (error) {
+        throw Object.assign(new Error('Trusted Recovery Supervisor bootstrap source could not be revalidated after host replacement.'), {
+          code: String(error?.code || 'TRUSTED_BOOTSTRAP_SOURCE_UNAVAILABLE'),
+          cause: error
+        });
+      }
+      if (verified?.attestation?.receipt_sha256 !== this.bootstrap.trusted_recovery_bootstrap.receipt_sha256) {
+        throw Object.assign(new Error('Trusted Recovery Supervisor bootstrap receipt changed after host replacement.'), {
+          code: 'TRUSTED_BOOTSTRAP_SOURCE_DRIFT'
+        });
+      }
     }
     const suppliedEpochId = String(this.bootstrap.activation_epoch_id || '').trim();
     if (durableEpoch && String(durableEpoch.operation_id || '') === operationId) {
@@ -1699,6 +1739,16 @@ class RecoveryHost {
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
       'runtime.lightweight_snapshot': async () => this.cachedRuntimeSnapshot(),
+      'runtime.record_execution_control_center_progress': async (observation = {}) => {
+        this.assertBootstrapMutationAllowed();
+        this.assertReadyAdoptionMutationAllowed();
+        if (typeof this.orchestrator?.recordExecutionControlCenterProgress !== 'function') {
+          throw Object.assign(new Error('Execution Control Center receipt producer is unavailable.'), {
+            code: 'CONTROL_CENTER_OBSERVATION_UNAVAILABLE'
+          });
+        }
+        return this.orchestrator.recordExecutionControlCenterProgress(observation);
+      },
       'runtime.activation_epoch_status': async () => this.hostStatus().activation_epoch,
       'runtime.complete_activation_epoch': async (activationEpochId) => {
         this.assertBootstrapMutationAllowed();
@@ -1848,6 +1898,33 @@ class RecoveryHost {
           && typeof this.orchestrator.serviceSupervisorRestartRequest === 'function'
           ? await this.orchestrator.serviceSupervisorRestartRequest()
           : null;
+        // A supervisor restart owns this watchdog tick once it either enters
+        // HANDOFF or explicitly defers with its durable journal retained.  In
+        // the deferred/RUNTIME_BUSY case, falling through to
+        // orchestrator.supervise() would consume the same ticket a second time
+        // in this tick; that retry can enter HANDOFF and then deadlock while the
+        // handoff waits for this exact supervisionInFlight promise to drain.
+        // Yield here and let the next watchdog iteration perform the retained
+        // retry.  Only an accepted HANDOFF proves the primary runtime stopped;
+        // a deferred request preserves the last observed process liveness.
+        if (['accepted', 'deferred'].includes(String(supervisorRequest?.status || ''))) {
+          const handoffAccepted = supervisorRequest.status === 'accepted';
+          runtime = {
+            ...(this.lastSupervisionStatus || {}),
+            ...(handoffAccepted ? {
+              mcpRunning: false,
+              nativeAlive: false,
+              tunnelRunning: false
+            } : {}),
+            componentsReady: false,
+            connectorReady: false,
+            fullyReady: false,
+            updateIncomplete: true,
+            supervisorRequest
+          };
+          this.recordSupervisionStatus(runtime, { activationConnectorPending: false });
+          return runtime;
+        }
         runtime = admissionBlocked
           ? (pendingObservation?.runtime || await this.orchestrator.lightweightSnapshot())
           : await this.orchestrator.supervise();
@@ -2204,7 +2281,7 @@ class RecoveryHost {
     }
     try {
       let observedSelf;
-      try { observedSelf = await this.processIdentityObserver(process.pid); }
+      try { observedSelf = await this.lifecycleProcessIdentityObserver(process.pid); }
       catch (error) {
         throw Object.assign(new Error('Recovery Host process identity is unavailable before runtime ownership.'), {
           code: 'RECOVERY_PROCESS_IDENTITY_UNVERIFIED',
@@ -2267,7 +2344,7 @@ class RecoveryHost {
           if (Number(pid) === Number(process.pid) && this.processIdentity) {
             return { state: 'live', ...this.processIdentity };
           }
-          return this.processIdentityObserver(pid);
+          return this.lifecycleProcessIdentityObserver(pid);
         }
       });
       await this.ipcServer.start();

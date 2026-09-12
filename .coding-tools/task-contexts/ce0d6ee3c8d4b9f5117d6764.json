@@ -1,0 +1,301 @@
+{
+  "version": 2,
+  "task_id": "c7a5bcf95b2c4c008198d405eb0cd0e1",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Qr5W18qmQFYsOiaApG28b3NN",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 615,
+    "finished_at": "2026-09-09T07:01:26.955Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "Qr5W18qmQFYsOiaApG28b3NN",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "Qr5W18qmQFYsOiaApG28b3NN",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": 615
+      },
+      "git": {
+        "head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "branch": "main",
+        "worktree_fp": "ff69f258efc46ecc7713cebf1b5b77a10326f2ac4355c22111a141ce325d2a8c",
+        "dirty_paths": [
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/main.js",
+          "electron/services/chatEvaluationJournal.js",
+          "electron/services/componentRevision.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/recoveryActionStore.js",
+          "electron/services/recoveryActivation.js",
+          "electron/services/recoveryBootstrap.js",
+          "electron/services/recoveryHost.js",
+          "electron/services/recoveryHostLauncher.js",
+          "electron/services/runtimeOrchestrator.js",
+          "renderer/control-center.css",
+          "renderer/dashboard.js",
+          "renderer/index.html",
+          "renderer/token-dashboard.html",
+          "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/activation_capability.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/completion_readiness.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "scripts/full-clean-activation.js",
+          "tests/accepted-code-activation.test.js",
+          "tests/chat-evaluation-journal.test.js",
+          "tests/component-revision.test.js",
+          "tests/full-clean-activation-command.test.js",
+          "tests/full-clean-activation.test.js",
+          "tests/recovery-activation.test.js",
+          "tests/recovery-bootstrap.test.js",
+          "tests/recovery-host.test.js",
+          "tests/recovery-supervisor.test.js",
+          "tests/runtime-lifecycle.test.js",
+          ".harness/epoch-transition/writer.lock",
+          "docs/CONTINUATION_CLOSURE_PLAN.md",
+          "electron/services/trustedRecoveryBootstrap.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/app_server_persistence.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+          "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+          "scripts/trusted-recovery-bootstrap.js",
+          "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs",
+          "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs",
+          "tests/trusted-recovery-bootstrap.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "c7a5bcf95b2c4c008198d405eb0cd0e1",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "ff73564137c020f5daf9003d0cfb01492f1412880538796994c9ffe19645900d",
+  "completion_report_acknowledged_id": "ff73564137c020f5daf9003d0cfb01492f1412880538796994c9ffe19645900d",
+  "completion_report_acknowledged_at": "2026-09-09T07:02:20.175Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_lifecycle_census.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '7 passed, 2 subtests passed in 16.54s'",
+      "finished_at": "2026-09-09T06:59:35.703Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Yp4hPSp7mKSGge2hZzxr6fX-"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "3d0d0852d5d1463886a54dd33d5e4eef",
+        "owner_wave": "e6b35e273828461cbd476ce26d645f9a",
+        "size_bytes": 118,
+        "command_id": "Yp4hPSp7mKSGge2hZzxr6fX-",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Yp4hPSp7mKSGge2hZzxr6fX-:stdout",
+            "total_stream_bytes": 118,
+            "total_retained_bytes": 118,
+            "head_retained_bytes": 118,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Yp4hPSp7mKSGge2hZzxr6fX-:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T06:59:16.451Z",
+  "updated_at": "2026-09-09T07:05:25.123Z",
+  "events": [
+    {
+      "time": "2026-09-09T06:59:16.451Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T06:59:17.181Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_lifecycle_census.py -q",
+        "session_id": "Yp4hPSp7mKSGge2hZzxr6fX-"
+      }
+    },
+    {
+      "time": "2026-09-09T06:59:35.703Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_lifecycle_census.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T06:59:36.221Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "Yp4hPSp7mKSGge2hZzxr6fX-",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "579289e4aa5bd14626a0e18d65cd19eae1a5cf3a8ec50e0134352460fdb847e1"
+      }
+    },
+    {
+      "time": "2026-09-09T07:00:27.405Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T07:00:39.441Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "579289e4aa5bd14626a0e18d65cd19eae1a5cf3a8ec50e0134352460fdb847e1"
+      }
+    },
+    {
+      "time": "2026-09-09T07:01:07.880Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "IDEMPOTENCY_OUTCOME_UNKNOWN"
+      }
+    },
+    {
+      "time": "2026-09-09T07:01:26.467Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+        "session_id": "Qr5W18qmQFYsOiaApG28b3NN"
+      }
+    },
+    {
+      "time": "2026-09-09T07:01:26.955Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff -- resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T07:01:40.005Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "Qr5W18qmQFYsOiaApG28b3NN",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "ff73564137c020f5daf9003d0cfb01492f1412880538796994c9ffe19645900d"
+      }
+    },
+    {
+      "time": "2026-09-09T07:01:47.813Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "MESSAGE_NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-09-09T07:02:20.175Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "ff73564137c020f5daf9003d0cfb01492f1412880538796994c9ffe19645900d"
+      }
+    },
+    {
+      "time": "2026-09-09T07:02:50.124Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    }
+  ]
+}

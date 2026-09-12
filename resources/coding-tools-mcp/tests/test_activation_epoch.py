@@ -6,9 +6,10 @@ import json
 import os
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.projection_rebuild import (
@@ -34,6 +35,11 @@ class ActivationEpochTests(unittest.TestCase):
             },
         )
         self.env.start()
+        # Most admission tests inspect an immediate snapshot. The dedicated
+        # wait tests below exercise the bounded transport wait explicitly.
+        waiter = patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 0)
+        waiter.start()
+        self.addCleanup(waiter.stop)
 
     def tearDown(self) -> None:
         self.env.stop()
@@ -190,6 +196,255 @@ class ActivationEpochTests(unittest.TestCase):
             self.assertTrue(result["structuredContent"]["ok"])
             self.assertNotIn("activation_bootstrap", result["structuredContent"])
             self.assertEqual(runtime.activation_admission, "open")
+        finally:
+            runtime.close()
+
+    def test_pending_bootstrap_has_timing_identity_and_truthful_model_text(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-bootstrap", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            response = runtime.call_tool("workspace_context", {"path": "must-not-read"})
+            value = response["structuredContent"]
+            self.assertEqual(value["status"], "activation_pending")
+            self.assertGreater(value["retry_after_ms"], 0)
+            self.assertEqual(value["activation"]["expires_at_unix_ms"], self.expires_at_unix_ms)
+            self.assertFalse(value["activation"]["admission_open"])
+            self.assertEqual(value["activation_bootstrap"]["process_instance_id"], runtime.process_instance_id)
+            rendered = "\n".join(block.get("text", "") for block in response["content"])
+            self.assertIn("pending", rendered.lower())
+            self.assertIn(str(value["retry_after_ms"]), rendered)
+            self.assertIn(str(self.expires_at_unix_ms), rendered)
+            self.assertNotIn("workspace_context: completed", rendered)
+            self.assertTrue(runtime.connector_activation_bootstrap()["observed"])
+            self.assertFalse(runtime.connector_client_contact()["observed"])
+        finally:
+            runtime.close()
+
+    def test_attested_call_waits_for_exact_commit_then_reads_once(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        finished = []
+        observed_receipt = threading.Event()
+        original_record = runtime._record_activation_bootstrap_rpc_contact
+        workspace_read = Mock(wraps=runtime.workspace_context)
+
+        def record(*args, **kwargs):
+            original_record(*args, **kwargs)
+            observed_receipt.set()
+
+        def call():
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-bootstrap", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            finished.append(runtime.call_tool("workspace_context", {"detail": "compact"}))
+
+        worker = threading.Thread(target=call)
+        try:
+            with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 2), patch.object(
+                runtime, "_record_activation_bootstrap_rpc_contact", side_effect=record
+            ), patch.dict(runtime._tool_handlers, {"workspace_context": workspace_read}), patch.object(
+                runtime, "_set_request_workspace_scope", wraps=runtime._set_request_workspace_scope
+            ) as workspace_scope:
+                worker.start()
+                self.assertTrue(observed_receipt.wait(1), "receipt must be visible before waiting")
+                self.assertFalse(finished)
+                self.assertEqual(runtime.active_tool_calls, 0, "bootstrap wait cannot block the final idle census")
+                workspace_scope.assert_not_called()
+                workspace_read.assert_not_called()
+                with self.assertRaises(ToolFailure):
+                    runtime.complete_activation_epoch("wrong-epoch", self.ready_commit_digest, self.expires_at_unix_ms)
+                self.assertFalse(finished)
+                runtime.complete_activation_epoch("epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms)
+                worker.join(3)
+                self.assertFalse(worker.is_alive())
+            value = finished[0]["structuredContent"]
+            self.assertTrue(value["completed"])
+            self.assertTrue(value["workspace_accessed"])
+            self.assertTrue(value["activation"]["admission_open"])
+            self.assertEqual(value["workspace"], str(Path(self.temp.name).resolve()))
+            self.assertNotIn("activation_bootstrap", value)
+            workspace_read.assert_called_once()
+            self.assertFalse(runtime.connector_activation_bootstrap()["workspace_accessed"])
+        finally:
+            if worker.ident is not None:
+                worker.join(3)
+            runtime.close()
+
+    def test_bootstrap_wait_timeout_remains_pending_and_preserves_receipt(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-wait-timeout", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 0.04), patch.object(
+                runtime, "_set_request_workspace_scope", side_effect=AssertionError("no workspace before open")
+            ):
+                first = runtime.call_tool("workspace_context", {})["structuredContent"]
+                receipt = runtime.connector_activation_bootstrap()
+                second = runtime.call_tool("workspace_context", {})["structuredContent"]
+            self.assertEqual(first["status"], "activation_pending")
+            self.assertFalse(second["workspace_accessed"])
+            self.assertEqual(runtime.connector_activation_bootstrap(), receipt)
+            self.assertEqual(runtime.active_tool_calls, 0)
+        finally:
+            runtime.close()
+
+    def test_activation_expiry_during_wait_is_terminal(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.activation_expires_at_unix_ms = int(time.time() * 1000) + 100
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-wait-expiry", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 1), patch.object(
+                runtime, "_set_request_workspace_scope", side_effect=AssertionError("no workspace on expiry")
+            ):
+                response = runtime.call_tool("workspace_context", {})
+            value = response["structuredContent"]
+            self.assertTrue(response["isError"])
+            self.assertEqual(value["error"]["code"], "ACTIVATION_REQUEST_EXPIRED")
+            self.assertFalse(value["retryable"])
+            self.assertFalse(value["workspace_accessed"])
+        finally:
+            runtime.close()
+
+    def test_waiter_capacity_returns_pending_without_wait_or_workspace_access(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-capacity", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            for _ in range(4):
+                self.assertTrue(runtime._activation_bootstrap_wait_slots.acquire(blocking=False))
+            with patch.object(runtime._activation_admission_changed, "wait", side_effect=AssertionError("excess waiters must return")), patch.object(
+                runtime, "_set_request_workspace_scope", side_effect=AssertionError("no workspace before open")
+            ):
+                value = runtime.call_tool("workspace_context", {})["structuredContent"]
+            self.assertEqual(value["status"], "activation_pending")
+            self.assertFalse(value["workspace_accessed"])
+            self.assertFalse(runtime._activation_bootstrap_wait_slots.acquire(blocking=False))
+        finally:
+            for _ in range(4):
+                runtime._activation_bootstrap_wait_slots.release()
+            runtime.close()
+
+    def test_rollback_wakes_waiter_without_dispatch(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        receipt_seen = threading.Event()
+        response = []
+        original_record = runtime._record_activation_bootstrap_rpc_contact
+
+        def record(*args, **kwargs):
+            original_record(*args, **kwargs)
+            receipt_seen.set()
+
+        def call():
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-wait-rollback", "client_type": "chatweb",
+                "identity_source": "attested_transport", "attestation_verified": True,
+            }
+            response.append(runtime.call_tool("workspace_context", {}))
+
+        worker = threading.Thread(target=call)
+        try:
+            with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 2), patch.object(
+                runtime, "_record_activation_bootstrap_rpc_contact", side_effect=record
+            ), patch.object(runtime, "_set_request_workspace_scope", side_effect=AssertionError("rollback never dispatches")):
+                worker.start()
+                self.assertTrue(receipt_seen.wait(1))
+                runtime.close_activation_epoch("epoch-test-001")
+                worker.join(1)
+                self.assertFalse(worker.is_alive())
+            value = response[0]["structuredContent"]
+            self.assertEqual(value["error"]["code"], "ACTIVATION_ROLLED_BACK")
+            self.assertFalse(value["retryable"])
+            self.assertFalse(value["workspace_accessed"])
+            for _ in range(4):
+                self.assertTrue(runtime._activation_bootstrap_wait_slots.acquire(blocking=False))
+            for _ in range(4):
+                runtime._activation_bootstrap_wait_slots.release()
+        finally:
+            if worker.ident is not None:
+                worker.join(3)
+            runtime.close()
+
+    def test_cached_workspace_success_has_fresh_admission_metadata(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.complete_activation_epoch("epoch-test-001", self.ready_commit_digest, self.expires_at_unix_ms)
+            first = runtime.call_tool("workspace_context", {"detail": "compact"})["structuredContent"]
+            with patch.object(runtime, "list_dir", side_effect=AssertionError("use the content cache")):
+                second = runtime.call_tool("workspace_context", {"detail": "compact"})["structuredContent"]
+            self.assertTrue(second["completed"])
+            self.assertTrue(second["workspace_accessed"])
+            self.assertTrue(second["activation"]["admission_open"])
+            self.assertEqual(second["activation"]["ready_commit_digest"], self.ready_commit_digest)
+            self.assertTrue(second["cache"]["hit"])
+            runtime.close_activation_epoch("epoch-test-001", self.ready_commit_digest)
+            refused = runtime.call_tool("workspace_context", {"detail": "compact"})["structuredContent"]
+            self.assertFalse(refused["workspace_accessed"])
+            self.assertEqual(refused["error"]["code"], "ACTIVATION_ROLLED_BACK")
+            self.assertTrue(first["activation"]["admission_open"], "earlier response is immutable")
+        finally:
+            runtime.close()
+
+    def test_runtime_shutdown_wakes_bootstrap_waiter(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        receipt_seen = threading.Event()
+        response = []
+        errors = []
+        original_record = runtime._record_activation_bootstrap_rpc_contact
+
+        def record(*args, **kwargs):
+            original_record(*args, **kwargs)
+            receipt_seen.set()
+
+        def call():
+            try:
+                runtime.request_context.hub_client = {
+                    "client_id": "chatweb-wait-shutdown", "client_type": "chatweb",
+                    "identity_source": "attested_transport", "attestation_verified": True,
+                }
+                response.append(runtime.call_tool("workspace_context", {}))
+            except BaseException as error:
+                errors.append(error)
+
+        worker = threading.Thread(target=call)
+        try:
+            with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 2), patch.object(
+                runtime, "_record_activation_bootstrap_rpc_contact", side_effect=record
+            ), patch.object(runtime, "_set_request_workspace_scope", side_effect=AssertionError("shutdown never dispatches")):
+                worker.start()
+                self.assertTrue(receipt_seen.wait(1))
+                runtime.close()
+                worker.join(1)
+                self.assertFalse(worker.is_alive())
+            self.assertFalse(errors, str(errors))
+            value = response[0]["structuredContent"]
+            self.assertEqual(value["error"]["code"], "RUNTIME_STOPPING")
+            self.assertFalse(value["retryable"])
+            self.assertFalse(value["workspace_accessed"])
+        finally:
+            if worker.ident is not None:
+                worker.join(3)
+            runtime.close()
+
+    def test_rollback_is_terminal_for_workspace_bootstrap(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.close_activation_epoch("epoch-test-001")
+            response = runtime.call_tool("workspace_context", {})
+            value = response["structuredContent"]
+            self.assertTrue(response["isError"])
+            self.assertEqual(value["error"]["code"], "ACTIVATION_ROLLED_BACK")
+            self.assertFalse(value["retryable"])
+            self.assertFalse(value["workspace_accessed"])
         finally:
             runtime.close()
 

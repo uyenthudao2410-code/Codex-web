@@ -1101,6 +1101,23 @@ class ContextualTaskStateStore:
 
 
 class TaskStateToolsMixin:
+    def ensure_tool_task_started(self, objective: str, *, current_step: str = "") -> dict[str, Any]:
+        """Auto-start a tool task without dropping a live EOCL projection.
+
+        A command failure can make the presentation task ``failed`` while its
+        canonical RUN is still PREFLIGHT/READY/etc. Generic tool dispatch must
+        not interpret that presentation status as authority to archive the task
+        and lose the contextual projection for the nonterminal RUN.
+        """
+        state = self.task_state.get()
+        projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+        run_id = str(projection.get("run_id") or "").strip()
+        if run_id and TaskStateStore._has_task(state):
+            current_ctx = self.orchestration_control.snapshot(run_id)
+            if current_ctx is not None and current_ctx.state not in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+                return state
+        return self.task_state.ensure_started(objective, current_step=current_step)
+
     def check_exec_environment(self, args: dict[str, Any]) -> dict[str, Any]:
         landlock = landlock_status_payload()
         warnings: list[str] = []

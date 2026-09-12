@@ -1,0 +1,510 @@
+[
+  {
+    "version": 2,
+    "task_id": "d5c4472ec7734f099e290b7dc4627455",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ee7LONpwTdJWtXP5AvoFUdyP",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 249,
+      "finished_at": "2026-09-10T00:24:22.748Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T00:23:52.316Z",
+    "updated_at": "2026-09-10T00:24:22.748Z",
+    "events": [
+      {
+        "time": "2026-09-10T00:23:52.316Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T00:23:52.631Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"acceptance_correction|unclassified|first.pass|empirical|cohort|outcome\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+          "session_id": "L_CtoudztHhT3loFiBnKXz7d"
+        }
+      },
+      {
+        "time": "2026-09-10T00:23:52.882Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"acceptance_correction|unclassified|first.pass|empirical|cohort|outcome\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:02.715Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/report_rework_baseline.py --help",
+          "session_id": "5HR55wdIdu0AvEDHdewgi3sZ"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:03.250Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/report_rework_baseline.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:10.949Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/report_rework_baseline.py --workspace E:\\DEV\\Codex-web",
+          "session_id": "HMdcVM57eScdC95Ge3iqFLgJ"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:13.615Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/report_rework_baseline.py --workspace E:\\DEV\\Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:22.482Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"unclassified|acceptance_correction|source_drift|failure_events|replan_count|error_codes\" resources/coding-tools-mcp/scripts -g \"report_*.py\"",
+          "session_id": "ee7LONpwTdJWtXP5AvoFUdyP"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:22.748Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"unclassified|acceptance_correction|source_drift|failure_events|replan_count|error_codes\" resources/coding-tools-mcp/scripts -g \"report_*.py\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T00:24:30.849Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "27e3bae61dc7408594ec7efdde18c428",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "s00elNiOOy_GoXqUUoKBinE2",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 250,
+      "finished_at": "2026-09-10T00:24:31.323Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T00:24:30.849Z",
+    "updated_at": "2026-09-10T00:24:31.323Z",
+    "events": [
+      {
+        "time": "2026-09-10T00:24:30.849Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:31.097Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"independent outcome|outcome receipt|COHORT_PROVENANCE_INCOMPLETE|quantitative_claim_ready\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "session_id": "s00elNiOOy_GoXqUUoKBinE2"
+        }
+      },
+      {
+        "time": "2026-09-10T00:24:31.323Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"independent outcome|outcome receipt|COHORT_PROVENANCE_INCOMPLETE|quantitative_claim_ready\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T01:30:47.711Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a7d8b1eb086b44c8a20bad9b6f86b576",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T01:31:18.556Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-10T01:30:47.713Z",
+    "updated_at": "2026-09-10T01:31:18.556Z",
+    "events": [
+      {
+        "time": "2026-09-10T01:30:47.713Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T01:30:48.032Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"runtime:status|loaded.*revision|running_revision|disk_revision|component_manifest|ready_commit_digest\" package.json scripts docs resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "ex_3ng2v4aBsv28ZTQRlhkIh"
+        }
+      },
+      {
+        "time": "2026-09-10T01:30:48.295Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"runtime:status|loaded.*revision|running_revision|disk_revision|component_manifest|ready_commit_digest\" package.json scripts docs resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:30:56.361Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"dev-ui|runtime:.*status|mcp:.*status|gateway:.*status|status.*runtime\" package.json",
+          "session_id": "l4rtUaSKWq7rH7y0vktQ4ri3"
+        }
+      },
+      {
+        "time": "2026-09-10T01:30:56.662Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"dev-ui|runtime:.*status|mcp:.*status|gateway:.*status|status.*runtime\" package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:02.816Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "zhx0uOjo3zjTo2ZTZHbklD-M"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:03.759Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:18.556Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"activate_update|mcp_update_pending|mcp_revision_state|case ['\\\"]refresh|refresh\\(\" scripts/dev-ui-lifecycle.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:18.556Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T01:31:26.187Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bc2c7d3b24ad47afb9b36569a5d227c8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "hqNbzKJmuj747Smb7VmVO10z",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 258,
+      "finished_at": "2026-09-10T01:31:38.043Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T01:31:26.188Z",
+    "updated_at": "2026-09-10T01:31:38.043Z",
+    "events": [
+      {
+        "time": "2026-09-10T01:31:26.188Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:26.463Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'scripts\\dev-ui-lifecycle.js' -Pattern 'activate_update','mcp_update_pending','mcp_revision_state','refresh' -Context 6,10\"",
+          "session_id": "B8P7dlecXyjRASIoR_kzEEid"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:27.102Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'scripts\\dev-ui-lifecycle.js' -Pattern 'activate_update','mcp_update_pending','mcp_revision_state','refresh' -Context 6,10\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:37.804Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 5 \"code\\.activate_update|coding_mcp.*activate|activate.*coding_mcp|component.*coding_mcp\" scripts resources/coding-tools-mcp tests electron | Select-Object -First 220",
+          "session_id": "hqNbzKJmuj747Smb7VmVO10z"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:38.043Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 5 \"code\\.activate_update|coding_mcp.*activate|activate.*coding_mcp|component.*coding_mcp\" scripts resources/coding-tools-mcp tests electron | Select-Object -First 220",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T01:31:48.272Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c1420f02f92e4852bed733375cf3d9d8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "GO1OPBbIgehW5NOJO1JTPFvK",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 315,
+      "finished_at": "2026-09-10T01:32:20.297Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T01:31:48.273Z",
+    "updated_at": "2026-09-10T01:32:20.297Z",
+    "events": [
+      {
+        "time": "2026-09-10T01:31:48.273Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:48.588Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem scripts,resources\\coding-tools-mcp,tests,electron -Recurse -File | Select-String -Pattern 'code\\.activate_update','activate.*coding_mcp','coding_mcp.*activate' | Select-Object -First 220 | ForEach-Object { '{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim() }\"",
+          "session_id": "FaXexMk_BIM7x_CMrD3RsdpR"
+        }
+      },
+      {
+        "time": "2026-09-10T01:31:52.627Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem scripts,resources\\coding-tools-mcp,tests,electron -Recurse -File | Select-String -Pattern 'code\\.activate_update','activate.*coding_mcp','coding_mcp.*activate' | Select-Object -First 220 | ForEach-Object { '{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:00.187Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'scripts\\dev-ui-lifecycle.js' | Select-Object -Skip 675 -First 45; Write-Output '---PACKAGE---'; Select-String -Path 'package.json' -Pattern 'activate','refresh','recovery'\"",
+          "session_id": "JE2kdofkAu3NtHfEuGyTZV_1"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:00.664Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'scripts\\dev-ui-lifecycle.js' | Select-Object -Skip 675 -First 45; Write-Output '---PACKAGE---'; Select-String -Path 'package.json' -Pattern 'activate','refresh','recovery'\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:07.875Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'scripts\\full-clean-activation.js' -Pattern 'process.argv','component','coding_mcp','usage','--' -Context 2,4 | Select-Object -First 180 | ForEach-Object { '{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim() }\"",
+          "session_id": "_yVtXT9kq35JSBw_NEMDqZfm"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:08.319Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'scripts\\full-clean-activation.js' -Pattern 'process.argv','component','coding_mcp','usage','--' -Context 2,4 | Select-Object -First 180 | ForEach-Object { '{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:20.078Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l \"component:\\s*['\\\"]coding_mcp['\\\"]|component\\s*=\\s*['\\\"]coding_mcp['\\\"]|request\\(['\\\"]coding_mcp['\\\"]\\)\" scripts electron resources/coding-tools-mcp",
+          "session_id": "GO1OPBbIgehW5NOJO1JTPFvK"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:20.297Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l \"component:\\s*['\\\"]coding_mcp['\\\"]|component\\s*=\\s*['\\\"]coding_mcp['\\\"]|request\\(['\\\"]coding_mcp['\\\"]\\)\" scripts electron resources/coding-tools-mcp",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T01:32:44.604Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f7db82045fdb40349d36d8647b519429",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T01:32:44.611Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-10T01:32:44.606Z",
+    "updated_at": "2026-09-10T01:32:44.611Z",
+    "events": [
+      {
+        "time": "2026-09-10T01:32:44.606Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:44.611Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"report_rework|empirical|natural.*cohort|readiness|usage.*report|causal\" package.json resources/coding-tools-mcp/scripts/*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T01:32:44.611Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T01:32:52.491Z",
+    "archive_reason": "finished"
+  }
+]

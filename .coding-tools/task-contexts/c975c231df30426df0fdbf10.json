@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "7b24ef98afc141cdaaa751c47c75a4b4",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "b0oQfnCCuLY_KkdY4pPUSozw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 820,
+    "finished_at": "2026-09-09T23:28:30.884Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T23:28:29.826Z",
+  "updated_at": "2026-09-09T23:28:30.884Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:28:29.826Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:28:30.162Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 -LiteralPath 'tests\\live-supervisor-e2e.test.js').Hash.ToLowerInvariant(); Write-Output ('sha256|'+$h); git status --short -- tests\\live-supervisor-e2e.test.js\"",
+        "session_id": "b0oQfnCCuLY_KkdY4pPUSozw"
+      }
+    },
+    {
+      "time": "2026-09-09T23:28:30.884Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 -LiteralPath 'tests\\live-supervisor-e2e.test.js').Hash.ToLowerInvariant(); Write-Output ('sha256|'+$h); git status --short -- tests\\live-supervisor-e2e.test.js\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

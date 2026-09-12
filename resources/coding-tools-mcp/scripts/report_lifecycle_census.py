@@ -22,6 +22,18 @@ from coding_tools_mcp.lifecycle_census import (  # noqa: E402
 )
 
 
+SUMMARY_FIELDS = (
+    "summary",
+    "projection",
+    "snapshot",
+    "read_contract",
+    "content_free",
+    "mutated_canonical_ledger",
+    "observed_at_unix_seconds",
+    "schema_version",
+)
+
+
 def _observed_at(value: str) -> float:
     text = str(value or "").strip()
     if not text:
@@ -53,12 +65,17 @@ def report(
         )
 
 
+def _summary_payload(payload: dict[str, object]) -> dict[str, object]:
+    return {field: payload[field] for field in SUMMARY_FIELDS if field in payload}
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
     parser.add_argument("--observed-at", default="", help="UTC ISO-8601 timestamp; defaults to the current clock.")
     parser.add_argument("--grace-seconds", type=float, default=15 * 60)
     parser.add_argument("--stale-after-seconds", type=float, default=24 * 60 * 60)
+    parser.add_argument("--summary", action="store_true", help="Emit only bounded lifecycle summary fields from the same census result.")
     args = parser.parse_args(argv)
     try:
         payload = report(
@@ -70,6 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, RuntimeError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": type(exc).__name__}, sort_keys=True))
         return 2
+    if args.summary:
+        payload = _summary_payload(payload)
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

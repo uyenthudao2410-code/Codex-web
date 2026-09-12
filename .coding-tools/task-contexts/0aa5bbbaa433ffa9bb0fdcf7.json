@@ -1,0 +1,1383 @@
+{
+  "version": 2,
+  "task_id": "477e66ecc84640168ddae875a9af0429",
+  "orchestration": {
+    "run_id": "e0dba795fc914a249075315f83c61d4b",
+    "wave_id": "a837206f583f4d4b811b176bc847325c",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "d39d0f9d2bfabd95818d00fb6eedd84fedf0446504f27dd18fd978b26c22d472",
+    "contract_fp": ""
+  },
+  "objective": "Natural #13 final verification-only closure on exact current bytes. Do not modify source. Re-attest the already-applied public resolution-envelope schema and corrected regression harness, prove public schema/runtime structural parity, unchanged Problem-lineage acceptance behavior, and scoped diff hygiene. The materialized tool_schema.py is 1120 lines, below its 1600-line budget; do not run the unrelated global module-size guard.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-10T00:06:53.973Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-10T00:06:53.973Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-10T00:06:53.973Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "fZI1EPeUf7Nef31125KqXypS",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 851,
+    "finished_at": "2026-09-10T00:07:07.152Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "state": "file",
+          "sha256": "fcab5c7043739cf9845cca663008168620274fad61a0f6bf6e2e65ff6385ec62",
+          "size_bytes": 82307,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "e0dba795fc914a249075315f83c61d4b",
+          "wave_id": "a837206f583f4d4b811b176bc847325c"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_resolution_contract.py",
+          "state": "file",
+          "sha256": "8242e176e940bc398df3a9416be4b1b2afb25ee4f243361e349ce1b8af210c1f",
+          "size_bytes": 7627,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "e0dba795fc914a249075315f83c61d4b",
+          "wave_id": "a837206f583f4d4b811b176bc847325c"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 141,
+        "head_hash": "1b349f7260049073149630b42758f636981fb048222d53431a4545401152445d"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e0dba795fc914a249075315f83c61d4b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e0dba795fc914a249075315f83c61d4b\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e0dba795fc914a249075315f83c61d4b\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e0dba795fc914a249075315f83c61d4b\\wave-003.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-e0dba795fc914a249075315f83c61d4b\\wave-004.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "e0dba795fc914a249075315f83c61d4b",
+      "wave_id": "a837206f583f4d4b811b176bc847325c",
+      "checkpoint_id": "d4f6d4ae056949bc8c009dc5dd2b2dd3",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "d39d0f9d2bfabd95818d00fb6eedd84fedf0446504f27dd18fd978b26c22d472",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #13 closure in the same RUN, verification-only. Preserve the already-applied public resolution-envelope schema and regression harness exactly. Re-run schema/runtime parity and Problem-lineage tests, check only tool_schema.py against its 1600-line budget using a read-only PowerShell command, and run scoped diff-check. Do not modify source.",
+        "objective_revision": 4,
+        "objective_sha256": "e4a722c1d86a317904e4123e60f92c8e910d5cf6eaa9ff63bbf11e9613551b76",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 3,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "52bd75a537ad41f5a5c2a3c938e08983",
+          "stage_id": "check:4135568e1a38cee1",
+          "status": "passed",
+          "duration_ms": 1952,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a95f20fe49934446b70a5ed89e7b8408",
+          "stage_id": "check:1b65fd2ac115c7f0",
+          "status": "passed",
+          "duration_ms": 45344,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "7048ff2808104ebeaa6d19777ca1de06",
+          "stage_id": "check:6eefdd5b3dff787d",
+          "status": "passed",
+          "duration_ms": 1078,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "00b62a0ef00d5e49cf618f368098a4735ebcd86804302edc0732917146588037",
+  "completion_report_acknowledged_id": "00b62a0ef00d5e49cf618f368098a4735ebcd86804302edc0732917146588037",
+  "completion_report_acknowledged_at": "2026-09-10T00:07:48.746Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_resolution_contract.py -q",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "summary": "exit 1 | 0.0s | 744 lines | tail: '6 failed, 6 passed, 4 subtests passed in 0.69s'",
+      "finished_at": "2026-09-09T23:58:08.849Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "-9mRtJ3VrZ7fEWY989sBz1DX"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "994f2484c97f43f5a396a832c2aa5e38",
+        "size_bytes": 42329,
+        "command_id": "-9mRtJ3VrZ7fEWY989sBz1DX",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:-9mRtJ3VrZ7fEWY989sBz1DX:stdout",
+            "total_stream_bytes": 42329,
+            "total_retained_bytes": 42329,
+            "head_retained_bytes": 42329,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:-9mRtJ3VrZ7fEWY989sBz1DX:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_resolution_contract.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '6 passed, 10 subtests passed in 0.09s'",
+      "finished_at": "2026-09-09T23:59:32.747Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "6paEwSE6L3K5TCi7dzA5r7LF"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "1eaae55e73054d84baa54470c311be15",
+        "size_bytes": 110,
+        "command_id": "6paEwSE6L3K5TCi7dzA5r7LF",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:6paEwSE6L3K5TCi7dzA5r7LF:stdout",
+            "total_stream_bytes": 110,
+            "total_retained_bytes": 110,
+            "head_retained_bytes": 110,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:6paEwSE6L3K5TCi7dzA5r7LF:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_problem_lineage.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '19 passed, 3 subtests passed in 44.84s'",
+      "finished_at": "2026-09-10T00:00:19.918Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "r_wScQiQbsMVK-wPRePoNOK3"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "1eaae55e73054d84baa54470c311be15",
+        "size_bytes": 118,
+        "command_id": "r_wScQiQbsMVK-wPRePoNOK3",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:r_wScQiQbsMVK-wPRePoNOK3:stdout",
+            "total_stream_bytes": 118,
+            "total_retained_bytes": 118,
+            "head_retained_bytes": 118,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:r_wScQiQbsMVK-wPRePoNOK3:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_resolution_contract.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '6 passed, 10 subtests passed in 0.08s'",
+      "finished_at": "2026-09-10T00:02:57.212Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "iZEMZbcC6-eVzWZ1Li_9Y_nj"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "efb3872f49ab4edf90ef8fdf85c2e96b",
+        "size_bytes": 110,
+        "command_id": "iZEMZbcC6-eVzWZ1Li_9Y_nj",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:iZEMZbcC6-eVzWZ1Li_9Y_nj:stdout",
+            "total_stream_bytes": 110,
+            "total_retained_bytes": 110,
+            "head_retained_bytes": 110,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:iZEMZbcC6-eVzWZ1Li_9Y_nj:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_problem_lineage.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '19 passed, 3 subtests passed in 48.30s'",
+      "finished_at": "2026-09-10T00:03:47.933Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Jf-gpCz4uQtwnBTfzL-VPVw9"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "efb3872f49ab4edf90ef8fdf85c2e96b",
+        "size_bytes": 118,
+        "command_id": "Jf-gpCz4uQtwnBTfzL-VPVw9",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Jf-gpCz4uQtwnBTfzL-VPVw9:stdout",
+            "total_stream_bytes": 118,
+            "total_retained_bytes": 118,
+            "head_retained_bytes": 118,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Jf-gpCz4uQtwnBTfzL-VPVw9:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_resolution_contract.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '6 passed, 10 subtests passed in 0.07s'",
+      "finished_at": "2026-09-10T00:06:06.323Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "l3gQlQvlBU0N2tuY0qoOrjAT"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "a837206f583f4d4b811b176bc847325c",
+        "size_bytes": 110,
+        "command_id": "l3gQlQvlBU0N2tuY0qoOrjAT",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:l3gQlQvlBU0N2tuY0qoOrjAT:stdout",
+            "total_stream_bytes": 110,
+            "total_retained_bytes": 110,
+            "head_retained_bytes": 110,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:l3gQlQvlBU0N2tuY0qoOrjAT:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_problem_lineage.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '19 passed, 3 subtests passed in 43.61s'",
+      "finished_at": "2026-09-10T00:06:52.128Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "DslUb927mIsqUIC2iijAq_WN"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "e0dba795fc914a249075315f83c61d4b",
+        "owner_wave": "a837206f583f4d4b811b176bc847325c",
+        "size_bytes": 118,
+        "command_id": "DslUb927mIsqUIC2iijAq_WN",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:DslUb927mIsqUIC2iijAq_WN:stdout",
+            "total_stream_bytes": 118,
+            "total_retained_bytes": 118,
+            "head_retained_bytes": 118,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:DslUb927mIsqUIC2iijAq_WN:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+      "operation": "update",
+      "updated_at": "2026-09-09T23:58:10.106Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_resolution_contract.py",
+      "operation": "update",
+      "updated_at": "2026-09-10T00:00:22.974Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T23:56:00.995Z",
+  "updated_at": "2026-09-10T00:07:48.752Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:56:00.995Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #13: align the public task_control problem_resolution_envelope JSON schema with the exact structural contract already enforced by normalize_resolution_envelope. The public schema must reject structurally invalid envelope payloads before dispatch while accepting canonical valid payloads. Do not change runtime resolution semantics, controller authority, tool names/count, P5, activation, or Problem transition behavior."
+      }
+    },
+    {
+      "time": "2026-09-09T23:56:03.100Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:56:09.360Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:56:09.366Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T23:57:28.027Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '---TEST---'; Get-Content 'resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'; Write-Output '---SCHEMA-DIFF-FOCUS---'; git diff -U5 -- 'resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py' | Select-String -Pattern 'problem_resolution_envelope|task_control|@@' -Context 8,12; Write-Output '---TEST-DIFF---'; git diff -- 'resources/coding-tools-mcp/tests/test_resolution_contract.py'\"",
+        "session_id": "GRjFhDgPckV4-R2GQCNtRBZe"
+      }
+    },
+    {
+      "time": "2026-09-09T23:57:28.764Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; Write-Output '---TEST---'; Get-Content 'resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'; Write-Output '---SCHEMA-DIFF-FOCUS---'; git diff -U5 -- 'resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py' | Select-String -Pattern 'problem_resolution_envelope|task_control|@@' -Context 8,12; Write-Output '---TEST-DIFF---'; git diff -- 'resources/coding-tools-mcp/tests/test_resolution_contract.py'\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:02.208Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:03.024Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:04.284Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:04.292Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:05.627Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:06.224Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:06.915Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "session_id": "-9mRtJ3VrZ7fEWY989sBz1DX"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:08.849Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:09.117Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:09.776Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:09.780Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:09.791Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:09.912Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "c506c7009a8f9361937f8f54fcac97234a31964f01da71d46a0b457470106271"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:10.106Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:21.853Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:40.018Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "c506c7009a8f9361937f8f54fcac97234a31964f01da71d46a0b457470106271"
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:54.700Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:58:56.051Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:03.095Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:03.103Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:14.819Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py').Hash.ToLower(); Write-Output $h\"",
+        "session_id": "DPC4_MxPKCdVxwN8h_AKawfX"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:15.357Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py').Hash.ToLower(); Write-Output $h\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:26.288Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:27.026Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:28.211Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:28.219Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:30.047Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:30.640Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:31.498Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "session_id": "6paEwSE6L3K5TCi7dzA5r7LF"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:32.747Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:59:33.937Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "session_id": "r_wScQiQbsMVK-wPRePoNOK3"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:19.918Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:21.013Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "session_id": "bNkKy492i3E3MlBejE0I2Jum"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:21.474Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:21.810Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:22.620Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:22.623Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:22.635Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:22.813Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "e1d769c6e3f8c3ad2a4920e343ce8926288c50a321586c579f6dc094a25b246b"
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:22.974Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-10T00:00:31.851Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:01:04.298Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "e1d769c6e3f8c3ad2a4920e343ce8926288c50a321586c579f6dc094a25b246b"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:15.345Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:16.909Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:23.034Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:23.045Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:35.272Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "session_id": "YDaIUSagNEN8AO25igFbEygd"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:35.869Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:50.891Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:51.679Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:52.950Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:52.957Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:54.424Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:54.987Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:55.858Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "session_id": "iZEMZbcC6-eVzWZ1Li_9Y_nj"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:57.212Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:02:58.454Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "session_id": "Jf-gpCz4uQtwnBTfzL-VPVw9"
+      }
+    },
+    {
+      "time": "2026-09-10T00:03:47.933Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:03:49.187Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T00:03:49.193Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:03:49.310Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PERMISSION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-10T00:04:00.296Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:04:42.113Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:04:48.170Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:04:48.182Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T00:05:49.532Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "session_id": "2T_i7FxWtEwuDaneR3qs80po"
+      }
+    },
+    {
+      "time": "2026-09-10T00:05:50.225Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:00.042Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:00.730Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:01.991Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:02.002Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:03.595Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:04.184Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:05.100Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "session_id": "l3gQlQvlBU0N2tuY0qoOrjAT"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:06.323Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_resolution_contract.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:07.517Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "session_id": "DslUb927mIsqUIC2iijAq_WN"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:52.128Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_problem_lineage.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:53.260Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/tool_schema.py tests/test_resolution_contract.py",
+        "session_id": "ASooXcL6eIl6PiNwCO3THR5N"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:53.721Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/tool_schema.py tests/test_resolution_contract.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:53.964Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:53.973Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:54.298Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:54.302Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:54.582Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "4ff57812237597948193d38f77b3ca16f5a08d0de6400c2c1c0cfa411e2f7f88"
+      }
+    },
+    {
+      "time": "2026-09-10T00:06:54.719Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:05.481Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:06.543Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "session_id": "fZI1EPeUf7Nef31125KqXypS"
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:07.152Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('resources\\coding-tools-mcp\\coding_tools_mcp\\tool_schema.py','resources\\coding-tools-mcp\\tests\\test_resolution_contract.py'); foreach($f in $files){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ($f+'|'+$h)}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:22.620Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:25.641Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:25.645Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:25.913Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "00b62a0ef00d5e49cf618f368098a4735ebcd86804302edc0732917146588037"
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:35.965Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T00:07:48.746Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "00b62a0ef00d5e49cf618f368098a4735ebcd86804302edc0732917146588037"
+      }
+    }
+  ]
+}

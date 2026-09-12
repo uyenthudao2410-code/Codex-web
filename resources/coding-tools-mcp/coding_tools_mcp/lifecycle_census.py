@@ -234,23 +234,16 @@ def read_task_projection(workspace: Path) -> dict[str, Any]:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeError, json.JSONDecodeError):
             payload = None
-        if not isinstance(payload, dict) or not isinstance(payload.get("orchestration"), dict):
-            return {"available": False, "status": "invalid" if payload is not None else global_status, "orchestration": {}}
-        orchestration = payload["orchestration"]
-        global_projection = {
-            "run_id": str(orchestration.get("run_id") or "").strip(),
-            "wave_id": str(orchestration.get("wave_id") or "").strip(),
-            "orchestration_state": str(orchestration.get("orchestration_state") or "").strip(),
-        }
-        if any(global_projection.values()):
-            return {
-                "available": True,
-                "status": "readable",
-                "orchestration": global_projection,
-                "mode": "global",
-                "context_count": 0,
-                "contextual_sha256": "",
+        if isinstance(payload, dict) and isinstance(payload.get("orchestration"), dict):
+            global_status = "readable"
+            orchestration = payload["orchestration"]
+            global_projection = {
+                "run_id": str(orchestration.get("run_id") or "").strip(),
+                "wave_id": str(orchestration.get("wave_id") or "").strip(),
+                "orchestration_state": str(orchestration.get("orchestration_state") or "").strip(),
             }
+        elif payload is not None:
+            global_status = "invalid"
 
     context_dir = root / ".coding-tools" / "task-contexts"
     context_paths = sorted(
@@ -291,7 +284,7 @@ def read_task_projection(workspace: Path) -> dict[str, Any]:
     if global_projection is not None:
         return {
             "available": True,
-            "status": "readable",
+            "status": global_status,
             "orchestration": global_projection,
             "mode": "global",
             "context_count": 0,

@@ -1,0 +1,250 @@
+{
+  "version": 2,
+  "task_id": "c0f1847202714e6b80bf8c0b566801e1",
+  "orchestration": {
+    "run_id": "f88eb0637e5743928dde7a82004bc7b6",
+    "wave_id": "641099131d2d4e00b53d109eef95213a",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "ff69f258efc46ecc7713cebf1b5b77a10326f2ac4355c22111a141ce325d2a8c",
+    "contract_fp": ""
+  },
+  "objective": "Narrow the candidate natural product defect to one falsifiable behavior. Determine whether lifecycle census/read-model can report an exact terminal RUN as nonterminal/stale because a stale global .coding-tools/task-state.json projection is preferred over a fresher contextual/canonical projection. Inspect the current source-selection/freshness logic and existing tests. Return: exact causal function(s), a minimal real operator-visible failure scenario, smallest safe source/test scope, and a focused pre-mutation oracle. Read-only only; no source/evidence mutation, no RUN/WAVE creation if avoidable, no reconcile/accept/ACK/restart.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 18,
+        "head_hash": "9f26e047a891a1735faec82af4e3d7d815d374b670277e96cfa62150ca15c329"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f88eb0637e5743928dde7a82004bc7b6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f88eb0637e5743928dde7a82004bc7b6\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "f88eb0637e5743928dde7a82004bc7b6",
+      "wave_id": "641099131d2d4e00b53d109eef95213a",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ff69f258efc46ecc7713cebf1b5b77a10326f2ac4355c22111a141ce325d2a8c",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Narrow the candidate natural product defect to one falsifiable behavior. Determine whether lifecycle census/read-model can report an exact terminal RUN as nonterminal/stale because a stale global .coding-tools/task-state.json projection is preferred over a fresher contextual/canonical projection. Inspect the current source-selection/freshness logic and existing tests. Return: exact causal function(s), a minimal real operator-visible failure scenario, smallest safe source/test scope, and a focused pre-mutation oracle. Read-only only; no source/evidence mutation, no RUN/WAVE creation if avoidable, no reconcile/accept/ACK/restart.",
+        "objective_revision": 1,
+        "objective_sha256": "f927b805b4bb0ef96a3d42f667b73ca3f184031790e545fb78712f7e03604882",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": "INVALID_ARGUMENT",
+      "reason": null,
+      "event_seq": 45133
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "adee39eb598c7a1c555918af0b1b548836fca68761128fb99d4ed110079c6cfa",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-09T06:52:51.150Z",
+  "updated_at": "2026-09-09T06:54:29.273Z",
+  "events": [
+    {
+      "time": "2026-09-09T06:52:51.150Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Narrow the candidate natural product defect to one falsifiable behavior. Determine whether lifecycle census/read-model can report an exact terminal RUN as nonterminal/stale because a stale global .coding-tools/task-state.json projection is preferred over a fresher contextual/canonical projection. Inspect the current source-selection/freshness logic and existing tests. Return: exact causal function(s), a minimal real operator-visible failure scenario, smallest safe source/test scope, and a focused pre-mutation oracle. Read-only only; no source/evidence mutation, no RUN/WAVE creation if avoidable, no reconcile/accept/ACK/restart."
+      }
+    },
+    {
+      "time": "2026-09-09T06:52:52.487Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:00.668Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:00.676Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:45.216Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:46.222Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:47.421Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:48.451Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:48.455Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:48.553Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:54.250Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:53:54.536Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "5194408acd0aff838ecc5035733b5198b48b05d3713f279cb3d7c770641fd267"
+      }
+    },
+    {
+      "time": "2026-09-09T06:54:12.238Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:54:14.018Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "5194408acd0aff838ecc5035733b5198b48b05d3713f279cb3d7c770641fd267"
+      }
+    },
+    {
+      "time": "2026-09-09T06:54:20.582Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:54:20.958Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "FINAL_ACCEPTANCE_NOT_READY"
+      }
+    },
+    {
+      "time": "2026-09-09T06:54:29.269Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "adee39eb598c7a1c555918af0b1b548836fca68761128fb99d4ed110079c6cfa"
+      }
+    }
+  ]
+}

@@ -59,6 +59,9 @@ class StatelessHttp2026Tests(unittest.TestCase):
             },
         )
         self.env.start()
+        waiter = patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 0)
+        waiter.start()
+        self.addCleanup(waiter.stop)
         self.runtime = Runtime(Path(self.temp.name), transport="http")
         self.server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, self.runtime, runtime_factory=None)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
@@ -73,7 +76,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
-    def request(self, method: str, params: dict, *, request_id: int = 1, extra_headers: dict[str, str] | None = None) -> tuple[int, dict[str, str], dict]:
+    def request(self, method: str, params: dict, *, request_id: int = 1, extra_headers: dict[str, str] | None = None, timeout: float = 5) -> tuple[int, dict[str, str], dict]:
         headers = {
             "Content-Type": "application/json",
             "MCP-Protocol-Version": STATELESS_PROTOCOL_VERSION,
@@ -96,7 +99,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
                 contract_sha256=self.runtime.tool_contract["sha256"],
             )
         body = json.dumps({"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}).encode("utf-8")
-        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=timeout)
         try:
             connection.request("POST", "/mcp", body=body, headers=headers)
             response = connection.getresponse()
@@ -509,6 +512,67 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertFalse(self.runtime.connector_activation_bootstrap()["observed"])
         self.assertEqual(self.runtime.activation_admission, "closed")
 
+    def test_one_http_bootstrap_survives_23_second_commit_without_client_retry(self) -> None:
+        self.runtime.activation_epoch_id = "activation-bootstrap-delayed-http-0001"
+        self.runtime.activation_gate_config = "closed"
+        self.runtime.activation_admission = "closed"
+        self.runtime.activation_expires_at_unix_ms = int(time.time() * 1000) + 60_000
+        context_id = "ctx_" + "d" * 32
+        params = modern_params({"name": "workspace_context", "arguments": {
+            "path": self.temp.name, "detail": "full", "task_context_id": context_id,
+        }})
+        observed = threading.Event()
+        controller_errors = []
+        original_record = self.runtime._record_activation_bootstrap_rpc_contact
+
+        def record(*args, **kwargs):
+            original_record(*args, **kwargs)
+            if self.runtime.connector_activation_bootstrap()["current_contract_contact"]:
+                observed.set()
+
+        def controller():
+            try:
+                self.assertTrue(observed.wait(5), "receipt must exist before the HTTP response")
+                self.assertEqual(self.runtime.active_tool_calls, 0)
+                # Reproduce the observed 23s gap, longer than all three of the
+                # original client retries combined. This is an isolated server,
+                # not a connector-discovery or production outcome receipt.
+                time.sleep(23)
+                self.runtime.complete_activation_epoch(
+                    self.runtime.activation_epoch_id, "a" * 64,
+                    self.runtime.activation_expires_at_unix_ms,
+                )
+            except BaseException as error:
+                controller_errors.append(error)
+
+        worker = threading.Thread(target=controller)
+        with patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 25), patch.object(
+            self.runtime, "_record_activation_bootstrap_rpc_contact", side_effect=record
+        ), patch.object(self.runtime, "projection_rebuild_snapshot", return_value={"current": True}):
+            worker.start()
+            try:
+                status, _, body = self.request("tools/call", params, request_id=81, extra_headers={"Mcp-Name": "workspace_context"}, timeout=40)
+            finally:
+                worker.join(30)
+        self.assertFalse(worker.is_alive())
+        self.assertFalse(controller_errors, str(controller_errors))
+        self.assertEqual(status, 200)
+        self.assertFalse(body["result"]["isError"])
+        value = body["result"]["structuredContent"]
+        self.assertEqual(value["task_context_id"], context_id)
+        self.assertEqual(value["workspace"], str(Path(self.temp.name).resolve()))
+        self.assertTrue(value["completed"])
+        self.assertTrue(value["workspace_accessed"])
+        self.assertTrue(value["activation"]["admission_open"])
+        self.assertNotIn("activation_bootstrap", value)
+        receipt = self.runtime.connector_activation_bootstrap()
+        self.assertTrue(receipt["current_contract_contact"])
+        self.assertFalse(receipt["workspace_accessed"])
+        self.assertEqual(len(self.runtime.activation_bootstrap_receipts), 1)
+        self.assertEqual(self.runtime.active_tool_calls, 0)
+        calls = [row for row in self.runtime.performance_trace.get()["recent"] if row["tool"] == "workspace_context"]
+        self.assertEqual(len(calls), 1)
+
     def test_expired_epoch_workspace_context_returns_terminal_error_without_contact(self) -> None:
         self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
         self.runtime.activation_epoch_id = "activation-bootstrap-expired-0001"
@@ -834,6 +898,51 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(resumed_state["task_id"], canonical_task_id)
         self.assertEqual(resumed_state["orchestration"]["run_id"], run_id)
         self.assertTrue(any(item.get("task_id") == polluted_task_id for item in store.history(100)))
+
+    def test_mutating_tool_autostart_preserves_failed_task_with_nonterminal_orchestration(self) -> None:
+        context_id = "nonterminal-autostart-context"
+        status, _, prepared = self.tool_call(
+            "agent_workflow",
+            {
+                "task_context_id": context_id,
+                "workflow": "diagnose",
+                "phase": "prepare",
+                "objective": "nonterminal-autostart-canonical",
+                "execution_route": "deterministic",
+                "execution_mode": "mcp_only",
+                "verification": "none",
+                "path": ".",
+            },
+            request_id=1282,
+        )
+        self.assertEqual(status, 200)
+        prepared_result = prepared["result"]["structuredContent"]
+        run_id = prepared_result["orchestration"]["run_id"]
+        wave_id = prepared_result["orchestration"]["wave_id"]
+        store = TaskStateStore(Path(self.temp.name), scope_id=f"mcp2026:{context_id}")
+        canonical = store.get()
+        canonical_task_id = canonical["task_id"]
+        store.update({"status": "failed", "failure": "simulated command failure"})
+
+        with patch.object(
+            self.runtime,
+            "_invoke_with_read_retry",
+            return_value={"ok": True, "status": "exited", "exit_code": 0, "stdout": "", "stderr": ""},
+        ):
+            status, _, response = self.tool_call(
+                "exec_command",
+                {"task_context_id": context_id, "cmd": "echo projection-preserved"},
+                request_id=1283,
+            )
+
+        self.assertEqual(status, 200)
+        self.assertFalse(response["result"]["isError"], response)
+        preserved = store.get()
+        self.assertEqual(preserved["task_id"], canonical_task_id)
+        self.assertEqual(preserved["orchestration"]["run_id"], run_id)
+        self.assertEqual(preserved["orchestration"]["wave_id"], wave_id)
+        self.assertEqual(preserved["orchestration"]["orchestration_state"], "PREFLIGHT")
+        self.assertFalse(any(item.get("task_id") == canonical_task_id for item in store.history(100)))
 
     def test_task_control_exact_run_recovery_refuses_active_conflicting_task(self) -> None:
         context_id = "active-conflict-continuity-context"

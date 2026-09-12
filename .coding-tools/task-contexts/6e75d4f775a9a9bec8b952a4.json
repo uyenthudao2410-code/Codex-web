@@ -1,0 +1,448 @@
+{
+  "version": 2,
+  "task_id": "9f43bd1fcfbc44edb20f4fbb7c0f69bb",
+  "orchestration": {
+    "run_id": "742eff5143bf45e6aa42febdd4e14018",
+    "wave_id": "8c4c360ed7bb4e109cd438d52909efb5",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Converge Recovery Host and Coding MCP component state by no-patch provenance adoption of the exact current bytes for the 26 unaccepted component files, with fresh deterministic proof and no source writes.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T17:38:54.165Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-08T17:38:54.165Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-08T17:38:54.165Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Ftg_AmJDUKoFcGNxjd_laZaj",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": null,
+    "finished_at": "2026-09-08T17:38:53.821Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 44,
+        "head_hash": "bddac94b6b3af47767eb14bb127bcb5a5fdc45ece377585c92cda60a4cde66cf"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-742eff5143bf45e6aa42febdd4e14018\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-742eff5143bf45e6aa42febdd4e14018\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-742eff5143bf45e6aa42febdd4e14018\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "742eff5143bf45e6aa42febdd4e14018",
+      "wave_id": "8c4c360ed7bb4e109cd438d52909efb5",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Converge Recovery Host and Coding MCP component state by no-patch provenance adoption of the exact current bytes for the 26 unaccepted component files, with fresh deterministic proof and no source writes.",
+        "objective_revision": 1,
+        "objective_sha256": "a20ad08e4ac6fe68112a7f6aa8a12bdb2de285e6f23c1b3f2c30785064a62679",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "2a42569c392c48cd9e4eff2de6a5dce5",
+          "stage_id": "check:a1ca22a027389477",
+          "status": "passed",
+          "duration_ms": 73138,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "e4b4954e55dd40b7b61ff2a36e73a7ba",
+          "stage_id": "check:fea3ad3e8fb2d5f8",
+          "status": "failed",
+          "duration_ms": 5830,
+          "exit_code": 2,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 44182
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "2bf5d58276ecaf21d4df4af125a6a24ae439cc92aaf72a9ad9432eca1135e155",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -B -m pytest resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+      "status": "failed",
+      "exit_code": 2,
+      "duration_ms": null,
+      "summary": "exit 2 | 0.0s | 490 lines | tail: '44 errors in 4.04s'",
+      "finished_at": "2026-09-08T17:38:53.821Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Ftg_AmJDUKoFcGNxjd_laZaj"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "742eff5143bf45e6aa42febdd4e14018",
+        "owner_wave": "8c4c360ed7bb4e109cd438d52909efb5",
+        "size_bytes": 34151,
+        "command_id": "Ftg_AmJDUKoFcGNxjd_laZaj",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Ftg_AmJDUKoFcGNxjd_laZaj:stdout",
+            "total_stream_bytes": 34151,
+            "total_retained_bytes": 34151,
+            "head_retained_bytes": 34151,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Ftg_AmJDUKoFcGNxjd_laZaj:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Present and acknowledge the pending operator completion report before starting or continuing a material agent workflow.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-08T17:36:36.558Z",
+  "updated_at": "2026-09-08T17:39:55.037Z",
+  "events": [
+    {
+      "time": "2026-09-08T17:36:36.558Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Converge Recovery Host and Coding MCP component state by no-patch provenance adoption of the exact current bytes for the 26 unaccepted component files, with fresh deterministic proof and no source writes."
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:37.945Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:40.041Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:41.370Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:41.375Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:43.060Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:43.076Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:43.076Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:43.192Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:36:59.555Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:30.117Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:31.024Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:32.083Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:32.093Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:33.582Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:34.172Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:37:35.074Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "session_id": "bP8TY2kYjHt9rJ1_eLdYRWKM"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:47.475Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:48.686Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -B -m pytest resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+        "session_id": "Ftg_AmJDUKoFcGNxjd_laZaj"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:53.821Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -B -m pytest resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:54.165Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:55.068Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:55.071Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:55.077Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:55.238Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "2bf5d58276ecaf21d4df4af125a6a24ae439cc92aaf72a9ad9432eca1135e155"
+      }
+    },
+    {
+      "time": "2026-09-08T17:38:55.378Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T17:39:08.586Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:39:08.836Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:39:55.037Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    }
+  ]
+}

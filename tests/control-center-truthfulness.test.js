@@ -35,9 +35,57 @@ function makeElement() {
   return element;
 }
 
+function makeEventTarget() {
+  const handlers = new Map();
+  return {
+    addEventListener(type, listener) {
+      if (!handlers.has(type)) handlers.set(type, new Set());
+      handlers.get(type).add(listener);
+    },
+    removeEventListener(type, listener) {
+      handlers.get(type)?.delete(listener);
+    },
+    dispatchEvent(event) {
+      for (const listener of handlers.get(event?.type) || []) listener(event);
+      return true;
+    }
+  };
+}
+
+class HarnessCustomEvent {
+  constructor(type, init = {}) { this.type = type; this.detail = init.detail; }
+}
+
+function loadEmbeddedBridge() {
+  const parentDocument = makeEventTarget();
+  const childDocument = makeEventTarget();
+  const apiCalls = { lightweightSnapshot: 0, liveOrchestration: 0 };
+  const api = {
+    lightweightSnapshot() { apiCalls.lightweightSnapshot += 1; return Promise.resolve({ ok: true, data: {} }); },
+    liveOrchestration() { apiCalls.liveOrchestration += 1; return Promise.resolve({ ok: true, data: {} }); }
+  };
+  const parentWindow = { document: parentDocument, CustomEvent: HarnessCustomEvent };
+  const windowObject = {
+    mcpAssistant: api,
+    location: { search: '?embedded=1' },
+    parent: parentWindow,
+    addEventListener() {}
+  };
+  vm.runInNewContext(source, {
+    window: windowObject,
+    document: childDocument,
+    CustomEvent: HarnessCustomEvent,
+    Promise,
+    console
+  }, { filename: 'renderer/control-center.js' });
+  return { apiCalls, parentDocument, childDocument };
+}
+
 function loadControlCenter(status, {
   snapshotResponses = [{ ok: true, data: status }],
-  orchestrationResponses = [{ ok: true, data: {} }]
+  orchestrationResponses = [{ ok: true, data: {} }],
+  locationSearch = '',
+  parentWindow = null
 } = {}) {
   const elements = new Map();
   const eventHandlers = new Map();
@@ -45,6 +93,7 @@ function loadControlCenter(status, {
   let heartbeat = null;
   let snapshotIndex = 0;
   let orchestrationIndex = 0;
+  const apiCalls = { lightweightSnapshot: 0, liveOrchestration: 0 };
   const nextResponse = async (responses, index) => {
     const response = responses[Math.min(index, responses.length - 1)];
     if (response instanceof Error) throw response;
@@ -68,20 +117,30 @@ function loadControlCenter(status, {
     }
   };
   const api = {
-    lightweightSnapshot: () => nextResponse(snapshotResponses, snapshotIndex++),
-    liveOrchestration: () => nextResponse(orchestrationResponses, orchestrationIndex++),
+    lightweightSnapshot: () => {
+      apiCalls.lightweightSnapshot += 1;
+      return nextResponse(snapshotResponses, snapshotIndex++);
+    },
+    liveOrchestration: () => {
+      apiCalls.liveOrchestration += 1;
+      return nextResponse(orchestrationResponses, orchestrationIndex++);
+    },
     performanceTrace: async () => ({ ok: true, data: {} }),
     recordUiPerformance: async () => ({ ok: true }),
     onHeartbeat(listener) { heartbeat = listener; }
   };
   const noTimer = () => 0;
+  const windowObject = {
+    mcpAssistant: api,
+    location: { search: locationSearch },
+    performance: { now: () => 0 },
+    matchMedia: () => ({ matches: false, addEventListener() {} }),
+    setTimeout: noTimer,
+    addEventListener() {}
+  };
+  windowObject.parent = parentWindow || windowObject;
   const context = {
-    window: {
-      mcpAssistant: api,
-      performance: { now: () => 0 },
-      matchMedia: () => ({ matches: false, addEventListener() {} }),
-      setTimeout: noTimer
-    },
+    window: windowObject,
     document,
     CustomEvent: class CustomEvent {
       constructor(type, init = {}) { this.type = type; this.detail = init.detail; }
@@ -96,6 +155,7 @@ function loadControlCenter(status, {
     elements,
     heartbeat: () => heartbeat,
     pulses,
+    apiCalls,
     requestRefresh: () => eventHandlers.get('coding-tools:overview-refresh-request')?.()
   };
 }
@@ -123,6 +183,39 @@ function currentStatus(overrides = {}) {
     ...overrides
   };
 }
+
+test('embedded Control Center is a passive pulse bridge instead of a second snapshot/orchestration poller', () => {
+  const harness = loadEmbeddedBridge();
+  assert.deepEqual(harness.apiCalls, { lightweightSnapshot: 0, liveOrchestration: 0 });
+
+  const observedPulses = [];
+  harness.childDocument.addEventListener('coding-tools:overview-pulse', (event) => observedPulses.push(event.detail));
+  const pulse = { snapshot: { status: { fullyReady: true } }, orchestration: { task: { status: 'active' } } };
+  harness.parentDocument.dispatchEvent(new HarnessCustomEvent('coding-tools:overview-pulse', { detail: pulse }));
+  assert.equal(observedPulses.length, 1);
+  assert.equal(observedPulses[0], pulse);
+
+  let parentRefreshes = 0;
+  harness.parentDocument.addEventListener('coding-tools:overview-refresh-request', () => { parentRefreshes += 1; });
+  harness.childDocument.dispatchEvent(new HarnessCustomEvent('coding-tools:overview-refresh-request'));
+  assert.equal(parentRefreshes, 1);
+  assert.deepEqual(harness.apiCalls, { lightweightSnapshot: 0, liveOrchestration: 0 });
+});
+
+test('embedded Control Center falls back to normal polling when parent document access is unavailable', async () => {
+  const inaccessibleParent = {};
+  Object.defineProperty(inaccessibleParent, 'document', {
+    get() { throw new Error('cross-origin parent'); }
+  });
+  const harness = loadControlCenter(currentStatus(), {
+    locationSearch: '?embedded=1',
+    parentWindow: inaccessibleParent
+  });
+  await flushRenderer();
+  assert.equal(harness.apiCalls.lightweightSnapshot, 1);
+  assert.equal(harness.apiCalls.liveOrchestration, 1);
+  assert.equal(harness.elements.get('ccHealthBadge').textContent, 'Operational');
+});
 
 test('Control Center uses a receipt timestamp and preserves unknown/stale heartbeat state instead of coercing it offline', async () => {
   const harness = loadControlCenter(currentStatus());

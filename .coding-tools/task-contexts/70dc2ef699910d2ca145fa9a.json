@@ -1,0 +1,563 @@
+{
+  "version": 2,
+  "task_id": "71b927d651ad4cc5a59a87913ca4db66",
+  "orchestration": {
+    "run_id": "8ed451b001a34a61be8442011abbd25b",
+    "wave_id": "9718a0058baa409982ba59556ca0dd6b",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "a70ba4f5fd17eac577e4c97ffed7f22608b4a0a6f8e11f5f3a2fbac24d11d70e",
+    "contract_fp": ""
+  },
+  "objective": "Natural #16 attempt #2: implement only the P2-local typed request/control-shape causal mapping for INVALID_ARGUMENT and MODE_ROUTE_MISMATCH, preserving global economics helper semantics and all generic failure classes as unknown.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:26:06.502Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:26:06.502Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:26:06.502Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Aj5oZgpyDmj5j4YYGcqvpdNb",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2022,
+    "finished_at": "2026-09-10T06:28:06.771Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+          "state": "file",
+          "sha256": "2f8e2a92abb0a1bbcaaa38d3a261358ee52382679579163c67fbd57bc00a200a",
+          "size_bytes": 40747,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "8ed451b001a34a61be8442011abbd25b",
+          "wave_id": "9718a0058baa409982ba59556ca0dd6b"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+          "state": "file",
+          "sha256": "c6d4aa7480d858805120e10617249c5d2fb1f5fc7c36ba4a3dd32d05da646d8b",
+          "size_bytes": 31102,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "8ed451b001a34a61be8442011abbd25b",
+          "wave_id": "9718a0058baa409982ba59556ca0dd6b"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "feae4694d89f4e949a472059427b3403",
+            "seq": 46797,
+            "event_time": "2026-09-10T06:25:35.869Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "68523b5aa0133b4546cabece585aa67616e95dadea3b5ae09a0805738f2d814b",
+              "8d6916dee3b472850be13e17ca96aaf08788c7a82eb1fdb38017cfbfbe2b0618"
+            ],
+            "file_count": 2,
+            "additions": 76,
+            "removals": 1,
+            "line_changes": 77,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 48,
+        "head_hash": "73cb5284becb26dca21cdd522d41a60d47f39d8cf91eb0f3af1e960f9fa669c9"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8ed451b001a34a61be8442011abbd25b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8ed451b001a34a61be8442011abbd25b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "8ed451b001a34a61be8442011abbd25b",
+      "wave_id": "9718a0058baa409982ba59556ca0dd6b",
+      "checkpoint_id": "63892f609c134f61a4d7234005ade0bd",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "a70ba4f5fd17eac577e4c97ffed7f22608b4a0a6f8e11f5f3a2fbac24d11d70e",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #16 attempt #2: implement only the P2-local typed request/control-shape causal mapping for INVALID_ARGUMENT and MODE_ROUTE_MISMATCH, preserving global economics helper semantics and all generic failure classes as unknown.",
+        "objective_revision": 1,
+        "objective_sha256": "d93b8ab3d6839ae15c2751e883af1088658c418e20f79b911c4c544681521580",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "5c2ebf39c61449bf940b44794d935583",
+          "stage_id": "check:ed7873ee22bf15b5",
+          "status": "passed",
+          "duration_ms": 4514,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "22226994df174d1ca786a2363a3c1c3a",
+          "stage_id": "check:1e606d62e02d0f68",
+          "status": "passed",
+          "duration_ms": 17616,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "1d4e78b6fa87479fb2fe2d2333c2f532",
+          "stage_id": "check:6d884becdef27c18",
+          "status": "passed",
+          "duration_ms": 3544,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "6bdb42dd21d34d6697f76590ab8f9020",
+          "stage_id": "check:20af4e8e69d7c88b",
+          "status": "passed",
+          "duration_ms": 825,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "a55f42df946f896e8407074be2da3fa303426870f38b41ecf5321531a10d1921",
+  "completion_report_acknowledged_id": "a55f42df946f896e8407074be2da3fa303426870f38b41ecf5321531a10d1921",
+  "completion_report_acknowledged_at": "2026-09-10T06:29:08.281Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+      "operation": "update",
+      "updated_at": "2026-09-10T06:26:07.210Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+      "operation": "update",
+      "updated_at": "2026-09-10T06:26:07.210Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-10T06:24:57.308Z",
+  "updated_at": "2026-09-10T06:29:08.285Z",
+  "events": [
+    {
+      "time": "2026-09-10T06:24:57.308Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #16 attempt #2: implement only the P2-local typed request/control-shape causal mapping for INVALID_ARGUMENT and MODE_ROUTE_MISMATCH, preserving global economics helper semantics and all generic failure classes as unknown."
+      }
+    },
+    {
+      "time": "2026-09-10T06:24:59.231Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:05.527Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:05.533Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:33.020Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:34.012Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:35.256Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:35.262Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:36.598Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:37.131Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:38.085Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis.ReworkDiagnosisTests.test_request_contract_correction_maps_only_typed_request_control_failures",
+        "session_id": "Cd4d6kXjtIhfzAhPHKPPQ5Vt"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:41.848Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis.ReworkDiagnosisTests.test_request_contract_correction_maps_only_typed_request_control_failures",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:43.018Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis",
+        "session_id": "yivbIGLSqN63_XeF5EthmakR"
+      }
+    },
+    {
+      "time": "2026-09-10T06:25:59.865Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:00.906Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts\\report_p2_rework_diagnosis.py --workspace ..\\.. --limit 200",
+        "session_id": "VPFvrcq6kT3JezR57AuCCjXJ"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:03.922Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts\\report_p2_rework_diagnosis.py --workspace ..\\.. --limit 200",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:05.099Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/rework_diagnosis.py tests/test_rework_diagnosis.py",
+        "session_id": "4mr-3_runU3nEXe7TaXIDcCz"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:05.236Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/rework_diagnosis.py tests/test_rework_diagnosis.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:06.496Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:06.502Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:06.904Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:06.906Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:07.003Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "c427264716594928b623554b6fcf2fefa4e8e864f6b6431fffba70fdbfa6f57f"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:07.210Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:29.170Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:29.463Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:26:41.879Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:27:50.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256; certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256\"",
+        "session_id": "4cWMwVhCALakTLzwHASvpnF0"
+      }
+    },
+    {
+      "time": "2026-09-10T06:27:51.672Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256; certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:03.956Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:05.024Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py' | Select-Object -Skip 285 -First 125\"",
+        "session_id": "Aj5oZgpyDmj5j4YYGcqvpdNb"
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:06.771Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py' | Select-Object -Skip 285 -First 125\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:32.480Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:35.616Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:35.619Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:35.743Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "a55f42df946f896e8407074be2da3fa303426870f38b41ecf5321531a10d1921"
+      }
+    },
+    {
+      "time": "2026-09-10T06:28:48.384Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:29:08.281Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "a55f42df946f896e8407074be2da3fa303426870f38b41ecf5321531a10d1921"
+      }
+    }
+  ]
+}

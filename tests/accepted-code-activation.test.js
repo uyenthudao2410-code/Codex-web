@@ -287,6 +287,7 @@ function controllerFor(paths, workspace, activation, options = {}) {
 
 test('component ownership recognizes only fixed activation manifests', () => {
   assert.equal(componentOwnsPath('recovery_host', 'electron/services/recoveryHost.js'), true);
+  assert.equal(componentOwnsPath('recovery_host', 'resources/recovery-supervisor/recovery-supervisor.ps1'), true);
   assert.equal(componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/coding_tools_mcp/server.py'), true);
   assert.equal(componentOwnsPath('coding_mcp', 'resources/coding-tools-mcp/tests/test_coordination_state.py'), false);
   assert.equal(componentOwnsPath('electron_ui', 'renderer/control-center.js'), true);
@@ -401,6 +402,87 @@ test('zero-target controller performs fresh lifecycle verification with the cano
   assert.equal(closure.proof_fingerprint, '');
   assert.equal(closure.lifecycle_clean, true);
   assert.equal(closure.components_current, true);
+});
+
+test('newer component-bearing checkpoint takes source authority over an older zero-target lifecycle audit', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const sourcePath = 'resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py';
+  const testPath = 'resources/coding-tools-mcp/tests/test_problem_lineage.py';
+  write(path.join(workspace, ...sourcePath.split('/')), 'PROBLEM_LINEAGE = true;\n');
+  write(path.join(workspace, ...testPath.split('/')), 'def test_problem_lineage():\n    assert True\n');
+  const zeroTarget = checkpointFor(workspace, {
+    checkpointId: 'checkpoint-zero-target-0001',
+    runId: 'run-zero-target-0001',
+    waveId: 'wave-zero-target-0001',
+    files: []
+  });
+  const codingMcp = checkpointFor(workspace, {
+    checkpointId: 'checkpoint-coding-mcp-0002',
+    runId: 'run-coding-mcp-0002',
+    waveId: 'wave-coding-mcp-0002',
+    files: [sourcePath, testPath],
+    source: 'explicit_acceptance_attestations'
+  });
+  let lifecycleVerifications = 0;
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { throw new Error('discover must not preflight a newly selected component'); },
+    activate: async () => { throw new Error('discover must not activate a newly selected component'); },
+    status: () => null,
+    verifyCheckpointLifecycle: async () => {
+      lifecycleVerifications += 1;
+      throw new Error('the older zero-target audit must not replace current component source authority');
+    }
+  }, {
+    acceptedCheckpointProvider: () => [zeroTarget, codingMcp]
+  });
+
+  assert.equal(await controller.discover(), true);
+  const state = controller.loadState();
+  assert.equal(state.active_checkpoint_id, codingMcp.checkpoint_id);
+  assert.equal(state.closure_input.source_checkpoint_id, codingMcp.checkpoint_id);
+  assert.deepEqual(state.closure_input.affected_components, ['coding_mcp']);
+  assert.equal(state.processed_checkpoint_ids.includes(zeroTarget.checkpoint_id), false);
+  assert.equal(lifecycleVerifications, 0);
+});
+
+test('processed component source is retained instead of being replaced by an older zero-target checkpoint', async (t) => {
+  const { workspace, paths } = await fixture(t);
+  const sourcePath = 'resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py';
+  const testPath = 'resources/coding-tools-mcp/tests/test_problem_lineage.py';
+  write(path.join(workspace, ...sourcePath.split('/')), 'PROBLEM_LINEAGE = true;\n');
+  write(path.join(workspace, ...testPath.split('/')), 'def test_problem_lineage():\n    assert True\n');
+  const zeroTarget = checkpointFor(workspace, {
+    checkpointId: 'checkpoint-zero-target-0003',
+    runId: 'run-zero-target-0003',
+    waveId: 'wave-zero-target-0003',
+    files: []
+  });
+  const codingMcp = checkpointFor(workspace, {
+    checkpointId: 'checkpoint-coding-mcp-0004',
+    runId: 'run-coding-mcp-0004',
+    waveId: 'wave-coding-mcp-0004',
+    files: [sourcePath, testPath],
+    source: 'explicit_acceptance_attestations'
+  });
+  const controller = controllerFor(paths, workspace, {
+    preflight: async () => { throw new Error('a retained source authority must not be reactivated'); },
+    activate: async () => { throw new Error('a retained source authority must not be reactivated'); },
+    status: () => null,
+    verifyCheckpointLifecycle: async () => { throw new Error('the older zero-target audit must not overwrite component authority'); }
+  }, {
+    acceptedCheckpointProvider: () => [zeroTarget, codingMcp]
+  });
+  const head = git(workspace, ['rev-parse', 'HEAD']).trim();
+  const state = controller.loadState();
+  state.processed_checkpoint_ids = [codingMcp.checkpoint_id];
+  state.closure_input = controller.newClosureInput(evaluateActivationEligibility(codingMcp, { workspace, currentHead: head }));
+  controller.saveState(state);
+
+  assert.equal(await controller.discover(), false);
+  const after = controller.loadState();
+  assert.equal(after.closure_input.source_checkpoint_id, codingMcp.checkpoint_id);
+  assert.deepEqual(after.closure_input.affected_components, ['coding_mcp']);
+  assert.equal(after.processed_checkpoint_ids.includes(zeroTarget.checkpoint_id), false);
 });
 
 test('empty proof is rejected for a mutation-bearing checkpoint and identity input is never normalized', async (t) => {

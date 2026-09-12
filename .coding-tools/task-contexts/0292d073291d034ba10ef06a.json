@@ -1,0 +1,610 @@
+{
+  "version": 2,
+  "task_id": "1a59292a1294481baf7f8b183e7e4aab",
+  "orchestration": {
+    "run_id": "ad6202865db749d9b0155ffc32bf5dd9",
+    "wave_id": "c1d85e83c14c4465825757fb1bb22e50",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "853ea5a6700669f12af2659613e6bcd636e228e3872ce9d33d613dec764c63f9",
+    "contract_fp": ""
+  },
+  "objective": "Continuation Recovery & Provenance Hardening — exact current 19-file dirty candidate. Adopt only the supplied current bytes without source patch, superseding the stopped narrow C4 packet. Technical scope: monotonic ABA fencing; explicit one-shot scoped consent with content-free host journal; exact persistent App Server session recovery and unknown-effect pause; no-patch proof identity; bounded workflow deadlines and REPLAN attribution. Preserve all existing authority, eight-tool public contract and unrelated WIP. No Problem/business resolution, no live autonomy or release claim. Stop at ACCEPTING for review.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T05:24:27.723Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T05:24:27.723Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T05:24:27.723Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "8vSrVU4rU4-kT1O5smFJN4yc",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1009,
+    "finished_at": "2026-09-08T05:24:27.384Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 68,
+        "head_hash": "276b376312fa0ece9d812dcfb4032f321cd6a26227f0cfb67af669e8acea5411"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ad6202865db749d9b0155ffc32bf5dd9\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ad6202865db749d9b0155ffc32bf5dd9\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ad6202865db749d9b0155ffc32bf5dd9\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "ad6202865db749d9b0155ffc32bf5dd9",
+      "wave_id": "c1d85e83c14c4465825757fb1bb22e50",
+      "checkpoint_id": "b0b72215005441f9bfa2d4aeb5adc2d9",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "853ea5a6700669f12af2659613e6bcd636e228e3872ce9d33d613dec764c63f9",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Continuation Recovery & Provenance Hardening — exact current 19-file dirty candidate. Adopt only the supplied current bytes without source patch, superseding the stopped narrow C4 packet. Technical scope: monotonic ABA fencing; explicit one-shot scoped consent with content-free host journal; exact persistent App Server session recovery and unknown-effect pause; no-patch proof identity; bounded workflow deadlines and REPLAN attribution. Preserve all existing authority, eight-tool public contract and unrelated WIP. No Problem/business resolution, no live autonomy or release claim. Stop at ACCEPTING for review.",
+        "objective_revision": 1,
+        "objective_sha256": "4e7b501b9aaa903816e1a9728377b0eed20dfa35155238b1ee1305abf7ffa3d2",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 5,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "08857f9729604984ad8cb967fb6e1957",
+          "stage_id": "check:589d8c263c8afba7",
+          "status": "passed",
+          "duration_ms": 142423,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a5b9fb8940a04625bdcbe65559a977d3",
+          "stage_id": "check:1fb9970002b47283",
+          "status": "passed",
+          "duration_ms": 1333,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a144c5c87950429882ac590a8461f7af",
+          "stage_id": "check:56c3130338151dcd",
+          "status": "passed",
+          "duration_ms": 2426,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "72dadca868b443d386b3036d1a83895f",
+          "stage_id": "check:9840051871779d79",
+          "status": "passed",
+          "duration_ms": 1093,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "7ce9bf0c3e8c4ad5b1fb1a551d7801e1",
+          "stage_id": "check:466c2f308b48c766",
+          "status": "passed",
+          "duration_ms": 1434,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "b901075441a12a1fd4f09401f9c9ee5cf40d84e6573eef147a11e6044e389fc0",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 5 lines | tail: '163 passed, 30 subtests passed in 152.62s (0:02:32)'",
+      "finished_at": "2026-09-08T05:17:30.866Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "wtzie0vJRYJkK81079I-pxx5"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "ad6202865db749d9b0155ffc32bf5dd9",
+        "owner_wave": "dfb7c0c6f8ae42d991bf8c03ae7bb090",
+        "size_bytes": 266,
+        "command_id": "wtzie0vJRYJkK81079I-pxx5",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:wtzie0vJRYJkK81079I-pxx5:stdout",
+            "total_stream_bytes": 266,
+            "total_retained_bytes": 266,
+            "head_retained_bytes": 266,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:wtzie0vJRYJkK81079I-pxx5:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "cmd /d /s /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q\"",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 5 lines | tail: '163 passed, 30 subtests passed in 140.71s (0:02:20)'",
+      "finished_at": "2026-09-08T05:24:17.983Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "94EoYaF6EVUFFucuaoPkacLq"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "ad6202865db749d9b0155ffc32bf5dd9",
+        "owner_wave": "c1d85e83c14c4465825757fb1bb22e50",
+        "size_bytes": 266,
+        "command_id": "94EoYaF6EVUFFucuaoPkacLq",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:94EoYaF6EVUFFucuaoPkacLq:stdout",
+            "total_stream_bytes": 266,
+            "total_retained_bytes": 266,
+            "head_retained_bytes": 266,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:94EoYaF6EVUFFucuaoPkacLq:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-08T05:14:51.168Z",
+  "updated_at": "2026-09-08T05:52:58.767Z",
+  "events": [
+    {
+      "time": "2026-09-08T05:14:51.168Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continuation Recovery & Provenance Hardening — exact current 19-file dirty candidate. Adopt only the supplied current bytes without source patch, superseding the stopped narrow C4 packet. Technical scope: monotonic ABA fencing; explicit one-shot scoped consent with content-free host journal; exact persistent App Server session recovery and unknown-effect pause; no-patch proof identity; bounded workflow deadlines and REPLAN attribution. Preserve all existing authority, eight-tool public contract and unrelated WIP. No Problem/business resolution, no live autonomy or release claim. Stop at ACCEPTING for review."
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:52.451Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:53.568Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:54.666Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:54.674Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:55.978Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:56.416Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:14:57.203Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q",
+        "session_id": "wtzie0vJRYJkK81079I-pxx5"
+      }
+    },
+    {
+      "time": "2026-09-08T05:17:30.866Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:17:32.147Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T05:17:32.150Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:17:32.265Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PERMISSION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:49.498Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:51.169Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:52.105Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:53.278Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:53.286Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:54.872Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:55.377Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:21:56.150Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /d /s /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q\"",
+        "session_id": "94EoYaF6EVUFFucuaoPkacLq"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:17.983Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /d /s /c \"cd /d resources\\coding-tools-mcp && python -m pytest tests/test_run_continuation.py tests/test_codex_bridge.py tests/test_efficiency_runtime.py tests/test_task_state_and_build.py -q\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:19.136Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/chat-evaluation-journal.test.js",
+        "session_id": "TdfmAoujTGXzthxzWyzmV-Gh"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:19.799Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/chat-evaluation-journal.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:23.451Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m compileall -q resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "IPIcSyaPYMOwauG33F53toE0"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:23.856Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m compileall -q resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:24.985Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "session_id": "LTKMtZOKF91-AtOqjLY1PIiX"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:25.442Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/check_module_size.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:26.607Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check",
+        "session_id": "8vSrVU4rU4-kT1O5smFJN4yc"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:27.384Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:27.714Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:27.723Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:28.118Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:28.126Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:28.299Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "60b5410fc43436e59840d0060ce45816637537887c8103d886260f8abda72e6b"
+      }
+    },
+    {
+      "time": "2026-09-08T05:24:28.437Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T05:52:56.518Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:52:58.615Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-08T05:52:58.617Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T05:52:58.767Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "b901075441a12a1fd4f09401f9c9ee5cf40d84e6573eef147a11e6044e389fc0"
+      }
+    }
+  ]
+}

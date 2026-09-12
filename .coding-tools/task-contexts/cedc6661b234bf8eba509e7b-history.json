@@ -1,0 +1,75 @@
+[
+  {
+    "version": 2,
+    "task_id": "dee71645e3bb4d4aacaede53e6069bde",
+    "orchestration": {},
+    "objective": "Complete a workspace task",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-09T06:29:25.370Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-09T06:28:10.110Z",
+    "updated_at": "2026-09-09T06:29:25.370Z",
+    "events": [
+      {
+        "time": "2026-09-09T06:28:10.110Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-09T06:28:10.120Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-09T06:29:20.763Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_IDENTITY_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-09T06:29:25.370Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T06:29:25.370Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T06:29:36.317Z",
+    "archive_reason": "finished"
+  }
+]

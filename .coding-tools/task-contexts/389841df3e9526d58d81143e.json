@@ -1,0 +1,1130 @@
+{
+  "version": 2,
+  "task_id": "a1b6e37f3f394f7aa6d6743e08901a93",
+  "orchestration": {
+    "run_id": "dfb76f82280a44a09eecabf52ab4ebfa",
+    "wave_id": "715c8e461fb343d89fc8eb8cadcf6a8c",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "da5cb95583313bf7c9b9cf0990b2a0a2687e35ec2f65ed3cc7f08dbd83137d81",
+    "contract_fp": ""
+  },
+  "objective": "Natural #12 final verification-only closure on exact current patched byte. Do not modify source. Re-attest tests/live-supervisor-e2e.test.js and prove bounded cleanup behavior, the formerly failing dead-owned-MCP recovery case, three independently identified full-file Windows passes, and scoped diff hygiene.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-09T23:51:15.684Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-09T23:51:15.684Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-09T23:51:15.684Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "KdDg0i3-rMsePy8LrElv_xpR",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 849,
+    "finished_at": "2026-09-09T23:52:44.892Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "tests/live-supervisor-e2e.test.js",
+          "state": "file",
+          "sha256": "8cdf8e24a1d4b1a769ea684be0037094e39c1672b1686cde0c072ed539cbdd0f",
+          "size_bytes": 22848,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "dfb76f82280a44a09eecabf52ab4ebfa",
+          "wave_id": "715c8e461fb343d89fc8eb8cadcf6a8c"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 183,
+        "head_hash": "60d04780916e9eb00cd5ff026c37410ad29431b46bf010c9c2ab87b867fc7833"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dfb76f82280a44a09eecabf52ab4ebfa\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dfb76f82280a44a09eecabf52ab4ebfa\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dfb76f82280a44a09eecabf52ab4ebfa\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "dfb76f82280a44a09eecabf52ab4ebfa",
+      "wave_id": "715c8e461fb343d89fc8eb8cadcf6a8c",
+      "checkpoint_id": "8e35967630d64de6b5b29fd8c79a6815",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "da5cb95583313bf7c9b9cf0990b2a0a2687e35ec2f65ed3cc7f08dbd83137d81",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #12 closure verification-only on the already-patched current byte of tests/live-supervisor-e2e.test.js. Do not modify source. Re-attest the existing patched file, then prove fault-injection, the formerly failing dead-owned-MCP test, three independently identified full-file Windows runs, and scoped diff-check.",
+        "objective_revision": 2,
+        "objective_sha256": "f86242dd26bf1276400676afe3cd3eb0842e8be22a80e5fd04b4d5b9621f3928",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 6,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "29b462ef7a904105b97ffc7236e12f55",
+          "stage_id": "check:2ebfe171af41e9b1",
+          "status": "passed",
+          "duration_ms": 1070,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "003d6a999f3544aa865efb07a8566665",
+          "stage_id": "check:9834e8eba310a580",
+          "status": "passed",
+          "duration_ms": 12894,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "09213d6a28be43519ed9f04672ab9c56",
+          "stage_id": "check:370e8294797255cc",
+          "status": "passed",
+          "duration_ms": 18764,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "615bcadf83be45dcad5e8680c019a287",
+          "stage_id": "check:837a707ffd3eda17",
+          "status": "passed",
+          "duration_ms": 18622,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "314c6ba8ac524ec6b31c6b61a520aeaf",
+          "stage_id": "check:0d919f5cfe93a702",
+          "status": "passed",
+          "duration_ms": 18520,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "6c4b99aff3e34accbe62335b897551b7",
+          "stage_id": "check:f19926fc67b4eb66",
+          "status": "passed",
+          "duration_ms": 1063,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "3b287530dd7a253f5fc6e222fc3c22520f3da7df911716fcb229ae32ee9354dd",
+  "completion_report_acknowledged_id": "3b287530dd7a253f5fc6e222fc3c22520f3da7df911716fcb229ae32ee9354dd",
+  "completion_report_acknowledged_at": "2026-09-09T23:53:35.011Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "tests/live-supervisor-e2e.test.js",
+      "operation": "update",
+      "updated_at": "2026-09-09T23:44:18.822Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T23:43:01.710Z",
+  "updated_at": "2026-09-09T23:53:35.016Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:45:53.105Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo controller-review-complete",
+        "session_id": "4rlO-HE_boq0Ilq2R1KGp_Gr"
+      }
+    },
+    {
+      "time": "2026-09-09T23:45:53.601Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo controller-review-complete",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:45:58.740Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:45:59.768Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo noop",
+        "session_id": "9mcP5JLRvC0lkDeM10fz2b47"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:00.227Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo noop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:06.010Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:07.054Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo accidental-loop-break",
+        "session_id": "ReueIfXqcpftZpNZ659yZvHf"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:07.485Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo accidental-loop-break",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:13.906Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:15.020Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo WRONG TOOL SHOULD BE TASK_CONTROL",
+        "session_id": "S_cOvr0uhEEmpIAW7l-JipZP"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:15.534Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo WRONG TOOL SHOULD BE TASK_CONTROL",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:22.231Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:23.263Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo last-wrong-tool",
+        "session_id": "mD15uAViDaDz64FKRmGFLlHM"
+      }
+    },
+    {
+      "time": "2026-09-09T23:46:23.701Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo last-wrong-tool",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:09.198Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:10.039Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ignore",
+        "session_id": "0Ds0QgGO6oJP36-Jtzzd11wW"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:10.505Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ignore",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:17.016Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:17.904Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo DO-NOT-COUNT-AS-PROOF",
+        "session_id": "CkoqCHi23gxjFDgf4dUbw2q7"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:18.272Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo DO-NOT-COUNT-AS-PROOF",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:25.022Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:25.984Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo stop",
+        "session_id": "0drlSvzo_-1Y9-DtppukFmeh"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:26.356Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo stop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:33.764Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:34.679Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo final-accidental-readonly",
+        "session_id": "ZlBC60i4kbRI7TEoUkA0fB4K"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:35.165Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo final-accidental-readonly",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:42.928Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:43.930Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo I-must-now-call-task-control",
+        "session_id": "NWI0c2DqVkzNhVExNbk28tA7"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:44.376Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo I-must-now-call-task-control",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:50.855Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:51.820Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo task-control-next",
+        "session_id": "Pu0wsIxPvIHoFmS44bZCbd9t"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:52.194Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo task-control-next",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:57.317Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:58.077Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo really-stop",
+        "session_id": "tUsyibEaDMieMia-wyiZq0fM"
+      }
+    },
+    {
+      "time": "2026-09-09T23:47:58.461Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo really-stop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:04.877Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:05.854Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo control",
+        "session_id": "i60Ru6FPB7ISS18XkeEOKYRs"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:06.402Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo control",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:15.560Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:16.455Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo no",
+        "session_id": "tfl_emgGlmQ8G3yqrPPnwgTu"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:16.870Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo no",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:23.741Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:24.572Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo switch",
+        "session_id": "dexvoS3guX2gmxjLVzIjS4-O"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:24.991Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo switch",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:39.357Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:40.271Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo transition-now",
+        "session_id": "yi0chi2yhgLCfBdQXjb9mCgL"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:40.679Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo transition-now",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:53.484Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:54.775Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:54.799Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:48:54.912Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "fb70301a31f59745fc8ce9e45ca36da9891d74c8f564d191d948150986cb4b51"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:04.878Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:16.500Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fb70301a31f59745fc8ce9e45ca36da9891d74c8f564d191d948150986cb4b51"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:26.533Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:27.746Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:33.768Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:33.781Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:44.973Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'tests\\live-supervisor-e2e.test.js').Hash.ToLower(); Write-Output $h\"",
+        "session_id": "4vsMPavJme3ZUc3Ir79jMa-k"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:45.654Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'tests\\live-supervisor-e2e.test.js').Hash.ToLower(); Write-Output $h\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:57.806Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:58.513Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:59.792Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:49:59.802Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:01.188Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:01.749Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:02.584Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor test cleanup retries only bounded transient Windows teardown failures\" tests/live-supervisor-e2e.test.js",
+        "session_id": "D1QT_dpYcf7a_nWCvP9rVKaQ"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:02.995Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor test cleanup retries only bounded transient Windows teardown failures\" tests/live-supervisor-e2e.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:04.131Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel\" tests/live-supervisor-e2e.test.js",
+        "session_id": "trG5gt09W2ct7Z8GVudrQzZN"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:16.410Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel\" tests/live-supervisor-e2e.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:17.656Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='1'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "session_id": "-2C-9cpGCtzV_Ya-ayY9o-HX"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:35.718Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='1'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:36.724Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='2'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "session_id": "YLnx_YGluOzSJVKE7eZLS-Fs"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:54.754Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='2'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:50:56.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='3'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "session_id": "9gBVY0kc38v1K2a7HvgEaCPl"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:13.738Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$env:N12_REPEAT='3'; node --test 'tests\\live-supervisor-e2e.test.js'; exit $LASTEXITCODE\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:14.948Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- tests/live-supervisor-e2e.test.js",
+        "session_id": "2_b42bbGhWyZivo5xJyUjhKJ"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:15.371Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- tests/live-supervisor-e2e.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:15.673Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:15.684Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:16.030Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:16.034Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:16.235Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "5c3b5de7d847432c31362da28aa058d4e36aa10cb80f4e6d7c6e9968d5bfc647"
+      }
+    },
+    {
+      "time": "2026-09-09T23:51:16.406Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:04.222Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:05.266Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'tests\\live-supervisor-e2e.test.js').Hash.ToLower(); Write-Output $h\"",
+        "session_id": "ybnvhIi1FjgBtoGmSk2NjfE9"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:05.919Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 'tests\\live-supervisor-e2e.test.js').Hash.ToLower(); Write-Output $h\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:21.531Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:22.930Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_RESOLUTION_ENVELOPE_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:32.858Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:33.900Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 18 \"resolution_envelope contains disallowed fields|problem_resolution_envelope|resolution_envelope\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+        "session_id": "O14cr7OJIdgmIk3KaOqimM7_"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:34.382Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 18 \"resolution_envelope contains disallowed fields|problem_resolution_envelope|resolution_envelope\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:43.329Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:44.291Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources\\coding-tools-mcp\\tests\\test_resolution_contract.py' | Select-Object -Skip 28 -First 45; Write-Output '---NORMALIZER---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py' | Select-Object -Skip 290 -First 52\"",
+        "session_id": "KdDg0i3-rMsePy8LrElv_xpR"
+      }
+    },
+    {
+      "time": "2026-09-09T23:52:44.892Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources\\coding-tools-mcp\\tests\\test_resolution_contract.py' | Select-Object -Skip 28 -First 45; Write-Output '---NORMALIZER---'; Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py' | Select-Object -Skip 290 -First 52\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:04.948Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:07.465Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:07.469Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:07.654Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "3b287530dd7a253f5fc6e222fc3c22520f3da7df911716fcb229ae32ee9354dd"
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:21.376Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T23:53:35.011Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "3b287530dd7a253f5fc6e222fc3c22520f3da7df911716fcb229ae32ee9354dd"
+      }
+    }
+  ]
+}

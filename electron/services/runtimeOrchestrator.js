@@ -20,6 +20,7 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { ActivationEpochStore } = require('./activationEpoch');
 const { run } = require('./commandRunner');
 const { runtimeDeviceIdentity, classifyStoredDeviceOwner } = require('./deviceIdentity');
+const { CONNECTOR_ATTESTATION_HEADER, connectorAttestationHeader } = require('./connectorAttestation');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -36,15 +37,15 @@ function assertActivationDeadline(expiresAtUnixMs, boundary, processMutated = fa
 const MAX_DEFERRED_RECOVERIES = 6;
 const MAX_SUPERVISOR_REQUEST_AGE_MS = 60_000;
 const READY_COMMIT_DIGEST_PATTERN = /^[0-9a-f]{64}$/;
+const EOCL_EXACT_ID_PATTERN = /^[0-9a-f]{32}$/;
 const OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{15,127}$/;
 const SUPERVISOR_RESTART_REASON_MAX_CHARS = 1024;
 const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
 const EXACT_STALE_RUN_ID_PATTERN = /^[a-f0-9]{32}$/;
-const EXACT_STALE_RUN_MAX_IDS = 16;
+const EXACT_STALE_RUN_MAX_IDS = 64;
 
 function exactStaleRunMaintenanceReason(value) {
   if (typeof value !== 'string' || !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return false;
-  if (value.length > SUPERVISOR_RESTART_REASON_MAX_CHARS) return false;
   const rawIds = value.slice(EXACT_STALE_RUN_REASON_PREFIX.length);
   const runIds = rawIds ? rawIds.split(',') : [];
   return runIds.length >= 1
@@ -55,8 +56,9 @@ function exactStaleRunMaintenanceReason(value) {
 
 function validSupervisorRestartReason(value) {
   if (value == null) return true;
-  if (typeof value !== 'string' || value.length > SUPERVISOR_RESTART_REASON_MAX_CHARS) return false;
-  return !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX) || exactStaleRunMaintenanceReason(value);
+  if (typeof value !== 'string') return false;
+  if (value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return exactStaleRunMaintenanceReason(value);
+  return value.length <= SUPERVISOR_RESTART_REASON_MAX_CHARS;
 }
 
 function validSupervisorRestartTarget(request, settings) {
@@ -420,7 +422,7 @@ function controlMcpActivation(port, token, payload) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body)
       },
-      timeout: 5000
+      timeout: MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS
     }, (response) => {
       let responseBody = '';
       response.setEncoding('utf8');
@@ -1142,7 +1144,7 @@ class RuntimeOrchestrator {
     return result;
   }
 
-  async verifyCodeActivation(operationId, sourceCheckpoint) {
+  async verifyCodeActivation(operationId, sourceCheckpoint, allowAcceptancePending = false) {
     const settings = this.settingsStore.load();
     const token = this.secrets.get('mcpAuthToken');
     if (!token) throw Object.assign(new Error('Coding Tools MCP is not running under this Recovery Host.'), { code: 'COMPONENT_STOPPED' });
@@ -1150,7 +1152,8 @@ class RuntimeOrchestrator {
       action: 'verify',
       operation_id: String(operationId || ''),
       workspace: settings.workspace,
-      source_checkpoint: sourceCheckpoint && typeof sourceCheckpoint === 'object' ? sourceCheckpoint : null
+      source_checkpoint: sourceCheckpoint && typeof sourceCheckpoint === 'object' ? sourceCheckpoint : null,
+      allow_acceptance_pending: allowAcceptancePending === true
     });
     if (workspaceKey(result.workspace) !== workspaceKey(settings.workspace)) {
       throw Object.assign(new Error('Coding MCP activation verification returned another workspace.'), { code: 'WORKSPACE_MISMATCH' });
@@ -1173,6 +1176,130 @@ class RuntimeOrchestrator {
       : { health: null, failure: mcpHealthFailure('auth_token_missing') };
     this.lastMcpHealthFailure = observation.failure;
     return observation.health;
+  }
+
+  async recordExecutionControlCenterProgress(observation = {}) {
+    const runId = String(observation.run_id || observation.runId || '').trim().toLowerCase();
+    const waveId = String(observation.wave_id || observation.waveId || '').trim().toLowerCase();
+    const snapshotFingerprint = String(
+      observation.snapshot_fingerprint || observation.snapshotFingerprint || ''
+    ).trim().toLowerCase();
+    if (!EOCL_EXACT_ID_PATTERN.test(runId)
+      || !EOCL_EXACT_ID_PATTERN.test(waveId)
+      || !READY_COMMIT_DIGEST_PATTERN.test(snapshotFingerprint)) {
+      throw Object.assign(new Error('Execution Control Center observation identity is invalid.'), {
+        code: 'CONTROL_CENTER_OBSERVATION_INVALID'
+      });
+    }
+    const settings = this.settingsStore.load();
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: MCP_HEALTH_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP health identity is unavailable.'), {
+        code: 'ORCHESTRATION_STATE_UNCERTAIN'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: 'electron-control-center',
+      clientType: 'electron',
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const body = JSON.stringify({
+      jsonrpc: '2.0',
+      id: `control-center-observation-${snapshotFingerprint.slice(0, 16)}`,
+      method: 'tools/call',
+      params: {
+        name: 'task_control',
+        arguments: {
+          action: 'observation',
+          run_id: runId,
+          wave_id: waveId,
+          observation_span: {
+            span_id: `execution-control-center:${snapshotFingerprint}`,
+            stage: 'report_visible',
+            source: 'electron_execution_control_center',
+            measurement: 'observed_control_center_progress',
+            clock_domain: `execution-control-center:${snapshotFingerprint}`,
+            start_ms: 0,
+            end_ms: 0,
+            observer_plane: 'execution_control_center'
+          }
+        },
+        _meta: {
+          'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+          'io.modelcontextprotocol/clientCapabilities': {},
+          'io.modelcontextprotocol/clientInfo': { name: 'coding-tools-mcp-control-center', version: '1' }
+        }
+      }
+    });
+    return new Promise((resolve, reject) => {
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': 'task_control',
+          'X-Coding-Tools-Client-Id': 'electron-control-center',
+          'X-Coding-Tools-Client-Type': 'electron',
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: MCP_HEALTH_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => { if (responseBody.length < 1024 * 1024) responseBody += chunk; });
+        response.on('end', () => {
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the Control Center observation.'), {
+              code: 'CONTROL_CENTER_OBSERVATION_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage) {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the Control Center observation (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_CENTER_OBSERVATION_REJECTED'
+            }));
+            return;
+          }
+          if (!structured?.control_center_receipt) {
+            reject(Object.assign(new Error('Coding Tools MCP did not return an attested Control Center receipt.'), {
+              code: 'CONTROL_CENTER_OBSERVATION_NOT_ATTESTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Execution Control Center observation timed out.'),
+        { code: 'CONTROL_CENTER_OBSERVATION_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_CENTER_OBSERVATION_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
   }
 
   async cancelCodeActivation(operationId, { strict = false } = {}) {
@@ -1982,7 +2109,10 @@ class RuntimeOrchestrator {
           ? { refresh: true, mode: 'full_clean_refresh', sourceCheckpoint: null }
           : { sourceCheckpoint }),
         expectedDiskRevision: expectedRevision,
-        expiresAtUnixMs: Number(pending.request.expires_at_unix_ms || 0),
+        // The supervisor ticket expiry is only the fail-closed admission/claim
+        // window. Once a fresh ticket has been claimed, FullCleanActivation
+        // owns its separate bounded end-to-end deadline for handoff, cold
+        // startup, connector readiness, and final postflight.
         allowAcceptancePending: pending.request.allow_acceptance_pending === true,
         reason: pending.request.reason || 'task_control_restart_runtime',
         ...(maintenanceRefresh ? { maintenanceWorkspace } : {})

@@ -116,6 +116,7 @@ from .orchestration_control import OrchestrationControl, OrchestrationControlErr
 from .orchestration_ledger import OrchestrationLedger, fingerprint_paths  # noqa: F401  # composition-root namespace
 from .continuation_driver import ContinuationDriverMixin  # noqa: F401  # composition-root namespace
 from .run_continuation import RunContinuationMixin  # noqa: F401  # composition-root namespace
+from .continuation_consent_http import ContinuationConsentChallengeStore  # noqa: F401  # composition-root namespace
 from .coordination_status import CoordinationStatusMixin  # noqa: F401  # composition-root namespace
 from .orchestration_report import OrchestrationReport  # noqa: F401  # composition-root namespace
 from .projection_rebuild import reconcile_task_orchestration_projection  # noqa: F401  # composition-root namespace
@@ -373,6 +374,8 @@ class Runtime(
         self.oauth_config = oauth_config
         self.server_instance_id = secrets.token_urlsafe(12)
         self.process_instance_id = PROCESS_INSTANCE_ID
+        self.run_continuation_consent_challenges = ContinuationConsentChallengeStore()
+        self.run_continuation_consent_http_origin = ""
         self._set_runtime_dir(runtime_dir_for_workspace(self.workspace.root, self.server_instance_id))
         self.fallback_runtime_dir = fallback_runtime_dir_for_workspace(self.workspace.root, self.server_instance_id)
         self.default_cwd = self.workspace.root
@@ -624,6 +627,7 @@ class Runtime(
             if self._closed:
                 return
             self._closed = True
+            self._activation_admission_changed.set()
             sessions = list(self.sessions.values())
             self.sessions.clear()
             self.output_sessions.clear()
@@ -1256,7 +1260,21 @@ class Runtime(
                     ttl_seconds=HUB_CONTROLLER_LEASE_SECONDS,
                 )
                 controller = claimed if claimed.get("acquired") else self.orchestration_ledger.get_controller_lease(run_id)
-        return {"client": client, "controller": controller, "run_id": run_id}
+        auto_resume = None
+        if (
+            run
+            and run.get("status") == "active"
+            and client_type == "chatweb"
+            and controller
+            and controller.get("status") == "active"
+            and controller.get("owner_client_id") == client_id
+        ):
+            auto_resume = self._run_continuation_try_auto_resume(
+                run_id=run_id,
+                trigger="reconnect",
+                marker=str(identity.get("session_instance") or identity.get("execution_context_id") or client_id),
+            )
+        return {"client": client, "controller": controller, "run_id": run_id, "auto_resume": auto_resume}
 
     def _require_hub_controller(self, run_id: str) -> dict[str, Any] | None:
         identity = self._current_hub_client()
@@ -1638,7 +1656,7 @@ class Runtime(
             )
             return result
 
-        activation_bootstrap = self.activation_connector_bootstrap_result(name)
+        activation_bootstrap = self.activation_connector_bootstrap_for_call(name)
         if activation_bootstrap is not None:
             return traced(make_tool_result(
                 name, activation_bootstrap, is_error=activation_bootstrap.get("ok") is False
@@ -2022,7 +2040,7 @@ class Runtime(
                     "document_create": "Create a Word document in the workspace",
                     "document_convert": "Convert a document into the workspace",
                 }.get(name, "Complete a workspace task")
-                self.task_state.ensure_started(objective, current_step=TOOL_REGISTRY[name].title)
+                self.ensure_tool_task_started(objective, current_step=TOOL_REGISTRY[name].title)
             self.request_context.request_id = request_id
             try:
                 payload = self._invoke_with_read_retry(name, handler, args, spec)
@@ -2229,6 +2247,9 @@ class Runtime(
         return "auto"
 
     def _project_orchestration(self, ctx: RunContext, *, event: str = "orchestration_projected") -> None:
+        rebind = getattr(self, "_rebind_current_background_operation", None)
+        if callable(rebind):
+            rebind(ctx)
         try:
             self.task_state.set_orchestration_projection(ctx.projection(), event=event)
         except (OSError, ValueError):

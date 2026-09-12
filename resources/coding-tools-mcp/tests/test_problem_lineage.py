@@ -414,6 +414,55 @@ class ProblemLineageTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_runtime_derives_attested_transport_identity_without_electron_pending_host_turn(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            runtime = Runtime(root, permission_mode="safe")
+            pending = root / ".coding-tools" / "evaluation" / "chatweb-host-turn-pending.json"
+            trace_id = "a" * 32
+            try:
+                runtime.orchestration_ledger.migrate_problem_lineage_schema()
+                attach_chatweb(runtime, "attested-transport")
+                self.assertFalse(pending.exists())
+
+                with self.assertRaises(ToolFailure) as unavailable:
+                    runtime.task_control({
+                        "action": "problem",
+                        "problem_event": public_event(open_event("unattested-transport-open")),
+                    })
+                self.assertEqual(unavailable.exception.code, "PRL_HOST_IDENTITY_UNAVAILABLE")
+                self.assertFalse(pending.exists())
+
+                runtime.request_context.hub_client.update({
+                    "identity_source": "attested_transport",
+                    "attestation_verified": True,
+                })
+                runtime.request_context.trace_context = {"trace_id": trace_id}
+                with self.assertRaises(ToolFailure) as mismatch:
+                    runtime.task_control({
+                        "action": "problem",
+                        "problem_event": public_event(open_event(
+                            "attested-transport-mismatch",
+                            turn_id="caller-turn",
+                            trace_id="caller-trace",
+                        )),
+                    })
+                self.assertEqual(mismatch.exception.code, "PRL_HOST_IDENTITY_MISMATCH")
+                self.assertFalse(pending.exists())
+
+                opened = runtime.task_control({
+                    "action": "problem",
+                    "problem_event": public_event(open_event("attested-transport-open")),
+                })
+                event = opened["problem"]["event"]
+                self.assertEqual(event["problem_revision"], 1)
+                self.assertEqual(event["turn_id"], f"chatweb-trace:{trace_id}")
+                self.assertEqual(event["trace_id"], trace_id)
+                self.assertEqual(event["provenance"], "CONTROLLER_REPORTED_EXPLICIT_USER")
+                self.assertFalse(pending.exists())
+            finally:
+                runtime.close()
+
     def test_problem_run_records_host_product_session_and_continuity_core_receipts(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -1,0 +1,144 @@
+{
+  "version": 2,
+  "task_id": "b5e3cee32b224e6db94b354d596f6b6f",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "KxSxSJzdIC2jfFkQB1Yog6gP",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 301,
+    "finished_at": "2026-09-09T14:31:13.883Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T14:28:57.765Z",
+  "updated_at": "2026-09-09T14:31:13.883Z",
+  "events": [
+    {
+      "time": "2026-09-09T14:28:57.766Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T14:28:58.056Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','electron/main.js','resources/coding-tools-mcp/tests/test_execution_hub.py','tests/dev-ui-lifecycle.test.js'); foreach($f in $files){$h=Get-FileHash -Algorithm SHA256 $f; Write-Output ($f+'|'+$h.Hash.ToLower())}; git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py electron/main.js resources/coding-tools-mcp/tests/test_execution_hub.py tests/dev-ui-lifecycle.t",
+        "session_id": "0NbBAit9QzarPi0KUthbQKjx"
+      }
+    },
+    {
+      "time": "2026-09-09T14:28:58.761Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py','electron/main.js','resources/coding-tools-mcp/tests/test_execution_hub.py','tests/dev-ui-lifecycle.test.js'); foreach($f in $files){$h=Get-FileHash -Algorithm SHA256 $f; Write-Output ($f+'|'+$h.Hash.ToLower())}; git diff --check -- resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py electron/main.js resources/coding-tools-mcp/tests/test_execution_hub.py tests/dev-ui-lifecycle.t",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:07.528Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --numstat -- resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py electron/main.js resources/coding-tools-mcp/tests/test_execution_hub.py tests/dev-ui-lifecycle.test.js && rg -n -C 10 \"canonicalTaskStateFromControl|details_available|detail_binding|test_task_snapshot_preserves_bounded_structured_task_evidence_for_exact_run|drops stale detail|preserves rich evidence\" electron\\main.js resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\test",
+        "session_id": "xijdjkKGbbCROS7sh5lLoaWO"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:07.945Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --numstat -- resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py electron/main.js resources/coding-tools-mcp/tests/test_execution_hub.py tests/dev-ui-lifecycle.test.js && rg -n -C 10 \"canonicalTaskStateFromControl|details_available|detail_binding|test_task_snapshot_preserves_bounded_structured_task_evidence_for_exact_run|drops stale detail|preserves rich evidence\" electron\\main.js resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\test",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:19.687Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_execution_hub.ExecutionHubHTTPTests.test_task_list_uses_the_canonical_orchestration_ledger_not_task_state_projection tests.test_execution_hub.ExecutionHubHTTPTests.test_task_snapshot_preserves_bounded_structured_task_evidence_for_exact_run",
+        "session_id": "gQ9lGaaXBDk0hGKEU_3ulC-u"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:23.070Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_execution_hub.ExecutionHubHTTPTests.test_task_list_uses_the_canonical_orchestration_ledger_not_task_state_projection tests.test_execution_hub.ExecutionHubHTTPTests.test_task_snapshot_preserves_bounded_structured_task_evidence_for_exact_run",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:30.111Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests\\dev-ui-lifecycle.test.js",
+        "session_id": "MItTiWabnPAAGifBoKwLR5o3"
+      }
+    },
+    {
+      "time": "2026-09-09T14:29:32.589Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests\\dev-ui-lifecycle.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T14:30:17.503Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTROLLER_HANDOFF_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T14:30:35.369Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"CONTROLLER_HANDOFF_REQUIRED|handoff_action|controller lease|owner_client_id\" resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests tests",
+        "session_id": "ai93WL4VToRCuYGNs9H3ZAMA"
+      }
+    },
+    {
+      "time": "2026-09-09T14:30:35.664Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"CONTROLLER_HANDOFF_REQUIRED|handoff_action|controller lease|owner_client_id\" resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T14:31:13.611Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 14 \"def _hub_client_record_id\" resources\\coding-tools-mcp\\coding_tools_mcp",
+        "session_id": "KxSxSJzdIC2jfFkQB1Yog6gP"
+      }
+    },
+    {
+      "time": "2026-09-09T14:31:13.883Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 14 \"def _hub_client_record_id\" resources\\coding-tools-mcp\\coding_tools_mcp",
+        "status": "passed"
+      }
+    }
+  ]
+}

@@ -1,0 +1,1232 @@
+[
+  {
+    "version": 2,
+    "task_id": "435ad48a07f94309bceeb60ebacc04e0",
+    "orchestration": {
+      "run_id": "7c223dd78a9948aea3d8abd68f82fcd3",
+      "wave_id": "1bf6a17bed71440aa475bdb33cbd6720",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+      "contract_fp": ""
+    },
+    "objective": "Natural #24 engineering implementation: make the existing G6 cross-session continuity proof contract attainable from real production operations by adding lawful runtime-derived producers/linkage for TG6-required receipts that production currently does not reliably emit. Preserve fail-closed semantics, do not synthesize or backfill historical receipts, do not trust caller-supplied evidence authority, do not add a ninth public tool, and preserve unrelated dirty work.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "V-CatEYJT9Kwlx2A2kWn_Oqk",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 1914,
+      "finished_at": "2026-09-10T14:10:23.771Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-10T12:09:51.565Z",
+    "updated_at": "2026-09-10T14:10:23.771Z",
+    "events": [
+      {
+        "time": "2026-09-10T12:49:33.769Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_controller_reattach.py'; $c=Get-Content $p; $c[0..120]; '---TAIL---'; $c[380..620]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:49:47.554Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_controller_reattach.py'; Select-String -Path $p -Pattern '^def begin_problem_run|^def reattach' -Context 0,90\"",
+          "session_id": "QiLutTEsn4n9ev3za9j1cf46"
+        }
+      },
+      {
+        "time": "2026-09-10T12:49:48.936Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_controller_reattach.py'; Select-String -Path $p -Pattern '^def begin_problem_run|^def reattach' -Context 0,90\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:50:27.958Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $c=Get-Content $p; $c[540..690]\"",
+          "session_id": "tcQs-FQk1deXIR6GxZPJX6sh"
+        }
+      },
+      {
+        "time": "2026-09-10T12:50:29.284Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $c=Get-Content $p; $c[540..690]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:51:58.409Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern '^    def record_proof|^    def upsert_managed|^    def register_managed|^    def .*process_job' -Context 0,60\"",
+          "session_id": "511OhWc2IO3QgaXT2wgChxXB"
+        }
+      },
+      {
+        "time": "2026-09-10T12:51:59.727Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern '^    def record_proof|^    def upsert_managed|^    def register_managed|^    def .*process_job' -Context 0,60\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:52:10.494Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js','renderer/control-center.js'); $files | ForEach-Object { $h=Get-FileHash -Algorithm SHA256 $_; [PSCustomObject]@{Path=$h.Path;Hash=$h.Hash} } | ConvertTo-Json -Compress\"",
+          "session_id": "3ZWpMAXyCV9jE3yWslbfFSlY"
+        }
+      },
+      {
+        "time": "2026-09-10T12:52:11.677Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js','renderer/control-center.js'); $files | ForEach-Object { $h=Get-FileHash -Algorithm SHA256 $_; [PSCustomObject]@{Path=$h.Path;Hash=$h.Hash} } | ConvertTo-Json -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:54:24.301Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/*.py' -Pattern 'record_problem_product_session|cross_session_chatweb_session_started|product_session_receipt_id' -Context 3,12 | Select-Object -First 180\"",
+          "session_id": "x0kGstDkRG79UApeOazf-jYA"
+        }
+      },
+      {
+        "time": "2026-09-10T12:54:25.820Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/*.py' -Pattern 'record_problem_product_session|cross_session_chatweb_session_started|product_session_receipt_id' -Context 3,12 | Select-Object -First 180\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:57:25.418Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'renderer/control-center.js' -Pattern 'run_id|wave_id|resume_packet|orchestration_state' -Context 2,8 | Select-Object -First 160; Select-String -Path 'electron/main.js' -Pattern 'function structuredMcpResult|sanitizeOrchestration|panel:live-control' -Context 2,25\"",
+          "session_id": "f-5519FUf-S7B45r52GwzUHh"
+        }
+      },
+      {
+        "time": "2026-09-10T12:57:26.954Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'renderer/control-center.js' -Pattern 'run_id|wave_id|resume_packet|orchestration_state' -Context 2,8 | Select-Object -First 160; Select-String -Path 'electron/main.js' -Pattern 'function structuredMcpResult|sanitizeOrchestration|panel:live-control' -Context 2,25\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T12:58:16.060Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py'; $c=Get-Content $p; $c[835..1045]\"",
+          "session_id": "QOEImBYbr75uy21TgqsZ5m0I"
+        }
+      },
+      {
+        "time": "2026-09-10T12:58:17.311Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py'; $c=Get-Content $p; $c[835..1045]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:01:16.153Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[480..540]\"",
+          "session_id": "P5FDcJ7kxJ5WsW1NGoTEHojb"
+        }
+      },
+      {
+        "time": "2026-09-10T13:01:17.362Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[480..540]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:01:38.342Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/main.js' -Pattern 'recordHostObservationSpan\\(' -Context 3,8\"",
+          "session_id": "uWD94d-1H0laaAkGhXRn7xK9"
+        }
+      },
+      {
+        "time": "2026-09-10T13:01:39.657Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/main.js' -Pattern 'recordHostObservationSpan\\(' -Context 3,8\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:04:50.637Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-10T13:05:30.125Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern 'CREATE TABLE IF NOT EXISTS managed_process_jobs' -Context 0,32\"",
+          "session_id": "du9azX2Q0dIVfXN0SnS7_992"
+        }
+      },
+      {
+        "time": "2026-09-10T13:05:31.795Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern 'CREATE TABLE IF NOT EXISTS managed_process_jobs' -Context 0,32\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:09:02.137Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-10T13:09:17.211Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/main.js'; $c=Get-Content $p; $c[520..590]; '---LIVE CONTROL---'; $c[1000..1035]; '---TOP---'; $c[20..65]\"",
+          "session_id": "N18KFRhdDB3hvDFkwAsi-JIa"
+        }
+      },
+      {
+        "time": "2026-09-10T13:09:18.514Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/main.js'; $c=Get-Content $p; $c[520..590]; '---LIVE CONTROL---'; $c[1000..1035]; '---TOP---'; $c[20..65]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:11:06.774Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:05.233Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py'; $i=1; Get-Content $p | ForEach-Object {('{0,4}: {1}' -f $i,$_);$i++}; '---ATT-HDR---'; Select-String -Path 'electron/main.js','electron/services/runtimeOrchestrator.js','resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py' -Pattern 'connectorAttestationForHealth|X-Coding-Tools-Connector|attestation' -Context 3,12\"",
+          "session_id": "hOoG1KmKwQfWAuiA7hsgeKFs"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:06.762Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py'; $i=1; Get-Content $p | ForEach-Object {('{0,4}: {1}' -f $i,$_);$i++}; '---ATT-HDR---'; Select-String -Path 'electron/main.js','electron/services/runtimeOrchestrator.js','resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py' -Pattern 'connectorAttestationForHealth|X-Coding-Tools-Connector|attestation' -Context 3,12\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:20.176Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/connectorAttestation.js'; '---OBS ACTION---'; $p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[1268..1315]; '---LIVE SNAP SHAPE---'; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/*.py' -Pattern 'def control_orchestration_snapshot' -Context 0,120\"",
+          "session_id": "YHgq5PRG5UJI75ULSHSQ0Ml6"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:21.536Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/connectorAttestation.js'; '---OBS ACTION---'; $p='resources/coding-tools-mcp/coding_tools_mcp/coordination.py'; $c=Get-Content $p; $c[1268..1315]; '---LIVE SNAP SHAPE---'; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/*.py' -Pattern 'def control_orchestration_snapshot' -Context 0,120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:31.533Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py'; Select-String -Path $p -Pattern '_OBSERVATION_RECEIPTS|controller_knowledge_no_advance_observed|execution_control_center_progress_observed|managed_execution_reobserved|goal_reconstruction_observed|remaining_criterion_completed' -Context 8,42\"",
+          "session_id": "ENJxipcBwhtUSmLYqWUZEudH"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:33.135Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py'; Select-String -Path $p -Pattern '_OBSERVATION_RECEIPTS|controller_knowledge_no_advance_observed|execution_control_center_progress_observed|managed_execution_reobserved|goal_reconstruction_observed|remaining_criterion_completed' -Context 8,42\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:47.494Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; Select-String -Path $p -Pattern 'def _controller_continuity_control|continuity_action ==|action == \\\"reattach\\\"|controller_reattach_goal\\(' -Context 0,120\"",
+          "session_id": "4K83R8eBRjA6IuKTnpdmzrEb"
+        }
+      },
+      {
+        "time": "2026-09-10T13:42:48.961Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; Select-String -Path $p -Pattern 'def _controller_continuity_control|continuity_action ==|action == \\\"reattach\\\"|controller_reattach_goal\\(' -Context 0,120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:43:55.609Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/main.js'; $c=Get-Content $p; $c[285..370]; '---RECOVERY IPC CLIENT---'; Select-String -Path 'electron/services/recoveryIpc.js' -Pattern 'class RecoveryIpcClient|async invoke|request\\(' -Context 0,65; '---HOST CONSTRUCTOR---'; $r='electron/services/recoveryHost.js'; $d=Get-Content $r; $d[335..430]\"",
+          "session_id": "PfTQVI5lw78NMXITI3hcCCfA"
+        }
+      },
+      {
+        "time": "2026-09-10T13:43:57.187Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/main.js'; $c=Get-Content $p; $c[285..370]; '---RECOVERY IPC CLIENT---'; Select-String -Path 'electron/services/recoveryIpc.js' -Pattern 'class RecoveryIpcClient|async invoke|request\\(' -Context 0,65; '---HOST CONSTRUCTOR---'; $r='electron/services/recoveryHost.js'; $d=Get-Content $r; $d[335..430]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:44:34.111Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T13:44:53.143Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/*.py' -Pattern 'def _current_hub_client|request_context.hub_client|attestation_verified' -Context 0,28 | Select-Object -First 220\"",
+          "session_id": "R2cZM_Z8_P2Ba4bigiu6ha2Z"
+        }
+      },
+      {
+        "time": "2026-09-10T13:44:54.903Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/*.py' -Pattern 'def _current_hub_client|request_context.hub_client|attestation_verified' -Context 0,28 | Select-Object -First 220\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:47:12.977Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryIpc.js'; $c=Get-Content $p; $c[0..90]; '---CLIENT TAIL---'; $c[420..455]; '---HOST HANDLER MAP---'; $h='electron/services/recoveryHost.js'; $d=Get-Content $h; $d[1690..1810]; '---MAIN ORCHESTRATOR INIT---'; Select-String -Path 'electron/main.js' -Pattern 'new RecoveryIpcClient|orchestrator = new RecoveryIpcClient|orchestrator =' -Context 3,12\"",
+          "session_id": "HCc8KA6wkXztDWuNhP2R-GYE"
+        }
+      },
+      {
+        "time": "2026-09-10T13:47:14.512Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryIpc.js'; $c=Get-Content $p; $c[0..90]; '---CLIENT TAIL---'; $c[420..455]; '---HOST HANDLER MAP---'; $h='electron/services/recoveryHost.js'; $d=Get-Content $h; $d[1690..1810]; '---MAIN ORCHESTRATOR INIT---'; Select-String -Path 'electron/main.js' -Pattern 'new RecoveryIpcClient|orchestrator = new RecoveryIpcClient|orchestrator =' -Context 3,12\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:47:35.470Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"'---RECOVERY IPC EXPORTS---'; Get-Content 'electron/services/recoveryIpc.js' -Tail 35; '---RECOVERY HOST EXPORTS---'; Get-Content 'electron/services/recoveryHost.js' -Tail 55; '---ENSURE RECOVERY HOST RETURN---'; Select-String -Path 'electron/services/recoveryHostLauncher.js' -Pattern 'function ensureRecoveryHost|async function ensureRecoveryHost|return new RecoveryIpcClient|return client' -Context 0,80\"",
+          "session_id": "onXxEshQLYV767XjI_Iw7m5z"
+        }
+      },
+      {
+        "time": "2026-09-10T13:47:36.812Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"'---RECOVERY IPC EXPORTS---'; Get-Content 'electron/services/recoveryIpc.js' -Tail 35; '---RECOVERY HOST EXPORTS---'; Get-Content 'electron/services/recoveryHost.js' -Tail 55; '---ENSURE RECOVERY HOST RETURN---'; Select-String -Path 'electron/services/recoveryHostLauncher.js' -Pattern 'function ensureRecoveryHost|async function ensureRecoveryHost|return new RecoveryIpcClient|return client' -Context 0,80\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:09.368Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern '^def _reattach_row' -Context 0,55; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern '^    def list_managed_process_jobs|^    def .*managed.*jobs|SELECT \\* FROM managed_process_jobs' -Context 0,65\"",
+          "session_id": "R_o73milRgPYl4FjpH6Bn1sL"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:10.554Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern '^def _reattach_row' -Context 0,55; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py' -Pattern '^    def list_managed_process_jobs|^    def .*managed.*jobs|SELECT \\* FROM managed_process_jobs' -Context 0,65\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:21.054Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n \\\"def _reattach_row|managed_process_jobs\\\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py | Select-Object -First 80\"",
+          "session_id": "ZQ65JZD60MCa4k2qPHTcT5yk"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:21.478Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n \\\"def _reattach_row|managed_process_jobs\\\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py | Select-Object -First 80\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:37.115Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/coding_tools_mcp' -Filter '*.py' | Select-String -Pattern 'def _reattach_row|def .*managed.*job|managed_process_jobs' | Select-Object -First 120 Path,LineNumber,Line | Format-List\"",
+          "session_id": "4PPfYLhI1QZG2jOguiR7MAVV"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:38.529Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/coding_tools_mcp' -Filter '*.py' | Select-String -Pattern 'def _reattach_row|def .*managed.*job|managed_process_jobs' | Select-Object -First 120 Path,LineNumber,Line | Format-List\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:53.585Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/coding_tools_mcp' -Filter '*.py' | Select-String -Pattern '_reattach_row' | Select-Object Path,LineNumber,Line | Format-List; '---JOB LIST METHOD---'; $p='resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py'; $c=Get-Content $p; $c[1200..1290]\"",
+          "session_id": "9SjPKplo_5kqC_Y7W7UQd-aw"
+        }
+      },
+      {
+        "time": "2026-09-10T13:48:55.013Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/coding_tools_mcp' -Filter '*.py' | Select-String -Pattern '_reattach_row' | Select-Object Path,LineNumber,Line | Format-List; '---JOB LIST METHOD---'; $p='resources/coding-tools-mcp/coding_tools_mcp/execution_resources.py'; $c=Get-Content $p; $c[1200..1290]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:49:07.093Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -TotalCount 35; Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py' -TotalCount 170\"",
+          "session_id": "e5zVpiyNlf0llcCQLgliA0SC"
+        }
+      },
+      {
+        "time": "2026-09-10T13:49:08.411Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -TotalCount 35; Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py' -TotalCount 170\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:49:56.916Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern 'def _continuity_goal_projection' -Context 0,150; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' -Pattern 'criterion|coverage|next_action|next_gap' -Context 2,10 | Select-Object -First 180\"",
+          "session_id": "WHqHnb8QT833eCLcbm_Drd-F"
+        }
+      },
+      {
+        "time": "2026-09-10T13:49:59.129Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern 'def _continuity_goal_projection' -Context 0,150; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' -Pattern 'criterion|coverage|next_action|next_gap' -Context 2,10 | Select-Object -First 180\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:50:39.078Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py' -Pattern 'record_problem_product_session' -Context 12,35; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern 'coverage_manifest =|problem_coverage_manifest|resolution_envelope =' -Context 5,45 | Select-Object -First 180\"",
+          "session_id": "Jhan3C8q8cUR3_Sl-XBEgKRJ"
+        }
+      },
+      {
+        "time": "2026-09-10T13:50:40.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py' -Pattern 'record_problem_product_session' -Context 12,35; Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py' -Pattern 'coverage_manifest =|problem_coverage_manifest|resolution_envelope =' -Context 5,45 | Select-Object -First 180\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:03.129Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/runtimeOrchestrator.js' -Pattern 'httpRequest|requestJson|/mcp|connectorAttestationHeader' -Context 2,15 | Select-Object -First 180; Select-String -Path 'electron/services/recoveryHost.js' -Pattern 'httpRequest|requestJson|node:http' -Context 2,12 | Select-Object -First 80\"",
+          "session_id": "jC7_HUYa2D0UtxY5dbuIRWZB"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:04.662Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/runtimeOrchestrator.js' -Pattern 'httpRequest|requestJson|/mcp|connectorAttestationHeader' -Context 2,15 | Select-Object -First 180; Select-String -Path 'electron/services/recoveryHost.js' -Pattern 'httpRequest|requestJson|node:http' -Context 2,12 | Select-Object -First 80\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:19.335Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/recoveryHost.js' -Pattern 'cachedRuntimeSnapshot\\(|lastSupervisionStatus|connectorAttestationForHealth\\(' -Context 3,35 | Select-Object -First 220\"",
+          "session_id": "MJDJsHMOPiOyip5t2wnQ1ffR"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:20.896Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/recoveryHost.js' -Pattern 'cachedRuntimeSnapshot\\(|lastSupervisionStatus|connectorAttestationForHealth\\(' -Context 3,35 | Select-Object -First 220\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:38.227Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[2680..2775]\"",
+          "session_id": "g2QPOlWIVnBAkLQITPRxn3q7"
+        }
+      },
+      {
+        "time": "2026-09-10T13:51:39.430Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/runtimeOrchestrator.js'; $c=Get-Content $p; $c[2680..2775]\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:52:28.170Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/runtimeOrchestrator.js' -Pattern '^async function probeMcp|^function probeMcp|^async function readMcpHealth' -Context 0,120\"",
+          "session_id": "HpW-ADP8Jkuyc9KLrtHBTNoq"
+        }
+      },
+      {
+        "time": "2026-09-10T13:52:29.546Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'electron/services/runtimeOrchestrator.js' -Pattern '^async function probeMcp|^function probeMcp|^async function readMcpHealth' -Context 0,120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:53:03.919Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/connectorAttestation.js' -Tail 85\"",
+          "session_id": "LQs2F2uVJ-DzKjNheAWPB_dW"
+        }
+      },
+      {
+        "time": "2026-09-10T13:53:05.087Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/connectorAttestation.js' -Tail 85\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:54:25.711Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/test_problem_lineage.py' -Pattern 'problem_coverage_manifest|problem_resolution_envelope|action.: .accept|\\\"action\\\": \\\"accept\\\"' -Context 25,55 | Select-Object -First 260\"",
+          "session_id": "ikzVZDvQhCEzgHZc1ESSurCB"
+        }
+      },
+      {
+        "time": "2026-09-10T13:54:27.278Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/test_problem_lineage.py' -Pattern 'problem_coverage_manifest|problem_resolution_envelope|action.: .accept|\\\"action\\\": \\\"accept\\\"' -Context 25,55 | Select-Object -First 260\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:54:39.044Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/test_problem_lineage.py' -Pattern '^def attach_chatweb|^def resolution_envelope|^def public_event|^def open_event' -Context 0,70 | Select-Object -First 260\"",
+          "session_id": "uluLKEdOHYb8a1_1XYig4du8"
+        }
+      },
+      {
+        "time": "2026-09-10T13:54:40.378Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/tests/test_problem_lineage.py' -Pattern '^def attach_chatweb|^def resolution_envelope|^def public_event|^def open_event' -Context 0,70 | Select-Object -First 260\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:55:04.736Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "session_id": "Vy3CcHRIRBVqv3JFUUf2FpGW"
+        }
+      },
+      {
+        "time": "2026-09-10T13:55:05.279Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:55:15.038Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js' | Select-Object Path,Hash | Format-List\"",
+          "session_id": "jobDU07LX8DExxn_N84kAMIh"
+        }
+      },
+      {
+        "time": "2026-09-10T13:55:16.811Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js' | Select-Object Path,Hash | Format-List\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:56:03.686Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py' -Pattern 'client_type|ALLOWED|electron' -Context 2,12 | Select-Object -First 120\"",
+          "session_id": "ZUAX8xkA2rY-I4vkKC0Bj3xp"
+        }
+      },
+      {
+        "time": "2026-09-10T13:56:05.221Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/http_hub_identity.py' -Pattern 'client_type|ALLOWED|electron' -Context 2,12 | Select-Object -First 120\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T13:56:37.544Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern 'def controller_goal_attachment|def controller_reattach_receipt|def controller_reattach' -Context 0,28\"",
+          "session_id": "AllfE0iyaBon9fwDuQl4HWfq"
+        }
+      },
+      {
+        "time": "2026-09-10T13:56:39.063Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' -Pattern 'def controller_goal_attachment|def controller_reattach_receipt|def controller_reattach' -Context 0,28\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:01:46.787Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-10T14:04:29.762Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryHost.js'; $c=Get-Content $p; '---LOCK AREA---'; for($i=300;$i -le 365;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CONSTRUCTOR CACHE---'; for($i=405;$i -le 438;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CACHED SNAPSHOT TO HANDLERS---'; for($i=1658;$i -le 1712;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---EXPORTS---'; $start=[Math]::Max(0,$c.Length-45); for($i=$start;$i -lt $c.Length;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "session_id": "Zmuk3Pj4pVutSH-r-vh9L25L"
+        }
+      },
+      {
+        "time": "2026-09-10T14:04:31.258Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryHost.js'; $c=Get-Content $p; '---LOCK AREA---'; for($i=300;$i -le 365;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CONSTRUCTOR CACHE---'; for($i=405;$i -le 438;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CACHED SNAPSHOT TO HANDLERS---'; for($i=1658;$i -le 1712;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---EXPORTS---'; $start=[Math]::Max(0,$c.Length-45); for($i=$start;$i -lt $c.Length;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:04:50.778Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryHost.js'; $c=Get-Content $p; for($i=0;$i -le 38;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CTOR HEAD---'; for($i=375;$i -le 420;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "session_id": "asLi34GhK8KwwkX8Y01CiRh-"
+        }
+      },
+      {
+        "time": "2026-09-10T14:04:52.404Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryHost.js'; $c=Get-Content $p; for($i=0;$i -le 38;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}; '---CTOR HEAD---'; for($i=375;$i -le 420;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:05:24.637Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $c=Get-Content $p; for($i=1490;$i -le 1608;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "session_id": "KYVsCnLhPwYyrneQ3zgi9hw6"
+        }
+      },
+      {
+        "time": "2026-09-10T14:05:25.664Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py'; $c=Get-Content $p; for($i=1490;$i -le 1608;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:00.377Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/services/recoveryIpc.js','electron/main.js'); foreach($p in $files){ Write-Output ('---'+$p+'---'); $c=Get-Content $p; if($p -like '*product_session_receipts.py'){for($i=0;$i -lt $c.Length;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}} elseif($p -like '*coordination.py'){foreach($r in @(@(1060,1135),@(1250,1335),@(1410",
+          "session_id": "uvnugtYLsqGskxTbP-YAqE7d"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:01.883Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py','resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/services/recoveryIpc.js','electron/main.js'); foreach($p in $files){ Write-Output ('---'+$p+'---'); $c=Get-Content $p; if($p -like '*product_session_receipts.py'){for($i=0;$i -lt $c.Length;$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}} elseif($p -like '*coordination.py'){foreach($r in @(@(1060,1135),@(1250,1335),@(1410",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:18.561Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$queries=@(@('electron/services/runtimeOrchestrator.js','connectorAttestationForHealth'),@('electron/services/recoveryHost.js','connectorAttestationForHealth'),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py','def _controller_continuity_control'),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py','if continuity_action == \\\"reattach\\\"'),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','",
+          "session_id": "Oh9byUm01M0M5NgW7gJn_0bo"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:20.171Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$queries=@(@('electron/services/runtimeOrchestrator.js','connectorAttestationForHealth'),@('electron/services/recoveryHost.js','connectorAttestationForHealth'),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py','def _controller_continuity_control'),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py','if continuity_action == \\\"reattach\\\"'),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py','",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:35.303Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py'; foreach($pat in @('no_advance_events =','control_center_events =','reobserved_events =','reconstruction_events =','criterion_completed_events =','no_advance =','control_center =','reobserved =','reconstruction =','criterion_completed =')){ Write-Output ('---'+$pat+'---'); Select-String -Path $p -Pattern $pat -SimpleMatch -Context 10,55 | Select-Object -First 3 }\"",
+          "session_id": "Ibycyg5qhCtulFtPEcFyMTOu"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:36.763Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py'; foreach($pat in @('no_advance_events =','control_center_events =','reobserved_events =','reconstruction_events =','criterion_completed_events =','no_advance =','control_center =','reobserved =','reconstruction =','criterion_completed =')){ Write-Output ('---'+$pat+'---'); Select-String -Path $p -Pattern $pat -SimpleMatch -Context 10,55 | Select-Object -First 3 }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:48.904Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py',1440,1608),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py',650,735),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py',850,915)); foreach($s in $sets){$p=$s[0];$c=Get-Content $p; Write-Output ('---'+$p+' '+$s[1]+'-'+$s[2]+'---'); for($i=$s[1]-1;$i -le [Math]::Min($s[2]-1,$c.Length-1);$i++){('{0,4}: {1}' -f ($i+1),$c[$i",
+          "session_id": "BWALbaOJ0eSbyJOWyceiBo2t"
+        }
+      },
+      {
+        "time": "2026-09-10T14:08:50.421Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py',1440,1608),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py',650,735),@('resources/coding-tools-mcp/coding_tools_mcp/cross_session_continuity_report.py',850,915)); foreach($s in $sets){$p=$s[0];$c=Get-Content $p; Write-Output ('---'+$p+' '+$s[1]+'-'+$s[2]+'---'); for($i=$s[1]-1;$i -le [Math]::Min($s[2]-1,$c.Length-1);$i++){('{0,4}: {1}' -f ($i+1),$c[$i",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:09:16.481Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/tests' -Filter '*.py' | Select-String -Pattern 'controller_knowledge_no_advance_observed|execution_control_center_progress_observed|managed_execution_reobserved|goal_reconstruction_observed|remaining_criterion_completed' -Context 4,24 | Select-Object -First 320\"",
+          "session_id": "EZPtD9fxL4ysg3TstnIPY1y5"
+        }
+      },
+      {
+        "time": "2026-09-10T14:09:18.172Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-ChildItem 'resources/coding-tools-mcp/tests' -Filter '*.py' | Select-String -Pattern 'controller_knowledge_no_advance_observed|execution_control_center_progress_observed|managed_execution_reobserved|goal_reconstruction_observed|remaining_criterion_completed' -Context 4,24 | Select-Object -First 320\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:10:08.703Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py',1,180),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py',1180,1410),@('resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py',1,260)); foreach($s in $sets){$p=$s[0];$c=Get-Content $p; Write-Output ('---'+$p+' '+$s[1]+'-'+$s[2]+'---'); for($i=$s[1]-1;$i -le [Math]::Min($s[2]-1,$c.Length-1);$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}}\"",
+          "session_id": "6osIvRfRdJ0VlU99z4CTIRCb"
+        }
+      },
+      {
+        "time": "2026-09-10T14:10:10.304Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/controller_reattach.py',1,180),@('resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py',1180,1410),@('resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py',1,260)); foreach($s in $sets){$p=$s[0];$c=Get-Content $p; Write-Output ('---'+$p+' '+$s[1]+'-'+$s[2]+'---'); for($i=$s[1]-1;$i -le [Math]::Min($s[2]-1,$c.Length-1);$i++){('{0,4}: {1}' -f ($i+1),$c[$i])}}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:10:22.086Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' -Pattern 'next_critical_gap|criterion_coverage|proof_refs|next_action' -Context 4,28 | Select-Object -First 220\"",
+          "session_id": "V-CatEYJT9Kwlx2A2kWn_Oqk"
+        }
+      },
+      {
+        "time": "2026-09-10T14:10:23.771Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' -Pattern 'next_critical_gap|criterion_coverage|proof_refs|next_action' -Context 4,28 | Select-Object -First 220\"",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T14:12:17.766Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "72a570244f564b37a5044ff74940c6f5",
+    "orchestration": {
+      "run_id": "a0619b0e55d84ec6b9e3e9d46faf8b57",
+      "wave_id": "5fd68517dab24ba3953b2d4f61ac256b",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+      "contract_fp": ""
+    },
+    "objective": "Read repository instructions and exact N24 implementation anchors needed for a lawful bounded patch. Do not mutate source. Focus on AGENTS.md plus exact symbols in product_session_receipts.py, coordination.py, recoveryIpc.js, recoveryHost.js, and electron/main.js. Preserve all unrelated dirty work.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ODA5TEmf5tJu8EDcscXAgzle",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 2298,
+      "finished_at": "2026-09-10T14:13:15.388Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 12,
+          "head_hash": "83a9c950864632dd392ebd78e1a89036922bad45ca0b5ed1ee4eeb30131f34fa"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a0619b0e55d84ec6b9e3e9d46faf8b57\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a0619b0e55d84ec6b9e3e9d46faf8b57\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "a0619b0e55d84ec6b9e3e9d46faf8b57",
+        "wave_id": "5fd68517dab24ba3953b2d4f61ac256b",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Read repository instructions and exact N24 implementation anchors needed for a lawful bounded patch. Do not mutate source. Focus on AGENTS.md plus exact symbols in product_session_receipts.py, coordination.py, recoveryIpc.js, recoveryHost.js, and electron/main.js. Preserve all unrelated dirty work.",
+          "objective_revision": 1,
+          "objective_sha256": "4861c012ac268bf731b84159d0c6fddb2dcdd97f1644c203abf8c01f2a2adae3",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "0e679baf3d3ac60e36343642b11a6d23f3296081d3cb96173b24ecc10bd6e0bf",
+    "completion_report_acknowledged_id": "0e679baf3d3ac60e36343642b11a6d23f3296081d3cb96173b24ecc10bd6e0bf",
+    "completion_report_acknowledged_at": "2026-09-10T14:20:30.790Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-10T14:12:17.768Z",
+    "updated_at": "2026-09-10T14:23:35.055Z",
+    "events": [
+      {
+        "time": "2026-09-10T14:12:17.768Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T14:12:18.491Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T14:12:28.251Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-10T14:12:28.260Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T14:12:59.569Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/AGENTS.md'; if(Test-Path $p){Get-Content $p}else{'NO_NESTED_AGENTS'}\"",
+          "session_id": "eMhMzeXdxnkq3ODLRQUujrOU"
+        }
+      },
+      {
+        "time": "2026-09-10T14:13:00.937Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/AGENTS.md'; if(Test-Path $p){Get-Content $p}else{'NO_NESTED_AGENTS'}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:13:13.386Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js'); Get-FileHash -Algorithm SHA256 $files | ForEach-Object { $_.Path + ' ' + $_.Hash }\"",
+          "session_id": "ODA5TEmf5tJu8EDcscXAgzle"
+        }
+      },
+      {
+        "time": "2026-09-10T14:13:15.388Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=@('resources/coding-tools-mcp/coding_tools_mcp/coordination.py','electron/main.js','electron/services/recoveryHost.js'); Get-FileHash -Algorithm SHA256 $files | ForEach-Object { $_.Path + ' ' + $_.Hash }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T14:20:09.173Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "0e679baf3d3ac60e36343642b11a6d23f3296081d3cb96173b24ecc10bd6e0bf"
+        }
+      },
+      {
+        "time": "2026-09-10T14:20:20.011Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T14:20:30.790Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0e679baf3d3ac60e36343642b11a6d23f3296081d3cb96173b24ecc10bd6e0bf"
+        }
+      },
+      {
+        "time": "2026-09-10T14:20:40.565Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T14:20:58.403Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+        }
+      },
+      {
+        "time": "2026-09-10T14:22:16.364Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-10T14:23:46.362Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "435ad48a07f94309bceeb60ebacc04e0",
+    "orchestration": {
+      "run_id": "7c223dd78a9948aea3d8abd68f82fcd3",
+      "wave_id": "1bf6a17bed71440aa475bdb33cbd6720",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+      "contract_fp": ""
+    },
+    "objective": "Natural #24 engineering implementation: make the existing G6 cross-session continuity proof contract attainable from real production operations by adding lawful runtime-derived producers/linkage for TG6-required receipts that production currently does not reliably emit. Preserve fail-closed semantics, do not synthesize or backfill historical receipts, do not trust caller-supplied evidence authority, do not add a ninth public tool, and preserve unrelated dirty work.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "stopped",
+        "integrity": {
+          "ok": true,
+          "checked": 281,
+          "head_hash": "53c28dc4169aac99a7933cd04d967fac41647aa722f11c2ec6bb6bb76c553752"
+        },
+        "reports": {}
+      },
+      "source_run_wave": {
+        "run_id": "7c223dd78a9948aea3d8abd68f82fcd3",
+        "wave_id": "1bf6a17bed71440aa475bdb33cbd6720",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Natural #24 engineering implementation: make the existing G6 cross-session continuity proof contract attainable from real production operations by adding lawful runtime-derived producers/linkage for TG6-required receipts that production currently does not reliably emit. Preserve fail-closed semantics, do not synthesize or backfill historical receipts, do not trust caller-supplied evidence authority, do not add a ninth public tool, and preserve unrelated dirty work.",
+          "objective_revision": 1,
+          "objective_sha256": "a91fb2c470f8414c2ae3c6a1789e09346d09705555327bd89276f26f4de1b6d7",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "ae17e51ba367761cdcaab7f07c053ef83ff824333d6e169144a4c4a6f3004a71",
+    "completion_report_acknowledged_id": "ae17e51ba367761cdcaab7f07c053ef83ff824333d6e169144a4c4a6f3004a71",
+    "completion_report_acknowledged_at": "2026-09-10T14:24:01.983Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-10T14:23:46.364Z",
+    "updated_at": "2026-09-10T14:24:52.345Z",
+    "events": [
+      {
+        "time": "2026-09-10T14:23:46.365Z",
+        "event": "orchestration_projection_exact_run_restored",
+        "details": {
+          "source": "canonical_ledger",
+          "run_id": "7c223dd78a9948aea3d8abd68f82fcd3"
+        }
+      },
+      {
+        "time": "2026-09-10T14:23:46.408Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "ae17e51ba367761cdcaab7f07c053ef83ff824333d6e169144a4c4a6f3004a71"
+        }
+      },
+      {
+        "time": "2026-09-10T14:23:59.924Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T14:24:01.983Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "ae17e51ba367761cdcaab7f07c053ef83ff824333d6e169144a4c4a6f3004a71"
+        }
+      },
+      {
+        "time": "2026-09-10T14:24:52.063Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T14:25:05.649Z",
+    "archive_reason": "superseded"
+  }
+]

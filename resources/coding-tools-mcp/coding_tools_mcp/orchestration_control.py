@@ -177,6 +177,14 @@ class OrchestrationControl:
     def _observation_now_ms() -> float:
         return time.perf_counter() * 1_000.0
 
+    def observation_now_ms(self) -> float:
+        """Return the current opaque runtime monotonic clock value.
+
+        The value is comparable only with observations carrying this control
+        instance's clock domain. It is descriptive timing, never authority.
+        """
+        return self._observation_now_ms()
+
     def record_observation_stage(
         self,
         ctx: RunContext,
@@ -226,7 +234,29 @@ class OrchestrationControl:
     def begin_observation_stage(self, ctx: RunContext, *, stage: str) -> None:
         stage_name = str(stage or "").strip().lower()
         if stage_name in {"execution", "proof", "acceptance"}:
-            ctx.observation_stage_starts[stage_name] = self._observation_now_ms()
+            started = self._observation_now_ms()
+            ctx.observation_stage_starts[stage_name] = started
+            if stage_name == "acceptance":
+                try:
+                    self.ledger.append_event(
+                        ctx.run_id,
+                        wave_id=ctx.wave_id,
+                        delegation_id=ctx.delegation_id,
+                        event_type="observation_stage_anchor_recorded",
+                        state_before=ctx.state,
+                        state_after=ctx.state,
+                        payload={
+                            "stage": "acceptance",
+                            "source": "coding_mcp_runtime",
+                            "measurement": "stage_start_anchor",
+                            "clock_domain": self._observation_clock_domain,
+                            "start_ms": round(started, 6),
+                            "observer_plane": "coding_mcp_runtime",
+                        },
+                    )
+                except Exception:
+                    # Timing evidence must never change EOCL authority.
+                    pass
 
     def finish_observation_stage(self, ctx: RunContext, *, stage: str) -> bool:
         stage_name = str(stage or "").strip().lower()
@@ -234,6 +264,106 @@ class OrchestrationControl:
         if started is None:
             return False
         return self.record_observation_stage(ctx, stage=stage_name, start_ms=started)
+
+    def _acceptance_observation_anchor(self, ctx: RunContext) -> dict[str, Any]:
+        try:
+            events = self.ledger.list_events(ctx.run_id, wave_id=ctx.wave_id)
+        except Exception:
+            return {}
+        for event in reversed(events):
+            if str(event.get("event_type") or "") != "observation_stage_anchor_recorded":
+                continue
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            if str(payload.get("stage") or "").strip().lower() != "acceptance":
+                continue
+            clock_domain = str(payload.get("clock_domain") or "").strip()
+            start_ms = payload.get("start_ms")
+            if (
+                not clock_domain
+                or isinstance(start_ms, bool)
+                or not isinstance(start_ms, (int, float))
+                or not math.isfinite(float(start_ms))
+                or float(start_ms) < 0
+            ):
+                return {}
+            return {"clock_domain": clock_domain, "start_ms": float(start_ms)}
+        return {}
+
+    def _record_acceptance_component_span(
+        self,
+        ctx: RunContext,
+        *,
+        measurement: str,
+        start_ms: float,
+        end_ms: float,
+    ) -> bool:
+        span_prefix = {
+            "controller_processing": "a2-controller-processing-v1",
+            "acceptance_wait": "a2-acceptance-wait-v1",
+        }.get(measurement)
+        if not span_prefix:
+            return False
+        try:
+            self.ledger.record_observation_span(
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                span={
+                    "span_id": f"{span_prefix}:{ctx.wave_id}",
+                    "stage": "acceptance",
+                    "source": "coding_mcp_runtime",
+                    "measurement": measurement,
+                    "clock_domain": self._observation_clock_domain,
+                    "start_ms": start_ms,
+                    "end_ms": max(start_ms, end_ms),
+                    "observer_plane": "coding_mcp_runtime",
+                },
+            )
+        except Exception:
+            return False
+        return True
+
+    def record_controller_acceptance_observations(
+        self,
+        ctx: RunContext,
+        *,
+        controller_started_ms: float,
+    ) -> dict[str, Any]:
+        """Record controller work and same-clock acceptance wait.
+
+        A durable monotonic anchor can be compared only when its opaque clock
+        domain matches this control instance. Cross-clock recovery records the
+        controller span but deliberately leaves acceptance wait unknown.
+        """
+        try:
+            started = float(controller_started_ms)
+        except (TypeError, ValueError):
+            return {"controller_processing": False, "acceptance_wait": False, "same_clock": False}
+        if not math.isfinite(started) or started < 0:
+            return {"controller_processing": False, "acceptance_wait": False, "same_clock": False}
+        finished = self._observation_now_ms()
+        controller_recorded = self._record_acceptance_component_span(
+            ctx,
+            measurement="controller_processing",
+            start_ms=started,
+            end_ms=finished,
+        )
+        anchor = self._acceptance_observation_anchor(ctx)
+        same_clock = bool(anchor) and str(anchor.get("clock_domain") or "") == self._observation_clock_domain
+        wait_recorded = False
+        if same_clock:
+            anchor_start = float(anchor["start_ms"])
+            if anchor_start <= started:
+                wait_recorded = self._record_acceptance_component_span(
+                    ctx,
+                    measurement="acceptance_wait",
+                    start_ms=anchor_start,
+                    end_ms=started,
+                )
+        return {
+            "controller_processing": controller_recorded,
+            "acceptance_wait": wait_recorded,
+            "same_clock": same_clock,
+        }
 
     def begin(
         self,

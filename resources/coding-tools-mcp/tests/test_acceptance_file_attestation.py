@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import tempfile
 import unittest
@@ -27,6 +28,7 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
         existing_dirty_source_paths: list[str] | None = None,
         patch_paths: list[str] | None = None,
         proof_statuses: list[str] | None = None,
+        proof_source_paths: list[str] | None = None,
     ):
         state = runtime.task_state.ensure_started("acceptance file attestation fixture")
         identity = runtime._orchestration_workspace_identity(".")
@@ -64,6 +66,15 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
         runtime.orchestration_control.begin_proof(ctx)
         statuses = (["passed"] if patch_paths else []) if proof_statuses is None else list(proof_statuses)
         for index, status in enumerate(statuses):
+            proof_metadata = None
+            if proof_source_paths is not None:
+                proof_metadata = {
+                    "proof_source_binding": runtime.proof_ledger.source_binding(
+                        base_head=str(identity.get("base_head") or ""),
+                        contract_fp=ctx.contract_fp,
+                        input_paths=proof_source_paths,
+                    ),
+                }
             runtime.orchestration_ledger.record_proof(
                 run_id=ctx.run_id,
                 wave_id=ctx.wave_id,
@@ -71,10 +82,92 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
                 stage_version="1",
                 input_fingerprint=hashlib.sha256(f"fixture-{index}-{status}".encode("utf-8")).hexdigest(),
                 status=status,
+                metadata=proof_metadata,
             )
         runtime.orchestration_control.mark_accepting(ctx, proof_summary={"proof": "green"})
         runtime.task_state.set_orchestration_projection(ctx.projection(), event="test_accepting_projection")
         return ctx
+
+    def test_bound_proof_metadata_is_persisted(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            source.write_bytes(b"VALUE = 2\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["app.py"],
+                    patch_paths=["app.py"],
+                    proof_source_paths=["app.py"],
+                )
+                proofs = runtime.orchestration_ledger.list_proofs(ctx.run_id, wave_id=ctx.wave_id)
+                binding = proofs[0]["metadata"]["proof_source_binding"]
+                self.assertEqual(binding["schema_version"], 1)
+                self.assertEqual(binding["paths"], ["app.py"])
+                self.assertEqual(binding["base_head"], str(runtime._orchestration_workspace_identity(".").get("base_head") or ""))
+                self.assertEqual(binding["contract_fp"], ctx.contract_fp)
+                self.assertEqual(len(binding["path_fingerprint"]), 64)
+            finally:
+                runtime.close()
+
+    def test_bound_proof_rejects_proof_covered_source_drift_even_with_current_sha(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            source.write_bytes(b"VALUE = 2\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["app.py"],
+                    patch_paths=["app.py"],
+                    proof_source_paths=["app.py"],
+                )
+                source.write_bytes(b"VALUE = 3\n")
+                current_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+                with self.assertRaises(ToolFailure) as drift:
+                    runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": [{"path": "app.py", "sha256": current_sha256}],
+                    })
+                self.assertEqual(drift.exception.code, "ACCEPTANCE_PROOF_SOURCE_DRIFT")
+                self.assertEqual(drift.exception.details["reason"], "proof_covered_path_changed")
+                self.assertEqual(runtime.orchestration_control.snapshot(ctx.run_id).state, "ACCEPTING")
+                self.assertEqual(runtime.orchestration_ledger.list_checkpoints(ctx.run_id), [])
+            finally:
+                runtime.close()
+
+    def test_bound_proof_accepts_unchanged_target_when_unrelated_path_drifts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "app.py"
+            unrelated = root / "unrelated.py"
+            source.write_bytes(b"VALUE = 2\n")
+            unrelated.write_bytes(b"OTHER = 1\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["app.py"],
+                    patch_paths=["app.py"],
+                    proof_source_paths=["app.py"],
+                )
+                unrelated.write_bytes(b"OTHER = 2\n")
+                accepted = runtime.task_control({
+                    "action": "accept",
+                    "run_id": ctx.run_id,
+                    "wave_id": ctx.wave_id,
+                })
+                self.assertTrue(accepted["accepted"])
+                checkpoint = runtime.orchestration_ledger.list_checkpoints(ctx.run_id, wave_id=ctx.wave_id)[-1]
+                binding = checkpoint["metadata"]["proof_source_binding"]
+                self.assertTrue(binding["required"])
+                self.assertEqual(binding["path_count"], 1)
+            finally:
+                runtime.close()
 
     def test_nul_git_status_parser_preserves_unicode_and_rename_copy_records(self) -> None:
         raw = (
@@ -808,6 +901,158 @@ class AcceptanceFileAttestationTests(unittest.TestCase):
                 self.assertTrue(runtime.task_control({"action": "accept", "run_id": ctx.run_id, "wave_id": ctx.wave_id})["accepted"])
             finally:
                 runtime.close()
+
+    def test_accept_recovers_legacy_continuation_effect_without_patch_surface_event(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "dirty.py"
+            source.write_bytes(b"VALUE = 2\n")
+            runtime = Runtime(root)
+            try:
+                ctx = self._accepting_run(
+                    runtime,
+                    allowed_paths=["dirty.py"],
+                    existing_dirty_source_paths=["dirty.py"],
+                    proof_statuses=["passed"],
+                )
+                action_id = "a" * 64
+                source_sha256 = hashlib.sha256(source.read_bytes()).hexdigest()
+                manifest = {
+                    "backup_root": f".coding-tools/orchestration/continuation-effects/{action_id}",
+                    "files": [{
+                        "path": "dirty.py",
+                        "preimage_sha256": "b" * 64,
+                        "postimage_sha256": source_sha256,
+                        "backup_path": f".coding-tools/orchestration/continuation-effects/{action_id}/dirty.py",
+                    }],
+                }
+                manifest_sha256 = hashlib.sha256(
+                    json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                ).hexdigest()
+                runtime.orchestration_ledger.append_event(
+                    ctx.run_id,
+                    event_type="run_continuation_effect_prepared",
+                    payload={
+                        "action_id": action_id,
+                        "driver_generation": 1,
+                        "effect_kind": "patch",
+                        "manifest_sha256": manifest_sha256,
+                    },
+                )
+                runtime.orchestration_ledger.append_event(
+                    ctx.run_id,
+                    wave_id=ctx.wave_id,
+                    event_type="write_lease_acquired",
+                    payload={
+                        "allowed_paths": ["dirty.py"],
+                        "existing_dirty_source_paths": ["dirty.py"],
+                        "protected_paths": [],
+                        "mode": "continuation_effect_journal",
+                        "owner": "MCP",
+                        "owner_session": "run_continuation_driver",
+                    },
+                )
+                runtime.orchestration_ledger.append_event(
+                    ctx.run_id,
+                    event_type="run_continuation_effect_observed",
+                    payload={
+                        "action_id": action_id,
+                        "driver_generation": 1,
+                        "status": "applied",
+                        "recovery_reason": "",
+                    },
+                )
+                effect = {
+                    "action_id": action_id,
+                    "run_id": ctx.run_id,
+                    "driver_generation": 1,
+                    "effect_kind": "patch",
+                    "manifest": manifest,
+                    "manifest_sha256": manifest_sha256,
+                    "status": "applied",
+                    "recovery_reason": "",
+                }
+                with patch.object(runtime.orchestration_ledger, "get_run_continuation_effect", return_value=effect):
+                    accepted = runtime.task_control({
+                        "action": "accept",
+                        "run_id": ctx.run_id,
+                        "wave_id": ctx.wave_id,
+                        "acceptance_files": [{"path": "dirty.py", "sha256": source_sha256}],
+                    })
+                self.assertTrue(accepted["accepted"])
+                receipts = runtime.orchestration_ledger.list_checkpoints(ctx.run_id)[-1]["metadata"]["accepted_files"]
+                self.assertEqual(receipts["source"], "explicit_acceptance_attestations")
+                self.assertEqual([item["path"] for item in receipts["files"]], ["dirty.py"])
+            finally:
+                runtime.close()
+
+    def test_unbound_run_level_continuation_effect_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "dirty.py"
+            source.write_bytes(b"VALUE = 2\n")
+            action_id = "a" * 64
+            manifest = {
+                "backup_root": f".coding-tools/orchestration/continuation-effects/{action_id}",
+                "files": [{
+                    "path": "dirty.py",
+                    "preimage_sha256": "b" * 64,
+                    "postimage_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    "backup_path": f".coding-tools/orchestration/continuation-effects/{action_id}/dirty.py",
+                }],
+            }
+            manifest_sha256 = hashlib.sha256(
+                json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+
+            class UnboundLedger:
+                workspace = root
+
+                @staticmethod
+                def list_events(_run_id: str) -> list[dict[str, object]]:
+                    return [
+                        {
+                            "seq": 1,
+                            "wave_id": None,
+                            "event_type": "run_continuation_effect_prepared",
+                            "payload": {
+                                "action_id": action_id,
+                                "driver_generation": 1,
+                                "effect_kind": "patch",
+                                "manifest_sha256": manifest_sha256,
+                            },
+                        },
+                        {
+                            "seq": 2,
+                            "wave_id": None,
+                            "event_type": "run_continuation_effect_observed",
+                            "payload": {"action_id": action_id, "driver_generation": 1, "status": "applied"},
+                        },
+                    ]
+
+                @staticmethod
+                def get_run_continuation_effect(_action_id: str) -> dict[str, object]:
+                    return {
+                        "run_id": "run-test",
+                        "effect_kind": "patch",
+                        "status": "applied",
+                        "manifest": manifest,
+                        "manifest_sha256": manifest_sha256,
+                    }
+
+            with self.assertRaises(ToolFailure) as unbound:
+                _durable_wave_acceptance_paths(
+                    UnboundLedger(),
+                    "run-test",
+                    "wave-test",
+                    workspace=root,
+                    explicit_attested_paths=["dirty.py"],
+                    explicit_attestations=[{
+                        "path": "dirty.py",
+                        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                    }],
+                )
+            self.assertEqual(unbound.exception.code, "ACCEPTANCE_FILE_ATTESTATION_REQUIRED")
 
     def test_mixed_proof_checkpoint_fingerprint_uses_only_passed_set(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

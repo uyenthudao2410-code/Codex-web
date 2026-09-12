@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "91ba3c39e1ac4c67b822a3f5b27cbb79",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "_flsKIXCZu1MIlN5LhyWNjjF",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2975,
+    "finished_at": "2026-09-12T07:09:08.137Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T07:09:04.864Z",
+  "updated_at": "2026-09-12T07:09:08.137Z",
+  "events": [
+    {
+      "time": "2026-09-12T07:09:04.864Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T07:09:05.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace E:\\DEV\\Codex-web --source-head 7bc1caee37107a15e74eb078b52fe314e5fa33ab --minimum-decision-cohort 1",
+        "session_id": "_flsKIXCZu1MIlN5LhyWNjjF"
+      }
+    },
+    {
+      "time": "2026-09-12T07:09:08.137Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_stage_latency_attribution.py --workspace E:\\DEV\\Codex-web --source-head 7bc1caee37107a15e74eb078b52fe314e5fa33ab --minimum-decision-cohort 1",
+        "status": "passed"
+      }
+    }
+  ]
+}

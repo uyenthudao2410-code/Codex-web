@@ -38,12 +38,14 @@ const {
   waitForDeferredParentExit,
   deferredWorkerEnvironment,
   spawnDeferredWorker,
+  assessDeferredHandoff,
   runDeferredWorker,
   deferExecute,
   parseDeferredWorkerArgs,
   run,
   readAuthority,
   connectorAcknowledgementEligible,
+  waitForReplacementOperation,
   waitForReplacementReady
 } = require('../scripts/full-clean-activation');
 
@@ -259,7 +261,7 @@ test('deferred queue TTL covers the full-clean budget but remains bounded', () =
     const operationId = deferredOperationId(now);
     const envelope = buildDeferredEnvelope({ paths, checkpoint, operationId, requestedAtUnixMs: now, parentPid: process.pid + 1000 });
     assert.equal(envelope.expires_at_unix_ms - now, DEFERRED_DEFAULT_TTL_MS);
-    assert.ok(DEFERRED_DEFAULT_TTL_MS > 120_000, 'queue must cover the service default plus handoff overhead');
+    assert.equal(DEFERRED_DEFAULT_TTL_MS, 300_000, 'queue must preserve the full bounded connector-verification window');
     assert.ok(DEFERRED_MAX_TTL_MS >= DEFERRED_DEFAULT_TTL_MS);
     assert.ok(DEFERRED_ACTIVATION_TTL_MS < DEFERRED_DEFAULT_TTL_MS, 'wire request remains bounded independently');
     assert.throws(() => buildDeferredEnvelope({
@@ -398,7 +400,7 @@ test('detached worker waits for the post-tool boundary before contacting Recover
         assert.equal(options.operationId, operationId);
         assert.equal(options.now, now + 1);
         assert.equal(options.expiresAtUnixMs, now + 1 + DEFERRED_ACTIVATION_TTL_MS);
-        assert.equal(options.timeoutMs, 120_000);
+        assert.equal(options.timeoutMs, DEFERRED_DEFAULT_TTL_MS - 1);
         assert.equal(JSON.parse(env.FULL_CLEAN_SOURCE_CHECKPOINT_JSON).checkpoint_id, checkpoint.checkpoint_id);
         return {
           ok: true,
@@ -727,6 +729,54 @@ test('deferred worker environment strips ambient credential and loader variables
   assert.equal(Object.hasOwn(safe, 'FULL_CLEAN_SOURCE_CHECKPOINT_JSON'), false);
 });
 
+test('Windows deferred handoff requires a fresh live supervisor capability receipt', () => {
+  const { root, paths } = tempPaths();
+  const now = Date.now();
+  try {
+    const ready = assessDeferredHandoff(paths, {
+      platform: 'win32',
+      now,
+      isAlive: (pid) => pid === 7654,
+      readStatus: () => ({
+        version: 1,
+        supervisor_pid: 7654,
+        state: 'healthy',
+        last_check_at: new Date(now - 1000).toISOString(),
+        deferred_activation_worker_v1: true
+      })
+    });
+    assert.equal(ready.ready, true);
+    assert.equal(ready.mode, 'recovery_supervisor');
+    assert.equal(ready.supervisor_pid, 7654);
+
+    const legacy = assessDeferredHandoff(paths, {
+      platform: 'win32',
+      now,
+      isAlive: () => true,
+      readStatus: () => ({ version: 1, supervisor_pid: 7654, state: 'healthy', last_check_at: new Date(now).toISOString() })
+    });
+    assert.equal(legacy.ready, false);
+    assert.equal(legacy.code, 'DEFERRED_SUPERVISOR_CAPABILITY_UNAVAILABLE');
+
+    const stale = assessDeferredHandoff(paths, {
+      platform: 'win32',
+      now,
+      isAlive: () => true,
+      readStatus: () => ({
+        version: 1,
+        supervisor_pid: 7654,
+        state: 'healthy',
+        last_check_at: new Date(now - 30_000).toISOString(),
+        deferred_activation_worker_v1: true
+      })
+    });
+    assert.equal(stale.ready, false);
+    assert.equal(stale.code, 'DEFERRED_SUPERVISOR_STATUS_STALE');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('execute command queues instead of synchronously self-calling the active MCP tool', async () => {
   const { root, paths } = tempPaths();
   const descriptor = {
@@ -753,6 +803,7 @@ test('execute command queues instead of synchronously self-calling the active MC
       checkpoint,
       env: {},
       now: Date.now(),
+      platform: 'linux',
       spawnProcess: () => fakeChild
     });
     assert.equal(queued.ok, true);
@@ -761,9 +812,55 @@ test('execute command queues instead of synchronously self-calling the active MC
     assert.equal(queued.fully_ready, false);
     assert.equal(queued.expires_at_unix_ms - queued.requested_at_unix_ms, DEFERRED_DEFAULT_TTL_MS);
     assert.equal(queued.worker_pid, 6789);
+    assert.equal(queued.supervisor_pid, null);
+    assert.equal(queued.handoff, 'post_tool_call');
     assert.match(queued.request_path, /full-clean-activation/);
     assert.equal(fs.existsSync(queued.request_path), true);
     assert.equal(fs.existsSync(deferredResultPath(paths, queued.operation_id)), false);
+    fs.rmSync(queued.request_path, { force: true });
+    fs.rmSync(deferredParentMarkerPath(paths, queued.operation_id), { force: true });
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Windows execute queues for the independent Recovery Supervisor without spawning a managed child', async () => {
+  const { root, paths } = tempPaths();
+  const descriptor = {
+    version: 1,
+    host: '127.0.0.1',
+    port: 43123,
+    token: crypto.randomBytes(32).toString('base64url'),
+    owner: 'recovery-host',
+    owner_pid: process.pid,
+    instance_id: 'instance-supervisor-command-0001',
+    installation_id: paths.runtimeIdentity().installation_id,
+    runtime_mode: paths.runtimeIdentity().mode
+  };
+  fs.mkdirSync(paths.dataRoot(), { recursive: true });
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(descriptor), 'utf8');
+  let spawned = false;
+  try {
+    const queued = await deferExecute({
+      paths,
+      checkpoint,
+      env: {},
+      now: Date.now(),
+      platform: 'win32',
+      assessDeferredHandoffFn: () => ({
+        ready: true,
+        required: true,
+        mode: 'recovery_supervisor',
+        supervisor_pid: 8765,
+        code: 'READY'
+      }),
+      spawnDeferredWorkerFn: async () => { spawned = true; return { pid: 9999 }; }
+    });
+    assert.equal(spawned, false);
+    assert.equal(queued.worker_pid, null);
+    assert.equal(queued.supervisor_pid, 8765);
+    assert.equal(queued.handoff, 'recovery_supervisor');
+    assert.equal(fs.existsSync(queued.request_path), true);
     fs.rmSync(queued.request_path, { force: true });
     fs.rmSync(deferredParentMarkerPath(paths, queued.operation_id), { force: true });
   } finally {
@@ -850,6 +947,138 @@ test('replacement connector ACK eligibility accepts exact discovery or compatibi
   }, descriptor, epochId, startedAt), false);
 });
 
+test('replacement operation polling tolerates the prior epoch only while the exact bootstrap owns handoff', async () => {
+  const { root, paths } = tempPaths();
+  try {
+    const operationId = 'full-clean-cli-bootstrap-transition-0001';
+    const epochId = 'epoch-bootstrap-transition-0001';
+    const initialDescriptor = {
+      instance_id: 'old-instance-transition-0001',
+      owner_pid: 1001,
+      installation_id: paths.runtimeIdentity().installation_id,
+      runtime_mode: paths.runtimeIdentity().mode
+    };
+    const replacementDescriptor = {
+      ...initialDescriptor,
+      instance_id: 'new-instance-transition-0001',
+      owner_pid: 1002
+    };
+    let poll = 0;
+    const result = await waitForReplacementOperation(paths, initialDescriptor, operationId, 5_000, {
+      now: () => 1_700_000_000_000 + poll,
+      waitFn: async () => { poll += 1; },
+      loadDescriptor: () => poll >= 2
+        ? { ...replacementDescriptor, activation_epoch_id: epochId }
+        : replacementDescriptor,
+      clientFactory: () => ({
+        status: async () => poll >= 2 ? {
+          activation_epoch: {
+            activation_epoch_id: epochId,
+            operation_id: operationId,
+            state: 'VERIFYING',
+            admission_open: false
+          },
+          runtime: { fully_ready: false }
+        } : {
+          recovery_bootstrap: { operation_id: operationId, state: 'started' },
+          activation_epoch: {
+            activation_epoch_id: 'epoch-prior-ready-0001',
+            operation_id: 'full-clean-refresh-prior-ready-0001',
+            state: 'READY',
+            admission_open: true
+          },
+          runtime: { fully_ready: false }
+        },
+        call: async () => ({
+          operation_id: operationId,
+          state: 'accepted',
+          activation_epoch_id: epochId,
+          activation_epoch: { activation_epoch_id: epochId, state: 'VERIFYING' }
+        })
+      })
+    });
+    assert.equal(result.activationEpochId, epochId);
+    assert.ok(poll >= 2);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('replacement operation recovers from exact completed bootstrap result when activation status is unavailable', async () => {
+  const { root, paths } = tempPaths();
+  try {
+    const operationId = 'full-clean-cli-bootstrap-result-0001';
+    const epochId = 'activation-bootstrap-result-0001';
+    const initialDescriptor = {
+      instance_id: 'old-instance-bootstrap-result-0001',
+      owner_pid: 1001,
+      installation_id: paths.runtimeIdentity().installation_id,
+      runtime_mode: paths.runtimeIdentity().mode
+    };
+    const replacementDescriptor = {
+      ...initialDescriptor,
+      instance_id: 'new-instance-bootstrap-result-0001',
+      owner_pid: 1002,
+      activation_epoch_id: epochId
+    };
+    const bootstrapResult = {
+      operation_id: operationId,
+      state: 'completed',
+      activation_epoch_id: epochId,
+      activation_state: 'READY',
+      admission_open: true,
+      fully_ready: true
+    };
+    const exactStatus = {
+      activation_epoch: {
+        activation_epoch_id: epochId,
+        operation_id: operationId,
+        state: 'READY',
+        admission_open: true
+      },
+      runtime: { fully_ready: true }
+    };
+    let activationStatusCalls = 0;
+    const result = await waitForReplacementOperation(paths, initialDescriptor, operationId, 5_000, {
+      loadDescriptor: () => replacementDescriptor,
+      readBootstrapResultFn: () => bootstrapResult,
+      clientFactory: () => ({
+        status: async () => exactStatus,
+        call: async () => {
+          activationStatusCalls += 1;
+          throw Object.assign(new Error('ephemeral activation status is unavailable'), {
+            code: 'ACTIVATION_OPERATION_NOT_FOUND'
+          });
+        }
+      })
+    });
+    assert.equal(result.activationEpochId, epochId);
+    assert.equal(result.operation, bootstrapResult, 'handoff must reuse the verified completed bootstrap result');
+    assert.equal(activationStatusCalls, 0, 'completed exact bootstrap evidence must not require ephemeral activation status');
+
+    let mismatchClock = 0;
+    await assert.rejects(
+      waitForReplacementOperation(paths, initialDescriptor, operationId, 5, {
+        now: () => mismatchClock,
+        waitFn: async () => { mismatchClock += 10; },
+        loadDescriptor: () => ({ ...replacementDescriptor, activation_epoch_id: 'activation-bootstrap-result-other' }),
+        readBootstrapResultFn: () => bootstrapResult,
+        clientFactory: () => ({
+          status: async () => exactStatus,
+          call: async () => {
+            throw Object.assign(new Error('ephemeral activation status is unavailable'), {
+              code: 'ACTIVATION_OPERATION_NOT_FOUND'
+            });
+          }
+        })
+      }),
+      { code: 'ACTIVATION_OPERATION_MISMATCH' }
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('replacement connector ACK waits for fresh current-epoch discovery and runs once', async () => {
   const { root, paths } = tempPaths();
   try {
@@ -919,6 +1148,70 @@ test('replacement connector ACK waits for fresh current-epoch discovery and runs
     assert.equal(result.ready, true);
     assert.equal(result.connectorAckAttempted, true);
     assert.equal(ackCalls, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('replacement readiness waits through a transient prior runtime snapshot epoch', async () => {
+  const { root, paths } = tempPaths();
+  try {
+    const startedAt = Date.now();
+    const operationId = 'full-clean-cli-runtime-cache-0001';
+    const epochId = 'epoch-runtime-cache-0001';
+    const initialDescriptor = {
+      instance_id: 'old-instance-runtime-cache-0001',
+      owner_pid: 1001,
+      installation_id: paths.runtimeIdentity().installation_id,
+      runtime_mode: paths.runtimeIdentity().mode
+    };
+    const replacementDescriptor = {
+      ...initialDescriptor,
+      instance_id: 'new-instance-runtime-cache-0001',
+      owner_pid: 1002,
+      activation_epoch_id: epochId,
+      started_at: new Date(startedAt).toISOString()
+    };
+    let clock = startedAt;
+    let snapshotCalls = 0;
+    const result = await waitForReplacementReady(paths, initialDescriptor, epochId, 5_000, {
+      operationId,
+      notBeforeUnixMs: startedAt,
+      now: () => clock,
+      waitFn: async () => { clock += 1; },
+      loadDescriptor: () => replacementDescriptor,
+      clientFactory: () => ({
+        status: async () => ({
+          activation_epoch: {
+            activation_epoch_id: epochId,
+            operation_id: operationId,
+            state: 'READY',
+            admission_open: true
+          },
+          runtime: { fully_ready: true }
+        }),
+        call: async (action) => {
+          if (action === 'runtime.lightweight_snapshot') {
+            snapshotCalls += 1;
+            return {
+              activationEpoch: {
+                activation_epoch_id: snapshotCalls === 1
+                  ? 'epoch-runtime-cache-prior-0001'
+                  : epochId
+              },
+              connectorRefreshRequired: false,
+              connectorAcknowledgementPending: false,
+              connectorContractState: 'UNCHANGED_ACKNOWLEDGED',
+              fullyReady: true
+            };
+          }
+          throw new Error(`unexpected action ${action}`);
+        }
+      })
+    });
+    assert.equal(result.ready, true);
+    assert.equal(snapshotCalls, 2, 'readiness must poll until the runtime snapshot reaches the exact epoch');
+    assert.equal(result.runtime.activationEpoch.activation_epoch_id, epochId);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

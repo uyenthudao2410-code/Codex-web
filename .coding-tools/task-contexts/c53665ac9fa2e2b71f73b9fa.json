@@ -1,0 +1,323 @@
+{
+  "version": 2,
+  "task_id": "1eebc8855381489faa97be7595ba96b3",
+  "orchestration": {
+    "run_id": "b4cbeabf1b1d47a58d68a57b07a6114e",
+    "wave_id": "ebf5458ef0f3475ca98bb457c4177be5",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Fresh Python full-suite proof shard 1 of 6 for component-state convergence; run exactly these 18 test modules with no source writes.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T18:01:06.224Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T18:01:06.224Z"
+    }
+  ],
+  "current_step": "Awaiting acceptance",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "C3ts9-3uTjHRFbjKLR22Wogx",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-08T18:01:05.692Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 22,
+        "head_hash": "b4ef85ebabc8c16714dfd56b4fec3bb33ccd3d3385fe27cdd3bb1b174d2d1cff"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b4cbeabf1b1d47a58d68a57b07a6114e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b4cbeabf1b1d47a58d68a57b07a6114e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "b4cbeabf1b1d47a58d68a57b07a6114e",
+      "wave_id": "ebf5458ef0f3475ca98bb457c4177be5",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fresh Python full-suite proof shard 1 of 6 for component-state convergence; run exactly these 18 test modules with no source writes.",
+        "objective_revision": 1,
+        "objective_sha256": "ae506f4a8b398aa894be3108a9926328f5f518933e808d891a6352c9dd9b6ccd",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "416ccaa47d7d45dd9a3b82712b160c77",
+          "stage_id": "check:2e51c5512effa4e0",
+          "status": "passed",
+          "duration_ms": 263249,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "62889c307b442897b294c4aa5c79497834dd61805bc4840285520d1581694ceb",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. -q -p no:cacheprovider resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py resources/coding-tools-mcp/tests/test_activation_epoch.py resources/coding-tools-mcp/tests/test_activation_ledger_census_script.py resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_activation_restart_escape.py resources/coding-tools-mcp/tests/test_agent_workflow_idempotency.py resources/coding-tools-mcp/tests/test_budget_control.py resources/coding-tools-mcp/tests/test_code_mode_bindings.py resources/coding-tools-mcp/tests/test_codex_bridge.py resources/coding-tools-mcp/tests/test_command_presentation.py resources/coding-tools-mcp/tests/test_committed_review.py resources/coding-tools-mcp/tests/test_connector_attestation.py resources/coding-tools-mcp/tests/test_connector_bootstrap_identity.py resources/coding-tools-mcp/tests/test_context_compiler.py resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_controller_usage_post_turn.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 4 lines | tail: '184 passed, 1 skipped, 85 subtests passed in 261.26s (0:04:21)'",
+      "finished_at": "2026-09-08T18:01:05.692Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "C3ts9-3uTjHRFbjKLR22Wogx"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "b4cbeabf1b1d47a58d68a57b07a6114e",
+        "owner_wave": "ebf5458ef0f3475ca98bb457c4177be5",
+        "size_bytes": 285,
+        "command_id": "C3ts9-3uTjHRFbjKLR22Wogx",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:C3ts9-3uTjHRFbjKLR22Wogx:stdout",
+            "total_stream_bytes": 285,
+            "total_retained_bytes": 285,
+            "head_retained_bytes": 285,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:C3ts9-3uTjHRFbjKLR22Wogx:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "created_at": "2026-09-08T17:56:35.807Z",
+  "updated_at": "2026-09-08T18:01:07.435Z",
+  "events": [
+    {
+      "time": "2026-09-08T17:56:35.807Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fresh Python full-suite proof shard 1 of 6 for component-state convergence; run exactly these 18 test modules with no source writes."
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:37.136Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:39.408Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:40.602Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:40.613Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:41.790Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:42.274Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:56:43.164Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. -q -p no:cacheprovider resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py resources/coding-tools-mcp/tests/test_activation_epoch.py resources/coding-tools-mcp/tests/test_activation_ledger_census_script.py resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_activation_restart_escape.py r",
+        "session_id": "C3ts9-3uTjHRFbjKLR22Wogx"
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:05.692Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. -q -p no:cacheprovider resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py resources/coding-tools-mcp/tests/test_accepted_result_economics_report.py resources/coding-tools-mcp/tests/test_activation_epoch.py resources/coding-tools-mcp/tests/test_activation_ledger_census_script.py resources/coding-tools-mcp/tests/test_activation_preflight.py resources/coding-tools-mcp/tests/test_activation_restart_escape.py r",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:06.222Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:06.224Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:06.808Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:06.812Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:06.987Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "62889c307b442897b294c4aa5c79497834dd61805bc4840285520d1581694ceb"
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:07.140Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T18:01:07.435Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

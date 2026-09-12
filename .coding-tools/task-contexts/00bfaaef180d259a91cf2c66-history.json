@@ -1,0 +1,508 @@
+[
+  {
+    "version": 2,
+    "task_id": "7a1918b46a064c84a0a0619b44ccb5c5",
+    "orchestration": {
+      "run_id": "963b51a3efb2455087f07ac54a7f3002",
+      "wave_id": "b6bba78356b84428acdefa97fd269633",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "d39d0f9d2bfabd95818d00fb6eedd84fedf0446504f27dd18fd978b26c22d472",
+      "contract_fp": ""
+    },
+    "objective": "Complete a workspace task",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "YelUwTnbNIYSB5G8hY33Vv98",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 358,
+      "finished_at": "2026-09-10T05:15:09.264Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+            "state": "file",
+            "sha256": "cac677269220099b528c6dded3618c138e0d3300011d8229eb9742ff0f5f0439",
+            "size_bytes": 59688,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "963b51a3efb2455087f07ac54a7f3002",
+            "wave_id": "b6bba78356b84428acdefa97fd269633"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+            "state": "file",
+            "sha256": "4779cab62f2d748834ab56cbd6d056c10b7874a819694d30754ed4ebbad1e903",
+            "size_bytes": 34407,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "963b51a3efb2455087f07ac54a7f3002",
+            "wave_id": "b6bba78356b84428acdefa97fd269633"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+            "state": "file",
+            "sha256": "5b13f958a2ce00494629d0a67719a0e314c0eacbec7c2682fa015a049cd0ad5a",
+            "size_bytes": 88407,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "963b51a3efb2455087f07ac54a7f3002",
+            "wave_id": "b6bba78356b84428acdefa97fd269633"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+            "state": "file",
+            "sha256": "aca242c748ed4bf2dcc84e917b026af06fcd84c9cd6afcd09fa809549c517043",
+            "size_bytes": 23678,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "963b51a3efb2455087f07ac54a7f3002",
+            "wave_id": "b6bba78356b84428acdefa97fd269633"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+            "state": "file",
+            "sha256": "62a73468a1e480eadb19c5c9784a10982b3d0cb6909e6566fbcc1aba121fa0ee",
+            "size_bytes": 153284,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "963b51a3efb2455087f07ac54a7f3002",
+            "wave_id": "b6bba78356b84428acdefa97fd269633"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 1,
+          "observation_count": 1,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "c8783e56f3fb40c297d451c1705a0255",
+              "seq": 46592,
+              "event_time": "2026-09-10T01:43:11.380Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "15b52830daedfcb9461bbc3966d97a38e9034046590ac784654d9e385a01c5bc",
+                "5e63a461946ee1ce663100830c89b9cdfa3ab070a43cf34038ef18dc0a4f5527",
+                "68523b5aa0133b4546cabece585aa67616e95dadea3b5ae09a0805738f2d814b",
+                "8d6916dee3b472850be13e17ca96aaf08788c7a82eb1fdb38017cfbfbe2b0618",
+                "9ce403b921f7861584805a44f666b19e26145deb41d30638b68f4ee68f9bc1fe"
+              ],
+              "file_count": 5,
+              "additions": 176,
+              "removals": 5,
+              "line_changes": 181,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 62,
+          "head_hash": "6f20bd367d7629ec10703dbc853051a4c1ca407aa68fa3ed306decc92cc40abc"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-963b51a3efb2455087f07ac54a7f3002\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-963b51a3efb2455087f07ac54a7f3002\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "963b51a3efb2455087f07ac54a7f3002",
+        "wave_id": "b6bba78356b84428acdefa97fd269633",
+        "checkpoint_id": "1aaeb07c93704435b936f6b66dd36ee5",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "d39d0f9d2bfabd95818d00fb6eedd84fedf0446504f27dd18fd978b26c22d472",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Natural #14: improve P2 rework observability without fabricating historical root causes. Safely classify ACCEPTANCE_FILE_SHA_MISMATCH under existing source_base_drift, and prospectively preserve only allowlisted content-free permission discriminators already present in structured ToolFailure.details.permission so PERMISSION_REQUIRED can be descriptively bucketed while remaining causally unclassified. Preserve existing CHECK_FAILED/BUILD_VERIFICATION_FAILED behavior and all EOCL/policy semantics.",
+          "objective_revision": 1,
+          "objective_sha256": "735396dffae0d5d2bbf28e77b7b415ef01d6795df491f5c43a7901585493883c",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 4,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "4cdaf42416c14c27acd7ffddb38f0549",
+            "stage_id": "check:18e6f92440da1fa2",
+            "status": "passed",
+            "duration_ms": 10939,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "fce00b8a0ae94b4ead3de22c3c1f6319",
+            "stage_id": "check:72c69437b924ac7f",
+            "status": "passed",
+            "duration_ms": 14755,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "7d254a5be3414d6da3f9a51b205452f1",
+            "stage_id": "check:65538f87de221534",
+            "status": "passed",
+            "duration_ms": 3314,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "54d63276c0b3435bb4fdf9cb1c7c023f",
+            "stage_id": "check:0ea1c812311f4427",
+            "status": "passed",
+            "duration_ms": 1052,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "44e18b09ef5e938815e816b419a4fc8332d7b31f016de2c43d86b05a7bc86448",
+    "completion_report_acknowledged_id": "44e18b09ef5e938815e816b419a4fc8332d7b31f016de2c43d86b05a7bc86448",
+    "completion_report_acknowledged_at": "2026-09-10T05:16:00.676Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-10T05:11:33.114Z",
+    "updated_at": "2026-09-10T05:16:14.961Z",
+    "events": [
+      {
+        "time": "2026-09-10T05:11:33.114Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Complete a workspace task"
+        }
+      },
+      {
+        "time": "2026-09-10T05:11:33.120Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:07.898Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --unified=0 -- resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_rework_diagnosis.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "session_id": "T2X36MHBfXow3wjZY_HQxh6c"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:08.179Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --unified=0 -- resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_rework_diagnosis.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:17.232Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --name-only -- resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_rework_diagnosis.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "session_id": "2ZuhNbrWHP0JLo4FDJ39vrAL"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:17.557Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --name-only -- resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_rework_diagnosis.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:29.435Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --unified=1 -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "session_id": "C_Sn7bmlkLVgVKqQYFDciv2y"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:29.769Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --unified=1 -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:40.833Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -G p2_failure_detail --unified=3 -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "session_id": "V6GA_3R8aetuZiAflCbo1-_Q"
+        }
+      },
+      {
+        "time": "2026-09-10T05:12:41.200Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -G p2_failure_detail --unified=3 -- resources/coding-tools-mcp/tests/test_execution_hub.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:23.506Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "session_id": "EQQc075rv43vMQ2U60f0lWij"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:23.850Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:35.028Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256",
+          "session_id": "-9gfB4g3EOoDLVNibcKHcx_q"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:35.293Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:43.660Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py SHA256",
+          "session_id": "4KNRy8fvBI71QT5hsGLclwFY"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:44.116Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\workflow_tools.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:54.258Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256",
+          "session_id": "vaW0LJgQDCyNePrj4tQJZkYc"
+        }
+      },
+      {
+        "time": "2026-09-10T05:13:54.627Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:05.928Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py SHA256",
+          "session_id": "bLlrsa2y0fvrdroQSw4BITOz"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:06.259Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\tests\\test_task_state_and_build.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:20.596Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:28.596Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "SESSION_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:47.916Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"direct_outcomes\" /c:\"relevant_invariants\" /c:\"required_evidence\" /c:\"excluded_scope\" /c:\"falsification_probe\" /c:\"adjacent_risks\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "session_id": "lt4noFBsleox9bWUZUQ9lhEH"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:48.182Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"direct_outcomes\" /c:\"relevant_invariants\" /c:\"required_evidence\" /c:\"excluded_scope\" /c:\"falsification_probe\" /c:\"adjacent_risks\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:14:59.974Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"outcome_id\" /c:\"risk_id\" /c:\"evidence_id\" /c:\"probe_id\" /c:\"truth_domains\" /c:\"executed\" /c:\"passed\" /c:\"summary\" /c:\"source\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "session_id": "uBnKF7W4Gg-6XK8Wzz1GQ8d9"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:00.375Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"outcome_id\" /c:\"risk_id\" /c:\"evidence_id\" /c:\"probe_id\" /c:\"truth_domains\" /c:\"executed\" /c:\"passed\" /c:\"summary\" /c:\"source\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:09.008Z",
+        "event": "command_started",
+        "details": {
+          "command": "findstr /n /c:\"evidence status\" /c:\"status not in\" /c:\"expected_failure_signal\" /c:\"method\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "session_id": "YelUwTnbNIYSB5G8hY33Vv98"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:09.264Z",
+        "event": "command_finished",
+        "details": {
+          "command": "findstr /n /c:\"evidence status\" /c:\"status not in\" /c:\"expected_failure_signal\" /c:\"method\" resources\\coding-tools-mcp\\coding_tools_mcp\\resolution_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:38.487Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:38.492Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:38.597Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "44e18b09ef5e938815e816b419a4fc8332d7b31f016de2c43d86b05a7bc86448"
+        }
+      },
+      {
+        "time": "2026-09-10T05:15:48.769Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-10T05:16:00.676Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "44e18b09ef5e938815e816b419a4fc8332d7b31f016de2c43d86b05a7bc86448"
+        }
+      },
+      {
+        "time": "2026-09-10T05:16:14.961Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T05:17:39.809Z",
+    "archive_reason": "finished"
+  }
+]

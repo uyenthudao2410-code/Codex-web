@@ -1,0 +1,693 @@
+{
+  "version": 2,
+  "task_id": "430da2b61f864254920579f400234cdf",
+  "orchestration": {
+    "run_id": "11a340b90db848b28536a2e8f531d762",
+    "wave_id": "ea247ca8797840839eadd3a2f793309d",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "e1034bd14aa3b08e2ca0fd6e069a4793ad5ccb69cefbbcffe753458305a3656d",
+    "contract_fp": ""
+  },
+  "objective": "No-patch technical acceptance packet for the repaired continuation-consent host integration. Adopt the exact current bytes of only the five authorized files, verify the loopback-only approval flow and fail-closed security/runtime semantics, run the four specified managed proof commands, and preserve controller-owned final acceptance. Do not modify source bytes.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-09T04:41:28.561Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-09T04:41:28.561Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-09T04:41:28.561Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "8iq2Ib7SCjAzAI0t7UKs5y5c",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 5450,
+    "finished_at": "2026-09-09T04:44:08.984Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py",
+          "state": "file",
+          "sha256": "3fe2633c997d4dfe7e5e6c757d59eac258e2db8579734d56cdd1cf5fc52f9064",
+          "size_bytes": 14965,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "11a340b90db848b28536a2e8f531d762",
+          "wave_id": "ea247ca8797840839eadd3a2f793309d"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "state": "file",
+          "sha256": "77ae50c06620563e570f3026ca81cba129c99fc85c3e6e3d724f0f7ac6d8a5dd",
+          "size_bytes": 85993,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "11a340b90db848b28536a2e8f531d762",
+          "wave_id": "ea247ca8797840839eadd3a2f793309d"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "state": "file",
+          "sha256": "14d78fff5bf0e98f6d88bd86257b32b5851164e909532bbd938f835354cb9b9d",
+          "size_bytes": 93609,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "11a340b90db848b28536a2e8f531d762",
+          "wave_id": "ea247ca8797840839eadd3a2f793309d"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "state": "file",
+          "sha256": "7a6913f155300e4a31fa9d734336e0dd49e8b6b04c8dfce63c5f21117c431413",
+          "size_bytes": 159303,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "11a340b90db848b28536a2e8f531d762",
+          "wave_id": "ea247ca8797840839eadd3a2f793309d"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+          "state": "file",
+          "sha256": "53b92e068b2b69a3a6aa96b4a65b2d465fcab1a528749e0689abd72cc73e681b",
+          "size_bytes": 8738,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "11a340b90db848b28536a2e8f531d762",
+          "wave_id": "ea247ca8797840839eadd3a2f793309d"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 50,
+        "head_hash": "1225b087100bf3e8c6417c49da55f1b292e1bc5062fc1ead709c44b198925d35"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11a340b90db848b28536a2e8f531d762\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11a340b90db848b28536a2e8f531d762\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "11a340b90db848b28536a2e8f531d762",
+      "wave_id": "ea247ca8797840839eadd3a2f793309d",
+      "checkpoint_id": "4d26152402d84cc7a8be6f5968387444",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "e1034bd14aa3b08e2ca0fd6e069a4793ad5ccb69cefbbcffe753458305a3656d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "No-patch technical acceptance packet for the repaired continuation-consent host integration. Adopt the exact current bytes of only the five authorized files, verify the loopback-only approval flow and fail-closed security/runtime semantics, run the four specified managed proof commands, and preserve controller-owned final acceptance. Do not modify source bytes.",
+        "objective_revision": 1,
+        "objective_sha256": "ef7852b37bbe33211fb637f835f6b571d6325cb90c5169959ea2f328bb3aa684",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "2eb520cda13246fc9470a0577333e0e6",
+          "stage_id": "check:0952f453ad4f926e",
+          "status": "passed",
+          "duration_ms": 3995,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "fdf1c25c24fd4196b567bbe1b990be96",
+          "stage_id": "check:720040ed1e4b6829",
+          "status": "passed",
+          "duration_ms": 46499,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "ba64faea813449688abcd9e2b2da7af3",
+          "stage_id": "check:7ec691b1eda131d2",
+          "status": "passed",
+          "duration_ms": 94676,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "def7ef82d6224410ad484a13b2d643a3",
+          "stage_id": "check:80a1a46bd01d26a3",
+          "status": "passed",
+          "duration_ms": 1385,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "15dba5273f53d4b86d3f98575dcc89eda78f846ca85d8bce2e70af0dc0c09e6f",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_continuation_consent_http.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '5 passed in 2.15s'",
+      "finished_at": "2026-09-09T04:39:03.967Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "6abrQwLT07sD_HiCBx0ysl0i"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "11a340b90db848b28536a2e8f531d762",
+        "owner_wave": "ea247ca8797840839eadd3a2f793309d",
+        "size_bytes": 100,
+        "command_id": "6abrQwLT07sD_HiCBx0ysl0i",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:6abrQwLT07sD_HiCBx0ysl0i:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:6abrQwLT07sD_HiCBx0ysl0i:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_run_continuation.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '30 passed, 2 subtests passed in 44.69s'",
+      "finished_at": "2026-09-09T04:39:51.113Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "D953Ept7JjAGigPAUbYJzi52"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "11a340b90db848b28536a2e8f531d762",
+        "owner_wave": "ea247ca8797840839eadd3a2f793309d",
+        "size_bytes": 119,
+        "command_id": "D953Ept7JjAGigPAUbYJzi52",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:D953Ept7JjAGigPAUbYJzi52:stdout",
+            "total_stream_bytes": 119,
+            "total_retained_bytes": 119,
+            "head_retained_bytes": 119,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:D953Ept7JjAGigPAUbYJzi52:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '50 passed, 9 subtests passed in 91.99s (0:01:31)'",
+      "finished_at": "2026-09-09T04:41:26.322Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "5OkPGg32ZGUHXcRh6qxF-ZX5"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "11a340b90db848b28536a2e8f531d762",
+        "owner_wave": "ea247ca8797840839eadd3a2f793309d",
+        "size_bytes": 122,
+        "command_id": "5OkPGg32ZGUHXcRh6qxF-ZX5",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:5OkPGg32ZGUHXcRh6qxF-ZX5:stdout",
+            "total_stream_bytes": 122,
+            "total_retained_bytes": 122,
+            "head_retained_bytes": 122,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:5OkPGg32ZGUHXcRh6qxF-ZX5:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T04:38:28.194Z",
+  "updated_at": "2026-09-09T04:48:17.642Z",
+  "events": [
+    {
+      "time": "2026-09-09T04:38:28.194Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "No-patch technical acceptance packet for the repaired continuation-consent host integration. Adopt the exact current bytes of only the five authorized files, verify the loopback-only approval flow and fail-closed security/runtime semantics, run the four specified managed proof commands, and preserve controller-owned final acceptance. Do not modify source bytes."
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:29.395Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:30.466Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:30.471Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:55.841Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:56.734Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:57.933Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:57.939Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:59.290Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T04:38:59.824Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:39:00.629Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_continuation_consent_http.py -q",
+        "session_id": "6abrQwLT07sD_HiCBx0ysl0i"
+      }
+    },
+    {
+      "time": "2026-09-09T04:39:03.967Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_continuation_consent_http.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:39:05.374Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py -q",
+        "session_id": "D953Ept7JjAGigPAUbYJzi52"
+      }
+    },
+    {
+      "time": "2026-09-09T04:39:51.113Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:39:52.276Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "session_id": "5OkPGg32ZGUHXcRh6qxF-ZX5"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:26.322Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub.py tests/test_stateless_http_2026.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:27.739Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "session_id": "Upw9WizWvIfhFmNDtuJ6uBfn"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:28.265Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts/check_module_size.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:28.557Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:28.561Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:28.954Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:28.957Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:29.050Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "787ec074736351643cae08081df3504d46d9442bf855c2ea4dbf6055480f0aab"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:29.187Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:44.132Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:45.114Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --no-ext-diff --unified=100 -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "session_id": "arNjNX_6PSMiepSfN4wx246N"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:45.561Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --no-ext-diff --unified=100 -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:56.040Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:57.014Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --no-ext-diff --unified=60 -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+        "session_id": "alAm6TrcdAq4i6CgZJ5PbF9_"
+      }
+    },
+    {
+      "time": "2026-09-09T04:41:57.517Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --no-ext-diff --unified=60 -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:42:08.161Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:44:03.176Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"^\" resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py .",
+        "session_id": "8iq2Ib7SCjAzAI0t7UKs5y5c"
+      }
+    },
+    {
+      "time": "2026-09-09T04:44:08.984Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"^\" resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py .",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T04:44:19.467Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:48:08.527Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-09T04:48:08.527Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T04:48:08.643Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "15dba5273f53d4b86d3f98575dcc89eda78f846ca85d8bce2e70af0dc0c09e6f"
+      }
+    },
+    {
+      "time": "2026-09-09T04:48:17.642Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

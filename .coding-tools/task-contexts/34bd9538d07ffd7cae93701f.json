@@ -1,0 +1,255 @@
+{
+  "version": 2,
+  "task_id": "cc4c928825da4ac9bf29f2cc18dcf2dc",
+  "orchestration": {
+    "run_id": "105033e48cfd4594acfc51a32e6268c7",
+    "wave_id": "4339b0f655554e73be978a6b6d8dacb5",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+    "contract_fp": ""
+  },
+  "objective": "Natural #5: fix the prepared-workflow exact-binding defect that rejects execute after run -> REPLAN -> new prepare wave because validate_prepared_workflow_binding reads run-level metadata.phase instead of authoritative active prepared-wave state. Preserve all exact RUN/WAVE/task/workflow/state fail-closed checks and historical metadata. Prepare only; no mutation yet.",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "JJ5wDZhOAt7w4O6avDyGGfMd",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": 701,
+    "finished_at": "2026-09-09T09:45:31.474Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "failed",
+      "integrity": {
+        "ok": true,
+        "checked": 24,
+        "head_hash": "4aca67866c8b9ea353823ec37c680e3dbffa53eb56e653700d7eafe191aea489"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-105033e48cfd4594acfc51a32e6268c7\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-105033e48cfd4594acfc51a32e6268c7\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "105033e48cfd4594acfc51a32e6268c7",
+      "wave_id": "4339b0f655554e73be978a6b6d8dacb5",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #5: fix the prepared-workflow exact-binding defect that rejects execute after run -> REPLAN -> new prepare wave because validate_prepared_workflow_binding reads run-level metadata.phase instead of authoritative active prepared-wave state. Preserve all exact RUN/WAVE/task/workflow/state fail-closed checks and historical metadata. Prepare only; no mutation yet.",
+        "objective_revision": 1,
+        "objective_sha256": "311d592e6fb0dfc78ebd208b3dc28ee87b481665defda8e959169a50cc5674f6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "0e9ff83859cff340713fb7221d264cf0b310f5a4292c80929e8f727b084ae703",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-09T09:41:31.794Z",
+  "updated_at": "2026-09-09T09:45:43.526Z",
+  "events": [
+    {
+      "time": "2026-09-09T09:41:31.794Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #5: fix the prepared-workflow exact-binding defect that rejects execute after run -> REPLAN -> new prepare wave because validate_prepared_workflow_binding reads run-level metadata.phase instead of authoritative active prepared-wave state. Preserve all exact RUN/WAVE/task/workflow/state fail-closed checks and historical metadata. Prepare only; no mutation yet."
+      }
+    },
+    {
+      "time": "2026-09-09T09:41:33.504Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T09:41:39.304Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T09:41:39.312Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T09:41:58.477Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"^\" resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+        "session_id": "zZH-r_YMxNgfSZUU41Kmtp-Y"
+      }
+    },
+    {
+      "time": "2026-09-09T09:41:58.965Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"^\" resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:42:09.015Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A90 -B40 \"current_run = self.orchestration_ledger.get_run|validate_prepared_workflow_binding|current_ctx =|get_wave|list_waves\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "session_id": "KFl0AdF5-H1cv3M8EcouUADh"
+      }
+    },
+    {
+      "time": "2026-09-09T09:42:09.573Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A90 -B40 \"current_run = self.orchestration_ledger.get_run|validate_prepared_workflow_binding|current_ctx =|get_wave|list_waves\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:33.342Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A90 -B20 \"class RunContext|@dataclass.*RunContext|def snapshot\\(|def begin_replan_wave\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "session_id": "tjp9N4sHu__ywf-BM0I2Gv-k"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:33.785Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A90 -B20 \"class RunContext|@dataclass.*RunContext|def snapshot\\(|def begin_replan_wave\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:45.516Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A100 -B25 \"def begin\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "session_id": "YYL4bTeKy5ccpTEBt2UKRsMO"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:45.995Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A100 -B25 \"def begin\\(\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:57.450Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A80 -B40 \"orchestration_prepared|prepared_binding|phase == \\\"prepare\\\"|phase != \\\"prepare\\\"\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "session_id": "ELxIsYdOlbm0HmMsxJnADNzh"
+      }
+    },
+    {
+      "time": "2026-09-09T09:43:57.974Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A80 -B40 \"orchestration_prepared|prepared_binding|phase == \\\"prepare\\\"|phase != \\\"prepare\\\"\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:44:24.797Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_EVENT_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-09T09:44:39.288Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_EVENT_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-09T09:45:31.032Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A45 -B20 \"action == \\\"stop\\\"|case \\\"stop\\\"|def .*stop\" resources/coding-tools-mcp/coding_tools_mcp/task_control.py resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "session_id": "JJ5wDZhOAt7w4O6avDyGGfMd"
+      }
+    },
+    {
+      "time": "2026-09-09T09:45:31.474Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A45 -B20 \"action == \\\"stop\\\"|case \\\"stop\\\"|def .*stop\" resources/coding-tools-mcp/coding_tools_mcp/task_control.py resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-09T09:45:43.523Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "0e9ff83859cff340713fb7221d264cf0b310f5a4292c80929e8f727b084ae703"
+      }
+    }
+  ]
+}

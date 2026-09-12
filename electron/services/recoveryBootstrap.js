@@ -27,13 +27,17 @@ const {
 } = require('./recoveryHostLauncher');
 const {
   normalizeProcessStartToken,
-  observeProcessIdentity,
+  observeLifecycleProcessIdentity,
   processIdentityFrom,
   sameProcessIdentity,
   terminateExactProcessTree,
   waitForExactProcessExit
 } = require('./processIdentity');
 const { writeJsonAtomic, ensureParent } = require('./jsonStore');
+const {
+  normalizeTrustedAttestation,
+  revalidateTrustedRecoveryHostSource
+} = require('./trustedRecoveryBootstrap');
 
 const BOOTSTRAP_SCHEMA_VERSION = 1;
 const BOOTSTRAP_KIND = 'recovery_host_bootstrap';
@@ -63,6 +67,18 @@ function bootstrapError(code, message, details = {}) {
 }
 
 function text(value) { return String(value ?? '').trim(); }
+
+// Persist only bounded machine diagnostics, never process output or argv.
+function bootstrapFailureDetails(value = {}) {
+  const result = {};
+  for (const key of ['cause_code', 'termination_cause_code']) {
+    if (/^[A-Z][A-Z0-9_]{0,119}$/.test(String(value?.[key] || ''))) result[key] = value[key];
+  }
+  for (const key of ['pid', 'exit_code']) {
+    if (Number.isSafeInteger(value?.[key])) result[key] = value[key];
+  }
+  return result;
+}
 
 function canonicalDigest(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value), 'utf8').digest('hex');
@@ -208,6 +224,25 @@ function validateOptionalRefreshCheckpoint(value, refresh) {
   return validateCheckpoint(value);
 }
 
+function validateTrustedRecoveryBootstrap(value, sourceCheckpoint, refresh) {
+  if (value === undefined || value === null) return null;
+  if (refresh === true) {
+    throw bootstrapError(
+      'RECOVERY_BOOTSTRAP_INVALID',
+      'A trusted Recovery Supervisor bootstrap cannot be a checkpoint-free refresh.'
+    );
+  }
+  try {
+    return normalizeTrustedAttestation(value, sourceCheckpoint);
+  } catch (error) {
+    throw bootstrapError(
+      String(error?.code || 'RECOVERY_BOOTSTRAP_INVALID'),
+      'Trusted Recovery Supervisor bootstrap attestation is invalid.',
+      { cause_code: String(error?.code || '') || null }
+    );
+  }
+}
+
 function expectedIdentity(paths) {
   const identity = paths?.runtimeIdentity?.();
   if (!identity || !INSTALLATION_ID.test(text(identity.installation_id).toLowerCase())
@@ -289,6 +324,7 @@ function buildBootstrapEnvelope({
   expiresAtUnixMs = Number(requestedAtUnixMs) + DEFAULT_TTL_MS,
   activationEpochId = '',
   refresh = false,
+  trustedRecoveryBootstrap = null,
   oldHostProcessStartToken = descriptor?.owner_process_start_token
 } = {}) {
   const identity = expectedIdentity(paths);
@@ -308,6 +344,8 @@ function buildBootstrapEnvelope({
   const epoch = text(activationEpochId);
   if (epoch && !EPOCH_ID.test(epoch)) throw bootstrapError('RECOVERY_BOOTSTRAP_INVALID', 'Recovery Host bootstrap activation epoch is invalid.');
   const processRefresh = refresh === true;
+  const canonicalSourceCheckpoint = validateOptionalRefreshCheckpoint(sourceCheckpoint, processRefresh);
+  const trusted = validateTrustedRecoveryBootstrap(trustedRecoveryBootstrap, canonicalSourceCheckpoint, processRefresh);
   const envelope = {
     schema_version: BOOTSTRAP_SCHEMA_VERSION,
     kind: BOOTSTRAP_KIND,
@@ -326,8 +364,9 @@ function buildBootstrapEnvelope({
     // managed jobs, P5 epochs and unexplained ownership remain hard blockers
     // in the independent canonical census.
     allow_acceptance_pending: true,
-    source_checkpoint: validateOptionalRefreshCheckpoint(sourceCheckpoint, processRefresh),
+    source_checkpoint: canonicalSourceCheckpoint,
     ...(processRefresh ? { refresh: true } : {}),
+    ...(trusted ? { trusted_recovery_bootstrap: trusted } : {}),
     ...(epoch ? { activation_epoch_id: epoch } : {})
   };
   return { ...envelope, integrity_sha256: canonicalDigest(envelope) };
@@ -341,7 +380,7 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
     'expected_installation_id', 'runtime_mode', 'app_root',
     'expected_disk_revision', 'allow_acceptance_pending', 'source_checkpoint', 'integrity_sha256'
   ];
-  const optional = ['activation_epoch_id', 'refresh'];
+  const optional = ['activation_epoch_id', 'refresh', 'trusted_recovery_bootstrap'];
   const keys = Object.keys(raw).sort();
   const allowed = new Set([...required, ...optional]);
   if (required.some((key) => !keys.includes(key)) || keys.some((key) => !allowed.has(key))) {
@@ -372,6 +411,7 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
   }
   const refresh = raw.refresh === true;
   const checkpoint = validateOptionalRefreshCheckpoint(raw.source_checkpoint, refresh);
+  const trusted = validateTrustedRecoveryBootstrap(raw.trusted_recovery_bootstrap, checkpoint, refresh);
   if (typeof raw.integrity_sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(raw.integrity_sha256)
     || raw.integrity_sha256 !== canonicalDigest(withoutIntegrity(raw))) throw bootstrapError('RECOVERY_BOOTSTRAP_INTEGRITY_FAILED', 'Recovery Host bootstrap envelope integrity check failed.');
   return {
@@ -388,6 +428,7 @@ function validateBootstrapEnvelope(raw, paths, { bootstrapId = '', now = Date.no
     expected_disk_revision: text(raw.expected_disk_revision).toLowerCase(),
     refresh,
     source_checkpoint: checkpoint,
+    trusted_recovery_bootstrap: trusted,
     bootstrap_path: bootstrapFile(paths, operationId),
     result_path: bootstrapResultFile(paths, operationId)
   };
@@ -464,7 +505,12 @@ function writeBootstrapResult(paths, result = {}, options = {}) {
     operation_id: operationId,
     state,
     completed_at_unix_ms: recordedAt,
-    ...(result.error ? { error: { code: text(result.error.code || 'RECOVERY_BOOTSTRAP_FAILED').slice(0, 120), message: text(result.error.message || result.error).slice(0, 2000) } } : {}),
+    ...(result.error ? { error: {
+      code: text(result.error.code || 'RECOVERY_BOOTSTRAP_FAILED').slice(0, 120),
+      message: text(result.error.message || result.error).slice(0, 2000),
+      ...(Object.keys(bootstrapFailureDetails(result.error.details)).length
+        ? { details: bootstrapFailureDetails(result.error.details) } : {})
+    } } : {}),
     ...(result.result !== undefined ? { result: result.result } : {})
   };
   const payload = { ...base, integrity_sha256: canonicalDigest(base) };
@@ -565,15 +611,17 @@ async function bootstrapCurrentRecoveryHost({
   expectedDiskRevision,
   activationEpochId = '',
   refresh = false,
+  trustedRecoveryBootstrap = null,
   forceRefresh = false,
   requestedAtUnixMs = Date.now(),
   expiresAtUnixMs = Number(requestedAtUnixMs) + DEFAULT_TTL_MS,
   timeoutMs = 15_000,
   spawnProcess = spawn,
   terminateProcess = defaultTerminateProcess,
-  processIdentityObserver = observeProcessIdentity,
+  processIdentityObserver = observeLifecycleProcessIdentity,
   waitForExactExit = waitForExactProcessExit,
   readDescriptor = loadRecoveryDescriptor,
+  revalidateTrustedSourceFn = revalidateTrustedRecoveryHostSource,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   log = null
 } = {}) {
@@ -581,6 +629,27 @@ async function bootstrapCurrentRecoveryHost({
   if (!freshness.installation_matches) throw bootstrapError('RECOVERY_HOST_INSTALLATION_MISMATCH', 'Refused to terminate a Recovery Host from another installation.', freshness);
   if (freshness.current && forceRefresh !== true) {
     return { required: false, stale: false, descriptor, status, freshness };
+  }
+  const canonicalSourceCheckpoint = validateOptionalRefreshCheckpoint(sourceCheckpoint, refresh === true);
+  const trusted = validateTrustedRecoveryBootstrap(
+    trustedRecoveryBootstrap,
+    canonicalSourceCheckpoint,
+    refresh === true
+  );
+  if (trusted) {
+    let verified;
+    try {
+      verified = await revalidateTrustedSourceFn(paths.appRoot(), canonicalSourceCheckpoint, trusted);
+    } catch (error) {
+      throw bootstrapError(
+        String(error?.code || 'TRUSTED_BOOTSTRAP_SOURCE_UNAVAILABLE'),
+        'Trusted Recovery Supervisor bootstrap source could not be revalidated before handoff.',
+        { cause_code: String(error?.code || '') || null }
+      );
+    }
+    if (verified?.attestation?.receipt_sha256 !== trusted.receipt_sha256) {
+      throw bootstrapError('TRUSTED_BOOTSTRAP_SOURCE_DRIFT', 'Trusted Recovery Supervisor bootstrap source receipt changed before handoff.');
+    }
   }
   const ownerPid = Number(descriptor?.owner_pid || 0);
   const ownerInstanceId = text(descriptor?.instance_id);
@@ -623,21 +692,24 @@ async function bootstrapCurrentRecoveryHost({
     paths,
     descriptor,
     operationId,
-    sourceCheckpoint,
+    sourceCheckpoint: canonicalSourceCheckpoint,
     expectedDiskRevision,
     requestedAtUnixMs,
     expiresAtUnixMs,
     activationEpochId,
     refresh: refresh === true,
+    trustedRecoveryBootstrap: trusted,
     oldHostProcessStartToken: ownerIdentity.process_start_token
   });
   const file = writeBootstrapEnvelope(paths, envelope);
   writeBootstrapResult(paths, { operation_id: envelope.operation_id, state: 'pending' });
+  const descriptorOptions = descriptorRequestOptions(descriptor);
+  let childStopMayHaveOccurred = false;
   try {
-    const descriptorOptions = descriptorRequestOptions(descriptor);
     // Ask the authenticated host to stop only its children first.  Transport
     // response loss is not proof that the stop did not happen; the exact
     // descriptor/PID checks below remain the mutation authority.
+    childStopMayHaveOccurred = true;
     try {
       await client.stop(
         { manual: false },
@@ -695,7 +767,10 @@ async function bootstrapCurrentRecoveryHost({
           throw bootstrapError('RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED', 'Recovery Host process identity could not be verified for termination.');
         }
         throw bootstrapError('RECOVERY_BOOTSTRAP_TERMINATION_FAILED', 'Stale Recovery Host exact termination failed.', {
-          cause_code: error?.code || ''
+          cause_code: error?.code || '',
+          termination_cause_code: error?.details?.cause_code || '',
+          pid: ownerPid,
+          exit_code: error?.details?.exit_code
         });
       }
     }
@@ -736,9 +811,44 @@ async function bootstrapCurrentRecoveryHost({
       writeBootstrapResult(paths, {
         operation_id: envelope.operation_id,
         state,
-        error: { code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED', message: error?.message || String(error) }
+        error: { code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED', message: error?.message || String(error), details: error?.details }
       });
     } catch { /* preserve the original handoff failure */ }
+    // runtime.stop happens before exact Recovery Host termination.  If a
+    // later fail-closed identity check refuses the handoff, restore the old
+    // runtime only when both the authenticated descriptor and OS start-token
+    // still prove the exact old owner.  This compensation cannot touch a
+    // replacement/recycled PID and never changes the terminal failure receipt.
+    if (childStopMayHaveOccurred && typeof client.start === 'function') {
+      try {
+        const currentDescriptor = readDescriptor(paths);
+        const descriptorStillExact = Number(currentDescriptor?.owner_pid || 0) === ownerPid
+          && text(currentDescriptor?.instance_id) === ownerInstanceId
+          && normalizeProcessStartToken(currentDescriptor?.owner_process_start_token)
+            === ownerIdentity.process_start_token;
+        if (descriptorStillExact) {
+          const observed = await processIdentityObserver(ownerPid);
+          if (observed?.state === 'live' && sameProcessIdentity(ownerIdentity, observed)) {
+            await client.start(
+              { reason: 'bootstrap_handoff_rollback' },
+              {
+                ...descriptorOptions,
+                timeout: Math.min(45_000, Math.max(5_000, Number(timeoutMs) || 15_000))
+              }
+            );
+            log?.warn?.('Restored the exact previous Recovery Host runtime after a refused bootstrap handoff.', {
+              operationId: envelope.operation_id,
+              code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED'
+            });
+          }
+        }
+      } catch (rollbackError) {
+        log?.error?.('Could not restore the previous Recovery Host runtime after bootstrap failure.', {
+          operationId: envelope.operation_id,
+          code: rollbackError?.code || 'RECOVERY_BOOTSTRAP_ROLLBACK_FAILED'
+        });
+      }
+    }
     throw error;
   }
 }

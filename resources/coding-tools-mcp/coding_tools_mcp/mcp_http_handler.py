@@ -42,6 +42,11 @@ from .protocol import (
     validate_rpc_envelope,
 )
 from .controller_usage_ingress import CONTROLLER_USAGE_META_KEY, active_controller_usage_context, controller_usage_request, decorate_controller_usage_status, record_controller_usage, tool_call_name
+from .continuation_consent_http import (
+    CONTINUATION_CONSENT_HTTP_PATH,
+    ContinuationConsentHTTPMixin,
+    local_continuation_consent_origin,
+)
 from .endpoint_identity import workspace_binding_id
 from .live_control import control_presence_projection, live_control_snapshot
 from .mcp_metadata import MCP_ENDPOINT_PATH, SERVER_NAME, SERVER_TITLE, server_card_payload  # noqa: F401  # compatibility re-export
@@ -64,6 +69,7 @@ from .transport_http import (
 from .http_hub_identity import HTTPHubIdentityMixin
 from .stateless_context import STATELESS_TASK_CONTEXT_META_KEY, resolve_stateless_task_context
 from .task_state import TaskStateStore
+from .task_snapshot_projection import build_task_snapshot_projection
 
 if TYPE_CHECKING:
     from .server import Runtime
@@ -88,7 +94,7 @@ def is_loopback_bind_host(host: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1", ""}
 
 
-class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
+class MCPHandler(ContinuationConsentHTTPMixin, HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
     server_version = f"CodingToolsMCP/{__version__}"
 
     @property
@@ -120,6 +126,9 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
         )
 
     def do_GET(self) -> None:
+        if posixpath.normpath(self.path.split("?", 1)[0]) == CONTINUATION_CONSENT_HTTP_PATH:
+            self.handle_continuation_consent_get()
+            return
         if (
             posixpath.normpath(self.path.split("?", 1)[0]) == MCP_ENDPOINT_PATH
             and self.headers.get("MCP-Protocol-Version") == STATELESS_PROTOCOL_VERSION
@@ -184,6 +193,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             "/oauth/authorize",
             "/oauth/token",
             "/oauth/register",
+            CONTINUATION_CONSENT_HTTP_PATH,
         }:
             self.send_json({"error": "Unknown endpoint"}, status=404)
             return
@@ -389,9 +399,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             }
             for item in (summary.get("proofs") or [])[-6:]
         ]
-        command = state.get("current_command")
-        if isinstance(command, dict):
-            command = {key: command.get(key) for key in ("kind", "command", "status", "started_at")}
+        task_projection = build_task_snapshot_projection(state)
         capsule = summary.get("latest_handoff_capsule")
         run = summary.get("run") or {}
         presence = control_presence_projection(
@@ -527,12 +535,13 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
             **runtime.activation_admission_snapshot(),
             "task": {
                 "task_id": state.get("task_id"),
+                "run_id": str(projection.get("run_id") or ""),
+                "wave_id": str(projection.get("wave_id") or ""),
                 "objective": str(state.get("objective") or "")[:400],
                 "status": state.get("status"),
                 "current_step": str(state.get("current_step") or "")[:300],
                 "next_step": str(state.get("next_step") or "")[:300],
-                "modified_files": [str(item) for item in list(state.get("modified_files") or [])[:10]],
-                "current_command": command,
+                **task_projection,
                 "updated_at": state.get("updated_at"),
                 "pause_reason": str(state.get("pause_reason") or ""),
             },
@@ -754,6 +763,7 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
                 result = self.runtime.activation_preflight(
                     operation_id=operation_id,
                     source_checkpoint=source_checkpoint,
+                    allow_acceptance_pending=payload.get("allow_acceptance_pending") is True,
                     require_unfenced=True,
                     prepare=False,
                 )
@@ -837,6 +847,9 @@ class MCPHandler(HTTPHubIdentityMixin, http.server.BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         request_path = self.path.split("?", 1)[0]
         normalized = posixpath.normpath(request_path)
+        if normalized == CONTINUATION_CONSENT_HTTP_PATH:
+            self.handle_continuation_consent_post()
+            return
         if normalized == "/__control/workspace":
             self.handle_control_workspace()
             return
@@ -1705,6 +1718,7 @@ class RuntimeHTTPServer(http.server.ThreadingHTTPServer):
     ) -> None:
         super().__init__(address, handler)
         self.control_runtime = control_runtime
+        self.control_runtime.run_continuation_consent_http_origin = local_continuation_consent_origin(self.server_address)
         self.sessions = HTTPSessionManager(control_runtime)
 
     def server_close(self) -> None:

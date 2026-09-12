@@ -426,7 +426,22 @@ def workflow_readiness_for_request(
     oracle_preflight: dict[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Choose workflow verification and build its non-authorizing readiness view."""
-    verification = str(args.get("verification", _DEFAULT_VERIFICATION_BY_WORKFLOW[workflow])).lower()
+    requested_verification = args.get("verification")
+    raw_adoptions = args.get("adopt_existing_files")
+    adoption_only = (
+        isinstance(raw_adoptions, list)
+        and bool(raw_adoptions)
+        and not planned_write_paths
+        and not any(str(item).strip() for item in args.get("directories", []) if str(item).strip())
+    )
+    # Adoption records provenance for bytes that already exist; it is not a
+    # source patch and must not silently escalate a bounded recovery into a
+    # repository/package verification lane. Explicit user/caller selection
+    # remains authoritative, including an explicit "all".
+    if requested_verification is None:
+        verification = "none" if adoption_only else _DEFAULT_VERIFICATION_BY_WORKFLOW[workflow]
+    else:
+        verification = str(requested_verification).lower()
     readiness = workflow_completion_readiness(
         root,
         {**args, "verification": verification},

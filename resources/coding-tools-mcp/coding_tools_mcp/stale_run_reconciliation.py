@@ -1,10 +1,10 @@
 """Guarded, exact-ID stale-run reconciliation for the canonical ledger.
 
-This operator-only primitive is intentionally not an MCP action.  It begins
-from one immutable Backup-API census, refuses unrelated lifecycle residue, and
-requires the Recovery Host-owned runtime to be stopped before it calls the
-supported exact-ID ledger authority.  It neither creates workload nor uses the
-legacy bulk stale-run helper.
+This operator-only primitive is intentionally not an MCP action. It begins
+from one immutable Backup-API census for the whole explicit batch, refuses
+unrelated lifecycle residue, and requires the Recovery Host-owned runtime to
+be stopped before it calls the supported exact-ID ledger authority. It neither
+creates workload nor uses the legacy bulk stale-run helper.
 """
 
 from __future__ import annotations
@@ -19,6 +19,22 @@ from .orchestration_ledger import OrchestrationLedger
 
 class ExactStaleRunReconciliationError(RuntimeError):
     """An exact stale-run maintenance guard did not hold."""
+
+
+_MANAGED_JOB_RESIDUE_CLASSIFICATIONS = frozenset({
+    "STALE_MANAGED_JOB_RESIDUE",
+    "ORPHANED_OR_FOREIGN_MANAGED_JOB",
+})
+
+
+def _has_managed_job_residue(census: dict[str, Any]) -> bool:
+    managed_jobs = census.get("managed_jobs")
+    jobs = managed_jobs if isinstance(managed_jobs, list) else []
+    return any(
+        isinstance(item, dict)
+        and str(item.get("classification") or "") in _MANAGED_JOB_RESIDUE_CLASSIFICATIONS
+        for item in jobs
+    )
 
 
 @dataclass(frozen=True)
@@ -36,11 +52,42 @@ class ExactStaleRunReconciliationReceipt:
         }
 
 
+@dataclass(frozen=True)
+class ExactStaleRunBatchReconciliationReceipt:
+    preflight: dict[str, Any]
+    reconciliation: dict[str, Any]
+    postflight: dict[str, Any]
+
+    def projection(self) -> dict[str, Any]:
+        return {
+            "schema_version": 1,
+            "preflight": _safe_projection(self.preflight),
+            "reconciliation": _safe_projection(self.reconciliation),
+            "postflight": _safe_projection(self.postflight),
+        }
+
+
+def _target_projection(target: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: target.get(key)
+        for key in (
+            "run_id",
+            "status",
+            "classification",
+            "reason_codes",
+            "has_live_ownership",
+            "already_reconciled",
+        )
+    }
+
+
 def _safe_projection(value: dict[str, Any]) -> dict[str, Any]:
     target = value.get("target") if isinstance(value.get("target"), dict) else {}
+    targets = value.get("targets") if isinstance(value.get("targets"), list) else []
+    results = value.get("results") if isinstance(value.get("results"), list) else []
     snapshot = value.get("snapshot") if isinstance(value.get("snapshot"), dict) else {}
     lifecycle = value.get("lifecycle") if isinstance(value.get("lifecycle"), dict) else {}
-    return {
+    projection = {
         "snapshot": {
             key: snapshot.get(key)
             for key in ("snapshot_at", "sha256", "logical_sha256", "size_bytes", "schema_version", "integrity_check", "foreign_key_check_rows")
@@ -49,16 +96,27 @@ def _safe_projection(value: dict[str, Any]) -> dict[str, Any]:
             key: lifecycle.get(key)
             for key in ("ordinary_active_runs", "unexplained_active_runs", "unbound_live_resource_residues", "projection_drift", "p5_epochs")
         },
-        "target": {
-            key: target.get(key)
-            for key in ("status", "classification", "reason_codes", "has_live_ownership", "already_reconciled")
-        },
         **({
             key: value.get(key)
             for key in ("changed", "idempotent", "chain_ok")
             if key in value
         }),
     }
+    if target:
+        projection["target"] = _target_projection(target)
+    if targets:
+        projection["targets"] = [_target_projection(item) for item in targets if isinstance(item, dict)]
+    if results:
+        projection["results"] = [
+            {
+                key: item.get(key)
+                for key in ("run_id", "changed", "idempotent", "status", "event_seq", "event_hash", "chain_ok")
+                if key in item
+            }
+            for item in results
+            if isinstance(item, dict)
+        ]
+    return projection
 
 
 def _reconciled_stale_target_record(snapshot: Any, *, run_id: str) -> dict[str, Any] | None:
@@ -112,11 +170,20 @@ def _reconciled_stale_target_record(snapshot: Any, *, run_id: str) -> dict[str, 
     }
 
 
-def _snapshot_preflight(workspace: Path, *, run_id: str, observed_at: float) -> dict[str, Any]:
+def _normalize_run_ids(run_ids: list[str] | tuple[str, ...]) -> list[str]:
+    identifiers = [str(run_id or "").strip() for run_id in run_ids]
+    if (
+        not 1 <= len(identifiers) <= 64
+        or any(not identifier or len(identifier) > 256 for identifier in identifiers)
+        or len(set(identifiers)) != len(identifiers)
+    ):
+        raise ExactStaleRunReconciliationError("exact stale-run reconciliation requires between one and 64 unique bounded run_ids")
+    return identifiers
+
+
+def _snapshot_batch_preflight(workspace: Path, *, run_ids: list[str] | tuple[str, ...], observed_at: float) -> dict[str, Any]:
     root = Path(workspace).resolve(strict=False)
-    identifier = str(run_id or "").strip()
-    if not identifier or len(identifier) > 256:
-        raise ExactStaleRunReconciliationError("exact stale-run reconciliation requires one bounded run_id")
+    identifiers = _normalize_run_ids(run_ids)
     with open_lifecycle_census_snapshot(root) as snapshot:
         census = lifecycle_census(
             snapshot,
@@ -126,24 +193,22 @@ def _snapshot_preflight(workspace: Path, *, run_id: str, observed_at: float) -> 
             stale_after_seconds=24 * 60 * 60,
             projection=read_task_projection(root),
         )
-        record = next((item for item in census.get("runs", []) if str(item.get("run_id") or "") == identifier), None)
-        if record is None:
-            record = _reconciled_stale_target_record(snapshot, run_id=identifier)
-        if record is None:
-            raise ExactStaleRunReconciliationError("exact stale-run target is absent from the immutable lifecycle census")
-        ownership = record.get("ownership") if isinstance(record.get("ownership"), dict) else {}
-        return {
-            "snapshot": dict(snapshot.snapshot_metadata),
-            "lifecycle": {
-                "ordinary_active_runs": int((census.get("summary") or {}).get("ordinary_active_runs") or 0),
-                "unexplained_active_runs": int((census.get("summary") or {}).get("unexplained_active_runs") or 0),
-                "unbound_live_resource_residues": int((census.get("summary") or {}).get("unbound_live_resource_residues") or 0),
-                "projection_drift": bool((census.get("summary") or {}).get("projection_drift")),
-                "p5_epochs": int((census.get("summary") or {}).get("p5_epochs") or 0),
-                "managed_job_residue": bool(census.get("managed_jobs")),
-                "terminal_parent_lane_residue": bool(census.get("terminal_parent_lanes")),
-            },
-            "target": {
+        records = {
+            str(item.get("run_id") or ""): item
+            for item in census.get("runs", [])
+            if isinstance(item, dict) and str(item.get("run_id") or "")
+        }
+        targets: list[dict[str, Any]] = []
+        for identifier in identifiers:
+            record = records.get(identifier)
+            if record is None:
+                record = _reconciled_stale_target_record(snapshot, run_id=identifier)
+            if record is None:
+                raise ExactStaleRunReconciliationError(
+                    f"exact stale-run target is absent from the immutable lifecycle census: {identifier}"
+                )
+            ownership = record.get("ownership") if isinstance(record.get("ownership"), dict) else {}
+            targets.append({
                 "run_id": identifier,
                 "status": str(record.get("run_status") or ""),
                 "classification": str(record.get("classification") or ""),
@@ -154,10 +219,40 @@ def _snapshot_preflight(workspace: Path, *, run_id: str, observed_at: float) -> 
                 "has_live_ownership": any(int(value or 0) > 0 for value in ownership.values()),
                 "p5_epoch_lifecycle": str(record.get("p5_epoch_lifecycle") or ""),
                 "already_reconciled": str(record.get("run_status") or "") == "stale",
+            })
+        return {
+            "snapshot": dict(snapshot.snapshot_metadata),
+            "lifecycle": {
+                "ordinary_active_runs": int((census.get("summary") or {}).get("ordinary_active_runs") or 0),
+                "unexplained_active_runs": int((census.get("summary") or {}).get("unexplained_active_runs") or 0),
+                "unbound_live_resource_residues": int((census.get("summary") or {}).get("unbound_live_resource_residues") or 0),
+                "projection_drift": bool((census.get("summary") or {}).get("projection_drift")),
+                "p5_epochs": int((census.get("summary") or {}).get("p5_epochs") or 0),
+                "managed_job_residue": _has_managed_job_residue(census),
+                "terminal_parent_lane_residue": bool(census.get("terminal_parent_lanes")),
             },
+            "targets": targets,
             "observed_at_unix_seconds": float(observed_at),
             "stale_after_seconds": float((census.get("thresholds") or {}).get("stale_after_seconds") or 0),
         }
+
+
+def _single_preflight(batch: dict[str, Any], *, run_id: str) -> dict[str, Any]:
+    targets = batch.get("targets") if isinstance(batch.get("targets"), list) else []
+    target = next((item for item in targets if isinstance(item, dict) and item.get("run_id") == run_id), None)
+    if target is None:
+        raise ExactStaleRunReconciliationError("exact stale-run target is absent from the batch preflight")
+    return {
+        **{key: value for key, value in batch.items() if key != "targets"},
+        "target": target,
+    }
+
+
+def _snapshot_preflight(workspace: Path, *, run_id: str, observed_at: float) -> dict[str, Any]:
+    return _single_preflight(
+        _snapshot_batch_preflight(workspace, run_ids=[run_id], observed_at=observed_at),
+        run_id=str(run_id or "").strip(),
+    )
 
 
 def _assert_preflight(preflight: dict[str, Any]) -> None:
@@ -173,6 +268,8 @@ def _assert_preflight(preflight: dict[str, Any]) -> None:
         blockers.append("unexplained_active_runs")
     if int(lifecycle.get("unbound_live_resource_residues") or 0) != 0:
         blockers.append("unbound_live_resource_residues")
+    if lifecycle.get("projection_drift"):
+        blockers.append("projection_drift")
     if lifecycle.get("managed_job_residue"):
         blockers.append("managed_job_residue")
     if lifecycle.get("terminal_parent_lane_residue"):
@@ -200,11 +297,94 @@ def _assert_preflight(preflight: dict[str, Any]) -> None:
         raise ExactStaleRunReconciliationError("exact stale-run preflight failed: " + ",".join(blockers))
 
 
+def _assert_batch_preflight(preflight: dict[str, Any]) -> None:
+    targets = preflight.get("targets") if isinstance(preflight.get("targets"), list) else []
+    if not targets:
+        raise ExactStaleRunReconciliationError("exact stale-run batch preflight contains no targets")
+    for target in targets:
+        if not isinstance(target, dict):
+            raise ExactStaleRunReconciliationError("exact stale-run batch preflight target is invalid")
+        _assert_preflight({**preflight, "target": target})
+
+
 def preflight_exact_stale_run_reconciliation(workspace: Path, *, run_id: str, observed_at: float) -> dict[str, Any]:
     """Read only: produce one guarded immutable exact-run preflight."""
     result = _snapshot_preflight(workspace, run_id=run_id, observed_at=observed_at)
     _assert_preflight(result)
     return result
+
+
+def preflight_exact_stale_runs_reconciliation(
+    workspace: Path,
+    *,
+    run_ids: list[str] | tuple[str, ...],
+    observed_at: float,
+) -> dict[str, Any]:
+    """Read only: produce one immutable census for an exact bounded batch."""
+    result = _snapshot_batch_preflight(workspace, run_ids=run_ids, observed_at=observed_at)
+    _assert_batch_preflight(result)
+    return result
+
+
+def reconcile_exact_stale_runs(
+    workspace: Path,
+    *,
+    run_ids: list[str] | tuple[str, ...],
+    observed_at: float,
+    runtime_stopped: bool,
+    authority: str,
+    expected_snapshot_sha256: str = "",
+    expected_logical_sha256: str = "",
+) -> ExactStaleRunBatchReconciliationReceipt:
+    """Reconcile an explicit stale batch atomically while the runtime is stopped."""
+    if runtime_stopped is not True:
+        raise ExactStaleRunReconciliationError("exact stale-run reconciliation requires explicit stopped-runtime authority")
+    identifiers = _normalize_run_ids(run_ids)
+    preflight = preflight_exact_stale_runs_reconciliation(workspace, run_ids=identifiers, observed_at=observed_at)
+    snapshot = preflight["snapshot"]
+    supplied_physical = str(expected_snapshot_sha256 or "").strip().lower()
+    supplied_logical = str(expected_logical_sha256 or "").strip().lower()
+    if supplied_physical and str(snapshot.get("sha256") or "").lower() != supplied_physical:
+        raise ExactStaleRunReconciliationError("exact stale-run physical snapshot changed or was not acknowledged")
+    if supplied_logical and str(snapshot.get("logical_sha256") or "").lower() != supplied_logical:
+        raise ExactStaleRunReconciliationError("exact stale-run logical snapshot changed or was not acknowledged")
+    targets = [
+        {
+            "run_id": str(target["run_id"]),
+            "status": str(target["status"]),
+            "latest_activity_at": str(target["latest_activity_at"]),
+            "last_event_seq": int(target["last_event_seq"]),
+            "last_event_hash": str(target["last_event_hash"]),
+        }
+        for target in preflight["targets"]
+    ]
+    raw = OrchestrationLedger(Path(workspace)).reconcile_exact_stale_runs(
+        targets=targets,
+        expected_logical_sha256=str(snapshot["logical_sha256"]),
+        observed_at_unix_seconds=float(preflight["observed_at_unix_seconds"]),
+        stale_after_seconds=float(preflight["stale_after_seconds"]),
+        authority=str(authority),
+    )
+    postflight = _snapshot_batch_preflight(workspace, run_ids=identifiers, observed_at=observed_at)
+    _assert_batch_preflight(postflight)
+    ledger = OrchestrationLedger(Path(workspace))
+    chain_by_run = {run_id: bool(ledger.verify_chain(run_id).get("ok")) for run_id in identifiers}
+    if not all(chain_by_run.values()):
+        raise ExactStaleRunReconciliationError("exact stale-run reconciliation invalidated a target hash chain")
+    results = []
+    for item in raw.get("results", []):
+        identifier = str(item.get("run_id") or "")
+        results.append({**item, "chain_ok": chain_by_run.get(identifier, False)})
+    reconciliation = {
+        **raw,
+        "chain_ok": all(chain_by_run.values()),
+        "results": results,
+    }
+    return ExactStaleRunBatchReconciliationReceipt(
+        preflight=preflight,
+        reconciliation=reconciliation,
+        postflight=postflight,
+    )
 
 
 def reconcile_exact_stale_run(
@@ -218,33 +398,19 @@ def reconcile_exact_stale_run(
     authority: str,
 ) -> ExactStaleRunReconciliationReceipt:
     """Reconcile one preflighted row while the canonical runtime is stopped."""
-    if runtime_stopped is not True:
-        raise ExactStaleRunReconciliationError("exact stale-run reconciliation requires explicit stopped-runtime authority")
-    preflight = preflight_exact_stale_run_reconciliation(workspace, run_id=run_id, observed_at=observed_at)
-    snapshot = preflight["snapshot"]
-    if str(snapshot.get("sha256") or "").lower() != str(expected_snapshot_sha256 or "").lower():
-        raise ExactStaleRunReconciliationError("exact stale-run physical snapshot changed or was not acknowledged")
-    if str(snapshot.get("logical_sha256") or "").lower() != str(expected_logical_sha256 or "").lower():
-        raise ExactStaleRunReconciliationError("exact stale-run logical snapshot changed or was not acknowledged")
-    target = preflight["target"]
-    reconciliation = OrchestrationLedger(Path(workspace)).reconcile_exact_stale_run(
-        run_id=str(target["run_id"]),
-        expected_logical_sha256=str(snapshot["logical_sha256"]),
-        expected_run_status=str(target["status"]),
-        expected_latest_activity_at=str(target["latest_activity_at"]),
-        expected_run_last_event_seq=int(target["last_event_seq"]),
-        expected_run_last_event_hash=str(target["last_event_hash"]),
-        observed_at_unix_seconds=float(preflight["observed_at_unix_seconds"]),
-        stale_after_seconds=float(preflight["stale_after_seconds"]),
-        authority=str(authority),
+    batch = reconcile_exact_stale_runs(
+        workspace,
+        run_ids=[run_id],
+        observed_at=observed_at,
+        expected_snapshot_sha256=expected_snapshot_sha256,
+        expected_logical_sha256=expected_logical_sha256,
+        runtime_stopped=runtime_stopped,
+        authority=authority,
     )
-    postflight = _snapshot_preflight(workspace, run_id=run_id, observed_at=observed_at)
-    _assert_preflight(postflight)
-    chain_ok = bool(OrchestrationLedger(Path(workspace)).verify_chain(str(run_id)).get("ok"))
-    if not chain_ok:
-        raise ExactStaleRunReconciliationError("exact stale-run reconciliation invalidated the target hash chain")
+    identifier = str(run_id or "").strip()
+    result = next(item for item in batch.reconciliation["results"] if item.get("run_id") == identifier)
     return ExactStaleRunReconciliationReceipt(
-        preflight=preflight,
-        reconciliation={**reconciliation, "chain_ok": chain_ok},
-        postflight=postflight,
+        preflight=_single_preflight(batch.preflight, run_id=identifier),
+        reconciliation=result,
+        postflight=_single_preflight(batch.postflight, run_id=identifier),
     )

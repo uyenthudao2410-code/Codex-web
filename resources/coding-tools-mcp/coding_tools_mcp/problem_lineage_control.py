@@ -42,6 +42,8 @@ class ProblemLineageControlMixin:
             process_instance_id=self.process_instance_id,
         )
         if claimed is None:
+            claimed = self._attested_chatweb_transport_turn()
+        if claimed is None:
             raise ToolFailure(
                 "PRL_HOST_IDENTITY_UNAVAILABLE",
                 "Problem authority requires a current one-shot pending host-turn receipt.",

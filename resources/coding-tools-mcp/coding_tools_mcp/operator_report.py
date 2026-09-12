@@ -15,6 +15,9 @@ REPORT_CONTRACT = [
     "WHAT REMAINS",
     "NEXT CRITICAL ACTION",
 ]
+PROBLEM_REPORT_SECTION = "PROBLEM RESOLUTION"
+_MAX_VISIBLE_PROBLEM_CRITERIA = 20
+_MAX_VISIBLE_UNRESOLVED_CONDITIONS = 20
 
 _EVENT_ID_RE = re.compile(r"^[0-9a-fA-F]{32}$")
 _PATH_HASH_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -375,6 +378,186 @@ def _changed_files(task_state: dict[str, Any], checkpoint: dict[str, Any]) -> tu
     return rows, "aligned_task_modified_files" if rows else "no_durable_file_receipts"
 
 
+def _problem_read_unavailable(exc: BaseException) -> dict[str, Any]:
+    code = str(getattr(exc, "code", "") or type(exc).__name__)[:128]
+    return {"status": "UNAVAILABLE", "missing_reason": code}
+
+
+def _problem_resolution_projection(
+    ledger: Any,
+    *,
+    run_id: str,
+    wave_id: str,
+    checkpoint_id: str,
+) -> dict[str, Any] | None:
+    """Project bounded authoritative Problem facts for an exactly bound RUN."""
+    handoff_reader = getattr(ledger, "problem_handoff_for_run", None)
+    if not callable(handoff_reader):
+        return None
+    try:
+        handoff = handoff_reader(run_id)
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        return {
+            "status": "UNAVAILABLE",
+            "missing_reason": str(getattr(exc, "code", "") or type(exc).__name__)[:128],
+            "content_free": True,
+            "derived_projection_only": True,
+            "authority_granted": False,
+        }
+    if not isinstance(handoff, dict):
+        return None
+    problem_id = str(handoff.get("active_problem_id") or "")
+    try:
+        problem_revision = int(handoff.get("problem_revision") or 0)
+    except (TypeError, ValueError):
+        problem_revision = 0
+    if not problem_id or problem_revision < 1:
+        return None
+
+    contract = (
+        handoff.get("contract_capsule")
+        if handoff.get("contract_capsule_included") is True
+        and isinstance(handoff.get("contract_capsule"), dict)
+        else None
+    )
+    criteria: list[dict[str, str]] = []
+    unresolved_conditions: list[str] = []
+    objective_summary: str | None = None
+    criteria_truncated = False
+    unresolved_conditions_truncated = False
+    if contract is not None:
+        objective_summary = str(contract.get("objective_summary") or "")[:2000] or None
+        raw_criteria = contract.get("acceptance_criteria")
+        if isinstance(raw_criteria, list):
+            criteria_truncated = len(raw_criteria) > _MAX_VISIBLE_PROBLEM_CRITERIA
+            for item in raw_criteria[:_MAX_VISIBLE_PROBLEM_CRITERIA]:
+                if not isinstance(item, dict):
+                    continue
+                criterion_id = str(item.get("criterion_id") or "")[:128]
+                if not criterion_id:
+                    continue
+                criteria.append({
+                    "criterion_id": criterion_id,
+                    "summary": str(item.get("summary") or "")[:800],
+                })
+        raw_unresolved = contract.get("unresolved_conditions")
+        if isinstance(raw_unresolved, list):
+            unresolved_conditions_truncated = (
+                len(raw_unresolved) > _MAX_VISIBLE_UNRESOLVED_CONDITIONS
+            )
+            unresolved_conditions = [
+                str(item)[:800]
+                for item in raw_unresolved[:_MAX_VISIBLE_UNRESOLVED_CONDITIONS]
+                if isinstance(item, str)
+            ]
+
+    goal_projection: dict[str, Any]
+    goal_reader = getattr(ledger, "goal_pursuit_live_summary", None)
+    if callable(goal_reader):
+        try:
+            raw_goal = goal_reader(run_id=run_id)
+            goal_projection = raw_goal if isinstance(raw_goal, dict) else {
+                "status": "UNAVAILABLE",
+                "missing_reason": "GOAL_SUMMARY_INVALID",
+            }
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            goal_projection = _problem_read_unavailable(exc)
+    else:
+        goal_projection = {"status": "UNAVAILABLE", "missing_reason": "GOAL_SUMMARY_UNAVAILABLE"}
+
+    goal_completion = (
+        goal_projection.get("completion")
+        if isinstance(goal_projection.get("completion"), dict)
+        else {}
+    )
+    progress = {
+        "status": str(goal_completion.get("status") or goal_projection.get("status") or "UNAVAILABLE"),
+        "criteria_total": goal_completion.get("criteria_total"),
+        "criteria_proven": goal_completion.get("criteria_proven"),
+        "criteria_unresolved": goal_completion.get("criteria_unresolved"),
+        "coverage_status": goal_completion.get("exact_coverage_status"),
+        "missing_reason": goal_completion.get("missing_reason") or goal_projection.get("missing_reason"),
+        "next_critical_gap_id": goal_projection.get("next_critical_gap_id"),
+        "next_critical_gap": goal_projection.get("next_critical_gap"),
+        "next_action": goal_projection.get("next_action"),
+        "fact_window": goal_projection.get("fact_window") if isinstance(goal_projection.get("fact_window"), dict) else None,
+    }
+
+    telemetry_projection: dict[str, Any]
+    telemetry_reader = getattr(ledger, "continuity_telemetry_summary", None)
+    if callable(telemetry_reader):
+        try:
+            raw_telemetry = telemetry_reader(
+                problem_id=problem_id,
+                problem_revision=problem_revision,
+                limit=1000,
+            )
+            if isinstance(raw_telemetry, dict):
+                telemetry_projection = {
+                    "status": "AVAILABLE",
+                    "complete": bool(raw_telemetry.get("complete")),
+                    "event_count": int(raw_telemetry.get("event_count") or 0),
+                    "manual_nudge_count": int(raw_telemetry.get("manual_nudge_count") or 0),
+                    "interruption_count": int(raw_telemetry.get("interruption_count") or 0),
+                    "replan_count": int(raw_telemetry.get("replan_count") or 0),
+                    "report_gate_count": int(raw_telemetry.get("report_gate_count") or 0),
+                    "continuation_attempt_count": int(raw_telemetry.get("continuation_attempt_count") or 0),
+                    "continuation_success_count": int(raw_telemetry.get("continuation_success_count") or 0),
+                    "continuation_failure_count": int(raw_telemetry.get("continuation_failure_count") or 0),
+                    "reconnect_count": int(raw_telemetry.get("reconnect_count") or 0),
+                    "restart_count": int(raw_telemetry.get("restart_count") or 0),
+                    "resume_count": int(raw_telemetry.get("resume_count") or 0),
+                    "duplicate_effect_prevented_count": int(raw_telemetry.get("duplicate_effect_prevented_count") or 0),
+                    "terminal_count": int(raw_telemetry.get("terminal_count") or 0),
+                    "blocker_count": int(raw_telemetry.get("blocker_count") or 0),
+                    "accepted_checkpoint_count": int(raw_telemetry.get("accepted_checkpoint_count") or 0),
+                    "time_to_resume_ms": raw_telemetry.get("time_to_resume_ms"),
+                    "replan_duration_ms": raw_telemetry.get("replan_duration_ms"),
+                    "report_gate_wait_ms": raw_telemetry.get("report_gate_wait_ms"),
+                }
+            else:
+                telemetry_projection = {
+                    "status": "UNAVAILABLE",
+                    "missing_reason": "CONTINUITY_TELEMETRY_INVALID",
+                }
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            telemetry_projection = _problem_read_unavailable(exc)
+    else:
+        telemetry_projection = {
+            "status": "UNAVAILABLE",
+            "missing_reason": "CONTINUITY_TELEMETRY_UNAVAILABLE",
+        }
+
+    return {
+        "status": "AVAILABLE" if str(handoff.get("context_status") or "") == "VALID" else "UNAVAILABLE",
+        "problem_id": problem_id,
+        "problem_revision": problem_revision,
+        "problem_state": str(handoff.get("problem_state") or "UNKNOWN"),
+        "resolution_status": str(goal_projection.get("resolution_status") or "UNAVAILABLE"),
+        "contract_fingerprint": str(handoff.get("contract_fingerprint") or ""),
+        "objective_summary": objective_summary,
+        "contract_capsule_included": contract is not None,
+        "contract_capsule_omission_reason": handoff.get("contract_capsule_omission_reason"),
+        "criteria": criteria,
+        "criteria_truncated": criteria_truncated,
+        "progress": progress,
+        "unresolved_conditions": unresolved_conditions,
+        "unresolved_conditions_truncated": unresolved_conditions_truncated,
+        "current_attempt": {
+            "run_id": run_id,
+            "wave_id": wave_id,
+            "checkpoint_id": checkpoint_id,
+        },
+        "latest_feedback_relation": str(handoff.get("latest_feedback_relation") or "UNKNOWN"),
+        "event_count": int(handoff.get("event_count") or 0),
+        "latest_event": handoff.get("latest_event") if isinstance(handoff.get("latest_event"), dict) else None,
+        "optimization_telemetry": telemetry_projection,
+        "content_free": True,
+        "derived_projection_only": True,
+        "authority_granted": False,
+    }
+
+
 def build_operator_completion_report(
     *,
     ledger: Any,
@@ -463,10 +646,21 @@ def build_operator_completion_report(
     if patch_surface_observations is not None:
         what_changed["patch_surface_observations"] = patch_surface_observations
 
+    problem_resolution = _problem_resolution_projection(
+        ledger,
+        run_id=run_id,
+        wave_id=wave_id,
+        checkpoint_id=str(checkpoint.get("checkpoint_id") or ""),
+    )
+    report_contract = list(REPORT_CONTRACT)
+    if problem_resolution is not None:
+        report_contract.insert(2, PROBLEM_REPORT_SECTION)
+
     return {
         "schema_version": 1,
         "operator_visible_required": True,
-        "report_contract": list(REPORT_CONTRACT),
+        "report_contract": report_contract,
+        **({"problem_resolution": problem_resolution} if problem_resolution is not None else {}),
         "what_changed": what_changed,
         "current_state": {
             "orchestration_state": orchestration_state,

@@ -1,0 +1,894 @@
+[
+  {
+    "version": 2,
+    "task_id": "9466d6591dd54aac9b389e5594a988db",
+    "orchestration": {
+      "run_id": "816cc0586ce24f05b07b928b920dd49c",
+      "wave_id": "a9304937d5f94b0c918b019dce307cc5",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+      "contract_fp": ""
+    },
+    "objective": "Strict-timing mini-canary for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Produce one fresh read-only proof on this exact wave so the RUN can be accepted, ACKed, cleared, and immediately observed by the already-prepared timing observer. No source mutation or restart.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:40:02.255Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:40:02.255Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-terminal-projection-clear-restart-drift-20260912",
+        "problem_revision": 2,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "e327cec6478eced616b75206c55cdd0c6e4206c006dc7bbaa3b72441efe4f99a",
+        "objective_summary": "Eliminate or truthfully fence the transient contextual-projection inconsistency window after terminal orchestration transitions and request-scoped task clear, so lifecycle and restart health checks do not temporarily report a fully terminal and quiescent orchestration run as missing or as a terminal-parent contradiction while preserving fail-closed behavior for genuine active, malformed, or live-resource state.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "transient_window_reproduction",
+            "summary": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation."
+          },
+          {
+            "criterion_id": "terminal_clear_atomic_visibility",
+            "summary": "After terminal transition and request-scoped clear are acknowledged, public and immutable lifecycle projection is either consistent or explicitly reports a bounded reconciliation-in-progress state; it must not expose a false terminal-parent contradiction as stable truth."
+          },
+          {
+            "criterion_id": "genuine_contradiction_preserved",
+            "summary": "A genuinely terminal parent with live child ownership, active resources, or malformed dependent state still classifies as TERMINAL_PARENT_CONTRADICTION and blocks unsafe restart."
+          },
+          {
+            "criterion_id": "restart_preflight_race_safe",
+            "summary": "Official controlled-restart preflight does not fail solely because it sampled the transient projection-reconciliation window; it observes consistent state or follows an authoritative bounded reconciliation gate."
+          },
+          {
+            "criterion_id": "reporter_semantic_oracle",
+            "summary": "Lifecycle health consumers evaluate semantic projection fields and do not treat reporter exit code zero alone as proof that projection state is healthy."
+          },
+          {
+            "criterion_id": "no_history_rewrite",
+            "summary": "The solution changes only derived projection, reconciliation visibility, or control sequencing and does not rewrite durable orchestration history."
+          },
+          {
+            "criterion_id": "postfix_repeated_probe",
+            "summary": "Repeated immediate and delayed probes across terminalize-and-clear no longer show a false projection-drift transition while SQLite integrity and foreign-key checks remain clean."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 7,
+          "criteria_proven": 0,
+          "criteria_unresolved": 7,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "transient_window_reproduction",
+          "next_critical_gap": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 5,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 2,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Identify the exact projection write, rebuild, or visibility ordering that creates the transient missing-state window.",
+          "Determine whether orchestration projection reconciliation is recorded before the contextual mapping becomes visible to an immutable lifecycle snapshot.",
+          "Choose the smallest safe correction among atomic projection update, an explicit RECONCILING state, or bounded preflight reconciliation."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "816cc0586ce24f05b07b928b920dd49c",
+          "wave_id": "a9304937d5f94b0c918b019dce307cc5",
+          "checkpoint_id": "f1b85cff74a046d1a512b079944c7c6d"
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 6,
+        "latest_event": {
+          "seq": 188,
+          "event_id": "prl-bind-9c526a40625df8a1793227986beb5b98918494e15d828c5125d400a54048ea53",
+          "event_hash": "05d483d0cd5e161196b5c7c927fac9be364839a4a5109d78b3b2ae72ad029416",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-12T10:39:43.433Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 10,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 6,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 4,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 26,
+          "head_hash": "da498c355d426fc6ccc80960c77cab26aa2285c932ef0627aeb616171933265c"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-816cc0586ce24f05b07b928b920dd49c\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-816cc0586ce24f05b07b928b920dd49c\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "816cc0586ce24f05b07b928b920dd49c",
+        "wave_id": "a9304937d5f94b0c918b019dce307cc5",
+        "checkpoint_id": "f1b85cff74a046d1a512b079944c7c6d",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Strict-timing mini-canary for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Create one normal read-only RUN, obtain a valid proof and final acceptance, operator-ACK the accepted report, then clear this request-scoped projection. A separately pre-armed observer will immediately run the full immutable lifecycle census. Acceptance/probe timestamps must demonstrate the post-clear semantic census occurred less than 60 seconds after this RUN became accepted, specifically testing the historical controller-lease TTL window. No source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "066046c3527b86cae891953d94f1a3c407aafc0aadfb67b005c78e46c70dc570",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "8c71396d415c47bb93a966d82784be1a",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 0,
+            "exit_code": null,
+            "cache_hit": true
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "8c68925e8c57331a6b990b6dc1fa163e4c4883f835310820eeb9353db9a4deb3",
+    "completion_report_acknowledged_id": "8c68925e8c57331a6b990b6dc1fa163e4c4883f835310820eeb9353db9a4deb3",
+    "completion_report_acknowledged_at": "2026-09-12T10:41:18.670Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-12T10:39:41.242Z",
+    "updated_at": "2026-09-12T10:41:28.973Z",
+    "events": [
+      {
+        "time": "2026-09-12T10:39:41.242Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Strict-timing mini-canary for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Create one normal read-only RUN, obtain a valid proof and final acceptance, operator-ACK the accepted report, then clear this request-scoped projection. A separately pre-armed observer will immediately run the full immutable lifecycle census. Acceptance/probe timestamps must demonstrate the post-clear semantic census occurred less than 60 seconds after this RUN became accepted, specifically testing the historical controller-lease TTL window. No source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:43.650Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:45.043Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:45.050Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:56.468Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:57.566Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:59.239Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:59.248Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:00.894Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:01.651Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:02.240Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:02.255Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:02.877Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:02.883Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:03.036Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "0eefc494a91579037a759ae64de9624eee06fac9aa197719b493713be845a55c"
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:03.193Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:51.097Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:55.125Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:55.127Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:40:55.237Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "8c68925e8c57331a6b990b6dc1fa163e4c4883f835310820eeb9353db9a4deb3"
+        }
+      },
+      {
+        "time": "2026-09-12T10:41:07.276Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:41:18.670Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "8c68925e8c57331a6b990b6dc1fa163e4c4883f835310820eeb9353db9a4deb3"
+        }
+      },
+      {
+        "time": "2026-09-12T10:41:28.973Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T10:41:29.115Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "4316c90695384d4e91f3e4fbf270134d",
+    "orchestration": {
+      "run_id": "03e4ff4dad8b4cc38d77ee7a10da6d09",
+      "wave_id": "f51e17c461c64322b5a25655418c01be",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+      "contract_fp": ""
+    },
+    "objective": "Strict-timing mini-canary retry for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Produce one normal read-only accepted RUN on this exact prepared wave; then it will be ACKed, cleared, and immediately observed by the already-live observer RUN 8aa174e6591a4bec975916556dc0e508 / WAVE 7a38a7e9628a49f59a4a612773be8284. No source mutation or restart.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:42:54.951Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:42:54.951Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-terminal-projection-clear-restart-drift-20260912",
+        "problem_revision": 2,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "e327cec6478eced616b75206c55cdd0c6e4206c006dc7bbaa3b72441efe4f99a",
+        "objective_summary": "Eliminate or truthfully fence the transient contextual-projection inconsistency window after terminal orchestration transitions and request-scoped task clear, so lifecycle and restart health checks do not temporarily report a fully terminal and quiescent orchestration run as missing or as a terminal-parent contradiction while preserving fail-closed behavior for genuine active, malformed, or live-resource state.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "transient_window_reproduction",
+            "summary": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation."
+          },
+          {
+            "criterion_id": "terminal_clear_atomic_visibility",
+            "summary": "After terminal transition and request-scoped clear are acknowledged, public and immutable lifecycle projection is either consistent or explicitly reports a bounded reconciliation-in-progress state; it must not expose a false terminal-parent contradiction as stable truth."
+          },
+          {
+            "criterion_id": "genuine_contradiction_preserved",
+            "summary": "A genuinely terminal parent with live child ownership, active resources, or malformed dependent state still classifies as TERMINAL_PARENT_CONTRADICTION and blocks unsafe restart."
+          },
+          {
+            "criterion_id": "restart_preflight_race_safe",
+            "summary": "Official controlled-restart preflight does not fail solely because it sampled the transient projection-reconciliation window; it observes consistent state or follows an authoritative bounded reconciliation gate."
+          },
+          {
+            "criterion_id": "reporter_semantic_oracle",
+            "summary": "Lifecycle health consumers evaluate semantic projection fields and do not treat reporter exit code zero alone as proof that projection state is healthy."
+          },
+          {
+            "criterion_id": "no_history_rewrite",
+            "summary": "The solution changes only derived projection, reconciliation visibility, or control sequencing and does not rewrite durable orchestration history."
+          },
+          {
+            "criterion_id": "postfix_repeated_probe",
+            "summary": "Repeated immediate and delayed probes across terminalize-and-clear no longer show a false projection-drift transition while SQLite integrity and foreign-key checks remain clean."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 7,
+          "criteria_proven": 0,
+          "criteria_unresolved": 7,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "transient_window_reproduction",
+          "next_critical_gap": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 6,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 3,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Identify the exact projection write, rebuild, or visibility ordering that creates the transient missing-state window.",
+          "Determine whether orchestration projection reconciliation is recorded before the contextual mapping becomes visible to an immutable lifecycle snapshot.",
+          "Choose the smallest safe correction among atomic projection update, an explicit RECONCILING state, or bounded preflight reconciliation."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "03e4ff4dad8b4cc38d77ee7a10da6d09",
+          "wave_id": "f51e17c461c64322b5a25655418c01be",
+          "checkpoint_id": "115379d8018849279c7ee3688a567e22"
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 7,
+        "latest_event": {
+          "seq": 189,
+          "event_id": "prl-bind-a210d1d30df55f9f3d7964e7468a223bc884f288fd11477b36f691a8db55c9eb",
+          "event_hash": "9c712248f91f8f5aebc9094baba24d94d6a5586a795dae357701dbfc9254caca",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-12T10:42:38.465Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 12,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 7,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 5,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 26,
+          "head_hash": "f0a83830f41d62f4448dd9887a4063fafaeb10a98d0890eced62a5bfc63f1f1e"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03e4ff4dad8b4cc38d77ee7a10da6d09\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-03e4ff4dad8b4cc38d77ee7a10da6d09\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "03e4ff4dad8b4cc38d77ee7a10da6d09",
+        "wave_id": "f51e17c461c64322b5a25655418c01be",
+        "checkpoint_id": "115379d8018849279c7ee3688a567e22",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Strict-timing mini-canary retry for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Create one normal read-only RUN, obtain final acceptance, ACK its accepted report, clear the request-scoped projection, then immediately use the already-live observer RUN 8aa174e6591a4bec975916556dc0e508 / WAVE 7a38a7e9628a49f59a4a612773be8284 to run the full immutable lifecycle census. This retry exists because the previous attempt's first observer call used stale owner IDs and lost the <60-second acceptance window. Measure from final_acceptance_recorded to observer census observed_at; require <60 seconds. No source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "744f15ce5e52cc2f2369edfdf181caf9a02315016861b169383e974dde249c5f",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "8280f6d4f77f496db232fb5b0d05a555",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 0,
+            "exit_code": null,
+            "cache_hit": true
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "04e4a01b17f2e65783e9193caaeff38f0d5e0547346edc1b1364977f40485848",
+    "completion_report_acknowledged_id": "04e4a01b17f2e65783e9193caaeff38f0d5e0547346edc1b1364977f40485848",
+    "completion_report_acknowledged_at": "2026-09-12T10:44:10.348Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-12T10:42:36.348Z",
+    "updated_at": "2026-09-12T10:44:20.965Z",
+    "events": [
+      {
+        "time": "2026-09-12T10:42:36.348Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Strict-timing mini-canary retry for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Create one normal read-only RUN, obtain final acceptance, ACK its accepted report, clear the request-scoped projection, then immediately use the already-live observer RUN 8aa174e6591a4bec975916556dc0e508 / WAVE 7a38a7e9628a49f59a4a612773be8284 to run the full immutable lifecycle census. This retry exists because the previous attempt's first observer call used stale owner IDs and lost the <60-second acceptance window. Measure from final_acceptance_recorded to observer census observed_at; require <60 seconds. No source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:38.669Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:40.014Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:40.026Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:50.156Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:50.927Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:52.290Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:52.297Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:53.668Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:54.332Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:54.945Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:54.951Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:55.666Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:55.666Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:55.774Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "205baa4f8ec9bf8b019a28299622557e9cc05ffe166b1b6800ffdfb0b2ef3a4d"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:55.944Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:43:44.223Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:43:47.545Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:43:47.549Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:43:47.658Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "04e4a01b17f2e65783e9193caaeff38f0d5e0547346edc1b1364977f40485848"
+        }
+      },
+      {
+        "time": "2026-09-12T10:43:57.789Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:10.348Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "04e4a01b17f2e65783e9193caaeff38f0d5e0547346edc1b1364977f40485848"
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:20.965Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T10:44:21.124Z",
+    "archive_reason": "cleared"
+  }
+]

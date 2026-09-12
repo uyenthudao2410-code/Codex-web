@@ -15,7 +15,7 @@ from typing import Any
 from .ledger_analysis import LedgerFacts
 
 
-STAGE_LATENCY_SCHEMA_VERSION = 1
+STAGE_LATENCY_SCHEMA_VERSION = 2
 STAGE_VOCABULARY = (
     "turn_received",
     "preflight",
@@ -35,6 +35,11 @@ _TIMED_STAGE_VOCABULARY = tuple(stage for stage in STAGE_VOCABULARY if stage not
 _BASE_REQUIRED_STAGES = tuple(stage for stage in _TIMED_STAGE_VOCABULARY if stage != "replan")
 _COVERAGE_THRESHOLD = 0.90
 _MIN_DECISION_COHORT = 50
+_ACCEPTANCE_COMPONENT_MEASUREMENTS = frozenset({"controller_processing", "acceptance_wait"})
+_SERVER_OWNED_HOST_CORRELATION_SOURCES = frozenset({
+    "electron_pending_host_turn",
+    "attested_chatweb_transport_trace",
+})
 
 
 def _ratio(numerator: int, denominator: int) -> float | None:
@@ -60,7 +65,7 @@ def _host_eligible(run: dict[str, Any]) -> bool:
     marker = metadata.get("host_correlation") if isinstance(metadata.get("host_correlation"), dict) else {}
     return (
         marker.get("schema_version") == 1
-        and str(marker.get("source") or "") == "electron_pending_host_turn"
+        and str(marker.get("source") or "") in _SERVER_OWNED_HOST_CORRELATION_SOURCES
         and marker.get("eligible") is True
     )
 
@@ -91,11 +96,19 @@ def _exact_host_binding(run: dict[str, Any], spans: list[dict[str, Any]]) -> boo
     """
     if not _host_eligible(run):
         return False
-    _, evaluation = _metadata(run)
+    metadata, evaluation = _metadata(run)
+    marker = metadata.get("host_correlation") if isinstance(metadata.get("host_correlation"), dict) else {}
+    host_source = str(marker.get("source") or "").strip()
     turn_id = str(evaluation.get("turn_id") or "").strip()
     trace_id = str(evaluation.get("trace_id") or "").strip()
     if not turn_id or not trace_id:
         return False
+    if host_source == "attested_chatweb_transport_trace":
+        # This marker is created only by the server from an attested ChatWeb
+        # controller transport plus its validated request trace.  It is an
+        # exact content-free host-to-run binding and does not require a later
+        # report-visible DOM span to prove that identity.
+        return marker.get("content_free") is True
     return any(
         str(span.get("stage") or "") == "report_visible"
         and str(span.get("turn_id") or "").strip() == turn_id
@@ -111,6 +124,21 @@ def _duration_summary(values: list[float]) -> dict[str, Any]:
         "p90": _percentile(values, 90),
         "max": round(max(values), 6) if values else None,
     }
+
+
+def _span_duration(span: dict[str, Any] | None) -> float | None:
+    if not isinstance(span, dict):
+        return None
+    value = span.get("duration_ms")
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(float(value)) or float(value) < 0:
+        return None
+    return float(value)
+
+
+def _primary_stage_measurement(stage: str, measurement: str) -> bool:
+    if stage == "report_visible":
+        return measurement == "observed_host_visible"
+    return measurement == "observed_stage_duration"
 
 
 def stage_latency_attribution_report(
@@ -143,6 +171,14 @@ def stage_latency_attribution_report(
     per_stage_domains: dict[str, set[str]] = defaultdict(set)
     per_stage_span_counts: dict[str, int] = defaultdict(int)
     rows: list[dict[str, Any]] = []
+    accepted_current_source_runs = 0
+    controller_processing_durations: list[float] = []
+    acceptance_wait_durations: list[float] = []
+    acceptance_same_clock_eligible = 0
+    acceptance_cross_clock_excluded = 0
+    acceptance_anchor_missing = 0
+    controller_processing_missing = 0
+    acceptance_wait_missing_same_clock = 0
 
     for run in ledger.list_runs(limit=5000):
         run_id = str(run.get("run_id") or "").strip()
@@ -167,14 +203,19 @@ def stage_latency_attribution_report(
             if stage not in STAGE_VOCABULARY:
                 unrecognized_span_count += 1
                 continue
+            measurement = str(span.get("measurement") or "").strip().lower()
+            if stage == "acceptance" and measurement in _ACCEPTANCE_COMPONENT_MEASUREMENTS:
+                continue
+            if not _primary_stage_measurement(stage, measurement):
+                continue
             known_stages.add(stage)
             per_stage_span_counts[stage] += 1
             clock_domain = str(span.get("clock_domain") or "").strip()
             if clock_domain:
                 per_stage_domains[stage].add(clock_domain)
-            duration = span.get("duration_ms")
-            if isinstance(duration, (int, float)) and not isinstance(duration, bool) and math.isfinite(float(duration)) and float(duration) >= 0:
-                per_stage_duration[stage].append(float(duration))
+            duration = _span_duration(span)
+            if duration is not None:
+                per_stage_duration[stage].append(duration)
 
         expected = _expected_stages(ledger, run_id)
         for stage in expected:
@@ -183,6 +224,72 @@ def stage_latency_attribution_report(
                 recorded_by_stage[stage] += 1
         exact_binding_count += int(_exact_host_binding(run, spans))
         rows.append({"expected": expected, "recorded": known_stages})
+
+        waves = ledger.list_waves(run_id)
+        latest_wave = max(waves, key=lambda item: (int(item.get("ordinal") or 0), str(item.get("wave_id") or ""))) if waves else {}
+        latest_wave_id = str(latest_wave.get("wave_id") or "")
+        accepted_checkpoint = any(
+            str(item.get("status") or "").lower() == "accepted"
+            for item in ledger.list_checkpoints(run_id, wave_id=latest_wave_id)
+        ) if latest_wave_id else False
+        if accepted_checkpoint:
+            accepted_current_source_runs += 1
+            processing = next((
+                item for item in spans
+                if str(item.get("span_id") or "") == f"a2-controller-processing-v1:{latest_wave_id}"
+                and str(item.get("measurement") or "").strip().lower() == "controller_processing"
+            ), None)
+            processing_duration = _span_duration(processing)
+            if processing_duration is None:
+                controller_processing_missing += 1
+            else:
+                controller_processing_durations.append(processing_duration)
+
+            anchor = next((
+                item for item in reversed(ledger.list_events(run_id, wave_id=latest_wave_id))
+                if str(item.get("event_type") or "") == "observation_stage_anchor_recorded"
+                and str((item.get("payload") or {}).get("stage") or "").strip().lower() == "acceptance"
+            ), None)
+            anchor_payload = anchor.get("payload") if isinstance(anchor, dict) and isinstance(anchor.get("payload"), dict) else {}
+            anchor_domain = str(anchor_payload.get("clock_domain") or "").strip()
+            anchor_start = anchor_payload.get("start_ms")
+            processing_domain = str(processing.get("clock_domain") or "").strip() if isinstance(processing, dict) else ""
+            processing_start = processing.get("start_ms") if isinstance(processing, dict) else None
+            anchor_valid = (
+                bool(anchor_domain)
+                and not isinstance(anchor_start, bool)
+                and isinstance(anchor_start, (int, float))
+                and math.isfinite(float(anchor_start))
+                and float(anchor_start) >= 0
+            )
+            processing_start_valid = (
+                processing_duration is not None
+                and bool(processing_domain)
+                and not isinstance(processing_start, bool)
+                and isinstance(processing_start, (int, float))
+                and math.isfinite(float(processing_start))
+                and float(processing_start) >= 0
+            )
+            if not anchor_valid:
+                acceptance_anchor_missing += 1
+            elif processing_start_valid:
+                if anchor_domain != processing_domain:
+                    acceptance_cross_clock_excluded += 1
+                elif float(anchor_start) <= float(processing_start):
+                    acceptance_same_clock_eligible += 1
+                    wait = next((
+                        item for item in spans
+                        if str(item.get("span_id") or "") == f"a2-acceptance-wait-v1:{latest_wave_id}"
+                        and str(item.get("measurement") or "").strip().lower() == "acceptance_wait"
+                        and str(item.get("clock_domain") or "").strip() == processing_domain
+                    ), None)
+                    wait_duration = _span_duration(wait)
+                    if wait_duration is None:
+                        acceptance_wait_missing_same_clock += 1
+                    else:
+                        acceptance_wait_durations.append(wait_duration)
+                else:
+                    acceptance_wait_missing_same_clock += 1
 
     stage_rows: list[dict[str, Any]] = []
     missing_over_threshold: list[str] = []
@@ -257,7 +364,7 @@ def stage_latency_attribution_report(
             "exact_ledger_binding_runs": exact_binding_count,
             "coverage": binding_coverage,
             "threshold": round(float(coverage_threshold), 6),
-            "method": "exact_turn_id_and_trace_id_against_report_visible_span",
+            "method": "server_owned_attested_transport_trace_or_exact_report_visible_trace_turn",
             "timestamp_proximity_inference_forbidden": True,
         },
         "stage_completeness": {
@@ -269,6 +376,28 @@ def stage_latency_attribution_report(
             "threshold": round(float(coverage_threshold), 6),
             "stages_with_missingness_above_threshold": missing_over_threshold,
             "rows": stage_rows,
+        },
+        "acceptance_attribution": {
+            "accepted_current_source_runs": accepted_current_source_runs,
+            "controller_processing_ms": {
+                "observed_runs": len(controller_processing_durations),
+                "missing_runs": controller_processing_missing,
+                "coverage": _ratio(len(controller_processing_durations), accepted_current_source_runs),
+                "duration_ms": _duration_summary(controller_processing_durations),
+            },
+            "acceptance_wait_ms": {
+                "same_clock_eligible_runs": acceptance_same_clock_eligible,
+                "observed_runs": len(acceptance_wait_durations),
+                "missing_same_clock_runs": acceptance_wait_missing_same_clock,
+                "coverage": _ratio(len(acceptance_wait_durations), acceptance_same_clock_eligible),
+                "duration_ms": _duration_summary(acceptance_wait_durations),
+                "anchor_missing_runs": acceptance_anchor_missing,
+                "cross_clock_excluded_runs": acceptance_cross_clock_excluded,
+            },
+            "same_clock_required": True,
+            "cross_clock_subtraction_forbidden": True,
+            "legacy_acceptance_span_is_nonexclusive": True,
+            "missing_or_cross_clock_remains_unknown": True,
         },
         "unrecognized_span_records": unrecognized_span_count,
         "considered_span_records": total_span_count,
@@ -282,6 +411,7 @@ def stage_latency_attribution_report(
             "uses_one_immutable_ledger_facts_snapshot": True,
             "host_visible_latency_is_not_model_latency": True,
             "cross_clock_timestamp_subtraction_forbidden": True,
+            "acceptance_components_require_same_clock_domain": True,
             "retry_overlap_and_dependency_not_inferred_from_duration": True,
             "missing_stage_is_not_zero_duration": True,
             "unrecognized_legacy_stage_is_not_rewritten": True,

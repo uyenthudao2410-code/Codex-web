@@ -23,6 +23,7 @@ from coding_tools_mcp.resolution_contract import (
     contract_sha256,
     normalize_resolution_envelope,
 )
+from coding_tools_mcp.server import Runtime
 
 
 WORKSPACE_ID = "workspace-tg6"
@@ -997,6 +998,159 @@ class CrossSessionContinuityReportTests(unittest.TestCase):
             self.assertFalse(report["no_partial_cross_session_claim"])
             self.assertEqual(report["gate_counts"]["PASS"], 19)
             self.assertEqual(report["typed_product_session_receipts"]["count"], 2)
+
+    def test_runtime_producers_complete_cross_session_receipt_without_direct_observation_inserts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            root = Path(directory)
+            (root / "app.py").write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            runtime._orchestration_workspace_identity = lambda _path: {
+                "branch": "test", "base_head": "a" * 40, "worktree_fp": "b" * 64,
+                "source_fingerprint": SOURCE_FP,
+                "workspace_identity": {"workspace_id": WORKSPACE_ID},
+            }
+            try:
+                ledger = runtime.orchestration_ledger
+                ledger.migrate_problem_lineage_schema()
+                opened = ledger.problem_record_event({
+                    "operation": "open", "event_id": "runtime-tg6-open",
+                    "problem_id": "problem-tg6", "task_id": "task-runtime-tg6",
+                    "task_class": "feature", "engineering_floor": "REQUIRED",
+                    "contract_capsule": contract(), "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER",
+                    "evidence_level": "OBSERVED", "occurred_at": "2026-09-01T00:00:00Z",
+                    "occurred_at_source": "EXPLICIT_USER",
+                }, now="2026-09-01T00:00:01Z", authority_context="RUNTIME_EXPLICIT_USER")
+                problem_id = str(opened["event"]["problem_id"])
+                fingerprint = str(opened["event"]["contract_fingerprint"])
+
+                def attach(label: str) -> dict[str, object]:
+                    client = ledger.upsert_hub_client(
+                        client_id=f"chatweb-runtime-{label}", client_type="chatweb", role="controller",
+                        status="online", session_instance=f"session-runtime-{label}",
+                        runtime_instance_id=f"runtime-runtime-{label}")
+                    hub = {**client, "identity_source": "explicit_headers", "attestation_verified": False}
+                    runtime.request_context.hub_client = hub
+                    runtime._touch_hub_client(hub)
+                    return hub
+
+                client_a = attach("a")
+                workflow = runtime.agent_workflow({
+                    "workflow": "feature", "phase": "execute", "execution_mode": "mcp_only",
+                    "objective": "Exercise production TG6 receipt producers",
+                    "evaluation": {"provenance": "benchmark"},
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none", "include_diff": False,
+                    "problem_context": {"work_origin": "problem", "problem_id": problem_id,
+                        "problem_revision": 1, "contract_fingerprint": fingerprint,
+                        "resolution_claim": "full_problem"},
+                })
+                run_id = str(workflow["orchestration"]["run_id"])
+                wave_id = str(workflow["orchestration"]["wave_id"])
+                self.assertEqual(workflow["orchestration"]["orchestration_state"], "ACCEPTING")
+                problem_resolution = ledger.get_run(run_id)["metadata"]["problem_resolution"]
+                first_receipt = "chatweb-product-session:" + "1" * 64
+                second_receipt = "chatweb-product-session:" + "2" * 64
+                first = record_problem_product_session(
+                    ledger, run_id=run_id, wave_id=wave_id, problem_resolution=problem_resolution,
+                    workspace_id=WORKSPACE_ID,
+                    claimed_host_turn={"turn_id": "runtime-turn-a", "trace_id": "runtime-trace-a",
+                        "product_session_receipt_id": first_receipt, "product_session_transition": "observed"},
+                    hub_client=client_a)
+                self.assertEqual(first["session_event"]["payload"]["session_role"], "A")
+                checkpoint = runtime.task_control({
+                    "action": "continuity", "continuity_action": "checkpoint",
+                    "continuity_event": {"problem_id": problem_id, "problem_revision": 1,
+                        "material_event_kind": "PROBLEM_OPENED", "material_event_id": "runtime-tg6-material"}})
+                self.assertTrue(checkpoint["continuity_core"]["continuity_core_fingerprint"])
+                for _ in range(3):
+                    runtime.task_control({"action": "continuity", "continuity_action": "get",
+                        "continuity_event": {"problem_id": problem_id, "problem_revision": 1}})
+                no_advance = [event for event in ledger.list_events(run_id, wave_id=wave_id)
+                    if event["event_type"] == "controller_knowledge_no_advance_observed"]
+                self.assertEqual(len(no_advance), 1, "polling one knowledge revision must stay idempotent")
+                runtime.request_context.hub_client = {
+                    "client_id": "electron-control-center", "client_type": "electron", "role": "supervisor",
+                    "identity_source": "attested_transport", "attestation_verified": True,
+                    "attestation_source": "managed_tunnel"}
+                observed = runtime.task_control({
+                    "action": "observation", "run_id": run_id, "wave_id": wave_id,
+                    "observation_span": {"span_id": "execution-control-center:" + "c" * 64,
+                        "stage": "report_visible", "source": "electron_execution_control_center",
+                        "measurement": "observed_control_center_progress",
+                        "clock_domain": "execution-control-center:" + "c" * 64,
+                        "start_ms": 0, "end_ms": 0, "observer_plane": "execution_control_center"}})
+                self.assertIsNotNone(observed["control_center_receipt"])
+                runtime.request_context.hub_client = {"client_id": "spoofed-electron", "client_type": "electron",
+                    "role": "supervisor", "identity_source": "explicit_headers", "attestation_verified": False}
+                spoofed = runtime.task_control({
+                    "action": "observation", "run_id": run_id, "wave_id": wave_id,
+                    "observation_span": {"span_id": "execution-control-center:" + "e" * 64,
+                        "stage": "report_visible", "source": "electron_execution_control_center",
+                        "measurement": "observed_control_center_progress",
+                        "clock_domain": "execution-control-center:" + "e" * 64,
+                        "start_ms": 0, "end_ms": 0, "observer_plane": "execution_control_center"}})
+                self.assertIsNone(spoofed["control_center_receipt"])
+                self.assertEqual(sum(1 for event in ledger.list_events(run_id)
+                    if event["event_type"] == "execution_control_center_progress_observed"), 1)
+                client_b = attach("b")
+                second = record_problem_product_session(
+                    ledger, run_id=run_id, wave_id=wave_id, problem_resolution=problem_resolution,
+                    workspace_id=WORKSPACE_ID,
+                    claimed_host_turn={"turn_id": "runtime-turn-b", "trace_id": "runtime-trace-b",
+                        "product_session_receipt_id": second_receipt,
+                        "prior_product_session_receipt_id": first_receipt, "product_session_transition": "rotated"},
+                    hub_client=client_b)
+                self.assertIsNotNone(second["rotation_event"])
+                self.assertEqual(second["session_event"]["payload"]["session_role"], "B")
+                lease = ledger.get_controller_lease(run_id)
+                if lease and lease.get("status") == "active" and lease.get("owner_client_id") != client_b["client_id"]:
+                    self.assertTrue(ledger.release_controller_lease(
+                        run_id=run_id, owner_client_id=str(lease["owner_client_id"]),
+                        lease_id=str(lease["lease_id"]), fencing_token=int(lease["fencing_token"])))
+                current = runtime.task_control({"action": "continuity", "continuity_action": "get",
+                    "continuity_event": {"problem_id": problem_id, "problem_revision": 1}})
+                reattached = runtime.task_control({
+                    "action": "continuity", "continuity_action": "reattach",
+                    "continuity_event": {"problem_id": problem_id, "problem_revision": 1,
+                        "reattach_id": "runtime-reattach-b", "ack_id": "runtime-ack-b",
+                        "knowledge_revision": current["continuity_core"]["knowledge_revision"],
+                        "continuity_core_fingerprint": current["continuity_core"]["continuity_core_fingerprint"]}})
+                self.assertEqual(reattached["controller_reattach"]["status"], "REATTACHED")
+                self._job(ledger, run_id, wave_id)
+                proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id,
+                    stage_id="runtime-tg6-focused", stage_version="1",
+                    input_fingerprint="runtime-tg6-proof", status="passed")
+                runtime.task_control({"action": "goal", "goal_action": "get",
+                    "goal_event": {"problem_id": problem_id, "problem_revision": 1}})
+                event_types = [event["event_type"] for event in ledger.list_events(run_id)]
+                self.assertIn("managed_execution_reobserved", event_types)
+                self.assertIn("goal_reconstruction_observed", event_types)
+                coverage = {f"criterion-{index}": [proof_id] for index in range(1, 6)}
+                accepted = runtime.task_control({"action": "accept", "run_id": run_id, "wave_id": wave_id,
+                    "reason": "production TG6 receipt producer integration is covered",
+                    "problem_coverage_manifest": coverage, "problem_resolution_envelope": ENVELOPE})
+                self.assertTrue(accepted["accepted"])
+                self.assertIn("remaining_criterion_completed",
+                    [event["event_type"] for event in ledger.list_events(run_id)])
+                receipt_id = problem_outcome_receipt_id(
+                    receipt_type="CHATWEB_EXPLICIT_USER_OUTCOME_V1", event_id="runtime-tg6-confirm",
+                    problem_id=problem_id, problem_revision=1, turn_id="runtime-tg6-confirm-turn",
+                    trace_id="runtime-tg6-confirm-trace")
+                ledger.problem_record_event({"operation": "confirm", "event_id": "runtime-tg6-confirm",
+                    "problem_id": problem_id, "problem_revision": 1, "feedback_intent": "CONFIRM_RESOLVED",
+                    "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+                    "turn_id": "runtime-tg6-confirm-turn", "trace_id": "runtime-tg6-confirm-trace",
+                    "outcome_receipt_type": "CHATWEB_EXPLICIT_USER_OUTCOME_V1", "outcome_receipt_id": receipt_id,
+                    "occurred_at": "2026-09-01T00:11:00Z", "occurred_at_source": "EXPLICIT_USER"},
+                    now="2026-09-01T00:11:01Z", authority_context="RUNTIME_OUTCOME_RECEIPT")
+                report = self._report(root)
+                self.assertEqual(report["status"], "PASS", report["gates"])
+                self.assertTrue(report["accepted_real_cross_session_continuity_receipt"])
+                self.assertEqual(report["gate_counts"]["PASS"], 19)
+            finally:
+                runtime.close()
 
 
 if __name__ == "__main__":

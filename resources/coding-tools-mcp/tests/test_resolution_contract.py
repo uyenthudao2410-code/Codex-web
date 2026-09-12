@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import unittest
 
+from coding_tools_mcp.errors import JsonRpcError
 from coding_tools_mcp.resolution_contract import (
     ResolutionContractError,
     contract_sha256,
@@ -10,6 +11,7 @@ from coding_tools_mcp.resolution_contract import (
     normalize_problem_frame,
     normalize_resolution_envelope,
 )
+from coding_tools_mcp.tool_schema import validate_arguments
 
 
 FRAME = {
@@ -108,6 +110,40 @@ class ResolutionContractTests(unittest.TestCase):
                     "provenance": {"not": "text"},
                 }],
             })
+
+    def test_public_envelope_schema_matches_runtime_structure(self) -> None:
+        normalized = normalize_resolution_envelope(ENVELOPE)
+        validate_arguments("task_control", {"action": "accept", "problem_resolution_envelope": normalized})
+
+        invalid_envelopes = {
+            "top_level_extra": {**ENVELOPE, "unexpected": True},
+            "direct_outcome_extra": {
+                **ENVELOPE,
+                "direct_outcomes": [{**ENVELOPE["direct_outcomes"][0], "unexpected": True}],
+            },
+            "risk_missing_basis": {
+                **ENVELOPE,
+                "adjacent_risks": [{"risk_id": "risk-1", "summary": "missing basis"}],
+            },
+            "evidence_bad_status": {
+                **ENVELOPE,
+                "required_evidence": [{**ENVELOPE["required_evidence"][0], "status": "guessed"}],
+            },
+            "probe_extra": {
+                **ENVELOPE,
+                "closure_falsification_probe": {**ENVELOPE["closure_falsification_probe"], "unexpected": True},
+            },
+            "probe_failed_result": {
+                **ENVELOPE,
+                "closure_falsification_probe": {**ENVELOPE["closure_falsification_probe"], "result": "failed"},
+            },
+        }
+        for name, envelope in invalid_envelopes.items():
+            with self.subTest(name=name):
+                with self.assertRaises(JsonRpcError):
+                    validate_arguments("task_control", {"action": "accept", "problem_resolution_envelope": envelope})
+                with self.assertRaises(ResolutionContractError):
+                    normalize_resolution_envelope(envelope)
 
 
 if __name__ == "__main__":

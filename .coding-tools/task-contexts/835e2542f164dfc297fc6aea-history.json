@@ -1,0 +1,925 @@
+[
+  {
+    "version": 2,
+    "task_id": "daeca4d751a4417db99aeddb827b6079",
+    "orchestration": {
+      "run_id": "da654f5e1ceb4c5ba9f30e17a4288e9f",
+      "wave_id": "1ae9a861e4c345e7a00d8463cf7cf013",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+      "contract_fp": ""
+    },
+    "objective": "Implement the smallest causal fix localized in the current prepared wave for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 1. Adjust only derived contextual projection/rebuild semantics so durable terminal accepted/rejected/failed/cancelled orchestration history that is no longer task-owned after explicit request-scoped clear is not classified as required missing projection / TERMINAL_PARENT_CONTRADICTION. Do not discard or rewrite durable orchestration history. Genuinely nonterminal task-owned RUNs, current RUN/wave mismatch, live ownership, unexplained resources, malformed projection state, and actual update/rebuild inconsistency must continue to fail closed. Add focused regression in the existing tests/test_projection_rebuild.py for cleared terminal exclusion and a negative active/malformed case. Use only existing test modules. Do not restart runtime, edit ledger history, commit, push, clean, reset, package, or release.",
+    "status": "stopped",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-12T09:26:02.374Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T09:26:02.374Z"
+      }
+    ],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "j3GuiOWTPGV6ArIeDkIc7bTl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 5092,
+      "finished_at": "2026-09-12T09:28:51.064Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-terminal-projection-clear-restart-drift-20260912",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "727f9484bed82809e4a74573b5badacad7b9ec5526c357d8c259cdb76856d4fe",
+        "objective_summary": "Fix the controller lifecycle projection so an accepted terminal orchestration run whose completion report is acknowledged and whose request-scoped task context is cleared no longer remains as a missing or terminal-parent contradiction in the contextual projection, allowing controlled restart preflight to prove quiescence without weakening fail-closed guards.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "cleared_terminal_not_drift",
+            "summary": "After an accepted or checkpointed run is acknowledged and its request-scoped task context is cleared, contextual lifecycle projection does not classify that durable terminal run as a terminal-parent contradiction or missing projection state."
+          },
+          {
+            "criterion_id": "active_or_malformed_still_blocks",
+            "summary": "Genuinely active parents, live ownership, malformed or mismatched task projection, and unexplained resources continue to fail closed and block controlled restart."
+          },
+          {
+            "criterion_id": "projection_rebuild_consistent",
+            "summary": "Projection rebuild and validation complete consistently for a cleared terminal context and do not fail solely because the durable accepted run remains in the ledger."
+          },
+          {
+            "criterion_id": "restart_preflight_regression",
+            "summary": "Focused regression reproduces accepted terminal run plus report acknowledgement plus task clear and proves controlled restart lifecycle preflight is no longer blocked by projection drift while stale-target safety checks remain intact."
+          },
+          {
+            "criterion_id": "production_recovery",
+            "summary": "With the accepted fix active, controlled restart for the first previously scoped stale candidate reaches stopped-writer exact-stale reconciliation and live postflight proves the stale cohort decreases by one before another stale candidate is attempted."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 5,
+          "criteria_proven": 0,
+          "criteria_unresolved": 5,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "cleared_terminal_not_drift",
+          "next_critical_gap": "After an accepted or checkpointed run is acknowledged and its request-scoped task context is cleared, contextual lifecycle projection does not classify that durable terminal run as a terminal-parent contradiction or missing projection state.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 1,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Root cause in contextual projection or rebuild classification must be identified and fixed with focused regression proof.",
+          "Accepted source must be exact-byte final-accepted before production restart is retried.",
+          "Production postflight for the first scoped stale candidate must prove the cohort decreases by one with clean integrity before remaining candidates are attempted."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "da654f5e1ceb4c5ba9f30e17a4288e9f",
+          "wave_id": "7bcdd617df854d3886452c4d99226f98",
+          "checkpoint_id": ""
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 2,
+        "latest_event": {
+          "seq": 174,
+          "event_id": "prl-bind-df6ad77b695bfe7c91cec489e56c5d36ce6a20f21f71307b3295bca686d42f95",
+          "event_hash": "ed0d6a4309c103b7d1401778d726a281b70635b324806deb4d06edc551f96457",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-12T09:22:23.320Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 1,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 1,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 0,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "REPLAN",
+        "run_status": "active",
+        "wave_status": "active",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 51,
+          "head_hash": "78f1bf7f5a22897532a8058da664ee7ec58fa37f3f8e1357d28efa4425ced6ee"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-da654f5e1ceb4c5ba9f30e17a4288e9f\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-da654f5e1ceb4c5ba9f30e17a4288e9f\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-da654f5e1ceb4c5ba9f30e17a4288e9f\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "da654f5e1ceb4c5ba9f30e17a4288e9f",
+        "wave_id": "7bcdd617df854d3886452c4d99226f98",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continue the same RUN for Problem prl-terminal-projection-clear-restart-drift-20260912 after wave 1 made no source changes and failed only because one proposed test path did not exist. Re-localize using only files that actually exist. Determine the exact classification path that turns a durable terminal accepted/checkpointed RUN into TERMINAL_PARENT_CONTRADICTION / missing projection after request-scoped task clear, identify the smallest source change, and identify existing test module(s) where the regression belongs. Do not mutate source or restart runtime in this prepare wave.",
+          "objective_revision": 2,
+          "objective_sha256": "75b8293c836e478eec3f6fb32b34c9b58e6e20e4940253dae777c5657087b009",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "9a53ec52d7814946a1512e19daee1f3f",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 10920,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+      "blocker_or_failure": {
+        "failure_class": "SOL_REJECTED",
+        "reason": "NO_DURABLE_SOURCE_CHANGE: verification passed only against the pre-existing test suite, but affected_files and adopted_files are empty. The Problem requires an actual causal projection fix plus focused regression. Replan with exact source localization and require durable file receipts before acceptance.",
+        "event_seq": 51083
+      },
+      "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+      "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+    },
+    "completion_report_id": "30fc1ada8a6c0e53e1263881cd040532bca55d78bfdf4cb174d5f68d3fe3d942",
+    "completion_report_acknowledged_id": "30fc1ada8a6c0e53e1263881cd040532bca55d78bfdf4cb174d5f68d3fe3d942",
+    "completion_report_acknowledged_at": "2026-09-12T09:26:46.613Z",
+    "test_results": [
+      {
+        "command": "python -m pytest resources/coding-tools-mcp/tests/test_projection_rebuild.py resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py -q",
+        "status": "failed",
+        "exit_code": 4,
+        "duration_ms": null,
+        "summary": "exit 4 | 0.0s | 7 lines | tail: 'ERROR: file or directory not found: resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py'",
+        "finished_at": "2026-09-12T09:24:15.049Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "AswAGcnJVyay2t9i7QaPErDl"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "da654f5e1ceb4c5ba9f30e17a4288e9f",
+          "owner_wave": "1ec951c6f58e4902982cd2d71a18d3ce",
+          "size_bytes": 137,
+          "command_id": "AswAGcnJVyay2t9i7QaPErDl",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:AswAGcnJVyay2t9i7QaPErDl:stdout",
+              "total_stream_bytes": 25,
+              "total_retained_bytes": 25,
+              "head_retained_bytes": 25,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:AswAGcnJVyay2t9i7QaPErDl:stderr",
+              "total_stream_bytes": 112,
+              "total_retained_bytes": 112,
+              "head_retained_bytes": 112,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest resources/coding-tools-mcp/tests/test_projection_rebuild.py resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py -q",
+        "status": "failed",
+        "exit_code": 4,
+        "duration_ms": 1528,
+        "summary": "exit 4 | 0.0s | 7 lines | tail: 'ERROR: file or directory not found: resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py'",
+        "session_id": "AswAGcnJVyay2t9i7QaPErDl",
+        "cancelled": false,
+        "timed_out": false,
+        "effective_timeout_ms": 229625
+      },
+      {
+        "command": "python -m pytest tests/test_projection_rebuild.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '11 passed, 6 subtests passed in 9.20s'",
+        "finished_at": "2026-09-12T09:26:01.965Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "KWAdC2K_asnhwnC8U7CDK_u7"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "da654f5e1ceb4c5ba9f30e17a4288e9f",
+          "owner_wave": "7bcdd617df854d3886452c4d99226f98",
+          "size_bytes": 114,
+          "command_id": "KWAdC2K_asnhwnC8U7CDK_u7",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:KWAdC2K_asnhwnC8U7CDK_u7:stdout",
+              "total_stream_bytes": 114,
+              "total_retained_bytes": 114,
+              "head_retained_bytes": 114,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:KWAdC2K_asnhwnC8U7CDK_u7:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_projection_rebuild.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 10921,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '11 passed, 6 subtests passed in 9.20s'",
+        "session_id": "KWAdC2K_asnhwnC8U7CDK_u7",
+        "cancelled": false,
+        "timed_out": false,
+        "effective_timeout_ms": 229014
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "python",
+        "name": "coding-tools-mcp",
+        "version": "1.0.0",
+        "package_manager": "pip",
+        "test_command": "python -m pytest",
+        "build_command": "python -m build",
+        "artifact_paths": [
+          "dist"
+        ]
+      },
+      "commands": {
+        "test": "python -m pytest tests/test_projection_rebuild.py -q",
+        "build": "python -m build"
+      },
+      "test_result": {
+        "command": "python -m pytest tests/test_projection_rebuild.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 10921,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '11 passed, 6 subtests passed in 9.20s'",
+        "session_id": "KWAdC2K_asnhwnC8U7CDK_u7",
+        "cancelled": false,
+        "timed_out": false,
+        "effective_timeout_ms": 229014
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-09-12T09:26:01.965Z"
+    },
+    "modified_files": [],
+    "failure": "CAUSAL_HYPOTHESIS_FALSIFIED_BY_FRESH_IMMUTABLE_CENSUS: no durable source change was made. Fresh census now reports CONTEXTUAL_PROJECTIONS with missing_run_count=0, conflicting_run_count=0, projection_drift=false, SQLite integrity ok and FK rows 0; the previously observed terminal-parent contradiction is no longer present. Abort this engineering attempt rather than patching unproven behavior, then return to the original stale-run maintenance goal with a fresh restart preflight.",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-12T09:22:21.356Z",
+    "updated_at": "2026-09-12T09:30:02.487Z",
+    "events": [
+      {
+        "time": "2026-09-12T09:22:21.356Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Diagnose Problem prl-terminal-projection-clear-restart-drift-20260912 revision 1. Reproduce from source semantics why an accepted/checkpointed terminal orchestration RUN can remain as TERMINAL_PARENT_CONTRADICTION / missing_run_count=1 in the contextual lifecycle projection after its completion report was acknowledged and task_control clear made the request-scoped task context idle. Focus on projection rebuild, lifecycle census/classification, task-state clear/reconciliation, and controlled restart preflight. Identify the smallest causal source change and focused regression. Do not mutate source, restart runtime, edit ledger history, commit, push, clean, or reset."
+        }
+      },
+      {
+        "time": "2026-09-12T09:22:23.569Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:22:30.367Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:22:30.386Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:23:34.299Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:09.095Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:09.847Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:11.263Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:11.276Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:12.662Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:13.310Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:14.113Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest resources/coding-tools-mcp/tests/test_projection_rebuild.py resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py -q",
+          "session_id": "AswAGcnJVyay2t9i7QaPErDl"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:15.049Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest resources/coding-tools-mcp/tests/test_projection_rebuild.py resources/coding-tools-mcp/tests/test_lifecycle_contextual_projection.py -q",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:15.049Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:15.460Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:16.192Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:16.194Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:16.203Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:16.315Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "fd498dad5ac2f848b463b9abb290f61a972ce395385576a2d42bb2330c569c31"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:16.453Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:28.016Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:30.393Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "fd498dad5ac2f848b463b9abb290f61a972ce395385576a2d42bb2330c569c31"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:41.535Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:43.435Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:49.341Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:24:49.345Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:46.060Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:47.324Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:48.827Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:48.835Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:50.218Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:50.843Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:25:51.821Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_projection_rebuild.py -q",
+          "session_id": "KWAdC2K_asnhwnC8U7CDK_u7"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:01.965Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_projection_rebuild.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:01.965Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:02.366Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:02.374Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:03.035Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:03.038Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:03.193Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "df11a34030f5bd4397c2c9aa444da52c8719af2f6a63fada58c8870fb08b922b"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:03.359Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:14.092Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:16.168Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:16.171Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:16.351Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "30fc1ada8a6c0e53e1263881cd040532bca55d78bfdf4cb174d5f68d3fe3d942"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:23.900Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:26.384Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "MESSAGE_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:46.613Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "30fc1ada8a6c0e53e1263881cd040532bca55d78bfdf4cb174d5f68d3fe3d942"
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:57.502Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:26:59.077Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:27:02.869Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:27:02.877Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:27:59.839Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py'; $a=Get-Content -LiteralPath $p; '--- lifecycle 330-455 ---'; $a[329..454]; '--- lifecycle 610-715 ---'; $a[609..714]; '--- projection rebuild full ---'; Get-Content -LiteralPath 'resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py'; '--- projection tests ---'; Get-Content -LiteralPath 'resources/coding-tools-mcp/tests/test_projection_rebuild.py'; '--- census tests 100-180 ---'; $t=",
+          "session_id": "Z8rUeH2IRRWL2_uI6knSfDDO"
+        }
+      },
+      {
+        "time": "2026-09-12T09:28:01.364Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py'; $a=Get-Content -LiteralPath $p; '--- lifecycle 330-455 ---'; $a[329..454]; '--- lifecycle 610-715 ---'; $a[609..714]; '--- projection rebuild full ---'; Get-Content -LiteralPath 'resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py'; '--- projection tests ---'; Get-Content -LiteralPath 'resources/coding-tools-mcp/tests/test_projection_rebuild.py'; '--- census tests 100-180 ---'; $t=",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:28:14.972Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py'; $a=Get-Content -LiteralPath $p; '--- lifecycle 1-120 ---'; $a[0..119]; '--- lifecycle 455-615 ---'; $a[454..614]; '--- projection readers ---'; Select-String -LiteralPath $p -Pattern 'def read_task_projection|def _.*projection|terminal_parent_ids|terminal_wave|contextual_projections' -Context 8,18; '--- task state projection listing symbols ---'; $t=Get-Content -LiteralPath 'resources/coding-too",
+          "session_id": "zt8mMMNiURIHWzESDgTkwt4G"
+        }
+      },
+      {
+        "time": "2026-09-12T09:28:17.022Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py'; $a=Get-Content -LiteralPath $p; '--- lifecycle 1-120 ---'; $a[0..119]; '--- lifecycle 455-615 ---'; $a[454..614]; '--- projection readers ---'; Select-String -LiteralPath $p -Pattern 'def read_task_projection|def _.*projection|terminal_parent_ids|terminal_wave|contextual_projections' -Context 8,18; '--- task state projection listing symbols ---'; $t=Get-Content -LiteralPath 'resources/coding-too",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:28:46.317Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "session_id": "j3GuiOWTPGV6ArIeDkIc7bTl"
+        }
+      },
+      {
+        "time": "2026-09-12T09:28:51.064Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:29:14.405Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:29:14.422Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:30:02.487Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T09:30:12.655Z",
+    "archive_reason": "cleared"
+  }
+]

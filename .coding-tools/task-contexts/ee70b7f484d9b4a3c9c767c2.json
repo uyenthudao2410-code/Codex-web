@@ -1,0 +1,130 @@
+{
+  "version": 2,
+  "task_id": "8c26d3edc8594222b11963024d687b68",
+  "orchestration": {
+    "run_id": "660e245165ee4c178d4e421bb0883b63",
+    "wave_id": "f4148daaa121471d95bb953168a8d413",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+    "contract_fp": ""
+  },
+  "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false if compactly practical. Preserve all unrelated pre-existing WIP bytes.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "stopped",
+      "integrity": {
+        "ok": true,
+        "checked": 10,
+        "head_hash": "cd18d8d2b33d58f5d552a6eca0cf32cdbd76fd5c5fc5b05a3923352544b3ca1e"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "660e245165ee4c178d4e421bb0883b63",
+      "wave_id": "f4148daaa121471d95bb953168a8d413",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false if compactly practical. Preserve all unrelated pre-existing WIP bytes.",
+        "objective_revision": 1,
+        "objective_sha256": "73c4f2988408d29d8182561e95947ebba29d9e0563400fa3acbe49b77776e91c",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "ba0d1632849738d914d6f8b11b6b0fc9634b651bf4cec856cdcb8c98977d9633",
+  "completion_report_acknowledged_id": "ba0d1632849738d914d6f8b11b6b0fc9634b651bf4cec856cdcb8c98977d9633",
+  "completion_report_acknowledged_at": "2026-09-08T20:25:52.161Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-08T20:25:43.439Z",
+  "updated_at": "2026-09-08T20:25:52.165Z",
+  "events": [
+    {
+      "time": "2026-09-08T20:25:43.439Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "660e245165ee4c178d4e421bb0883b63"
+      }
+    },
+    {
+      "time": "2026-09-08T20:25:43.480Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "ba0d1632849738d914d6f8b11b6b0fc9634b651bf4cec856cdcb8c98977d9633"
+      }
+    },
+    {
+      "time": "2026-09-08T20:25:50.208Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T20:25:52.161Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "ba0d1632849738d914d6f8b11b6b0fc9634b651bf4cec856cdcb8c98977d9633"
+      }
+    }
+  ]
+}

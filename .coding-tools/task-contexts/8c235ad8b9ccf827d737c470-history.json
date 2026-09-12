@@ -1,0 +1,92 @@
+[
+  {
+    "version": 2,
+    "task_id": "00e747ab704d4d5b862bc3506027f503",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "AX63YkIQw0ZJ9M4FRWb-vPCg",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 318,
+      "finished_at": "2026-09-09T07:43:16.348Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T07:42:25.571Z",
+    "updated_at": "2026-09-09T07:43:16.348Z",
+    "events": [
+      {
+        "time": "2026-09-09T07:42:25.571Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T07:42:25.931Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); 'PROJECTION'; $j.projection | ConvertTo-Json -Depth 5; 'SUMMARY'; $j.summary | ConvertTo-Json -Depth 5; 'RELEVANT'; $j.runs | Where-Object { $_.classification -in @('LIVE_OWNED','AWAITING_ACCEPTANCE','GRACE_PERIOD_INACTIVE','TERMINAL_PARENT_CONTRADICTION','UNEXPLAINED_ACTIVE') } | Select-Object run_id,cla",
+          "session_id": "TTgGmvJ12sBJx21YsU2KynVL"
+        }
+      },
+      {
+        "time": "2026-09-09T07:42:31.237Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); 'PROJECTION'; $j.projection | ConvertTo-Json -Depth 5; 'SUMMARY'; $j.summary | ConvertTo-Json -Depth 5; 'RELEVANT'; $j.runs | Where-Object { $_.classification -in @('LIVE_OWNED','AWAITING_ACCEPTANCE','GRACE_PERIOD_INACTIVE','TERMINAL_PARENT_CONTRADICTION','UNEXPLAINED_ACTIVE') } | Select-Object run_id,cla",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T07:42:48.114Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.run_id -in @('4af4b6a6240d4207b2fea6b9fe169d7f','b4cbeabf1b1d47a58d68a57b07a6114e') } | Select-Object run_id,classification,latest_state_after,run_status,reasons,ownership,managed_job_classifications,stale_background_operations,@{n='last_seq';e={$_.last_event.seq}} | ConvertTo-",
+          "session_id": "xOM2GAuLVBQ5WoXsW_wN9yYG"
+        }
+      },
+      {
+        "time": "2026-09-09T07:42:54.019Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.run_id -in @('4af4b6a6240d4207b2fea6b9fe169d7f','b4cbeabf1b1d47a58d68a57b07a6114e') } | Select-Object run_id,classification,latest_state_after,run_status,reasons,ownership,managed_job_classifications,stale_background_operations,@{n='last_seq';e={$_.last_event.seq}} | ConvertTo-",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T07:43:16.079Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -E \"action == ['\\\"](stop|clear)['\\\"]|action in .*stop|def .*stop|task_stop|stop_task|orchestration.*stop|controller.*lease\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "AX63YkIQw0ZJ9M4FRWb-vPCg"
+        }
+      },
+      {
+        "time": "2026-09-09T07:43:16.348Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -E \"action == ['\\\"](stop|clear)['\\\"]|action in .*stop|def .*stop|task_stop|stop_task|orchestration.*stop|controller.*lease\" -- resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T07:43:26.541Z",
+    "archive_reason": "finished"
+  }
+]

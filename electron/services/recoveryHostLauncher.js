@@ -5,7 +5,7 @@ const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('.
 const { sameInstallationIdentity } = require('./runtimeIdentity');
 const {
   normalizeProcessStartToken,
-  observeProcessIdentity,
+  observeLifecycleProcessIdentity,
   processIdentityFrom,
   sameProcessIdentity,
   terminateExactProcessTree,
@@ -71,8 +71,14 @@ function executableForLaunch(options = {}) {
   return candidate;
 }
 
-function processEnvironment(role, options = {}) {
-  const env = { ...process.env, WEBCODEX_PROCESS_ROLE: role };
+function processEnvironment(role, options = {}, inheritedEnv = process.env) {
+  const env = { ...inheritedEnv, WEBCODEX_PROCESS_ROLE: role };
+  // A trusted deferred worker intentionally runs electron.exe as Node.  A real
+  // Recovery Host or Electron UI spawned from that worker must cross back into
+  // Electron mode instead of inheriting the worker-only execution contract.
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.FULL_CLEAN_DEFERRED_WORKER;
+  delete env.FULL_CLEAN_SOURCE_CHECKPOINT_JSON;
   const epoch = activationEpochId(options);
   if (epoch) env.CODING_TOOLS_MCP_ACTIVATION_EPOCH_ID = epoch;
   const bootstrap = recoveryBootstrapId(options);
@@ -322,7 +328,7 @@ async function retireStaleDevelopmentRecoveryHost({
   descriptor,
   log,
   readDescriptor = loadRecoveryDescriptor,
-  processIdentityObserver = observeProcessIdentity,
+  processIdentityObserver = observeLifecycleProcessIdentity,
   terminateProcess = null,
   waitForExactExit = waitForExactProcessExit,
   sleep = wait,
@@ -460,7 +466,7 @@ async function ensureRecoveryHost({
   spawnProcess = spawn,
   clientFactory = (options) => new RecoveryIpcClient(options),
   readDescriptor = loadRecoveryDescriptor,
-  processIdentityObserver = observeProcessIdentity,
+  processIdentityObserver = observeLifecycleProcessIdentity,
   terminateProcess = null,
   waitForExactExit = waitForExactProcessExit,
   processAlive = isProcessAlive,
@@ -548,6 +554,7 @@ module.exports = {
   recoveryLoginItemArguments,
   electronUiArguments,
   spawnElectronUi,
+  processEnvironment,
   assertActivationDeadline,
   suppressDevelopmentRecoverySupervisor,
   descriptorMatchesInstallation,

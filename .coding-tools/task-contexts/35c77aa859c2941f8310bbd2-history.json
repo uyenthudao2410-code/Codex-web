@@ -1,0 +1,246 @@
+[
+  {
+    "version": 2,
+    "task_id": "90735f14b882429a8e0e8c828b9a9136",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "zMeNN9i8hWNTBjTYIpw2I_yX",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 4140,
+      "finished_at": "2026-09-10T16:56:34.802Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T16:54:47.990Z",
+    "updated_at": "2026-09-10T16:56:34.802Z",
+    "events": [
+      {
+        "time": "2026-09-10T16:54:47.990Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T16:54:48.348Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "session_id": "Y4VKGj7QPkTnWYgW-NbTbeFu"
+        }
+      },
+      {
+        "time": "2026-09-10T16:54:52.133Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:55:18.132Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = (& python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web | Out-String | ConvertFrom-Json); $j.runs | Where-Object { $_.classification -ne 'THRESHOLD_SENSITIVE_STALE_CANDIDATE' -and $_.classification -ne 'P5_EXPERIMENT_ANCHOR' } | Select-Object run_id,wave_id,classification,status,parent_run_id | ConvertTo-Json -Depth 4; $j.managed_jobs | Where-Object { $_.classification -ne 'TERMINAL' } | Select-Object job_id,command_id,run_id,wave_id,classif",
+          "session_id": "N0URuxren5gSxM-ffX9FBWUM"
+        }
+      },
+      {
+        "time": "2026-09-10T16:55:23.291Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = (& python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web | Out-String | ConvertFrom-Json); $j.runs | Where-Object { $_.classification -ne 'THRESHOLD_SENSITIVE_STALE_CANDIDATE' -and $_.classification -ne 'P5_EXPERIMENT_ANCHOR' } | Select-Object run_id,wave_id,classification,status,parent_run_id | ConvertTo-Json -Depth 4; $j.managed_jobs | Where-Object { $_.classification -ne 'TERMINAL' } | Select-Object job_id,command_id,run_id,wave_id,classif",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:02.010Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "session_id": "fRgT-X37gkd5DwPqk8sEagFq"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:06.152Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:18.918Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\reconcile_exact_stale_run.py --help",
+          "session_id": "H3QXWn92Aw_QiersRYTn2wCc"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:19.344Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\reconcile_exact_stale_run.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:30.729Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\reconcile_exact_stale_run.py --workspace E:\\DEV\\Codex-web --run-id 73e2b11c37284f31864f73b497da1781",
+          "session_id": "zMeNN9i8hWNTBjTYIpw2I_yX"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:34.802Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\reconcile_exact_stale_run.py --workspace E:\\DEV\\Codex-web --run-id 73e2b11c37284f31864f73b497da1781",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T16:56:58.256Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "dcde6c1c6170442b8906236ee9d096f4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "KUJLHxUPVW0zfAq_GKJBbpBM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 318,
+      "finished_at": "2026-09-10T16:57:44.891Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T16:56:58.258Z",
+    "updated_at": "2026-09-10T16:57:44.891Z",
+    "events": [
+      {
+        "time": "2026-09-10T16:56:58.258Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:58.594Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reconcile_exact_stale_run|runtime_stopped|stale-run reconciliation|stale_run_reconciliation\" electron scripts resources/recovery-supervisor resources/coding-tools-mcp -g \"*.js\" -g \"*.ps1\" -g \"*.py\"",
+          "session_id": "6lffFb7Ks87RZkqEvoXISr3q"
+        }
+      },
+      {
+        "time": "2026-09-10T16:56:58.868Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reconcile_exact_stale_run|runtime_stopped|stale-run reconciliation|stale_run_reconciliation\" electron scripts resources/recovery-supervisor resources/coding-tools-mcp -g \"*.js\" -g \"*.ps1\" -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:10.890Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/fullCleanActivation.js' | Select-Object -Skip 1700 -First 210\"",
+          "session_id": "UYMj0p7Lol8Iz_LKGPvaxDdj"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:12.267Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/fullCleanActivation.js' | Select-Object -Skip 1700 -First 210\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:23.513Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"EXACT_STALE_RUN_REASON_PREFIX|EXACT_STALE_RUN_MAX_IDS|maintenance_workspace|exact-stale-run\" electron/services/fullCleanActivation.js electron/services/recoveryActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-activation.test.js",
+          "session_id": "e28_4NoETNQ0K8ILNwbh29_P"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:23.773Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"EXACT_STALE_RUN_REASON_PREFIX|EXACT_STALE_RUN_MAX_IDS|maintenance_workspace|exact-stale-run\" electron/services/fullCleanActivation.js electron/services/recoveryActivation.js electron/services/recoveryHost.js tests/full-clean-activation.test.js tests/recovery-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:31.840Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/fullCleanActivation.js' | Select-Object -Skip 1430 -First 285\"",
+          "session_id": "hOI5v6EF8cqxvRT0j3Nm62Ht"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:33.241Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'electron/services/fullCleanActivation.js' | Select-Object -Skip 1430 -First 285\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:44.590Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"restart_runtime|confirm_restart|exact_stale_runs:\" resources/coding-tools-mcp/coding_tools_mcp electron/services tests | Select-Object -First 120",
+          "session_id": "KUJLHxUPVW0zfAq_GKJBbpBM"
+        }
+      },
+      {
+        "time": "2026-09-10T16:57:44.891Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"restart_runtime|confirm_restart|exact_stale_runs:\" resources/coding-tools-mcp/coding_tools_mcp electron/services tests | Select-Object -First 120",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T16:57:55.396Z",
+    "archive_reason": "finished"
+  }
+]

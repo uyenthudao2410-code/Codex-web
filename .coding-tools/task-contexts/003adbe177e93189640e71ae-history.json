@@ -1,0 +1,550 @@
+[
+  {
+    "version": 2,
+    "task_id": "9a951fa4100b4edab48e793a91397b05",
+    "orchestration": {
+      "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+      "wave_id": "741844f3041244a8a4250b446356e13a",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "55652b7f675ffef67b7c29b8edf29f9dcb1f596f9220a32f33a82814971a6972",
+      "contract_fp": "48bf51ec5b78d91e5c83035589ffe868fdce216a6b5d7bc2206fa7891f7f910b"
+    },
+    "objective": "Establish byte-exact accepted recovery_host provenance for the trusted mixed-version bootstrap, prove the selector and handoff safeguards, and prepare one safe full-clean replacement without changing the existing source bytes.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T12:58:35.315Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T12:58:35.315Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T12:58:35.315Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-08T12:59:17.364Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "docs/RECOVERY_HOST.md",
+            "state": "file",
+            "sha256": "c740b00c1e59321e54525dc2995df5ac47b9eedae043af454953a95d3ec1a483",
+            "size_bytes": 41512,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "electron/services/componentRevision.js",
+            "state": "file",
+            "sha256": "91e74b98e5332e191adc11205ebf03c404506e6c6e90213977ce52f2dd95bfc7",
+            "size_bytes": 12990,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "electron/services/recoveryActionStore.js",
+            "state": "file",
+            "sha256": "1901a7c123b1c0f7a50da3f288e8af88801c7fb3f7c019275d5f4c8281b1f899",
+            "size_bytes": 83912,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "electron/services/recoveryBootstrap.js",
+            "state": "file",
+            "sha256": "f81940b4090ad7a86f3a249cd3593f6b20d4a17743e703b417e45755e69cca5c",
+            "size_bytes": 38893,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "electron/services/recoveryHost.js",
+            "state": "file",
+            "sha256": "cc3eac44bb52a5502fc35ea7ee77ca8dd40f07e431246a48b094a4a1da015486",
+            "size_bytes": 133400,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "electron/services/trustedRecoveryBootstrap.js",
+            "state": "file",
+            "sha256": "00dd436290dc1a7760e98a0ef0bb9e86b7f9c0e4315cb98acb7115381a876672",
+            "size_bytes": 10525,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "scripts/full-clean-activation.js",
+            "state": "file",
+            "sha256": "7b15ba0f1c6a43ce517de813ec5be1381b808423ddfea8ebb85e2c199b5cb0a1",
+            "size_bytes": 76297,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "scripts/trusted-recovery-bootstrap.js",
+            "state": "file",
+            "sha256": "91835c6b7f8174a27164f24babc71c4457769c504de9c4588bdf215865673ede",
+            "size_bytes": 3591,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "tests/accepted-code-activation.test.js",
+            "state": "file",
+            "sha256": "5a3d06382db8f3ebeb2ce3aa7237c3bad6da16e8fb3369aaf6897fc0956dc3a6",
+            "size_bytes": 56275,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "tests/recovery-bootstrap.test.js",
+            "state": "file",
+            "sha256": "6336e7a6c4406b470cf296dc681255628ffcd7f5ee1af03da06d2879473dcc90",
+            "size_bytes": 29990,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          },
+          {
+            "path": "tests/trusted-recovery-bootstrap.test.js",
+            "state": "file",
+            "sha256": "64e9511f427ead20c6d2e0a952e636f36ff9cef07c79d768ed4ebc6dc36c56ce",
+            "size_bytes": 8483,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+            "wave_id": "741844f3041244a8a4250b446356e13a"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 45,
+          "head_hash": "cd6c95abb9aba86cef98dafcdb1a011c5101d2840cf147f4424cf495e6a25886"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-40792d1bc41d482f9d4a81d0d0b5ffc8\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-40792d1bc41d482f9d4a81d0d0b5ffc8\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "40792d1bc41d482f9d4a81d0d0b5ffc8",
+        "wave_id": "741844f3041244a8a4250b446356e13a",
+        "checkpoint_id": "21d887b0bf674a139b532a2fc158ca16",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "55652b7f675ffef67b7c29b8edf29f9dcb1f596f9220a32f33a82814971a6972",
+        "contract_fp": "48bf51ec5b78d91e5c83035589ffe868fdce216a6b5d7bc2206fa7891f7f910b",
+        "objective_provenance": {
+          "effective_objective": "Establish byte-exact accepted recovery_host provenance for the trusted mixed-version bootstrap, prove the selector and handoff safeguards, and prepare one safe full-clean replacement without changing the existing source bytes.",
+          "objective_revision": 1,
+          "objective_sha256": "a2a376a0a50c3e3cac1410e90acf24d004400208002c2a19e4dfc8438c18166a",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 5,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "50fa431f75c44bf4a777825e1b9cf6ba",
+            "stage_id": "check:ab3e5982ab79e3d6",
+            "status": "passed",
+            "duration_ms": 5362,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "4e934ef2a1c14278adaf62595f4a2f67",
+            "stage_id": "check:1a46f0fadadf887b",
+            "status": "passed",
+            "duration_ms": 1456,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "becd9da9fafc418c89634a6420f9cd93",
+            "stage_id": "check:fb57f580333ccaca",
+            "status": "passed",
+            "duration_ms": 5604,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "ce0393372c704a27b2f0e1f90df267b4",
+            "stage_id": "check:9273835c18178321",
+            "status": "passed",
+            "duration_ms": 6280,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "e3d582a745ee48ac98e5b051998d2c33",
+            "stage_id": "check:10113b3f8fc4b7e9",
+            "status": "passed",
+            "duration_ms": 1327,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "946df9359a610d5fe27c509e2170b05bfa3d77fa7f2cefac116b67abc76e01ac",
+    "completion_report_acknowledged_id": "946df9359a610d5fe27c509e2170b05bfa3d77fa7f2cefac116b67abc76e01ac",
+    "completion_report_acknowledged_at": "2026-09-08T13:41:14.011Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T12:58:06.247Z",
+    "updated_at": "2026-09-08T13:41:23.695Z",
+    "events": [
+      {
+        "time": "2026-09-08T12:58:06.247Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Establish byte-exact accepted recovery_host provenance for the trusted mixed-version bootstrap, prove the selector and handoff safeguards, and prepare one safe full-clean replacement without changing the existing source bytes."
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:07.848Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:09.052Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:10.224Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:10.232Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:11.520Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:12.012Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:13.070Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/trusted-recovery-bootstrap.test.js tests/recovery-bootstrap.test.js tests/full-clean-activation-command.test.js",
+          "session_id": "TCYn7vo3Rr4SFrEzJqrfeuno"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:17.600Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/trusted-recovery-bootstrap.test.js tests/recovery-bootstrap.test.js tests/full-clean-activation-command.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:19.208Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/component-revision.test.js",
+          "session_id": "LpoLmh74-MBny42hzei9WVH1"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:19.652Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/component-revision.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:21.492Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test --test-name-pattern \"newer component-bearing|processed component source\" tests/accepted-code-activation.test.js",
+          "session_id": "3NfXhhOrP8vRwtAHTpPkPTwo"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:26.193Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test --test-name-pattern \"newer component-bearing|processed component source\" tests/accepted-code-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:27.672Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/full-clean-activation.test.js",
+          "session_id": "N4yKdk-ZaJSKLyAstI1x5kRG"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:33.091Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:34.436Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md electron/services/componentRevision.js electron/services/recoveryActionStore.js electron/services/recoveryBootstrap.js electron/services/recoveryHost.js scripts/full-clean-activation.js tests/accepted-code-activation.test.js tests/recovery-bootstrap.test.js",
+          "session_id": "1zqCJJbQ2SvYIadHaQ_anrKU"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:34.949Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- docs/RECOVERY_HOST.md electron/services/componentRevision.js electron/services/recoveryActionStore.js electron/services/recoveryBootstrap.js electron/services/recoveryHost.js scripts/full-clean-activation.js tests/accepted-code-activation.test.js tests/recovery-bootstrap.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:35.307Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:35.315Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:35.799Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:35.803Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:35.929Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "6fa827956ffd27db22d25e33049daa2b830bb715dcda9d556d0cde27fb7e604c"
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:36.077Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T12:58:59.069Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:59:01.440Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T12:59:01.443Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:59:01.584Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "946df9359a610d5fe27c509e2170b05bfa3d77fa7f2cefac116b67abc76e01ac"
+        }
+      },
+      {
+        "time": "2026-09-08T12:59:17.201Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T12:59:17.364Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/trusted-recovery-bootstrap.js --preflight",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-08T13:41:14.011Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "946df9359a610d5fe27c509e2170b05bfa3d77fa7f2cefac116b67abc76e01ac"
+        }
+      },
+      {
+        "time": "2026-09-08T13:41:23.695Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T13:41:23.837Z",
+    "archive_reason": "finished"
+  }
+]

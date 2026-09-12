@@ -309,6 +309,73 @@ test('dev:control-center opens the manager through the exact current Electron in
   assert.match(fixture.lines.at(-1), new RegExp(`running_revision=${REVISION} disk_revision=${REVISION}`));
 });
 
+test('start bootstraps an absent or dead host through the guarded full-clean lifecycle', async (t) => {
+  for (const code of ['ENOENT', 'RECOVERY_DESCRIPTOR_STALE']) {
+    await t.test(code, async () => {
+      const fixture = harness(unavailableObservation({ code }));
+      fixture.deps.ensureRefreshHost = async () => {
+        fixture.calls.push('ensure-refresh-host');
+        fixture.current = observation('MISSING');
+        return fixture.current;
+      };
+      fixture.deps.refresh = async () => {
+        fixture.calls.push('guarded-full-clean');
+        throw Object.assign(new Error('canonical census blocks mutation'), { code: 'RUNTIME_BUSY' });
+      };
+      await assert.rejects(runLifecycle('start', fixture.deps), { code: 'RUNTIME_BUSY' });
+      assert.deepEqual(fixture.calls, ['ensure-refresh-host', 'guarded-full-clean']);
+      assert.match(fixture.lines[0], /START action=cold_start reason=host_absent/);
+    });
+  }
+});
+
+test('start uses a new guarded epoch when fresh telemetry and PID state prove both primary services stopped', async () => {
+  const fixture = harness(observation('MISSING'));
+  fixture.deps.runtimeSnapshot = async () => ({
+    telemetryAvailable: true, signalStale: false,
+    mcpRunning: false, nativeAlive: false, tunnelRunning: false
+  });
+  fixture.deps.runtimeState = () => ({ nativePid: 44111, tunnelPid: 44112 });
+  fixture.deps.processAlive = () => false;
+  fixture.deps.refresh = async () => {
+    fixture.calls.push('guarded-full-clean');
+    throw Object.assign(new Error('source/ledger guard'), { code: 'RUNTIME_BUSY' });
+  };
+  await assert.rejects(runLifecycle('start', fixture.deps), { code: 'RUNTIME_BUSY' });
+  assert.deepEqual(fixture.calls, ['guarded-full-clean']);
+  assert.match(fixture.lines[0], /START action=cold_start reason=runtime_stopped/);
+});
+
+test('start never turns uncertain, partial, busy or still-live service evidence into a refresh', async (t) => {
+  const stopped = { telemetryAvailable: true, signalStale: false, mcpRunning: false, nativeAlive: false, tunnelRunning: false };
+  for (const patch of [
+    { signalStale: true }, { telemetryAvailable: false }, { snapshotBusy: true },
+    { busy: true }, { recovering: true }, { nativeAlive: true }, { tunnelRunning: true },
+    { livePid: true }, { manualStop: true }, { snapshotFailure: true }
+  ]) {
+    await t.test(JSON.stringify(patch), async () => {
+      const fixture = harness(observation('CURRENT'));
+      fixture.deps.runtimeSnapshot = async () => {
+        if (patch.snapshotFailure) throw Object.assign(new Error('unavailable'), { code: 'RECOVERY_REQUEST_TIMEOUT' });
+        return { ...stopped, ...patch };
+      };
+      fixture.deps.runtimeState = () => ({ nativePid: 44111, manualStop: patch.manualStop });
+      fixture.deps.processAlive = () => patch.livePid === true;
+      fixture.deps.refresh = async () => assert.fail('uncertainty is not refresh authority');
+      fixture.deps.runtimeReadiness = async () => ({ ready: false, reason: 'runtime_readiness_unverified' });
+      await assert.rejects(runLifecycle('start', fixture.deps), { code: 'DEV_UI_RUNTIME_UNAVAILABLE' });
+      assert.deepEqual(fixture.calls, ['signal:focus:electron-ui-instance-0001']);
+    });
+  }
+});
+
+test('start refuses an unreachable host without bootstrapping over an uncertain owner', async () => {
+  const fixture = harness(unavailableObservation({ code: 'ECONNREFUSED' }));
+  fixture.deps.ensureRefreshHost = async () => assert.fail('do not infer absence from transport failure');
+  await assert.rejects(runLifecycle('start', fixture.deps), { code: 'DEV_UI_HOST_UNAVAILABLE' });
+  assert.deepEqual(fixture.calls, []);
+});
+
 test('dev reports UI_CURRENT and fails typed when Recovery Host backend is not ready', async () => {
   const fixture = harness(observation('CURRENT'));
   fixture.deps.runtimeReadiness = async () => ({
@@ -1241,16 +1308,99 @@ test('Electron task list reads and controls canonical orchestration state instea
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'electron', 'main.js'), 'utf8');
   const start = source.indexOf("secureHandle('task-state:read'");
   const end = source.indexOf("secureHandle('performance:read'", start);
+  const bridgeStart = source.indexOf('function canonicalTaskStateFromControl');
+  const bridgeEnd = source.indexOf('async function panelTaskControl', bridgeStart);
   assert.ok(start >= 0 && end > start);
+  assert.ok(bridgeStart >= 0 && bridgeEnd > bridgeStart);
   const handlers = source.slice(start, end);
+  const bridge = source.slice(bridgeStart, bridgeEnd);
   assert.match(handlers, /readOrchestrationControlSnapshot\(\)/);
-  assert.match(handlers, /taskList\?\.source !== 'orchestration_ledger'/);
-  assert.match(handlers, /taskList\.current/);
+  assert.match(handlers, /canonicalTaskStateFromControl\(await readOrchestrationControlSnapshot\(\)\)/);
+  assert.match(bridge, /taskList\?\.source !== 'orchestration_ledger'/);
+  assert.match(bridge, /taskList\.current/);
+  assert.match(bridge, /projectionTaskId === canonicalTaskId/);
+  assert.match(bridge, /projectionRunId === canonicalRunId/);
+  assert.match(bridge, /controlRunId === canonicalRunId/);
   assert.match(handlers, /Array\.isArray\(taskList\.history\)/);
   for (const action of ['clear', 'pause', 'resume', 'stop']) {
     assert.match(handlers, new RegExp(`panelTaskControl\\('${action}'\\)`));
   }
   assert.doesNotMatch(handlers, /workspaceStatePaths|archiveTask|readJson|writeJsonAtomic/);
+});
+
+function taskProjectionBridgeHarness() {
+  const source = fs.readFileSync(path.resolve(__dirname, '..', 'electron', 'main.js'), 'utf8');
+  const start = source.indexOf('function canonicalTaskStateFromControl');
+  const end = source.indexOf('async function panelTaskControl', start);
+  assert.ok(start >= 0 && end > start, 'canonical task bridge must remain discoverable');
+  const context = vm.createContext({});
+  vm.runInContext(source.slice(start, end), context, { filename: 'electron/task-state-bridge.js' });
+  return (control) => {
+    context.__control = control;
+    return JSON.parse(JSON.stringify(vm.runInContext('canonicalTaskStateFromControl(__control)', context)));
+  };
+}
+
+test('Task projection bridge preserves rich evidence only for the exact canonical task and run', () => {
+  const project = taskProjectionBridgeHarness();
+  const result = project({
+    run_id: 'run-1',
+    task_list: {
+      source: 'orchestration_ledger',
+      current: { task_id: 'task-1', run_id: 'run-1', objective: 'Canonical objective', status: 'accepted', started_at: '2026-09-09T00:00:00Z' }
+    },
+    task: {
+      task_id: 'task-1',
+      run_id: 'run-1',
+      wave_id: 'wave-1',
+      objective: 'projection objective must not override canonical',
+      status: 'waiting',
+      steps: [{ id: 'step-1', text: 'Done', status: 'completed' }],
+      test_results: [{ command: 'node --test focused', status: 'passed', duration_ms: 12 }],
+      modified_files: [{ path: 'electron/main.js', operation: 'update' }],
+      failure: 'preserved evidence',
+      last_build_report: { overall_status: 'passed', project: { type: 'electron', version: '1.0.0' }, artifacts: [] }
+    }
+  });
+  assert.equal(result.exists, true);
+  assert.equal(result.state.task_id, 'task-1');
+  assert.equal(result.state.orchestration.run_id, 'run-1');
+  assert.equal(result.state.objective, 'Canonical objective');
+  assert.equal(result.state.status, 'accepted');
+  assert.equal(result.state.details_available, true);
+  assert.equal(result.state.detail_binding, 'exact');
+  assert.equal(result.state.steps[0].text, 'Done');
+  assert.equal(result.state.test_results[0].status, 'passed');
+  assert.equal(result.state.modified_files[0].path, 'electron/main.js');
+  assert.equal(result.state.last_build_report.overall_status, 'passed');
+});
+
+test('Task projection bridge drops stale detail instead of building a hybrid task', () => {
+  const project = taskProjectionBridgeHarness();
+  const result = project({
+    run_id: 'run-1',
+    task_list: {
+      source: 'orchestration_ledger',
+      current: { task_id: 'task-1', run_id: 'run-1', objective: 'Canonical objective', status: 'accepted', finished_at: '2026-09-09T00:00:05Z' }
+    },
+    task: {
+      task_id: 'stale-task',
+      run_id: 'stale-run',
+      steps: [{ id: 'stale-step', text: 'Must not leak', status: 'failed' }],
+      test_results: [{ status: 'failed' }],
+      modified_files: [{ path: 'stale.js', operation: 'update' }],
+      failure: 'stale failure',
+      last_build_report: { overall_status: 'failed' }
+    }
+  });
+  assert.equal(result.exists, true);
+  assert.equal(result.state.task_id, 'task-1');
+  assert.equal(result.state.orchestration.run_id, 'run-1');
+  assert.equal(result.state.details_available, false);
+  assert.equal(result.state.detail_binding, 'unavailable');
+  for (const key of ['steps', 'test_results', 'modified_files', 'failure', 'last_build_report']) {
+    assert.equal(Object.hasOwn(result.state, key), false, `${key} must be omitted on binding mismatch`);
+  }
 });
 
 test('Command Center renders loaded-source status and connector enum semantics', () => {

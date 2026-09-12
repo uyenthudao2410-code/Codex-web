@@ -1,0 +1,478 @@
+{
+  "version": 2,
+  "task_id": "f238dfd657e740b5a59fb333cc4ef7b2",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "DMweGb7I-vhBA1YOvHTaB8vV",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 16305,
+    "finished_at": "2026-09-10T06:52:16.833Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_recovery_restores_exact_session_before_one_new_turn tests/test_run_continuation.py::RunContinuationSurfaceTests::test_restart_with_pending_dispatch_pauses_without_restoring_or_replaying -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 16305,
+      "summary": "exit 0 | 16.3s | 3 lines | tail: '3 passed in 15.00s'",
+      "finished_at": "2026-09-10T06:52:16.833Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "DMweGb7I-vhBA1YOvHTaB8vV"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 101,
+        "command_id": "DMweGb7I-vhBA1YOvHTaB8vV",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:DMweGb7I-vhBA1YOvHTaB8vV:stdout",
+            "total_stream_bytes": 101,
+            "total_retained_bytes": 101,
+            "head_retained_bytes": 101,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:DMweGb7I-vhBA1YOvHTaB8vV:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Generate the result from the inspected content, then save it once.",
+  "created_at": "2026-09-10T06:45:57.062Z",
+  "updated_at": "2026-09-10T06:52:16.833Z",
+  "events": [
+    {
+      "time": "2026-09-10T06:45:57.062Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:57.349Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"goal_action|GOAL_IDENTITY_AMBIGUOUS|continuity_action|run_continuation|continuation_driver|reattach\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron tests",
+        "session_id": "rFGWgnhygyNf-DyLvOl4x4ll"
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:57.929Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"goal_action|GOAL_IDENTITY_AMBIGUOUS|continuity_action|run_continuation|continuation_driver|reattach\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests electron tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:17.565Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -g \"*.py\" \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|goal_action|continuity_action|run_continuation_action|def .*goal|def .*continu\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "NWODCDzWJq3CLjCu55kE4oqT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:18.348Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -g \"*.py\" \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|goal_action|continuity_action|run_continuation_action|def .*goal|def .*continu\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:26.723Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 18 \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|controller_goal_attachment|reattach|knowledge_revision|material_event\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "kgL9TI_LzU3Yj1UwriuaCw5s"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:27.060Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 18 \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|controller_goal_attachment|reattach|knowledge_revision|material_event\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:34.694Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|def controller_goal_attachment|def .*reattach|def .*continuity|def controller_continuity|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "7kHOqC89IIMIo5S_czF-t7o9"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:34.993Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"GOAL_IDENTITY_AMBIGUOUS|CONTINUITY_EVENT_REQUIRED|def controller_goal_attachment|def .*reattach|def .*continuity|def controller_continuity|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:42.081Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"GOAL_IDENTITY_AMBIGUOUS|more than one unresolved Goal|goal_action\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "session_id": "mm69_S1rG7RsM19T8QrsyWZx"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:42.365Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"GOAL_IDENTITY_AMBIGUOUS|more than one unresolved Goal|goal_action\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:49.299Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 28 \"GOAL_IDENTITY_AMBIGUOUS|def _goal|goal_action|unresolved Goal|timestamp_selection_used|problem_state\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+        "session_id": "noi1AEL216Lpx7OfCFfodRCg"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:49.692Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 28 \"GOAL_IDENTITY_AMBIGUOUS|def _goal|goal_action|unresolved Goal|timestamp_selection_used|problem_state\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:56.647Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"def goal_pursuit_resolve_identity|def goal_pursuit_projection|def goal_pursuit_continuation|def .*pursuit.*|stop_reason|continuation\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+        "session_id": "GEW-wmQ2iAz7VIr6htPijWR-"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:56.932Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"def goal_pursuit_resolve_identity|def goal_pursuit_projection|def goal_pursuit_continuation|def .*pursuit.*|stop_reason|continuation\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:04.788Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' | Select-Object -Skip 100 -First 170\"",
+        "session_id": "P2qsMIH0yS3Vg0xl1djcWgKz"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:06.722Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' | Select-Object -Skip 100 -First 170\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:12.064Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' | Select-Object -Skip 630 -First 235\"",
+        "session_id": "7vKYHhcjPiOCMBVjFEuPtGg6"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:14.044Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py' | Select-Object -Skip 630 -First 235\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:27.170Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"max_decision_turns|max_duration_seconds|max_patch_attempts|continuation_proposal|fixed no-tools|driver|terminal|reconcile|observe|explicit\" resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+        "session_id": "S3nx8n25T9hz7fjUgulk6xyv"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:27.525Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"max_decision_turns|max_duration_seconds|max_patch_attempts|continuation_proposal|fixed no-tools|driver|terminal|reconcile|observe|explicit\" resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:35.514Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"RUN_CONTINUATION_MAX|def .*drive|decision_turn|while |for .*turn|state ==|terminal_state|action=start|explicitly start|recommended_next_action\" resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+        "session_id": "eLiogBicnF0clIydAm8j5eky"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:35.802Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"RUN_CONTINUATION_MAX|def .*drive|decision_turn|while |for .*turn|state ==|terminal_state|action=start|explicitly start|recommended_next_action\" resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:43.481Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 225 -First 115\"",
+        "session_id": "qhz_X0-n0x7EFVH1oy1rDIac"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:45.653Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 225 -First 115\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:51.441Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 590 -First 190\"",
+        "session_id": "DegQw0kj7YXOe5QAB9uSCjmc"
+      }
+    },
+    {
+      "time": "2026-09-10T06:47:53.710Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 590 -First 190\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:00.561Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 330 -First 265\"",
+        "session_id": "sI4tsVs4rzuSmM7WG3b3TmcR"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:02.294Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 330 -First 265\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:07.675Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 760 -First 225\"",
+        "session_id": "ImbEdhjVefn240chkk6Ly0s6"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:09.670Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py' | Select-Object -Skip 760 -First 225\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:16.894Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"_run_continuation_start_worker|run_continuation.*start|recover.*continuation|resume.*continuation|continuation.*restart|driver_generation\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+        "session_id": "2J82iACCytCgTtw5bZ-ol0Th"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:17.286Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"_run_continuation_start_worker|run_continuation.*start|recover.*continuation|resume.*continuation|continuation.*restart|driver_generation\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:22.283Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py' | Select-Object -Skip 1395 -First 175\"",
+        "session_id": "lzhEq6z4LQie5QeuReTLC6ZJ"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:25.059Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py' | Select-Object -Skip 1395 -First 175\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:48.760Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1404 -First 205\"",
+        "session_id": "1h12Mh0xn2kX_vZrFqPICLi5"
+      }
+    },
+    {
+      "time": "2026-09-10T06:48:51.516Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1404 -First 205\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:07.816Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 235 -First 245\"",
+        "session_id": "eKgPe4nsccuzEgdyB-_RH2A4"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:09.524Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 235 -First 245\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:18.321Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 430 -First 190\"",
+        "session_id": "YfQ62opcyGmNIzRxpaJpGdmo"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:20.240Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 430 -First 190\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:34.766Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"goal_pursuit_projection|goal_pursuit_resolve_identity|controller_goal_attachment|SATISFY_UNRESOLVED_CRITERION|OBTAIN_INDEPENDENT_OUTCOME|RECONCILE_PROVISIONAL_RESOLUTION\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "session_id": "xsPKv5sC3wmpGP3nIUSOqDjr"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:35.248Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"goal_pursuit_projection|goal_pursuit_resolve_identity|controller_goal_attachment|SATISFY_UNRESOLVED_CRITERION|OBTAIN_INDEPENDENT_OUTCOME|RECONCILE_PROVISIONAL_RESOLUTION\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:43.417Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/live_control.py' | Select-Object -Skip 455 -First 315\"",
+        "session_id": "Vutq8pNAqZbpdpx__93TS3xD"
+      }
+    },
+    {
+      "time": "2026-09-10T06:49:45.590Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/live_control.py' | Select-Object -Skip 455 -First 315\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:50:33.611Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -g \"*.md\" -g \"*.py\" \"Goal Pursuit|goal pursuit|controller continuity|run continuation|persistent lane|Codex Desktop|LOCAL_AUTONOMOUS|COORDINATED_LANE|until.*resolved|follow.*goal\" docs resources/coding-tools-mcp/tests tests",
+        "session_id": "aR1RUFNJXPbgjsFeaBOsjT3s"
+      }
+    },
+    {
+      "time": "2026-09-10T06:50:33.912Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -g \"*.md\" -g \"*.py\" \"Goal Pursuit|goal pursuit|controller continuity|run continuation|persistent lane|Codex Desktop|LOCAL_AUTONOMOUS|COORDINATED_LANE|until.*resolved|follow.*goal\" docs resources/coding-tools-mcp/tests tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:50:40.132Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T06:52:00.586Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_recovery_restores_exact_session_before_one_new_turn tests/test_run_continuation.py::RunContinuationSurfaceTests::test_restart_with_pending_dispatch_pauses_without_restoring_or_replaying -q",
+        "session_id": "DMweGb7I-vhBA1YOvHTaB8vV"
+      }
+    },
+    {
+      "time": "2026-09-10T06:52:16.833Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_recovery_restores_exact_session_before_one_new_turn tests/test_run_continuation.py::RunContinuationSurfaceTests::test_restart_with_pending_dispatch_pauses_without_restoring_or_replaying -q",
+        "status": "passed"
+      }
+    }
+  ]
+}

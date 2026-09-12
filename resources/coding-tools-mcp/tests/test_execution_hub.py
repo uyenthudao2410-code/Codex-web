@@ -173,6 +173,55 @@ class ExecutionHubHTTPTests(unittest.TestCase):
         self.assertNotEqual(task_list["current"]["objective"], "projection-only stale objective")
         self.assertIn(self.ctx.run_id, [item["run_id"] for item in task_list["history"]])
 
+    def test_task_snapshot_preserves_bounded_structured_task_evidence_for_exact_run(self) -> None:
+        self.runtime.task_state.update({
+            "steps": [{"id": "step-1", "text": "Verify task bridge", "status": "completed", "updated_at": "2026-09-09T00:00:00Z"}],
+        })
+        self.runtime.task_state.record_build_report({
+            "overall_status": "passed",
+            "project": {"type": "electron", "name": "coding-tools-mcp", "version": "1.0.0"},
+            "test_result": {
+                "command": "node --test focused",
+                "status": "passed",
+                "exit_code": 0,
+                "duration_ms": 42,
+                "summary": "green",
+                "finished_at": "2026-09-09T00:00:01Z",
+            },
+            "artifacts": [{"path": "dist/app.exe", "size": 123, "sha256": "a" * 64}],
+        })
+        self.runtime.task_state.record_tool_result(
+            "apply_patch",
+            {},
+            {"ok": True, "affected_files": [{"path": "electron/main.js", "operation": "update"}]},
+        )
+        self.runtime.task_state.update({"failure": "bounded failure detail"})
+        self.runtime.task_state.record_command_started(
+            "node --test focused",
+            "task-bridge-command",
+            ".",
+            owner_run_id=self.ctx.run_id,
+            owner_wave_id=self.ctx.wave_id,
+        )
+
+        status, body = self.get_snapshot()
+
+        self.assertEqual(status, 200, body)
+        task = body["task"]
+        self.assertEqual(task["task_id"], self.runtime.task_state.get()["task_id"])
+        self.assertEqual(task["run_id"], self.ctx.run_id)
+        self.assertEqual(task["wave_id"], self.ctx.wave_id)
+        self.assertEqual(task["steps"][0]["text"], "Verify task bridge")
+        self.assertEqual(task["test_results"][0]["status"], "passed")
+        self.assertEqual(len(task["modified_files"]), 1)
+        self.assertEqual(task["modified_files"][0]["path"], "electron/main.js")
+        self.assertEqual(task["modified_files"][0]["operation"], "update")
+        self.assertTrue(task["modified_files"][0]["updated_at"])
+        self.assertEqual(task["current_command"]["workdir"], ".")
+        self.assertEqual(task["failure"], "bounded failure detail")
+        self.assertEqual(task["last_build_report"]["project"]["type"], "electron")
+        self.assertEqual(task["last_build_report"]["artifacts"][0]["sha256"], "a" * 64)
+
     def test_live_snapshot_skips_heavy_analytics_but_preserves_control_state(self) -> None:
         def unexpected_heavy_call(*_args, **_kwargs):
             raise AssertionError("live control snapshot must not execute heavyweight analytics")

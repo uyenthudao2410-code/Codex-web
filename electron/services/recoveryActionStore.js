@@ -1230,14 +1230,40 @@ class AcceptedCodeActivationController {
 
   candidate(checkpoints, state, workspace, head) {
     const processed = new Set(state.processed_checkpoint_ids);
+    const candidates = [];
     for (const checkpoint of (Array.isArray(checkpoints) ? checkpoints : [])) {
       if (processed.has(String(checkpoint?.checkpoint_id || ''))
         || typeof checkpoint?.git_head !== 'string'
         || checkpoint.git_head !== head) continue;
       const evaluation = evaluateActivationEligibility(checkpoint, { workspace, currentHead: head });
-      return { checkpoint, evaluation, receipts: evaluation.receipts };
+      candidates.push({ checkpoint, evaluation, receipts: evaluation.receipts });
     }
-    return null;
+    // `readAcceptedCheckpoints` is chronological.  A zero-target checkpoint is
+    // legitimate lifecycle evidence, but cannot authorize a component restart;
+    // do not let one prevent a later accepted component receipt from becoming
+    // the source authority for the same current HEAD.
+    const componentCandidate = candidates.reduce((selected, candidate) => (
+      candidate.evaluation.eligible && candidate.evaluation.affected_components.length
+        ? candidate
+        : selected
+    ), null);
+    if (componentCandidate) return componentCandidate;
+
+    // A component-bearing closure remains the source authority after its
+    // activation intent is terminal.  Keep it until a newer eligible
+    // component-bearing checkpoint replaces it; otherwise an older unprocessed
+    // zero-target lifecycle audit could overwrite the only legal source for a
+    // subsequent full-clean restart.
+    const retainedCheckpointId = String(state.closure_input?.source_checkpoint_id || '');
+    if (retainedCheckpointId) {
+      const retainedCheckpoint = (Array.isArray(checkpoints) ? checkpoints : [])
+        .find((checkpoint) => String(checkpoint?.checkpoint_id || '') === retainedCheckpointId);
+      if (retainedCheckpoint && retainedCheckpoint.git_head === head) {
+        const retained = evaluateActivationEligibility(retainedCheckpoint, { workspace, currentHead: head });
+        if (retained.eligible && retained.affected_components.length) return null;
+      }
+    }
+    return candidates[0] || null;
   }
 
   markActiveProcessed(state) {

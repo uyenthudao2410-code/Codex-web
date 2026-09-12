@@ -14,9 +14,9 @@ from .problem_lineage import PROBLEM_EVENT_SCHEMA_V11, PROBLEM_SCHEMA_VERSION, P
 from .problem_resolution_economics import ProblemLineageFacts
 
 
-PROBLEM_LINEAGE_CANARY_SCHEMA_VERSION = 2
+PROBLEM_LINEAGE_CANARY_SCHEMA_VERSION = 3
 PRL_V11_CODEBOOK_VERSION = "1.0.0"
-PRL_V11_COHORT_RULES_VERSION = "1.0.0"
+PRL_V11_COHORT_RULES_VERSION = "2.0.0"
 _AUTHORITATIVE_CONFIRMATION_AUTHORITIES = frozenset({"RUNTIME_EXPLICIT_USER", "RUNTIME_OUTCOME_RECEIPT", "RUNTIME_HUMAN_REVIEW"})
 
 
@@ -129,9 +129,36 @@ def _full_claim_unit(ledger: LedgerFacts, problems: ProblemLineageFacts, run_id:
     revision = index.get((problem_id, number))
     if revision is None or fingerprint != revision["contract_fingerprint"] or context.get("engineering_floor") != revision["engineering_floor"]:
         return False, "revision_missing_or_invalid"
-    links = [event for event in problems.events_for_revision(problem_id, number) if _current(event) and _text(event.get("relation_type")) == "ENGINEERING_ATTEMPT_BOUND" and event.get("run_id") == run_id and event.get("wave_id") == wave.get("wave_id") and _text(event.get("link_status")) == "EXACT"]
+    wave_id = _text(wave.get("wave_id"))
+    claim = context.get("outcome_claim")
+    if not isinstance(claim, dict) or context.get("outcome_claim_sha256") != _sha(claim):
+        return False, "outcome_claim_invalid"
+    if (
+        claim.get("resolution_claim") != "full_problem"
+        or claim.get("run_id") != run_id
+        or claim.get("wave_id") != wave_id
+        or claim.get("problem_id") != problem_id
+        or claim.get("problem_revision") != number
+        or claim.get("contract_fingerprint") != revision["contract_fingerprint"]
+        or claim.get("criteria_fingerprint") != revision["criteria_fingerprint"]
+        or claim.get("criteria_count") != revision["criteria_count"]
+        or claim.get("engineering_floor") != revision["engineering_floor"]
+    ):
+        return False, "outcome_claim_identity_mismatch"
+    links = [
+        event for event in problems.events
+        if _current(event)
+        and event.get("run_id") == run_id
+        and _text(event.get("relation_type")) in {"LINK", "ENGINEERING_ATTEMPT_BOUND"}
+        and _text(event.get("link_status")) == "EXACT"
+        and _text(event.get("link_role")) == "PRIMARY"
+    ]
     if not links:
         return False, "exact_attempt_binding_missing"
+    if len(links) != 1:
+        return False, "exact_attempt_binding_ambiguous"
+    if links[0].get("problem_id") != problem_id or links[0].get("problem_revision") != number:
+        return False, "exact_attempt_binding_mismatch"
     criteria = {item["criterion_id"] for item in revision["capsule"]["acceptance_criteria"]}
     manifest = context.get("coverage_manifest")
     if revision["engineering_floor"] == "REQUIRED":
@@ -180,13 +207,13 @@ def _full_claim_exact_coverage(ledger: LedgerFacts, problems: ProblemLineageFact
         for wave in ledger.list_waves(run_id):
             metadata = wave.get("metadata") if isinstance(wave.get("metadata"), dict) else {}
             context = metadata.get("problem_resolution") if isinstance(metadata.get("problem_resolution"), dict) else {}
-            if not isinstance(context, dict) or context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem":
+            if not isinstance(context, dict) or context.get("work_origin") != "problem" or context.get("resolution_claim") != "full_problem" or "outcome_claim" not in context:
                 continue
             total += 1
             valid, reason = _full_claim_unit(ledger, problems, run_id, wave, index)
             if valid: complete += 1
             else: reasons[reason] += 1
-    return _coverage(complete, total, invalid=reasons, contract="exact_revision_manifest_proof_checkpoint_bridge_v1")
+    return _coverage(complete, total, invalid=reasons, contract="actual_claim_run_revision_manifest_proof_checkpoint_bridge_v2")
 
 
 def problem_lineage_canary_report(ledger: LedgerFacts, problems: ProblemLineageFacts, *, integrity_check: str, foreign_key_violations: int) -> dict[str, Any]:

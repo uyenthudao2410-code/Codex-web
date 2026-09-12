@@ -16,6 +16,27 @@ class ProofLedger:
         self.workspace = workspace.resolve(strict=False)
         self.ledger = ledger
 
+    def source_binding(
+        self,
+        *,
+        base_head: str = "",
+        contract_fp: str = "",
+        input_paths: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Return the bounded source identity shared by proof and acceptance."""
+        paths = sorted({
+            str(item).strip().replace("\\", "/")
+            for item in (input_paths or [])
+            if str(item).strip()
+        })
+        return {
+            "schema_version": 1,
+            "base_head": str(base_head or ""),
+            "contract_fp": str(contract_fp or ""),
+            "paths": paths,
+            "path_fingerprint": fingerprint_paths(self.workspace, paths),
+        }
+
     def fingerprint(
         self,
         *,
@@ -28,14 +49,18 @@ class ProofLedger:
         config: dict[str, Any] | None = None,
         upstream_proof_ids: list[str] | None = None,
     ) -> str:
-        path_fp = fingerprint_paths(self.workspace, input_paths or [])
+        source_binding = self.source_binding(
+            base_head=base_head,
+            contract_fp=contract_fp,
+            input_paths=input_paths,
+        )
         raw = {
             "stage_id": stage_id,
             "stage_version": stage_version,
             "base_head": base_head,
             "worktree_fp": worktree_fp,
             "contract_fp": contract_fp,
-            "path_fp": path_fp,
+            "path_fp": source_binding["path_fingerprint"],
             "config": config or {},
             "upstream_proof_ids": upstream_proof_ids or [],
         }

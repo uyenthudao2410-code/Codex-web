@@ -170,6 +170,11 @@ test('Recovery Host revision manifest owns stale-host bootstrap source', () => {
     true
   );
   assert.equal(componentOwnsPath('recovery_host', 'electron/services/recoveryBootstrap.js'), true);
+  assert.equal(
+    COMPONENT_SPECS.recovery_host.files.includes('resources/recovery-supervisor/recovery-supervisor.ps1'),
+    true
+  );
+  assert.equal(componentOwnsPath('recovery_host', 'resources/recovery-supervisor/recovery-supervisor.ps1'), true);
 });
 
 test('activation census sources are owned by the components that execute them', () => {

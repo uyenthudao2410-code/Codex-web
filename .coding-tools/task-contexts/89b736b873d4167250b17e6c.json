@@ -1,0 +1,513 @@
+{
+  "version": 2,
+  "task_id": "3e3dc910cf554804be3de565dc7ee29c",
+  "orchestration": {
+    "run_id": "2eb9b69079f14b9099f37f8dc4c63896",
+    "wave_id": "6c951632060443a8a8bd2a1061f680f2",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "a6ad6c0bb96181797b8ab684ae1eb9acec20e93b7e25f5bf3f468fc1bd9d775f",
+    "contract_fp": ""
+  },
+  "objective": "Natural #17: extend only P2-local request_contract_correction to include EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED, update focused regression expectations from 2/7 to 3/7 mapped, and preserve global repair-cause/runtime semantics.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:35:41.716Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:35:41.716Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-10T06:35:41.716Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "9w67RfWgmNP9YfWIqjD0mXT-",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2289,
+    "finished_at": "2026-09-10T06:44:44.305Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+          "state": "file",
+          "sha256": "f9b49b42d2042ced51f0ccf6bfac115af660fbde391d731ee81188554935d56f",
+          "size_bytes": 40819,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2eb9b69079f14b9099f37f8dc4c63896",
+          "wave_id": "6c951632060443a8a8bd2a1061f680f2"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+          "state": "file",
+          "sha256": "530b0a45411e9472c98892e23d7e39665629a7b50c4006849756cdb7fd06a783",
+          "size_bytes": 31142,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2eb9b69079f14b9099f37f8dc4c63896",
+          "wave_id": "6c951632060443a8a8bd2a1061f680f2"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "e21c783db41f4b71807a9e72bb473146",
+            "seq": 46866,
+            "event_time": "2026-09-10T06:35:10.379Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "68523b5aa0133b4546cabece585aa67616e95dadea3b5ae09a0805738f2d814b",
+              "8d6916dee3b472850be13e17ca96aaf08788c7a82eb1fdb38017cfbfbe2b0618"
+            ],
+            "file_count": 2,
+            "additions": 13,
+            "removals": 7,
+            "line_changes": 20,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 45,
+        "head_hash": "7b62dd4b58e5e80dffd58d95499a9b50805722efbd53e8425e8fb603e477d7af"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2eb9b69079f14b9099f37f8dc4c63896\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2eb9b69079f14b9099f37f8dc4c63896\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "2eb9b69079f14b9099f37f8dc4c63896",
+      "wave_id": "6c951632060443a8a8bd2a1061f680f2",
+      "checkpoint_id": "997baceb5f1447e2b2c8307230cb1424",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "a6ad6c0bb96181797b8ab684ae1eb9acec20e93b7e25f5bf3f468fc1bd9d775f",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #17: extend only P2-local request_contract_correction to include EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED, update focused regression expectations from 2/7 to 3/7 mapped, and preserve global repair-cause/runtime semantics.",
+        "objective_revision": 1,
+        "objective_sha256": "1da93b92432a89aa48cafbf4bf225ae09acea2d3c75d0af0c03f3b5ec5824ee6",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 4,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "f8a784f15dfa48209946bf2e62b071cc",
+          "stage_id": "check:ed7873ee22bf15b5",
+          "status": "passed",
+          "duration_ms": 3880,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "d909639d048f4ee680ec376c5f454312",
+          "stage_id": "check:1e606d62e02d0f68",
+          "status": "passed",
+          "duration_ms": 17997,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a4302b173d8f498b8c124740d3d0ecee",
+          "stage_id": "check:6d884becdef27c18",
+          "status": "passed",
+          "duration_ms": 3466,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "2a55d47aefa441be8b240f8d88a370e4",
+          "stage_id": "check:20af4e8e69d7c88b",
+          "status": "passed",
+          "duration_ms": 1193,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "06afb3771243a60cee89621e411719733b92c32ca0484675439967ab2a43c5b8",
+  "completion_report_acknowledged_id": "06afb3771243a60cee89621e411719733b92c32ca0484675439967ab2a43c5b8",
+  "completion_report_acknowledged_at": "2026-09-10T06:46:17.509Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+      "operation": "update",
+      "updated_at": "2026-09-10T06:35:42.456Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+      "operation": "update",
+      "updated_at": "2026-09-10T06:35:42.456Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-10T06:34:35.892Z",
+  "updated_at": "2026-09-10T06:46:17.516Z",
+  "events": [
+    {
+      "time": "2026-09-10T06:34:35.892Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #17: extend only P2-local request_contract_correction to include EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED, update focused regression expectations from 2/7 to 3/7 mapped, and preserve global repair-cause/runtime semantics."
+      }
+    },
+    {
+      "time": "2026-09-10T06:34:37.908Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:34:44.016Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:34:44.022Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:07.345Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:08.374Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:09.648Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:09.655Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:11.523Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:12.174Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:12.931Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis.ReworkDiagnosisTests.test_request_contract_correction_maps_only_typed_request_control_failures",
+        "session_id": "Hoy2fWH-Ur4JWYzWthCtf0ME"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:16.202Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis.ReworkDiagnosisTests.test_request_contract_correction_maps_only_typed_request_control_failures",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:17.612Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis",
+        "session_id": "j1nABoDtHxW8szCK3mpXEF1E"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:34.927Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_rework_diagnosis",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:35.989Z",
+      "event": "command_started",
+      "details": {
+        "command": "python scripts\\report_p2_rework_diagnosis.py --workspace ..\\.. --limit 200",
+        "session_id": "ae1TYPwdK87OgrTj8JrooBhN"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:38.847Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python scripts\\report_p2_rework_diagnosis.py --workspace ..\\.. --limit 200",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:40.081Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/rework_diagnosis.py tests/test_rework_diagnosis.py",
+        "session_id": "uyFkSG2yu56N7jUjCvjWdFOe"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:40.571Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- coding_tools_mcp/rework_diagnosis.py tests/test_rework_diagnosis.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:41.709Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:41.716Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:42.109Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:42.113Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:42.239Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "5a317e7029e70988a079ea581177b987070d2c1828223f0f6365f3cba40f9fc4"
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:42.456Z",
+      "event": "files_modified",
+      "details": {
+        "count": 2
+      }
+    },
+    {
+      "time": "2026-09-10T06:35:57.129Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:44:42.235Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$paths=@('resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py','resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py'); foreach($p in $paths){$h=(Get-FileHash -Algorithm SHA256 $p).Hash.ToLower(); Write-Output ($p+' '+$h)}\"",
+        "session_id": "9w67RfWgmNP9YfWIqjD0mXT-"
+      }
+    },
+    {
+      "time": "2026-09-10T06:44:44.305Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$paths=@('resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py','resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py'); foreach($p in $paths){$h=(Get-FileHash -Algorithm SHA256 $p).Hash.ToLower(); Write-Output ($p+' '+$h)}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:42.745Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:46.057Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:46.060Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:45:46.184Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "06afb3771243a60cee89621e411719733b92c32ca0484675439967ab2a43c5b8"
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:01.283Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:46:17.509Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "06afb3771243a60cee89621e411719733b92c32ca0484675439967ab2a43c5b8"
+      }
+    }
+  ]
+}

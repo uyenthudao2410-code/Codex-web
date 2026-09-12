@@ -44,6 +44,237 @@ def logical_ledger_sha256(connection: Any) -> str:
 class LifecycleReconciliationLedgerMixin:
     """Official, exact-ID reconciliation that preserves canonical evidence."""
 
+    def reconcile_exact_stale_runs(
+        self,
+        *,
+        targets: list[dict[str, Any]],
+        expected_logical_sha256: str,
+        observed_at_unix_seconds: float,
+        stale_after_seconds: float,
+        authority: str,
+        reason: str = "inactivity_timeout",
+    ) -> dict[str, Any]:
+        """Atomically terminalize one bounded, explicit set of inactive runs.
+
+        Every target is revalidated before the first mutation. This prevents a
+        restart deadline from committing only a prefix of an exact maintenance
+        batch.
+        """
+        expected_logical = _bounded_text(expected_logical_sha256, 64).strip().lower()
+        operator = _bounded_text(authority, 128).strip()
+        bounded_reason = _bounded_text(reason, 256).strip()
+        try:
+            observed_at = float(observed_at_unix_seconds)
+            stale_after = max(60.0, float(stale_after_seconds))
+        except (TypeError, ValueError) as exc:
+            raise LifecycleReconciliationError("exact stale-run batch requires numeric observation and threshold guards") from exc
+        if len(expected_logical) != 64 or any(char not in "0123456789abcdef" for char in expected_logical):
+            raise LifecycleReconciliationError("expected logical ledger SHA-256 is invalid")
+        if not operator or not bounded_reason or observed_at < 0:
+            raise LifecycleReconciliationError("exact stale-run batch requires complete common guards")
+        if not isinstance(targets, list) or not 1 <= len(targets) <= 64:
+            raise LifecycleReconciliationError("exact stale-run batch requires between one and 64 targets")
+
+        guards: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for raw in targets:
+            if not isinstance(raw, dict):
+                raise LifecycleReconciliationError("exact stale-run batch target guard is invalid")
+            identifier = _bounded_text(raw.get("run_id"), 256).strip()
+            expected_status = _bounded_text(raw.get("status"), 64).strip().lower()
+            expected_activity = _bounded_text(raw.get("latest_activity_at"), 64).strip()
+            expected_hash = _bounded_text(raw.get("last_event_hash"), 64).strip().lower()
+            try:
+                expected_seq = int(raw.get("last_event_seq"))
+            except (TypeError, ValueError) as exc:
+                raise LifecycleReconciliationError("exact stale-run batch event guard is invalid") from exc
+            if (
+                not identifier
+                or identifier in seen
+                or not expected_activity
+                or expected_status not in {"active", "stale"}
+                or expected_seq < 0
+            ):
+                raise LifecycleReconciliationError("exact stale-run batch requires complete unique target guards")
+            if expected_hash and (len(expected_hash) != 64 or any(char not in "0123456789abcdef" for char in expected_hash)):
+                raise LifecycleReconciliationError("expected run event guard is invalid")
+            seen.add(identifier)
+            guards.append({
+                "run_id": identifier,
+                "status": expected_status,
+                "latest_activity_at": expected_activity,
+                "last_event_seq": expected_seq,
+                "last_event_hash": expected_hash,
+            })
+
+        with self._lock, self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                if logical_ledger_sha256(connection) != expected_logical:
+                    raise LifecycleReconciliationError("logical ledger snapshot changed before exact stale-run batch reconciliation")
+
+                pending: list[tuple[dict[str, Any], Any, str]] = []
+                results: dict[str, dict[str, Any]] = {}
+                live_checks = (
+                    "SELECT 1 FROM controller_leases WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                    "SELECT 1 FROM write_fences WHERE run_id=? AND status='active' AND expires_at>? LIMIT 1",
+                    "SELECT 1 FROM background_operations WHERE run_id=? AND status='running' LIMIT 1",
+                    "SELECT 1 FROM agent_lanes WHERE run_id=? AND lifecycle IN ('starting','active','waiting','idle') LIMIT 1",
+                    "SELECT 1 FROM managed_process_jobs WHERE run_id=? AND lifecycle_state IN ('starting','active','waiting','idle','running') LIMIT 1",
+                )
+                for guard in guards:
+                    identifier = guard["run_id"]
+                    run = connection.execute("SELECT * FROM runs WHERE run_id=?", (identifier,)).fetchone()
+                    if run is None:
+                        raise LifecycleReconciliationError("stale-run target was not found")
+                    last = connection.execute(
+                        "SELECT seq,event_hash,event_type,state_after,event_time FROM events WHERE run_id=? ORDER BY seq DESC LIMIT 1",
+                        (identifier,),
+                    ).fetchone()
+                    actual_seq = int(last["seq"] or 0) if last is not None else 0
+                    actual_hash = str(last["event_hash"] or "") if last is not None else ""
+                    activity_rows = [
+                        connection.execute("SELECT started_at AS value FROM runs WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(event_time) AS value FROM events WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(started_at) AS value FROM waves WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(finished_at) AS value FROM waves WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(updated_at) AS value FROM agent_lanes WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(updated_at) AS value FROM background_operations WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(updated_at) AS value FROM managed_process_jobs WHERE run_id=?", (identifier,)).fetchone(),
+                        connection.execute("SELECT MAX(created_at) AS value FROM handoff_capsules WHERE run_id=?", (identifier,)).fetchone(),
+                    ]
+                    actual_activity = max(
+                        (str(row["value"] or "") for row in activity_rows if row is not None and str(row["value"] or "")),
+                        default="",
+                    )
+                    actual_status = str(run["status"] or "").lower()
+                    if (
+                        actual_status != guard["status"]
+                        or actual_activity != guard["latest_activity_at"]
+                        or actual_seq != guard["last_event_seq"]
+                        or actual_hash != guard["last_event_hash"]
+                    ):
+                        raise LifecycleReconciliationError("exact stale-run batch guard changed before reconciliation")
+                    if actual_status == "stale":
+                        if last is None or str(last["event_type"] or "") != "run_stale_reconciled":
+                            raise LifecycleReconciliationError("terminal stale run lacks exact stale reconciliation receipt")
+                        results[identifier] = {
+                            "changed": False,
+                            "idempotent": True,
+                            "run_id": identifier,
+                            "status": "stale",
+                            "event_seq": actual_seq,
+                            "event_hash": actual_hash,
+                        }
+                        continue
+                    if actual_status != "active":
+                        raise LifecycleReconciliationError("stale-run target is not active")
+                    if last is not None and str(last["state_after"] or "").upper() == "ACCEPTING":
+                        raise LifecycleReconciliationError("accepting run is not an exact stale-run target")
+                    if connection.execute("SELECT 1 FROM p5_experiment_epochs WHERE ledger_run_id=? LIMIT 1", (identifier,)).fetchone():
+                        raise LifecycleReconciliationError("P5 experiment anchor is not an exact stale-run target")
+                    if (
+                        connection.execute(live_checks[0], (identifier, observed_at)).fetchone()
+                        or connection.execute(live_checks[1], (identifier, observed_at)).fetchone()
+                        or connection.execute(live_checks[2], (identifier,)).fetchone()
+                        or connection.execute(live_checks[3], (identifier,)).fetchone()
+                        or connection.execute(live_checks[4], (identifier,)).fetchone()
+                    ):
+                        raise LifecycleReconciliationError("stale-run target acquired live ownership before reconciliation")
+                    try:
+                        activity_ts = datetime.fromisoformat(actual_activity.replace("Z", "+00:00")).timestamp()
+                    except ValueError as exc:
+                        raise LifecycleReconciliationError("stale-run target has no parseable guarded activity timestamp") from exc
+                    if observed_at - activity_ts < stale_after:
+                        raise LifecycleReconciliationError("stale-run target has not crossed the guarded inactivity threshold")
+                    pending.append((guard, run, actual_activity))
+
+                now = _utc_now()
+                for guard, run, actual_activity in pending:
+                    identifier = guard["run_id"]
+                    for wave in connection.execute("SELECT * FROM waves WHERE run_id=? AND status='active' ORDER BY ordinal", (identifier,)).fetchall():
+                        wave_metadata = json.loads(wave["metadata_json"] or "{}")
+                        wave_metadata = wave_metadata if isinstance(wave_metadata, dict) else {}
+                        wave_metadata["lifecycle_reconciliation"] = {
+                            "reason": bounded_reason,
+                            "authority": operator,
+                            "run_status": "stale",
+                            "stale_after_seconds": stale_after,
+                        }
+                        wave_id = str(wave["wave_id"] or "")
+                        connection.execute(
+                            "UPDATE waves SET status='aborted',finished_at=?,metadata_json=? WHERE wave_id=?",
+                            (now, _json(wave_metadata), wave_id),
+                        )
+                        append_hash_chained_event(
+                            connection,
+                            run_id=identifier,
+                            event_type="wave_lifecycle_reconciled",
+                            wave_id=wave_id or None,
+                            delegation_id=None,
+                            state_before="active",
+                            state_after="ABORTED",
+                            payload={
+                                "reason": bounded_reason,
+                                "authority": operator,
+                                "run_status": "stale",
+                                "wave_status": "aborted",
+                            },
+                            event_time=now,
+                            sanitize=lambda value: value,
+                            serialize=_json,
+                            bounded_text=_bounded_text,
+                        )
+                    run_metadata = json.loads(run["metadata_json"] or "{}")
+                    run_metadata = run_metadata if isinstance(run_metadata, dict) else {}
+                    run_metadata["lifecycle_reconciliation"] = {
+                        "reason": bounded_reason,
+                        "authority": operator,
+                        "latest_activity_at": actual_activity,
+                        "stale_after_seconds": stale_after,
+                    }
+                    connection.execute(
+                        "UPDATE runs SET status='stale',finished_at=?,metadata_json=? WHERE run_id=?",
+                        (now, _json(run_metadata), identifier),
+                    )
+                    event = append_hash_chained_event(
+                        connection,
+                        run_id=identifier,
+                        event_type="run_stale_reconciled",
+                        wave_id=None,
+                        delegation_id=None,
+                        state_before="active",
+                        state_after="ABORTED",
+                        payload={
+                            "reason": bounded_reason,
+                            "authority": operator,
+                            "stale_after_seconds": stale_after,
+                        },
+                        event_time=now,
+                        sanitize=lambda value: value,
+                        serialize=_json,
+                        bounded_text=_bounded_text,
+                    )
+                    results[identifier] = {
+                        "changed": True,
+                        "idempotent": False,
+                        "run_id": identifier,
+                        "status": "stale",
+                        "event_seq": int(event["seq"]),
+                        "event_hash": str(event["event_hash"]),
+                    }
+                connection.commit()
+            except Exception:
+                connection.rollback()
+                raise
+
+        ordered = [results[guard["run_id"]] for guard in guards]
+        return {
+            "changed": any(item["changed"] for item in ordered),
+            "idempotent": all(item["idempotent"] for item in ordered),
+            "results": ordered,
+        }
+
     def reconcile_exact_stale_run(
         self,
         *,

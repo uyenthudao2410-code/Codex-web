@@ -1,0 +1,230 @@
+[
+  {
+    "version": 2,
+    "task_id": "7b2175e51e1441088d92e634277bfdb8",
+    "orchestration": {
+      "run_id": "e26f78aca9d44050b7e52d0b1e2f76bc",
+      "wave_id": "70db657d28824c199f15ab5ca4ad2a8c",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+      "contract_fp": ""
+    },
+    "objective": "Reproduce semantic-first localization health on one known symbol without mutation. Locate controlMcpActivation in runtimeOrchestrator.js using the native semantic provider when available and report provider admission/result plus fallback usage. This is evidence collection only: do not patch, restart, commit, push, clean, reset, package, release, or deploy.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "iUXcIeWHc4MSZzu06cKoV_e7",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 980,
+      "finished_at": "2026-09-12T09:55:28.584Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Read-only semantic localization reproduction is complete. Native semantic admission succeeded, the provider deterministically failed with SEMANTIC_PROVIDER_CALL_FAILED / LSP_RESOURCE_STATUS_FAILED, and bounded text fallback returned the known symbol matches. Evidence has been captured in a dedicated Problem; no source mutation is needed in this non-problem reproduction RUN.",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-12T09:52:20.893Z",
+    "updated_at": "2026-09-12T09:55:51.353Z",
+    "events": [
+      {
+        "time": "2026-09-12T09:52:20.893Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Reproduce semantic-first localization health on one known symbol without mutation. Locate controlMcpActivation in runtimeOrchestrator.js using the native semantic provider when available and report provider admission/result plus fallback usage. This is evidence collection only: do not patch, restart, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T09:52:22.290Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:52:28.198Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:52:28.203Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:53:24.093Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_IDENTITY_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-12T09:53:49.282Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 40 \"SEMANTIC_PROVIDER_CALL_FAILED\" .coding-tools/orchestration/reports docs",
+          "session_id": "uTINVMlWchs_ihW-eDyRHH5w"
+        }
+      },
+      {
+        "time": "2026-09-12T09:53:49.756Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 40 \"SEMANTIC_PROVIDER_CALL_FAILED\" .coding-tools/orchestration/reports docs",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:00.034Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 40 \"GOAL_IDENTITY_AMBIGUOUS\" .coding-tools/orchestration/reports docs resources/coding-tools-mcp",
+          "session_id": "-V7JlEBPzfnsGSk-nIrUZ_c7"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:00.606Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 40 \"GOAL_IDENTITY_AMBIGUOUS\" .coding-tools/orchestration/reports docs resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:11.673Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 60 \"cross_plane_overlap_not_proven\" .coding-tools/orchestration/reports docs resources/coding-tools-mcp",
+          "session_id": "uNRZF1f7RpzIXrqP1s9yEqE2"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:12.250Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 60 \"cross_plane_overlap_not_proven\" .coding-tools/orchestration/reports docs resources/coding-tools-mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:33.629Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"candidates_truncated\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "session_id": "rxb6-YqZanM6hQtAwjBkHxcM"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:34.095Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"candidates_truncated\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:42.711Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"GOAL_PURSUIT_MAX_CANDIDATES\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "session_id": "pm-aWmwavo_why8Ci4qqRLff"
+        }
+      },
+      {
+        "time": "2026-09-12T09:54:43.230Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"GOAL_PURSUIT_MAX_CANDIDATES\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:18.742Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 80 \"exact_ledger_binding\" docs resources/coding-tools-mcp .coding-tools/orchestration/reports",
+          "session_id": "sfMrq5rKJazLrhDXKsNnbilr"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:19.231Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 80 \"exact_ledger_binding\" docs resources/coding-tools-mcp .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:28.033Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 80 \"accepted-result economics\" docs resources/coding-tools-mcp .coding-tools/orchestration/reports",
+          "session_id": "iUXcIeWHc4MSZzu06cKoV_e7"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:28.584Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 80 \"accepted-result economics\" docs resources/coding-tools-mcp .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:45.180Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:45.184Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:55:51.353Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T09:55:51.493Z",
+    "archive_reason": "cleared"
+  }
+]

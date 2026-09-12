@@ -247,6 +247,8 @@ def input_schemas() -> dict[str, dict[str, Any]]:
                 },
                 "description": "Optional v11 PRL capture declaration. problem requires an exact immutable revision binding; non_problem creates no fake lineage; unknown stays policy-ineligible. Reserved workspace/base/trace authority is runtime-derived.",
             },
+            "run_id": {**string, "maxLength": 128, "description": "For phase=execute, optionally bind to the exact PREFLIGHT/READY RUN returned by the preceding prepare call. Must be paired with wave_id and match the caller's current scoped task projection."},
+            "wave_id": {**string, "maxLength": 128, "description": "For phase=execute, optionally bind to the exact wave returned by the preceding prepare call. Must be paired with run_id; mismatches fail closed before a new RUN or write lease can be created."},
             "idempotency_key": {**string, "maxLength": 128, "description": "Optional durable mutation identity for execute/run. Reusing the same key+request deduplicates across MCP reconnect/restart; conflicting reuse fails closed."},
             "p5_assignment_id": {**string, "maxLength": 128, "description": "Optional immutable P5 assignment. Valid only for feature/bugfix execute or run after task_control p5 protocol_start; the runtime binds it to the acquired write lease before any write-capable call."},
             "continuation": {
@@ -523,8 +525,71 @@ def input_schemas() -> dict[str, dict[str, Any]]:
             },
             "problem_resolution_envelope": {
                 "type": "object",
-                "additionalProperties": True,
-                "description": "Required for a full_problem acceptance claim: bounded direct outcomes, relevant invariants/truth domains, evidence provenance, excluded scope, and an executed/passed closure-falsification probe.",
+                "additionalProperties": False,
+                "properties": {
+                    "schema_version": {**integer, "minimum": 1, "maximum": 1},
+                    "direct_outcomes": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 40,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "outcome_id": {**string, "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+                                "summary": {**string, "minLength": 1, "maxLength": 800},
+                            },
+                            "required": ["outcome_id", "summary"],
+                        },
+                    },
+                    "relevant_invariants": {"type": "array", "minItems": 1, "maxItems": 32, "items": {**string, "minLength": 1, "maxLength": 800}},
+                    "truth_domains": {"type": "array", "minItems": 1, "maxItems": 32, "items": {**string, "minLength": 1, "maxLength": 800}},
+                    "adjacent_risks": {
+                        "type": "array",
+                        "maxItems": 40,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "risk_id": {**string, "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+                                "summary": {**string, "minLength": 1, "maxLength": 800},
+                                "basis": {**string, "minLength": 1, "maxLength": 800},
+                            },
+                            "required": ["risk_id", "summary", "basis"],
+                        },
+                    },
+                    "excluded_scope": {"type": "array", "maxItems": 32, "items": {**string, "minLength": 1, "maxLength": 800}},
+                    "required_evidence": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 64,
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "properties": {
+                                "evidence_id": {**string, "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+                                "kind": {**string, "minLength": 1, "maxLength": 128},
+                                "provenance": {**string, "minLength": 1, "maxLength": 128},
+                                "status": {**string, "enum": ["observed", "derived", "not_applicable"]},
+                            },
+                            "required": ["evidence_id", "kind", "provenance", "status"],
+                        },
+                    },
+                    "closure_falsification_probe": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "probe_id": {**string, "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]{1,128}$"},
+                            "method": {**string, "minLength": 1, "maxLength": 800},
+                            "expected_failure_signal": {**string, "minLength": 1, "maxLength": 800},
+                            "executed": boolean,
+                            "result": {**string, "maxLength": 32, "enum": ["passed"]},
+                        },
+                        "required": ["probe_id", "method", "expected_failure_signal", "executed", "result"],
+                    },
+                },
+                "required": ["direct_outcomes", "relevant_invariants", "truth_domains", "required_evidence", "closure_falsification_probe"],
+                "description": "Required for a full_problem acceptance claim. This public schema mirrors the runtime envelope's structural contract; privacy scanning, uniqueness, total-byte bounds, and the semantic requirement that the closure probe executed=true remain runtime-enforced by normalize_resolution_envelope.",
             },
             "operation_id": {**string, "description": "Background operation id returned by a long agent_workflow."},
             "after_seq": {**integer, "minimum": 0, "default": 0, "description": "Durable orchestration event sequence cursor for action=events."},

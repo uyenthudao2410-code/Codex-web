@@ -10,7 +10,7 @@ ACTIVATION_PROOF_RE = re.compile(r"^[a-f0-9]{64}$")
 ACTIVATION_CONTROL_ALLOWED_FIELDS = {
     "prepare": {"action", "operation_id", "expires_at_unix_ms", "workspace", "allow_acceptance_pending", "source_checkpoint"},
     "cancel": {"action", "operation_id"},
-    "verify": {"action", "operation_id", "workspace", "source_checkpoint"},
+    "verify": {"action", "operation_id", "workspace", "source_checkpoint", "allow_acceptance_pending"},
     "complete_epoch": {"action", "activation_epoch_id", "ready_commit_digest", "expires_at_unix_ms"},
     "close_epoch": {"action", "activation_epoch_id", "ready_commit_digest"},
 }

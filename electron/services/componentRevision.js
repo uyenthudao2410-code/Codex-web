@@ -50,7 +50,11 @@ const COMPONENT_SPECS = Object.freeze({
       'electron/services/secretStore.js',
       'electron/services/settingsStore.js',
       'electron/services/tunnelService.js',
-      'resources/recovery-mcp/recovery_mcp.py'
+      'resources/recovery-mcp/recovery_mcp.py',
+      'resources/recovery-supervisor/recovery-supervisor.ps1',
+      'electron/services/trustedRecoveryBootstrap.js',
+      'scripts/full-clean-activation.js',
+      'scripts/trusted-recovery-bootstrap.js'
     ])
   }),
   coding_mcp: Object.freeze({

@@ -28,6 +28,7 @@ const {
   electronUiArguments,
   spawnRecoveryHost,
   spawnElectronUi,
+  processEnvironment,
   assertActivationDeadline
 } = require('../electron/services/recoveryHostLauncher');
 const { replacementArguments, bootstrapArguments } = require('../electron/recoveryHost');
@@ -555,6 +556,128 @@ test('healthy READY supervision services the explicit supervisor restart ticket'
   assert.equal(superviseCalls, 1, 'ordinary supervision may continue after the explicit restart request is serviced');
   assert.equal(lightweightCalls, 0, 'healthy READY supervision must not fall back to the blocked lightweight snapshot path');
   assert.equal(ready.supervisorRequest.ticket_id, 'restart-healthy-ready-test');
+});
+
+test('healthy READY supervision yields immediately after a supervisor restart enters HANDOFF', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  seedReadyEpoch(host);
+  let superviseCalls = 0;
+  let lightweightCalls = 0;
+  let recoveryPlaneCalls = 0;
+  let uiCalls = 0;
+  host.orchestrator.serviceSupervisorRestartRequest = async () => ({
+    ticketId: 'restart-handoff-drain-test',
+    operationId: 'restart-handoff-drain-test',
+    status: 'accepted',
+    activation_mode: 'full_clean_refresh',
+    result: { state: 'HANDOFF', admission_open: false, fully_ready: false }
+  });
+  host.orchestrator.supervise = async () => {
+    superviseCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: true };
+  };
+  host.orchestrator.lightweightSnapshot = async () => {
+    lightweightCalls += 1;
+    return { mcpRunning: true, tunnelRunning: true, fullyReady: false };
+  };
+
+  await host.start();
+  host.ensureRecoveryPlane = async () => { recoveryPlaneCalls += 1; };
+  host.superviseElectronUi = async () => { uiCalls += 1; };
+  const pending = await host.superviseOnce();
+
+  assert.equal(superviseCalls, 0, 'ordinary runtime supervision must not run after accepted full-clean HANDOFF');
+  assert.equal(lightweightCalls, 0, 'handoff must not start another live runtime observation before supervision drains');
+  assert.equal(recoveryPlaneCalls, 0, 'Recovery Plane supervision must yield to the full-clean handoff owner');
+  assert.equal(uiCalls, 0, 'UI recovery must yield to the full-clean handoff owner');
+  assert.equal(pending.supervisorRequest.status, 'accepted');
+  assert.equal(pending.supervisorRequest.result.state, 'HANDOFF');
+  assert.equal(pending.fullyReady, false);
+  assert.equal(pending.updateIncomplete, true);
+});
+
+test('healthy READY supervision defers a retained supervisor restart until the next watchdog tick', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  seedReadyEpoch(host);
+  let ticketCalls = 0;
+  let superviseCalls = 0;
+  let lightweightCalls = 0;
+  let recoveryPlaneCalls = 0;
+  let uiCalls = 0;
+  host.orchestrator.serviceSupervisorRestartRequest = async () => {
+    ticketCalls += 1;
+    if (ticketCalls === 1) {
+      return {
+        ticketId: 'restart-deferred-retry-test',
+        operationId: 'restart-deferred-retry-test',
+        status: 'deferred',
+        request_retained: true,
+        activation_mode: 'full_clean_activation',
+        error: { code: 'RUNTIME_BUSY', message: 'initiating tool call is still leaving admission' }
+      };
+    }
+    return {
+      ticketId: 'restart-deferred-retry-test',
+      operationId: 'restart-deferred-retry-test',
+      status: 'accepted',
+      activation_mode: 'full_clean_refresh',
+      result: { state: 'HANDOFF', admission_open: false, fully_ready: false }
+    };
+  };
+  host.orchestrator.supervise = async () => {
+    superviseCalls += 1;
+    const nestedRequest = await host.orchestrator.serviceSupervisorRestartRequest();
+    return {
+      mcpRunning: true,
+      nativeAlive: true,
+      tunnelRunning: true,
+      fullyReady: true,
+      supervisorRequest: nestedRequest
+    };
+  };
+  host.orchestrator.lightweightSnapshot = async () => {
+    lightweightCalls += 1;
+    return { mcpRunning: true, nativeAlive: true, tunnelRunning: true, fullyReady: true };
+  };
+
+  await host.start();
+  host.recordSupervisionStatus({
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: true,
+    componentsReady: true,
+    connectorReady: true,
+    fullyReady: true
+  });
+  host.ensureRecoveryPlane = async () => { recoveryPlaneCalls += 1; };
+  host.superviseElectronUi = async () => { uiCalls += 1; };
+
+  const deferred = await host.superviseOnce();
+  assert.equal(ticketCalls, 1,
+    'a retained deferred ticket must not be consumed again through ordinary supervision in the same tick');
+  assert.equal(superviseCalls, 0, 'ordinary runtime supervision must yield to the deferred restart owner');
+  assert.equal(lightweightCalls, 0, 'the deferred tick must not start a second runtime observation');
+  assert.equal(recoveryPlaneCalls, 0, 'Recovery Plane mutation must yield while the restart journal owns the tick');
+  assert.equal(uiCalls, 0, 'UI recovery must yield while the restart journal owns the tick');
+  assert.equal(deferred.supervisorRequest.status, 'deferred');
+  assert.equal(deferred.supervisorRequest.request_retained, true);
+  assert.equal(deferred.mcpRunning, true, 'deferred is not evidence that the primary runtime already stopped');
+  assert.equal(deferred.tunnelRunning, true, 'deferred preserves the last observed live Tunnel state');
+  assert.equal(deferred.fullyReady, false);
+  assert.equal(deferred.updateIncomplete, true);
+
+  const accepted = await host.superviseOnce();
+  assert.equal(ticketCalls, 2, 'the retained ticket is retried exactly once on the next watchdog tick');
+  assert.equal(superviseCalls, 0, 'accepted HANDOFF must still bypass ordinary runtime supervision');
+  assert.equal(lightweightCalls, 0);
+  assert.equal(recoveryPlaneCalls, 0);
+  assert.equal(uiCalls, 0);
+  assert.equal(accepted.supervisorRequest.status, 'accepted');
+  assert.equal(accepted.supervisorRequest.result.state, 'HANDOFF');
+  assert.equal(accepted.mcpRunning, false);
+  assert.equal(accepted.tunnelRunning, false);
+  assert.equal(accepted.fullyReady, false);
+  assert.equal(accepted.updateIncomplete, true);
 });
 
 test('invalid READY adoption guard retires only after a different durable epoch becomes current', async (t) => {
@@ -1748,6 +1871,25 @@ test('activation launchers propagate the epoch through argv and child environmen
   assert.equal(launches[0].options.windowsHide, true, 'Recovery Host must remain a background process');
   assert.equal(launches[1].options.windowsHide, false, 'Electron UI must be allowed to create a visible Windows window');
   assert.equal(launches[2].options.windowsHide, true, 'bootstrap Recovery Host must remain a background process');
+});
+
+test('real Electron children strip deferred worker-only environment contracts', () => {
+  const inherited = {
+    ELECTRON_RUN_AS_NODE: '1',
+    FULL_CLEAN_DEFERRED_WORKER: '1',
+    FULL_CLEAN_SOURCE_CHECKPOINT_JSON: '{"checkpoint_id":"must-not-cross"}',
+    SAFE_PARENT_VALUE: 'preserved'
+  };
+  const env = processEnvironment('recovery-host', {
+    bootstrapId: 'bootstrap-operation-0001'
+  }, inherited);
+  assert.equal(Object.hasOwn(env, 'ELECTRON_RUN_AS_NODE'), false);
+  assert.equal(Object.hasOwn(env, 'FULL_CLEAN_DEFERRED_WORKER'), false);
+  assert.equal(Object.hasOwn(env, 'FULL_CLEAN_SOURCE_CHECKPOINT_JSON'), false);
+  assert.equal(env.SAFE_PARENT_VALUE, 'preserved');
+  assert.equal(env.WEBCODEX_PROCESS_ROLE, 'recovery-host');
+  assert.equal(env.WEBCODEX_RECOVERY_BOOTSTRAP_ID, 'bootstrap-operation-0001');
+  assert.equal(inherited.ELECTRON_RUN_AS_NODE, '1');
 });
 
 test('activation launchers reject expired requests before invoking the process spawn boundary', async () => {

@@ -13,6 +13,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Callable
 
+from .app_server_persistence import restore_persistent_thread as _restore_persistent_thread
 from .processes import managed_process_creationflags
 from .runtime_config import is_core_command_env_name, is_filtered_env_var
 from .secret_broker import OPENAI_API_KEY_HANDLE, SecretBroker
@@ -687,6 +688,33 @@ class CodexAppServerBridge:
             wait_ms=wait_ms,
         )
 
+    def restore_persistent_thread(
+        self,
+        *,
+        thread_id: str,
+        profile: str,
+        model: str | None = None,
+        effort: str | None = None,
+        expected_session_id: str = "",
+        deadline_ms: int = 0,
+        output_schema: dict[str, Any] | None = None,
+        wait_ms: int = 0,
+    ) -> dict[str, Any]:
+        """Restore one exact durable App Server lane without launching a turn."""
+        return _restore_persistent_thread(
+            self,
+            error_type=CodexBridgeError,
+            workspace_contains=_is_within_workspace,
+            thread_id=thread_id,
+            profile=profile,
+            model=model,
+            effort=effort,
+            expected_session_id=expected_session_id,
+            deadline_ms=deadline_ms,
+            output_schema=output_schema,
+            wait_ms=wait_ms,
+        )
+
     def resume_persistent_thread(
         self,
         *,
@@ -700,88 +728,16 @@ class CodexAppServerBridge:
         output_schema: dict[str, Any] | None = None,
         wait_ms: int = 0,
     ) -> dict[str, Any]:
-        """Resume a registry-authorized persistent lane after process rollover.
-
-        This is intentionally not a model-facing action. The caller must first
-        resolve the thread from the durable orchestration lane registry so an
-        arbitrary live Codex Desktop thread cannot be claimed by the bridge.
-        """
-        if not thread_id:
-            raise CodexBridgeError("THREAD_ID_REQUIRED", "A persisted lane thread_id is required.")
-        prompt = self._validate_prompt(prompt)
-        workspace = self._workspace()
-        route = self._resolve_route(
+        """Restore a persisted lane, then launch exactly one new caller-authorized turn."""
+        restored = self.restore_persistent_thread(
+            thread_id=thread_id,
             profile=profile,
             model=model,
             effort=effort,
-            source_thread_id="history-source" if profile == "history" else None,
-            continuing=True,
+            expected_session_id=expected_session_id,
         )
-        self._ensure_connected()
-        self._assert_profile_launch_policy(route)
-        source_result = self._request(
-            "thread/read",
-            {"threadId": thread_id, "includeTurns": False},
-        )
-        source = source_result.get("thread") if isinstance(source_result, dict) else None
-        if not isinstance(source, dict):
-            raise CodexBridgeError(
-                "PERSISTENT_THREAD_NOT_FOUND",
-                "Codex did not return the persisted lane thread.",
-                details={"thread_id": thread_id},
-            )
-        if not _is_within_workspace(source.get("cwd"), workspace):
-            raise CodexBridgeError(
-                "PERSISTENT_WORKSPACE_MISMATCH",
-                "The persisted lane belongs to a different workspace.",
-                details={
-                    "thread_id": thread_id,
-                    "source_cwd": source.get("cwd"),
-                    "workspace": str(workspace),
-                },
-            )
-        actual_session_id = str(source.get("sessionId") or "")
-        if expected_session_id and actual_session_id != expected_session_id:
-            raise CodexBridgeError(
-                "PERSISTENT_SESSION_MISMATCH",
-                "The persisted lane session identity no longer matches the durable registry.",
-                details={
-                    "thread_id": thread_id,
-                    "expected_session_id": expected_session_id,
-                    "actual_session_id": actual_session_id,
-                },
-            )
-        self._check_capacity(route["model"])
-        resume_response = self._request(
-            "thread/resume",
-            {
-                "threadId": thread_id,
-                **self._thread_route_params(route, workspace),
-            },
-        )
-        resumed = resume_response.get("thread") if isinstance(resume_response, dict) else None
-        if not isinstance(resumed, dict) or str(resumed.get("id") or thread_id) != thread_id:
-            raise CodexBridgeError(
-                "PERSISTENT_THREAD_RESUME_FAILED",
-                "Codex did not confirm the persisted lane thread during resume.",
-                details={"thread_id": thread_id},
-            )
-        with self._condition:
-            self._owned_threads[thread_id] = {
-                "workspace": str(workspace),
-                "source_thread_id": None,
-                "created_at": time.time(),
-                "mode": "persistent_resume",
-                "lifetime": "persistent",
-                "profile": route["profile"],
-                "model": route["model"],
-                "effort": route["effort"],
-                "session_id": str(resumed.get("sessionId") or actual_session_id),
-                "reported_model": resumed.get("model"),
-                "reported_effort": resumed.get("reasoningEffort"),
-                "restored": True,
-            }
-        return self._launch_turn(
+        route = restored.get("route") if isinstance(restored.get("route"), dict) else {}
+        launched = self._launch_turn(
             thread_id=thread_id,
             prompt=prompt,
             route=route,
@@ -791,6 +747,7 @@ class CodexAppServerBridge:
             output_schema=output_schema,
             wait_ms=wait_ms,
         )
+        return launched
 
     def continue_thread(
         self,
@@ -1037,24 +994,28 @@ class CodexAppServerBridge:
         turn_id = str(turn["id"])
         with self._condition:
             state = self._turn_states.setdefault(turn_id, {})
+            terminal_before_response = str(state.get("status", "")) in {"completed", "failed", "interrupted"}
             state.update({
                 "thread_id": thread_id,
                 "turn_id": turn_id,
-                "status": str(turn.get("status", "inProgress")),
-                "agent_text": str(state.get("agent_text", "")),
-                "error": turn.get("error"),
                 "profile": route["profile"],
                 "model": route["model"],
                 "effort": route["effort"],
-                "started_monotonic": time.monotonic(),
-                "finalized": False,
             })
+            if not terminal_before_response:
+                state["status"] = str(turn.get("status", "inProgress"))
+                state["error"] = turn.get("error")
+            state.setdefault("agent_text", "")
+            state.setdefault("error", None)
+            state.setdefault("started_monotonic", time.monotonic())
+            state.setdefault("finalized", False)
             self._latest_turn_by_thread[thread_id] = turn_id
             owned = dict(self._owned_threads.get(thread_id, {}))
             self._condition.notify_all()
+        merged_status = str(state.get("status", "inProgress"))
         payload: dict[str, Any] = {
             "ok": True,
-            "status": "running" if str(turn.get("status", "")) == "inProgress" else turn.get("status"),
+            "status": "running" if merged_status == "inProgress" else merged_status,
             "thread_id": thread_id,
             "turn_id": turn_id,
             "creation_mode": creation_mode,

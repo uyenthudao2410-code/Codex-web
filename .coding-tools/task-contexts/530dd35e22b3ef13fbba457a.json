@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "9ef3df01e3a84505a9093dd9ae03ea41",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "LRZa_8tDwTIDSWj4KrkcnZ3f",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 11389,
+    "finished_at": "2026-09-09T23:27:12.208Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T23:27:00.516Z",
+  "updated_at": "2026-09-09T23:27:12.208Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:27:00.516Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:27:00.836Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor replaces a dead owned Coding MCP\" tests\\live-supervisor-e2e.test.js",
+        "session_id": "LRZa_8tDwTIDSWj4KrkcnZ3f"
+      }
+    },
+    {
+      "time": "2026-09-09T23:27:12.208Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-name-pattern=\"live supervisor replaces a dead owned Coding MCP\" tests\\live-supervisor-e2e.test.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

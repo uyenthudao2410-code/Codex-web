@@ -3,6 +3,7 @@ from __future__ import annotations
 # The package path is intentionally inserted before local imports.
 # ruff: noqa: E402
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -22,6 +23,7 @@ import coding_tools_mcp.server as server_module
 import coding_tools_mcp.coordination as coordination_module
 import coding_tools_mcp.task_state as task_state_module
 from coding_tools_mcp.build_verify import collect_artifacts, detect_project
+from coding_tools_mcp.completion_readiness import workflow_readiness_for_request
 from coding_tools_mcp.errors import JsonRpcError, ToolFailure
 from coding_tools_mcp.task_state import TaskStateStore, classify_command, command_payload_succeeded
 from coding_tools_mcp.server import Runtime
@@ -503,6 +505,51 @@ class BackgroundOperationTests(unittest.TestCase):
                 self.assertEqual(polled["background_operation"]["result"], {"done": True})
             runtime.close()
 
+    def test_background_operation_rebinds_when_worker_creates_replan_wave(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                state = runtime.task_state.update({"objective": "rebind operation", "status": "active"})
+                original = runtime.orchestration_control.begin(
+                    objective="rebind operation",
+                    task_id=str(state["task_id"]),
+                    execution_mode="mcp_only",
+                    base_head="test-head",
+                    worktree_fp="test-worktree",
+                )
+                original_wave_id = original.wave_id
+                runtime._project_orchestration(original, event="test_old_wave_projected")
+                rebound_wave_id = "replanned-wave"
+
+                def worker_call(name, arguments, request_id=None):
+                    del name, arguments, request_id
+                    # begin_replan_wave mutates its context in place. This
+                    # synthetic projection exercises the background-handle
+                    # rebinding hook without making a global-process fixture
+                    # part of this narrowly scoped receipt test.
+                    replanned = original.__class__(**{**original.__dict__, "wave_id": rebound_wave_id})
+                    runtime._project_orchestration(replanned, event="test_new_wave_projected")
+                    return {"ok": True, "status": "replanned"}
+
+                with patch.object(runtime, "_call_tool_sync", side_effect=worker_call):
+                    operation, done = runtime._start_background_tool(
+                        "agent_workflow",
+                        {"timeout_seconds": 30},
+                        request_id=None,
+                    )
+                    self.assertTrue(done.wait(2))
+
+                durable = runtime.orchestration_ledger.get_background_operation(operation["operation_id"])
+                self.assertIsNotNone(durable)
+                assert durable is not None
+                self.assertEqual(durable["run_id"], original.run_id)
+                self.assertEqual(durable["wave_id"], rebound_wave_id)
+                self.assertEqual(durable["summary"]["orchestration_binding"]["previous"]["wave_id"], original_wave_id)
+                self.assertEqual(durable["summary"]["orchestration_binding"]["current"]["wave_id"], rebound_wave_id)
+                self.assertEqual(runtime.task_state.get()["orchestration"]["wave_id"], rebound_wave_id)
+            finally:
+                runtime.close()
+
 
 class BuildVerificationTests(unittest.TestCase):
     def test_verify_build_projects_content_addressed_workspace_artifact_ref(self) -> None:
@@ -547,7 +594,7 @@ class BuildVerificationTests(unittest.TestCase):
                     ("", "failed"),
                     ("quiesced", "failed"),
                     ("terminated", "failed"),
-                    ("timed_out", "failed"),
+                    ("timed_out", "timed_out"),
                 )
                 for lifecycle, expected in cases:
                     terminal = {
@@ -569,8 +616,75 @@ class BuildVerificationTests(unittest.TestCase):
                             "test_command": "python -m pytest -q",
                         })
                     self.assertEqual(report["test_result"]["status"], expected)
-                    self.assertEqual(report["overall_status"], expected)
+                    self.assertEqual(report["overall_status"], "passed" if expected == "passed" else "failed")
                     self.assertEqual(report["ok"], expected == "passed")
+            finally:
+                runtime.close()
+
+    def test_verify_build_uses_remaining_background_budget_and_preserves_timeout_cause(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            terminal = {
+                "ok": True,
+                "status": "exited",
+                "session_id": "budgeted-build",
+                "exit_code": 0,
+                "elapsed_ms": 1,
+            }
+            try:
+                with (
+                    patch.object(runtime, "_background_operation_remaining_seconds", return_value=8.0),
+                    patch.object(runtime, "exec_command", return_value=terminal) as exec_command,
+                ):
+                    report = runtime.verify_build({
+                        "path": ".",
+                        "run_tests": True,
+                        "run_build": False,
+                        "test_command": "python -m pytest -q",
+                    })
+                self.assertTrue(report["ok"])
+                self.assertEqual(exec_command.call_args.args[0]["timeout_ms"], 3_000)
+                self.assertEqual(exec_command.call_args.args[0]["yield_time_ms"], 1_000)
+            finally:
+                runtime.close()
+
+    def test_verify_build_distinguishes_workflow_cancellation_from_command_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                inner_timeout = {
+                    "ok": False,
+                    "status": "timed_out",
+                    "session_id": "inner-timeout",
+                    "exit_code": None,
+                    "elapsed_ms": 1,
+                    "timed_out": True,
+                }
+                with patch.object(runtime, "exec_command", return_value=inner_timeout):
+                    inner = runtime.verify_build({
+                        "path": ".",
+                        "run_tests": True,
+                        "run_build": False,
+                        "test_command": "python -m pytest -q",
+                    })
+                self.assertEqual(inner["error"]["code"], "BUILD_VERIFICATION_TIMEOUT")
+                self.assertEqual(inner["error"]["details"]["stage"], "test")
+
+                running = {"ok": True, "status": "running", "session_id": "outer-cancel"}
+                with (
+                    patch.object(runtime, "_background_operation_cancelled", side_effect=[False, True, True]),
+                    patch.object(runtime, "exec_command", return_value=running),
+                    patch.object(runtime, "kill_session", return_value={"ok": True}) as kill_session,
+                ):
+                    cancelled = runtime.verify_build({
+                        "path": ".",
+                        "run_tests": True,
+                        "run_build": False,
+                        "test_command": "python -m pytest -q",
+                    })
+                self.assertEqual(cancelled["error"]["code"], "WORKFLOW_RUNTIME_EXCEEDED")
+                self.assertEqual(cancelled["error"]["details"]["stage"], "test")
+                kill_session.assert_called_once_with({"session_id": "outer-cancel"})
             finally:
                 runtime.close()
 
@@ -1662,6 +1776,56 @@ class ToolModeTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_agent_workflow_permission_failure_records_only_safe_p2_discriminator(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                failure = ToolFailure(
+                    "PERMISSION_REQUIRED",
+                    "synthetic permission failure",
+                    category="permission",
+                    details={
+                        "permission": "inline_script",
+                        "command": "do-not-persist-command",
+                        "path": "do-not-persist-path",
+                    },
+                )
+                with patch.object(runtime, "_run_continuous_check", side_effect=failure):
+                    with self.assertRaises(ToolFailure) as caught:
+                        runtime.agent_workflow({
+                            "workflow": "feature",
+                            "phase": "execute",
+                            "execution_route": "deterministic",
+                            "objective": "exercise prospective P2 permission observation",
+                            "commands": ["synthetic-check"],
+                            "verification": "none",
+                            "evaluation": {"provenance": "synthetic"},
+                            "include_diff": False,
+                        })
+                self.assertEqual(caught.exception.code, "PERMISSION_REQUIRED")
+                state = runtime.task_state.get()
+                run_id = state["orchestration"]["run_id"]
+                failures = [
+                    event for event in runtime.orchestration_ledger.list_events(run_id)
+                    if event["event_type"] == "failure_observed"
+                ]
+                self.assertEqual(len(failures), 1)
+                payload = failures[0]["payload"]
+                self.assertEqual(payload["failure_class"], "PERMISSION_REQUIRED")
+                self.assertEqual(
+                    payload["p2_failure_detail"],
+                    {
+                        "schema": "p2_failure_observation_v3",
+                        "stage": "permission_policy",
+                        "permission_reason": "inline_script",
+                        "causal_attribution": "unattributed",
+                    },
+                )
+                self.assertNotIn("do-not-persist-command", str(payload))
+                self.assertNotIn("do-not-persist-path", str(payload))
+            finally:
+                runtime.close()
+
     def test_agent_workflow_preflights_ambiguous_disjoint_patch_batch_before_orchestration(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -2157,6 +2321,76 @@ class ToolModeTests(unittest.TestCase):
                 self.assertTrue(readiness["verification"]["execution_environment_preflight_required"])
                 self.assertEqual(readiness["scope"]["understood_paths"], ["app.py"])
                 self.assertTrue(readiness["acceptance"]["business_outcome_not_inferred_from_build"])
+            finally:
+                runtime.close()
+
+    def test_adoption_only_verification_defaults_to_none_but_explicit_scope_wins(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            base_args = {
+                "adopt_existing_files": [{"path": "existing.py", "sha256": "a" * 64}],
+            }
+            selected, readiness = workflow_readiness_for_request(
+                root,
+                base_args,
+                workflow="bugfix",
+                command_root=root,
+                workspace_identity={},
+                problem_resolution={},
+                prepared=None,
+                planned_write_paths=[],
+            )
+            self.assertEqual(selected, "none")
+            self.assertEqual(readiness["verification"]["mode"], "none")
+            explicit, _ = workflow_readiness_for_request(
+                root,
+                {**base_args, "verification": "all"},
+                workflow="bugfix",
+                command_root=root,
+                workspace_identity={},
+                problem_resolution={},
+                prepared=None,
+                planned_write_paths=[],
+            )
+            self.assertEqual(explicit, "all")
+
+    def test_adopted_files_are_proof_inputs_and_verify_cache_ignores_wave_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "existing.py"
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            for command in (
+                ["git", "init"],
+                ["git", "config", "user.email", "tests@example.invalid"],
+                ["git", "config", "user.name", "Tests"],
+                ["git", "add", "existing.py"],
+                ["git", "commit", "-m", "initial"],
+            ):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)
+            target.write_text("VALUE = 2\n", encoding="utf-8")
+            digest = hashlib.sha256(target.read_bytes()).hexdigest()
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                with patch.object(runtime.proof_ledger, "fingerprint", wraps=runtime.proof_ledger.fingerprint) as fingerprint:
+                    result = runtime.agent_workflow({
+                        "workflow": "bugfix",
+                        "phase": "execute",
+                        "execution_route": "deterministic",
+                        "objective": "adopt exact existing bytes",
+                        "evaluation": {"provenance": "synthetic"},
+                        "adopt_existing_files": [{"path": "existing.py", "sha256": digest}],
+                        "verification": "tests",
+                        "test_command": f'"{sys.executable}" -c "print(1)"',
+                        "include_diff": False,
+                    })
+                self.assertTrue(result["execution"]["ok"], result)
+                verify_call = next(
+                    call for call in fingerprint.call_args_list
+                    if call.kwargs["stage_id"] == "verify:tests"
+                )
+                self.assertEqual(verify_call.kwargs["input_paths"], ["existing.py"])
+                self.assertNotIn("run_id", verify_call.kwargs["config"])
+                self.assertNotIn("wave_id", verify_call.kwargs["config"])
             finally:
                 runtime.close()
 

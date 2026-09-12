@@ -1,0 +1,754 @@
+[
+  {
+    "version": 2,
+    "task_id": "8c26d3edc8594222b11963024d687b68",
+    "orchestration": {
+      "run_id": "660e245165ee4c178d4e421bb0883b63",
+      "wave_id": "f4148daaa121471d95bb953168a8d413",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+      "contract_fp": ""
+    },
+    "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false if compactly practical. Preserve all unrelated pre-existing WIP bytes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "08hg05v6fzDwqssaTiWUJUlC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 825,
+      "finished_at": "2026-09-08T20:17:45.596Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-08T20:16:51.127Z",
+    "updated_at": "2026-09-08T20:17:45.596Z",
+    "events": [
+      {
+        "time": "2026-09-08T20:16:51.127Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false if compactly practical. Preserve all unrelated pre-existing WIP bytes."
+        }
+      },
+      {
+        "time": "2026-09-08T20:16:52.276Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:17:02.346Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:17:02.354Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T20:17:45.065Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 80 \"function normalizeLifecycleDecision\" electron/services/activationPostflight.js",
+          "session_id": "08hg05v6fzDwqssaTiWUJUlC"
+        }
+      },
+      {
+        "time": "2026-09-08T20:17:45.596Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 80 \"function normalizeLifecycleDecision\" electron/services/activationPostflight.js",
+          "status": "passed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T20:18:10.889Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "68b0b8053da64a0da9554a5407515123",
+    "orchestration": {
+      "run_id": "1f3a255e5c274cd8a6f5d67ae185c0f7",
+      "wave_id": "f22be624cbe14dbeabd021c87fdda56e",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+      "contract_fp": ""
+    },
+    "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false. Preserve all unrelated pre-existing WIP bytes.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 4,
+          "head_hash": "a366be3c3ddf7849c04c864dd39279b888d95fc5ebd754e55ff6281df618939e"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1f3a255e5c274cd8a6f5d67ae185c0f7\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1f3a255e5c274cd8a6f5d67ae185c0f7\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "1f3a255e5c274cd8a6f5d67ae185c0f7",
+        "wave_id": "f22be624cbe14dbeabd021c87fdda56e",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false. Preserve all unrelated pre-existing WIP bytes.",
+          "objective_revision": 1,
+          "objective_sha256": "f8910ab6f54ec75cd3d8c774f0e62ccd70dbd91445cd9fdfdacf6d5aa49b7346",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": null,
+        "reason": "Representative feature/bugfix mutation requires a pre-write solution shadow recommendation.",
+        "event_seq": null
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "24c3da9942a5d3c51d5021b260f1c24796899e3896d4ce7fde599b84c5f07774",
+    "completion_report_acknowledged_id": "24c3da9942a5d3c51d5021b260f1c24796899e3896d4ce7fde599b84c5f07774",
+    "completion_report_acknowledged_at": "2026-09-08T20:21:28.944Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-08T20:18:10.895Z",
+    "updated_at": "2026-09-08T20:21:34.170Z",
+    "events": [
+      {
+        "time": "2026-09-08T20:18:10.895Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:18:11.696Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:18:12.087Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-08T20:21:02.359Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "24c3da9942a5d3c51d5021b260f1c24796899e3896d4ce7fde599b84c5f07774"
+        }
+      },
+      {
+        "time": "2026-09-08T20:21:11.632Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:21:28.944Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "24c3da9942a5d3c51d5021b260f1c24796899e3896d4ce7fde599b84c5f07774"
+        }
+      },
+      {
+        "time": "2026-09-08T20:21:34.170Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T20:21:34.349Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "8c26d3edc8594222b11963024d687b68",
+    "orchestration": {
+      "run_id": "660e245165ee4c178d4e421bb0883b63",
+      "wave_id": "f4148daaa121471d95bb953168a8d413",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+      "contract_fp": ""
+    },
+    "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false if compactly practical. Preserve all unrelated pre-existing WIP bytes.",
+    "status": "idle",
+    "steps": [],
+    "current_step": "",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-08T20:21:34.352Z",
+    "updated_at": "2026-09-08T20:21:34.352Z",
+    "events": [
+      {
+        "time": "2026-09-08T20:21:34.352Z",
+        "event": "orchestration_projection_exact_run_restored",
+        "details": {
+          "source": "canonical_ledger",
+          "run_id": "660e245165ee4c178d4e421bb0883b63"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T20:22:06.016Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "e9700f60f823440ab6e084c2d9fa1d75",
+    "orchestration": {
+      "run_id": "8174dcb7db144e34abb30714dc4f2621",
+      "wave_id": "cf29b3bd25ad4ef2a6c5ad2266696872",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+      "contract_fp": ""
+    },
+    "objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false. Preserve all unrelated pre-existing WIP bytes.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T20:22:19.655Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T20:22:19.655Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T20:22:19.655Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "KDSdajIAeY5qBZF3TYfLGpUz",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 756,
+      "finished_at": "2026-09-08T20:22:18.581Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "electron/services/fullCleanActivation.js",
+            "state": "file",
+            "sha256": "5c6a4e9f51f5623b5aba55b90c61d8dafe364efbfbf7f390008d47e753f43fc1",
+            "size_bytes": 134747,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8174dcb7db144e34abb30714dc4f2621",
+            "wave_id": "cf29b3bd25ad4ef2a6c5ad2266696872"
+          },
+          {
+            "path": "tests/full-clean-activation.test.js",
+            "state": "file",
+            "sha256": "d1b9bc98f478393ad3e2f40ba9ed404f98901bd9b96e528c23fb36536cd3edd1",
+            "size_bytes": 98203,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8174dcb7db144e34abb30714dc4f2621",
+            "wave_id": "cf29b3bd25ad4ef2a6c5ad2266696872"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 1,
+          "observation_count": 1,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "13f0245e567e404b9191426a2eb99651",
+              "seq": 44668,
+              "event_time": "2026-09-08T20:22:09.689Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "2a7d39770f31e841ac96d0931719adc029e5282e2494ebcf3fd6ff736a1a4413",
+                "49e98133a9af7798b040d1e03d451ae9d516457a1b0ced68b21823af9e5100cf"
+              ],
+              "file_count": 2,
+              "additions": 70,
+              "removals": 1,
+              "line_changes": 71,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "85301bc4b622968bbc5b59ff8eef55fbb58bd5d371f8dab0a01c9bc665d5a1d5"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8174dcb7db144e34abb30714dc4f2621\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8174dcb7db144e34abb30714dc4f2621\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "8174dcb7db144e34abb30714dc4f2621",
+        "wave_id": "cf29b3bd25ad4ef2a6c5ad2266696872",
+        "checkpoint_id": "63eb3b7d800c4ad5a926dbe1a8e9e457",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "ea172e9ba82d71ec6808af3e77508ee85530cc1f5c004383e8841dedbe0650c0",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Propagate the durable source-controlled activation policy flag into successor final-census verification without changing checkpoint-free or other activation semantics: in FullCleanActivation._freshActivationObservation(record), when sourceCheckpoint exists, call orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint, record.metadata?.allow_acceptance_pending === true). Add one focused regression in tests/full-clean-activation.test.js that directly proves the third verifyCodeActivation argument is true only when durable record metadata explicitly sets allow_acceptance_pending:true and false when absent/false. Preserve all unrelated pre-existing WIP bytes.",
+          "objective_revision": 1,
+          "objective_sha256": "f8910ab6f54ec75cd3d8c774f0e62ccd70dbd91445cd9fdfdacf6d5aa49b7346",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "3b9932f4834a4e44968ff7fb5e86d936",
+            "stage_id": "check:9273835c18178321",
+            "status": "passed",
+            "duration_ms": 5603,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "8cf75f93876545a4ba4868a257ef121a",
+            "stage_id": "check:fdd8d9bbdabfc13b",
+            "status": "passed",
+            "duration_ms": 1161,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "a81d984e565b6dfa343181df1fe40a0294944a9f54e3936322f133b4845d0532",
+    "completion_report_acknowledged_id": "a81d984e565b6dfa343181df1fe40a0294944a9f54e3936322f133b4845d0532",
+    "completion_report_acknowledged_at": "2026-09-08T20:25:20.186Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "electron/services/fullCleanActivation.js",
+        "operation": "update",
+        "updated_at": "2026-09-08T20:22:20.335Z"
+      },
+      {
+        "path": "tests/full-clean-activation.test.js",
+        "operation": "update",
+        "updated_at": "2026-09-08T20:22:20.335Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T20:22:06.018Z",
+    "updated_at": "2026-09-08T20:25:32.565Z",
+    "events": [
+      {
+        "time": "2026-09-08T20:22:06.018Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:06.755Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:07.893Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:09.023Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:09.030Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:10.491Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:11.030Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:11.864Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/full-clean-activation.test.js",
+          "session_id": "HS0uhmcnuB-f-LUNt5856v80"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:16.841Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:18.183Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- electron/services/fullCleanActivation.js tests/full-clean-activation.test.js",
+          "session_id": "KDSdajIAeY5qBZF3TYfLGpUz"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:18.581Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- electron/services/fullCleanActivation.js tests/full-clean-activation.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:19.648Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:19.655Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:20.073Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:20.075Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:20.189Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "68d511357285556cd3e54594c8a634e736062cfd318a03bf655aea5a2ba24dc9"
+        }
+      },
+      {
+        "time": "2026-09-08T20:22:20.335Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-09-08T20:24:54.253Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:24:56.361Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T20:24:56.365Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:24:56.490Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "a81d984e565b6dfa343181df1fe40a0294944a9f54e3936322f133b4845d0532"
+        }
+      },
+      {
+        "time": "2026-09-08T20:25:06.953Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T20:25:20.186Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "a81d984e565b6dfa343181df1fe40a0294944a9f54e3936322f133b4845d0532"
+        }
+      },
+      {
+        "time": "2026-09-08T20:25:28.758Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T20:25:43.436Z",
+    "archive_reason": "cleared"
+  }
+]

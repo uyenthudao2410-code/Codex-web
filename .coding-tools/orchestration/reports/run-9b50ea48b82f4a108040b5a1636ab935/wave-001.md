@@ -10,7 +10,7 @@
 - Base HEAD: `f702c2a4036d1d185337c14fe1f5cd03e14e3409`
 - Worktree fingerprint: `31640b20c26b036f4ffacee3c36f92a0058a54d3b621ee34a6cdffc9f3c30974`
 - Contract fingerprint: `93e3ed21d873b122a3d130156daaec043036975196cd0dcdf3fd44b64adf31e2`
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -32,6 +32,8 @@
 | 41878 | 2026-09-06T06:23:26.903Z | managed_process_admitted |  |  | owner=default |
 | 41879 | 2026-09-06T06:23:27.187Z | managed_process_started |  |  | owner=default |
 | 41880 | 2026-09-06T06:23:28.351Z | managed_process_terminal |  |  | owner=default |
+| 48427 | 2026-09-10T16:43:27.612Z | state_transition | PREFLIGHT | ABORTED | reason=Abort the obsolete Session-A continuity RUN after same-role controller reattach. Its base/runtime are stale, all managed jobs are terminal, there is no proof or source mutation, and typed product-session Session-A evidence was never recorded. Preserve history and do not claim G6 resolution. |
+| 48428 | 2026-09-10T16:43:28.092Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -48,5 +50,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `10`
-- Chain head: `6b89b459286e6f7d90a0c9f795d078f7bf0e6287dd7ad3debba0cb96b5102f50`
+- Events checked: `12`
+- Chain head: `ae4e3c81f8c8ccbd84eeb5463fa36383cfa72540e8e1f6edaee77d24a71c78aa`

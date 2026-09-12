@@ -1,0 +1,60 @@
+[
+  {
+    "version": 2,
+    "task_id": "e74ff891d35e48ea9ea81b3336b57759",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-08T23:31:25.049Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-08T23:31:25.046Z",
+    "updated_at": "2026-09-08T23:31:25.049Z",
+    "events": [
+      {
+        "time": "2026-09-08T23:31:25.046Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-08T23:31:25.049Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/full-clean-activation.js --status",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-08T23:31:25.049Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T23:31:33.180Z",
+    "archive_reason": "finished"
+  }
+]

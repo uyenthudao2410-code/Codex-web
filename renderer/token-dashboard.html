@@ -1175,6 +1175,24 @@
     overflow: visible !important;
   }
 }
+
+/* Embedded mode (Tổng quan Vận hành iframe): drop window chrome so only
+   the token content shows. The standalone window keeps its sidebar/topbar. */
+body.is-embedded, body.is-embedded html { height: auto; }
+body.is-embedded { overflow: visible; }
+body.is-embedded .manager-window-bar,
+body.is-embedded .sidebar,
+body.is-embedded .main-area > .topbar { display: none !important; }
+body.is-embedded .app-shell {
+  position: static !important;
+  inset: auto !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+body.is-embedded .content-viewport { overflow: visible !important; padding: 0 !important; }
 </style>
 </head>
 <body data-theme="light" class="token-board-window">
@@ -1678,6 +1696,7 @@
       const params = new URLSearchParams(window.location.search);
       const initialTheme = params.get('theme') || 'light';
       applyTheme(initialTheme);
+      if (params.get('embedded') === '1') document.body.classList.add('is-embedded');
 
       if (themeBtn) {
         themeBtn.addEventListener('click', () => {

@@ -1,0 +1,83 @@
+[
+  {
+    "version": 2,
+    "task_id": "c09d0eaf06314f09989d66e13236dce0",
+    "orchestration": {},
+    "objective": "Resume Natural #8 on exact existing RUN fe863a45563b4725af4804ecf05f8a03 after controller reattach. Do not create a replacement RUN. Restore the durable REPLAN state for the exact Problem prl-8608d245430d443aea96a0bcd545e6cd revision 1 and Wave 576f0bfc74284a9a8001e34958fa4a69 so the next evidence-driven replan can exact-byte adopt the existing intended files and rerun proof.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "qiVlGvFaqOC1p7IuN_I4a7jy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 314,
+      "finished_at": "2026-09-09T12:11:17.990Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T12:10:16.888Z",
+    "updated_at": "2026-09-09T12:11:17.990Z",
+    "events": [
+      {
+        "time": "2026-09-09T12:10:16.888Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Resume Natural #8 on exact existing RUN fe863a45563b4725af4804ecf05f8a03 after controller reattach. Do not create a replacement RUN. Restore the durable REPLAN state for the exact Problem prl-8608d245430d443aea96a0bcd545e6cd revision 1 and Wave 576f0bfc74284a9a8001e34958fa4a69 so the next evidence-driven replan can exact-byte adopt the existing intended files and rerun proof."
+        }
+      },
+      {
+        "time": "2026-09-09T12:10:17.429Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-09T12:10:37.778Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 36 -e \"EXACT_RUN_RECOVERY_REFUSED\" -e \"acknowledged archived history\" -e \"prepared RUN/WAVE\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "w-l83km2OLkcolGCznr2qaHC"
+        }
+      },
+      {
+        "time": "2026-09-09T12:10:38.024Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 36 -e \"EXACT_RUN_RECOVERY_REFUSED\" -e \"acknowledged archived history\" -e \"prepared RUN/WAVE\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:11:17.681Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F \"fe863a45563b4725af4804ecf05f8a03\" .coding-tools/task-context-workspaces.json .coding-tools/task-state.json .coding-tools/task-history.json .coding-tools/orchestration/reports",
+          "session_id": "qiVlGvFaqOC1p7IuN_I4a7jy"
+        }
+      },
+      {
+        "time": "2026-09-09T12:11:17.990Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F \"fe863a45563b4725af4804ecf05f8a03\" .coding-tools/task-context-workspaces.json .coding-tools/task-state.json .coding-tools/task-history.json .coding-tools/orchestration/reports",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T12:11:29.246Z",
+    "archive_reason": "finished"
+  }
+]

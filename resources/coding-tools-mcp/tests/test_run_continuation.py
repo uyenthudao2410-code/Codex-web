@@ -12,6 +12,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from coding_tools_mcp.errors import ToolFailure
+from coding_tools_mcp.host_correlation import (
+    CONTINUATION_CONSENT_PENDING_RELATIVE,
+    CONTINUATION_CONSENT_SCHEMA_VERSION,
+    claim_pending_continuation_consent,
+    consume_pending_continuation_consent,
+)
 from coding_tools_mcp.continuation_driver import (
     continuation_execution_environment_hash,
     materialize_continuation_effect_backups,
@@ -22,7 +28,9 @@ from coding_tools_mcp.run_continuation import (
     RUN_CONTINUATION_PROPOSAL_SCHEMA,
     RunContinuationError,
     RunContinuationLedgerMixin,
+    bind_run_continuation_consent,
     build_run_continuation_policy,
+    continuation_consent_descriptor,
     parse_run_continuation_proposal,
 )
 from coding_tools_mcp.server import Runtime
@@ -73,6 +81,7 @@ def policy(run_id: str, request: dict[str, object] | None = None) -> dict[str, o
         activation_epoch_id="epoch-test",
         activation_admission="open",
         issuer_client_id="chatweb-test",
+        wave_id="wave-test",
     )
 
 
@@ -134,7 +143,52 @@ class RunContinuationLedgerTests(unittest.TestCase):
                 "pending_replan_json",
                 "pending_dispatch_action_id",
                 "pending_patch_action_id",
+                "thread_session_id",
             }.issubset(columns))
+
+    def test_explicit_host_consent_is_exact_scoped_and_one_shot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            descriptor = continuation_consent_descriptor(policy("run-consent"))
+            pending = root / CONTINUATION_CONSENT_PENDING_RELATIVE
+            pending.parent.mkdir(parents=True)
+            pending.write_text(json.dumps({
+                "schema_version": CONTINUATION_CONSENT_SCHEMA_VERSION,
+                "receipt_id": "chatweb-continuation-consent:test-receipt",
+                "turn_id": "chatweb-turn:test",
+                "trace_id": "trace-test",
+                "staged_at_unix_ms": 1_000_000,
+                "descriptor": descriptor,
+            }), encoding="utf-8")
+            claimed = claim_pending_continuation_consent(
+                root,
+                process_instance_id="runtime-test",
+                expected_descriptor=descriptor,
+                now_ms=1_000_100,
+            )
+            self.assertIsNotNone(claimed)
+            assert claimed is not None
+            self.assertFalse(pending.exists())
+            consume_pending_continuation_consent(claimed)
+            self.assertFalse(pending.exists())
+            self.assertFalse(claimed["_claim_path"].exists())
+
+            changed = {**descriptor, "max_patch_attempts": descriptor["max_patch_attempts"] + 1}
+            pending.write_text(json.dumps({
+                "schema_version": CONTINUATION_CONSENT_SCHEMA_VERSION,
+                "receipt_id": "chatweb-continuation-consent:test-other",
+                "turn_id": "chatweb-turn:test-other",
+                "trace_id": "trace-other",
+                "staged_at_unix_ms": 1_000_000,
+                "descriptor": changed,
+            }), encoding="utf-8")
+            self.assertIsNone(claim_pending_continuation_consent(
+                root,
+                process_instance_id="runtime-test",
+                expected_descriptor=descriptor,
+                now_ms=1_000_100,
+            ))
+            self.assertFalse(pending.exists())
 
     def test_grant_is_durable_idempotent_and_conflicts_on_policy_change(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -275,13 +329,14 @@ class RunContinuationLedgerTests(unittest.TestCase):
                 now_unix_ms=4_000_000,
             )
             self.assertEqual(regranted["continuation"]["policy_revision"], 2)
+            regrant_generation = int(regranted["continuation"]["driver_generation"])
 
             def claim(name: str) -> dict[str, object]:
                 peer = OrchestrationLedger(root)
                 return peer.claim_run_continuation(
                     run_id=run_id,
                     runtime_instance_id=name,
-                    expected_generation=0,
+                    expected_generation=regrant_generation,
                     now_unix_ms=4_000_100,
                 )
 
@@ -416,6 +471,210 @@ class RunContinuationLedgerTests(unittest.TestCase):
             self.assertEqual(record["pending_dispatch_action_id"], action_two)
             self.assertEqual(record["pending_evidence_paths"], ["resources/coding-tools-mcp/coding_tools_mcp/target.py"])
             self.assertEqual(record["last_turn_id"], "turn-two")
+
+    def test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger, run_id = self._ledger_with_run(root)
+            ledger.issue_run_continuation(
+                run_id=run_id,
+                policy=policy(run_id),
+                issuer_receipt_sha256="e" * 64,
+            )
+            first_claim = ledger.claim_run_continuation(
+                run_id=run_id,
+                runtime_instance_id="runtime-old",
+                expected_generation=0,
+            )
+            first_generation = int(first_claim["continuation"]["driver_generation"])
+            first_action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=first_generation,
+                runtime_instance_id="runtime-old",
+                action_kind="proposal",
+                request_hash="1" * 64,
+                expected_action_seq=1,
+            )
+            ledger.set_run_continuation_dispatch(
+                run_id=run_id,
+                driver_generation=first_generation,
+                runtime_instance_id="runtime-old",
+                action_id=str(first_action["action_id"]),
+                lane_id="lane-old",
+                thread_id="thread-old",
+                turn_id="turn-old",
+            )
+            ledger.complete_run_continuation_action(
+                run_id=run_id,
+                driver_generation=first_generation,
+                runtime_instance_id="runtime-old",
+                action_id=str(first_action["action_id"]),
+            )
+            ledger.set_run_continuation_state(run_id=run_id, action="revoke", reason="replace policy")
+            with self.assertRaises(RunContinuationError) as revoked:
+                ledger.assert_run_continuation_execution(
+                    run_id=run_id,
+                    driver_generation=first_generation,
+                    runtime_instance_id="runtime-old",
+                )
+            self.assertEqual(revoked.exception.code, "RUN_CONTINUATION_REVOKED")
+
+            regranted = ledger.issue_run_continuation(
+                run_id=run_id,
+                policy=policy(run_id),
+                issuer_receipt_sha256="f" * 64,
+            )
+            self.assertEqual(regranted["continuation"]["policy_revision"], 2)
+            self.assertEqual(regranted["continuation"]["lane_id"], "")
+            self.assertEqual(regranted["continuation"]["thread_id"], "")
+            self.assertEqual(regranted["continuation"]["last_turn_id"], "")
+            regrant_generation = int(regranted["continuation"]["driver_generation"])
+            self.assertGreater(regrant_generation, first_generation)
+            with self.assertRaises(RunContinuationError) as stale_old_authority:
+                ledger.assert_run_continuation_execution(
+                    run_id=run_id,
+                    driver_generation=first_generation,
+                    runtime_instance_id="runtime-old",
+                )
+            self.assertEqual(stale_old_authority.exception.code, "RUN_CONTINUATION_STALE_GENERATION")
+
+            second_claim = ledger.claim_run_continuation(
+                run_id=run_id,
+                runtime_instance_id="runtime-new",
+                expected_generation=regrant_generation,
+            )
+            second_generation = int(second_claim["continuation"]["driver_generation"])
+            second_action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=second_generation,
+                runtime_instance_id="runtime-new",
+                action_kind="proposal",
+                request_hash="2" * 64,
+                expected_action_seq=1,
+            )
+            rebound = ledger.set_run_continuation_dispatch(
+                run_id=run_id,
+                driver_generation=second_generation,
+                runtime_instance_id="runtime-new",
+                action_id=str(second_action["action_id"]),
+                lane_id="lane-new",
+                thread_id="thread-new",
+                turn_id="turn-new",
+            )
+            self.assertEqual(rebound["lane_id"], "lane-new")
+            self.assertEqual(rebound["thread_id"], "thread-new")
+            self.assertEqual(rebound["last_turn_id"], "turn-new")
+            self.assertTrue(ledger.verify_chain(run_id)["ok"])
+
+    def test_regrant_same_runtime_generation_is_aba_fenced_at_execution_boundaries(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger, run_id = self._ledger_with_run(root)
+            ledger.issue_run_continuation(
+                run_id=run_id,
+                policy=policy(run_id),
+                issuer_receipt_sha256="e" * 64,
+            )
+            first_claim = ledger.claim_run_continuation(
+                run_id=run_id,
+                runtime_instance_id="runtime-same",
+                expected_generation=0,
+            )
+            old_generation = int(first_claim["continuation"]["driver_generation"])
+            first_action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=old_generation,
+                runtime_instance_id="runtime-same",
+                action_kind="proposal",
+                request_hash="3" * 64,
+                expected_action_seq=1,
+            )
+            ledger.set_run_continuation_dispatch(
+                run_id=run_id,
+                driver_generation=old_generation,
+                runtime_instance_id="runtime-same",
+                action_id=str(first_action["action_id"]),
+                lane_id="lane-old",
+                thread_id="thread-old",
+                turn_id="turn-old",
+            )
+            ledger.complete_run_continuation_action(
+                run_id=run_id,
+                driver_generation=old_generation,
+                runtime_instance_id="runtime-same",
+                action_id=str(first_action["action_id"]),
+            )
+            revoked = ledger.set_run_continuation_state(
+                run_id=run_id,
+                action="revoke",
+                reason="replace policy",
+            )
+            revoked_generation = int(revoked["driver_generation"])
+            self.assertGreater(revoked_generation, old_generation)
+
+            regranted = ledger.issue_run_continuation(
+                run_id=run_id,
+                policy=policy(run_id),
+                issuer_receipt_sha256="f" * 64,
+            )
+            self.assertEqual(regranted["continuation"]["policy_revision"], 2)
+            self.assertEqual(int(regranted["continuation"]["driver_generation"]), revoked_generation)
+            fresh_claim = ledger.claim_run_continuation(
+                run_id=run_id,
+                runtime_instance_id="runtime-same",
+                expected_generation=revoked_generation,
+            )
+            fresh_generation = int(fresh_claim["continuation"]["driver_generation"])
+            self.assertGreater(fresh_generation, revoked_generation)
+
+            with self.assertRaises(RunContinuationError) as stale_assert:
+                ledger.assert_run_continuation_execution(
+                    run_id=run_id,
+                    driver_generation=old_generation,
+                    runtime_instance_id="runtime-same",
+                )
+            self.assertEqual(stale_assert.exception.code, "RUN_CONTINUATION_STALE_GENERATION")
+            with self.assertRaises(RunContinuationError) as stale_reserve:
+                ledger.reserve_run_continuation_action(
+                    run_id=run_id,
+                    driver_generation=old_generation,
+                    runtime_instance_id="runtime-same",
+                    action_kind="proposal",
+                    request_hash="4" * 64,
+                    expected_action_seq=1,
+                )
+            self.assertEqual(stale_reserve.exception.code, "RUN_CONTINUATION_STALE_GENERATION")
+
+            fresh_action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=fresh_generation,
+                runtime_instance_id="runtime-same",
+                action_kind="proposal",
+                request_hash="4" * 64,
+                expected_action_seq=1,
+            )
+            with self.assertRaises(RunContinuationError) as stale_dispatch:
+                ledger.set_run_continuation_dispatch(
+                    run_id=run_id,
+                    driver_generation=old_generation,
+                    runtime_instance_id="runtime-same",
+                    action_id=str(fresh_action["action_id"]),
+                    lane_id="lane-old",
+                    thread_id="thread-old",
+                    turn_id="turn-old",
+                )
+            self.assertEqual(stale_dispatch.exception.code, "RUN_CONTINUATION_STALE_GENERATION")
+            rebound = ledger.set_run_continuation_dispatch(
+                run_id=run_id,
+                driver_generation=fresh_generation,
+                runtime_instance_id="runtime-same",
+                action_id=str(fresh_action["action_id"]),
+                lane_id="lane-new",
+                thread_id="thread-new",
+                turn_id="turn-new",
+            )
+            self.assertEqual(rebound["thread_id"], "thread-new")
+            self.assertTrue(ledger.verify_chain(run_id)["ok"])
 
     def test_claim_owner_expiry_and_renewal_fence_every_execution_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -575,6 +834,107 @@ class RunContinuationLedgerTests(unittest.TestCase):
 
 
 class RunContinuationSurfaceTests(unittest.TestCase):
+    def test_telemetry_without_continuation_uses_exact_problem_handoff_and_deduplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Runtime(Path(directory))
+            try:
+                run_id = runtime.orchestration_ledger.create_run(objective="record ordinary accepted telemetry")
+                runtime.orchestration_ledger.create_wave(run_id, execution_mode="deep_single_lane")
+                handoff = {
+                    "context_status": "VALID",
+                    "active_problem_id": "problem-exact",
+                    "problem_revision": 3,
+                }
+                with patch.object(runtime.orchestration_ledger, "problem_handoff_for_run", return_value=handoff):
+                    first = runtime._run_continuation_record_telemetry(
+                        run_id,
+                        "accepted_checkpoint",
+                        outcome="succeeded",
+                        code="CONTROLLER_ACCEPTED",
+                        marker="checkpoint-exact",
+                    )
+                    repeated = runtime._run_continuation_record_telemetry(
+                        run_id,
+                        "accepted_checkpoint",
+                        outcome="succeeded",
+                        code="CONTROLLER_ACCEPTED",
+                        marker="checkpoint-exact",
+                    )
+                assert first is not None and repeated is not None
+                self.assertTrue(first["created"])
+                self.assertTrue(repeated["idempotent"])
+                self.assertEqual(first["event"]["problem_id"], "problem-exact")
+                self.assertEqual(first["event"]["problem_revision"], 3)
+                summary = runtime.orchestration_ledger.continuity_telemetry_summary(
+                    problem_id="problem-exact", problem_revision=3
+                )
+                self.assertEqual(summary["accepted_checkpoint_count"], 1)
+            finally:
+                runtime.close()
+
+    def test_telemetry_without_continuation_never_invents_problem_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Runtime(Path(directory))
+            try:
+                run_id = runtime.orchestration_ledger.create_run(objective="record unbound ordinary telemetry")
+                runtime.orchestration_ledger.create_wave(run_id, execution_mode="deep_single_lane")
+                blocked_handoff = {
+                    "context_status": "BLOCKED_MISSING_PROBLEM_CONTEXT",
+                    "active_problem_id": "must-not-be-used",
+                    "problem_revision": 9,
+                }
+                with patch.object(runtime.orchestration_ledger, "problem_handoff_for_run", return_value=blocked_handoff):
+                    recorded = runtime._run_continuation_record_telemetry(
+                        run_id,
+                        "report_gate",
+                        outcome="succeeded",
+                        code="REPORT_ACKNOWLEDGED",
+                        marker="report-unbound",
+                    )
+                assert recorded is not None
+                self.assertTrue(recorded["created"])
+                self.assertEqual(recorded["event"]["problem_id"], "")
+                self.assertEqual(recorded["event"]["problem_revision"], 0)
+                by_run = runtime.orchestration_ledger.continuity_telemetry_summary(run_id=run_id)
+                self.assertEqual(by_run["report_gate_count"], 1)
+                by_problem = runtime.orchestration_ledger.continuity_telemetry_summary(
+                    problem_id="must-not-be-used", problem_revision=9
+                )
+                self.assertEqual(by_problem["event_count"], 0)
+            finally:
+                runtime.close()
+
+    def test_continuation_policy_problem_identity_keeps_precedence_for_telemetry(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Runtime(Path(directory))
+            try:
+                run_id = runtime.orchestration_ledger.create_run(objective="preserve continuation telemetry identity")
+                runtime.orchestration_ledger.create_wave(run_id, execution_mode="deep_single_lane")
+                runtime.orchestration_ledger.issue_run_continuation(
+                    run_id=run_id,
+                    policy=policy(run_id),
+                    issuer_receipt_sha256="e" * 64,
+                )
+                conflicting_handoff = {
+                    "context_status": "VALID",
+                    "active_problem_id": "problem-other",
+                    "problem_revision": 7,
+                }
+                with patch.object(runtime.orchestration_ledger, "problem_handoff_for_run", return_value=conflicting_handoff) as handoff_lookup:
+                    recorded = runtime._run_continuation_record_telemetry(
+                        run_id,
+                        "report_gate",
+                        outcome="pending",
+                        code="FINAL_ACCEPTANCE_REQUIRED",
+                        marker="continuation-wave",
+                    )
+                assert recorded is not None
+                handoff_lookup.assert_not_called()
+                self.assertEqual(recorded["event"]["problem_id"], "problem-test")
+                self.assertEqual(recorded["event"]["problem_revision"], 1)
+            finally:
+                runtime.close()
+
     def test_prompt_requires_one_json_object_while_mcp_retains_strict_typed_parser(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             runtime = Runtime(Path(directory))
@@ -858,6 +1218,151 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def _prepare_recoverable_persistent_lane(self, runtime: Runtime, *, with_consent: bool, keep_pending: bool = False) -> tuple[object, dict[str, object]]:
+        identity = runtime._orchestration_workspace_identity(".")
+        ctx = runtime.orchestration_control.begin(
+            objective="resume exactly one already-authorized persistent continuation lane",
+            task_id="task-test",
+            execution_mode="deep_single_lane",
+            base_head=str(identity.get("base_head") or ""),
+            worktree_fp=str(identity.get("worktree_fp") or ""),
+            contract_fp="b" * 64,
+        )
+        behavior = runtime._loaded_behavior_identity()
+        continuation_policy: dict[str, object] = build_run_continuation_policy(
+            grant_request(),
+            run_id=ctx.run_id,
+            workspace_id="workspace-test",
+            problem_id="problem-test",
+            problem_revision=1,
+            contract_fingerprint="b" * 64,
+            tool_contract_sha256=str(runtime.tool_contract["sha256"]),
+            runtime_behavior_fingerprint=str(behavior["fingerprint"]),
+            activation_epoch_id="epoch-current",
+            activation_admission="open",
+            issuer_client_id="chatweb-test",
+            wave_id=ctx.wave_id,
+        )
+        if with_consent:
+            descriptor = continuation_consent_descriptor(continuation_policy)
+            continuation_policy = bind_run_continuation_consent(continuation_policy, {
+                "receipt_id": "chatweb-continuation-consent:test",
+                "turn_id": "chatweb-turn:test",
+                "trace_id": "trace-test",
+                "descriptor": descriptor,
+            })
+        runtime.orchestration_ledger.issue_run_continuation(
+            run_id=ctx.run_id,
+            policy=continuation_policy,
+            issuer_receipt_sha256="e" * 64,
+        )
+        claim = runtime.orchestration_ledger.claim_run_continuation(
+            run_id=ctx.run_id,
+            runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+            expected_generation=0,
+        )
+        generation = int(claim["continuation"]["driver_generation"])
+        reserved = runtime.orchestration_ledger.reserve_run_continuation_action(
+            run_id=ctx.run_id,
+            driver_generation=generation,
+            runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+            action_kind="proposal",
+            request_hash="9" * 64,
+            evidence_hash="a" * 64,
+            evidence_paths=[],
+            expected_action_seq=1,
+        )
+        lane_id = hashlib.sha256(f"run-continuation-lane-v1\0{ctx.run_id}\0{'a' * 64}".encode("utf-8")).hexdigest()
+        action_id = str(reserved["action_id"])
+        runtime.orchestration_ledger.set_run_continuation_dispatch(
+            run_id=ctx.run_id,
+            driver_generation=generation,
+            runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+            action_id=action_id,
+            lane_id=lane_id,
+            thread_id="persistent-thread",
+            turn_id="previous-turn",
+            session_id="persistent-session",
+        )
+        if not keep_pending:
+            runtime.orchestration_ledger.complete_run_continuation_action(
+                run_id=ctx.run_id,
+                driver_generation=generation,
+                runtime_instance_id=runtime._run_continuation_runtime_instance_id(),
+                action_id=action_id,
+            )
+        return ctx, continuation_policy
+
+    def test_persistent_lane_recovery_restores_exact_session_before_one_new_turn(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                with (
+                    patch.object(runtime, "activation_admission_snapshot", return_value={"admission": "open", "activation_epoch_id": "epoch-current"}),
+                    patch.object(runtime, "_run_continuation_canonical_evidence", return_value=({}, "a" * 64)),
+                    patch.object(runtime, "_run_continuation_start_worker"),
+                    patch.object(runtime._codex_bridge, "restore_persistent_thread", return_value={"thread_id": "persistent-thread", "session_id": "persistent-session"}) as restored,
+                    patch.object(runtime._codex_bridge, "continue_thread", return_value={"thread_id": "persistent-thread", "turn_id": "new-turn", "session_id": "persistent-session"}) as continued,
+                    patch.object(runtime._codex_bridge, "run") as created,
+                ):
+                    result = runtime._run_continuation_start_driver({"run_id": ctx.run_id})
+                self.assertEqual(result["status"], "PROPOSING")
+                restored.assert_called_once()
+                continued.assert_called_once()
+                created.assert_not_called()
+                current = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert current is not None
+                self.assertEqual(current["thread_session_id"], "persistent-session")
+                self.assertEqual(current["last_turn_id"], "new-turn")
+            finally:
+                runtime.close()
+
+    def test_persistent_lane_recovery_rejects_missing_consent_or_stale_epoch_without_dispatch(self) -> None:
+        for with_consent, epoch, expected in [
+            (False, "epoch-current", "RUN_CONTINUATION_CONSENT_REQUIRED"),
+            (True, "epoch-new", "RUN_CONTINUATION_EPOCH_STALE"),
+        ]:
+            with self.subTest(with_consent=with_consent, epoch=epoch), tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+                runtime = Runtime(Path(directory))
+                try:
+                    ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=with_consent)
+                    with (
+                        patch.object(runtime, "activation_admission_snapshot", return_value={"admission": "open", "activation_epoch_id": epoch}),
+                        patch.object(runtime._codex_bridge, "restore_persistent_thread") as restored,
+                        patch.object(runtime._codex_bridge, "continue_thread") as continued,
+                    ):
+                        with self.assertRaises(ToolFailure) as raised:
+                            runtime._run_continuation_start_driver({"run_id": ctx.run_id})
+                    self.assertEqual(raised.exception.code, expected)
+                    restored.assert_not_called()
+                    continued.assert_not_called()
+                finally:
+                    runtime.close()
+
+    def test_restart_with_pending_dispatch_pauses_without_restoring_or_replaying(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True, keep_pending=True)
+                with (
+                    patch.object(runtime._codex_bridge, "restore_persistent_thread") as restored,
+                    patch.object(runtime._codex_bridge, "continue_thread") as continued,
+                    patch.object(runtime._codex_bridge, "run") as created,
+                ):
+                    with self.assertRaises(ToolFailure) as raised:
+                        runtime._run_continuation_start_driver({"run_id": ctx.run_id})
+                self.assertEqual(raised.exception.code, "RUN_CONTINUATION_RECOVERY_RECONCILE_REQUIRED")
+                restored.assert_not_called()
+                continued.assert_not_called()
+                created.assert_not_called()
+                current = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert current is not None
+                self.assertFalse(current["enabled"])
+                self.assertTrue(current["pending_action_id"])
+            finally:
+                runtime.close()
+
     def test_terminal_read_dispatches_one_next_turn_on_the_same_owned_thread(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
@@ -1108,6 +1613,17 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 assert effect is not None
                 self.assertEqual(effect["status"], "applied")
                 self.assertTrue((root / effect["manifest"]["files"][0]["backup_path"]).is_file())
+                surface_events = [
+                    event
+                    for event in runtime.orchestration_ledger.list_events(ctx.run_id)
+                    if event["event_type"] == "patch_surface_observed"
+                ]
+                self.assertEqual(len(surface_events), 1)
+                self.assertEqual(surface_events[0]["payload"]["file_count"], 1)
+                self.assertEqual(
+                    surface_events[0]["payload"]["file_ids"],
+                    [hashlib.sha256(b"target.py").hexdigest()],
+                )
                 recovered = runtime.orchestration_control.snapshot(ctx.run_id)
                 assert recovered is not None
                 self.assertEqual(recovered.state, "ACCEPTING")
@@ -1250,6 +1766,146 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 accepted = runtime.orchestration_control.snapshot(ctx.run_id)
                 assert accepted is not None
                 self.assertEqual(accepted.state, "ACCEPTING")
+            finally:
+                runtime.close()
+
+    def test_auto_resume_replans_same_run_and_dispatches_once_after_report_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                runtime.orchestration_control.record_failure(ctx, "TEST_REPORT_GATE", payload={"test": True})
+                runtime.orchestration_ledger.set_run_continuation_state(run_id=ctx.run_id, action="pause", reason="report gate")
+                original_wave = ctx.wave_id
+                with (
+                    patch.object(runtime, "_run_continuation_validate_execution_rebind", return_value={"wave_rebound": True, "successor_activation": False}),
+                    patch.object(runtime, "_run_continuation_start_driver", return_value={"status": "PROPOSING", "run_id": ctx.run_id, "continue_observing": True}) as started,
+                ):
+                    result = runtime._run_continuation_try_auto_resume(run_id=ctx.run_id, trigger="report_gate", marker="report-1")
+                self.assertTrue(result["auto_resumed"])
+                started.assert_called_once()
+                current = runtime.orchestration_control.snapshot(ctx.run_id)
+                assert current is not None
+                self.assertNotEqual(current.wave_id, original_wave)
+                self.assertEqual(current.state, "PREFLIGHT")
+                continuation = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert continuation is not None
+                self.assertTrue(continuation["enabled"])
+                events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
+                self.assertIn("resume", {item["event_type"] for item in events})
+                self.assertIn("continuation_success", {item["event_type"] for item in events})
+            finally:
+                runtime.close()
+
+    def test_auto_resume_never_replays_pending_dispatch_after_lost_claim(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True, keep_pending=True)
+                runtime.orchestration_ledger.set_run_continuation_state(run_id=ctx.run_id, action="pause", reason="simulated reconnect")
+                with patch.object(runtime, "_run_continuation_start_driver") as started:
+                    result = runtime._run_continuation_try_auto_resume(run_id=ctx.run_id, trigger="reconnect", marker="session-2")
+                self.assertEqual(result["status"], "RECOVERY_RECONCILE_REQUIRED")
+                started.assert_not_called()
+                events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
+                self.assertEqual(
+                    [item["event_type"] for item in events].count("duplicate_effect_prevented"), 1
+                )
+            finally:
+                runtime.close()
+
+    def test_execution_rebind_requires_exact_cross_endpoint_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert record is not None
+                policy_value = record["policy"]
+                binding = {
+                    "workspace_id": policy_value["workspace_id"],
+                    "problem_id": policy_value["problem_id"],
+                    "problem_revision": policy_value["problem_revision"],
+                }
+                attachment = {"last_reattach_id": "reattach-new-owner"}
+                receipt = {
+                    **binding,
+                    "owner_client_id": "new-owner",
+                    "active_run_transfers": [{"run_id": ctx.run_id}],
+                }
+                controller = {"status": "active", "owner_client_id": "new-owner"}
+                with (
+                    patch.object(runtime, "_run_continuation_assert_runtime"),
+                    patch.object(runtime.orchestration_ledger, "problem_get_exact_revision", return_value={}),
+                    patch.object(runtime.orchestration_ledger, "controller_run_problem_binding", return_value=binding),
+                    patch.object(runtime, "_continuity_current_controller_identity", return_value={"owner_client_id": "new-owner"}),
+                    patch.object(runtime, "_continuity_assert_run_controller", return_value=attachment),
+                    patch.object(runtime.orchestration_ledger, "get_controller_lease", return_value=controller),
+                    patch.object(runtime.orchestration_ledger, "controller_reattach_receipt", return_value=receipt) as receipt_lookup,
+                ):
+                    rebound = runtime._run_continuation_validate_execution_rebind(record, ctx)
+                    self.assertEqual(rebound["controller_owner"], "new-owner")
+                    receipt_lookup.return_value = {**receipt, "active_run_transfers": []}
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime._run_continuation_validate_execution_rebind(record, ctx)
+                self.assertEqual(denied.exception.code, "RUN_CONTINUATION_REATTACH_RECEIPT_REQUIRED")
+            finally:
+                runtime.close()
+
+    def test_execution_rebind_requires_exact_successor_activation_receipt_for_same_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                record = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert record is not None
+                policy_value = record["policy"]
+                issuer = str(policy_value["issuer_client_id"])
+                binding = {
+                    "workspace_id": policy_value["workspace_id"],
+                    "problem_id": policy_value["problem_id"],
+                    "problem_revision": policy_value["problem_revision"],
+                }
+                attachment = {"last_reattach_id": "reattach-successor-same-owner"}
+                receipt = {
+                    **binding,
+                    "owner_client_id": issuer,
+                    "active_run_transfers": [{"run_id": ctx.run_id}],
+                }
+                controller = {"status": "active", "owner_client_id": issuer}
+                with (
+                    patch.object(runtime, "_run_continuation_assert_runtime"),
+                    patch.object(runtime, "activation_admission_snapshot", return_value={"admission": "open", "activation_epoch_id": "epoch-successor"}),
+                    patch.object(runtime.orchestration_ledger, "problem_get_exact_revision", return_value={}),
+                    patch.object(runtime.orchestration_ledger, "controller_run_problem_binding", return_value=binding),
+                    patch.object(runtime, "_continuity_current_controller_identity", return_value={"owner_client_id": issuer}),
+                    patch.object(runtime, "_continuity_assert_run_controller", return_value=attachment),
+                    patch.object(runtime.orchestration_ledger, "get_controller_lease", return_value=controller),
+                    patch.object(runtime.orchestration_ledger, "controller_reattach_receipt", return_value=receipt) as receipt_lookup,
+                ):
+                    rebound = runtime._run_continuation_validate_execution_rebind(record, ctx)
+                    self.assertTrue(rebound["successor_activation"])
+                    receipt_lookup.return_value = None
+                    with self.assertRaises(ToolFailure) as denied:
+                        runtime._run_continuation_validate_execution_rebind(record, ctx)
+                self.assertEqual(denied.exception.code, "RUN_CONTINUATION_REATTACH_RECEIPT_REQUIRED")
+            finally:
+                runtime.close()
+
+    def test_runtime_behavior_identity_covers_continuation_execution(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runtime = Runtime(Path(directory))
+            try:
+                before = runtime._loaded_behavior_identity()
+                components = before["components"]
+                self.assertIn("run_continuation_driver", components)
+                self.assertIn("run_continuation_autoresume", components)
+                self.assertEqual(before["schema_version"], 2)
+                self.assertEqual(before["algorithm"], "sha256_python_semantic_code_v2")
+                self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                after = runtime._loaded_behavior_identity()
+                self.assertEqual(after["components"], before["components"])
+                self.assertEqual(after["fingerprint"], before["fingerprint"])
             finally:
                 runtime.close()
 

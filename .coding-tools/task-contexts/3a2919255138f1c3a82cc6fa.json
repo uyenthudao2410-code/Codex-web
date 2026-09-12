@@ -1,0 +1,85 @@
+{
+  "version": 2,
+  "task_id": "7c0804e115d54d3e9d7d1ec18090b512",
+  "orchestration": {
+    "run_id": "e372a99676b242b4887c8da4eb3f278e",
+    "wave_id": "100837ae59a04e43977e6c3f664d56c5",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "auto",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "b0e7a500bb7d6912bd93201c53bbffa6e8ba3e6ac99da6c01347ca00fb2db486",
+    "contract_fp": ""
+  },
+  "objective": "Read-only focused architecture audit. Return concrete existing mechanisms and exact candidate integration surfaces for Astra async tools, response steering, reasoning updates, instruction provenance, follow-through exit policy, delegation, proportional verification, and model-registry provenance. Do not mutate anything.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Read-only Astra applicability research audit is complete. No implementation, source mutation, test/build, release, or deployment was requested or performed.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-08T03:47:41.032Z",
+  "updated_at": "2026-09-08T03:49:39.533Z",
+  "events": [
+    {
+      "time": "2026-09-08T03:47:41.032Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T03:47:42.244Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T03:47:48.521Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T03:49:39.526Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-08T03:49:39.533Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

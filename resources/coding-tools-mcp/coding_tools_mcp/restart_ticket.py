@@ -16,14 +16,12 @@ SUPERVISOR_RESTART_MAX_CLOCK_SKEW_MS = 5_000
 SUPERVISOR_RESTART_REASON_MAX_CHARS = 1_024
 EXACT_STALE_RUN_REASON_PREFIX = "exact_stale_runs:"
 EXACT_STALE_RUN_ID = re.compile(r"^[a-f0-9]{32}$")
-EXACT_STALE_RUN_MAX_IDS = 16
+EXACT_STALE_RUN_MAX_IDS = 64
 PROBLEM_LINEAGE_SCHEMA_V12_REASON = "problem_lineage_schema_v12"
 
 
 def is_exact_stale_run_maintenance_reason(value: Any) -> bool:
     if not isinstance(value, str) or not value.startswith(EXACT_STALE_RUN_REASON_PREFIX):
-        return False
-    if len(value) > SUPERVISOR_RESTART_REASON_MAX_CHARS:
         return False
     raw_ids = value[len(EXACT_STALE_RUN_REASON_PREFIX):]
     run_ids = raw_ids.split(",") if raw_ids else []
@@ -45,13 +43,13 @@ def is_workspace_maintenance_reason(value: Any) -> bool:
 def _restart_reason_valid(value: Any) -> bool:
     if value is None:
         return True
-    if not isinstance(value, str) or len(value) > SUPERVISOR_RESTART_REASON_MAX_CHARS:
+    if not isinstance(value, str):
         return False
     if value.startswith(EXACT_STALE_RUN_REASON_PREFIX):
         return is_exact_stale_run_maintenance_reason(value)
     if value.startswith(PROBLEM_LINEAGE_SCHEMA_V12_REASON):
         return is_problem_lineage_schema_v12_maintenance_reason(value)
-    return True
+    return len(value) <= SUPERVISOR_RESTART_REASON_MAX_CHARS
 
 
 def build_supervisor_restart_ticket(

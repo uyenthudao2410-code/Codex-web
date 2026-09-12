@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "task_id": "f7871b0ef4654371848c8f2b5b311b54",
+  "orchestration": {
+    "run_id": "9fbbdd7e96d34411be533f6dad0f01de",
+    "wave_id": "c43df8245f30410aacfd725aa1b5199e",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "ff69f258efc46ecc7713cebf1b5b77a10326f2ac4355c22111a141ce325d2a8c",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnosis for a candidate natural Codex-web product defect: verify whether exact RUN 234713daf77f427ca486a7044fefd204 is currently CHECKPOINTED in the canonical ledger/contextual projection but stale ACCEPTING in global .coding-tools/task-state.json; identify which current product/runtime consumers select global vs contextual projection; determine whether this can misreport terminal state to an operator; localize the smallest causal source change and existing/focused oracle. Do not mutate source/evidence, do not reconcile, accept, ACK, restart, or create a synthetic success condition.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T06:51:18.907Z",
+  "updated_at": "2026-09-09T06:51:45.645Z",
+  "events": [
+    {
+      "time": "2026-09-09T06:51:18.907Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnosis for a candidate natural Codex-web product defect: verify whether exact RUN 234713daf77f427ca486a7044fefd204 is currently CHECKPOINTED in the canonical ledger/contextual projection but stale ACCEPTING in global .coding-tools/task-state.json; identify which current product/runtime consumers select global vs contextual projection; determine whether this can misreport terminal state to an operator; localize the smallest causal source change and existing/focused oracle. Do not mutate source/evidence, do not reconcile, accept, ACK, restart, or create a synthetic success condition."
+      }
+    },
+    {
+      "time": "2026-09-09T06:51:20.361Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:51:45.640Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T06:51:45.645Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

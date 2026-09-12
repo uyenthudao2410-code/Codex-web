@@ -1,0 +1,240 @@
+[
+  {
+    "version": 2,
+    "task_id": "3859642f12d24742b5497edbb2f038b5",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "DFtWtWSDWcsxE8q_MGgS2llL",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 293,
+      "finished_at": "2026-09-12T11:19:19.152Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T11:19:09.672Z",
+    "updated_at": "2026-09-12T11:19:19.152Z",
+    "events": [
+      {
+        "time": "2026-09-12T11:19:09.672Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:10.009Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i \"PROOF_ORACLE_GAP|proof oracle|proof-cache|input_fingerprint|content_addressed\" .coding-tools/orchestration/reports .coding-tools 2>$null",
+          "session_id": "Rpc1wFAfs5bhXfETka46OgUT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:10.537Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i \"PROOF_ORACLE_GAP|proof oracle|proof-cache|input_fingerprint|content_addressed\" .coding-tools/orchestration/reports .coding-tools 2>$null",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:18.853Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l -i \"PROOF_ORACLE_GAP\" .coding-tools/orchestration/reports | Select-Object -Last 20",
+          "session_id": "DFtWtWSDWcsxE8q_MGgS2llL"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:19.152Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l -i \"PROOF_ORACLE_GAP\" .coding-tools/orchestration/reports | Select-Object -Last 20",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T11:19:30.614Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ddc3f05ca9bf4a46b45350113e425641",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T11:19:59.008Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-12T11:19:30.615Z",
+    "updated_at": "2026-09-12T11:19:59.008Z",
+    "events": [
+      {
+        "time": "2026-09-12T11:19:30.615Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:30.902Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l -i \"PROOF_ORACLE_GAP\" .coding-tools\\orchestration\\reports",
+          "session_id": "FCZApdSu4XpjEhkf7jl4ZOEo"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:31.214Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l -i \"PROOF_ORACLE_GAP\" .coding-tools\\orchestration\\reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:42.119Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 -i \"PROOF_ORACLE_GAP|proof cache|input_fingerprint|content_addressed\" .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\run-summary.md .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\wave-002.md .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\wave-003.md",
+          "session_id": "Q5n1hAl3A37JhdJTmpCOHHfQ"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:42.442Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 -i \"PROOF_ORACLE_GAP|proof cache|input_fingerprint|content_addressed\" .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\run-summary.md .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\wave-002.md .coding-tools\\orchestration\\reports\\run-358545cb4cc047f2b5388b221a0beefd\\wave-003.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:59.008Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -C 6 \"proof.*oracle|oracle.*proof|cache.*fingerprint|fingerprint.*cache|content-address|content_addressed|problem_id|OPEN Problem|new Problem\" .coding-tools\\orchestration\\reports\\run-88a4488b7dc24a12981e5b6b497dd8ac .coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:19:59.008Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T11:20:09.221Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5e7fb99442c74d0ca26360a38123a857",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "FkuCJlr8_rVDlW2bPWk4nKQO",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 257,
+      "finished_at": "2026-09-12T11:20:20.322Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T11:20:09.224Z",
+    "updated_at": "2026-09-12T11:20:20.322Z",
+    "events": [
+      {
+        "time": "2026-09-12T11:20:09.224Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T11:20:09.601Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -C 6 -e PROOF_ORACLE_GAP -e content_addressed -e problem_id -e \"new Problem\" .coding-tools\\orchestration\\reports\\run-88a4488b7dc24a12981e5b6b497dd8ac .coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a",
+          "session_id": "9bcpyOIdsTtjXP-ZrPlRPdGj"
+        }
+      },
+      {
+        "time": "2026-09-12T11:20:09.855Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -C 6 -e PROOF_ORACLE_GAP -e content_addressed -e problem_id -e \"new Problem\" .coding-tools\\orchestration\\reports\\run-88a4488b7dc24a12981e5b6b497dd8ac .coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:20:20.040Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 --version",
+          "session_id": "FkuCJlr8_rVDlW2bPWk4nKQO"
+        }
+      },
+      {
+        "time": "2026-09-12T11:20:20.322Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 --version",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T11:20:31.625Z",
+    "archive_reason": "finished"
+  }
+]

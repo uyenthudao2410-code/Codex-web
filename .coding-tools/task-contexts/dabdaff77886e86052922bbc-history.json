@@ -1,0 +1,70 @@
+[
+  {
+    "version": 2,
+    "task_id": "ad48ac93bee44654a855701f4b22f3f8",
+    "orchestration": {
+      "run_id": "9d34b1e4c7a44dfb8d6437fed0c1c348",
+      "wave_id": "567a025e4d3743889dc947a29b4ac704",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "32c24da3d64455edeaed92384d990c728835f989be0b950cb851ef12b07cbcaf",
+      "contract_fp": ""
+    },
+    "objective": "Controlled/synthetic continuation canary for tests/fixtures/continuation-canary/case-g2-clamp-001: implement clampCount for finite integer arguments; clamp values inside inclusive bounds; throw TypeError for any non-number, non-finite, or non-integer argument; throw RangeError when min > max.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T03:57:37.457Z",
+    "updated_at": "2026-09-09T03:59:38.121Z",
+    "events": [
+      {
+        "time": "2026-09-09T03:57:37.458Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Controlled/synthetic continuation canary for tests/fixtures/continuation-canary/case-g2-clamp-001: implement clampCount for finite integer arguments; clamp values inside inclusive bounds; throw TypeError for any non-number, non-finite, or non-integer argument; throw RangeError when min > max."
+        }
+      },
+      {
+        "time": "2026-09-09T03:57:39.331Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-09T03:57:40.718Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-09T03:57:40.724Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T04:01:04.468Z",
+    "archive_reason": "superseded"
+  }
+]

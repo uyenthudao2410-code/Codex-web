@@ -1,0 +1,349 @@
+{
+  "version": 2,
+  "task_id": "02e38035d27345b1a9b06ddc21cbf06a",
+  "orchestration": {
+    "run_id": "d868e2430ee34341b280592991d9ad86",
+    "wave_id": "a8b3349630824ea39697a0d22be642ab",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "b635c38a4a678b02ee546c998e242ba8d725df04b2ceea944323236025ddfe88",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnosis after Natural #8 technical closure: reproduce the current full-suite `npm test` exit status on exact current workspace bytes, identify every failing test and the first causal assertion/error, and classify whether any failure is causally related to Natural #8 renderer/control-center.js or tests/control-center-truthfulness.test.js versus an independent pre-existing/product defect. Do not modify files, do not reconcile lifecycle state, do not open or mutate Problem Lineage, do not accept/ACK/restart/commit/push/package/release/deploy. Preserve all dirty WIP.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-09T12:53:19.127Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-09T12:53:19.127Z"
+    }
+  ],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tuu39kQd8gKNoohAgeo2jM6l",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-09T12:53:18.826Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 26,
+        "head_hash": "19ee8ede405fc4b500e3a26b9607163057a8c45e83d20363c57a9321fbf575c7"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d868e2430ee34341b280592991d9ad86\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d868e2430ee34341b280592991d9ad86\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d868e2430ee34341b280592991d9ad86",
+      "wave_id": "a8b3349630824ea39697a0d22be642ab",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "b635c38a4a678b02ee546c998e242ba8d725df04b2ceea944323236025ddfe88",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only diagnosis after Natural #8 technical closure: reproduce the current full-suite `npm test` exit status on exact current workspace bytes, identify every failing test and the first causal assertion/error, and classify whether any failure is causally related to Natural #8 renderer/control-center.js or tests/control-center-truthfulness.test.js versus an independent pre-existing/product defect. Do not modify files, do not reconcile lifecycle state, do not open or mutate Problem Lineage, do not accept/ACK/restart/commit/push/package/release/deploy. Preserve all dirty WIP.",
+        "objective_revision": 1,
+        "objective_sha256": "168f875b2e056bd39cf876fea1eee5ddf50d14c4e50083b81dbad933ed103c13",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "9af1ef61956544f29f23f5db75635079",
+          "stage_id": "check:328e123c63857fd8",
+          "status": "failed",
+          "duration_ms": 86909,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 45795
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "2a9b695ecd5623515f27761a00e3f9ff6fbfba05b9d8b0fc957bf2564572c317",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "npm test",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "summary": "exit 1 | 0.0s | 2838 lines | tail: '}'",
+      "finished_at": "2026-09-09T12:53:18.826Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "tuu39kQd8gKNoohAgeo2jM6l"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d868e2430ee34341b280592991d9ad86",
+        "owner_wave": "a8b3349630824ea39697a0d22be642ab",
+        "size_bytes": 318672,
+        "command_id": "tuu39kQd8gKNoohAgeo2jM6l",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:tuu39kQd8gKNoohAgeo2jM6l:stdout",
+            "total_stream_bytes": 318672,
+            "total_retained_bytes": 318672,
+            "head_retained_bytes": 65536,
+            "tail_retained_bytes": 253136,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:tuu39kQd8gKNoohAgeo2jM6l:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before any resume or replacement wave.",
+  "created_at": "2026-09-09T12:51:44.282Z",
+  "updated_at": "2026-09-09T12:59:09.673Z",
+  "events": [
+    {
+      "time": "2026-09-09T12:51:44.282Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnosis after Natural #8 technical closure: reproduce the current full-suite `npm test` exit status on exact current workspace bytes, identify every failing test and the first causal assertion/error, and classify whether any failure is causally related to Natural #8 renderer/control-center.js or tests/control-center-truthfulness.test.js versus an independent pre-existing/product defect. Do not modify files, do not reconcile lifecycle state, do not open or mutate Problem Lineage, do not accept/ACK/restart/commit/push/package/release/deploy. Preserve all dirty WIP."
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:45.631Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:48.638Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:49.829Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:49.839Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:51.112Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:51.778Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:51:52.557Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm test",
+        "session_id": "tuu39kQd8gKNoohAgeo2jM6l"
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:18.826Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm test",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:19.127Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:19.879Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:19.882Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:19.894Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:20.036Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "02ffefb8e29a50147c500b77d37857c5dd41a75b8f16c5db1c2766750f59776f"
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:20.041Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T12:53:22.037Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:57:31.676Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "02ffefb8e29a50147c500b77d37857c5dd41a75b8f16c5db1c2766750f59776f"
+      }
+    },
+    {
+      "time": "2026-09-09T12:59:08.239Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T12:59:09.671Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "2a9b695ecd5623515f27761a00e3f9ff6fbfba05b9d8b0fc957bf2564572c317"
+      }
+    }
+  ]
+}

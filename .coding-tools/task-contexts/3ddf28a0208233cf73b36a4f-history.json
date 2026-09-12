@@ -1,0 +1,376 @@
+[
+  {
+    "version": 2,
+    "task_id": "02e47b2f75f547c69d2fbddef57a6af7",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-09T12:59:36.777Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "A2Bay75tTpTeYSHy5Po_fusE",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "A2Bay75tTpTeYSHy5Po_fusE",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+          "branch": "main",
+          "worktree_fp": "b635c38a4a678b02ee546c998e242ba8d725df04b2ceea944323236025ddfe88",
+          "dirty_paths": [
+            "docs/CURRENT_STATE.md",
+            "docs/RECOVERY_HOST.md",
+            "electron/main.js",
+            "electron/services/chatEvaluationJournal.js",
+            "electron/services/componentRevision.js",
+            "electron/services/fullCleanActivation.js",
+            "electron/services/recoveryActionStore.js",
+            "electron/services/recoveryActivation.js",
+            "electron/services/recoveryBootstrap.js",
+            "electron/services/recoveryHost.js",
+            "electron/services/recoveryHostLauncher.js",
+            "electron/services/runtimeOrchestrator.js",
+            "renderer/control-center.css",
+            "renderer/control-center.js",
+            "renderer/dashboard.js",
+            "renderer/index.html",
+            "renderer/token-dashboard.html",
+            "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/activation_capability.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/completion_readiness.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+            "resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+            "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+            "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+            "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+            "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+            "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+            "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+            "resources/coding-tools-mcp/tests/test_run_continuation.py",
+            "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+            "resources/recovery-supervisor/recovery-supervisor.ps1",
+            "scripts/full-clean-activation.js",
+            "tests/accepted-code-activation.test.js",
+            "tests/chat-evaluation-journal.test.js",
+            "tests/component-revision.test.js",
+            "tests/control-center-truthfulness.test.js",
+            "tests/full-clean-activation-command.test.js",
+            "tests/full-clean-activation.test.js",
+            "tests/recovery-activation.test.js",
+            "tests/recovery-bootstrap.test.js",
+            "tests/recovery-host.test.js",
+            "tests/recovery-supervisor.test.js",
+            "tests/runtime-lifecycle.test.js",
+            ".harness/epoch-transition/writer.lock",
+            "docs/CONTINUATION_CLOSURE_PLAN.md",
+            "electron/services/trustedRecoveryBootstrap.js",
+            "resources/coding-tools-mcp/coding_tools_mcp/app_server_persistence.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+            "resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+            "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+            "resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+            "resources/coding-tools-mcp/tests/test_lifecycle_census_cli.py",
+            "scripts/trusted-recovery-bootstrap.js",
+            "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs",
+            "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs",
+            "tests/trusted-recovery-bootstrap.test.js"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "02e47b2f75f547c69d2fbddef57a6af7",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "84ca03cef91cf65c59ae3f480c2e4670dbc4f5a872adf4680f67fe9141a6b62c",
+    "completion_report_acknowledged_id": "84ca03cef91cf65c59ae3f480c2e4670dbc4f5a872adf4680f67fe9141a6b62c",
+    "completion_report_acknowledged_at": "2026-09-09T12:59:54.262Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-09T12:54:05.861Z",
+    "updated_at": "2026-09-09T12:59:54.265Z",
+    "events": [
+      {
+        "time": "2026-09-09T12:54:05.861Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T12:54:06.109Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 -e \"function removeTempTree\" -e \"live supervisor replaces a dead owned Coding MCP\" -e \"removeTempTree\\(\" tests/live-supervisor-e2e.test.js",
+          "session_id": "_A6IKQBhxFoVw2yL3SDsjMqe"
+        }
+      },
+      {
+        "time": "2026-09-09T12:54:06.359Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 -e \"function removeTempTree\" -e \"live supervisor replaces a dead owned Coding MCP\" -e \"removeTempTree\\(\" tests/live-supervisor-e2e.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:54:25.427Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test --test-name-pattern \"live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel\" tests/live-supervisor-e2e.test.js",
+          "session_id": "A2Bay75tTpTeYSHy5Po_fusE"
+        }
+      },
+      {
+        "time": "2026-09-09T12:54:43.948Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test --test-name-pattern \"live supervisor replaces a dead owned Coding MCP and refreshes only its dependent attested Tunnel\" tests/live-supervisor-e2e.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:54:44.427Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "A2Bay75tTpTeYSHy5Po_fusE",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "84ca03cef91cf65c59ae3f480c2e4670dbc4f5a872adf4680f67fe9141a6b62c"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:08.300Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e \"mcpAssistant\\.taskState\\(\" -e \"taskState\\(\\)\" renderer tests electron | findstr /I /C:\"taskState\" /C:\"task-state\"",
+          "session_id": "kYlsyqUflVbQfWEEJEOJ4am7"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:08.502Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"mcpAssistant\\.taskState\\(\" -e \"taskState\\(\\)\" renderer tests electron | findstr /I /C:\"taskState\" /C:\"task-state\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:22.227Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 -e \"function renderTaskState\" -e \"function loadTaskState\" renderer/app.js",
+          "session_id": "cdSOeoYraRsOilfI_vs2HWzc"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:22.534Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 -e \"function renderTaskState\" -e \"function loadTaskState\" renderer/app.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:37.418Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 26 -e \"task-state:history\" -e \"panelTaskControl\" electron/main.js renderer/app.js tests/dev-ui-lifecycle.test.js",
+          "session_id": "KMf6sMEfKx3RympHOKQd8kYP"
+        }
+      },
+      {
+        "time": "2026-09-09T12:55:37.700Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 26 -e \"task-state:history\" -e \"panelTaskControl\" electron/main.js renderer/app.js tests/dev-ui-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:10.492Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 -e \"task_list\" -e \"current_task\" -e \"task_projection\" resources/coding-tools-mcp/coding_tools_mcp | findstr /I /C:\"task_list\" /C:\"projection\" /C:\"current\"",
+          "session_id": "lEIcRAy-Mfmf94Nr6PwLOYS6"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:10.753Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 -e \"task_list\" -e \"current_task\" -e \"task_projection\" resources/coding-tools-mcp/coding_tools_mcp | findstr /I /C:\"task_list\" /C:\"projection\" /C:\"current\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:19.251Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 -e \"\\\"task_list\\\"\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "qX3LUrFCco4knU4SulblU019"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:19.571Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 -e \"\\\"task_list\\\"\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:32.802Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 32 -e \"current_task =\" -e \"task_history =\" -e \"\\\"task\\\": task\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "ckjFl5o7u0ZBCeYnFeAVw2zr"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:33.026Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 32 -e \"current_task =\" -e \"task_history =\" -e \"\\\"task\\\": task\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:47.610Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 34 -e \"state = runtime.task_state.get\" -e \"run_id =\" -e \"projection =\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "session_id": "qvOtcndBPkRdZ6p9O7J97FTv"
+        }
+      },
+      {
+        "time": "2026-09-09T12:56:47.903Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 34 -e \"state = runtime.task_state.get\" -e \"run_id =\" -e \"projection =\" resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:20.634Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 -e \"def _reconcile_task_orchestration_projection\" -e \"_reconcile_task_orchestration_projection\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "YEJ0Q1SMaX7LJOfXbA7SGaME"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:20.910Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 -e \"def _reconcile_task_orchestration_projection\" -e \"_reconcile_task_orchestration_projection\\(\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:28.776Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -e \"def _reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:28.776Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:36.777Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -e \"def _reconcile_task_orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:36.777Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-09T12:59:54.262Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "84ca03cef91cf65c59ae3f480c2e4670dbc4f5a872adf4680f67fe9141a6b62c"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T13:00:02.278Z",
+    "archive_reason": "finished"
+  }
+]

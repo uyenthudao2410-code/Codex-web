@@ -1,0 +1,536 @@
+[
+  {
+    "version": 2,
+    "task_id": "9f284169c83e4d6e9e5c50e6242257e8",
+    "orchestration": {
+      "run_id": "1f80bc246f3349e7b744b2332882dc74",
+      "wave_id": "ed3d6623a3534b1e8b11855e838398b7",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "8a4606128216edf031666829191bef294181785af24a26c0b946e5fdf2966a91",
+      "contract_fp": ""
+    },
+    "objective": "Resolve Problem prl-semantic-localization-provider-health-20260912 revision 1 from current source/runtime state. Diagnose the causal break between configured semantic localization availability and executable native provider/LSP resource health. Trace workspace_context semantic_localization projection, agent_workflow semantic-first localization, native semantic provider call, LSP/resource admission/health reporting, SEMANTIC_PROVIDER_CALL_FAILED and LSP_RESOURCE_STATUS_FAILED translation, and bounded text fallback. Identify the smallest causal repair and exact focused oracle that proves: healthy known-symbol query is semantic-handled; unavailable/unhealthy provider is reported truthfully with actionable health reason; bounded text fallback remains correct; HEAVY admission/host-pressure guards are not weakened; post-fix telemetry records a semantic-handled query. Preserve unrelated dirty WIP. No restart, commit, push, clean, reset, package, release, or deploy.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "CLnpLvAco6edX926rdzjzUjZ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 895,
+      "finished_at": "2026-09-12T11:44:32.606Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-semantic-localization-provider-health-20260912",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "3796c4736150c6a9206e5548b580f9434ae1a17c938161ff16eec87fa7e873c7",
+        "objective_summary": "Restore truthful and usable semantic-first localization so configured semantic capability matches executable native-provider health, known-symbol queries use the semantic provider when healthy, and bounded text fallback remains available when semantic health is genuinely unavailable.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "semantic_known_symbol_success",
+            "summary": "A known-symbol localization probe on a healthy runtime is handled by the native semantic provider without SEMANTIC_PROVIDER_CALL_FAILED."
+          },
+          {
+            "criterion_id": "availability_truthfulness",
+            "summary": "Runtime and workspace capability reporting does not present semantic localization as usable when provider or resource readiness deterministically prevents semantic calls."
+          },
+          {
+            "criterion_id": "fallback_preserved",
+            "summary": "When semantic provider health is unavailable, localization safely falls back to bounded text search and still returns correct matches."
+          },
+          {
+            "criterion_id": "health_diagnostics",
+            "summary": "Provider failure exposes an actionable semantic/LSP lifecycle or resource-health reason rather than only configured availability."
+          },
+          {
+            "criterion_id": "regression_proof",
+            "summary": "Focused regression proves both unhealthy-provider truthful fallback and healthy-provider semantic handling without weakening resource admission."
+          },
+          {
+            "criterion_id": "measurement_recovery",
+            "summary": "A post-fix known-symbol probe records at least one semantic-handled query without rewriting historical localization telemetry."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 6,
+          "criteria_proven": 0,
+          "criteria_unresolved": 6,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "semantic_known_symbol_success",
+          "next_critical_gap": "A known-symbol localization probe on a healthy runtime is handled by the native semantic provider without SEMANTIC_PROVIDER_CALL_FAILED.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 2,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Identify the causal break between configured semantic binding and native provider/resource health.",
+          "Determine whether capability availability and provider readiness are being conflated in the live projection."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "1f80bc246f3349e7b744b2332882dc74",
+          "wave_id": "ed3d6623a3534b1e8b11855e838398b7",
+          "checkpoint_id": ""
+        },
+        "latest_feedback_relation": "PROVIDE_NEW_EVIDENCE",
+        "event_count": 4,
+        "latest_event": {
+          "seq": 196,
+          "event_id": "prl-bind-1fa6097a77d6f2f89bdd4caa3fabd7e51047e33eee2d9f8b3e3ee81ce039864f",
+          "event_hash": "c5d235f0a90d2af7512f2a7a107014cf559cf686d42c9a98e60bcd5f38afc18d",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-12T11:38:32.342Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 0,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 0,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 0,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 52,
+          "head_hash": "06604aae82455bf81c6b085c6abd7fe140d98a44b5e1bf675ce75142ad4040a0"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1f80bc246f3349e7b744b2332882dc74\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-1f80bc246f3349e7b744b2332882dc74\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "1f80bc246f3349e7b744b2332882dc74",
+        "wave_id": "ed3d6623a3534b1e8b11855e838398b7",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "8a4606128216edf031666829191bef294181785af24a26c0b946e5fdf2966a91",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Resolve Problem prl-semantic-localization-provider-health-20260912 revision 1 from current source/runtime state. Diagnose the causal break between configured semantic localization availability and executable native provider/LSP resource health. Trace workspace_context semantic_localization projection, agent_workflow semantic-first localization, native semantic provider call, LSP/resource admission/health reporting, SEMANTIC_PROVIDER_CALL_FAILED and LSP_RESOURCE_STATUS_FAILED translation, and bounded text fallback. Identify the smallest causal repair and exact focused oracle that proves: healthy known-symbol query is semantic-handled; unavailable/unhealthy provider is reported truthfully with actionable health reason; bounded text fallback remains correct; HEAVY admission/host-pressure guards are not weakened; post-fix telemetry records a semantic-handled query. Preserve unrelated dirty WIP. No restart, commit, push, clean, reset, package, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "8fc9f7d2fe78ab63ff493f92209eff0f62e1c1d3adeb0d3f3a7efd324ff67c2b",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": null,
+        "reason": "The requested RUN/WAVE is not the caller's current compatible prepare lineage.",
+        "event_seq": null
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "0ae79923885a881241278a86cace207fa3042eb11d48f738ee034a4566308bce",
+    "completion_report_acknowledged_id": "0ae79923885a881241278a86cace207fa3042eb11d48f738ee034a4566308bce",
+    "completion_report_acknowledged_at": "2026-09-12T11:48:13.075Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-12T11:38:30.415Z",
+    "updated_at": "2026-09-12T11:48:25.750Z",
+    "events": [
+      {
+        "time": "2026-09-12T11:38:30.415Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Resolve Problem prl-semantic-localization-provider-health-20260912 revision 1 from current source/runtime state. Diagnose the causal break between configured semantic localization availability and executable native provider/LSP resource health. Trace workspace_context semantic_localization projection, agent_workflow semantic-first localization, native semantic provider call, LSP/resource admission/health reporting, SEMANTIC_PROVIDER_CALL_FAILED and LSP_RESOURCE_STATUS_FAILED translation, and bounded text fallback. Identify the smallest causal repair and exact focused oracle that proves: healthy known-symbol query is semantic-handled; unavailable/unhealthy provider is reported truthfully with actionable health reason; bounded text fallback remains correct; HEAVY admission/host-pressure guards are not weakened; post-fix telemetry records a semantic-handled query. Preserve unrelated dirty WIP. No restart, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T11:38:32.380Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:38:35.416Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:38:35.423Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T11:39:33.968Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 -e \"class NativeRustSemanticLocalizationProvider\" -e \"def status\\(\" -e \"def resource_status\" -e \"def _request_json\" -e \"def semantic_provider_status\" -e \"def semantic_provider_resource_status\" -e \"def run_semantic_localization\" -e \"NATIVE_LSP_STATUS\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "OuMA5dp47ufH-YyN4nG8XOhX"
+        }
+      },
+      {
+        "time": "2026-09-12T11:39:34.524Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 -e \"class NativeRustSemanticLocalizationProvider\" -e \"def status\\(\" -e \"def resource_status\" -e \"def _request_json\" -e \"def semantic_provider_status\" -e \"def semantic_provider_resource_status\" -e \"def run_semantic_localization\" -e \"NATIVE_LSP_STATUS\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:39:50.978Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 -e \"def _request_data\" -e \"semantic/status\" -e \"semantic/localize\" -e \"lsp_resource\" -e \"workspace_sha256\" src\\connector_runtime\\semantic_bridge.rs resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "4PSiNnCtGa_Sg3LJ4UuDSRKA"
+        }
+      },
+      {
+        "time": "2026-09-12T11:39:51.471Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 -e \"def _request_data\" -e \"semantic/status\" -e \"semantic/localize\" -e \"lsp_resource\" -e \"workspace_sha256\" src\\connector_runtime\\semantic_bridge.rs resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:40:11.135Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 -e \"prepare_coding_context\" -e \"semantic_scope_mode\" -e \"semantic_provider_resource_status\" -e \"run_semantic_localization\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py | findstr /N \".\"",
+          "session_id": "wvtnMnchAQGRtQ-MjTAskCod"
+        }
+      },
+      {
+        "time": "2026-09-12T11:40:11.694Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 -e \"prepare_coding_context\" -e \"semantic_scope_mode\" -e \"semantic_provider_resource_status\" -e \"run_semantic_localization\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py | findstr /N \".\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:40:43.537Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short -- resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py && git diff -- resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "session_id": "ywVEaGuXY1EbvJ5rc66ke_pb"
+        }
+      },
+      {
+        "time": "2026-09-12T11:40:44.057Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short -- resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py && git diff -- resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:41:06.604Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 -e \"semantic_localization\" -e \"semantic_provider_status\\(self.semantic_localizer\\)\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py | findstr /N \".\"",
+          "session_id": "ZwgVHFJ4FMAX66oNELqDETol"
+        }
+      },
+      {
+        "time": "2026-09-12T11:41:07.175Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 -e \"semantic_localization\" -e \"semantic_provider_status\\(self.semantic_localizer\\)\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py | findstr /N \".\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:41:26.093Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 110 -e \"fn semantic_resource_projection\" -e \"fn unknown_semantic_resource_projection\" src\\connector_runtime\\semantic_bridge.rs",
+          "session_id": "RDBtxNBxLykbBp-Hx-nj5cje"
+        }
+      },
+      {
+        "time": "2026-09-12T11:41:26.674Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 110 -e \"fn semantic_resource_projection\" -e \"fn unknown_semantic_resource_projection\" src\\connector_runtime\\semantic_bridge.rs",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:26.406Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 -e \"def semantic_native_claim\" -e \"def public_decision\" -e \"semantic_native_admission\" resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests | findstr /I /C:\"semantic_native_claim\" /C:\"public_decision\" /C:\"reason_code\" /C:\"claim_acquired\"",
+          "session_id": "SCAQKGE1bOFDPXOZm_huxWRe"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:26.940Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 -e \"def semantic_native_claim\" -e \"def public_decision\" -e \"semantic_native_admission\" resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests | findstr /I /C:\"semantic_native_claim\" /C:\"public_decision\" /C:\"reason_code\" /C:\"claim_acquired\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:38.942Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 40 -e \"def public_decision\" -e \"def semantic_native_claim\" resources\\coding-tools-mcp\\coding_tools_mcp\\execution_resources.py",
+          "session_id": "17ucwB_--jVRGYt8cgnFagb0"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:39.449Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 40 -e \"def public_decision\" -e \"def semantic_native_claim\" resources\\coding-tools-mcp\\coding_tools_mcp\\execution_resources.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:54.014Z",
+        "event": "command_started",
+        "details": {
+          "command": "tail -n 45 resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "session_id": "oCfNJVipU0IE9jG3mVckevzg"
+        }
+      },
+      {
+        "time": "2026-09-12T11:42:54.564Z",
+        "event": "command_finished",
+        "details": {
+          "command": "tail -n 45 resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:43:09.181Z",
+        "event": "command_started",
+        "details": {
+          "command": "more +520 resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "session_id": "nrIJx299L6gi1n0hmkppTyMK"
+        }
+      },
+      {
+        "time": "2026-09-12T11:43:09.710Z",
+        "event": "command_finished",
+        "details": {
+          "command": "more +520 resources\\coding-tools-mcp\\tests\\test_semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:43:43.288Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 70 -e \"semantic_attempted\" -e \"text_fallback_queries\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py",
+          "session_id": "8n5I3Q-P725qp_Xd0nI8Sg6Z"
+        }
+      },
+      {
+        "time": "2026-09-12T11:43:43.895Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -e \"semantic_attempted\" -e \"text_fallback_queries\" resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:44:06.512Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "session_id": "tCkfCJyjGTNeKUX5ILkugUFN"
+        }
+      },
+      {
+        "time": "2026-09-12T11:44:07.040Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\context_tools.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:44:32.093Z",
+        "event": "command_started",
+        "details": {
+          "command": "more +646 resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "CLnpLvAco6edX926rdzjzUjZ"
+        }
+      },
+      {
+        "time": "2026-09-12T11:44:32.606Z",
+        "event": "command_finished",
+        "details": {
+          "command": "more +646 resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:45:08.496Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PATCH_CONTEXT_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-12T11:45:46.929Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:45:48.626Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T11:45:49.734Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "EXISTING_FILE_ADOPTION_PATCH_CONFLICT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:46:39.689Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-12T11:47:01.122Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "0ae79923885a881241278a86cace207fa3042eb11d48f738ee034a4566308bce"
+        }
+      },
+      {
+        "time": "2026-09-12T11:47:55.979Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:48:13.075Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0ae79923885a881241278a86cace207fa3042eb11d48f738ee034a4566308bce"
+        }
+      },
+      {
+        "time": "2026-09-12T11:48:25.750Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T11:48:25.925Z",
+    "archive_reason": "cleared"
+  }
+]

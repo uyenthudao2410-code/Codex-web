@@ -16,6 +16,7 @@ from typing import Any, Iterable
 
 from .artifact_refs import handoff_capsule_artifact_ref, proof_artifact_ref
 from .controller_continuity import ControllerContinuityLedgerMixin
+from .continuity_telemetry import ContinuityTelemetryLedgerMixin
 from .goal_pursuit import GoalPursuitLedgerMixin
 from .idempotency_codec import decode_summary as _decode_idempotency_summary, encode_summary as _encode_idempotency_summary
 from .ledger_file_gate import ledger_access_gate
@@ -328,7 +329,7 @@ def fingerprint_paths(root: Path, paths: Iterable[str], *, extra: dict[str, Any]
         digest.update(_json(extra).encode("utf-8"))
     return digest.hexdigest()
 
-class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedgerMixin, GoalPursuitLedgerMixin, LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
+class OrchestrationLedger(RunContinuationLedgerMixin, ContinuityTelemetryLedgerMixin, ControllerContinuityLedgerMixin, GoalPursuitLedgerMixin, LifecycleReconciliationLedgerMixin, ObservationSpanLedgerMixin, P5ExperimentLedgerMixin, ProblemLineageLedgerMixin, QualityOutcomeLedgerMixin):
     """Durable append-only orchestration audit source for one workspace.
     The ledger stores structured control/evidence identity, not raw prompts, patches,
     file contents, stdout, or stderr. Events are hash-chained per run so accidental
@@ -712,16 +713,32 @@ class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedger
             )
         return run_id
 
+    @staticmethod
+    def _release_terminal_controller_lease(
+        connection: sqlite3.Connection,
+        *,
+        run_id: str,
+        updated_at: str,
+    ) -> None:
+        connection.execute(
+            """UPDATE controller_leases SET status='released', updated_at=?
+            WHERE run_id=? AND status='active'""",
+            (updated_at, _bounded_text(run_id, 256)),
+        )
+
     def finish_run(self, run_id: str, *, status: str, metadata: dict[str, Any] | None = None) -> None:
         now = utc_now()
+        terminal_status = _bounded_text(status, 64)
         with self._lock, self._connect() as connection:
             row = connection.execute("SELECT metadata_json FROM runs WHERE run_id=?", (run_id,)).fetchone()
             existing = json.loads(row[0]) if row else {}
             existing.update(_sanitize(metadata or {}))
             connection.execute(
                 "UPDATE runs SET status=?, finished_at=?, metadata_json=? WHERE run_id=?",
-                (_bounded_text(status, 64), now, _json(existing), run_id),
+                (terminal_status, now, _json(existing), run_id),
             )
+            if terminal_status != "active":
+                self._release_terminal_controller_lease(connection, run_id=run_id, updated_at=now)
 
     def create_wave(
         self,
@@ -2679,6 +2696,7 @@ class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedger
         """
         checkpoint_id = uuid.uuid4().hex
         now = utc_now()
+        terminal_status = _bounded_text(status, 64)
         with self._lock, self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             run = connection.execute(
@@ -2709,12 +2727,14 @@ class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedger
             )
             connection.execute(
                 "UPDATE waves SET status=?, finished_at=? WHERE wave_id=?",
-                (_bounded_text(status, 64), now, wave_id),
+                (terminal_status, now, wave_id),
             )
             connection.execute(
                 "UPDATE runs SET status=?, finished_at=? WHERE run_id=?",
-                (_bounded_text(status, 64), now, run_id),
+                (terminal_status, now, run_id),
             )
+            if terminal_status != "active":
+                self._release_terminal_controller_lease(connection, run_id=run_id, updated_at=now)
             self._insert_checkpoint_row(
                 connection,
                 checkpoint_id=checkpoint_id,
@@ -3194,6 +3214,55 @@ class OrchestrationLedger(RunContinuationLedgerMixin, ControllerContinuityLedger
                     operation_id,
                 ),
             )
+        return self.get_background_operation(operation_id)
+
+    def rebind_background_operation(
+        self,
+        operation_id: str,
+        *,
+        run_id: str,
+        wave_id: str,
+    ) -> dict[str, Any] | None:
+        """Bind one still-running operation to the wave it actually executes.
+
+        A workflow can enter REPLAN after its outer background handle has been
+        created. The handle stays the same, but its prior wave is terminal and
+        must not remain the operation's presented owner.
+        """
+        normalized_run_id = _bounded_text(run_id, 256)
+        normalized_wave_id = _bounded_text(wave_id, 256)
+        if not normalized_run_id or not normalized_wave_id:
+            raise ValueError("background operation rebinding requires run_id and wave_id")
+        now = utc_now()
+        with self._lock, self._connect() as connection:
+            row = connection.execute(
+                "SELECT run_id,wave_id,status,summary_json FROM background_operations WHERE operation_id=?",
+                (operation_id,),
+            ).fetchone()
+            if not row:
+                return None
+            if str(row["status"]) == "running":
+                previous = {"run_id": str(row["run_id"] or ""), "wave_id": str(row["wave_id"] or "")}
+                if previous != {"run_id": normalized_run_id, "wave_id": normalized_wave_id}:
+                    summary = json.loads(row["summary_json"] or "{}")
+                    summary["orchestration_binding"] = {
+                        "schema_version": 1,
+                        "previous": previous,
+                        "current": {"run_id": normalized_run_id, "wave_id": normalized_wave_id},
+                        "rebound_at": now,
+                    }
+                    connection.execute(
+                        """UPDATE background_operations
+                           SET run_id=?, wave_id=?, updated_at=?, summary_json=?
+                           WHERE operation_id=? AND status='running'""",
+                        (
+                            normalized_run_id,
+                            normalized_wave_id,
+                            now,
+                            _json(_sanitize(summary)),
+                            operation_id,
+                        ),
+                    )
         return self.get_background_operation(operation_id)
 
     def mark_orphaned_background_operations(

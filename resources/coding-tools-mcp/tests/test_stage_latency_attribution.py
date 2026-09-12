@@ -11,9 +11,12 @@ from coding_tools_mcp.stage_latency_attribution import STAGE_VOCABULARY, stage_l
 
 class StageLatencyAttributionTests(unittest.TestCase):
     @staticmethod
-    def _host_metadata() -> dict[str, object]:
+    def _host_metadata(*, source: str = "electron_pending_host_turn") -> dict[str, object]:
+        marker: dict[str, object] = {"schema_version": 1, "source": source, "eligible": True}
+        if source == "attested_chatweb_transport_trace":
+            marker["content_free"] = True
         return {
-            "host_correlation": {"schema_version": 1, "source": "electron_pending_host_turn", "eligible": True},
+            "host_correlation": marker,
             "evaluation": {"provenance": "representative", "turn_id": "turn-a", "trace_id": "trace-a"},
         }
 
@@ -105,6 +108,110 @@ class StageLatencyAttributionTests(unittest.TestCase):
             self.assertEqual(report["stage_completeness"]["recorded_stage_observations"], 0)
             self.assertEqual(report["status"], "HOST_BINDING_COVERAGE_BELOW_THRESHOLD")
             self.assertTrue(report["policy"]["unrecognized_legacy_stage_is_not_rewritten"])
+
+    def test_acceptance_components_are_reported_without_polluting_legacy_stage_duration(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = self._record_complete_fixture(ledger, source_head="current-head")
+            wave_id = ledger.list_waves(run_id)[-1]["wave_id"]
+            ledger.append_event(run_id, wave_id=wave_id, event_type="observation_stage_anchor_recorded", payload={
+                "stage": "acceptance", "source": "coding_mcp_runtime", "measurement": "stage_start_anchor",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 60.0, "observer_plane": "coding_mcp_runtime",
+            })
+            ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                "span_id": f"a2-acceptance-wait-v1:{wave_id}", "stage": "acceptance",
+                "source": "coding_mcp_runtime", "measurement": "acceptance_wait",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 60.0, "end_ms": 70.0,
+            })
+            ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                "span_id": f"a2-controller-processing-v1:{wave_id}", "stage": "acceptance",
+                "source": "coding_mcp_runtime", "measurement": "controller_processing",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 70.0, "end_ms": 75.0,
+            })
+            ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="current-head", proof_fingerprint="proof", status="accepted")
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = stage_latency_attribution_report(snapshot.ledger, source_head="current-head", min_decision_cohort=1)
+
+            attribution = report["acceptance_attribution"]
+            self.assertEqual(attribution["accepted_current_source_runs"], 1)
+            self.assertEqual(attribution["controller_processing_ms"]["coverage"], 1.0)
+            self.assertEqual(attribution["controller_processing_ms"]["duration_ms"]["p50"], 5.0)
+            self.assertEqual(attribution["acceptance_wait_ms"]["coverage"], 1.0)
+            self.assertEqual(attribution["acceptance_wait_ms"]["duration_ms"]["p50"], 10.0)
+            acceptance_row = next(item for item in report["stage_completeness"]["rows"] if item["stage"] == "acceptance")
+            self.assertEqual(acceptance_row["duration_ms"]["observed_span_count"], 1)
+            self.assertTrue(attribution["cross_clock_subtraction_forbidden"])
+
+    def test_attested_transport_binding_contributes_acceptance_without_report_visible_span(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(
+                objective="natural transport-style fixture",
+                metadata=self._host_metadata(source="attested_chatweb_transport_trace"),
+            )
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", base_head="current-head")
+            for ordinal, stage in enumerate(("preflight", "localization", "routing", "execution", "proof", "acceptance")):
+                ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                    "span_id": f"stage-{stage}", "stage": stage, "source": "coding_mcp_runtime",
+                    "measurement": "observed_stage_duration", "clock_domain": "coding-mcp:fixture",
+                    "start_ms": ordinal * 10.0, "end_ms": ordinal * 10.0 + 5.0,
+                })
+            ledger.append_event(run_id, wave_id=wave_id, event_type="observation_stage_anchor_recorded", payload={
+                "stage": "acceptance", "source": "coding_mcp_runtime", "measurement": "stage_start_anchor",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 60.0,
+            })
+            ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                "span_id": f"a2-acceptance-wait-v1:{wave_id}", "stage": "acceptance",
+                "source": "coding_mcp_runtime", "measurement": "acceptance_wait",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 60.0, "end_ms": 70.0,
+            })
+            ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                "span_id": f"a2-controller-processing-v1:{wave_id}", "stage": "acceptance",
+                "source": "coding_mcp_runtime", "measurement": "controller_processing",
+                "clock_domain": "coding-mcp:fixture", "start_ms": 70.0, "end_ms": 75.0,
+            })
+            ledger.record_checkpoint(
+                run_id=run_id, wave_id=wave_id, git_head="current-head", proof_fingerprint="proof", status="accepted"
+            )
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = stage_latency_attribution_report(snapshot.ledger, source_head="current-head", min_decision_cohort=1)
+
+            self.assertEqual(report["cohort"]["current_source_eligible_runs"], 1)
+            self.assertEqual(report["host_to_run_binding"]["exact_ledger_binding_runs"], 1)
+            self.assertEqual(report["host_to_run_binding"]["coverage"], 1.0)
+            self.assertEqual(report["acceptance_attribution"]["accepted_current_source_runs"], 1)
+            self.assertEqual(report["acceptance_attribution"]["controller_processing_ms"]["coverage"], 1.0)
+            self.assertEqual(report["acceptance_attribution"]["acceptance_wait_ms"]["coverage"], 1.0)
+            visible = next(item for item in report["stage_completeness"]["rows"] if item["stage"] == "report_visible")
+            self.assertEqual(visible["recorded_runs"], 0)
+            self.assertEqual(report["status"], "STAGE_COMPLETENESS_BELOW_THRESHOLD")
+
+    def test_acceptance_wait_remains_unknown_when_anchor_and_controller_clocks_differ(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = self._record_complete_fixture(ledger, source_head="current-head")
+            wave_id = ledger.list_waves(run_id)[-1]["wave_id"]
+            ledger.append_event(run_id, wave_id=wave_id, event_type="observation_stage_anchor_recorded", payload={
+                "stage": "acceptance", "source": "coding_mcp_runtime", "measurement": "stage_start_anchor",
+                "clock_domain": "coding-mcp:old", "start_ms": 60.0,
+            })
+            ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span={
+                "span_id": f"a2-controller-processing-v1:{wave_id}", "stage": "acceptance",
+                "source": "coding_mcp_runtime", "measurement": "controller_processing",
+                "clock_domain": "coding-mcp:new", "start_ms": 70.0, "end_ms": 75.0,
+            })
+            ledger.record_checkpoint(run_id=run_id, wave_id=wave_id, git_head="current-head", proof_fingerprint="proof", status="accepted")
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = stage_latency_attribution_report(snapshot.ledger, source_head="current-head", min_decision_cohort=1)
+
+            wait = report["acceptance_attribution"]["acceptance_wait_ms"]
+            self.assertEqual(wait["same_clock_eligible_runs"], 0)
+            self.assertEqual(wait["cross_clock_excluded_runs"], 1)
+            self.assertIsNone(wait["coverage"])
+            self.assertIsNone(wait["duration_ms"]["p50"])
 
 
 if __name__ == "__main__":

@@ -1,0 +1,767 @@
+{
+  "version": 2,
+  "task_id": "5f0f7c70d72b4002ae92641b792e3928",
+  "orchestration": {
+    "run_id": "a3a3cc02c5b34ca8ab39074eb66b1deb",
+    "wave_id": "3b1e28fff7774dfebe31d0de963acb76",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "22cc81788aad51a10092e66b5c59d537b029b4c62e383aa6d6d9e80addd0b678",
+    "contract_fp": "ec4a56b30aa2cb5ea238cd543b0a3bc8d2a9766704707c28a0777fc252e5a68f"
+  },
+  "objective": "Natural #11 verification-only closure: preserve exact current recovery-supervisor test bytes and prove the bounded Windows cleanup hardening with one deterministic fault-injection proof, three independently identified full-file Windows test invocations, and scoped diff check. No source replay or modification.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-09T18:03:47.885Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-09T18:03:47.885Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-09T18:03:47.885Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "ZCvVmr40l4r0z2K1UCxwa9Mc",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 938,
+    "finished_at": "2026-09-09T22:41:27.755Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "tests/recovery-supervisor.test.js",
+          "state": "file",
+          "sha256": "93141d0ce5683eea046aa145f83253e7034d49429725a46cca63d842c980933e",
+          "size_bytes": 27968,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "a3a3cc02c5b34ca8ab39074eb66b1deb",
+          "wave_id": "3b1e28fff7774dfebe31d0de963acb76"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 86,
+        "head_hash": "b3ed460c2a2a31be726962c2d1d6436b76a9f2f19a46bc1fc3adb75941f8b913"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a3a3cc02c5b34ca8ab39074eb66b1deb\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a3a3cc02c5b34ca8ab39074eb66b1deb\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a3a3cc02c5b34ca8ab39074eb66b1deb\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "a3a3cc02c5b34ca8ab39074eb66b1deb",
+      "wave_id": "3b1e28fff7774dfebe31d0de963acb76",
+      "checkpoint_id": "75bcdeb3ccb1444f94d604d9186f6aee",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "22cc81788aad51a10092e66b5c59d537b029b4c62e383aa6d6d9e80addd0b678",
+      "contract_fp": "ec4a56b30aa2cb5ea238cd543b0a3bc8d2a9766704707c28a0777fc252e5a68f",
+      "objective_provenance": {
+        "effective_objective": "Natural #11 verification-only closure: preserve exact current recovery-supervisor test bytes and prove the bounded Windows cleanup hardening with one deterministic fault-injection proof, three independently identified full-file Windows test invocations, and scoped diff check. No source replay or modification.",
+        "objective_revision": 2,
+        "objective_sha256": "95a03264b5a23df1325783e4266ed1d8ecffb6786a43886cd8c548a7b72aeea1",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 5,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "498e57991b2343b1909b4a5aff170baa",
+          "stage_id": "check:0183a1c69dbe83e9",
+          "status": "passed",
+          "duration_ms": 1172,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "bc6d3b37fea049dcb2591d4ba50c3ff7",
+          "stage_id": "check:a2de8e221daa212b",
+          "status": "passed",
+          "duration_ms": 22460,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "f95aef04b38a46ae87568264326e32a3",
+          "stage_id": "check:2406619fff45f460",
+          "status": "passed",
+          "duration_ms": 22204,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "678145196c114ab3af476a75e70ccafb",
+          "stage_id": "check:c93443c70a3193e5",
+          "status": "passed",
+          "duration_ms": 22380,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "c45d53bcde38459196cd7e84082f501e",
+          "stage_id": "check:56b9f34db8dfaa74",
+          "status": "passed",
+          "duration_ms": 1092,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "824f0510c0cdc763b9ccba9e6555fdeb961c4c47a15e04edf0320ca4aa185041",
+  "completion_report_acknowledged_id": "824f0510c0cdc763b9ccba9e6555fdeb961c4c47a15e04edf0320ca4aa185041",
+  "completion_report_acknowledged_at": "2026-09-09T22:42:40.248Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [
+    {
+      "path": "tests/recovery-supervisor.test.js",
+      "operation": "update",
+      "updated_at": "2026-09-09T18:00:01.313Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T17:57:51.525Z",
+  "updated_at": "2026-09-09T23:25:03.296Z",
+  "events": [
+    {
+      "time": "2026-09-09T17:57:51.525Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #11 attempt 2: harden only Windows test temp-tree cleanup in tests/recovery-supervisor.test.js. Previous attempt was aborted with zero writes after an adoption/patch validation conflict. Preserve all current dirty bytes, process kill/wait ordering, assertions, and production Recovery Supervisor behavior. Retry only bounded transient Windows sharing/access errors by re-running whole-tree removal; rethrow non-transient and exhausted errors. Add deterministic fault-injection coverage and prove repeated full-file stability."
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:53.459Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:59.948Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:59.955Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:29.322Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:29.984Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:31.207Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:31.215Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:32.797Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:33.385Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:34.225Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-name-pattern=\"bounded transient Windows teardown failures\" tests\\recovery-supervisor.test.js",
+        "session_id": "vyiyX1gbsGDKDcS4qZtqMdH5"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:34.741Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-name-pattern=\"bounded transient Windows teardown failures\" tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:36.001Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests\\recovery-supervisor.test.js",
+        "session_id": "si9m6loCJwz7G3qLLPWLWLFg"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:57.844Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:59.095Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- tests\\recovery-supervisor.test.js",
+        "session_id": "UEoWuAgtfm2eKZC2tyFYiYAw"
+      }
+    },
+    {
+      "time": "2026-09-09T17:59:59.553Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:00.614Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:00.621Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:01.036Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:01.038Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:01.153Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "d726f70e8839a8e561c44be499a6655dc47887e44b2ce9fc1eb8f751f01ae955"
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:01.313Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:24.912Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:27.057Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:27.060Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:27.172Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "d03d6f8d109f1d47c79c36072807dfa48a67446efd8714d2fd42683147d85f13"
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:42.940Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:00:55.745Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "d03d6f8d109f1d47c79c36072807dfa48a67446efd8714d2fd42683147d85f13"
+      }
+    },
+    {
+      "time": "2026-09-09T18:01:01.898Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:01:47.327Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_INCOMPLETE"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:05.615Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:11.663Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:11.671Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:31.761Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:32.520Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:33.783Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:33.791Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:35.235Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:35.846Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:36.701Z",
+      "event": "command_started",
+      "details": {
+        "command": "set N11_PROOF=focus&& node --test --test-name-pattern=\"bounded transient Windows teardown failures\" tests\\recovery-supervisor.test.js",
+        "session_id": "7p6PRoS4sKApNDKEM9cEJNls"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:37.187Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set N11_PROOF=focus&& node --test --test-name-pattern=\"bounded transient Windows teardown failures\" tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:02:38.522Z",
+      "event": "command_started",
+      "details": {
+        "command": "set N11_REPEAT=1&& node --test tests\\recovery-supervisor.test.js",
+        "session_id": "a0EWbXoc4Ji4bNeaU68WB51P"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:00.166Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set N11_REPEAT=1&& node --test tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:01.435Z",
+      "event": "command_started",
+      "details": {
+        "command": "set N11_REPEAT=2&& node --test tests\\recovery-supervisor.test.js",
+        "session_id": "rfqkIu0ZfkAM8nglizu9BwFe"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:22.954Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set N11_REPEAT=2&& node --test tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:24.319Z",
+      "event": "command_started",
+      "details": {
+        "command": "set N11_REPEAT=3&& node --test tests\\recovery-supervisor.test.js",
+        "session_id": "hLPm1g-bZlJPCb2upFNLUeG8"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:45.946Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set N11_REPEAT=3&& node --test tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:47.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --check -- tests\\recovery-supervisor.test.js",
+        "session_id": "mQ9OFfX1Ny9-4ZbaiP9WcoFb"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:47.591Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --check -- tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:47.874Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:47.885Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:48.312Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:48.315Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:48.493Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "25e97f8dc501c3420d541c4c3c7387fd9e56b2d4d97e15989321e217da4e40d9"
+      }
+    },
+    {
+      "time": "2026-09-09T18:03:48.624Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T22:41:15.091Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T22:41:27.059Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"(Get-FileHash -Algorithm SHA256 -LiteralPath 'tests\\recovery-supervisor.test.js').Hash.ToLowerInvariant()\"",
+        "session_id": "ZCvVmr40l4r0z2K1UCxwa9Mc"
+      }
+    },
+    {
+      "time": "2026-09-09T22:41:27.755Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"(Get-FileHash -Algorithm SHA256 -LiteralPath 'tests\\recovery-supervisor.test.js').Hash.ToLowerInvariant()\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T22:41:36.577Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T22:42:15.459Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-09T22:42:15.463Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T22:42:15.640Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "824f0510c0cdc763b9ccba9e6555fdeb961c4c47a15e04edf0320ca4aa185041"
+      }
+    },
+    {
+      "time": "2026-09-09T22:42:30.343Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T22:42:40.248Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "824f0510c0cdc763b9ccba9e6555fdeb961c4c47a15e04edf0320ca4aa185041"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:02.974Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

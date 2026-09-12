@@ -1529,6 +1529,92 @@ test('Coding MCP activation prepare forwards the checkpoint-bound source receipt
   assert.deepEqual(observed.source_checkpoint, sourceCheckpoint);
 });
 
+test('Coding MCP activation prepare allows a valid response beyond the former five-second client window', { timeout: 12_000 }, async (t) => {
+  const token = 'activation-slow-prepare-token';
+  let observed = null;
+  const server = http.createServer((request, response) => {
+    assert.equal(request.url, '/__control/activation');
+    assert.equal(request.method, 'POST');
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      observed = JSON.parse(body);
+      setTimeout(() => {
+        const payload = JSON.stringify({ safe: true, code: 'READY', workspace: 'C:\\work\\one' });
+        response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
+        response.end(payload);
+      }, 5_250);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one', mcpPort: server.address().port }) },
+    secrets: { get: (name) => name === 'mcpAuthToken' ? token : '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.native = { status: async () => true };
+
+  const result = await orchestrator.prepareCodeActivation({
+    operationId: 'operation_slow_prepare_0001',
+    expiresAtUnixMs: Date.now() + 30_000
+  });
+
+  assert.equal(result.safe, true);
+  assert.equal(observed.action, 'prepare');
+  assert.equal(observed.operation_id, 'operation_slow_prepare_0001');
+});
+
+test('Coding MCP activation verify forwards acceptance-pending preservation', async (t) => {
+  let observed = null;
+  const token = 'activation-test-token';
+  const server = http.createServer((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      observed = JSON.parse(body);
+      const payload = JSON.stringify({ safe: true, code: 'READY', workspace: 'C:\\work\\one' });
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
+      response.end(payload);
+    });
+  });
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => server.close());
+  const sourceCheckpoint = {
+    checkpoint_id: 'checkpoint-verify-0001',
+    run_id: 'run-verify-0001',
+    wave_id: 'wave-verify-0001',
+    proof_fingerprint: 'a'.repeat(64),
+    git_head: 'b'.repeat(40)
+  };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one', mcpPort: server.address().port }) },
+    secrets: { get: (name) => name === 'mcpAuthToken' ? token : '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+
+  const result = await orchestrator.verifyCodeActivation(
+    'operation_verify_0001',
+    sourceCheckpoint,
+    true
+  );
+
+  assert.equal(result.safe, true);
+  assert.deepEqual(observed, {
+    action: 'verify',
+    operation_id: 'operation_verify_0001',
+    workspace: 'C:\\work\\one',
+    source_checkpoint: sourceCheckpoint,
+    allow_acceptance_pending: true
+  });
+});
+
 test('supervisor consumes a fresh workspace-bound restart ticket exactly once', async () => {
   const workspace = 'C:\\work\\one';
   const ticketId = 'restart-ticket-0001';
@@ -1601,7 +1687,8 @@ test('supervisor consumes a fresh workspace-bound restart ticket exactly once', 
   assert.equal(activationOptions.operationId, ticketId);
   assert.deepEqual(activationOptions.sourceCheckpoint, sourceCheckpoint);
   assert.equal(activationOptions.expectedDiskRevision, 'a'.repeat(64));
-  assert.equal(activationOptions.expiresAtUnixMs, now + 30000);
+  assert.equal(activationOptions.expiresAtUnixMs, undefined,
+    'ticket admission expiry must not become the durable full-clean execution deadline');
   assert.equal(activationOptions.automatic, undefined);
   assert.equal(activationOptions.mode, undefined);
 });
@@ -1771,8 +1858,9 @@ test('supervisor restart ticket fails closed without Recovery Host checkpoint au
 test('exact stale-run supervisor maintenance uses checkpoint-free full-clean refresh', async () => {
   const workspace = 'C:\\work\\one';
   const ticketId = 'restart-exact-stale-maintenance-0001';
-  const runIds = Array.from({ length: 16 }, (_value, index) => index.toString(16).padStart(32, '0'));
+  const runIds = Array.from({ length: 64 }, (_value, index) => index.toString(16).padStart(32, '0'));
   const reason = `exact_stale_runs:${runIds.join(',')}`;
+  assert.ok(reason.length > 1024);
   const restartCalls = [];
   const orchestrator = new RuntimeOrchestrator({
     settings: { load: () => ({ workspace, autoStartServices: true }) },
@@ -1826,6 +1914,8 @@ test('exact stale-run supervisor maintenance uses checkpoint-free full-clean ref
   assert.equal(restartCalls[0].mode, 'full_clean_refresh');
   assert.equal(restartCalls[0].sourceCheckpoint, null);
   assert.equal(restartCalls[0].reason, reason);
+  assert.equal(restartCalls[0].expiresAtUnixMs, undefined,
+    'stale-run maintenance must retain the independent full-clean execution deadline after ticket admission');
   assert.equal(result.supervisorRequest.status, 'completed');
   assert.equal(result.supervisorRequest.activation_mode, 'full_clean_refresh');
 });

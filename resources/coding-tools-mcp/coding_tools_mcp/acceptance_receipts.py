@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import sqlite3
@@ -10,6 +11,7 @@ from typing import Any
 
 from .errors import ToolFailure
 from .fs_utils import is_relative_to
+from .orchestration_ledger import fingerprint_paths
 from .solution_economics import (
     EXISTING_FILE_ADOPTION_EVENT,
     EXISTING_FILE_ADOPTION_MEASUREMENT,
@@ -29,6 +31,7 @@ ACCEPTED_FILE_RECEIPT_KINDS = frozenset({
 _HEX_DIGITS = frozenset("0123456789abcdef")
 _PROTECTED_ACCEPTANCE_ROOTS = frozenset({".coding-tools", ".git"})
 _SOURCE_CHECKPOINT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$")
+PROOF_SOURCE_BINDING_SCHEMA_VERSION = 1
 
 
 def _portable_path_key(value: Any) -> str:
@@ -127,6 +130,186 @@ def passed_proof_fingerprint(proofs: Any) -> str:
         for proof_id, input_fingerprint in _passed_proof_keys(proofs)
     )
     return hashlib.sha256(material.encode("utf-8")).hexdigest() if material else ""
+
+
+def validate_passed_proof_source_binding(
+    workspace: Path,
+    proofs: Any,
+    *,
+    current_base_head: str,
+    current_contract_fp: str,
+    accepted_paths: Any,
+) -> dict[str, Any]:
+    """Bind final acceptance to the exact affected-path bytes used by proof.
+
+    Historical proofs did not persist a source binding, so an all-legacy proof
+    set retains the previous acceptance behavior. Once a wave contains a
+    source-bound passed proof, every passed proof in that wave must carry the
+    same valid binding. This prevents mixed legacy/current evidence from
+    weakening the new guard while preserving checkpoint compatibility.
+    """
+    passed = [
+        item for item in proofs if isinstance(item, dict)
+        and str(item.get("status") or "").strip().lower() == "passed"
+    ] if isinstance(proofs, list) else []
+    if not passed:
+        return {"required": False, "reason": "no_passed_proof"}
+
+    bindings: list[dict[str, Any]] = []
+    missing = 0
+    for proof in passed:
+        metadata = proof.get("metadata") if isinstance(proof.get("metadata"), dict) else {}
+        binding = metadata.get("proof_source_binding")
+        if binding is None:
+            missing += 1
+            continue
+        if not isinstance(binding, dict):
+            raise ToolFailure(
+                "ACCEPTANCE_PROOF_SOURCE_BINDING_INVALID",
+                "A passed proof contains an invalid proof-source binding.",
+                category="runtime",
+                retryable=False,
+            )
+        bindings.append(binding)
+    if not bindings:
+        return {"required": False, "reason": "legacy_proof_without_source_binding"}
+    if missing:
+        raise ToolFailure(
+            "ACCEPTANCE_PROOF_SOURCE_BINDING_INCOMPLETE",
+            "Passed proofs mix source-bound and legacy evidence in the accepting wave.",
+            category="runtime",
+            retryable=False,
+            details={"passed_proof_count": len(passed), "missing_binding_count": missing},
+        )
+
+    canonical: dict[str, Any] | None = None
+    for binding in bindings:
+        if set(binding) != {"schema_version", "base_head", "contract_fp", "paths", "path_fingerprint"}:
+            raise ToolFailure(
+                "ACCEPTANCE_PROOF_SOURCE_BINDING_INVALID",
+                "A passed proof-source binding has an unexpected contract.",
+                category="runtime",
+                retryable=False,
+            )
+        raw_paths = binding.get("paths")
+        if (
+            binding.get("schema_version") != PROOF_SOURCE_BINDING_SCHEMA_VERSION
+            or not isinstance(binding.get("base_head"), str)
+            or not isinstance(binding.get("contract_fp"), str)
+            or not isinstance(raw_paths, list)
+            or len(raw_paths) > MAX_ACCEPTED_FILE_RECEIPTS
+            or not _is_hex_digest(binding.get("path_fingerprint"))
+        ):
+            raise ToolFailure(
+                "ACCEPTANCE_PROOF_SOURCE_BINDING_INVALID",
+                "A passed proof-source binding is malformed.",
+                category="runtime",
+                retryable=False,
+            )
+        normalized_paths: list[str] = []
+        seen_keys: set[str] = set()
+        for raw in raw_paths:
+            portable = _portable_path(raw)
+            relative = Path(portable)
+            key = _portable_path_key(portable)
+            if (
+                not isinstance(raw, str)
+                or not portable
+                or portable != raw
+                or relative.is_absolute()
+                or ".." in relative.parts
+                or _is_protected_acceptance_path(portable)
+                or key in seen_keys
+            ):
+                raise ToolFailure(
+                    "ACCEPTANCE_PROOF_SOURCE_BINDING_INVALID",
+                    "A passed proof-source binding contains an unsafe or duplicate path.",
+                    category="runtime",
+                    retryable=False,
+                )
+            seen_keys.add(key)
+            normalized_paths.append(portable)
+        if normalized_paths != sorted(normalized_paths):
+            raise ToolFailure(
+                "ACCEPTANCE_PROOF_SOURCE_BINDING_INVALID",
+                "Proof-source paths must use one canonical sorted representation.",
+                category="runtime",
+                retryable=False,
+            )
+        normalized = {
+            "schema_version": PROOF_SOURCE_BINDING_SCHEMA_VERSION,
+            "base_head": binding["base_head"],
+            "contract_fp": binding["contract_fp"],
+            "paths": normalized_paths,
+            "path_fingerprint": str(binding["path_fingerprint"]).lower(),
+        }
+        if canonical is None:
+            canonical = normalized
+        elif canonical != normalized:
+            raise ToolFailure(
+                "ACCEPTANCE_PROOF_SOURCE_BINDING_INCONSISTENT",
+                "Passed proofs in the accepting wave do not share one proof-source binding.",
+                category="runtime",
+                retryable=False,
+            )
+
+    assert canonical is not None
+    if canonical["base_head"] != str(current_base_head or ""):
+        raise ToolFailure(
+            "ACCEPTANCE_PROOF_SOURCE_DRIFT",
+            "The repository base HEAD changed after the accepting proof was recorded.",
+            category="runtime",
+            retryable=False,
+            details={"reason": "base_head_changed"},
+        )
+    if canonical["contract_fp"] != str(current_contract_fp or ""):
+        raise ToolFailure(
+            "ACCEPTANCE_PROOF_SOURCE_DRIFT",
+            "The orchestration contract changed after the accepting proof was recorded.",
+            category="runtime",
+            retryable=False,
+            details={"reason": "contract_changed"},
+        )
+
+    observed_path_fingerprint = fingerprint_paths(workspace, canonical["paths"])
+    if observed_path_fingerprint != canonical["path_fingerprint"]:
+        raise ToolFailure(
+            "ACCEPTANCE_PROOF_SOURCE_DRIFT",
+            "A proof-covered source path changed after the accepting proof was recorded.",
+            category="runtime",
+            retryable=False,
+            details={
+                "reason": "proof_covered_path_changed",
+                "path_count": len(canonical["paths"]),
+                "expected_path_fingerprint": canonical["path_fingerprint"],
+                "observed_path_fingerprint": observed_path_fingerprint,
+            },
+        )
+
+    accepted_keys = {
+        _portable_path_key(item)
+        for item in accepted_paths
+        if _portable_path(item)
+    } if isinstance(accepted_paths, (list, tuple, set, frozenset)) else set()
+    bound_keys = {_portable_path_key(item) for item in canonical["paths"]}
+    uncovered = accepted_keys.difference(bound_keys)
+    if uncovered:
+        raise ToolFailure(
+            "ACCEPTANCE_PROOF_SOURCE_COVERAGE_REQUIRED",
+            "Final acceptance includes source paths that were not covered by the passed proof-source binding.",
+            category="runtime",
+            retryable=False,
+            details={"uncovered_path_count": len(uncovered)},
+        )
+    return {
+        "required": True,
+        "schema_version": PROOF_SOURCE_BINDING_SCHEMA_VERSION,
+        "proof_count": len(passed),
+        "path_count": len(canonical["paths"]),
+        "path_fingerprint": canonical["path_fingerprint"],
+        "base_head": canonical["base_head"],
+        "contract_fp": canonical["contract_fp"],
+    }
 
 
 def _portable_path(value: Any) -> str:
@@ -636,6 +819,221 @@ def _durable_wave_adoption_paths(
     )
 
 
+def _durable_continuation_effect_file_ids(
+    ledger: Any,
+    *,
+    run_id: str,
+    wave_id: str,
+    events: list[dict[str, Any]],
+    workspace: Path | None,
+) -> set[str]:
+    """Recover applied continuation paths from its immutable effect journal.
+
+    Older continuation drivers persisted the exact pre/postimage manifest but
+    did not also emit ``patch_surface_observed``.  Final acceptance may use the
+    stronger journal only when its action is bound to the exact accepting wave
+    and the current bytes still match every postimage.  Current events carry a
+    direct wave id.  Historical run-level events are accepted only when one
+    continuation-effect write lease from the target wave is strictly bracketed
+    by the prepared/applied event sequence.
+    """
+    getter = getattr(ledger, "get_run_continuation_effect", None)
+    if not callable(getter):
+        return set()
+    prepared: dict[str, dict[str, Any]] = {}
+    applied: dict[str, dict[str, Any]] = {}
+    for event in events:
+        event_type = str(event.get("event_type") or "")
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        if event_type == "run_continuation_effect_prepared":
+            action_id = str(payload.get("action_id") or "").strip().lower()
+            manifest_sha256 = str(payload.get("manifest_sha256") or "").strip().lower()
+            if (
+                not _is_hex_digest(action_id)
+                or not _is_hex_digest(manifest_sha256)
+                or str(payload.get("effect_kind") or "") != "patch"
+            ):
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "Durable continuation effect preparation is incomplete.",
+                    category="runtime",
+                    retryable=False,
+                )
+            entry = {
+                "manifest_sha256": manifest_sha256,
+                "driver_generation": payload.get("driver_generation"),
+                "seq": int(event.get("seq") or 0),
+                "wave_id": str(event.get("wave_id") or ""),
+            }
+            previous = prepared.get(action_id)
+            if previous is not None and previous != entry:
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "Durable continuation effect preparation conflicts for one action.",
+                    category="runtime",
+                    retryable=False,
+                )
+            prepared[action_id] = entry
+        elif event_type == "run_continuation_effect_observed":
+            action_id = str(payload.get("action_id") or "").strip().lower()
+            if str(payload.get("status") or "") == "applied":
+                if not _is_hex_digest(action_id):
+                    raise ToolFailure(
+                        "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                        "Durable continuation effect observation has an invalid action identity.",
+                        category="runtime",
+                        retryable=False,
+                    )
+                entry = {
+                    "driver_generation": payload.get("driver_generation"),
+                    "seq": int(event.get("seq") or 0),
+                    "wave_id": str(event.get("wave_id") or ""),
+                }
+                previous = applied.get(action_id)
+                if previous is not None and previous != entry:
+                    raise ToolFailure(
+                        "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                        "Durable continuation effect observations conflict for one action.",
+                        category="runtime",
+                        retryable=False,
+                    )
+                applied[action_id] = entry
+    if set(applied).difference(prepared):
+        raise ToolFailure(
+            "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+            "An applied continuation effect has no matching prepared journal event.",
+            category="runtime",
+            retryable=False,
+        )
+    if not applied:
+        return set()
+    if workspace is None:
+        raise ToolFailure(
+            "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+            "Durable continuation effects require a workspace root for postimage verification.",
+            category="runtime",
+            retryable=False,
+        )
+
+    file_ids: set[str] = set()
+    target_wave = str(wave_id or "")
+    for action_id in sorted(applied):
+        prepared_event = prepared[action_id]
+        applied_event = applied[action_id]
+        prepared_seq = int(prepared_event["seq"])
+        applied_seq = int(applied_event["seq"])
+        direct_wave_binding = (
+            prepared_event["wave_id"] == target_wave
+            and applied_event["wave_id"] == target_wave
+            and prepared_seq > 0
+            and prepared_seq < applied_seq
+            and prepared_event["driver_generation"] == applied_event["driver_generation"]
+        )
+        legacy_leases = [
+            event
+            for event in events
+            if prepared_seq < int(event.get("seq") or 0) < applied_seq
+            and str(event.get("wave_id") or "") == target_wave
+            and str(event.get("event_type") or "") == "write_lease_acquired"
+            and isinstance(event.get("payload"), dict)
+            and str(event["payload"].get("mode") or "") == "continuation_effect_journal"
+            and str(event["payload"].get("owner") or "") == "MCP"
+            and str(event["payload"].get("owner_session") or "") == "run_continuation_driver"
+        ]
+        legacy_wave_binding = (
+            prepared_event["wave_id"] == ""
+            and applied_event["wave_id"] == ""
+            and prepared_seq > 0
+            and prepared_seq < applied_seq
+            and prepared_event["driver_generation"] == applied_event["driver_generation"]
+            and len(legacy_leases) == 1
+        )
+        if not direct_wave_binding and not legacy_wave_binding:
+            raise ToolFailure(
+                "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                "Durable continuation effect is not bound to the exact accepting wave.",
+                category="runtime",
+                retryable=False,
+            )
+        effect = getter(action_id)
+        manifest = effect.get("manifest") if isinstance(effect, dict) else None
+        manifest_sha256 = str(effect.get("manifest_sha256") or "").strip().lower() if isinstance(effect, dict) else ""
+        rows = manifest.get("files") if isinstance(manifest, dict) else None
+        canonical_sha256 = hashlib.sha256(
+            json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest() if isinstance(manifest, dict) else ""
+        if (
+            not isinstance(effect, dict)
+            or str(effect.get("run_id") or "") != str(run_id)
+            or str(effect.get("effect_kind") or "") != "patch"
+            or str(effect.get("status") or "") != "applied"
+            or not _is_hex_digest(manifest_sha256)
+            or prepared_event["manifest_sha256"] != manifest_sha256
+            or canonical_sha256 != manifest_sha256
+            or not isinstance(rows, list)
+            or not rows
+            or len(rows) > PATCH_SURFACE_FILE_ID_LIMIT
+        ):
+            raise ToolFailure(
+                "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                "Durable continuation effect journal is incomplete or conflicts with its wave events.",
+                category="runtime",
+                retryable=False,
+            )
+        action_ids: set[str] = set()
+        legacy_allowed_paths = {
+            _portable_path(item)
+            for event in legacy_leases
+            for item in event["payload"].get("allowed_paths", [])
+            if _portable_path(item)
+        }
+        for row in rows:
+            portable = _portable_path(row.get("path")) if isinstance(row, dict) else ""
+            relative = Path(portable)
+            preimage_sha256 = str(row.get("preimage_sha256") or "").strip().lower() if isinstance(row, dict) else ""
+            postimage_sha256 = str(row.get("postimage_sha256") or "").strip().lower() if isinstance(row, dict) else ""
+            file_id = hashlib.sha256(portable.encode("utf-8")).hexdigest() if portable else ""
+            if (
+                not portable
+                or relative.is_absolute()
+                or ".." in relative.parts
+                or _is_protected_acceptance_path(portable)
+                or (preimage_sha256 != "absent" and not _is_hex_digest(preimage_sha256))
+                or not _is_hex_digest(postimage_sha256)
+                or file_id in action_ids
+                or (legacy_wave_binding and portable not in legacy_allowed_paths)
+                or not _assert_safe_path(Path(workspace), relative, explicit=False, portable=portable)
+            ):
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "Durable continuation effect contains an unsafe or incomplete file identity.",
+                    category="runtime",
+                    retryable=False,
+                )
+            target = Path(workspace) / relative
+            try:
+                observed_sha256 = hashlib.sha256(target.read_bytes()).hexdigest()
+            except OSError as exc:
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "A durable continuation postimage is no longer readable.",
+                    category="runtime",
+                    retryable=False,
+                    details={"path": portable, "error_type": type(exc).__name__},
+                ) from exc
+            if observed_sha256 != postimage_sha256:
+                raise ToolFailure(
+                    "ACCEPTANCE_FILE_ATTESTATION_REQUIRED",
+                    "A durable continuation postimage no longer matches the applied effect journal.",
+                    category="runtime",
+                    retryable=False,
+                    details={"path": portable},
+                )
+            action_ids.add(file_id)
+        file_ids.update(action_ids)
+    return file_ids
+
+
 def _durable_wave_acceptance_paths(
     ledger: Any,
     run_id: str,
@@ -646,8 +1044,9 @@ def _durable_wave_acceptance_paths(
     explicit_attestations: Any = None,
 ) -> tuple[bool, list[str]]:
     """Recover exact touched paths from the canonical run/wave event stream."""
+    all_events = ledger.list_events(run_id)
     events = [
-        item for item in ledger.list_events(run_id)
+        item for item in all_events
         if str(item.get("wave_id") or "") == str(wave_id or "")
     ]
     observed_file_ids: set[str] = set()
@@ -682,6 +1081,16 @@ def _durable_wave_acceptance_paths(
         if file_count > 0:
             mutation_observed = True
             observed_file_ids.update(file_ids)
+    continuation_effect_ids = _durable_continuation_effect_file_ids(
+        ledger,
+        run_id=run_id,
+        wave_id=wave_id,
+        events=all_events,
+        workspace=workspace,
+    )
+    if continuation_effect_ids:
+        mutation_observed = True
+        observed_file_ids.update(continuation_effect_ids)
     lease_payloads = [
         event.get("payload") if isinstance(event.get("payload"), dict) else {}
         for event in events

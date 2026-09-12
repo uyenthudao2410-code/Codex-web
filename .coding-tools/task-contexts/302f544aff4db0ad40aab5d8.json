@@ -1,0 +1,327 @@
+{
+  "version": 2,
+  "task_id": "2dc16fae2a7e4c5a91ac65b8c13d0210",
+  "orchestration": {
+    "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+    "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "13d01189d6660ef2ed3769395c03889f088197da15aa96a9e611db583785af27",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "bZTWR05-hrXRUHYE02qzfpD4",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2827,
+    "finished_at": "2026-09-10T15:56:01.991Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/main.js",
+          "state": "file",
+          "sha256": "a8e9a3ed88fbbd2a7bf11f65ad739b8903e7e57549093f03e64ab3617ff32f9d",
+          "size_bytes": 56119,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "electron/services/recoveryHost.js",
+          "state": "file",
+          "sha256": "1e355128d398d8d17f476246e80f65160c35040f05e8c04d34b15cc729a2e05c",
+          "size_bytes": 131824,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "electron/services/recoveryIpc.js",
+          "state": "file",
+          "sha256": "9ef3573f77de731ec5da314a19f83df5693e13295fb3b603c94e6fd1125bf90a",
+          "size_bytes": 20971,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "electron/services/runtimeOrchestrator.js",
+          "state": "file",
+          "sha256": "507af9ebc69d9cb3ae93fff367c7cf8358781fc662a3a67573160736097c5df8",
+          "size_bytes": 143376,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "state": "file",
+          "sha256": "26d058f86391ffd92ab45ece92dc1b02085e55858f1ddafc1cf84b1597dd4ea7",
+          "size_bytes": 93073,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py",
+          "state": "file",
+          "sha256": "df78a8ad5048694a55c2a3a22078557d599edec3a512ac8c01588e1290b18d48",
+          "size_bytes": 25526,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "state": "file",
+          "sha256": "ac7e9984eb3ab733706e255bad061679eead704c552bb584188ecec642d8c5ea",
+          "size_bytes": 51901,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        },
+        {
+          "path": "tests/control-center-receipt.test.js",
+          "state": "file",
+          "sha256": "7151a082a7b91b462d3b670321fe31c9105b34126513dbf11940feb245e43ad2",
+          "size_bytes": 5394,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+          "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false,
+      "patch_surface_observations": {
+        "schema_version": 1,
+        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+        "matching_event_count": 1,
+        "observation_count": 1,
+        "rejected_event_count": 0,
+        "complete": true,
+        "truncated": false,
+        "invalid": false,
+        "observations": [
+          {
+            "event_id": "f4529cbd0f5e4512ab294d05a969fe37",
+            "seq": 48349,
+            "event_time": "2026-09-10T15:32:12.581Z",
+            "measurement": "applied_patch_delta_v1",
+            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+            "path_hashes_sha256": [
+              "746ec208716f3c393136a9fe635a3d587332e72ca881b8d42441f199dc05f0d0",
+              "83a36311532fa0599c458b958b8c02cb187cf29407e118c1c3523512dc038d1d",
+              "a9d9bd3d63b70ff776893260886781bd73efcb79961467e5e813b5f7e580cb28",
+              "c8db703774131bd1e6e57e7a4a6ce28a091c4cc4e06d5f3d4ddaa9f44762be5b",
+              "d26babf4803ac63f9da8f41503879776892f456b3d9c4fcb184610527aca0531",
+              "f2c12eebe43fecf1e39d5d86f77c31894c47501dafc4ab60ea014bc60eaa2c2b",
+              "ff68fc0bac26925ace10bd92faa61548865df5d93f838af71bbf2bdca002b984"
+            ],
+            "file_count": 7,
+            "additions": 445,
+            "removals": 5,
+            "line_changes": 450,
+            "producer_complete": true,
+            "complete": true,
+            "truncated": false,
+            "invalid": false,
+            "invalid_fields": []
+          }
+        ]
+      }
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 334,
+        "head_hash": "8de20f82e8b167edd8dfe97a3043045197e48eeadbc3a8891a20eab23f1fd0b3"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2a4aa64efc6a49ecb9cb665da166a7e2\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2a4aa64efc6a49ecb9cb665da166a7e2\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2a4aa64efc6a49ecb9cb665da166a7e2\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "2a4aa64efc6a49ecb9cb665da166a7e2",
+      "wave_id": "8aec082d0ed942ce8ea344a41cc03ef1",
+      "checkpoint_id": "42377e5c367e470d88b77bf765c94b01",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "13d01189d6660ef2ed3769395c03889f088197da15aa96a9e611db583785af27",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #24 continuation: complete and harden lawful production-derived TG6 receipt producers/linkage, including the missing attested Electron Execution Control Center sender path, focused production-path/security tests, exact no-spoof/no-backfill behavior, and final TG6/report proof. Preserve the already-applied Python producer patch and all unrelated dirty WIP.",
+        "objective_revision": 2,
+        "objective_sha256": "0eb38ce27acba3701760b29c27fd31c4666940d933dbf29328922bbff37858c2",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d62dadbd74384ce09ec18edd71e27be6",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 51141,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "8928dab63ce7dd1307768b6c3c019ffd0416994dd10f1fc137dc68c3cf00621c",
+  "completion_report_acknowledged_id": "8928dab63ce7dd1307768b6c3c019ffd0416994dd10f1fc137dc68c3cf00621c",
+  "completion_report_acknowledged_at": "2026-09-10T15:58:08.692Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-10T15:55:48.659Z",
+  "updated_at": "2026-09-10T15:58:34.936Z",
+  "events": [
+    {
+      "time": "2026-09-10T15:55:48.659Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-10T15:55:49.394Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"^class \" resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py",
+        "session_id": "r6YqQczmlBzIquJHT3sfSSDw"
+      }
+    },
+    {
+      "time": "2026-09-10T15:55:49.862Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"^class \" resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T15:55:59.366Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m unittest tests.test_stateless_http_2026.StatelessHttp2026Tests.test_attestation_without_explicit_identity_is_observed_but_not_authoritative tests.test_stateless_http_2026.StatelessHttp2026Tests.test_explicit_chatweb_headers_without_attestation_are_not_authoritative",
+        "session_id": "bZTWR05-hrXRUHYE02qzfpD4"
+      }
+    },
+    {
+      "time": "2026-09-10T15:56:01.991Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m unittest tests.test_stateless_http_2026.StatelessHttp2026Tests.test_attestation_without_explicit_identity_is_observed_but_not_authoritative tests.test_stateless_http_2026.StatelessHttp2026Tests.test_explicit_chatweb_headers_without_attestation_are_not_authoritative",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T15:57:19.346Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-10T15:57:19.348Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T15:57:19.536Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "8928dab63ce7dd1307768b6c3c019ffd0416994dd10f1fc137dc68c3cf00621c"
+      }
+    },
+    {
+      "time": "2026-09-10T15:57:34.903Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T15:58:08.692Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "8928dab63ce7dd1307768b6c3c019ffd0416994dd10f1fc137dc68c3cf00621c"
+      }
+    },
+    {
+      "time": "2026-09-10T15:58:34.936Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

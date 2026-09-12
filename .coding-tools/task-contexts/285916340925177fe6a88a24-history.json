@@ -1,0 +1,568 @@
+[
+  {
+    "version": 2,
+    "task_id": "a4f43b864f63438c8e12aed3ac452b95",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T07:20:34.401Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-10T07:20:02.943Z",
+    "updated_at": "2026-09-10T07:20:34.401Z",
+    "events": [
+      {
+        "time": "2026-09-10T07:20:02.943Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:03.278Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "TkMa4f6XgfWzZTJW7QX5ElJ4"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:04.002Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:09.704Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dev:status",
+          "session_id": "7DgIGpj5LdoCXG3K9Kxxt910"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:10.600Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dev:status",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:17.990Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "session_id": "Jhxs8ARcq0PaQMfRBFV6UAFp"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:22.135Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace E:\\DEV\\Codex-web --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:34.401Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import sqlite3,json; p=r'E:\\\\DEV\\\\Codex-web\\\\.coding-tools\\\\orchestration\\\\ledger.sqlite3'; c=sqlite3.connect('file:'+p+'?mode=ro',uri=True); rows=c.execute('select resolution_state,count(*) from problem_threads group by resolution_state order by resolution_state').fetchall(); print(json.dumps(rows)); print('unresolved=',sum(n for s,n in rows if s not in ('RESOLVED_CONFIRMED','ABANDONED')))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:34.401Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T07:20:43.605Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "48a9b0daf10643c1908ec2f5c0c2200f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T07:21:31.636Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 14747,
+        "summary": "exit 0 | 14.7s | 3 lines | tail: '1 passed in 13.05s'",
+        "finished_at": "2026-09-10T07:21:08.103Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "lwMI7ctVxKTNdzTM3VuLyLZB"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 101,
+          "command_id": "lwMI7ctVxKTNdzTM3VuLyLZB",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:lwMI7ctVxKTNdzTM3VuLyLZB:stdout",
+              "total_stream_bytes": 101,
+              "total_retained_bytes": 101,
+              "head_retained_bytes": 101,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:lwMI7ctVxKTNdzTM3VuLyLZB:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-10T07:20:43.607Z",
+    "updated_at": "2026-09-10T07:21:31.636Z",
+    "events": [
+      {
+        "time": "2026-09-10T07:20:43.607Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:43.958Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"marshal.dumps|sha256_python_marshal_code|runtime_behavior_fingerprint|external_review_policy\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "session_id": "Ch3-ip6wsxqUqaTeK2LeI-FE"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:45.488Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"marshal.dumps|sha256_python_marshal_code|runtime_behavior_fingerprint|external_review_policy\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:20:53.421Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting -q",
+          "session_id": "lwMI7ctVxKTNdzTM3VuLyLZB"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:08.103Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:23.249Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"runtime_behavior_identity|loaded_behavior|marshal_code|RUNTIME_DRIFT\" resources/coding-tools-mcp/tests tests",
+          "session_id": "X7QMTD-ogKCPoiLdrokQG8NO"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:23.526Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"runtime_behavior_identity|loaded_behavior|marshal_code|RUNTIME_DRIFT\" resources/coding-tools-mcp/tests tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:31.636Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"loaded = identity\\[\\\"loaded_behavior\\\"\\]\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py && rg -n -C 30 \"def runtime_behavior_identity|marshal.dumps\" resources/coding-tools-mcp/coding_tools_mcp/runtime_behavior_identity.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:31.636Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T07:21:37.105Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f0108afc54e5478a81dd9472880cb0a4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T07:22:07.448Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-10T07:21:37.107Z",
+    "updated_at": "2026-09-10T07:22:07.449Z",
+    "events": [
+      {
+        "time": "2026-09-10T07:21:37.107Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:37.417Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"loaded = identity\\[\\\"loaded_behavior\\\"\\]\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "MwM2_q7xCdo_stYds-T46t5q"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:37.841Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"loaded = identity\\[\\\"loaded_behavior\\\"\\]\" resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:42.760Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"marshal.dumps\" resources/coding-tools-mcp/coding_tools_mcp/runtime_behavior_identity.py",
+          "session_id": "cV-vMHHfEJH7kdFrLsE4ICGZ"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:43.178Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"marshal.dumps\" resources/coding-tools-mcp/coding_tools_mcp/runtime_behavior_identity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:52.751Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"goal_action|run_continuation_action|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "session_id": "bFLYQNYvYFJkJGPdj5vXfqH9"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:53.169Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"goal_action|run_continuation_action|continuity_action\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:59.305Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 38 \"def grant_run_continuation|def _run_continuation_grant|policy_revision|remaining_decision_turns|run_status\" resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "session_id": "dZ66Pvb8Dz-WXzBm2HNDRo_Z"
+        }
+      },
+      {
+        "time": "2026-09-10T07:21:59.661Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 38 \"def grant_run_continuation|def _run_continuation_grant|policy_revision|remaining_decision_turns|run_status\" resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:07.449Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state|PROVISIONALLY_RESOLVED\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp/*report*.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:07.449Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T07:22:14.121Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f2eed2e5494b4ca2898aaa93240fe6d3",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Gs44RV0c-Cv6gkn0eRge5kaH",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 4,
+      "duration_ms": 2072,
+      "finished_at": "2026-09-10T07:23:14.440Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationSurfaceTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationSurfaceTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_recovery_restores_exact_session_before_one_new_turn tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting -q",
+        "status": "failed",
+        "exit_code": 4,
+        "duration_ms": 2072,
+        "summary": "exit 4 | 2.1s | 11 lines | tail: '(no match in any of [<UnitTestCase RunContinuationSurfaceTests>])'",
+        "finished_at": "2026-09-10T07:23:14.440Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "Gs44RV0c-Cv6gkn0eRge5kaH"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "size_bytes": 564,
+          "command_id": "Gs44RV0c-Cv6gkn0eRge5kaH",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:Gs44RV0c-Cv6gkn0eRge5kaH:stdout",
+              "total_stream_bytes": 25,
+              "total_retained_bytes": 25,
+              "head_retained_bytes": 25,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:Gs44RV0c-Cv6gkn0eRge5kaH:stderr",
+              "total_stream_bytes": 539,
+              "total_retained_bytes": 539,
+              "head_retained_bytes": 539,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-10T07:22:14.124Z",
+    "updated_at": "2026-09-10T07:23:14.440Z",
+    "events": [
+      {
+        "time": "2026-09-10T07:22:14.124Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:14.482Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state|PROVISIONALLY_RESOLVED\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "EjD851tVzT24dzf8hiV4QR8F"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:14.835Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state|PROVISIONALLY_RESOLVED\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:21.134Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_resolution_economics|resolution_outcomes\" resources/coding-tools-mcp/scripts",
+          "session_id": "ejNPuwjcHZBy8ENx-p2IgEwi"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:21.562Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_resolution_economics|resolution_outcomes\" resources/coding-tools-mcp/scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:30.021Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "session_id": "quzol2toQ13zQanzWiA_otou"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:30.469Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:43.039Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web",
+          "session_id": "viQjZVovSz9aN-pzKsv3XUtW"
+        }
+      },
+      {
+        "time": "2026-09-10T07:22:46.520Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:23:00.579Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def test_.*(goal|ambiguous|regrant|budget|persistent|restart|repair|continuation)\" resources/coding-tools-mcp/tests/test_problem_lineage.py resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "session_id": "616cU0NcbF4FDsZ9kro6Es1d"
+        }
+      },
+      {
+        "time": "2026-09-10T07:23:00.940Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def test_.*(goal|ambiguous|regrant|budget|persistent|restart|repair|continuation)\" resources/coding-tools-mcp/tests/test_problem_lineage.py resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T07:23:12.506Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationSurfaceTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationSurfaceTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lan",
+          "session_id": "Gs44RV0c-Cv6gkn0eRge5kaH"
+        }
+      },
+      {
+        "time": "2026-09-10T07:23:14.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationSurfaceTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationSurfaceTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lan",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T07:23:21.138Z",
+    "archive_reason": "finished"
+  }
+]

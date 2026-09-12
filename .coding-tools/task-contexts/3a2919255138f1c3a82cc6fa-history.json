@@ -1,0 +1,131 @@
+[
+  {
+    "version": 2,
+    "task_id": "6bf37e85f1a24d4eb0d007efc8e2b8b5",
+    "orchestration": {
+      "run_id": "0c0ae23695224585a15ee28ef7e477f2",
+      "wave_id": "deb3930eba024b8289321bb9759e0289",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "401a632b931ee21c52029e6cae3d70cb54dfda0f7790c735edb62f06fdbd3bea",
+      "contract_fp": ""
+    },
+    "objective": "Read-only research: map GPT-6 Astra official guidance and linux.do article concepts to the current Codex-web architecture. Identify existing mechanisms, gaps, conflicts, and concrete candidate integration points. Do not write files, create or mutate RUN/WAVE, run tests/builds, or change Git/runtime state.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-08T03:44:23.042Z",
+    "updated_at": "2026-09-08T03:44:35.398Z",
+    "events": [
+      {
+        "time": "2026-09-08T03:44:23.042Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Read-only research: map GPT-6 Astra official guidance and linux.do article concepts to the current Codex-web architecture. Identify existing mechanisms, gaps, conflicts, and concrete candidate integration points. Do not write files, create or mutate RUN/WAVE, run tests/builds, or change Git/runtime state."
+        }
+      },
+      {
+        "time": "2026-09-08T03:44:24.186Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T03:44:35.390Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T03:45:51.405Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "acdf636d1aee46eab969887c5652f946",
+    "orchestration": {
+      "run_id": "7e2bfd245e12407ab43d48ce0973929f",
+      "wave_id": "5d315fc599c642dcaa46fb66942e5071",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1b779ed396f975c31591ab375eec37b5a65f48d676289db4aaf910971b5afc1",
+      "contract_fp": ""
+    },
+    "objective": "Read-only architecture audit for applying GPT-6 Astra guidance to current Codex-web. Map existing instruction hierarchy, model routing/reasoning controls, continuation/steering support, parallel/subagent dispatch, testing/proof policy, safety/misalignment gates, and model-registry provenance. Identify concrete code integration points and gaps. No writes, commands, tests/builds, Git mutations, RUN/WAVE mutations, ACKs, or runtime changes.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-08T03:45:51.405Z",
+    "updated_at": "2026-09-08T03:46:01.755Z",
+    "events": [
+      {
+        "time": "2026-09-08T03:45:51.405Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T03:45:52.748Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T03:46:01.748Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T03:47:41.030Z",
+    "archive_reason": "superseded"
+  }
+]

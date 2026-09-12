@@ -1,0 +1,259 @@
+{
+  "version": 2,
+  "task_id": "a364e9b26a8c4305a484b1c2d5a8059b",
+  "orchestration": {
+    "run_id": "652c1539fde648a584e259d11fc1ff8b",
+    "wave_id": "16cdcfb10bad445d808e02715b07ea27",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "a6ad6c0bb96181797b8ab684ae1eb9acec20e93b7e25f5bf3f468fc1bd9d775f",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "55n13K1D-Z6D3iUWtF5af_Jf",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2223,
+    "finished_at": "2026-09-10T06:32:50.247Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 21,
+        "head_hash": "3d149dbf1f8720b468fc607371120525f180b9c8992e03f2b7ab48759a2aa310"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-652c1539fde648a584e259d11fc1ff8b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-652c1539fde648a584e259d11fc1ff8b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "652c1539fde648a584e259d11fc1ff8b",
+      "wave_id": "16cdcfb10bad445d808e02715b07ea27",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "a6ad6c0bb96181797b8ab684ae1eb9acec20e93b7e25f5bf3f468fc1bd9d775f",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Investigate the post-Natural-16 oracle-observation gap without modifying source: P2 reports oracle_preflight.strong_oracle for only 51/151 accepted representative model-free runs, leaving 100 unknown and only one strong. Determine whether current agent_workflow already computes oracle_preflight for modern runs but fails to persist a durable oracle_preflight event, distinguish legacy absence from current emitter/projection gaps, and identify the smallest prospective fix if a real current observability gap exists.",
+        "objective_revision": 1,
+        "objective_sha256": "d77897ef46382d4584447b3a7644c53897691e5880f8a6ea18430183378bd66c",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "cd895971a67a06afbd9e46f2ace8697577bb493b1e875874c15d2a0efe73de17",
+  "completion_report_acknowledged_id": "cd895971a67a06afbd9e46f2ace8697577bb493b1e875874c15d2a0efe73de17",
+  "completion_report_acknowledged_at": "2026-09-10T06:33:49.458Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-10T06:29:29.134Z",
+  "updated_at": "2026-09-10T06:33:49.460Z",
+  "events": [
+    {
+      "time": "2026-09-10T06:29:29.134Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-10T06:29:29.465Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources\\coding-tools-mcp\\scripts\\report_p2_rework_diagnosis.py --workspace . --limit 200",
+        "session_id": "d4MHih75lZJ_l86lmF-Ngtqd"
+      }
+    },
+    {
+      "time": "2026-09-10T06:29:32.209Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources\\coding-tools-mcp\\scripts\\report_p2_rework_diagnosis.py --workspace . --limit 200",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:29:54.047Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:30:00.205Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:30:00.212Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T06:31:06.273Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\completion_readiness.py' | Select-Object -Skip 250 -First 110\"",
+        "session_id": "hBTUxqWT6d9mNnrPQDRxpz0G"
+      }
+    },
+    {
+      "time": "2026-09-10T06:31:07.840Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\completion_readiness.py' | Select-Object -Skip 250 -First 110\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:31:21.065Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$db='.coding-tools\\orchestration\\ledger.sqlite3'; python -c \\\"import sqlite3,json; c=sqlite3.connect(r'$db'); r=c.execute(\\\\\\\"select event_type,payload_json from events where run_id=? and event_type='oracle_preflight' order by seq\\\\\\\",('652c1539fde648a584e259d11fc1ff8b',)).fetchall(); print(json.dumps(r))\\\"; Select-String -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py' -Pattern 'oracle_preflight|oracle_strength' -Context 8,18; Get-Content '",
+        "session_id": "UkXP6UPsIqKITJMjhIOIFsIv"
+      }
+    },
+    {
+      "time": "2026-09-10T06:31:22.790Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$db='.coding-tools\\orchestration\\ledger.sqlite3'; python -c \\\"import sqlite3,json; c=sqlite3.connect(r'$db'); r=c.execute(\\\\\\\"select event_type,payload_json from events where run_id=? and event_type='oracle_preflight' order by seq\\\\\\\",('652c1539fde648a584e259d11fc1ff8b',)).fetchall(); print(json.dumps(r))\\\"; Select-String -Path 'resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py' -Pattern 'oracle_preflight|oracle_strength' -Context 8,18; Get-Content '",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:17.781Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED\" -- .coding-tools/orchestration/reports",
+        "session_id": "-BmemxxLEUx_Fr7Y7mT1w_PY"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:18.330Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED\" -- .coding-tools/orchestration/reports",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:33.273Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools\\orchestration\\reports\\run-4926d2f2c07d4340897fa422c580675f\\run-summary.md' | Select-Object -Skip 20 -First 75; '---RUN2---'; Get-Content '.coding-tools\\orchestration\\reports\\run-7f856e93086146328c5f32bb049a9fbb\\run-summary.md' | Select-Object -Skip 20 -First 75; '---RUN3---'; Get-Content '.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\run-summary.md' | Select-Object -Skip 20 -First 95\"",
+        "session_id": "zdYaGYLqAWINSar44dZY9MQl"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:34.829Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools\\orchestration\\reports\\run-4926d2f2c07d4340897fa422c580675f\\run-summary.md' | Select-Object -Skip 20 -First 75; '---RUN2---'; Get-Content '.coding-tools\\orchestration\\reports\\run-7f856e93086146328c5f32bb049a9fbb\\run-summary.md' | Select-Object -Skip 20 -First 75; '---RUN3---'; Get-Content '.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\run-summary.md' | Select-Object -Skip 20 -First 95\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:48.376Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools\\orchestration\\reports\\run-4926d2f2c07d4340897fa422c580675f\\wave-002.md','.coding-tools\\orchestration\\reports\\run-7f856e93086146328c5f32bb049a9fbb\\wave-002.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-004.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-005.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-006.md' -Pattern 'ado",
+        "session_id": "55n13K1D-Z6D3iUWtF5af_Jf"
+      }
+    },
+    {
+      "time": "2026-09-10T06:32:50.247Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path '.coding-tools\\orchestration\\reports\\run-4926d2f2c07d4340897fa422c580675f\\wave-002.md','.coding-tools\\orchestration\\reports\\run-7f856e93086146328c5f32bb049a9fbb\\wave-002.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-004.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-005.md','.coding-tools\\orchestration\\reports\\run-f423d1ffaedd4c1d81dac0eb63af489c\\wave-006.md' -Pattern 'ado",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:33:15.687Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "cd895971a67a06afbd9e46f2ace8697577bb493b1e875874c15d2a0efe73de17"
+      }
+    },
+    {
+      "time": "2026-09-10T06:33:26.713Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:33:49.458Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "cd895971a67a06afbd9e46f2ace8697577bb493b1e875874c15d2a0efe73de17"
+      }
+    }
+  ]
+}

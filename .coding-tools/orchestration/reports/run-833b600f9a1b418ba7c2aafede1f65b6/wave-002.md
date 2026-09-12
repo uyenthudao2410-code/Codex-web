@@ -10,7 +10,7 @@
 - Base HEAD: `58ee20d3a5b2607016b1880f4276437eb2dcf5df`
 - Worktree fingerprint: `464e97125b8db8b31955340b304f777ae0275f4c68a13f98539792001fb6782a`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -49,6 +49,8 @@
 | 41979 | 2026-09-06T08:06:21.909Z | failure_observed | ACCEPTING | ACCEPTING | reason=Independent adjacent validation found a heartbeat truthfulness regression: node --test on the existing browser/control-center truthfulness suite passed 36/38 but failed the stale/unavailable heartbeat and malformed recovery-counter cases because scheduleHeartbeatRender defers the state update when requestAnimationFrame is unavailable. Preserve the current three-file patch and passed focused proof. Replan with the smallest fix: execute the commit callback synchronously only when requestAnimationFrame is unavailable, retain one-frame coalescing in real browsers, then rerun the new performance test plus the affected existing truthfulness tests and diff-check.; failure_class=SOL_REJECTED |
 | 41980 | 2026-09-06T08:06:22.121Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
 | 41981 | 2026-09-06T08:06:22.415Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 45585 | 2026-09-09T10:47:55.057Z | state_transition | REPLAN | ABORTED | reason=Terminalize this detached historical RUN as ABORTED. Canonical replay shows passed proof followed by explicit controller SOL_REJECTED due adjacent regression, transition to REPLAN, no accepted checkpoint, and wave_processes_quiesced. Preserve all mutation/proof/rejection evidence; do not accept or reconcile it as successful current work. |
+| 45586 | 2026-09-09T10:47:55.531Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -65,5 +67,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `46`
-- Chain head: `7b048299e7107c0598546ca4bb4b679160930f615777e3941b5e8456ced9fdc6`
+- Events checked: `48`
+- Chain head: `61147204dabf38e67dcbb3f9fa546b28af5ce44e17bf6369f9fd32072693fb69`

@@ -1,0 +1,181 @@
+{
+  "version": 2,
+  "task_id": "81c14577ee134465aa7ff4fcf1bdb2bd",
+  "orchestration": {
+    "run_id": "88cb4981536e423ba32d77ea851215a9",
+    "wave_id": "b1c4ee69fa3b45eabea9bfab0fc65890",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "49249c1e4835542db2aafc1b22d6661a366fb5eb62ca622149d3c7775983dde1",
+    "contract_fp": ""
+  },
+  "objective": "Implement the narrow fix for Problem prl-stale-reconcile-managed-job-scope-20260912 revision 1. The exact stale-run preflight currently sets managed_job_residue from bool(census.managed_jobs), so any historical/terminal managed job anywhere in the workspace blocks every exact target. Change only this predicate/derived preflight field so it represents genuinely live managed job residue, using the canonical immutable lifecycle-census job classification/state rather than process probing or timestamp proximity. Preserve all existing exact-target, stale-threshold, live-ownership, unbound-live-resource, projection, integrity, P5, and idempotency guards. Add focused regression coverage proving terminal/historical jobs do not block and genuinely live jobs still block. Do not reconcile the three target RUNs in this implementation wave, do not restart, commit, push, clean, reset, or backfill history.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "ImMVK8ij-AhHblLmBfOGBFKQ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 736,
+    "finished_at": "2026-09-12T07:22:59.038Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Problem contract advanced from revision 1 to revision 2 before any source mutation after live census disproved the original managed-job assumption. Stop this no-write PREFLIGHT so it cannot become another stale residue; implementation must bind to revision 2.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-12T07:20:57.666Z",
+  "updated_at": "2026-09-12T07:23:43.101Z",
+  "events": [
+    {
+      "time": "2026-09-12T07:20:57.666Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Implement the narrow fix for Problem prl-stale-reconcile-managed-job-scope-20260912 revision 1. The exact stale-run preflight currently sets managed_job_residue from bool(census.managed_jobs), so any historical/terminal managed job anywhere in the workspace blocks every exact target. Change only this predicate/derived preflight field so it represents genuinely live managed job residue, using the canonical immutable lifecycle-census job classification/state rather than process probing or timestamp proximity. Preserve all existing exact-target, stale-threshold, live-ownership, unbound-live-resource, projection, integrity, P5, and idempotency guards. Add focused regression coverage proving terminal/historical jobs do not block and genuinely live jobs still block. Do not reconcile the three target RUNs in this implementation wave, do not restart, commit, push, clean, reset, or backfill history."
+      }
+    },
+    {
+      "time": "2026-09-12T07:20:59.768Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-12T07:21:08.779Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-12T07:21:08.787Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:02.394Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+        "session_id": "avmMtdB8BUKd5YNfnUodUsqd"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:02.856Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:11.222Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 28 \"managed_job_residue\\|managed_jobs\\|lifecycle_state\\|terminal\" -- resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py",
+        "session_id": "nKkj7eG9E7itYDCXezIb5Mbz"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:11.742Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 28 \"managed_job_residue\\|managed_jobs\\|lifecycle_state\\|terminal\" -- resources/coding-tools-mcp/coding_tools_mcp/stale_run_reconciliation.py resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:23.839Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+        "session_id": "i-HNYLxyisiADPfk1GG9o9se"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:28.148Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:43.880Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -E \"os\\.environ.*(COMMAND|JOB|RUN|WAVE)|COMMAND_ID|JOB_ID|CODING_TOOLS_.*(RUN|WAVE|COMMAND|JOB)|command_id.*env|job_id.*env\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts",
+        "session_id": "pSdHX09ZM5p1k2atuaPrk5Qb"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:44.414Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -E \"os\\.environ.*(COMMAND|JOB|RUN|WAVE)|COMMAND_ID|JOB_ID|CODING_TOOLS_.*(RUN|WAVE|COMMAND|JOB)|command_id.*env|job_id.*env\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/scripts",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:58.567Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 18 \"managed_job_residue\" -- resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py resources/coding-tools-mcp/tests",
+        "session_id": "ImMVK8ij-AhHblLmBfOGBFKQ"
+      }
+    },
+    {
+      "time": "2026-09-12T07:22:59.038Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 18 \"managed_job_residue\" -- resources/coding-tools-mcp/tests/test_stale_run_reconciliation.py resources/coding-tools-mcp/tests",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:23:21.565Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "PRL_EVENT_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-12T07:23:43.095Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-12T07:23:43.098Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -60,7 +60,12 @@ def main(argv: list[str] | None = None) -> int:
                 "canonical_writer_instantiated": False,
                 "live_backup_connections": snapshot.live_backup_connections,
             }
-        result["source_identity"] = {**result["source_identity"], **identity, "source_head_explicit_override": bool(supplied_head)}
+        result["source_identity"] = {
+            **result["source_identity"],
+            **identity,
+            "source_head_used_for_current_cohort": source_head or None,
+            "source_head_explicit_override": bool(supplied_head),
+        }
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": type(exc).__name__, "message": str(exc)[:500]}, sort_keys=True))
         return 2

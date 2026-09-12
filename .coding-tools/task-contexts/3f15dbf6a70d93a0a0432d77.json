@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "9573df86ed8842c5913149b6e6739e26",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "XRzSQifjF6Nrktmimo5DFT3z",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 626,
+    "finished_at": "2026-09-09T23:26:10.824Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T23:26:09.924Z",
+  "updated_at": "2026-09-09T23:26:10.824Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:26:09.924Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:26:10.343Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -LiteralPath 'tests\\live-supervisor-e2e.test.js' -Pattern 'removeTempTree','rmSync','webcodex-sup-','afterEach','after(' -SimpleMatch -Context 12,18 | ForEach-Object { $_.ToString() }\"",
+        "session_id": "XRzSQifjF6Nrktmimo5DFT3z"
+      }
+    },
+    {
+      "time": "2026-09-09T23:26:10.824Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -LiteralPath 'tests\\live-supervisor-e2e.test.js' -Pattern 'removeTempTree','rmSync','webcodex-sup-','afterEach','after(' -SimpleMatch -Context 12,18 | ForEach-Object { $_.ToString() }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

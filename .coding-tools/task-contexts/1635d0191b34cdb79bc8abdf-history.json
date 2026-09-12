@@ -1,0 +1,447 @@
+[
+  {
+    "version": 2,
+    "task_id": "fe31ab25896a48aebb7640497cc28efd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-09T10:13:29.446Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-09-09T10:08:03.233Z",
+    "updated_at": "2026-09-09T10:15:52.658Z",
+    "events": [
+      {
+        "time": "2026-09-09T10:08:03.233Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:03.935Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/scripts/report_empirical_readiness.py','resources/coding-tools-mcp/tests/test_empirical_readiness.py' | ForEach-Object { $_.Path + ' ' + $_.Hash.ToLowerInvariant() }\"",
+          "session_id": "KbGovbZBFaiMaKxgnuBvPze2"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:04.542Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/scripts/report_empirical_readiness.py','resources/coding-tools-mcp/tests/test_empirical_readiness.py' | ForEach-Object { $_.Path + ' ' + $_.Hash.ToLowerInvariant() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:24.281Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A45 -B20 \"stale_run_audit|_stale_subtype|ArgumentParser|add_argument|def main|THRESHOLD_SENSITIVE_STALE_CANDIDATE|stale-details|stale_details\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+          "session_id": "F-Wh-gugIoS93i4VlXrOpwRz"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:24.833Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A45 -B20 \"stale_run_audit|_stale_subtype|ArgumentParser|add_argument|def main|THRESHOLD_SENSITIVE_STALE_CANDIDATE|stale-details|stale_details\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:36.431Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A170 -B10 \"def empirical_readiness_report|def test_.*stale|def test_.*report|def test_.*main\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+          "session_id": "GMwZ5ccZJlufbeQ9ZWfBAvBD"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:36.941Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A170 -B10 \"def empirical_readiness_report|def test_.*stale|def test_.*report|def test_.*main\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:59.141Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_empirical_readiness.py' -TotalCount 90; Write-Output '---FAKELEDGER---'; Select-String -Path 'resources/coding-tools-mcp/tests/test_empirical_readiness.py' -Pattern 'class FakeLedger' -Context 0,80\"",
+          "session_id": "3q4M39Vy3wQGDFAhogw7Mw1n"
+        }
+      },
+      {
+        "time": "2026-09-09T10:08:59.759Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content 'resources/coding-tools-mcp/tests/test_empirical_readiness.py' -TotalCount 90; Write-Output '---FAKELEDGER---'; Select-String -Path 'resources/coding-tools-mcp/tests/test_empirical_readiness.py' -Pattern 'class FakeLedger' -Context 0,80\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:09:49.622Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-09T10:10:22.368Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-09T10:10:34.967Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/679a35d50dee2806648d13c9.json' -Raw\"",
+          "session_id": "aATGV_mNHbLm1KhzbOeeC2jZ"
+        }
+      },
+      {
+        "time": "2026-09-09T10:10:35.522Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"Get-Content '.coding-tools/task-contexts/679a35d50dee2806648d13c9.json' -Raw\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:11:15.923Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -l \"d07cc568e2b345bb946754e565a026df|679a35d50dee2806648d13c9\" .coding-tools/task-contexts",
+          "session_id": "UfjzItv9lf0aoCwXQlznCBon"
+        }
+      },
+      {
+        "time": "2026-09-09T10:11:16.306Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -l \"d07cc568e2b345bb946754e565a026df|679a35d50dee2806648d13c9\" .coding-tools/task-contexts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:11:25.873Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='.coding-tools/task-contexts/1635d0191b34cdb79bc8abdf.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; [pscustomobject]@{task_id=$j.task_id; run_id=$j.orchestration.run_id; wave_id=$j.orchestration.wave_id; state=$j.orchestration.orchestration_state; status=$j.status; objective=$j.objective; updated_at=$j.updated_at} | ConvertTo-Json -Depth 4\"",
+          "session_id": "kQgtSdEDo8BXt3r35hTyynNV"
+        }
+      },
+      {
+        "time": "2026-09-09T10:11:26.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p='.coding-tools/task-contexts/1635d0191b34cdb79bc8abdf.json'; $j=Get-Content $p -Raw | ConvertFrom-Json; [pscustomobject]@{task_id=$j.task_id; run_id=$j.orchestration.run_id; wave_id=$j.orchestration.wave_id; state=$j.orchestration.orchestration_state; status=$j.status; objective=$j.objective; updated_at=$j.updated_at} | ConvertTo-Json -Depth 4\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:12:05.762Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_IDENTITY_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-09T10:12:25.066Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A90 -B35 \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action|def .*reattach|CONTINUITY.*REATTACH\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "h713UBnXQJSJoWIPbS9zdqJH"
+        }
+      },
+      {
+        "time": "2026-09-09T10:12:25.357Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A90 -B35 \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action|def .*reattach|CONTINUITY.*REATTACH\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:13:08.313Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-09T10:13:29.446Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A110 -B45 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history|exact run recovery\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T10:13:29.446Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "TASK_STOPPED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T10:16:11.137Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a0be6ea58247495bb70cd0c83fd637a1",
+    "orchestration": {
+      "run_id": "d98a9faf44da4cbfa74f487d3bd71139",
+      "wave_id": "d26bf4d14af64a9ead8ce9d61070ecb4",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "0d976b0862e2911d237ec1f7ff04443ba879c9cc25204ef82e2bd6e9ff0bdaad",
+      "contract_fp": ""
+    },
+    "objective": "Natural #4 engineering continuation on the same Problem revision after predecessor RUN d07cc568e2b345bb946754e565a026df was truthfully ABORTED solely because the new MCP process could not exact-recover task projection without acknowledged archived history. No source mutation occurred in the predecessor active wave. Implement the already-frozen opt-in --stale-details feature only in resources/coding-tools-mcp/scripts/report_empirical_readiness.py and resources/coding-tools-mcp/tests/test_empirical_readiness.py; preserve compact default, existing sample semantics, existing _stale_subtype evidence semantics, read-only/no-reconciliation/no-P5 invariants, and unrelated WIP. Prepare only; no mutation.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 12,
+          "head_hash": "46713533bcab2d2779a386ee5d886533345bae2d1af2b7ac859b792751d385f4"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d98a9faf44da4cbfa74f487d3bd71139\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d98a9faf44da4cbfa74f487d3bd71139\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "d98a9faf44da4cbfa74f487d3bd71139",
+        "wave_id": "d26bf4d14af64a9ead8ce9d61070ecb4",
+        "checkpoint_id": "",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "0d976b0862e2911d237ec1f7ff04443ba879c9cc25204ef82e2bd6e9ff0bdaad",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Natural #4 engineering continuation on the same Problem revision after predecessor RUN d07cc568e2b345bb946754e565a026df was truthfully ABORTED solely because the new MCP process could not exact-recover task projection without acknowledged archived history. No source mutation occurred in the predecessor active wave. Implement the already-frozen opt-in --stale-details feature only in resources/coding-tools-mcp/scripts/report_empirical_readiness.py and resources/coding-tools-mcp/tests/test_empirical_readiness.py; preserve compact default, existing sample semantics, existing _stale_subtype evidence semantics, read-only/no-reconciliation/no-P5 invariants, and unrelated WIP. Prepare only; no mutation.",
+          "objective_revision": 1,
+          "objective_sha256": "0893fcbaee9e6eae695c114dc1aa3fddc8b98d76cdd49272af2b71bcf253176b",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": null,
+        "reason": "The requested RUN/WAVE is not the caller's current compatible prepare lineage.",
+        "event_seq": null
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "be54ad1ae534abd9ceb5f1a29e90e5ccb918084de6c0610164079a4009310478",
+    "completion_report_acknowledged_id": "be54ad1ae534abd9ceb5f1a29e90e5ccb918084de6c0610164079a4009310478",
+    "completion_report_acknowledged_at": "2026-09-09T10:21:24.876Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-09T10:16:11.138Z",
+    "updated_at": "2026-09-09T10:21:44.243Z",
+    "events": [
+      {
+        "time": "2026-09-09T10:16:11.138Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Natural #4 engineering continuation on the same Problem revision after predecessor RUN d07cc568e2b345bb946754e565a026df was truthfully ABORTED solely because the new MCP process could not exact-recover task projection without acknowledged archived history. No source mutation occurred in the predecessor active wave. Implement the already-frozen opt-in --stale-details feature only in resources/coding-tools-mcp/scripts/report_empirical_readiness.py and resources/coding-tools-mcp/tests/test_empirical_readiness.py; preserve compact default, existing sample semantics, existing _stale_subtype evidence semantics, read-only/no-reconciliation/no-P5 invariants, and unrelated WIP. Prepare only; no mutation."
+        }
+      },
+      {
+        "time": "2026-09-09T10:16:12.867Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-09T10:16:19.589Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-09T10:16:19.597Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-09T10:17:02.282Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-09T10:17:03.173Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-09T10:17:04.114Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "EXISTING_FILE_ADOPTION_PATCH_CONFLICT"
+        }
+      },
+      {
+        "time": "2026-09-09T10:19:59.921Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-09T10:20:42.307Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "be54ad1ae534abd9ceb5f1a29e90e5ccb918084de6c0610164079a4009310478"
+        }
+      },
+      {
+        "time": "2026-09-09T10:20:57.419Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-09T10:21:24.876Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "be54ad1ae534abd9ceb5f1a29e90e5ccb918084de6c0610164079a4009310478"
+        }
+      },
+      {
+        "time": "2026-09-09T10:21:33.123Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-09T10:21:33.270Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+        }
+      },
+      {
+        "time": "2026-09-09T10:21:43.736Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-09T10:21:56.952Z",
+    "archive_reason": "superseded"
+  }
+]

@@ -1,0 +1,507 @@
+[
+  {
+    "version": 2,
+    "task_id": "fbc5fea935b745a78d5a7cf8be0b7871",
+    "orchestration": {
+      "run_id": "4bf7a99c2bba4e36bfa2c94b02b59dfd",
+      "wave_id": "9fbf403345ae478c9bf8239298178fbd",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "aec9468f04470a22668a8be642645928b652c030f3873d82fe9774ea5c3690a3",
+      "contract_fp": ""
+    },
+    "objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, when readBootstrapResult returns state=completed with a canonical activation_epoch_id and code.activation_status is unavailable/not found, allow that exact completed bootstrap result to supply the operation/epoch handoff only if replacement descriptor epoch, status projected epoch, bootstrap result activation_epoch_id, and observed status operation ID all exactly match the expected operation/epoch. Reuse the bootstrapResult object as operation if suitable. Preserve terminal ACTIVATION_OPERATION_MISMATCH for any operation/epoch mismatch, preserve UPDATE_INCOMPLETE for failed/expired bootstrap, and keep pending bootstrap polling. Add a focused regression in tests/full-clean-activation-command.test.js proving exact completed bootstrap + exact descriptor/status succeeds when code.activation_status is unavailable/not found, with mismatch still rejected if practical. Preserve all unrelated WIP and protected foreign lineage; do not touch .coding-tools manually.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-08T20:59:35.308Z",
+    "updated_at": "2026-09-08T20:59:42.855Z",
+    "events": [
+      {
+        "time": "2026-09-08T20:59:35.308Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, when readBootstrapResult returns state=completed with a canonical activation_epoch_id and code.activation_status is unavailable/not found, allow that exact completed bootstrap result to supply the operation/epoch handoff only if replacement descriptor epoch, status projected epoch, bootstrap result activation_epoch_id, and observed status operation ID all exactly match the expected operation/epoch. Reuse the bootstrapResult object as operation if suitable. Preserve terminal ACTIVATION_OPERATION_MISMATCH for any operation/epoch mismatch, preserve UPDATE_INCOMPLETE for failed/expired bootstrap, and keep pending bootstrap polling. Add a focused regression in tests/full-clean-activation-command.test.js proving exact completed bootstrap + exact descriptor/status succeeds when code.activation_status is unavailable/not found, with mismatch still rejected if practical. Preserve all unrelated WIP and protected foreign lineage; do not touch .coding-tools manually."
+        }
+      },
+      {
+        "time": "2026-09-08T20:59:36.502Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:59:42.841Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T20:59:42.855Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T21:01:03.586Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "2a507b4dc30c4beeafdd4f8f3fbafb90",
+    "orchestration": {
+      "run_id": "02e6ab7520aa44f0a62a7dc23edf8923",
+      "wave_id": "61f6aa46f29044498b67330d1546190c",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "aec9468f04470a22668a8be642645928b652c030f3873d82fe9774ea5c3690a3",
+      "contract_fp": ""
+    },
+    "objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, recover from missing ephemeral code.activation_status only when the durable bootstrap result is completed and its exact operation/epoch agrees with replacement descriptor epoch, projected status epoch, and observed status operation ID. Reuse the bootstrapResult object as operation. Preserve failed/expired UPDATE_INCOMPLETE, pending polling, and all mismatch guards. Add the focused regression in tests/full-clean-activation-command.test.js. Preserve all unrelated WIP.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T21:01:14.679Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T21:01:14.679Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T21:01:14.679Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "J0oy7AWT1i2zdTVJY9OIW9Ll",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 661,
+      "finished_at": "2026-09-08T21:01:13.753Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "scripts/full-clean-activation.js",
+            "state": "file",
+            "sha256": "4da2ea85acbf75f5e0dd4cefbdd10143d5f01e1f6a865faa3943bdb24d28cf3b",
+            "size_bytes": 82583,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "02e6ab7520aa44f0a62a7dc23edf8923",
+            "wave_id": "61f6aa46f29044498b67330d1546190c"
+          },
+          {
+            "path": "tests/full-clean-activation-command.test.js",
+            "state": "file",
+            "sha256": "dde974e6e6af2d1407ccf494cb12dae6c5e925b07b8b1656e857caca532a9ca2",
+            "size_bytes": 56384,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "02e6ab7520aa44f0a62a7dc23edf8923",
+            "wave_id": "61f6aa46f29044498b67330d1546190c"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 1,
+          "observation_count": 1,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "e2ff6d6944f54e588ea0fb420e6fea4e",
+              "seq": 44749,
+              "event_time": "2026-09-08T21:01:07.459Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "e8703d5dd8e019e06ee0d4bd3a25bcac23bb6244a9b077cbde2efee5835b1a3a",
+                "fbb807f6d5a6ad1edfdf4589a4a0f979f1b6ae24b55e57ca5ee7151544ea481c"
+              ],
+              "file_count": 2,
+              "additions": 107,
+              "removals": 3,
+              "line_changes": 110,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "96e95ba4f5158dfeaeb7c5ace76cb1c36075ac74610f71eeea4b948bd24df047"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-02e6ab7520aa44f0a62a7dc23edf8923\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-02e6ab7520aa44f0a62a7dc23edf8923\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "02e6ab7520aa44f0a62a7dc23edf8923",
+        "wave_id": "61f6aa46f29044498b67330d1546190c",
+        "checkpoint_id": "a80af312e2a4450aa59d5a28539eec53",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "aec9468f04470a22668a8be642645928b652c030f3873d82fe9774ea5c3690a3",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, recover from missing ephemeral code.activation_status only when the durable bootstrap result is completed and its exact operation/epoch agrees with replacement descriptor epoch, projected status epoch, and observed status operation ID. Reuse the bootstrapResult object as operation. Preserve failed/expired UPDATE_INCOMPLETE, pending polling, and all mismatch guards. Add the focused regression in tests/full-clean-activation-command.test.js. Preserve all unrelated WIP.",
+          "objective_revision": 1,
+          "objective_sha256": "5029db31b985e80c6a179e2ccedca59392c244a9eba581d004e97b65c2bed3e7",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "aa2db7f6e1a64e24b9cd23a00a061dfa",
+            "stage_id": "check:bcb9533c87e955fe",
+            "status": "passed",
+            "duration_ms": 3201,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "e9bbfbb6d2dd4570a9eb86e9dfc87c6f",
+            "stage_id": "check:23efc2d04b2baee1",
+            "status": "passed",
+            "duration_ms": 1084,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "cb8a717ddfe143addbc6699ca11f1fdbedf80b11a88c927b95375af4c260d559",
+    "completion_report_acknowledged_id": "cb8a717ddfe143addbc6699ca11f1fdbedf80b11a88c927b95375af4c260d559",
+    "completion_report_acknowledged_at": "2026-09-08T21:04:18.421Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [
+      {
+        "path": "scripts/full-clean-activation.js",
+        "operation": "update",
+        "updated_at": "2026-09-08T21:01:15.422Z"
+      },
+      {
+        "path": "tests/full-clean-activation-command.test.js",
+        "operation": "update",
+        "updated_at": "2026-09-08T21:01:15.422Z"
+      }
+    ],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T21:01:03.588Z",
+    "updated_at": "2026-09-08T21:04:28.803Z",
+    "events": [
+      {
+        "time": "2026-09-08T21:01:03.588Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:04.309Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:05.564Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:06.824Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:06.831Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:08.283Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:08.796Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:09.730Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/full-clean-activation-command.test.js",
+          "session_id": "aXj-nY6ugTQk8emqb15NW6Wh"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:12.139Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/full-clean-activation-command.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:13.331Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- scripts/full-clean-activation.js tests/full-clean-activation-command.test.js",
+          "session_id": "J0oy7AWT1i2zdTVJY9OIW9Ll"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:13.753Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- scripts/full-clean-activation.js tests/full-clean-activation-command.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:14.672Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:14.679Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:15.019Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:15.022Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:15.286Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "217b660267f70073e5866245a0445834e92f716c66dcd7c984b5c3ecd9ad0c96"
+        }
+      },
+      {
+        "time": "2026-09-08T21:01:15.422Z",
+        "event": "files_modified",
+        "details": {
+          "count": 2
+        }
+      },
+      {
+        "time": "2026-09-08T21:03:48.748Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:03:54.045Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T21:03:54.049Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:03:54.354Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "cb8a717ddfe143addbc6699ca11f1fdbedf80b11a88c927b95375af4c260d559"
+        }
+      },
+      {
+        "time": "2026-09-08T21:04:03.735Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T21:04:18.421Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "cb8a717ddfe143addbc6699ca11f1fdbedf80b11a88c927b95375af4c260d559"
+        }
+      },
+      {
+        "time": "2026-09-08T21:04:28.803Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T21:04:42.344Z",
+    "archive_reason": "cleared"
+  }
+]

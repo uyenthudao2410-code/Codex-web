@@ -1,0 +1,385 @@
+{
+  "version": 2,
+  "task_id": "59b7a0d3f9a340959bec2c34c1a5c149",
+  "orchestration": {
+    "run_id": "00a0931613d843dfa0374018c9ea9006",
+    "wave_id": "fa170acb759e46bfba1544383167b10f",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "23b17216abbcc2870d18de5d362f6d1e3bc18d6ca80c927acd6aaa709cdf9acc",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "RyOjYlwfrQ_Cr_1-RTmWgqTw",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 691,
+    "finished_at": "2026-09-09T17:56:49.821Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 27,
+        "head_hash": "c8be459963a83ca66ab45bd20adecf75591242da4f94ca8bca183028af50cfd0"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-00a0931613d843dfa0374018c9ea9006\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-00a0931613d843dfa0374018c9ea9006\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "00a0931613d843dfa0374018c9ea9006",
+      "wave_id": "fa170acb759e46bfba1544383167b10f",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "23b17216abbcc2870d18de5d362f6d1e3bc18d6ca80c927acd6aaa709cdf9acc",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #11: harden only the Windows test temp-tree cleanup boundary in tests/recovery-supervisor.test.js. Preserve all pre-existing dirty WIP, process kill/wait ordering, assertions, and production Recovery Supervisor behavior. Retry only bounded transient Windows sharing/access errors by re-running whole-tree removal; rethrow non-transient and exhausted errors. Add deterministic fault-injection coverage and prove repeated full-file stability.",
+        "objective_revision": 1,
+        "objective_sha256": "a067c7a9ad4b10a4d40857c46680ee81b25c47af6231518f49d4f1a3563b6dfd",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "1e27691804b10e24c1793b851e8abec823c61fdc2db4f9b60dc9fe833b2ab641",
+  "completion_report_acknowledged_id": "1e27691804b10e24c1793b851e8abec823c61fdc2db4f9b60dc9fe833b2ab641",
+  "completion_report_acknowledged_at": "2026-09-09T17:57:35.085Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-09T17:49:41.076Z",
+  "updated_at": "2026-09-09T17:57:35.089Z",
+  "events": [
+    {
+      "time": "2026-09-09T17:49:41.076Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T17:49:41.441Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$hits = rg -l -i 'EPERM|EBUSY' '.coding-tools\\orchestration\\reports' -g 'wave-*.md'; Write-Output ('wave_reports_with_windows_teardown_signal=' + @($hits).Count); $hits | Select-Object -First 20\"",
+        "session_id": "QcpD84R8BNkz9Uig98mVaez4"
+      }
+    },
+    {
+      "time": "2026-09-09T17:49:42.089Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$hits = rg -l -i 'EPERM|EBUSY' '.coding-tools\\orchestration\\reports' -g 'wave-*.md'; Write-Output ('wave_reports_with_windows_teardown_signal=' + @($hits).Count); $hits | Select-Object -First 20\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:49:56.260Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- tests\\recovery-supervisor.test.js && git diff --check -- tests\\recovery-supervisor.test.js",
+        "session_id": "VwIcuOGNxnRNkU2OjqHjzTsc"
+      }
+    },
+    {
+      "time": "2026-09-09T17:49:56.602Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- tests\\recovery-supervisor.test.js && git diff --check -- tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:50:04.604Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff -- tests\\recovery-supervisor.test.js",
+        "session_id": "rpyDoW1Cr1YvoUgeHFjpu9Du"
+      }
+    },
+    {
+      "time": "2026-09-09T17:50:04.959Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff -- tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:50:36.207Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"maxRetries|retryDelay|EPERM|EBUSY|EACCES|removeTemp\" tests -g \"*.js\"",
+        "session_id": "lch6-yc7R1d7_wx5y6Q7cF_A"
+      }
+    },
+    {
+      "time": "2026-09-09T17:50:36.543Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"maxRetries|retryDelay|EPERM|EBUSY|EACCES|removeTemp\" tests -g \"*.js\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:51:40.352Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests\\recovery-supervisor.test.js",
+        "session_id": "YR94UmMqFKTE2SMAn27dyw0F"
+      }
+    },
+    {
+      "time": "2026-09-09T17:52:03.878Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:52:04.393Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "YR94UmMqFKTE2SMAn27dyw0F",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "f1f5fc96b57278b91eac394e902505abd4272cf0aa5aba44346662367971517a"
+      }
+    },
+    {
+      "time": "2026-09-09T17:52:45.248Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T17:52:56.962Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "f1f5fc96b57278b91eac394e902505abd4272cf0aa5aba44346662367971517a"
+      }
+    },
+    {
+      "time": "2026-09-09T17:53:07.962Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:53:14.418Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:53:14.425Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-09T17:54:52.909Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$c=Get-Content 'tests\\recovery-supervisor.test.js'; $c[0..150]\"",
+        "session_id": "J-9Ct_noyrJTufYNaiy1THNs"
+      }
+    },
+    {
+      "time": "2026-09-09T17:54:53.415Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$c=Get-Content 'tests\\recovery-supervisor.test.js'; $c[0..150]\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:03.726Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 \"function removeTemp|function waitForExit|function killFixtureTree\" tests\\recovery-supervisor.test.js",
+        "session_id": "n3PnuYbX-gf6BODEkwlznYOs"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:04.253Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 \"function removeTemp|function waitForExit|function killFixtureTree\" tests\\recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:13.070Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 'tests\\recovery-supervisor.test.js').Hash.ToLower()\"",
+        "session_id": "ZODxXW4xVTSH5ZUoCL3jlC1X"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:13.745Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"(Get-FileHash -Algorithm SHA256 'tests\\recovery-supervisor.test.js').Hash.ToLower()\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:41.655Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:42.449Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-09T17:55:43.363Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "EXISTING_FILE_ADOPTION_PATCH_CONFLICT"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:16.246Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:26.315Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "FINAL_ACCEPTANCE_NOT_READY"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:40.712Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 12 \"PREPARED_RUN_BINDING_MISMATCH|EXISTING_FILE_ADOPTION_PATCH_CONFLICT|current compatible prepare lineage\" resources\\coding-tools-mcp\\coding_tools_mcp -g \"*.py\"",
+        "session_id": "E53rtWX894dlULjnsNqfj-7G"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:41.178Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 \"PREPARED_RUN_BINDING_MISMATCH|EXISTING_FILE_ADOPTION_PATCH_CONFLICT|current compatible prepare lineage\" resources\\coding-tools-mcp\\coding_tools_mcp -g \"*.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:49.214Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$c=Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\prepared_workflow_binding.py'; $c[120..205]\"",
+        "session_id": "RyOjYlwfrQ_Cr_1-RTmWgqTw"
+      }
+    },
+    {
+      "time": "2026-09-09T17:56:49.821Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$c=Get-Content 'resources\\coding-tools-mcp\\coding_tools_mcp\\prepared_workflow_binding.py'; $c[120..205]\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:14.985Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "1e27691804b10e24c1793b851e8abec823c61fdc2db4f9b60dc9fe833b2ab641"
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:24.592Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T17:57:35.085Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "1e27691804b10e24c1793b851e8abec823c61fdc2db4f9b60dc9fe833b2ab641"
+      }
+    }
+  ]
+}

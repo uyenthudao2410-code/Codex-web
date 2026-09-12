@@ -94,8 +94,9 @@
 
 
           <div class="da-section">
-            <!-- Token dashboard lives in renderer/token-dashboard.html (standalone window).
-                 Open it with #daTokenBoardButton in the hero above. -->
+            <!-- Token dashboard embedded directly in Tổng quan Vận hành.
+                 Standalone window stays available via #daTokenBoardButton. -->
+            <iframe id="overviewTokenFrame" src="token-dashboard.html?embedded=1" title="Bảng token & hiệu quả" loading="lazy"></iframe>
             <article class="cc-card legacy-overview" id="runtimeSourceStatusCard">
               <div class="cc-card-head"><div><h3>Loaded runtime source</h3><p>Ba component chỉ CURRENT khi running revision khớp disk; Tunnel dùng READY theo health receipt, không giả làm source revision.</p></div><span id="runtimeSourceSummary" class="cc-pill is-waiting">Đang kiểm tra</span></div>
               <div class="cc-card-body cc-evidence-summary">

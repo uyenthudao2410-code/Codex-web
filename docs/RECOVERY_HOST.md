@@ -59,6 +59,16 @@ khóa app root, executable và SHA-256 executable; binary đổi thì yêu cầu
 Sau spawn có cooldown 20 giây; tối đa 4 lần trong 10 phút rồi suppress 5 phút.
 Status secret-free nằm ở `%APPDATA%\\web-mcp-assistant\\recovery-supervisor-status.json`.
 
+Các ranh giới thay thế Recovery Host dùng probe identity riêng cho lifecycle:
+PowerShell broker được giữ sống giữa các lần kiểm tra, mỗi probe có ngân sách tối
+đa 10 giây và chỉ retry tối đa 2 lần khi kết quả là `unavailable`. Kết quả `live`,
+`absent` hoặc start-token khác được xử lý ngay; PID/start-token mismatch vẫn tuyệt
+đối không được đi tới `taskkill`. Nếu bootstrap đã dừng MCP/Tunnel nhưng một guard
+sau đó từ chối handoff, runtime cũ chỉ được phục hồi qua chính descriptor đã xác
+thực khi descriptor, PID và process-start token vẫn khớp tuyệt đối. Receipt lỗi
+bootstrap vẫn được giữ nguyên; descriptor đổi hoặc PID tái sử dụng thì không có
+rollback mutation.
+
 Trong đường `ensureRecoveryHost` development thông thường, `stop.request` chỉ
 được tạo ngay trước khi thực sự retire/handoff Recovery Host khác checkout hoặc
 spawn Host đang thiếu, và chỉ khi installed Supervisor chưa khớp exact
@@ -84,6 +94,15 @@ npm run recovery:supervisor:install
 npm run recovery:supervisor:status
 npm run recovery:supervisor:uninstall
 ```
+
+`recovery:supervisor:install` là replacement có kiểm soát: nó đặt stop sentinel,
+dừng và gỡ Scheduled Task cũ, rồi chờ có giới hạn cho đúng PID supervisor đã
+publish thoát trước khi copy/register/start bản mới. PID cũ không thoát làm
+installer fail-closed; installer không dùng kill theo tên hay thay một PID tùy
+ý. Thành công chỉ được trả sau heartbeat mới chứng minh PID sống, capability
+`deferred_activation_worker_v1=true`, manifest đúng bản vừa cài và state không
+phải `stopping`, `uninstalled` hay `duplicate_supervisor`. Trạng thái `Ready` hay
+`Running` của Task Scheduler chỉ là tín hiệu phụ, không thay cho heartbeat này.
 
 Supervisor không sở hữu Coding MCP/Tunnel. Nó chỉ chịu trách nhiệm bounded
 resurrection của Recovery Host. **Phase 3B independent Recovery MCP/Tunnel đã có
@@ -195,6 +214,22 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   mutating signal to the exact
   `development` installation identity from the authenticated Recovery Host
   descriptor. They never scan by process name or accept an arbitrary PID.
+- `npm start` / `npm run dev` also handle cold start: an absent/dead Recovery
+  Host, or fresh same-installation telemetry plus PID checks proving both
+  primary services stopped (without an operator manual-stop intent), enters
+  the existing guarded full-clean lifecycle. This creates a new activation
+  epoch instead of spawning MCP under a terminal READY record from an earlier
+  process/Windows boot. A missing UI alone still only launches the UI; a
+  healthy runtime is focused and preserved. Transport errors, stale/busy
+  telemetry, live/partial services or a foreign installation never authorize
+  an implicit refresh. The canonical census and active-epoch reconciliation
+  remain authoritative before any replacement.
+- Windows `taskkill /T` can return nonzero while the exact root is finishing
+  termination because descendants are exiting concurrently. The lifecycle
+  waits for bounded PID + creation-token exit proof without retrying the kill
+  or parsing localized output. A still-live root or unverifiable identity
+  remains a failure. Bootstrap failure receipts retain bounded cause/exit
+  codes (not stdout, argv or secrets) for subsequent diagnosis.
 - `npm run dev:refresh` requests the explicit `full_clean_refresh` transaction. Recovery
   Host closes admission, captures the canonical ledger census, stops the exact
   owned child set, hands off to a new Recovery Host and starts fresh MCP,
@@ -222,10 +257,24 @@ that Recovery MCP/Tunnel identity must not be folded back into primary runtime s
   its exact component projection with bounded live MCP/PID observations;
   lightweight UI status only consumes that completed projection and never starts
   a second heavy OS-identity/Tunnel census. The first
-  cached-client `workspace_context` call can therefore return a retryable
-  bootstrap envelope. If the exact SHA compatibility boundary is valid, that
-  receipt lets the watchdog run final census, guarded ACK and admission-open;
-  otherwise the breaking contract remains fail-closed until strict discovery.
+  cached-client `workspace_context` call publishes its exact attested
+  no-workspace receipt before waiting up to 25 seconds for admission. The wait
+  holds no activation lock or active workspace-tool count, so the watchdog can
+  finish census/ACK. At most four calls wait concurrently; excess callers get
+  the pending response immediately. If the exact SHA compatibility boundary
+  is valid and admission opens, the same request/task context proceeds through
+  ordinary workspace validation and returns real workspace data. No client
+  retry is needed for that case. Otherwise it returns `status=activation_pending`,
+  `completed=false`, `workspace_accessed=false`, a bounded `retry_after_ms`
+  and the startup deadline/epoch in `activation`. Model text explicitly says
+  pending, never falsely `workspace_context: completed`. Several short retries
+  alone do not establish an outage/stall. Expiry or rollback is terminal and
+  non-retryable in that process; waiting never extends activation authority.
+  A successful workspace read (including a content-cache hit) reports
+  `completed=true`, `workspace_accessed=true` and a fresh admission snapshot.
+  Those flags describe only that read, not RUN/Problem acceptance; the original
+  bootstrap receipt remains `workspace_accessed=false`. Breaking contracts
+  still fail closed until strict discovery.
 - A watchdog census may reuse the exact durable projection-rebuild receipt only
   while the epoch remains `VERIFYING`, admission remains `CLOSED`, the connector
   is the sole incomplete gate, and all recorded process, workspace, device,
@@ -524,6 +573,64 @@ minh canonical preflight bằng protocol mới, nên không được tự fallba
 kill/restart. Operator chỉ bootstrap trong maintenance window đã xác nhận
 canonical runtime idle; sau khi host và MCP mới đã load, mọi activation tiếp
 theo phải đi qua protocol controlled ở trên.
+
+### Trusted mixed-version Recovery Host bootstrap
+
+Khi chính Recovery Host đang chạy còn phiên bản selector cũ và vì vậy không thể
+tự tìm source authority của bản sửa `recovery_host`, chỉ dùng entry point cố
+định sau đây. Đây là recovery boundary một lần, không phải một loại restart mới:
+
+```text
+node scripts/trusted-recovery-bootstrap.js --preflight
+node scripts/trusted-recovery-bootstrap.js
+```
+
+Lệnh không nhận checkpoint, RUN/WAVE, path, PID, shell command, URL hoặc
+operation ID. Nó tự suy ra Git root từ checkout cố định và chỉ chọn checkpoint
+accepted mới nhất thỏa đồng thời tất cả điều kiện sau: `git_head` đúng HEAD hiện
+tại; evaluator hiện hành trả `eligible=true` và `code=ACTIVATABLE`;
+`affected_components` đúng bằng `['recovery_host']`; và toàn bộ accepted-file
+receipt không rỗng, complete, provenance hợp lệ, và còn khớp SHA-256/byte trên
+disk. Checkpoint chỉ ảnh hưởng `coding_mcp`, checkpoint zero-target,
+multi-component, stale/malformed receipt, hoặc nguồn khác HEAD đều bị từ chối.
+Không được dùng checkpoint của component khác để khởi động sửa chữa Recovery
+Host.
+
+`--preflight` chỉ đọc Git/ledger/receipt và không tạo durable operation. Trên
+Windows nó còn yêu cầu một heartbeat mới, process còn sống và capability
+`deferred_activation_worker_v1=true` từ Recovery Supervisor. Điều kiện này là
+bắt buộc vì mọi tiến trình con của `exec_command` nằm trong Job Object
+`KILL_ON_JOB_CLOSE`; gắn `detached=true` không tạo durable handoff và worker sẽ
+bị dừng khi tool call đóng.
+
+Lệnh không có cờ này tạo đúng một deferred full-clean request. Recovery
+Supervisor độc lập đọc queue cố định trong data root, chỉ nhận request
+development có `trusted_recovery_bootstrap`, tạo launch claim một lần và chạy
+fixed `scripts/full-clean-activation.js --deferred-worker <request>` bằng
+Electron executable đã pin hash với `ELECTRON_RUN_AS_NODE=1`. Không có shell
+text/caller command, không truyền credential/provider key và không tự retry
+launch claim. Khi worker spawn Recovery Host hoặc Electron UI thật, launcher
+loại bỏ `ELECTRON_RUN_AS_NODE` cùng các biến chỉ dành cho deferred worker trước
+khi qua process boundary. Trong lúc Recovery Host bootstrap mới đã sở hữu
+handoff nhưng durable epoch mới chưa được publish, controller cho phép quan sát
+epoch cũ như trạng thái chuyển tiếp; readiness cuối vẫn bắt buộc operation,
+epoch, process identity và revision mới khớp chính xác. Request mang attestation integrity-protected gồm identity của
+checkpoint và digest receipt. Worker xác minh lại toàn bộ envelope/source ngay
+trước khi old host bị dừng, và Recovery Host thay thế xác minh lần nữa trước
+khi tạo durable epoch. Bất kỳ source/head/receipt/workspace/supervisor mismatch
+nào đều fail-closed trước mutation còn lại.
+
+Deferred trusted bootstrap và command poll dùng cùng cửa sổ tối đa năm phút.
+Cửa sổ này bao gồm cả cold-start/census và lượt compatibility bootstrap của
+connector thật sau khi process mới vào `VERIFYING`; nó không nới TTL 55 giây
+của authenticated request gửi trực tiếp cho current host, và mọi READY commit
+vẫn bị từ chối tại hoặc sau durable expiry chính xác.
+
+Entry point này không thay cho `npm run dev:refresh`, `task_control` restart,
+source-less refresh, raw IPC/HTTP, hoặc process kill. Việc gửi được deferred chỉ
+chứng minh request đã được tạo; activation chỉ hoàn tất sau normal full-clean
+census, exact process/instance/revision postflight, connector freshness/ACK và
+admission gate. Không tự viết/sửa ledger hoặc receipt để làm preflight pass.
 
 ## Current scope and rollback
 

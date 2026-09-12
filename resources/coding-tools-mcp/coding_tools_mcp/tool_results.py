@@ -33,6 +33,27 @@ def make_tool_result(
 def render_tool_text(tool_name: str, payload: dict[str, Any], *, is_error: bool) -> str:
     if is_error or payload.get("ok") is False:
         return _render_error(payload)
+    bootstrap = payload.get("activation_bootstrap")
+    if (tool_name == "workspace_context" and isinstance(bootstrap, dict)
+            and bootstrap.get("kind") == "connector_compatibility_bootstrap"
+            and bootstrap.get("retry_required") is True):
+        activation = payload.get("activation") if isinstance(payload.get("activation"), dict) else {}
+        lines = [
+            "workspace_context: activation pending; workspace has NOT been accessed.",
+            f"Activation epoch: {bootstrap.get('activation_epoch_id') or 'unavailable'}.",
+        ]
+        retry_after = payload.get("retry_after_ms")
+        expires_at = activation.get("expires_at_unix_ms")
+        if isinstance(retry_after, int) and not isinstance(retry_after, bool) and retry_after > 0:
+            lines.append(f"Retry workspace_context after {retry_after} ms using the same task context and arguments.")
+        if isinstance(expires_at, int) and not isinstance(expires_at, bool) and expires_at > 0:
+            lines.append(f"Activation deadline (Unix ms): {expires_at}.")
+        lines.extend([
+            "Admission is still closed; a pending reply or retry count alone does not prove a stall or an outage.",
+            "Recovery Host owns final verification. Do not restart or mutate RUN/Problem state merely because several retries are pending.",
+            "A later successful read returns workspace data, completed=true and workspace_accessed=true. This earlier bootstrap receipt remains workspace_accessed=false.",
+        ])
+        return "\n".join(lines)
     renderer = _RENDERERS.get(tool_name)
     if renderer is not None:
         return renderer(payload)

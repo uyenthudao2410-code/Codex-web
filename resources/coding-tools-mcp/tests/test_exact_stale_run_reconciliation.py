@@ -4,13 +4,16 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from coding_tools_mcp.ledger_analysis import LedgerReadSession
 from coding_tools_mcp.lifecycle_reconciliation import LifecycleReconciliationError, logical_ledger_sha256
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.stale_run_reconciliation import (
     ExactStaleRunReconciliationError,
+    preflight_exact_stale_runs_reconciliation,
     preflight_exact_stale_run_reconciliation,
+    reconcile_exact_stale_runs,
     reconcile_exact_stale_run,
 )
 
@@ -153,6 +156,111 @@ class ExactStaleRunReconciliationTests(unittest.TestCase):
             with LedgerReadSession(ledger.path) as session:
                 assert session.connection is not None
                 self.assertEqual(logical_ledger_sha256(session.connection), logical_ledger_sha256(session.connection))
+
+    def test_live_owned_managed_job_is_not_global_reconciliation_residue(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(objective="abandoned")
+            ledger.create_wave(run_id, execution_mode="mcp_only")
+            observed_at = self._future()
+
+            from coding_tools_mcp import stale_run_reconciliation as stale_module
+            original = stale_module.lifecycle_census
+
+            def with_live_owned_job(*args, **kwargs):
+                census = original(*args, **kwargs)
+                census["managed_jobs"] = [{"classification": "LIVE_OWNED", "run_id": "unrelated-live-run"}]
+                return census
+
+            with mock.patch.object(stale_module, "lifecycle_census", side_effect=with_live_owned_job):
+                preflight = preflight_exact_stale_run_reconciliation(root, run_id=run_id, observed_at=observed_at)
+
+            self.assertFalse(preflight["lifecycle"]["managed_job_residue"])
+
+    def test_managed_job_residue_classifications_still_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_id = ledger.create_run(objective="abandoned")
+            ledger.create_wave(run_id, execution_mode="mcp_only")
+            observed_at = self._future()
+
+            from coding_tools_mcp import stale_run_reconciliation as stale_module
+            original = stale_module.lifecycle_census
+
+            for classification in ("STALE_MANAGED_JOB_RESIDUE", "ORPHANED_OR_FOREIGN_MANAGED_JOB"):
+                with self.subTest(classification=classification):
+                    def with_residue(*args, _classification=classification, **kwargs):
+                        census = original(*args, **kwargs)
+                        census["managed_jobs"] = [{"classification": _classification}]
+                        return census
+
+                    with mock.patch.object(stale_module, "lifecycle_census", side_effect=with_residue):
+                        with self.assertRaisesRegex(ExactStaleRunReconciliationError, "managed_job_residue"):
+                            preflight_exact_stale_run_reconciliation(root, run_id=run_id, observed_at=observed_at)
+
+    def test_batch_uses_one_preflight_one_postflight_and_reconciles_all_targets(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_ids = [ledger.create_run(objective=f"abandoned-{index}") for index in range(4)]
+            for run_id in run_ids:
+                ledger.create_wave(run_id, execution_mode="mcp_only")
+            observed_at = self._future()
+
+            from coding_tools_mcp import stale_run_reconciliation as stale_module
+            with mock.patch.object(stale_module, "lifecycle_census", wraps=stale_module.lifecycle_census) as census:
+                receipt = reconcile_exact_stale_runs(
+                    root,
+                    run_ids=run_ids,
+                    observed_at=observed_at,
+                    runtime_stopped=True,
+                    authority="test-batch-authority",
+                ).projection()
+
+            self.assertEqual(census.call_count, 2)
+            self.assertTrue(receipt["reconciliation"]["changed"])
+            self.assertTrue(receipt["reconciliation"]["chain_ok"])
+            self.assertEqual([item["run_id"] for item in receipt["reconciliation"]["results"]], run_ids)
+            self.assertEqual([item["run_id"] for item in receipt["postflight"]["targets"]], run_ids)
+            for run_id in run_ids:
+                self.assertEqual(ledger.get_run(run_id)["status"], "stale")
+                self.assertTrue(ledger.verify_chain(run_id)["ok"])
+
+    def test_batch_guard_failure_rolls_back_without_prefix_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            run_ids = [ledger.create_run(objective=f"rollback-{index}") for index in range(3)]
+            for run_id in run_ids:
+                ledger.create_wave(run_id, execution_mode="mcp_only")
+            observed_at = self._future()
+            preflight = preflight_exact_stale_runs_reconciliation(root, run_ids=run_ids, observed_at=observed_at)
+            targets = [
+                {
+                    "run_id": target["run_id"],
+                    "status": target["status"],
+                    "latest_activity_at": target["latest_activity_at"],
+                    "last_event_seq": target["last_event_seq"],
+                    "last_event_hash": target["last_event_hash"],
+                }
+                for target in preflight["targets"]
+            ]
+            targets[1]["last_event_seq"] = int(targets[1]["last_event_seq"]) + 1
+
+            with self.assertRaisesRegex(LifecycleReconciliationError, "batch guard changed"):
+                ledger.reconcile_exact_stale_runs(
+                    targets=targets,
+                    expected_logical_sha256=str(preflight["snapshot"]["logical_sha256"]),
+                    observed_at_unix_seconds=observed_at,
+                    stale_after_seconds=float(preflight["stale_after_seconds"]),
+                    authority="test-batch-authority",
+                )
+            for run_id in run_ids:
+                self.assertEqual(ledger.get_run(run_id)["status"], "active")
+                self.assertFalse(any(item["event_type"] == "run_stale_reconciled" for item in ledger.list_events(run_id)))
+                self.assertTrue(ledger.verify_chain(run_id)["ok"])
 
 
 if __name__ == "__main__":

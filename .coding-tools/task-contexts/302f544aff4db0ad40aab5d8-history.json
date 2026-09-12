@@ -1,0 +1,665 @@
+[
+  {
+    "version": 2,
+    "task_id": "0f00c96d53ae4aa69fc4d5eba83ef341",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T15:41:33.368Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-10T15:41:14.980Z",
+    "updated_at": "2026-09-10T15:41:33.368Z",
+    "events": [
+      {
+        "time": "2026-09-10T15:41:14.980Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T15:41:15.871Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --numstat -- electron resources/coding-tools-mcp tests",
+          "session_id": "fvClx4aCWXuJr4Av9sv9g_a_"
+        }
+      },
+      {
+        "time": "2026-09-10T15:41:16.426Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --numstat -- electron resources/coding-tools-mcp tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:41:33.368Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import hashlib,subprocess; hs=set('746ec208716f3c393136a9fe635a3d587332e72ca881b8d42441f199dc05f0d0 83a36311532fa0599c458b958b8c02cb187cf29407e118c1c3523512dc038d1d a9d9bd3d63b70ff776893260886781bd73efcb79961467e5e813b5f7e580cb28 c8db703774131bd1e6e57e7a4a6ce28a091c4cc4e06d5f3d4ddaa9f44762be5b d26babf4803ac63f9da8f41503879776892f456b3d9c4fcb184610527aca0531 f2c12eebe43fecf1e39d5d86f77c31894c47501dafc4ab60ea014bc60eaa2c2b ff68fc0bac26925ace10bd92faa61548865df5d93f838af71bbf2bdca002b984",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:41:33.368Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T15:42:20.809Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "32e1e00b9cdf41fe8f05d76d736085be",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T15:46:34.653Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-10T15:42:20.810Z",
+    "updated_at": "2026-09-10T15:46:34.653Z",
+    "events": [
+      {
+        "time": "2026-09-10T15:42:20.810Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T15:42:21.587Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --name-only",
+          "session_id": "AQt5IIlxqeAuVXcnVfrK3IyP"
+        }
+      },
+      {
+        "time": "2026-09-10T15:42:22.080Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --name-only",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:42:57.337Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short --untracked-files=all",
+          "session_id": "s2gWgKQCdmYNoGfmbaD-7YOv"
+        }
+      },
+      {
+        "time": "2026-09-10T15:42:57.779Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short --untracked-files=all",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:43:28.079Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --unified=3 -- electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py tests/control-center-receipt.test.js",
+          "session_id": "M7sCeya52O3UKdiGXcruRgyg"
+        }
+      },
+      {
+        "time": "2026-09-10T15:43:28.608Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --unified=3 -- electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py tests/control-center-receipt.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:00.216Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:08.978Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "SESSION_NOT_FOUND"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:21.863Z",
+        "event": "command_started",
+        "details": {
+          "command": "type tests\\control-center-receipt.test.js",
+          "session_id": "5CH6UvCo-AADkvQyHmuGycNT"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:22.341Z",
+        "event": "command_finished",
+        "details": {
+          "command": "type tests\\control-center-receipt.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:33.405Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:54.414Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"record_continuity_read_receipt|record_goal_runtime_receipts|record_accepted_remaining_criterion|record_execution_control_center_progress|control_center_receipt\" resources\\coding-tools-mcp\\coding_tools_mcp",
+          "session_id": "-jvdr2ovPSC0vyGdbF3P5UE4"
+        }
+      },
+      {
+        "time": "2026-09-10T15:45:54.896Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"record_continuity_read_receipt|record_goal_runtime_receipts|record_accepted_remaining_criterion|record_execution_control_center_progress|control_center_receipt\" resources\\coding-tools-mcp\\coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:08.279Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 \"record_goal_runtime_receipts|record_continuity_read_receipt|record_execution_control_center_progress|record_accepted_remaining_criterion\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "session_id": "_NsQuaOjR9ZXYF7YAdqD7hza"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:08.871Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"record_goal_runtime_receipts|record_continuity_read_receipt|record_execution_control_center_progress|record_accepted_remaining_criterion\" resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:20.608Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 \"attestation_verified|attested_transport|CONNECTOR_ATTESTATION_HEADER\" resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py electron\\services\\connectorAttestation.js",
+          "session_id": "XNlmyTneKRsb7JbVT3FJimW_"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:21.123Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"attestation_verified|attested_transport|CONNECTOR_ATTESTATION_HEADER\" resources\\coding-tools-mcp\\coding_tools_mcp\\mcp_http_handler.py resources\\coding-tools-mcp\\coding_tools_mcp\\server.py electron\\services\\connectorAttestation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:34.653Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 \"identity_source.*attested_transport|attestation_verified|connector_attestation\" resources\\coding-tools-mcp\\coding_tools_mcp",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:34.653Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T15:46:44.322Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "37e6eeb48e4c41bf8b970989cf85b24c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-10T15:55:25.907Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "hjpvNiSjvVjxble4Pfk_Ijde",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "hjpvNiSjvVjxble4Pfk_Ijde",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+          "branch": "main",
+          "worktree_fp": "200185f726f4a202cfe54fc6e64ce6be3bd5ed943c088375dda83804411ec63d",
+          "dirty_paths": [
+            "docs/CURRENT_STATE.md",
+            "docs/RECOVERY_HOST.md",
+            "electron/main.js",
+            "electron/services/chatEvaluationJournal.js",
+            "electron/services/componentRevision.js",
+            "electron/services/fullCleanActivation.js",
+            "electron/services/processIdentity.js",
+            "electron/services/recoveryActionStore.js",
+            "electron/services/recoveryActivation.js",
+            "electron/services/recoveryBootstrap.js",
+            "electron/services/recoveryHost.js",
+            "electron/services/recoveryHostLauncher.js",
+            "electron/services/recoveryIpc.js",
+            "electron/services/runtimeOrchestrator.js",
+            "renderer/control-center.css",
+            "renderer/control-center.js",
+            "renderer/dashboard.js",
+            "renderer/index.html",
+            "renderer/token-dashboard.html",
+            "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/activation_capability.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/completion_readiness.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/rework_diagnosis.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/task_state.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_results.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+            "resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+            "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+            "resources/coding-tools-mcp/tests/test_activation_epoch.py",
+            "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+            "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+            "resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+            "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "resources/coding-tools-mcp/tests/test_execution_hub.py",
+            "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+            "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+            "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+            "resources/coding-tools-mcp/tests/test_resolution_contract.py",
+            "resources/coding-tools-mcp/tests/test_rework_diagnosis.py",
+            "resources/coding-tools-mcp/tests/test_run_continuation.py",
+            "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+            "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+            "resources/coding-tools-mcp/tests/test_workspace_binding.py",
+            "resources/recovery-supervisor/recovery-supervisor.ps1",
+            "scripts/dev-ui-lifecycle.js",
+            "scripts/full-clean-activation.js",
+            "tests/accepted-code-activation.test.js",
+            "tests/chat-evaluation-journal.test.js",
+            "tests/component-revision.test.js",
+            "tests/control-center-truthfulness.test.js",
+            "tests/dev-ui-lifecycle.test.js",
+            "tests/full-clean-activation-command.test.js",
+            "tests/full-clean-activation.test.js",
+            "tests/live-supervisor-e2e.test.js",
+            "tests/process-identity.test.js",
+            "tests/recovery-activation.test.js",
+            "tests/recovery-bootstrap.test.js",
+            "tests/recovery-host.test.js",
+            "tests/recovery-supervisor.test.js",
+            "tests/runtime-lifecycle.test.js",
+            ".harness/epoch-transition/writer.lock",
+            "docs/CONTINUATION_CLOSURE_PLAN.md",
+            "electron/services/trustedRecoveryBootstrap.js",
+            "resources/coding-tools-mcp/coding_tools_mcp/app_server_persistence.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/task_snapshot_projection.py",
+            "resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+            "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+            "resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+            "resources/coding-tools-mcp/tests/test_lifecycle_census_cli.py",
+            "scripts/trusted-recovery-bootstrap.js",
+            "tests/control-center-receipt.test.js",
+            "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs",
+            "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs",
+            "tests/trusted-recovery-bootstrap.test.js"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "37e6eeb48e4c41bf8b970989cf85b24c",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "0736a11b76c0d131e74150585eeba33196e6dc8d41c4c6e3ef080c0bb9284f3f",
+    "completion_report_acknowledged_id": "0736a11b76c0d131e74150585eeba33196e6dc8d41c4c6e3ef080c0bb9284f3f",
+    "completion_report_acknowledged_at": "2026-09-10T15:55:40.538Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-10T15:46:44.325Z",
+    "updated_at": "2026-09-10T15:55:40.543Z",
+    "events": [
+      {
+        "time": "2026-09-10T15:46:44.325Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:45.071Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 8 attestation_verified resources\\coding-tools-mcp\\coding_tools_mcp",
+          "session_id": "ivws5DGv9BnLWIdtRHdIGNGG"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:45.606Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 8 attestation_verified resources\\coding-tools-mcp\\coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:57.298Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"verify_connector_attestation|identity_source\" resources\\coding-tools-mcp\\coding_tools_mcp\\http_hub_identity.py",
+          "session_id": "Xg5iqhutW4ft8icIzBGHUT75"
+        }
+      },
+      {
+        "time": "2026-09-10T15:46:57.820Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"verify_connector_attestation|identity_source\" resources\\coding-tools-mcp\\coding_tools_mcp\\http_hub_identity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:47:15.746Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "session_id": "8pjmkSx2f-Y5Bfxp_qAfm3NA"
+        }
+      },
+      {
+        "time": "2026-09-10T15:47:16.262Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- electron/main.js electron/services/recoveryHost.js electron/services/recoveryIpc.js electron/services/runtimeOrchestrator.js resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py resources/coding-tools-mcp/tests/test_cross_session_continuity_report.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:52:16.404Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests\\control-center-receipt.test.js",
+          "session_id": "Tj69ZBTVGzwOAemOQGptOij8"
+        }
+      },
+      {
+        "time": "2026-09-10T15:52:16.844Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests\\control-center-receipt.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:52:30.629Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest tests.test_cross_session_continuity_report.CrossSessionContinuityReportTests.test_runtime_producers_complete_cross_session_receipt_without_direct_observation_inserts",
+          "session_id": "hjpvNiSjvVjxble4Pfk_Ijde"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:00.629Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest tests.test_cross_session_continuity_report.CrossSessionContinuityReportTests.test_runtime_producers_complete_cross_session_receipt_without_direct_observation_inserts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:01.198Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "hjpvNiSjvVjxble4Pfk_Ijde",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "0736a11b76c0d131e74150585eeba33196e6dc8d41c4c6e3ef080c0bb9284f3f"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:14.488Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"cross_session_continuity|TG6|tg6|accepted_real_cross_session_continuity_receipt\" resources\\coding-tools-mcp\\scripts resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests",
+          "session_id": "fJkG9L_1Ds2AfOgh5TlRYZNu"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:14.938Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"cross_session_continuity|TG6|tg6|accepted_real_cross_session_continuity_receipt\" resources\\coding-tools-mcp\\scripts resources\\coding-tools-mcp\\coding_tools_mcp resources\\coding-tools-mcp\\tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:29.808Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --help",
+          "session_id": "tiuE1O-SIAVZN8E4m9eAg2O9"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:30.328Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:44.213Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-de6e9424448ffa9ef199317aa1383378 --problem-revision 1",
+          "session_id": "ZyeHuwG_mLmHX1NoiCzTZ1xD"
+        }
+      },
+      {
+        "time": "2026-09-10T15:53:47.574Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-de6e9424448ffa9ef199317aa1383378 --problem-revision 1",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:54:39.171Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile electron\\main.js SHA256 && certutil -hashfile electron\\services\\recoveryHost.js SHA256 && certutil -hashfile electron\\services\\recoveryIpc.js SHA256 && certutil -hashfile electron\\services\\runtimeOrchestrator.js SHA256 && certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\product_session_receipts.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_cross_sessio",
+          "session_id": "sFcRui-kiPVeo9p_iLN-m_xS"
+        }
+      },
+      {
+        "time": "2026-09-10T15:54:39.704Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile electron\\main.js SHA256 && certutil -hashfile electron\\services\\recoveryHost.js SHA256 && certutil -hashfile electron\\services\\recoveryIpc.js SHA256 && certutil -hashfile electron\\services\\runtimeOrchestrator.js SHA256 && certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\coordination.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\product_session_receipts.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_cross_sessio",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:54:56.732Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"attestation|explicit_headers|attested_transport\" resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py",
+          "session_id": "_67L6Zh43sJl7zd7NAo5f99u"
+        }
+      },
+      {
+        "time": "2026-09-10T15:54:57.233Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"attestation|explicit_headers|attested_transport\" resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:55:13.022Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m unittest tests.test_stateless_http_2026.StatelessHTTP2026Tests.test_attestation_without_explicit_identity_is_observed_but_not_authoritative tests.test_stateless_http_2026.StatelessHTTP2026Tests.test_explicit_chatweb_headers_without_attestation_are_not_authoritative",
+          "session_id": "IuZUt5Njk-Dy_YZVHl8qprp2"
+        }
+      },
+      {
+        "time": "2026-09-10T15:55:13.724Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m unittest tests.test_stateless_http_2026.StatelessHTTP2026Tests.test_attestation_without_explicit_identity_is_observed_but_not_authoritative tests.test_stateless_http_2026.StatelessHTTP2026Tests.test_explicit_chatweb_headers_without_attestation_are_not_authoritative",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:55:25.907Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"^class \" resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-10T15:55:25.907Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-10T15:55:40.538Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "0736a11b76c0d131e74150585eeba33196e6dc8d41c4c6e3ef080c0bb9284f3f"
+        }
+      }
+    ],
+    "archived_at": "2026-09-10T15:55:48.657Z",
+    "archive_reason": "finished"
+  }
+]

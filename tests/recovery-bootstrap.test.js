@@ -15,6 +15,7 @@ const {
   removeBootstrapEnvelope,
   bootstrapCurrentRecoveryHost
 } = require('../electron/services/recoveryBootstrap');
+const { trustedAttestation } = require('../electron/services/trustedRecoveryBootstrap');
 
 const OPERATION_ONE = 'bootstrap-operation-000001';
 const OPERATION_TWO = 'bootstrap-operation-000002';
@@ -28,6 +29,30 @@ const SOURCE_CHECKPOINT = Object.freeze({
   proof_fingerprint: 'b'.repeat(64),
   git_head: 'c'.repeat(40)
 });
+
+function trustedSourceAttestation() {
+  return trustedAttestation({
+    eligible: true,
+    code: 'ACTIVATABLE',
+    source_checkpoint_id: SOURCE_CHECKPOINT.checkpoint_id,
+    run_id: SOURCE_CHECKPOINT.run_id,
+    wave_id: SOURCE_CHECKPOINT.wave_id,
+    proof_fingerprint: SOURCE_CHECKPOINT.proof_fingerprint,
+    accepted_head: SOURCE_CHECKPOINT.git_head,
+    affected_components: ['recovery_host'],
+    receipts: [{
+      path: 'electron/services/recoveryActionStore.js',
+      state: 'file',
+      sha256: 'd'.repeat(64),
+      size_bytes: 1,
+      receipt_kind: 'durable_wave_patch_surface',
+      run_id: SOURCE_CHECKPOINT.run_id,
+      wave_id: SOURCE_CHECKPOINT.wave_id,
+      restart_safe: true,
+      content_addressed: true
+    }]
+  });
+}
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-bootstrap-'));
@@ -130,6 +155,29 @@ test('bootstrap artifacts are operation-scoped and exact-envelope removal cannot
   assert.equal(fs.existsSync(secondPath), true);
 });
 
+test('bootstrap failure receipt retains only bounded termination diagnostics', (t) => {
+  const paths = fixture(t);
+  writeBootstrapResult(paths, {
+    operation_id: OPERATION_ONE,
+    state: 'failed',
+    error: {
+      code: 'RECOVERY_BOOTSTRAP_TERMINATION_FAILED',
+      message: 'Exact termination failed',
+      details: {
+        cause_code: 'PROCESS_TERMINATION_FAILED',
+        termination_cause_code: 'PROCESS_TERMINATION_TIMEOUT',
+        pid: 42424, exit_code: 128,
+        stdout: 'must not persist process output', token: 'must not persist secrets'
+      }
+    }
+  });
+  assert.deepEqual(readBootstrapResult(paths, OPERATION_ONE).error.details, {
+    cause_code: 'PROCESS_TERMINATION_FAILED',
+    termination_cause_code: 'PROCESS_TERMINATION_TIMEOUT',
+    pid: 42424, exit_code: 128
+  });
+});
+
 test('bootstrap results move monotonically and terminal receipts are immutable per operation', (t) => {
   const paths = fixture(t);
   writeBootstrapResult(paths, { operation_id: OPERATION_ONE, state: 'pending', completed_at_unix_ms: 1000 });
@@ -224,15 +272,174 @@ test('stale-host bootstrap reconciles a lost stop response through exact descrip
   assert.equal(readBootstrapEnvelope(paths, { bootstrapId: OPERATION_ONE }).old_host_instance_id, staleDescriptor.instance_id);
 });
 
-test('bootstrap host creates durable same-operation epoch before consuming request and never starts normal supervision', async (t) => {
+test('refused handoff restores children only through the still-exact old Recovery Host', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths);
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(staleDescriptor), 'utf8');
+  let stopCalls = 0;
+  let startCalls = 0;
+
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() },
+    paths,
+    client: {
+      stop: async () => { stopCalls += 1; },
+      start: async (options, callOptions) => {
+        startCalls += 1;
+        assert.deepEqual(options, { reason: 'bootstrap_handoff_rollback' });
+        assert.equal(callOptions.expectedOwnerPid, staleDescriptor.owner_pid);
+        assert.equal(callOptions.expectedInstanceId, staleDescriptor.instance_id);
+        assert.equal(callOptions.expectedOwnerProcessStartToken, OLD_PROCESS_START_TOKEN);
+      }
+    },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: SOURCE_CHECKPOINT,
+    expectedDiskRevision: REVISION,
+    processIdentityObserver: async (pid) => ({
+      state: 'live',
+      pid,
+      process_start_token: OLD_PROCESS_START_TOKEN
+    }),
+    terminateProcess: async () => {
+      throw Object.assign(new Error('transient probe unavailable'), { code: 'PROCESS_IDENTITY_UNVERIFIED' });
+    },
+    sleep: async () => {}
+  }), { code: 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED' });
+
+  assert.equal(stopCalls, 1);
+  assert.equal(startCalls, 1);
+  const receipt = readBootstrapResult(paths, OPERATION_ONE);
+  assert.equal(receipt.state, 'failed');
+  assert.equal(receipt.error.code, 'RECOVERY_BOOTSTRAP_PROCESS_IDENTITY_UNVERIFIED');
+});
+
+test('failed handoff never restores through a changed Recovery Host descriptor', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths);
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(staleDescriptor), 'utf8');
+  let descriptorReads = 0;
+  let startCalls = 0;
+
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() },
+    paths,
+    client: {
+      stop: async () => {},
+      start: async () => { startCalls += 1; }
+    },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: SOURCE_CHECKPOINT,
+    expectedDiskRevision: REVISION,
+    processIdentityObserver: async (pid) => ({
+      state: 'live',
+      pid,
+      process_start_token: OLD_PROCESS_START_TOKEN
+    }),
+    readDescriptor: () => {
+      descriptorReads += 1;
+      return { ...staleDescriptor, instance_id: 'replacement-host-instance-0001' };
+    },
+    sleep: async () => {}
+  }), { code: 'RECOVERY_BOOTSTRAP_TARGET_CHANGED' });
+
+  assert.equal(descriptorReads, 2);
+  assert.equal(startCalls, 0);
+});
+
+test('failed exact termination carries cause and exit code into the durable bootstrap receipt', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths);
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(staleDescriptor), 'utf8');
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() },
+    paths, descriptor: staleDescriptor,
+    client: { stop: async () => {} },
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE, sourceCheckpoint: SOURCE_CHECKPOINT, expectedDiskRevision: REVISION,
+    processIdentityObserver: async (pid) => ({ state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }),
+    terminateProcess: async () => {
+      throw Object.assign(new Error('failed kill'), {
+        code: 'PROCESS_TERMINATION_FAILED',
+        details: { cause_code: 'PROCESS_TERMINATION_TIMEOUT', exit_code: 128, stdout: 'not evidence' }
+      });
+    },
+    spawnProcess: () => assert.fail('a live root must prevent replacement')
+  }), { code: 'RECOVERY_BOOTSTRAP_TERMINATION_FAILED' });
+  assert.deepEqual(readBootstrapResult(paths, OPERATION_ONE).error.details, {
+    cause_code: 'PROCESS_TERMINATION_FAILED', termination_cause_code: 'PROCESS_TERMINATION_TIMEOUT',
+    pid: staleDescriptor.owner_pid, exit_code: 128
+  });
+});
+
+test('trusted bootstrap revalidates its recovery_host receipt before it can stop the old host', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths);
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(staleDescriptor), 'utf8');
+  const attestation = trustedSourceAttestation();
+  let validationCalls = 0;
+  let stopCalls = 0;
+  let alive = true;
+  const result = await bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() },
+    paths,
+    client: { stop: async () => { stopCalls += 1; } },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: SOURCE_CHECKPOINT,
+    expectedDiskRevision: REVISION,
+    trustedRecoveryBootstrap: attestation,
+    revalidateTrustedSourceFn: async (workspace, sourceCheckpoint, receivedAttestation) => {
+      validationCalls += 1;
+      assert.equal(workspace, paths.appRoot());
+      assert.deepEqual(sourceCheckpoint, SOURCE_CHECKPOINT);
+      assert.deepEqual(receivedAttestation, attestation);
+      return { source_checkpoint: sourceCheckpoint, attestation: receivedAttestation };
+    },
+    spawnProcess: () => ({ pid: 45002, once(event, listener) { if (event === 'spawn') queueMicrotask(listener); return this; }, unref() {} }),
+    processIdentityObserver: async (pid) => alive
+      ? { state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }
+      : { state: 'absent', pid, process_start_token: null },
+    terminateProcess: async () => { alive = false; },
+    sleep: async () => {}
+  });
+
+  assert.equal(validationCalls, 1);
+  assert.equal(stopCalls, 1);
+  assert.equal(result.required, true);
+  assert.deepEqual(readBootstrapEnvelope(paths, { bootstrapId: OPERATION_ONE }).trusted_recovery_bootstrap, attestation);
+
+  let rejectedStopCalls = 0;
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: true, getAppPath: () => paths.appRoot() },
+    paths,
+    client: { stop: async () => { rejectedStopCalls += 1; } },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_TWO,
+    sourceCheckpoint: SOURCE_CHECKPOINT,
+    expectedDiskRevision: REVISION,
+    trustedRecoveryBootstrap: attestation,
+    revalidateTrustedSourceFn: async () => { throw Object.assign(new Error('receipt changed'), { code: 'TRUSTED_BOOTSTRAP_SOURCE_DRIFT' }); }
+  }), { code: 'TRUSTED_BOOTSTRAP_SOURCE_DRIFT' });
+  assert.equal(rejectedStopCalls, 0);
+});
+
+test('bootstrap host revalidates trusted source before creating a durable same-operation epoch', async (t) => {
   const paths = fixture(t);
   const request = envelope(paths, OPERATION_ONE, {
-    descriptor: { owner_pid: 78001, instance_id: 'old-stale-host-0001' }
+    descriptor: { owner_pid: 78001, instance_id: 'old-stale-host-0001' },
+    trustedRecoveryBootstrap: trustedSourceAttestation()
   });
   writeBootstrapEnvelope(paths, request);
   writeBootstrapResult(paths, { operation_id: OPERATION_ONE, state: 'started' });
   let recoveryPlaneEnsures = 0;
   let ordinaryStarts = 0;
+  let trustedValidationCalls = 0;
   const orchestrator = {
     setFullCleanActivation() {},
     setActivationEpoch() {},
@@ -267,6 +474,13 @@ test('bootstrap host creates durable same-operation epoch before consuming reque
       ensure: async () => { recoveryPlaneEnsures += 1; return { state: 'healthy' }; }
     },
     bootstrap: request,
+    trustedRecoverySourceValidator: async (workspace, sourceCheckpoint, attestation) => {
+      trustedValidationCalls += 1;
+      assert.equal(workspace, paths.appRoot());
+      assert.deepEqual(sourceCheckpoint, SOURCE_CHECKPOINT);
+      assert.deepEqual(attestation, request.trusted_recovery_bootstrap);
+      return { source_checkpoint: sourceCheckpoint, attestation };
+    },
     processIdentityObserver: async (pid) => pid === process.pid
       ? { state: 'live', pid, process_start_token: CURRENT_PROCESS_START_TOKEN }
       : { state: 'absent', pid, process_start_token: null },
@@ -292,6 +506,7 @@ test('bootstrap host creates durable same-operation epoch before consuming reque
   assert.equal(status.activation_epoch.operation_id, OPERATION_ONE);
   assert.equal(status.activation_epoch.admission_open, false);
   assert.equal(status.state, 'bootstrapping');
+  assert.equal(trustedValidationCalls, 1);
   assert.equal(host.supervisionTimer, null);
   assert.equal(recoveryPlaneEnsures, 0);
   assert.equal(ordinaryStarts, 0);

@@ -1,0 +1,179 @@
+{
+  "version": 2,
+  "task_id": "19b96310cd0c4a4aac4556470a6a6eb2",
+  "orchestration": {
+    "run_id": "6d9a686618c8448da3a1ced8f317f88e",
+    "wave_id": "5f12658c3ff0403389f45bb3e702b8fc",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Converge Recovery Host and Coding MCP component state without source writes by no-patch provenance adoption of the pre-existing dirty subset and exact controller attestation of all 26 current component-file bytes, with fresh deterministic proof covering both runtime components.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T17:52:34.597Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "in_progress",
+      "updated_at": "2026-09-08T17:52:34.597Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-08T17:52:34.597Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "HQoXP1uczquPWMrEhbcn1kf8",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-08T17:53:40.379Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-08T17:52:27.815Z",
+  "updated_at": "2026-09-08T17:53:55.728Z",
+  "events": [
+    {
+      "time": "2026-09-08T17:52:27.815Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Converge Recovery Host and Coding MCP component state without source writes by no-patch provenance adoption of the pre-existing dirty subset and exact controller attestation of all 26 current component-file bytes, with fresh deterministic proof covering both runtime components."
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:29.240Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:31.433Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:32.692Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:32.701Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:34.123Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:34.597Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:52:35.733Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-reporter=spec tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "session_id": "HQoXP1uczquPWMrEhbcn1kf8"
+      }
+    },
+    {
+      "time": "2026-09-08T17:53:40.379Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-reporter=spec tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T17:53:41.888Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:53:41.888Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:53:42.147Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PERMISSION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:53:55.728Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

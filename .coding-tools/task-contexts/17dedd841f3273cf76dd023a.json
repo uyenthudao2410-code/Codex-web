@@ -1,0 +1,493 @@
+{
+  "version": 2,
+  "task_id": "c7bc7bdceb934f7fbd5622f082b909a4",
+  "orchestration": {
+    "run_id": "7a66e89515cf4fe6b99239715c584a2b",
+    "wave_id": "64a2db78d39a4226b9e8e5373f4650b5",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "027af408244ec5f2042ccce0f89dba13e1ce6087415305cc148f5970d6c1294a",
+    "contract_fp": ""
+  },
+  "objective": "Fresh exact-ID preflight for the three scoped unresolved stale orchestration RUNs after the accepted managed-job residue fix. Read-only only: do not reconcile, mutate source, restart runtime, commit, push, or alter unrelated lifecycle state.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-12T07:46:21.618Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-12T07:46:21.618Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "yXt4R6_Ql1Oiy10W_pbntHKc",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-12T07:46:21.222Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-stale-reconcile-managed-job-scope-20260912",
+      "problem_revision": 2,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "6318a54774a2a3b1454e65b0ce8d7b47645427923d16ec9e3a55d06969a0b864",
+      "objective_summary": "Fix exact stale-run reconciliation so the global managed_job_residue gate reflects only actual stale/orphan/foreign managed-process residue. A normal LIVE_OWNED managed job that has a valid canonical RUN parent, including the managed command performing the preflight, must not become a workspace-global self-blocker. Preserve fail-closed blocking for stale/orphan/foreign managed-job residue, unbound live resources, live ownership on the exact target, integrity/projection/P5 guards, and exact-ID reconciliation.",
+      "contract_capsule_included": true,
+      "contract_capsule_omission_reason": null,
+      "criteria": [
+        {
+          "criterion_id": "live_owned_job_not_global_residue",
+          "summary": "A canonical LIVE_OWNED managed job with a valid RUN parent does not by itself set managed_job_residue or block reconciliation of an unrelated stale target."
+        },
+        {
+          "criterion_id": "stale_or_orphan_job_still_blocks",
+          "summary": "STALE_MANAGED_JOB_RESIDUE and ORPHANED_OR_FOREIGN_MANAGED_JOB classifications still set managed_job_residue and block exact stale-run reconciliation."
+        },
+        {
+          "criterion_id": "target_and_unbound_live_guards_preserved",
+          "summary": "A target with live ownership and any live managed resource without a canonical RUN parent still fail closed through target_has_live_ownership and unbound_live_resource_residues respectively; integrity, projection and P5 guards remain unchanged."
+        },
+        {
+          "criterion_id": "three_outsiders_retriaged",
+          "summary": "After the source fix is proven, the three scoped outsider stale RUNs are each re-preflighted and only reconciled individually when all exact guards pass."
+        },
+        {
+          "criterion_id": "below_threshold_candidate_preserved",
+          "summary": "The additional threshold-sensitive candidate remains unreconciled while it is below the current stale threshold."
+        }
+      ],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 5,
+        "criteria_proven": 0,
+        "criteria_unresolved": 5,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "live_owned_job_not_global_residue",
+        "next_critical_gap": "A canonical LIVE_OWNED managed job with a valid RUN parent does not by itself set managed_job_residue or block reconciliation of an unrelated stale target.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 2,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 1,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [
+        "The active bugfix PREFLIGHT was originally bound to the prior revision and must not mutate source under the revised contract; a newly bound engineering wave is required."
+      ],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "7a66e89515cf4fe6b99239715c584a2b",
+        "wave_id": "64a2db78d39a4226b9e8e5373f4650b5",
+        "checkpoint_id": "35b4529c4b2c496daf16c55339bc4511"
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 3,
+      "latest_event": {
+        "seq": 164,
+        "event_id": "prl-bind-3cf911817235a9a7a3416504554a372d6d066b045262ba999d97440e07b6abf7",
+        "event_hash": "8e0549a98c5657a15b367c2478f455305bd164f45a8330d96587f865ef0562f5",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-12T07:45:54.652Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 4,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 2,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 2,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 41,
+        "head_hash": "7746946e3c1116cc082d9b107d591ccd85d2e4262cd7decb20f9d19431dc8059"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-7a66e89515cf4fe6b99239715c584a2b\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-7a66e89515cf4fe6b99239715c584a2b\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "7a66e89515cf4fe6b99239715c584a2b",
+      "wave_id": "64a2db78d39a4226b9e8e5373f4650b5",
+      "checkpoint_id": "35b4529c4b2c496daf16c55339bc4511",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "027af408244ec5f2042ccce0f89dba13e1ce6087415305cc148f5970d6c1294a",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fresh exact-ID preflight for the three scoped unresolved stale orchestration RUNs after the accepted managed-job residue fix. Read-only only: do not reconcile, mutate source, restart runtime, commit, push, or alter unrelated lifecycle state.",
+        "objective_revision": 1,
+        "objective_sha256": "84008d4cdaa2d65845ccbbbd703448e1dc7341d87e0cc5373c007d76fb171e58",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 3,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "039dedcfb96d46d6b5ea18941aca87b3",
+          "stage_id": "check:38d71a711ab9a633",
+          "status": "passed",
+          "duration_ms": 6884,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "de87ca3f9d14481c91e4a99b9cefe90d",
+          "stage_id": "check:d71a5d8400a37add",
+          "status": "passed",
+          "duration_ms": 5514,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "c1792f65b12f46c7a1c8d2f2e8453a58",
+          "stage_id": "check:3a4ed2f0dfd33bca",
+          "status": "passed",
+          "duration_ms": 6307,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "b71c108cd52c694f73e9271170cf62a0330ee6d4898da4eafb175204338c872c",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-12T07:45:52.445Z",
+  "updated_at": "2026-09-12T07:47:14.337Z",
+  "events": [
+    {
+      "time": "2026-09-12T07:45:52.446Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Fresh exact-ID preflight for the three scoped unresolved stale orchestration RUNs after the accepted managed-job residue fix. Read-only only: do not reconcile, mutate source, restart runtime, commit, push, or alter unrelated lifecycle state."
+      }
+    },
+    {
+      "time": "2026-09-12T07:45:54.990Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-12T07:45:57.137Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-12T07:45:58.622Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-12T07:45:58.630Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:00.392Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:01.115Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:02.053Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id c9a67701e8554ce2b21e3117212797f6",
+        "session_id": "1IMb9x-hnPoBuIi4fB59cZom"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:08.202Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id c9a67701e8554ce2b21e3117212797f6",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:09.466Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 9c633d2185d84ed4b86fa60f6bfb38ef",
+        "session_id": "8CDdb6vfIVMe1uFsCNPAvwX7"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:14.289Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 9c633d2185d84ed4b86fa60f6bfb38ef",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:15.656Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 6559ba677eb742139c6f111e760edc78",
+        "session_id": "yXt4R6_Ql1Oiy10W_pbntHKc"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:21.222Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --run-id 6559ba677eb742139c6f111e760edc78",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:21.611Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:21.618Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:22.498Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:22.502Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:22.645Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "e4a10fdae1daf1de9f54bfaa064bc82161ae0cd2d335db52cb022df0770c282d"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:22.817Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:33.118Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:33.453Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-12T07:46:41.054Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:47:04.788Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "e4a10fdae1daf1de9f54bfaa064bc82161ae0cd2d335db52cb022df0770c282d"
+      }
+    },
+    {
+      "time": "2026-09-12T07:47:10.859Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:47:14.148Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-12T07:47:14.152Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T07:47:14.331Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "b71c108cd52c694f73e9271170cf62a0330ee6d4898da4eafb175204338c872c"
+      }
+    }
+  ]
+}

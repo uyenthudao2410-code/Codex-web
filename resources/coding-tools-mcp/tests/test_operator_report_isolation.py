@@ -468,6 +468,8 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     "reason": "fixture accepts proven terminal wave",
                 })
                 self.assertTrue(accepted["accepted"])
+                accepted_telemetry = runtime.orchestration_ledger.continuity_telemetry_summary(run_id=run_id)
+                self.assertEqual(accepted_telemetry["accepted_checkpoint_count"], 1)
                 checkpoint = runtime.orchestration_ledger.list_checkpoints(
                     run_id, wave_id=wave_id
                 )[-1]
@@ -491,6 +493,8 @@ class OperatorReportIsolationTests(unittest.TestCase):
                     "message_id": report_id,
                 })
                 self.assertTrue(acknowledged["acknowledged"])
+                acknowledged_telemetry = runtime.orchestration_ledger.continuity_telemetry_summary(run_id=run_id)
+                self.assertEqual(acknowledged_telemetry["report_gate_count"], 1)
                 after_ack = runtime.task_state.get()
                 acknowledged_at = after_ack["completion_report_acknowledged_at"]
                 self.assertEqual(after_ack["completion_report_acknowledged_id"], report_id)

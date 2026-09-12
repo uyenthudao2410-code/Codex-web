@@ -27,6 +27,7 @@ const RPC_ACTIONS = Object.freeze([
   'client.suppress_ui_recovery',
   'runtime.snapshot',
   'runtime.lightweight_snapshot',
+  'runtime.record_execution_control_center_progress',
   'runtime.start',
   'runtime.stop',
   'runtime.restart',
@@ -48,6 +49,7 @@ const MUTATING_ACTIONS = new Set([
   'runtime.start',
   'runtime.stop',
   'runtime.restart',
+  'runtime.record_execution_control_center_progress',
   'runtime.complete_activation_epoch',
   'runtime.switch_workspace',
   'runtime.update_authorized_roots',
@@ -433,6 +435,7 @@ class RecoveryIpcClient {
   suppressUiRecovery(intent) { return this.call('client.suppress_ui_recovery', [intent]); }
   snapshot(options = {}) { return this.call('runtime.snapshot', [options]); }
   lightweightSnapshot() { return this.call('runtime.lightweight_snapshot'); }
+  recordExecutionControlCenterProgress(observation) { return this.call('runtime.record_execution_control_center_progress', [observation]); }
   supervise() { return this.lightweightSnapshot(); }
   start(options = {}, callOptions = {}) { return this.call('runtime.start', [options], callOptions); }
   stop(options = {}, callOptions = {}) { return this.call('runtime.stop', [options], callOptions); }

@@ -273,6 +273,77 @@ class ActivationPreflightTests(unittest.TestCase):
                 thread.join(timeout=5)
                 runtime.close()
 
+    def test_authenticated_verify_forwards_acceptance_pending_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            runtime = Runtime(root, auth_token="activation-token")
+            server = RuntimeHTTPServer(("127.0.0.1", 0), MCPHandler, runtime, runtime_factory=None)
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            operation_id = "activation-verify-policy-http-0001"
+            source_checkpoint = {
+                "checkpoint_id": "checkpoint-verify-policy-0001",
+                "run_id": "run-verify-policy-0001",
+                "wave_id": "wave-verify-policy-0001",
+                "proof_fingerprint": "a" * 64,
+                "git_head": "b" * 40,
+            }
+
+            def activation_preflight(**kwargs: object) -> dict[str, object]:
+                allowed = kwargs.get("allow_acceptance_pending") is True
+                return {
+                    "safe": allowed,
+                    "code": "READY" if allowed else "ACCEPTANCE_PENDING",
+                    "workspace": str(root),
+                    "acceptance_pending": True,
+                    "fenced": False,
+                    "fence_operation_id": None,
+                }
+
+            try:
+                with patch.object(runtime, "activation_preflight", side_effect=activation_preflight) as preflight:
+                    for allowed, expected_status, expected_code in (
+                        (False, 409, "ACCEPTANCE_PENDING"),
+                        (True, 200, "READY"),
+                    ):
+                        with self.subTest(allow_acceptance_pending=allowed):
+                            body = json.dumps({
+                                "action": "verify",
+                                "operation_id": operation_id,
+                                "workspace": str(root),
+                                "source_checkpoint": source_checkpoint,
+                                "allow_acceptance_pending": allowed,
+                            })
+                            connection = http.client.HTTPConnection(
+                                "127.0.0.1",
+                                int(server.server_address[1]),
+                                timeout=5,
+                            )
+                            connection.request("POST", "/__control/activation", body=body, headers={
+                                "Authorization": "Bearer activation-token",
+                                "Content-Type": "application/json",
+                                "Content-Length": str(len(body.encode("utf-8"))),
+                            })
+                            response = connection.getresponse()
+                            result = json.loads(response.read())
+                            connection.close()
+
+                            self.assertEqual(response.status, expected_status)
+                            self.assertEqual(result["code"], expected_code)
+
+                    self.assertEqual(
+                        [call.kwargs["allow_acceptance_pending"] for call in preflight.call_args_list],
+                        [False, True],
+                    )
+                    for call in preflight.call_args_list:
+                        self.assertTrue(call.kwargs["require_unfenced"])
+                        self.assertFalse(call.kwargs["prepare"])
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=5)
+                runtime.close()
+
     def test_source_checkpoint_current_receipt_drift_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             runtime, source, source_checkpoint = self._accepted_checkpoint_fixture(Path(temp).resolve())
@@ -791,6 +862,188 @@ class ActivationPreflightTests(unittest.TestCase):
                 self.assertEqual(result["counts"]["threshold_sensitive_stale_candidates"], 3)
             finally:
                 runtime.close()
+
+    def test_paused_replan_exact_self_controller_is_discounted_only_for_restart_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            run_id = "run-paused-self-controller"
+            identity = {
+                "client_id": "chatweb-test",
+                "client_type": "chatweb",
+                "execution_context_id": "execution-context-1234567890",
+            }
+            client_id = runtime._hub_client_record_id(identity)
+            lifecycle = {
+                "classification_counts": {"LIVE_OWNED": 1},
+                "run_ids_by_class": {"LIVE_OWNED": [run_id]},
+                "live_owned_runs": [{
+                    "run_id": run_id,
+                    "run_status": "active",
+                    "latest_state_after": "REPLAN",
+                    "ownership": {
+                        "active_controller_leases": 1,
+                        "active_write_fences": 0,
+                        "running_background_operations": 0,
+                        "live_agent_lanes": 0,
+                        "live_managed_jobs": 0,
+                    },
+                }],
+                "unexplained_active_runs": 0,
+                "unbound_live_resource_residues": 0,
+                "p5_lifecycles": [],
+                "snapshot": self._canonical_lifecycle_snapshot(),
+            }
+            task = {"status": "paused", "orchestration": {"run_id": run_id}}
+            lease = {
+                "run_id": run_id,
+                "status": "active",
+                "owner_client_id": client_id,
+                "lease_id": f"client:{client_id}",
+            }
+            try:
+                with (
+                    patch.object(runtime, "_activation_lifecycle_summary", return_value=lifecycle),
+                    patch.object(runtime.task_state, "get", return_value=task),
+                    patch.object(runtime, "_current_hub_client", return_value=identity),
+                    patch.object(runtime.orchestration_ledger, "peek_controller_lease", return_value=lease),
+                    patch.object(runtime.orchestration_control, "snapshot", return_value=SimpleNamespace(state="REPLAN")),
+                    patch.object(runtime.orchestration_ledger, "verify_chain", return_value={"ok": True}),
+                    patch.object(runtime.orchestration_ledger, "current_active_execution_run", return_value={"run_id": run_id}),
+                ):
+                    ordinary = runtime.activation_preflight()
+                    allowed = runtime.activation_preflight(allow_self_controller_lease=True)
+                self.assertFalse(ordinary["safe"])
+                self.assertEqual(ordinary["reason"], "lifecycle_live_owned")
+                self.assertTrue(allowed["safe"])
+                self.assertEqual(allowed["reason"], "paused_replan_self_controller_is_quiescent")
+                self.assertEqual(allowed["orchestration_state"], "QUIESCENT_REPLAN_WITH_SELF_CONTROLLER")
+                self.assertEqual(allowed["counts"]["self_controller_leases_discounted"], 1)
+            finally:
+                runtime.close()
+
+    def test_self_controller_discount_fails_closed_for_foreign_or_additional_ownership(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            run_id = "run-self-controller-unsafe"
+            identity = {
+                "client_id": "chatweb-test",
+                "client_type": "chatweb",
+                "execution_context_id": "execution-context-1234567890",
+            }
+            client_id = runtime._hub_client_record_id(identity)
+            base_ownership = {
+                "active_controller_leases": 1,
+                "active_write_fences": 0,
+                "running_background_operations": 0,
+                "live_agent_lanes": 0,
+                "live_managed_jobs": 0,
+            }
+            task = {"status": "paused", "orchestration": {"run_id": run_id}}
+            try:
+                for label, ownership, owner, task_status in (
+                    ("foreign-controller", base_ownership, "another-client", "paused"),
+                    ("write-fence", {**base_ownership, "active_write_fences": 1}, client_id, "paused"),
+                    ("task-not-paused", base_ownership, client_id, "active"),
+                ):
+                    lifecycle = {
+                        "classification_counts": {"LIVE_OWNED": 1},
+                        "run_ids_by_class": {"LIVE_OWNED": [run_id]},
+                        "live_owned_runs": [{
+                            "run_id": run_id,
+                            "run_status": "active",
+                            "latest_state_after": "REPLAN",
+                            "ownership": ownership,
+                        }],
+                        "unexplained_active_runs": 0,
+                        "unbound_live_resource_residues": 0,
+                        "p5_lifecycles": [],
+                        "snapshot": self._canonical_lifecycle_snapshot(),
+                    }
+                    lease = {"run_id": run_id, "status": "active", "owner_client_id": owner}
+                    with (
+                        self.subTest(label=label),
+                        patch.object(runtime, "_activation_lifecycle_summary", return_value=lifecycle),
+                        patch.object(runtime.task_state, "get", return_value={**task, "status": task_status}),
+                        patch.object(runtime, "_current_hub_client", return_value=identity),
+                        patch.object(runtime.orchestration_ledger, "peek_controller_lease", return_value=lease),
+                        patch.object(runtime.orchestration_control, "snapshot", return_value=SimpleNamespace(state="REPLAN")),
+                        patch.object(runtime.orchestration_ledger, "verify_chain", return_value={"ok": True}),
+                    ):
+                        refused = runtime.activation_preflight(allow_self_controller_lease=True)
+                    self.assertFalse(refused["safe"])
+                    self.assertEqual(refused["reason"], "lifecycle_live_owned")
+                    self.assertEqual(refused["counts"]["self_controller_leases_discounted"], 0)
+            finally:
+                runtime.close()
+
+    def test_lifecycle_summary_projects_live_owned_ownership_from_same_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = Runtime(Path(temp))
+            run_id = "run-live-owned-summary"
+            ownership = {
+                "active_controller_leases": 1,
+                "active_write_fences": 0,
+                "running_background_operations": 0,
+                "live_agent_lanes": 0,
+                "live_managed_jobs": 0,
+            }
+            census = {
+                "snapshot": self._canonical_lifecycle_snapshot(),
+                "summary": {
+                    "run_classification_counts": {"LIVE_OWNED": 1},
+                    "unexplained_active_runs": 0,
+                    "unbound_live_resource_residues": 0,
+                },
+                "projection": {},
+                "runs": [{
+                    "run_id": run_id,
+                    "run_status": "active",
+                    "classification": "LIVE_OWNED",
+                    "latest_state_after": "REPLAN",
+                    "ownership": ownership,
+                }],
+                "unbound_live_resources": [],
+            }
+            try:
+                with (
+                    patch.object(runtime, "_projection_rebuild_census", return_value=census),
+                    patch.object(runtime, "projection_rebuild_snapshot", return_value={}),
+                ):
+                    summary = runtime._activation_lifecycle_summary()
+                self.assertEqual(summary["run_ids_by_class"]["LIVE_OWNED"], [run_id])
+                self.assertEqual(summary["live_owned_runs"], [{
+                    "run_id": run_id,
+                    "run_status": "active",
+                    "latest_state_after": "REPLAN",
+                    "ownership": ownership,
+                }])
+            finally:
+                runtime.close()
+
+    def test_restart_runtime_enables_only_bounded_self_controller_preflight_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            workspace = root / "workspace"
+            control = root / "control"
+            workspace.mkdir()
+            control.mkdir()
+            ticket_path = control / "runtime-supervisor-request.json"
+            with patch.dict("os.environ", {"CODING_TOOLS_MCP_SUPERVISOR_REQUEST_FILE": str(ticket_path)}):
+                runtime = Runtime(workspace)
+                try:
+                    with patch.object(runtime, "activation_preflight", return_value={
+                        "safe": False,
+                        "code": "RUNTIME_BUSY",
+                        "reason": "sentinel",
+                    }) as preflight:
+                        with self.assertRaises(ToolFailure) as raised:
+                            runtime._enqueue_runtime_restart({"confirm_restart": True, "reason": "test restart"})
+                    self.assertEqual(raised.exception.code, "RUNTIME_BUSY")
+                    self.assertTrue(preflight.call_args.kwargs["allow_self_controller_lease"])
+                    self.assertEqual(preflight.call_args.kwargs["ignore_active_tool_calls"], 1)
+                    self.assertFalse(ticket_path.exists())
+                finally:
+                    runtime.close()
 
     def test_unexplained_lifecycle_residue_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

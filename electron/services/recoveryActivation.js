@@ -519,7 +519,11 @@ class RecoveryActivation {
     const inspected = await this.orchestrator.inspectCodeActivation();
     const runtime = inspected.code === 'COMPONENT_STOPPED'
       ? inspected
-      : await this.orchestrator.verifyCodeActivation(request.operation_id, request.source_checkpoint);
+      : await this.orchestrator.verifyCodeActivation(
+        request.operation_id,
+        request.source_checkpoint,
+        request.allow_acceptance_pending
+      );
     if (runtime.code === 'COMPONENT_STOPPED' && request.component !== 'coding_mcp') {
       return {
         safe: false,
@@ -594,7 +598,11 @@ class RecoveryActivation {
     }
     let verification;
     try {
-      verification = await this.orchestrator.verifyCodeActivation(request.operation_id, request.source_checkpoint);
+      verification = await this.orchestrator.verifyCodeActivation(
+        request.operation_id,
+        request.source_checkpoint,
+        request.allow_acceptance_pending
+      );
     } catch (error) {
       throw activationError(String(error?.code || 'LIFECYCLE_VERIFICATION_FAILED'), String(error?.message || 'Fresh lifecycle verification failed.'));
     }

@@ -24,6 +24,7 @@ from typing import Any, Iterable
 
 from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
+from .problem_lineage import ProblemLineageError
 from .run_continuation import (
     RUN_CONTINUATION_PROFILE,
     RunContinuationError,
@@ -33,6 +34,7 @@ from .run_continuation import (
     _now_ms,
     parse_run_continuation_proposal,
 )
+from .solution_economics import record_patch_surface
 from .task_state import command_payload_succeeded
 
 
@@ -227,6 +229,280 @@ class ContinuationDriverMixin:
             return "[failure output withheld because it contains sensitive-like text]"
         return summary[:2_000]
 
+    def _run_continuation_record_telemetry(
+        self,
+        run_id: str,
+        event_type: str,
+        *,
+        outcome: str = "",
+        code: str = "",
+        duration_ms: int | None = None,
+        marker: str = "",
+    ) -> dict[str, Any] | None:
+        """Persist only bounded machine facts; telemetry never grants authority."""
+        try:
+            record = self.orchestration_ledger._run_continuation_get_raw(run_id)
+            ctx = self.orchestration_control.snapshot(run_id)
+            policy = record.get("policy") if isinstance(record, dict) and isinstance(record.get("policy"), dict) else {}
+            problem_id = str(policy.get("problem_id") or "")
+            problem_revision = int(policy.get("problem_revision") or 0)
+            if record is None:
+                handoff = self.orchestration_ledger.problem_handoff_for_run(run_id)
+                if isinstance(handoff, dict) and str(handoff.get("context_status") or "") == "VALID":
+                    bound_problem_id = str(handoff.get("active_problem_id") or "")
+                    bound_problem_revision = int(handoff.get("problem_revision") or 0)
+                    if bound_problem_id and bound_problem_revision >= 1:
+                        problem_id = bound_problem_id
+                        problem_revision = bound_problem_revision
+                else:
+                    problem_id = ""
+                    problem_revision = 0
+            admission = self.activation_admission_snapshot()
+            safe_code = re.sub(r"[^A-Za-z0-9_.:@-]+", "_", str(code or ""))[:128]
+            logical_seed = {
+                "run_id": run_id,
+                "wave_id": str(ctx.wave_id if ctx is not None else ""),
+                "event_type": event_type,
+                "marker": str(marker or "")[:256],
+                "outcome": outcome,
+                "code": safe_code,
+            }
+            logical_id = "continuity-" + hashlib.sha256(
+                _canonical_json(logical_seed).encode("utf-8")
+            ).hexdigest()
+            return self.orchestration_ledger.record_continuity_telemetry(
+                logical_id=logical_id,
+                run_id=run_id,
+                wave_id=str(ctx.wave_id if ctx is not None else ""),
+                event_type=event_type,
+                problem_id=problem_id,
+                problem_revision=problem_revision,
+                task_context_id=str(self._current_stateless_task_context_id() or ""),
+                activation_epoch_id=str(admission.get("activation_epoch_id") or ""),
+                process_instance_id=str(getattr(self, "process_instance_id", "") or ""),
+                server_instance_id=str(getattr(self, "server_instance_id", "") or ""),
+                restart_ticket_id=str(
+                    admission.get("restart_ticket_id") or admission.get("ticket_id") or ""
+                ),
+                outcome=outcome,
+                code=safe_code,
+                duration_ms=duration_ms,
+            )
+        except Exception:
+            # Optimization telemetry is deliberately non-authoritative. A
+            # telemetry failure cannot turn a safe continuation into a write.
+            return None
+
+    def _run_continuation_validate_execution_rebind(
+        self, record: dict[str, Any], ctx: RunContext
+    ) -> dict[str, Any]:
+        """Prove execution-only continuity without changing immutable consent."""
+        policy = record["policy"]
+        run_id = str(record["run_id"])
+        self._run_continuation_assert_runtime(policy)
+        if str(self.tool_contract.get("sha256") or "") != str(policy.get("tool_contract_sha256") or ""):
+            raise ToolFailure(
+                "RUN_CONTINUATION_TOOL_CONTRACT_DRIFT",
+                "The current public tool contract differs from the immutable continuation grant.",
+                category="security",
+            )
+        try:
+            self.orchestration_ledger.problem_get_exact_revision(
+                str(policy["problem_id"]),
+                int(policy["problem_revision"]),
+                expected_contract_fingerprint=str(policy["contract_fingerprint"]),
+            )
+        except ProblemLineageError as exc:
+            raise ToolFailure(
+                "RUN_CONTINUATION_PROBLEM_BINDING_STALE",
+                "Execution rebind requires the exact current Problem revision and an active PRL schema.",
+                category="security",
+            ) from exc
+        binding = self.orchestration_ledger.controller_run_problem_binding(run_id)
+        if not isinstance(binding, dict) or (
+            str(binding.get("workspace_id") or policy["workspace_id"]) != str(policy["workspace_id"])
+            or str(binding.get("problem_id") or "") != str(policy["problem_id"])
+            or int(binding.get("problem_revision") or 0) != int(policy["problem_revision"])
+        ):
+            raise ToolFailure(
+                "RUN_CONTINUATION_PROBLEM_BINDING_STALE",
+                "The active RUN is not bound to the immutable continuation Problem revision.",
+                category="security",
+            )
+        source = self._orchestration_workspace_identity(".")
+        if (
+            str(source.get("base_head") or "") != str(ctx.base_head or "")
+            or str(source.get("worktree_fp") or "") != str(ctx.worktree_fp or "")
+            or str(ctx.contract_fp or "") != str(policy.get("contract_fingerprint") or "")
+        ):
+            raise ToolFailure(
+                "RUN_CONTINUATION_EVIDENCE_STALE",
+                "Execution rebind requires the exact current RUN source and contract.",
+                category="runtime",
+                retryable=True,
+            )
+        controller_identity = self._continuity_current_controller_identity(required=True)
+        assert controller_identity is not None
+        attachment = self._continuity_assert_run_controller(run_id)
+        controller = self.orchestration_ledger.get_controller_lease(run_id) or {}
+        current_owner = str(controller_identity.get("owner_client_id") or "")
+        if (
+            not attachment
+            or str(controller.get("status") or "") != "active"
+            or str(controller.get("owner_client_id") or "") != current_owner
+        ):
+            raise ToolFailure(
+                "RUN_CONTINUATION_CONTROLLER_REQUIRED",
+                "Execution rebind requires the current durable Goal controller lease.",
+                category="security",
+            )
+        admission = self.activation_admission_snapshot()
+        successor_activation = (
+            str(admission.get("activation_epoch_id") or "")
+            != str(policy.get("activation_epoch_id") or "")
+        )
+        issuer = str(policy.get("issuer_client_id") or "")
+        if successor_activation or current_owner != issuer:
+            reattach_id = str(attachment.get("last_reattach_id") or "")
+            receipt = (
+                self.orchestration_ledger.controller_reattach_receipt(reattach_id)
+                if reattach_id
+                else None
+            )
+            transfers = receipt.get("active_run_transfers") if isinstance(receipt, dict) else []
+            transferred_ids = {
+                str(item.get("run_id") or "") for item in transfers or [] if isinstance(item, dict)
+            }
+            if (
+                not isinstance(receipt, dict)
+                or str(receipt.get("workspace_id") or "") != str(policy["workspace_id"])
+                or str(receipt.get("problem_id") or "") != str(policy["problem_id"])
+                or int(receipt.get("problem_revision") or 0) != int(policy["problem_revision"])
+                or str(receipt.get("owner_client_id") or "") != current_owner
+                or run_id not in transferred_ids
+            ):
+                raise ToolFailure(
+                    "RUN_CONTINUATION_REATTACH_RECEIPT_REQUIRED",
+                    "A different ChatWeb endpoint may inherit execution only through its exact durable reattach receipt.",
+                    category="security",
+                )
+        return {
+            "run_id": run_id,
+            "wave_rebound": str(ctx.wave_id) != str(policy.get("grant_wave_id") or ""),
+            "successor_activation": successor_activation,
+            "controller_owner": current_owner,
+        }
+
+    def _run_continuation_try_auto_resume(
+        self, *, run_id: str, trigger: str, marker: str = ""
+    ) -> dict[str, Any]:
+        """Resume one exact durable RUN only when all original authority still holds."""
+        with self._run_continuation_driver_lock():
+            record = self.orchestration_ledger._run_continuation_get_raw(run_id)
+            if record is None:
+                return {"status": "MISSING", "run_id": run_id}
+            pending = bool(
+                record.get("pending_action_id")
+                or record.get("pending_job_id")
+                or record.get("pending_patch_action_id")
+            )
+            if pending:
+                same_runtime_live = (
+                    str(record.get("claimed_runtime_instance") or "")
+                    == self._run_continuation_runtime_instance_id()
+                    and _now_ms() < int(record.get("claim_expires_at_unix_ms") or 0)
+                )
+                if same_runtime_live and record.get("enabled"):
+                    return {"status": "ALREADY_ACTIVE", "run_id": run_id}
+                self._run_continuation_fail_closed_pause(run_id, "auto_resume_pending_effect")
+                self._run_continuation_record_telemetry(
+                    run_id,
+                    "duplicate_effect_prevented",
+                    outcome="prevented",
+                    code="RUN_CONTINUATION_RECOVERY_RECONCILE_REQUIRED",
+                    marker=marker or str(record.get("pending_action_id") or "pending"),
+                )
+                return {
+                    "status": "RECOVERY_RECONCILE_REQUIRED",
+                    "run_id": run_id,
+                    "continue_observing": False,
+                }
+            if record.get("revoked_at"):
+                self._run_continuation_record_telemetry(
+                    run_id, "blocker", outcome="blocked", code="RUN_CONTINUATION_REVOKED", marker=marker
+                )
+                return {"status": "BLOCKED", "run_id": run_id, "reason": "RUN_CONTINUATION_REVOKED"}
+            if _now_ms() >= int(record.get("expires_at_unix_ms") or 0):
+                self._run_continuation_record_telemetry(
+                    run_id, "blocker", outcome="blocked", code="RUN_CONTINUATION_EXPIRED", marker=marker
+                )
+                return {"status": "BLOCKED", "run_id": run_id, "reason": "RUN_CONTINUATION_EXPIRED"}
+            ctx = self.orchestration_control.snapshot(run_id)
+            if ctx is None:
+                return {"status": "BLOCKED", "run_id": run_id, "reason": "RUN_CONTINUATION_RUN_CONTEXT_MISSING"}
+            if ctx.state == "ACCEPTING":
+                return {"status": "AWAITING_FINAL_ACCEPTANCE", "run_id": run_id, "wave_id": ctx.wave_id}
+            if ctx.state in {"CHECKPOINTED", "BLOCKED", "ABORTED"}:
+                event_type = "terminal" if ctx.state in {"CHECKPOINTED", "ABORTED"} else "blocker"
+                self._run_continuation_record_telemetry(
+                    run_id, event_type, outcome="terminal" if event_type == "terminal" else "blocked",
+                    code=f"ORCHESTRATION_{ctx.state}", marker=marker,
+                )
+                return {"status": "TERMINAL", "run_id": run_id, "reason": f"ORCHESTRATION_{ctx.state}"}
+            if ctx.state in {"EXECUTING", "PROVING"}:
+                self._run_continuation_record_telemetry(
+                    run_id, "blocker", outcome="blocked", code="RUN_CONTINUATION_STAGE_AMBIGUOUS", marker=marker
+                )
+                return {"status": "BLOCKED", "run_id": run_id, "reason": "RUN_CONTINUATION_STAGE_AMBIGUOUS"}
+            try:
+                rebind = self._run_continuation_validate_execution_rebind(record, ctx)
+                if ctx.state == "REPLAN":
+                    identity = self._orchestration_workspace_identity(".")
+                    ctx = self.orchestration_control.begin_replan_wave(
+                        ctx,
+                        execution_mode="deep_single_lane",
+                        base_head=str(identity.get("base_head") or ""),
+                        worktree_fp=str(identity.get("worktree_fp") or ""),
+                        contract_fp=str(record["policy"].get("contract_fingerprint") or ""),
+                        reason=f"AUTO_RESUME_{str(trigger).upper()[:64]}",
+                        metadata={"continuation": True, "auto_resume": True, "trigger": str(trigger)[:64]},
+                    )
+                    self._project_orchestration(ctx, event="run_continuation_auto_replan_wave")
+                    self._run_continuation_record_telemetry(
+                        run_id, "replan", outcome="succeeded", code="AUTO_RESUME_REPLAN", marker=ctx.wave_id
+                    )
+                    record = self.orchestration_ledger._run_continuation_get_raw(run_id) or record
+                    rebind = self._run_continuation_validate_execution_rebind(record, ctx)
+                if not record.get("enabled"):
+                    record = self.orchestration_ledger.set_run_continuation_state(
+                        run_id=run_id, action="resume", reason=f"auto_resume:{str(trigger)[:64]}"
+                    )
+                self._run_continuation_record_telemetry(
+                    run_id, "continuation_attempt", outcome="attempted", code="AUTO_RESUME", marker=marker or trigger
+                )
+                started = self._run_continuation_start_driver({"run_id": run_id})
+            except (RunContinuationError, ToolFailure, OrchestrationControlError) as exc:
+                code = str(getattr(exc, "code", "RUN_CONTINUATION_AUTO_RESUME_FAILED"))
+                self._run_continuation_record_telemetry(
+                    run_id, "continuation_failure", outcome="failed", code=code, marker=marker or trigger
+                )
+                return {"status": "BLOCKED", "run_id": run_id, "reason": code, "continue_observing": False}
+            self._run_continuation_record_telemetry(
+                run_id, "continuation_success", outcome="succeeded", code="AUTO_RESUME", marker=marker or trigger
+            )
+            self._run_continuation_record_telemetry(
+                run_id, "resume", outcome="succeeded", code=str(trigger)[:128], marker=marker or trigger
+            )
+            if str(trigger).lower() in {"reconnect", "reattach"}:
+                self._run_continuation_record_telemetry(
+                    run_id, "reconnect", outcome="succeeded", code=str(trigger)[:128], marker=marker or trigger
+                )
+            if rebind.get("successor_activation"):
+                self._run_continuation_record_telemetry(
+                    run_id, "restart", outcome="succeeded", code="SUCCESSOR_ACTIVATION", marker=marker or trigger
+                )
+            return {**started, "auto_resumed": True, "trigger": trigger, "execution_rebind": rebind}
+
     def _run_continuation_driver_lock(self) -> threading.RLock:
         lock = getattr(self, "_continuation_driver_lock", None)
         if lock is None:
@@ -274,6 +550,9 @@ class ContinuationDriverMixin:
             record = self.orchestration_ledger._run_continuation_get_raw(run_id)
             if record is not None and record.get("enabled"):
                 self.orchestration_ledger.set_run_continuation_state(run_id=run_id, action="pause", reason=reason[:512])
+            self._run_continuation_record_telemetry(
+                run_id, "interruption", outcome="observed", code=reason, marker=reason[:128]
+            )
         except Exception:
             # A failed safety projection cannot justify retrying an unknown write.
             return
@@ -372,6 +651,9 @@ class ContinuationDriverMixin:
         except OrchestrationControlError as exc:
             raise ToolFailure(exc.code, str(exc), category="runtime", retryable=True, details=exc.details) from exc
         self._project_orchestration(replanned, event="run_continuation_technical_replan_wave")
+        self._run_continuation_record_telemetry(
+            ctx.run_id, "replan", outcome="observed", code=reason, marker=replanned.wave_id
+        )
         return replanned
 
     def _run_continuation_dispatch_repair(
@@ -751,6 +1033,9 @@ class ContinuationDriverMixin:
         try:
             self.orchestration_control.mark_accepting(ctx, proof_summary={"continuation": True, "proof_ids": proof_ids, "checks": [item.get("check_id") for item in checks]})
             self._project_orchestration(ctx, event="run_continuation_accepting")
+            self._run_continuation_record_telemetry(
+                ctx.run_id, "report_gate", outcome="pending", code="FINAL_ACCEPTANCE_REQUIRED", marker=ctx.wave_id
+            )
         except OrchestrationControlError as exc:
             raise ToolFailure(exc.code, str(exc), category="runtime", details=exc.details) from exc
         return {"status": "ACCEPTING", "run_id": ctx.run_id, "wave_id": ctx.wave_id, "proof_ids": proof_ids, "check_results": results, "continue_observing": False, "recommended_next_action": "MCP completed exact technical proof. ChatWeb Sol must inspect the diff/proof and use task_control accept or reject; this is not final business acceptance."}
@@ -818,7 +1103,7 @@ class ContinuationDriverMixin:
                 runtime_worktree_fingerprint=str(identity.get("runtime_worktree_fingerprint") or identity.get("worktree_fp") or ""),
                 dirty_source_paths=list(identity.get("dirty_source_paths") or identity.get("dirty_paths") or []),
             )
-            self.apply_patch({"patch": patch, "dry_run": False})
+            patch_result = self.apply_patch({"patch": patch, "dry_run": False})
             observed = observe_continuation_effect(self.workspace.root, manifest)
             if observed["status"] != "applied":
                 self.orchestration_ledger.record_run_continuation_effect_observation(
@@ -838,6 +1123,18 @@ class ContinuationDriverMixin:
                 action_id=action_id,
                 status="applied",
             )
+            receipt = record_patch_surface(
+                self.orchestration_ledger,
+                run_id=ctx.run_id,
+                wave_id=ctx.wave_id,
+                patch_result=patch_result,
+            )
+            if receipt.get("recorded") is not True:
+                raise ToolFailure(
+                    "RUN_CONTINUATION_MUTATION_RECEIPT_REQUIRED",
+                    "The applied continuation patch did not produce its durable mutation receipt.",
+                    category="runtime",
+                )
         except (RunContinuationError, ToolFailure) as exc:
             code = str(getattr(exc, "code", "RUN_CONTINUATION_PATCH_FAILED"))
             ctx = self.orchestration_control.snapshot(str(record["run_id"]))
@@ -959,10 +1256,37 @@ class ContinuationDriverMixin:
                 consumed_event_seq=cursor,
             )
             ctx = self.orchestration_control.snapshot(run_id)
-            if ctx is not None:
-                self._run_continuation_replan(ctx, "RUN_CONTINUATION_MODEL_BLOCKED", {"action_id": action_id})
-            self._run_continuation_fail_closed_pause(run_id, "model_blocked")
-            return {"status": "REPLAN_REQUIRED", "run_id": run_id, "reason": "RUN_CONTINUATION_MODEL_BLOCKED", "continue_observing": False}
+            raw = self.orchestration_ledger._run_continuation_get_raw(run_id)
+            if ctx is not None and raw is not None and int(raw.get("remaining_decision_turns") or 0) > 0:
+                technical_replan = {
+                    "failure": "MODEL_BLOCKED",
+                    "check_id": "model-proposal",
+                    "check_definition_hash": hashlib.sha256(b"run-continuation-model-blocked-v1").hexdigest(),
+                    "proof_id": action_id,
+                    "exit_code": None,
+                    "summary": str(proposal.get("reason") or "Model requested a non-authoritative stop.")[:2_000],
+                }
+                replanned = self._run_continuation_begin_technical_replan(
+                    ctx=ctx,
+                    record=raw,
+                    reason="RUN_CONTINUATION_MODEL_BLOCKED",
+                    payload={"action_id": action_id},
+                )
+                try:
+                    return self._run_continuation_dispatch_repair(
+                        record=raw,
+                        ctx=replanned,
+                        technical_replan=technical_replan,
+                        consumed_event_seq=cursor,
+                    )
+                except (RunContinuationError, ToolFailure) as exc:
+                    self._run_continuation_fail_closed_pause(run_id, f"model_blocked_repair:{exc.code}")
+                    return {"status": "REPLAN_REQUIRED", "run_id": run_id, "reason": exc.code, "continue_observing": False}
+            self._run_continuation_fail_closed_pause(run_id, "decision_budget_exhausted")
+            self._run_continuation_record_telemetry(
+                run_id, "blocker", outcome="blocked", code="RUN_CONTINUATION_DECISION_BUDGET_EXHAUSTED", marker=action_id
+            )
+            return {"status": "BLOCKED", "run_id": run_id, "reason": "RUN_CONTINUATION_DECISION_BUDGET_EXHAUSTED", "continue_observing": False}
 
     def _run_continuation_reconcile_driver(self, *, run_id: str, controller_fencing_token: object) -> dict[str, Any]:
         with self._run_continuation_driver_lock():
@@ -1024,6 +1348,9 @@ class ContinuationDriverMixin:
                     replanned_wave_id = replanned.wave_id
                 except ToolFailure as exc:
                     return {"status": "PATCH_RECOVERY_REQUIRED", "run_id": run_id, "action_id": action_id, "reason": exc.code, "continue_observing": False}
+            auto_resume = self._run_continuation_try_auto_resume(
+                run_id=run_id, trigger="reconcile", marker=action_id
+            )
             return {
                 "status": "PATCH_RECOVERY_REPLANNED",
                 "run_id": run_id,
@@ -1031,6 +1358,7 @@ class ContinuationDriverMixin:
                 "action_id": action_id,
                 "effect": observed,
                 "continuation": continuation,
-                "continue_observing": False,
-                "recommended_next_action": "The exact pending effect was classified and terminalized without replay. The continuation remains paused/revoked; resume or issue a replacement grant, then explicitly start the next same-RUN technical WAVE from current source.",
+                "auto_resume": auto_resume,
+                "continue_observing": bool(auto_resume.get("continue_observing")),
+                "recommended_next_action": "The exact pending effect was classified without replay. Eligible immutable continuation authority is resumed automatically; typed safety or authority blockers remain stopped.",
             }

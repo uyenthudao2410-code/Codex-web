@@ -1,0 +1,770 @@
+[
+  {
+    "version": 2,
+    "task_id": "70e1782de92f4fab9d5fbce83d2c3bcb",
+    "orchestration": {
+      "run_id": "bba66a46ae7f4b54a91a1c388bac1477",
+      "wave_id": "e23a1790b171445387049749f1739100",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+      "contract_fp": ""
+    },
+    "objective": "Problem-bound read-only root-cause localization for semantic localization provider health. Trace how semantic capability availability is projected, how native LSP resource health/status is obtained, how semantic calls are made, and where SEMANTIC_PROVIDER_CALL_FAILED / LSP_RESOURCE_STATUS_FAILED is translated into fallback. Determine the smallest causal boundary and focused regression oracle. Do not mutate source, restart any process, edit runtime/ledger history, commit, push, clean, reset, package, release, or deploy.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "MYhQF2nldMronBBEWAeAecKC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 880,
+      "finished_at": "2026-09-12T09:59:03.851Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Problem-bound semantic diagnosis is complete for this audit phase. Evidence proves configured shallow availability can coexist with failed native LSP resource/status and localization transport calls; safe text fallback remains functional. Root cause is narrowed to the native semantic transport/resource-health boundary, but no source mutation is authorized or required for this audit. Keep the Problem OPEN for implementation.",
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-12T09:56:46.044Z",
+    "updated_at": "2026-09-12T09:59:40.949Z",
+    "events": [
+      {
+        "time": "2026-09-12T09:56:46.044Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Problem-bound read-only root-cause localization for semantic localization provider health. Trace how semantic capability availability is projected, how native LSP resource health/status is obtained, how semantic calls are made, and where SEMANTIC_PROVIDER_CALL_FAILED / LSP_RESOURCE_STATUS_FAILED is translated into fallback. Determine the smallest causal boundary and focused regression oracle. Do not mutate source, restart any process, edit runtime/ledger history, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T09:56:49.113Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:56:55.666Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T09:56:55.672Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T09:57:54.368Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"def semantic_provider_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "u-ZNrAQflFsU2Gc8BdEXR1cN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:57:54.824Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"def semantic_provider_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:04.019Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"def semantic_provider_resource_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "1SIGGDX3xQTz3d3FlehkS5Cw"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:04.561Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"def semantic_provider_resource_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:14.440Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"def run_semantic_localization\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "qZTunBxL7zp2mFuxVB2U8Azl"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:14.958Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"def run_semantic_localization\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:25.448Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"class NativeRustSemanticLocalizationProvider\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "sjm05P-QT6RQzCJg5xVcrpN4"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:25.962Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"class NativeRustSemanticLocalizationProvider\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:34.295Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"def resource_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "eUTjRDT3aJ83-DRCXjwUZDE2"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:34.862Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"def resource_status\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:42.963Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"effective_timeout = NATIVE_LSP_TIMEOUT_SECONDS\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "session_id": "wYZ4UcEGCnknqPlIfJOZXN7I"
+        }
+      },
+      {
+        "time": "2026-09-12T09:58:43.430Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"effective_timeout = NATIVE_LSP_TIMEOUT_SECONDS\" resources\\coding-tools-mcp\\coding_tools_mcp\\semantic_localization.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:03.230Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -i -m 80 \"LSP_RESOURCE_STATUS_FAILED|SEMANTIC_PROVIDER_CALL_FAILED|semantic_watchdog|semantic tool-plane|native semantic transport\" .coding-tools",
+          "session_id": "MYhQF2nldMronBBEWAeAecKC"
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:03.851Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -i -m 80 \"LSP_RESOURCE_STATUS_FAILED|SEMANTIC_PROVIDER_CALL_FAILED|semantic_watchdog|semantic tool-plane|native semantic transport\" .coding-tools",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:14.862Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:31.912Z",
+        "event": "task_orchestration_aborted",
+        "details": {
+          "state": "ABORTED"
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:31.914Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T09:59:40.949Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T09:59:41.108Z",
+    "archive_reason": "cleared"
+  },
+  {
+    "version": 2,
+    "task_id": "8a27074253724907904a7a4a6ba605f2",
+    "orchestration": {
+      "run_id": "943b5fec8ad7427f94beec9e420f0b8a",
+      "wave_id": "f6c92ee4da4a4c56a28ad7137e290813",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+      "contract_fp": ""
+    },
+    "objective": "Continue the same read-only project-health baseline RUN after the summary reporter exposed projection drift. Collect the full immutable lifecycle census to identify the exact missing/terminal-parent-contradiction RUN and its derived projection evidence. No source or runtime mutation, no restart, no ledger edits, no commit/push/clean/reset/package/release/deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:01:34.210Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:01:34.210Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "IC9Q5Hkr3JKje8wA4VUxZHuD",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T10:01:33.837Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 58,
+          "head_hash": "6adc6220674dafeccbf97a092afbc69d8fd7809c8f0b75d8ef6f99678be3d95f"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-943b5fec8ad7427f94beec9e420f0b8a\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "943b5fec8ad7427f94beec9e420f0b8a",
+        "wave_id": "f6c92ee4da4a4c56a28ad7137e290813",
+        "checkpoint_id": "92ce084a9a4b4c5691e81002958de564",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3afc90dfca1133e4e987b4a279b1fedc0532b5ce46323facea6689e31dbcf716",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continue the same read-only project-health baseline RUN after the summary reporter exposed projection drift. Collect the full immutable lifecycle census to identify the exact missing/terminal-parent-contradiction RUN and its derived projection evidence. No source or runtime mutation, no restart, no ledger edits, no commit/push/clean/reset/package/release/deploy.",
+          "objective_revision": 2,
+          "objective_sha256": "82299158457504c733b6608d2c932b4e929e3d2a0ea64bf48a75eec8c8c88a4b",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "6527669deaef45df922b403eea7fb090",
+            "stage_id": "check:8760071733b66fc6",
+            "status": "passed",
+            "duration_ms": 5703,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "04c05cdac7b7329f5d5d6f51eb5883649d8d119d55ba4e79f497237b1b58e2a8",
+    "completion_report_acknowledged_id": "04c05cdac7b7329f5d5d6f51eb5883649d8d119d55ba4e79f497237b1b58e2a8",
+    "completion_report_acknowledged_at": "2026-09-12T10:02:21.337Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-12T09:59:59.244Z",
+    "updated_at": "2026-09-12T10:02:28.315Z",
+    "events": [
+      {
+        "time": "2026-09-12T09:59:59.244Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Final read-only project-health baseline after opening three new Problems. Re-run only the immutable lifecycle census summary to confirm no stale/unbound/projection residue was introduced by this audit. Do not mutate source or runtime, restart, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:00.793Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:03.116Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:04.594Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:04.600Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:06.010Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:06.672Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:07.662Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "session_id": "p6u5SChOh8PcM1SRaQ8ByFn9"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:12.091Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:12.425Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:12.430Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:13.093Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:13.096Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:13.207Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "3aaf7050bd7e0379ccd0a5f94512aefa266d3c4c027da8431429efacb939386d"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:13.213Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:22.154Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:39.252Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:39.254Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:39.346Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "2464bb41b553f720120c72334e214af6cc43f85cac2fa4ae3713c7aee8b3cdb1"
+        }
+      },
+      {
+        "time": "2026-09-12T10:00:47.414Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:08.652Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "2464bb41b553f720120c72334e214af6cc43f85cac2fa4ae3713c7aee8b3cdb1"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:19.292Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:21.208Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:23.733Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:25.470Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:25.480Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:27.099Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:27.941Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:28.704Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "IC9Q5Hkr3JKje8wA4VUxZHuD"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:33.837Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:34.203Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:34.210Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:34.863Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:34.866Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:35.047Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "a048760a301ea5176cbfa527c63f66828bd0397a28b8df2090f1b056d6e9a8b2"
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:35.052Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:01:42.320Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:00.644Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:00.645Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:00.782Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "04c05cdac7b7329f5d5d6f51eb5883649d8d119d55ba4e79f497237b1b58e2a8"
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:09.682Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:21.337Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "04c05cdac7b7329f5d5d6f51eb5883649d8d119d55ba4e79f497237b1b58e2a8"
+        }
+      },
+      {
+        "time": "2026-09-12T10:02:28.315Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T10:02:28.475Z",
+    "archive_reason": "cleared"
+  }
+]

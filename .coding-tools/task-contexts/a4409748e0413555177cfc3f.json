@@ -1,0 +1,258 @@
+{
+  "version": 2,
+  "task_id": "d2f138c5fcd04c5daf650526cc9ae6b1",
+  "orchestration": {
+    "run_id": "b4cbeabf1b1d47a58d68a57b07a6114e",
+    "wave_id": "ebf5458ef0f3475ca98bb457c4177be5",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "L9tM9U1T8gt0YZsT3ZPsedBI",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 5068,
+    "finished_at": "2026-09-09T07:40:46.255Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 25,
+        "head_hash": "f736695b331d5716a5eaae27d943900be77d5ec964cb8cf04d233e3f0706a2ed"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b4cbeabf1b1d47a58d68a57b07a6114e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b4cbeabf1b1d47a58d68a57b07a6114e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "b4cbeabf1b1d47a58d68a57b07a6114e",
+      "wave_id": "ebf5458ef0f3475ca98bb457c4177be5",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fresh Python full-suite proof shard 1 of 6 for component-state convergence; run exactly these 18 test modules with no source writes.",
+        "objective_revision": 1,
+        "objective_sha256": "ae506f4a8b398aa894be3108a9926328f5f518933e808d891a6352c9dd9b6ccd",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "416ccaa47d7d45dd9a3b82712b160c77",
+          "stage_id": "check:2e51c5512effa4e0",
+          "status": "passed",
+          "duration_ms": 263249,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Historical non-Problem diagnostic proof shard is still ACCEPTING from 2026-09-08 with no source writes. Its proof passed 184 tests plus 85 subtests on worktree fingerprint c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d, which does not match the current worktree fingerprint c6f9071869d4882401a598b4463ab6c5b574382ead7d293a98a6e8830283b931. Reject stale proof rather than treating it as current component-state acceptance.",
+      "event_seq": 45216
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "95d9caceaf83bc769a48538205df582dd04e00bf21c12d19bc877e5db5f22c26",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-09T07:40:07.837Z",
+  "updated_at": "2026-09-09T07:42:15.467Z",
+  "events": [
+    {
+      "time": "2026-09-09T07:40:07.837Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:08.485Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.run_id -in @('4af4b6a6240d4207b2fea6b9fe169d7f','b4cbeab5f6fa4d85bc55a1c6016ff2d6') } | ConvertTo-Json -Depth 10\"",
+        "session_id": "RRSwkU_27Ql4d0W1cu11F__P"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:12.041Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.run_id -in @('4af4b6a6240d4207b2fea6b9fe169d7f','b4cbeab5f6fa4d85bc55a1c6016ff2d6') } | ConvertTo-Json -Depth 10\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:25.245Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); [pscustomobject]@{classification=$j.classification; stale_orchestration_runs=$j.summary.stale_orchestration_runs; projection_mode=$j.projection.mode; context_count=$j.projection.context_count; relevant_run_count=$j.projection.relevant_run_count; bound_relevant_run_count=$j.projection.bound_relevant_run_co",
+        "session_id": "2rKRI4KqlRvj9B-6PL3wH8fR"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:29.505Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); [pscustomobject]@{classification=$j.classification; stale_orchestration_runs=$j.summary.stale_orchestration_runs; projection_mode=$j.projection.mode; context_count=$j.projection.context_count; relevant_run_count=$j.projection.relevant_run_count; bound_relevant_run_count=$j.projection.bound_relevant_run_co",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:41.119Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.classification -in @('LIVE_OWNED','AWAITING_ACCEPTANCE','GRACE_PERIOD_INACTIVE','TERMINAL_PARENT_CONTRADICTION','UNEXPLAINED_ACTIVE') } | Select-Object run_id,classification,latest_state_after,run_status,latest_activity_at,@{n='last_seq';e={$_.last_event.seq}} | ConvertTo-Json ",
+        "session_id": "L9tM9U1T8gt0YZsT3ZPsedBI"
+      }
+    },
+    {
+      "time": "2026-09-09T07:40:46.255Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j = ((& python 'resources/coding-tools-mcp/scripts/report_lifecycle_census.py' --workspace 'E:\\DEV\\Codex-web') -join [Environment]::NewLine | ConvertFrom-Json); $j.runs | Where-Object { $_.classification -in @('LIVE_OWNED','AWAITING_ACCEPTANCE','GRACE_PERIOD_INACTIVE','TERMINAL_PARENT_CONTRADICTION','UNEXPLAINED_ACTIVE') } | Select-Object run_id,classification,latest_state_after,run_status,latest_activity_at,@{n='last_seq';e={$_.last_event.seq}} | ConvertTo-Json ",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:39.741Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:39.744Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:39.938Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "a8d603ea391a648a0a5c8fa778f9ff30dfc65726e2aba9e22b02ad21fa1f40b9"
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:56.781Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:58.167Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:58.180Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T07:41:58.310Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "95d9caceaf83bc769a48538205df582dd04e00bf21c12d19bc877e5db5f22c26"
+      }
+    },
+    {
+      "time": "2026-09-09T07:42:15.467Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

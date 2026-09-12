@@ -770,7 +770,12 @@ function createRuntimeDependencies(options = {}) {
       throw lifecycleError(
         String(error?.code || 'DEV_UI_REFRESH_FAILED'),
         String(error?.message || 'Full-system refresh was refused by Recovery Host.'),
-        { operation_id: operationId, cause_code: error?.code || null }
+        {
+          operation_id: operationId,
+          cause_code: error?.details?.cause_code || error?.code || null,
+          termination_cause_code: error?.details?.termination_cause_code || null,
+          exit_code: Number.isSafeInteger(error?.details?.exit_code) ? error.details.exit_code : null
+        }
       );
     }
   }
@@ -1171,7 +1176,30 @@ async function statusLifecycle(deps) {
 }
 
 async function startLifecycle(deps) {
-  const observation = await ensureCurrent(deps);
+  const initial = await deps.inspect();
+  assertSameDevelopmentInstallation(initial);
+  // Start is also the supported cold-start entry point. Reuse full-clean's
+  // exact installation/census/epoch guards, rather than creating children
+  // under a terminal READY record from a previous process or Windows boot.
+  const hostAbsent = !initial.hostAvailable
+    && ['ENOENT', 'RECOVERY_DESCRIPTOR_STALE'].includes(initial.errorCode);
+  let runtimeAbsent = false;
+  if (initial.hostAvailable && typeof deps.runtimeSnapshot === 'function') {
+    // A failed observation is not absence and must not trigger a refresh.
+    const runtime = await deps.runtimeSnapshot(initial).catch(() => null);
+    const state = typeof deps.runtimeState === 'function' ? deps.runtimeState() : null;
+    runtimeAbsent = Boolean(state && state.manualStop !== true && typeof deps.processAlive === 'function'
+      && runtime?.telemetryAvailable === true && runtime?.signalStale === false
+      && runtime?.snapshotBusy !== true && runtime?.busy !== true && runtime?.recovering !== true
+      && runtime?.mcpRunning === false && runtime?.nativeAlive === false && runtime?.tunnelRunning === false
+      && (!state.nativePid || deps.processAlive(state.nativePid) === false)
+      && (!state.tunnelPid || deps.processAlive(state.tunnelPid) === false));
+  }
+  if (hostAbsent || runtimeAbsent) {
+    deps.output(`DEV_UI START action=cold_start reason=${hostAbsent ? 'host_absent' : 'runtime_stopped'} lifecycle=full_clean`);
+    return refreshLifecycle(deps);
+  }
+  const observation = await ensureCurrent(deps, initial);
   if (observation.ui.instanceId) await deps.signal('focus', observation.ui.instanceId);
   const verified = await deps.inspect();
   assertSameDevelopmentInstallation(verified);
@@ -1724,7 +1752,10 @@ async function main(argv = process.argv.slice(2)) {
     await runLifecycle(normalizeAction(argv[0]));
   } catch (error) {
     const code = String(error?.code || 'DEV_UI_LIFECYCLE_FAILED');
-    process.stderr.write(`DEV_UI ERROR code=${code} message=${String(error?.message || error)}\n`);
+    const cause = String(error?.details?.cause_code || '');
+    const exit = error?.details?.exit_code;
+    const diagnostics = `${/^[A-Z][A-Z0-9_]{0,119}$/.test(cause) ? ` cause_code=${cause}` : ''}${Number.isSafeInteger(exit) ? ` exit_code=${exit}` : ''}`;
+    process.stderr.write(`DEV_UI ERROR code=${code}${diagnostics} message=${String(error?.message || error)}\n`);
     process.exitCode = 1;
   }
 }

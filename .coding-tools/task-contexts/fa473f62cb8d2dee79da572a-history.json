@@ -1,0 +1,172 @@
+[
+  {
+    "version": 2,
+    "task_id": "d32be24d8eb14793b66f01f84cdbcf92",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-11T08:51:51.559Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-11T08:50:30.736Z",
+    "updated_at": "2026-09-11T08:51:51.559Z",
+    "events": [
+      {
+        "time": "2026-09-11T08:50:30.736Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-11T08:50:31.121Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "session_id": "pOdkpIUFzlF2zvghCZZ7_qQK"
+        }
+      },
+      {
+        "time": "2026-09-11T08:50:36.444Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --summary",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:50:45.971Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --help",
+          "session_id": "gIKTBJpyJk_-BEHv2LVjaJ-W"
+        }
+      },
+      {
+        "time": "2026-09-11T08:50:46.705Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:50:53.630Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "zNDfEyCaiAlXywE328gLWDhy"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:00.644Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:12.842Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "session_id": "7LT332wcu2ciZJNsn3OR0fLU"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:13.363Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:26.288Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reconcile_exact_stale_run|runtime-stopped|stale_run_reconciliation|STALE_RECONCILIATION\" resources/coding-tools-mcp tests electron scripts",
+          "session_id": "HptgsbUzTqEzX8f9fBaauhN4"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:26.539Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reconcile_exact_stale_run|runtime-stopped|stale_run_reconciliation|STALE_RECONCILIATION\" resources/coding-tools-mcp tests electron scripts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:34.496Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"reconcile_exact_stale_run|reconciled_stale_orchestration_runs|unresolved_stale_orchestration_runs\" electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "QgdRe9g8WUq_TZU4joIUOzFT"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:34.763Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"reconcile_exact_stale_run|reconciled_stale_orchestration_runs|unresolved_stale_orchestration_runs\" electron/services/fullCleanActivation.js resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:43.555Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 45 \"EXACT_STALE_RUN_REASON_PREFIX|EXACT_STALE_RUN_MAX_IDS|exactStaleRunIds|_execExactStaleRunCli\" electron/services/fullCleanActivation.js electron/services/recoveryHost.js electron/services/recoveryActionStore.js electron/main.js scripts/full-clean-activation.js",
+          "session_id": "q8yX6YUlhtbjcIKDxkMB1gMn"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:43.839Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"EXACT_STALE_RUN_REASON_PREFIX|EXACT_STALE_RUN_MAX_IDS|exactStaleRunIds|_execExactStaleRunCli\" electron/services/fullCleanActivation.js electron/services/recoveryHost.js electron/services/recoveryActionStore.js electron/main.js scripts/full-clean-activation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:51.559Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"exact_stale_runs:|reason.*full-clean|full-clean.*reason|maintenance_workspace|allowAcceptancePending\" scripts/full-clean-activation.js electron/main.js electron/services/recovery*.js package.json tests/full-clean-activation-command.test.js tests/full-clean-activation.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-11T08:51:51.559Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-11T08:51:59.589Z",
+    "archive_reason": "finished"
+  }
+]

@@ -19,6 +19,7 @@ from .acceptance_receipts import (
     _verify_lifecycle_snapshot,
     has_passed_proof,
     passed_proof_fingerprint,
+    validate_passed_proof_source_binding,
 )
 from .codex_bridge import CodexBridgeError
 from .controller_continuity import ControllerContinuityControlMixin
@@ -32,7 +33,13 @@ from .orchestration_control import OrchestrationControlError
 from .p5_control import P5ControlMixin
 from .problem_lineage import ProblemLineageError
 from .problem_lineage_control import ProblemLineageControlMixin
-from .product_session_receipts import record_current_continuity_core
+from .product_session_receipts import (
+    record_accepted_remaining_criterion,
+    record_continuity_read_receipt,
+    record_current_continuity_core,
+    record_execution_control_center_progress,
+    record_goal_runtime_receipts,
+)
 from .solution_shadow_control import SolutionShadowControlMixin
 from .restart_ticket import (
     SUPERVISOR_RESTART_TICKET_PREFIX,
@@ -79,12 +86,93 @@ COORDINATION_LANE_OUTPUT_SCHEMA = {
     ],
 }
 class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMixin, GoalPursuitControlMixin, SolutionShadowControlMixin, P5ControlMixin, ProblemLineageControlMixin):
+    def _activation_paused_self_controller(
+        self,
+        lifecycle: dict[str, Any],
+        live_owned: list[str],
+    ) -> dict[str, str]:
+        """Return exact self-controller identity only for a quiescent REPLAN.
+
+        The lifecycle classifier remains authoritative and unchanged.  This
+        helper merely proves that one LIVE_OWNED row is caused solely by the
+        calling ChatWeb controller lease while the task is explicitly paused.
+        Any missing, additional, future/unknown, or foreign ownership evidence
+        fails closed by returning no allowance.
+        """
+        try:
+            state = self.task_state.get()
+            if str(state.get("status") or "").strip().lower() != "paused":
+                return {}
+            projection = state.get("orchestration") if isinstance(state.get("orchestration"), dict) else {}
+            run_id = str(projection.get("run_id") or "").strip()
+            if not run_id or run_id not in live_owned:
+                return {}
+            identity = self._current_hub_client()
+            if not isinstance(identity, dict) or str(identity.get("client_type") or "").strip().lower() != "chatweb":
+                return {}
+            client_id = str(self._hub_client_record_id(identity) or "").strip()
+            if not client_id:
+                return {}
+
+            lifecycle_counts = lifecycle.get("classification_counts") if isinstance(lifecycle.get("classification_counts"), dict) else {}
+            total_live_owned = int(lifecycle_counts.get("LIVE_OWNED") or 0)
+            live_records = lifecycle.get("live_owned_runs") if isinstance(lifecycle.get("live_owned_runs"), list) else []
+            live_records = [item for item in live_records if isinstance(item, dict)]
+            # run_ids_by_class/live_owned_runs are bounded projections.  Never
+            # discount from a truncated or internally inconsistent snapshot.
+            if total_live_owned != len(live_owned) or total_live_owned != len(live_records):
+                return {}
+            record = next((item for item in live_records if str(item.get("run_id") or "") == run_id), None)
+            if record is None:
+                return {}
+            if str(record.get("run_status") or "") != "active":
+                return {}
+            if str(record.get("latest_state_after") or "").upper() != "REPLAN":
+                return {}
+            ownership = record.get("ownership") if isinstance(record.get("ownership"), dict) else {}
+            expected_keys = {
+                "active_controller_leases",
+                "active_write_fences",
+                "running_background_operations",
+                "live_agent_lanes",
+                "live_managed_jobs",
+            }
+            if set(ownership) != expected_keys:
+                return {}
+            observed_ownership = {key: int(ownership.get(key) or 0) for key in expected_keys}
+            if observed_ownership != {
+                "active_controller_leases": 1,
+                "active_write_fences": 0,
+                "running_background_operations": 0,
+                "live_agent_lanes": 0,
+                "live_managed_jobs": 0,
+            }:
+                return {}
+            lease = self.orchestration_ledger.peek_controller_lease(run_id)
+            if not isinstance(lease, dict):
+                return {}
+            if (
+                str(lease.get("run_id") or "") != run_id
+                or str(lease.get("status") or "") != "active"
+                or str(lease.get("owner_client_id") or "") != client_id
+            ):
+                return {}
+            ctx = self.orchestration_control.snapshot(run_id)
+            if ctx is None or str(ctx.state or "").upper() != "REPLAN":
+                return {}
+            if self.orchestration_ledger.verify_chain(run_id).get("ok") is not True:
+                return {}
+            return {"run_id": run_id, "client_id": client_id}
+        except (KeyError, TypeError, ValueError, sqlite3.Error, OSError, RuntimeError, ToolFailure):
+            return {}
+
     def activation_preflight(
         self,
         *,
         operation_id: str = "",
         expires_at_unix_ms: int = 0,
         allow_acceptance_pending: bool = False,
+        allow_self_controller_lease: bool = False,
         prepare: bool = False,
         ignore_active_tool_calls: int = 0,
         source_checkpoint: Any = None,
@@ -200,6 +288,14 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 }
             run_ids_by_class = lifecycle.get("run_ids_by_class") if isinstance(lifecycle.get("run_ids_by_class"), dict) else {}
             live_owned = list(run_ids_by_class.get("LIVE_OWNED") or [])
+            self_controller: dict[str, str] = {}
+            counts["self_controller_leases_discounted"] = 0
+            if live_owned and allow_self_controller_lease:
+                self_controller = self._activation_paused_self_controller(lifecycle, live_owned)
+                self_controller_run_id = str(self_controller.get("run_id") or "")
+                if self_controller_run_id:
+                    live_owned = [run_id for run_id in live_owned if str(run_id) != self_controller_run_id]
+                    counts["self_controller_leases_discounted"] = 1
             if live_owned:
                 return {
                     "safe": False,
@@ -238,6 +334,8 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             # orchestration guard and acceptance proof.
             if threshold_candidates:
                 orchestration_state = "QUIESCENT_WITH_THRESHOLD_CANDIDATES"
+                if self_controller:
+                    run_id = str(self_controller.get("run_id") or "")
             else:
                 try:
                     active_run = self.orchestration_ledger.current_active_execution_run()
@@ -283,6 +381,8 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                             "orchestration_state": orchestration_state,
                             "counts": counts,
                         }
+                elif self_controller and run_id == str(self_controller.get("run_id") or "") and orchestration_state == "REPLAN":
+                    orchestration_state = "QUIESCENT_REPLAN_WITH_SELF_CONTROLLER"
                 else:
                     return {
                         "safe": False,
@@ -320,7 +420,11 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
             result = {
                 "safe": True,
                 "code": "READY",
-                "reason": "idle" if not acceptance_pending else "acceptance_state_is_durable",
+                "reason": (
+                    "paused_replan_self_controller_is_quiescent"
+                    if self_controller
+                    else "idle" if not acceptance_pending else "acceptance_state_is_durable"
+                ),
                 "operation_id": operation_id or None,
                 "run_id": run_id,
                 "orchestration_state": orchestration_state,
@@ -911,6 +1015,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 operation_id=ticket_id,
                 expires_at_unix_ms=now_ms + SUPERVISOR_RESTART_TICKET_TTL_MS,
                 allow_acceptance_pending=allow_acceptance_pending,
+                allow_self_controller_lease=True,
                 prepare=True,
                 ignore_active_tool_calls=1,
             )
@@ -1084,10 +1189,13 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
         if action == "problem":
             return self._problem_control(args)
         if action == "goal":
-            return self._goal_control(args)
+            result = self._goal_control(args)
+            record_goal_runtime_receipts(self, args, result)
+            return result
         if action == "continuity":
             result = self._controller_continuity_control(args)
             record_current_continuity_core(self, args, result)
+            record_continuity_read_receipt(self, args, result)
             return result
         if action == "run_continuation":
             return self._run_continuation_control(args)
@@ -1161,11 +1269,26 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     "The coordination message or workspace-local completion report was not found.",
                     category="not_found",
                 ) from exc
+            ack_projection = (
+                acknowledged_state.get("orchestration")
+                if isinstance(acknowledged_state.get("orchestration"), dict)
+                else {}
+            )
+            ack_run_id = str(ack_projection.get("run_id") or "")
+            auto_resume = None
+            if ack_run_id:
+                self._run_continuation_record_telemetry(
+                    ack_run_id, "report_gate", outcome="succeeded", code="REPORT_ACKNOWLEDGED", marker=message_id
+                )
+                auto_resume = self._run_continuation_try_auto_resume(
+                    run_id=ack_run_id, trigger="report_gate", marker=message_id
+                )
             return {
                 "acknowledged": True,
                 "acknowledgement_type": "operator_completion_report",
                 "report_id": message_id,
-                "state": acknowledged_state,
+                "state": self.task_state.get() if auto_resume is not None else acknowledged_state,
+                "continuation_auto_resume": auto_resume,
             }
         if action == "handoff":
             state, projection, run_id, wave_id = self._coordination_ids(args)
@@ -1290,9 +1413,16 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                 recorded = self.orchestration_ledger.record_observation_span(run_id=run_id, wave_id=wave_id, span=span)
             except ValueError as exc:
                 raise ToolFailure("OBSERVATION_SPAN_INVALID", str(exc), category="validation") from exc
+            control_center_receipt = record_execution_control_center_progress(
+                self,
+                run_id=run_id,
+                wave_id=wave_id,
+                span=span,
+            )
             return {
                 "recorded": bool(recorded.get("recorded")),
                 "observation_span": recorded,
+                "control_center_receipt": control_center_receipt,
                 "critical_path": self.orchestration_ledger.critical_path_analysis(run_id),
             }
         if action == "solution_shadow":
@@ -1343,6 +1473,7 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     "reports": reports,
                 }
             if action == "accept":
+                controller_acceptance_started_ms = self.orchestration_control.observation_now_ms()
                 controller = self._require_hub_controller(run_id)
                 if ctx.state != "ACCEPTING":
                     raise ToolFailure(
@@ -1423,6 +1554,19 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                         retryable=False,
                         details={"run_id": run_id, "wave_id": ctx.wave_id},
                     )
+                proof_source_binding = {"required": False, "reason": "no_mutation"}
+                if durable_mutation or receipt_mutation:
+                    proof_source_binding = validate_passed_proof_source_binding(
+                        scope_root,
+                        proofs,
+                        current_base_head=str(identity.get("base_head") or ""),
+                        current_contract_fp=str(ctx.contract_fp or ""),
+                        accepted_paths=[
+                            str(item.get("path") or "")
+                            for item in (accepted_files.get("files") or [])
+                            if isinstance(item, dict) and str(item.get("path") or "")
+                        ],
+                    )
                 coverage_manifest, criterion_dispositions = args.get("problem_coverage_manifest"), args.get("problem_criterion_dispositions")
                 resolution_envelope = self._problem_resolution_envelope(args.get("problem_resolution_envelope"))
                 controller_authority = self._problem_chatweb_controller_authority(run_id, controller=controller) if criterion_dispositions is not None else None
@@ -1450,6 +1594,8 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                             outcome={"source": "accepted_proof_auto_v1", "oracle_pass": True},
                         )
                 checkpoint_metadata = _accepted_checkpoint_metadata(identity, accepted_by=accepted_by, accepted_files=accepted_files)
+                if proof_source_binding.get("required") is True:
+                    checkpoint_metadata["proof_source_binding"] = proof_source_binding
                 if problem_outcome.get("required"):
                     checkpoint_metadata.update({"problem_outcome_claim": problem_outcome["claim"], "problem_outcome_claim_sha256": problem_outcome["claim_sha256"]})
                 _checkpoint_ctx, checkpoint_result = self.orchestration_control.checkpoint_with_receipt(
@@ -1460,7 +1606,21 @@ class CoordinationMixin(ActivationLifecycleMixin, ControllerContinuityControlMix
                     status="accepted",
                     metadata=checkpoint_metadata,
                 )
+                self.orchestration_control.record_controller_acceptance_observations(
+                    ctx,
+                    controller_started_ms=controller_acceptance_started_ms,
+                )
                 checkpoint_id = str(checkpoint_result.get("checkpoint_id") or "")
+                self._run_continuation_record_telemetry(
+                    run_id, "accepted_checkpoint", outcome="succeeded", code="CONTROLLER_ACCEPTED", marker=checkpoint_id
+                )
+                record_accepted_remaining_criterion(
+                    self,
+                    run_id=run_id,
+                    wave_id=ctx.wave_id,
+                    coverage_manifest=coverage_manifest,
+                    checkpoint_id=checkpoint_id,
+                )
                 problem_outcome_bridge = self._problem_reconcile_after_checkpoint(
                     run_id=run_id, wave_id=ctx.wave_id, checkpoint_id=checkpoint_id, identity=identity,
                 ) if problem_outcome.get("required") else {"recorded": False, "reason": problem_outcome.get("reason")}

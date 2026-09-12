@@ -194,6 +194,102 @@ class ProblemLineageCanaryTests(unittest.TestCase):
             self.assertEqual(coverage["numerator"], 1)
             self.assertEqual(coverage["invalid_reason_counts"], {})
 
+    def test_full_problem_intent_without_outcome_claim_is_not_in_claim_cohort(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            ledger.migrate_problem_lineage_schema()
+            opened = ledger.problem_record_event({
+                "operation": "open", "event_id": "open", "problem_id": "problem-fixture", "task_id": "task-fixture",
+                "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": CAPSULE,
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:00Z", authority_context="RUNTIME_EXPLICIT_USER")
+            context = {"schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem", "problem_id": "problem-fixture", "problem_revision": 1, "contract_fingerprint": opened["event"]["contract_fingerprint"], "engineering_floor": "REQUIRED", "policy_eligible": False}
+            run_id = ledger.create_run(objective="fixture", metadata={"problem_resolution": context})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "link", "problem_id": "problem-fixture", "problem_revision": 1,
+                "run_id": run_id, "wave_id": wave_id, "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:01Z", authority_context="RUNTIME_BINDING")
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_lineage_canary_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader), integrity_check="ok", foreign_key_violations=0)
+            coverage = report["mechanics"]["criterion_to_proof_structural_coverage"]
+            self.assertEqual(coverage["denominator"], 0)
+            self.assertEqual(coverage["numerator"], 0)
+            self.assertEqual(coverage["invalid_reason_counts"], {})
+
+    def test_replan_full_claim_uses_run_level_exact_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            ledger.migrate_problem_lineage_schema()
+            opened = ledger.problem_record_event({
+                "operation": "open", "event_id": "open", "problem_id": "problem-fixture", "task_id": "task-fixture",
+                "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": CAPSULE,
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:00Z", authority_context="RUNTIME_EXPLICIT_USER")
+            context = {"schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem", "problem_id": "problem-fixture", "problem_revision": 1, "contract_fingerprint": opened["event"]["contract_fingerprint"], "engineering_floor": "REQUIRED", "policy_eligible": False}
+            run_id = ledger.create_run(objective="fixture", metadata={"problem_resolution": context})
+            first_wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "link", "problem_id": "problem-fixture", "problem_revision": 1,
+                "run_id": run_id, "wave_id": first_wave_id, "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:01Z", authority_context="RUNTIME_BINDING")
+            ledger.finish_wave(first_wave_id, status="replanned")
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="focused", stage_version="1", input_fingerprint="proof", status="passed")
+            proofs = ledger.list_proofs(run_id, wave_id=wave_id)
+            proof_fp = passed_proof_fingerprint(proofs)
+            files = self._accepted_files(run_id, wave_id)
+            git_head = "a" * 40
+            worktree_fp = "b" * 64
+            outcome = ledger.problem_prepare_eocl_outcome_claim(run_id=run_id, wave_id=wave_id, git_head=git_head, worktree_fp=worktree_fp, proof_fingerprint=proof_fp, accepted_files=files, durable_mutation=False, coverage_manifest={"criterion-1": [proof_id]}, resolution_envelope=ENVELOPE)
+            checkpoint = ledger.accept_checkpoint_atomic(run_id=run_id, wave_id=wave_id, git_head=git_head, proof_fingerprint=proof_fp, metadata={"worktree_fp": worktree_fp, "accepted_files": files, "problem_outcome_claim": outcome["claim"], "problem_outcome_claim_sha256": outcome["claim_sha256"]})
+            checkpoint_created_at = ledger.list_checkpoints(run_id, wave_id=wave_id)[-1]["created_at"]
+            ledger.problem_record_provisional_from_eocl(run_id=run_id, wave_id=wave_id, checkpoint_id=checkpoint["checkpoint_id"], now=checkpoint_created_at)
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_lineage_canary_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader), integrity_check="ok", foreign_key_violations=0)
+            coverage = report["mechanics"]["criterion_to_proof_structural_coverage"]
+            self.assertEqual(coverage["denominator"], 1)
+            self.assertEqual(coverage["numerator"], 1)
+            self.assertEqual(coverage["invalid_reason_counts"], {})
+
+    def test_actual_claim_with_different_run_binding_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ledger = OrchestrationLedger(root)
+            ledger.migrate_problem_lineage_schema()
+            first = ledger.problem_record_event({
+                "operation": "open", "event_id": "open-a", "problem_id": "problem-a", "task_id": "task-a",
+                "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": CAPSULE,
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:00Z", authority_context="RUNTIME_EXPLICIT_USER")
+            second = ledger.problem_record_event({
+                "operation": "open", "event_id": "open-b", "problem_id": "problem-b", "task_id": "task-b",
+                "task_class": "bugfix", "engineering_floor": "REQUIRED", "contract_capsule": CAPSULE,
+                "provenance": "CONTROLLER_REPORTED_EXPLICIT_USER", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:01Z", authority_context="RUNTIME_EXPLICIT_USER")
+            context = {"schema_version": 1, "work_origin": "problem", "resolution_claim": "full_problem", "problem_id": "problem-b", "problem_revision": 1, "contract_fingerprint": second["event"]["contract_fingerprint"], "engineering_floor": "REQUIRED", "policy_eligible": False}
+            run_id = ledger.create_run(objective="fixture", metadata={"problem_resolution": context})
+            wave_id = ledger.create_wave(run_id, execution_mode="mcp_only", metadata={"problem_resolution": context})
+            ledger.problem_record_event({
+                "operation": "link", "event_id": "link-a", "problem_id": "problem-a", "problem_revision": 1,
+                "run_id": run_id, "wave_id": wave_id, "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+                "provenance": "DETERMINISTIC_EVIDENCE", "evidence_level": "OBSERVED",
+            }, now="2026-08-25T00:00:02Z", authority_context="RUNTIME_BINDING")
+            del first
+            proof_id = ledger.record_proof(run_id=run_id, wave_id=wave_id, stage_id="focused", stage_version="1", input_fingerprint="proof", status="passed")
+            files = self._accepted_files(run_id, wave_id)
+            ledger.problem_prepare_eocl_outcome_claim(run_id=run_id, wave_id=wave_id, git_head="a" * 40, worktree_fp="b" * 64, proof_fingerprint=passed_proof_fingerprint(ledger.list_proofs(run_id, wave_id=wave_id)), accepted_files=files, durable_mutation=False, coverage_manifest={"criterion-1": [proof_id]}, resolution_envelope=ENVELOPE)
+            with open_ledger_analysis_snapshot(root) as snapshot:
+                report = problem_lineage_canary_report(snapshot.ledger, ProblemLineageFacts.load(snapshot.reader), integrity_check="ok", foreign_key_violations=0)
+            coverage = report["mechanics"]["criterion_to_proof_structural_coverage"]
+            self.assertEqual(coverage["denominator"], 1)
+            self.assertEqual(coverage["numerator"], 0)
+            self.assertEqual(coverage["invalid_reason_counts"], {"exact_attempt_binding_mismatch": 1})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,0 +1,147 @@
+{
+  "version": 2,
+  "task_id": "583c4803a49d48f7a03039a002b65c58",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-09T13:58:29.578Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The current task was stopped. Start or resume a task before continuing.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-09T13:56:03.920Z",
+  "updated_at": "2026-09-09T13:58:29.578Z",
+  "events": [
+    {
+      "time": "2026-09-09T13:56:03.920Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:04.253Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"CONTINUITY_IDENTITY_REQUIRED\\|reattach_id\" -- resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+        "session_id": "BTV4E2878gLM3zNc7Z9H80-J"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:04.537Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"CONTINUITY_IDENTITY_REQUIRED\\|reattach_id\" -- resources/coding-tools-mcp/coding_tools_mcp tests resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:14.270Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 45 \"reattach_id = _opaque\" -- resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "session_id": "7mnaiT785_Q1UvBTUX4g4wMI"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:14.556Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 45 \"reattach_id = _opaque\" -- resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:25.540Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 30 \"def reattach\\|\\\"reattach_id\\\": \\\"reattach-1\\\"\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "session_id": "Xq_o-rc3WAZYbmfh94vdBU2_"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:25.851Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 30 \"def reattach\\|\\\"reattach_id\\\": \\\"reattach-1\\\"\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:50.377Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 55 \"test_idle_reattach_replay_and_old_endpoint_new_run_fence\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "session_id": "23SKWgKA2huc5dkyyYoHqVsF"
+      }
+    },
+    {
+      "time": "2026-09-09T13:56:50.642Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 55 \"test_idle_reattach_replay_and_old_endpoint_new_run_fence\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:57:51.971Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 35 \"EXACT_RUN_RECOVERY_REFUSED\\|current compact task projection is not terminal\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "RTGBEgMzGuwxcp3gdojyK4D3"
+      }
+    },
+    {
+      "time": "2026-09-09T13:57:52.250Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 35 \"EXACT_RUN_RECOVERY_REFUSED\\|current compact task projection is not terminal\" -- resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:58:00.071Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T13:58:29.578Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"a5bedacf651b492f91a5be367d2c871c\" -- .coding-tools/task-context-workspaces.json .coding-tools/task-state.json .coding-tools/orchestration/reports/run-a5bedacf651b492f91a5be367d2c871c/run-summary.md .coding-tools/orchestration/reports/run-a5bedacf651b492f91a5be367d2c871c/wave-004.md",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-09T13:58:29.578Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "TASK_STOPPED"
+      }
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "task_id": "849b780b9f64436aa45659cf7a8ab031",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "zLL9s9_qyaEQsZbLuKRtpQDe",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 23663,
+    "finished_at": "2026-09-10T07:24:00.549Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationLedgerTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationLedgerTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_recovery_restores_exact_session_before_one_new_turn tests/test_run_continuation.py::RunContinuationSurfaceTests::test_failed_proof_dispatches_one_bounded_repair_turn_then_reaches_accepting -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 23663,
+      "summary": "exit 0 | 23.7s | 3 lines | tail: '5 passed in 22.42s'",
+      "finished_at": "2026-09-10T07:24:00.549Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "zLL9s9_qyaEQsZbLuKRtpQDe"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "size_bytes": 101,
+        "command_id": "zLL9s9_qyaEQsZbLuKRtpQDe",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:zLL9s9_qyaEQsZbLuKRtpQDe:stdout",
+            "total_stream_bytes": 101,
+            "total_retained_bytes": 101,
+            "head_retained_bytes": 101,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:zLL9s9_qyaEQsZbLuKRtpQDe:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-10T07:23:21.141Z",
+  "updated_at": "2026-09-10T07:24:00.549Z",
+  "events": [
+    {
+      "time": "2026-09-10T07:23:21.141Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-10T07:23:21.490Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"^class |test_regrant_resets_dispatch_identity|test_patch_budget_is_atomic\" resources/coding-tools-mcp/tests/test_run_continuation.py",
+        "session_id": "GlAv0lYQ80ic-cxiuhUtGdC5"
+      }
+    },
+    {
+      "time": "2026-09-10T07:23:21.769Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"^class |test_regrant_resets_dispatch_identity|test_patch_budget_is_atomic\" resources/coding-tools-mcp/tests/test_run_continuation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T07:23:27.697Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"^class .*Reattach|test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed\" resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "session_id": "OjjeSm9lxkJw5r9xf8sNOf9w"
+      }
+    },
+    {
+      "time": "2026-09-10T07:23:28.024Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"^class .*Reattach|test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed\" resources/coding-tools-mcp/tests/test_controller_reattach.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T07:23:36.780Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationLedgerTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationLedgerTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_",
+        "session_id": "zLL9s9_qyaEQsZbLuKRtpQDe"
+      }
+    },
+    {
+      "time": "2026-09-10T07:24:00.549Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_controller_reattach.py::ControllerReattachTests::test_capsule_source_runtime_revision_and_goal_ambiguity_fail_closed tests/test_run_continuation.py::RunContinuationLedgerTests::test_regrant_resets_dispatch_identity_and_binds_new_thread_with_valid_chain tests/test_run_continuation.py::RunContinuationLedgerTests::test_patch_budget_is_atomic_per_action_and_exhaustion_blocks_a_second_effect tests/test_run_continuation.py::RunContinuationSurfaceTests::test_persistent_lane_",
+        "status": "passed"
+      }
+    }
+  ]
+}

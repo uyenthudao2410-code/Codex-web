@@ -1,0 +1,526 @@
+{
+  "version": 2,
+  "task_id": "bb815d5a6f35496eb456f49748271f31",
+  "orchestration": {
+    "run_id": "ea21d3ac303946aeae05a02302a3c8bd",
+    "wave_id": "b4abdd6bfb8849348f6ca72d777725a5",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+    "contract_fp": ""
+  },
+  "objective": "G6 operational continuity closure verification for Problem prl-b1fed3cdfd5203d9d9202643265865c3 revision 1. Make no source changes. Execute the authoritative immutable TG6 reporter and fail closed unless all required cross-session receipts are present; do not synthesize or backfill missing product-session, rotation, observation, reconstruction, falsifier, or outcome receipts.",
+  "status": "stopped",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-10T11:57:40.030Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-10T11:57:40.030Z"
+    }
+  ],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tav389nZUNivpB3GBnXjBcFR",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-10T11:57:39.647Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 46,
+        "head_hash": "7c023027181ff48701bfde9317c5bbc902872616eafc6fb0cef066d58c1e5473"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ea21d3ac303946aeae05a02302a3c8bd\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ea21d3ac303946aeae05a02302a3c8bd\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ea21d3ac303946aeae05a02302a3c8bd\\wave-002.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "ea21d3ac303946aeae05a02302a3c8bd",
+      "wave_id": "b4abdd6bfb8849348f6ca72d777725a5",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "7470a8970a58fb13e889a681570fbb672e2e13033d940ea26d07e60849521d11",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "G6 operational continuity closure verification for Problem prl-b1fed3cdfd5203d9d9202643265865c3 revision 1. Make no source changes. Execute the authoritative immutable TG6 reporter and fail closed unless all required cross-session receipts are present; do not synthesize or backfill missing product-session, rotation, observation, reconstruction, falsifier, or outcome receipts.",
+        "objective_revision": 2,
+        "objective_sha256": "da3e2a8f14650732ff29c75fece5b2b96db070af0df8b6f2223262cd7f4576a5",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "97c3cf2981c74bd1b0a5831d7ac9e6f5",
+          "stage_id": "check:00c5e69ca64d14c0",
+          "status": "failed",
+          "duration_ms": 7165,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 47795
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "34d1d848a55cc7fa6865c0622125c70b5ed350aaeb9ed7bb0b802676c91db469",
+  "completion_report_acknowledged_id": "34d1d848a55cc7fa6865c0622125c70b5ed350aaeb9ed7bb0b802676c91db469",
+  "completion_report_acknowledged_at": "2026-09-10T11:59:33.510Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-10T11:45:08.044Z",
+  "updated_at": "2026-09-10T11:59:33.515Z",
+  "events": [
+    {
+      "time": "2026-09-10T11:45:08.044Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "G6 operational continuity closure verification for Problem prl-b1fed3cdfd5203d9d9202643265865c3 revision 1. Make no source changes. Verify the current durable evidence for G6-C1 through G6-C8, and verify G6-C9 as the preserved two-plane rule: technical acceptance may only create PROVISIONALLY_RESOLVED while independent explicit user outcome remains absent and unclaimed. Use exact identities, bounded content-free continuity evidence, and current authoritative reporters/tests. Do not rewrite historical runs, do not recover by recency, do not mutate ledger manually, and do not restart/commit/push/release/deploy."
+      }
+    },
+    {
+      "time": "2026-09-10T11:45:09.199Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-10T11:45:49.638Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-10T11:47:11.205Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T11:47:18.666Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T11:47:18.673Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T11:53:59.818Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:00.904Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:02.160Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:02.167Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:03.550Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:04.171Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:05.171Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$raw = python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $j=$raw|ConvertFrom-Json; $r=if($null -ne $j.result){$j.result}else{$j}; [pscustomobject]@{status=$r.status; accepted=$r.accepted_real_cross_session_continuity_receipt; gate_counts=$r.gate_counts; non_pass=@($r.gates|Where-Object {$_.status -ne 'PASS'}|Select-O",
+        "session_id": "qNuM8CCbCzlC5fQEAIducEto"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:06.140Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$raw = python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $j=$raw|ConvertFrom-Json; $r=if($null -ne $j.result){$j.result}else{$j}; [pscustomobject]@{status=$r.status; accepted=$r.accepted_real_cross_session_continuity_receipt; gate_counts=$r.gate_counts; non_pass=@($r.gates|Where-Object {$_.status -ne 'PASS'}|Select-O",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:06.487Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:07.175Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:07.186Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:07.194Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:07.281Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "0e1c1a58753b2aea674792929a031c9f52bb3fa4d853082b608facfb148e71e6"
+      }
+    },
+    {
+      "time": "2026-09-10T11:54:07.392Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T11:55:55.854Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:55:59.241Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "0e1c1a58753b2aea674792929a031c9f52bb3fa4d853082b608facfb148e71e6"
+      }
+    },
+    {
+      "time": "2026-09-10T11:56:14.693Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:56:16.039Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:27.435Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:28.483Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:29.976Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:29.986Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:31.506Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:32.257Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:33.235Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$raw = python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $j=$raw|ConvertFrom-Json; $r=if($null -ne $j.result){$j.result}else{$j}; [pscustomobject]@{status=$r.status; accepted=$r.accepted_real_cross_session_continuity_receipt; gate_counts=$r.gate_counts; non_pass=@($r.gates|Where-Object {$_.status -ne 'PASS'}|Select-O",
+        "session_id": "tav389nZUNivpB3GBnXjBcFR"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:39.647Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$raw = python scripts\\report_cross_session_continuity.py --workspace E:\\DEV\\Codex-web --problem-id prl-b1fed3cdfd5203d9d9202643265865c3 --problem-revision 1; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $j=$raw|ConvertFrom-Json; $r=if($null -ne $j.result){$j.result}else{$j}; [pscustomobject]@{status=$r.status; accepted=$r.accepted_real_cross_session_continuity_receipt; gate_counts=$r.gate_counts; non_pass=@($r.gates|Where-Object {$_.status -ne 'PASS'}|Select-O",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:40.030Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:41.129Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:41.135Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:41.156Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:41.408Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "dc62d5d618645411c5b337773001b29dfcde407c71e5c709cb5519c7ba3c78b8"
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:41.568Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:53.553Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:57:53.906Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-10T11:58:16.627Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "dc62d5d618645411c5b337773001b29dfcde407c71e5c709cb5519c7ba3c78b8"
+      }
+    },
+    {
+      "time": "2026-09-10T11:59:05.591Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:59:07.366Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "34d1d848a55cc7fa6865c0622125c70b5ed350aaeb9ed7bb0b802676c91db469"
+      }
+    },
+    {
+      "time": "2026-09-10T11:59:16.994Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T11:59:33.510Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "34d1d848a55cc7fa6865c0622125c70b5ed350aaeb9ed7bb0b802676c91db469"
+      }
+    }
+  ]
+}

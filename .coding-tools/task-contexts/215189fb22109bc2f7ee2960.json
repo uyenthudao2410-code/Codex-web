@@ -1,0 +1,211 @@
+{
+  "version": 2,
+  "task_id": "5d244d436596408588043e1b1b31c15d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "aY4cXfm_1oyv2cNRs-BUUgn1",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-09T23:24:32.152Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "aY4cXfm_1oyv2cNRs-BUUgn1",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "aY4cXfm_1oyv2cNRs-BUUgn1",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "branch": "main",
+        "worktree_fp": "22cc81788aad51a10092e66b5c59d537b029b4c62e383aa6d6d9e80addd0b678",
+        "dirty_paths": [
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/main.js",
+          "electron/services/chatEvaluationJournal.js",
+          "electron/services/componentRevision.js",
+          "electron/services/fullCleanActivation.js",
+          "electron/services/recoveryActionStore.js",
+          "electron/services/recoveryActivation.js",
+          "electron/services/recoveryBootstrap.js",
+          "electron/services/recoveryHost.js",
+          "electron/services/recoveryHostLauncher.js",
+          "electron/services/runtimeOrchestrator.js",
+          "renderer/control-center.css",
+          "renderer/control-center.js",
+          "renderer/dashboard.js",
+          "renderer/index.html",
+          "renderer/token-dashboard.html",
+          "resources/coding-tools-mcp/coding_tools_mcp/acceptance_receipts.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/activation_capability.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/codex_bridge.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/completion_readiness.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/exec_tools.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/host_correlation.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/lifecycle_census.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/mcp_http_handler.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/proof_ledger.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/runtime_background.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "resources/coding-tools-mcp/tests/test_acceptance_file_attestation.py",
+          "resources/coding-tools-mcp/tests/test_activation_preflight.py",
+          "resources/coding-tools-mcp/tests/test_codex_bridge.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_execution_hub.py",
+          "resources/coding-tools-mcp/tests/test_lifecycle_census.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "resources/coding-tools-mcp/tests/test_problem_lineage.py",
+          "resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "resources/coding-tools-mcp/tests/test_task_state_and_build.py",
+          "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "scripts/full-clean-activation.js",
+          "tests/accepted-code-activation.test.js",
+          "tests/chat-evaluation-journal.test.js",
+          "tests/component-revision.test.js",
+          "tests/control-center-truthfulness.test.js",
+          "tests/dev-ui-lifecycle.test.js",
+          "tests/full-clean-activation-command.test.js",
+          "tests/full-clean-activation.test.js",
+          "tests/recovery-activation.test.js",
+          "tests/recovery-bootstrap.test.js",
+          "tests/recovery-host.test.js",
+          "tests/recovery-supervisor.test.js",
+          "tests/runtime-lifecycle.test.js",
+          ".harness/epoch-transition/writer.lock",
+          "docs/CONTINUATION_CLOSURE_PLAN.md",
+          "electron/services/trustedRecoveryBootstrap.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/app_server_persistence.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+          "resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+          "resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+          "resources/coding-tools-mcp/tests/test_lifecycle_census_cli.py",
+          "scripts/trusted-recovery-bootstrap.js",
+          "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs",
+          "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs",
+          "tests/trusted-recovery-bootstrap.test.js"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "5d244d436596408588043e1b1b31c15d",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "fa33ed2fc122c629e0b22a37df53d9582f806a06e5cf81cfe1d29fd2d8e171ad",
+  "completion_report_acknowledged_id": "fa33ed2fc122c629e0b22a37df53d9582f806a06e5cf81cfe1d29fd2d8e171ad",
+  "completion_report_acknowledged_at": "2026-09-09T23:24:50.804Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-09T23:22:44.480Z",
+  "updated_at": "2026-09-09T23:25:08.555Z",
+  "events": [
+    {
+      "time": "2026-09-09T23:22:44.480Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T23:22:44.774Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; foreach($i in 1..5){ $env:N11_FOLLOWUP=[string]$i; Write-Output ('--- followup '+$i+' ---'); node --test 'tests\\recovery-supervisor.test.js'; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }\"",
+        "session_id": "aY4cXfm_1oyv2cNRs-BUUgn1"
+      }
+    },
+    {
+      "time": "2026-09-09T23:24:32.152Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; foreach($i in 1..5){ $env:N11_FOLLOWUP=[string]$i; Write-Output ('--- followup '+$i+' ---'); node --test 'tests\\recovery-supervisor.test.js'; if($LASTEXITCODE -ne 0){ exit $LASTEXITCODE } }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T23:24:32.691Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "aY4cXfm_1oyv2cNRs-BUUgn1",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "fa33ed2fc122c629e0b22a37df53d9582f806a06e5cf81cfe1d29fd2d8e171ad"
+      }
+    },
+    {
+      "time": "2026-09-09T23:24:50.804Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fa33ed2fc122c629e0b22a37df53d9582f806a06e5cf81cfe1d29fd2d8e171ad"
+      }
+    },
+    {
+      "time": "2026-09-09T23:25:08.552Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    }
+  ]
+}

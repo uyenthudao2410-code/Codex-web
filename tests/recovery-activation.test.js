@@ -337,6 +337,48 @@ test('zero-target lifecycle verification accepts canonical empty proof without w
   );
 });
 
+test('acceptance-pending preservation is forwarded to initial and post-cancel verification', async (t) => {
+  const paths = fixture(t);
+  const verificationCalls = [];
+  const manager = new RecoveryActivation({
+    paths,
+    revisions: revisions(),
+    orchestrator: orchestrator({
+      verifyCodeActivation: async (operationId, sourceCheckpoint, allowAcceptancePending) => {
+        verificationCalls.push({ operationId, sourceCheckpoint, allowAcceptancePending });
+        return {
+          ...safeLifecycle({ operationId, sourceCheckpoint }),
+          operation_id: operationId,
+          fenced: false,
+          fence_operation_id: null
+        };
+      }
+    }),
+    log: {},
+    recoveryInstanceId: 'recovery-instance-0001',
+    recoveryRunningRevision: OLD
+  });
+  const activation = { ...request('coding_mcp'), allow_acceptance_pending: true };
+
+  const preflight = await manager.preflight(activation);
+  const completed = await manager.activate(activation);
+
+  assert.equal(preflight.safe, true);
+  assert.equal(completed.state, 'completed');
+  assert.deepEqual(verificationCalls, [
+    {
+      operationId: activation.operation_id,
+      sourceCheckpoint: SOURCE_CHECKPOINT,
+      allowAcceptancePending: true
+    },
+    {
+      operationId: activation.operation_id,
+      sourceCheckpoint: SOURCE_CHECKPOINT,
+      allowAcceptancePending: true
+    }
+  ]);
+});
+
 test('durable action store replays the same operation and rejects payload conflicts', (t) => {
   const paths = fixture(t);
   let now = Date.now();

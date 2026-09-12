@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "98b21603f6b54f2b8ba210125f347a61",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Wej3l6AgPL4WTnHyi_gCJMJa",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 365,
+    "finished_at": "2026-09-09T12:20:38.872Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-09T12:20:38.192Z",
+  "updated_at": "2026-09-09T12:20:38.872Z",
+  "events": [
+    {
+      "time": "2026-09-09T12:20:38.192Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-09T12:20:38.564Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 70 -e \"problem_resolution_envelope\" -e \"normalize_resolution_envelope\" -e \"acceptance_evidence\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "session_id": "Wej3l6AgPL4WTnHyi_gCJMJa"
+      }
+    },
+    {
+      "time": "2026-09-09T12:20:38.872Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 70 -e \"problem_resolution_envelope\" -e \"normalize_resolution_envelope\" -e \"acceptance_evidence\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/task_state.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+        "status": "failed"
+      }
+    }
+  ]
+}

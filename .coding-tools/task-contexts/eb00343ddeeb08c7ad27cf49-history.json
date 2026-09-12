@@ -1,0 +1,134 @@
+[
+  {
+    "version": 2,
+    "task_id": "40a4094f37ae406f8296c22c5239162c",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3TzWb1ioYbiFe47Vovx5A4ef",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 261,
+      "finished_at": "2026-09-09T12:02:51.937Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T12:02:51.437Z",
+    "updated_at": "2026-09-09T12:02:51.937Z",
+    "events": [
+      {
+        "time": "2026-09-09T12:02:51.437Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T12:02:51.703Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 -e \"write_set_additions\" -e \"WRITE_SET_EXPANSION_REQUIRED\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "3TzWb1ioYbiFe47Vovx5A4ef"
+        }
+      },
+      {
+        "time": "2026-09-09T12:02:51.937Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 -e \"write_set_additions\" -e \"WRITE_SET_EXPANSION_REQUIRED\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T12:03:00.094Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c85e5819e9dc44f7a3274f2f6ec388e6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "gIJJ5bRjzaHMNcONq_ww-nrJ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 325,
+      "finished_at": "2026-09-09T12:03:09.272Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T12:03:00.096Z",
+    "updated_at": "2026-09-09T12:03:09.272Z",
+    "events": [
+      {
+        "time": "2026-09-09T12:03:00.096Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T12:03:00.398Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"write_set_additions|WRITE_SET_EXPANSION_REQUIRED\" . --glob \"!resources/coding-tools-mcp/python_vendor/**\" --glob \"!.git/**\"",
+          "session_id": "GrmgNvWiGOez7pIzF2qA8YYi"
+        }
+      },
+      {
+        "time": "2026-09-09T12:03:01.671Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"write_set_additions|WRITE_SET_EXPANSION_REQUIRED\" . --glob \"!resources/coding-tools-mcp/python_vendor/**\" --glob \"!.git/**\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T12:03:08.939Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -S \"Write set expansion required|Requested expansion|write set expansion\" . --glob \"!resources/coding-tools-mcp/python_vendor/**\" --glob \"!.git/**\" --glob \"!.coding-tools/**\"",
+          "session_id": "gIJJ5bRjzaHMNcONq_ww-nrJ"
+        }
+      },
+      {
+        "time": "2026-09-09T12:03:09.272Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -S \"Write set expansion required|Requested expansion|write set expansion\" . --glob \"!resources/coding-tools-mcp/python_vendor/**\" --glob \"!.git/**\" --glob \"!.coding-tools/**\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T12:03:16.152Z",
+    "archive_reason": "finished"
+  }
+]

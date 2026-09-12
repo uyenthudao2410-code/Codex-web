@@ -7,6 +7,8 @@ const HOST_OBSERVATION_MAX_BUFFER = 256;
 const HOST_OBSERVATION_MAX_JOURNAL_BYTES = 2 * 1024 * 1024;
 const HOST_CORRELATION_SCHEMA_VERSION = 1;
 const HOST_CORRELATION_BINDING_TTL_MS = 60 * 60 * 1000;
+const CONTINUATION_CONSENT_SCHEMA_VERSION = 1;
+const CONTINUATION_CONSENT_PREFIX = '/coding-tools-continue-consent ';
 const PRODUCT_SESSION_RECEIPT_PREFIX = 'chatweb-product-session:';
 const EVENT_TYPES = new Set(['user_turn_visible', 'assistant_response_first_visible', 'host_turn_span', 'controller_usage', 'turn_features']);
 
@@ -285,6 +287,81 @@ function finiteNonNegative(value) {
 
 function exactNonNegativeInteger(value) {
   return Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function continuationConsentPath(workspace) {
+  return path.join(path.resolve(workspace), '.coding-tools', 'evaluation', 'chatweb-continuation-consent-pending.json');
+}
+
+function normalizedContinuationConsentDescriptor(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const required = new Set([
+    'action', 'run_id', 'wave_id', 'workspace_id', 'problem_id', 'problem_revision',
+    'contract_fingerprint', 'tool_contract_sha256', 'runtime_behavior_fingerprint',
+    'activation_epoch_id', 'activation_admission', 'issuer_client_id', 'scope_sha256',
+    'read_paths', 'write_paths', 'protected_paths', 'approved_check_hashes',
+    'max_duration_seconds', 'max_decision_turns', 'max_patch_attempts'
+  ]);
+  if (Object.keys(value).length !== required.size || Object.keys(value).some((key) => !required.has(key))) return null;
+  if (value.action !== 'authorize_bounded_continuation') return null;
+  const opaque = {};
+  for (const [key, maximum] of Object.entries({
+    run_id: 128, wave_id: 128, workspace_id: 512, problem_id: 128,
+    activation_epoch_id: 128, activation_admission: 32, issuer_client_id: 512
+  })) {
+    const normalized = boundedText(value[key], maximum, true);
+    if (!normalized) return null;
+    opaque[key] = normalized;
+  }
+  const hashes = {};
+  for (const key of ['contract_fingerprint', 'tool_contract_sha256', 'runtime_behavior_fingerprint', 'scope_sha256']) {
+    const normalized = boundedText(value[key], 64, true);
+    if (!normalized || !/^[0-9a-f]{64}$/.test(normalized)) return null;
+    hashes[key] = normalized;
+  }
+  const lists = {};
+  for (const [key, maximum, pattern] of [
+    ['read_paths', 256, null], ['write_paths', 256, null], ['protected_paths', 256, null], ['approved_check_hashes', 16, /^[0-9a-f]{64}$/]
+  ]) {
+    if (!Array.isArray(value[key]) || value[key].length > maximum) return null;
+    const normalized = value[key].map((item) => boundedText(item, pattern ? 64 : 512, true));
+    if (normalized.some((item) => !item) || normalized.some((item) => pattern && !pattern.test(item))
+      || JSON.stringify(normalized) !== JSON.stringify([...new Set(normalized)].sort())) return null;
+    lists[key] = normalized;
+  }
+  if (!Number.isSafeInteger(value.problem_revision) || value.problem_revision < 1) return null;
+  for (const key of ['max_duration_seconds', 'max_decision_turns', 'max_patch_attempts']) {
+    if (!Number.isSafeInteger(value[key]) || value[key] < 1) return null;
+  }
+  return {
+    action: 'authorize_bounded_continuation', ...opaque, problem_revision: value.problem_revision,
+    ...hashes, ...lists,
+    max_duration_seconds: value.max_duration_seconds,
+    max_decision_turns: value.max_decision_turns,
+    max_patch_attempts: value.max_patch_attempts
+  };
+}
+
+function parseContinuationConsentText(value) {
+  const text = String(value ?? '').trim();
+  if (!text.startsWith(CONTINUATION_CONSENT_PREFIX) || text.length > 16 * 1024) return null;
+  try {
+    return normalizedContinuationConsentDescriptor(JSON.parse(text.slice(CONTINUATION_CONSENT_PREFIX.length)));
+  } catch {
+    return null;
+  }
+}
+
+function normalizeContinuationConsentObservation(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const allowed = new Set(['kind', 'schema_version', 'turn_id', 'trace_id', 'descriptor', 'observer_plane', 'product_session_receipt_id', 'prior_product_session_receipt_id', 'product_session_transition']);
+  if (Object.keys(value).some((key) => !allowed.has(key)) || value.kind !== 'continuation_consent' || value.schema_version !== CONTINUATION_CONSENT_SCHEMA_VERSION) return null;
+  const turnId = boundedText(value.turn_id, 128, true);
+  const traceId = boundedText(value.trace_id, 128, true);
+  const observerPlane = boundedText(value.observer_plane, 100, true);
+  const descriptor = normalizedContinuationConsentDescriptor(value.descriptor);
+  if (!turnId || !traceId || !observerPlane || observerPlane !== 'electron_chatgpt_dom' || !descriptor) return null;
+  return { turn_id: turnId, trace_id: traceId, descriptor };
 }
 
 function productSessionReceipt(url) {
@@ -596,6 +673,31 @@ class ChatEvaluationJournal {
     return staged;
   }
 
+  stagePendingContinuationConsents(workspace, observations) {
+    const normalized = Array.isArray(observations) ? observations : [];
+    const visibleTurns = new Set(
+      normalized
+        .map((value) => normalizeHostObservation(value))
+        .filter((event) => event?.event_type === 'user_turn_visible')
+        .map((event) => `${event.turn_id}\u0000${event.trace_id}`)
+    );
+    let staged = 0;
+    for (const value of normalized) {
+      const consent = normalizeContinuationConsentObservation(value);
+      if (!consent || !visibleTurns.has(`${consent.turn_id}\u0000${consent.trace_id}`)) continue;
+      writeOneShotJson(continuationConsentPath(workspace), {
+        schema_version: CONTINUATION_CONSENT_SCHEMA_VERSION,
+        receipt_id: `chatweb-continuation-consent:${crypto.randomUUID()}`,
+        turn_id: consent.turn_id,
+        trace_id: consent.trace_id,
+        staged_at_unix_ms: Date.now(),
+        descriptor: consent.descriptor
+      });
+      staged += 1;
+    }
+    return staged;
+  }
+
   attachExplicitBindings(workspace, observations) {
     const binding = normalizedBinding(workspace);
     return (Array.isArray(observations) ? observations : []).map((value) => {
@@ -875,6 +977,17 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
       if (/^0{32}$/.test(traceId)) traceId = traceId.slice(0, -1) + '1';
       return { turnId: 'chatweb-turn:' + raw, traceId };
     };
+    const continuationConsentFromNode = (node) => {
+      try {
+        const text = typeof node?.textContent === 'string' ? node.textContent.trim() : '';
+        const prefix = ${JSON.stringify(CONTINUATION_CONSENT_PREFIX)};
+        if (!text.startsWith(prefix) || text.length > 16 * 1024) return null;
+        const descriptor = JSON.parse(text.slice(prefix.length));
+        return descriptor && typeof descriptor === 'object' && !Array.isArray(descriptor) ? descriptor : null;
+      } catch {
+        return null;
+      }
+    };
     const emitVisible = (item, at, identity) => {
       const observationId = epoch + ':' + item.role + ':' + (++state.sequence);
       push({
@@ -915,6 +1028,17 @@ function buildChatEvaluationObserverScript({ navigationEpoch, clockDomain }) {
         const at = sample();
         const identity = state.pendingIntentIdentity || createTurnIdentity();
         const observationId = emitVisible(latest, at, identity);
+        const continuationConsent = continuationConsentFromNode(latest.roleNode);
+        if (continuationConsent) {
+          push({
+            kind: 'continuation_consent',
+            schema_version: ${CONTINUATION_CONSENT_SCHEMA_VERSION},
+            turn_id: identity.turnId,
+            trace_id: identity.traceId,
+            descriptor: continuationConsent,
+            observer_plane: 'electron_chatgpt_dom'
+          });
+        }
         markSeen(latest.node);
         state.awaitingUserVisible = false;
         state.pendingIntentIdentity = null;
@@ -1203,9 +1327,14 @@ module.exports = {
   chatEvaluationDebugScript,
   journalPath,
   pendingTurnPath,
+  continuationConsentPath,
   bindingTurnPath,
+  parseContinuationConsentText,
+  normalizedContinuationConsentDescriptor,
   HOST_OBSERVATION_MAX_BUFFER,
   HOST_OBSERVATION_MAX_JOURNAL_BYTES,
   HOST_OBSERVATION_SCHEMA_VERSION,
-  HOST_CORRELATION_SCHEMA_VERSION
+  HOST_CORRELATION_SCHEMA_VERSION,
+  CONTINUATION_CONSENT_SCHEMA_VERSION,
+  CONTINUATION_CONSENT_PREFIX
 };

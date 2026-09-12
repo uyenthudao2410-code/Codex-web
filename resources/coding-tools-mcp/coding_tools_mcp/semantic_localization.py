@@ -62,8 +62,36 @@ def unknown_semantic_resource_status(*, reason: str = "LSP_RESOURCE_STATUS_UNKNO
     }
 
 
+def normalize_semantic_scope(workspace: Path, path: str) -> str:
+    """Normalize an authorized workspace scope to the project-relative bridge contract."""
+
+    raw = str(path or ".").strip()
+    if not raw or raw == ".":
+        return "."
+    if "\x00" in raw:
+        raise ValueError("native semantic scope is invalid")
+    normalized = raw.replace("\\", "/")
+    candidate = Path(raw).expanduser()
+    if candidate.is_absolute():
+        try:
+            root = workspace.expanduser().resolve(strict=True)
+            resolved = candidate.resolve(strict=False)
+            relative = resolved.relative_to(root)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ValueError("native semantic scope is outside workspace") from exc
+        normalized = relative.as_posix()
+        return normalized if normalized not in {"", "."} else "."
+    if (
+        normalized.startswith("/")
+        or (len(normalized) >= 2 and normalized[1] == ":")
+        or ".." in normalized.split("/")
+    ):
+        raise ValueError("native semantic scope is invalid")
+    return normalized.rstrip("/") or "."
+
+
 def semantic_scope_mode(workspace: Path, path: str) -> str:
-    normalized = str(path or ".").strip().replace("\\", "/")
+    normalized = normalize_semantic_scope(workspace, path)
     candidate = Path(normalized)
     if (
         normalized != "."
@@ -343,17 +371,10 @@ class NativeRustSemanticLocalizationProvider:
         bounded_results = int(max_results)
         if not 1 <= bounded_results <= 50:
             raise ValueError("native semantic result limit is out of bounds")
-        scope = str(path or ".").strip().replace("\\", "/")
-        if (
-            scope.startswith("/")
-            or (len(scope) >= 2 and scope[1] == ":")
-            or ".." in scope.split("/")
-            or "\x00" in scope
-        ):
-            raise ValueError("native semantic scope is invalid")
         normalized_resource_class = str(resource_class or "").strip().upper()
         if normalized_resource_class not in {"MEDIUM", "HEAVY"}:
             raise ValueError("native semantic resource class is invalid")
+        scope = normalize_semantic_scope(workspace, path)
         data = self._request_data(
             NATIVE_LSP_ENDPOINT_PATH,
             {
@@ -375,14 +396,7 @@ class NativeRustSemanticLocalizationProvider:
         return data["results"]
 
     def resource_status(self, *, workspace: Path, path: str) -> dict[str, Any]:
-        scope = str(path or ".").strip().replace("\\", "/")
-        if (
-            scope.startswith("/")
-            or (len(scope) >= 2 and scope[1] == ":")
-            or ".." in scope.split("/")
-            or "\x00" in scope
-        ):
-            raise ValueError("native semantic scope is invalid")
+        scope = normalize_semantic_scope(workspace, path)
         data = self._request_data(
             NATIVE_LSP_STATUS_ENDPOINT_PATH,
             {
@@ -571,8 +585,10 @@ def semantic_provider_resource_status(
         return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_UNSUPPORTED")
     try:
         raw = provider.resource_status(workspace=workspace, path=path)
-    except Exception:
-        return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_FAILED")
+    except Exception as exc:
+        status = unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_FAILED")
+        status["error_class"] = type(exc).__name__
+        return status
     if not isinstance(raw, dict):
         return unknown_semantic_resource_status(reason="LSP_RESOURCE_STATUS_INVALID")
     lifecycle = str(raw.get("lifecycle_state") or "UNKNOWN").strip().upper()
@@ -603,6 +619,42 @@ def semantic_provider_resource_status(
         "observed_at": optional_count("observed_at"),
         "observed": True,
     }
+
+
+def semantic_provider_health_status(
+    provider: Any,
+    *,
+    workspace: Path,
+    path: str,
+) -> dict[str, Any]:
+    """Combine configured binding state with bounded executable resource health."""
+
+    configured = semantic_provider_status(provider)
+    result = dict(configured)
+    binding_available = configured.get("available") is True
+    result["binding_available"] = binding_available
+    if not binding_available:
+        result["health_state"] = "UNAVAILABLE"
+        return result
+
+    resource = semantic_provider_resource_status(
+        provider,
+        workspace=workspace,
+        path=path,
+    )
+    result["resource"] = dict(resource)
+    lifecycle = str(resource.get("lifecycle_state") or "UNKNOWN").upper()
+    if resource.get("observed") is not True:
+        result["available"] = False
+        result["health_state"] = "UNAVAILABLE"
+        result["reason"] = str(resource.get("reason") or "LSP_RESOURCE_STATUS_FAILED")[:240]
+    elif lifecycle == "FAILED":
+        result["available"] = False
+        result["health_state"] = "FAILED"
+        result["reason"] = "LSP_RESOURCE_FAILED"
+    else:
+        result["health_state"] = "READY" if lifecycle == "RUNNING" else "COLD_OR_UNKNOWN"
+    return result
 
 
 def _normalize_match(value: Any) -> dict[str, Any] | None:

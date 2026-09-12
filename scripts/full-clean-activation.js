@@ -41,6 +41,10 @@ const {
 } = require('../electron/services/recoveryBootstrap');
 const { hashComponentRevision } = require('../electron/services/componentRevision');
 const { readJson, writeJsonAtomic } = require('../electron/services/jsonStore');
+const {
+  normalizeTrustedAttestation,
+  revalidateTrustedRecoveryHostSource
+} = require('../electron/services/trustedRecoveryBootstrap');
 
 const CHECKPOINT_FIELDS = Object.freeze([
   'checkpoint_id',
@@ -53,7 +57,14 @@ const HEX64 = /^[a-f0-9]{64}$/;
 const GIT_OBJECT_ID = /^[a-f0-9]{40,64}$/;
 const CHECKPOINT_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/;
 const DEFAULT_TTL_MS = 55_000;
-const DEFAULT_TIMEOUT_MS = 120_000;
+// A trusted Recovery Host bootstrap must cover the replacement itself and the
+// real external connector compatibility round trip that follows.  The
+// previous two-minute command budget could leave only a few seconds after a
+// Windows cold start, even though the durable coordinator supports a longer
+// bounded activation epoch.  Keep this aligned with the five-minute deferred
+// envelope cap; the authenticated current-host wire request remains
+// independently capped at DEFAULT_TTL_MS below.
+const DEFAULT_TIMEOUT_MS = 300_000;
 const POLL_MS = 500;
 
 // A Coding-VP exec_command is itself accounted as an active MCP tool call.
@@ -72,7 +83,7 @@ const DEFERRED_PARENT_GRACE_MS = 300;
 // plus bounded ownership/handoff overhead.  It is intentionally separate from
 // the authenticated activation request TTL, which is still capped at the
 // Recovery Host's current 55s request contract below.
-const DEFERRED_DEFAULT_TTL_MS = 180_000;
+const DEFERRED_DEFAULT_TTL_MS = 300_000;
 const DEFERRED_MAX_TTL_MS = 300_000;
 const DEFERRED_ACTIVATION_TTL_MS = DEFAULT_TTL_MS;
 const DEFERRED_PARENT_WAIT_MAX_MS = 30_000;
@@ -80,6 +91,9 @@ const DEFERRED_PREFLIGHT_RETRY_MS = 250;
 const DEFERRED_RESULT_MAX_BYTES = 256 * 1024;
 const DEFERRED_LOCK_MAX_BYTES = 16 * 1024;
 const DEFERRED_OPERATION_ID = /^full-clean-cli-[A-Za-z0-9_-]{15,127}$/;
+const DEFERRED_SUPERVISOR_STATUS_MAX_BYTES = 64 * 1024;
+const DEFERRED_SUPERVISOR_STATUS_MAX_AGE_MS = 20_000;
+const DEFERRED_SUPERVISOR_STATUS_FUTURE_SKEW_MS = 5_000;
 const ACTIVATION_RESPONSE_LOSS_CODES = new Set([
   'ECONNABORTED', 'ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ENOENT', 'ETIMEDOUT',
   'RECOVERY_DESCRIPTOR_CHANGED', 'RECOVERY_DESCRIPTOR_STALE', 'RECOVERY_RESPONSE_INVALID',
@@ -247,13 +261,15 @@ function validateDeferredEnvelope(raw, paths, requestPath) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw activationCommandError('DEFERRED_REQUEST_INVALID', 'Deferred activation envelope is not an object.');
   }
-  const allowed = [
+  const required = [
     'schema_version', 'kind', 'operation_id', 'requested_at_unix_ms',
     'expires_at_unix_ms', 'parent_pid', 'parent_marker', 'source_checkpoint',
     'installation_id', 'runtime_mode', 'app_root', 'parent_marker_nonce', 'integrity_sha256'
   ].sort();
+  const optional = ['trusted_recovery_bootstrap'];
   const keys = Object.keys(raw).sort();
-  if (JSON.stringify(keys) !== JSON.stringify(allowed)) {
+  const allowed = new Set([...required, ...optional]);
+  if (required.some((key) => !keys.includes(key)) || keys.some((key) => !allowed.has(key))) {
     throw activationCommandError('DEFERRED_REQUEST_INVALID', 'Deferred activation envelope fields are not canonical.');
   }
   if (Number(raw.schema_version) !== DEFERRED_SCHEMA_VERSION || raw.kind !== DEFERRED_KIND) {
@@ -274,6 +290,9 @@ function validateDeferredEnvelope(raw, paths, requestPath) {
   // Reuse the exact canonical checkpoint validator; this also rejects any
   // hidden/extra fields introduced by a hand-edited request file.
   const checkpoint = parseCheckpoint(JSON.stringify(raw.source_checkpoint));
+  const trustedRecoveryBootstrap = raw.trusted_recovery_bootstrap === undefined
+    ? null
+    : normalizeTrustedAttestation(raw.trusted_recovery_bootstrap, checkpoint);
   const identity = typeof paths?.runtimeIdentity === 'function' ? paths.runtimeIdentity() : null;
   if (!identity || String(raw.installation_id || '').toLowerCase() !== String(identity.installation_id || '').toLowerCase()
     || String(raw.runtime_mode || '') !== String(identity.mode || '')) {
@@ -310,6 +329,7 @@ function validateDeferredEnvelope(raw, paths, requestPath) {
     expires_at_unix_ms: expiresAt,
     parent_pid: parentPid,
     source_checkpoint: checkpoint,
+    trusted_recovery_bootstrap: trustedRecoveryBootstrap,
     request_path: resolvedRequest,
     result_path: deferredResultPath(paths, operationId),
     parent_marker: marker,
@@ -739,7 +759,8 @@ function buildDeferredEnvelope({
   expiresAtUnixMs,
   parentPid = process.pid,
   parentMarker,
-  parentMarkerNonce
+  parentMarkerNonce,
+  trustedRecoveryBootstrap = null
 } = {}) {
   if (!paths || typeof paths.dataRoot !== 'function' || typeof paths.appRoot !== 'function'
     || typeof paths.runtimeIdentity !== 'function') {
@@ -777,6 +798,12 @@ function buildDeferredEnvelope({
     app_root: path.resolve(paths.appRoot()),
     parent_marker_nonce: markerNonce
   };
+  if (trustedRecoveryBootstrap !== null && trustedRecoveryBootstrap !== undefined) {
+    envelope.trusted_recovery_bootstrap = normalizeTrustedAttestation(
+      trustedRecoveryBootstrap,
+      canonicalCheckpoint
+    );
+  }
   // Bind the marker nonce to the digest and validate it in the worker.  Older
   // envelopes without this boundary identity are rejected rather than guessed.
   envelope.integrity_sha256 = canonicalDigest(envelope);
@@ -898,6 +925,68 @@ function spawnDeferredWorker(requestPath, {
   });
 }
 
+function assessDeferredHandoff(paths, {
+  platform = process.platform,
+  now = Date.now(),
+  isAlive = processAlive,
+  readStatus = null
+} = {}) {
+  if (String(platform || '') !== 'win32') {
+    return {
+      ready: true,
+      required: false,
+      mode: 'detached_process',
+      supervisor_pid: null,
+      code: 'READY'
+    };
+  }
+  const dataRoot = String(paths?.dataRoot?.() || '').trim();
+  if (!dataRoot || !path.isAbsolute(dataRoot)) {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: null, code: 'DEFERRED_DATA_ROOT_UNAVAILABLE' };
+  }
+  const statusPath = path.join(path.resolve(dataRoot), 'recovery-supervisor-status.json');
+  let status;
+  try {
+    if (typeof readStatus === 'function') {
+      status = readStatus(statusPath);
+    } else {
+      const stat = fs.statSync(statusPath);
+      if (!stat.isFile() || stat.size > DEFERRED_SUPERVISOR_STATUS_MAX_BYTES) {
+        throw new Error('Recovery Supervisor status is missing or oversized.');
+      }
+      status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+    }
+  } catch {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: null, code: 'DEFERRED_SUPERVISOR_STATUS_UNAVAILABLE' };
+  }
+  const supervisorPid = Number(status?.supervisor_pid);
+  const checkedAt = Date.parse(String(status?.last_check_at || ''));
+  const observedAt = Number(now);
+  const state = String(status?.state || '').trim().toLowerCase();
+  if (Number(status?.version) !== 1 || status?.deferred_activation_worker_v1 !== true) {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: null, code: 'DEFERRED_SUPERVISOR_CAPABILITY_UNAVAILABLE' };
+  }
+  if (!Number.isSafeInteger(supervisorPid) || supervisorPid <= 0 || !isAlive(supervisorPid)) {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: supervisorPid || null, code: 'DEFERRED_SUPERVISOR_NOT_RUNNING' };
+  }
+  if (!Number.isFinite(observedAt) || !Number.isFinite(checkedAt)
+    || checkedAt > observedAt + DEFERRED_SUPERVISOR_STATUS_FUTURE_SKEW_MS
+    || observedAt - checkedAt > DEFERRED_SUPERVISOR_STATUS_MAX_AGE_MS) {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: supervisorPid, code: 'DEFERRED_SUPERVISOR_STATUS_STALE' };
+  }
+  if (['stopping', 'uninstalled', 'duplicate_supervisor'].includes(state)) {
+    return { ready: false, required: true, mode: 'recovery_supervisor', supervisor_pid: supervisorPid, code: 'DEFERRED_SUPERVISOR_NOT_READY' };
+  }
+  return {
+    ready: true,
+    required: true,
+    mode: 'recovery_supervisor',
+    supervisor_pid: supervisorPid,
+    code: 'READY',
+    observed_at: new Date(checkedAt).toISOString()
+  };
+}
+
 async function deferExecute({
   paths,
   checkpoint,
@@ -908,9 +997,21 @@ async function deferExecute({
   // DEFERRED_ACTIVATION_TTL_MS when the worker crosses the post-tool boundary.
   timeoutMs = DEFERRED_DEFAULT_TTL_MS,
   parentPid = process.pid,
-  spawnProcess = spawn
+  spawnProcess = spawn,
+  trustedRecoveryBootstrap = null,
+  platform = process.platform,
+  assessDeferredHandoffFn = assessDeferredHandoff,
+  spawnDeferredWorkerFn = spawnDeferredWorker
 } = {}) {
   const context = createCommandContext({ paths });
+  const handoff = assessDeferredHandoffFn(context.paths, { platform });
+  if (handoff?.ready !== true) {
+    throw activationCommandError(
+      String(handoff?.code || 'DEFERRED_SUPERVISOR_UNAVAILABLE'),
+      'The durable post-tool-call activation owner is unavailable or stale.',
+      { handoff }
+    );
+  }
   const requestedAt = Number.isSafeInteger(Number(now)) ? Number(now) : Date.now();
   const operationId = deferredOperationId(requestedAt);
   const maxTimeout = Math.min(DEFERRED_MAX_TTL_MS, Math.max(1000, Number(timeoutMs) || DEFERRED_DEFAULT_TTL_MS));
@@ -921,26 +1022,29 @@ async function deferExecute({
     operationId,
     requestedAtUnixMs: requestedAt,
     expiresAtUnixMs: expiresAt,
-    parentPid
+    parentPid,
+    trustedRecoveryBootstrap
   });
   const files = writeDeferredRequest(context.paths, envelope);
   const cleanupMarker = () => removeDeferredParentMarker(files.markerPath);
   process.once('exit', cleanupMarker);
-  let worker;
-  try {
-    worker = await spawnDeferredWorker(files.requestPath, {
-      spawnProcess,
-      cwd: context.paths.appRoot(),
-      env
-    });
-  } catch (error) {
-    process.removeListener('exit', cleanupMarker);
-    cleanupMarker();
-    const serialized = serializeActivationError(Object.assign(error, {
-      code: error?.code || 'DEFERRED_WORKER_START_FAILED'
-    }));
-    writeDeferredResult(context.paths, operationId, { state: 'failed', error: serialized });
-    throw activationCommandError('DEFERRED_WORKER_START_FAILED', 'The detached activation worker could not be started.', serialized);
+  let worker = null;
+  if (handoff.mode === 'detached_process') {
+    try {
+      worker = await spawnDeferredWorkerFn(files.requestPath, {
+        spawnProcess,
+        cwd: context.paths.appRoot(),
+        env
+      });
+    } catch (error) {
+      process.removeListener('exit', cleanupMarker);
+      cleanupMarker();
+      const serialized = serializeActivationError(Object.assign(error, {
+        code: error?.code || 'DEFERRED_WORKER_START_FAILED'
+      }));
+      writeDeferredResult(context.paths, operationId, { state: 'failed', error: serialized });
+      throw activationCommandError('DEFERRED_WORKER_START_FAILED', 'The detached activation worker could not be started.', serialized);
+    }
   }
   return {
     ok: true,
@@ -951,10 +1055,11 @@ async function deferExecute({
     requested_at_unix_ms: requestedAt,
     expires_at_unix_ms: expiresAt,
     worker_pid: worker?.pid || null,
+    supervisor_pid: handoff.supervisor_pid || null,
     request_path: files.requestPath,
     request_sha256: envelope.integrity_sha256,
     result_path: deferredResultPath(context.paths, operationId),
-    handoff: 'post_tool_call'
+    handoff: handoff.mode === 'recovery_supervisor' ? 'recovery_supervisor' : 'post_tool_call'
   };
 }
 
@@ -999,9 +1104,17 @@ function activationEpochState(epoch) {
 function observedActivationOperationId(status) {
   const epoch = activationEpochProjection(status);
   return String(
-    epoch?.operation_id
+    status?.recovery_bootstrap?.operation_id
+    || status?.recoveryBootstrap?.operationId
+    || epoch?.operation_id
     || epoch?.operationId
-    || status?.recovery_bootstrap?.operation_id
+    || ''
+  ).trim() || null;
+}
+
+function observedBootstrapOperationId(status) {
+  return String(
+    status?.recovery_bootstrap?.operation_id
     || status?.recoveryBootstrap?.operationId
     || ''
   ).trim() || null;
@@ -1100,6 +1213,7 @@ async function waitForReplacementOperation(paths, initialDescriptor, operationId
       const client = clientFactory(paths, descriptor);
       const requestOptions = descriptorRequestOptions(descriptor);
       const status = await client.status(requestOptions);
+      const bootstrapOperationId = observedBootstrapOperationId(status);
       const statusOperationId = observedActivationOperationId(status);
       if (statusOperationId && statusOperationId !== expectedOperationId) {
         throw activationCommandError(
@@ -1116,7 +1230,38 @@ async function waitForReplacementOperation(paths, initialDescriptor, operationId
           error: statusEpoch?.error || null
         });
       }
-      const operation = await client.call('code.activation_status', [expectedOperationId], requestOptions);
+      const descriptorEpoch = String(descriptor?.activation_epoch_id || '').trim();
+      const projectedEpoch = String(statusEpoch?.activation_epoch_id || '').trim();
+      const bootstrapState = String(bootstrapResult?.state || '').trim().toLowerCase();
+      const bootstrapEpochId = String(
+        bootstrapResult?.activation_epoch_id
+        || bootstrapResult?.result?.activation_epoch_id
+        || ''
+      ).trim();
+      let operation;
+      if (bootstrapState === 'completed' && bootstrapEpochId) {
+        const bootstrapResultOperationId = String(bootstrapResult?.operation_id || '').trim();
+        if (bootstrapResultOperationId !== expectedOperationId
+          || descriptorEpoch !== bootstrapEpochId
+          || projectedEpoch !== bootstrapEpochId
+          || statusOperationId !== expectedOperationId) {
+          throw activationCommandError(
+            'ACTIVATION_OPERATION_MISMATCH',
+            'Completed Recovery Host bootstrap result does not match the exact replacement operation and epoch.',
+            {
+              expected_operation_id: expectedOperationId,
+              observed_operation_id: statusOperationId,
+              bootstrap_operation_id: bootstrapResultOperationId || null,
+              bootstrap_activation_epoch_id: bootstrapEpochId,
+              descriptor_activation_epoch_id: descriptorEpoch || null,
+              projected_activation_epoch_id: projectedEpoch || null
+            }
+          );
+        }
+        operation = bootstrapResult;
+      } else {
+        operation = await client.call('code.activation_status', [expectedOperationId], requestOptions);
+      }
       if (String(operation?.operation_id || '') !== expectedOperationId) {
         throw activationCommandError('ACTIVATION_OPERATION_MISMATCH', 'Replacement activation status does not match the requested operation.');
       }
@@ -1128,11 +1273,16 @@ async function waitForReplacementOperation(paths, initialDescriptor, operationId
         || operationEpoch?.activation_epoch_id
         || ''
       ).trim();
-      const descriptorEpoch = String(descriptor?.activation_epoch_id || '').trim();
-      const projectedEpoch = String(statusEpoch?.activation_epoch_id || '').trim();
       if ((descriptorEpoch && epochId && descriptorEpoch !== epochId)
         || (projectedEpoch && epochId && projectedEpoch !== epochId)) {
-        throw activationCommandError('ACTIVATION_OPERATION_MISMATCH', 'Replacement activation epoch does not match the durable operation.');
+        throw activationCommandError(
+          bootstrapOperationId === expectedOperationId
+            ? 'ACTIVATION_HANDOFF_PENDING'
+            : 'ACTIVATION_OPERATION_MISMATCH',
+          bootstrapOperationId === expectedOperationId
+            ? 'Replacement Recovery Host is still projecting the prior epoch while the exact bootstrap owns the handoff.'
+            : 'Replacement activation epoch does not match the durable operation.'
+        );
       }
       if (['failed', 'refused'].includes(String(operation?.state || '').toLowerCase())
         || ['failed', 'refused'].includes(String(operation?.result?.state || '').toLowerCase())
@@ -1207,8 +1357,16 @@ async function waitForReplacementReady(paths, initialDescriptor, activationEpoch
         && (!expectedOperationId || statusOperationId === expectedOperationId)) {
         runtime = await client.call('runtime.lightweight_snapshot', [], requestOptions);
         const runtimeEpoch = activationEpochProjection(runtime);
-        if (String(runtimeEpoch?.activation_epoch_id || '') !== activationEpochId) {
-          throw activationCommandError('ACTIVATION_OPERATION_MISMATCH', 'Replacement runtime snapshot belongs to another activation epoch.');
+        const observedRuntimeEpochId = String(runtimeEpoch?.activation_epoch_id || '').trim();
+        if (observedRuntimeEpochId !== activationEpochId) {
+          throw activationCommandError(
+            'ACTIVATION_HANDOFF_PENDING',
+            'Replacement runtime snapshot is still projecting a prior activation epoch.',
+            {
+              expected_activation_epoch_id: activationEpochId,
+              observed_activation_epoch_id: observedRuntimeEpochId || null
+            }
+          );
         }
         if (!connectorAckAttempted
           && connectorAcknowledgementEligible(runtime, descriptor, activationEpochId, notBeforeUnixMs)) {
@@ -1250,6 +1408,24 @@ async function run(options = {}, env = process.env) {
     return { ok: true, mode: 'status', authority: summarizeAuthority(authority) };
   }
   const checkpoint = parseCheckpoint(env.FULL_CLEAN_SOURCE_CHECKPOINT_JSON);
+  const trustedRecoveryBootstrap = options.trustedRecoveryBootstrap === undefined
+    ? null
+    : normalizeTrustedAttestation(options.trustedRecoveryBootstrap, checkpoint);
+  const forceRecoveryHostBootstrap = options.forceRecoveryHostBootstrap === true;
+  if (forceRecoveryHostBootstrap && !trustedRecoveryBootstrap) {
+    throw activationCommandError(
+      'TRUSTED_BOOTSTRAP_ATTESTATION_INVALID',
+      'Forced Recovery Host bootstrap is reserved for a trusted recovery bootstrap attestation.'
+    );
+  }
+  if (trustedRecoveryBootstrap) {
+    const revalidateTrustedSource = options.revalidateTrustedSourceFn || revalidateTrustedRecoveryHostSource;
+    await revalidateTrustedSource(
+      context.paths.appRoot(),
+      checkpoint,
+      trustedRecoveryBootstrap
+    );
+  }
   const request = buildRequest(authority, checkpoint, Number(options.now || Date.now()), {
     operationId: options.operationId,
     expiresAtUnixMs: options.expiresAtUnixMs
@@ -1262,7 +1438,8 @@ async function run(options = {}, env = process.env) {
   const waitForReady = options.waitForReplacementReadyFn || waitForReplacementReady;
   const bootstrapHost = options.bootstrapCurrentRecoveryHostFn || bootstrapCurrentRecoveryHost;
   const currentHost = authority.freshness?.current === true;
-  if (!currentHost && mode.preflightOnly) {
+  const bootstrapRequired = !currentHost || forceRecoveryHostBootstrap;
+  if (bootstrapRequired && mode.preflightOnly) {
     return {
       ok: true,
       mode: 'preflight',
@@ -1282,7 +1459,7 @@ async function run(options = {}, env = process.env) {
   let bootstrap = null;
   let activationResponseRecovered = false;
   let epochId = null;
-  if (!currentHost) {
+  if (bootstrapRequired) {
     const identity = context.paths.runtimeIdentity();
     const requestedAt = Number(request.requested_at_unix_ms);
     bootstrap = await bootstrapHost({
@@ -1297,6 +1474,8 @@ async function run(options = {}, env = process.env) {
       operationId: request.operation_id,
       sourceCheckpoint: request.source_checkpoint,
       expectedDiskRevision: authority.expectedDiskRevision,
+      ...(trustedRecoveryBootstrap ? { trustedRecoveryBootstrap } : {}),
+      ...(forceRecoveryHostBootstrap ? { forceRefresh: true } : {}),
       requestedAtUnixMs: requestedAt,
       // The bootstrap envelope owns the coordinator/handoff window.  It is
       // intentionally not constrained by the 55s authenticated wire TTL used
@@ -1544,7 +1723,11 @@ async function runDeferredWorker(requestPath, {
       // authenticated contract.
       now: activationNow,
       expiresAtUnixMs: activationNow + activationTtl,
-      timeoutMs: Math.min(DEFAULT_TIMEOUT_MS, activationRemaining)
+      timeoutMs: Math.min(DEFAULT_TIMEOUT_MS, activationRemaining),
+      ...(envelope.trusted_recovery_bootstrap ? {
+        trustedRecoveryBootstrap: envelope.trusted_recovery_bootstrap,
+        forceRecoveryHostBootstrap: true
+      } : {})
     };
     let result;
     let preflightAttempts = 0;
@@ -1713,6 +1896,7 @@ module.exports = {
   waitForDeferredParentExit,
   deferredWorkerEnvironment,
   spawnDeferredWorker,
+  assessDeferredHandoff,
   deferExecute,
   parseDeferredWorkerArgs,
   runDeferredWorker,

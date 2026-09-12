@@ -1,0 +1,1057 @@
+[
+  {
+    "version": 2,
+    "task_id": "9aefb1f4e16c449c81633a9c85f9ca15",
+    "orchestration": {
+      "run_id": "8c5d64ae9e6a4f8b903b1a61b4d90954",
+      "wave_id": "d9e7cc9ae12445abb7fc858ee8bb4c2e",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+      "contract_fp": ""
+    },
+    "objective": "Run a workspace command",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-09T09:13:57.438Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+            "state": "file",
+            "sha256": "bf5709532bf4ac5df82f5c34f335fab14476761a3cd92909d5cf8a9a3c836ed0",
+            "size_bytes": 18442,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8c5d64ae9e6a4f8b903b1a61b4d90954",
+            "wave_id": "d9e7cc9ae12445abb7fc858ee8bb4c2e"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_empirical_readiness.py",
+            "state": "file",
+            "sha256": "66336384a896b64629ca82f901a4174d7da7f4820ed8789da6f540f964f5b03b",
+            "size_bytes": 12922,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "8c5d64ae9e6a4f8b903b1a61b4d90954",
+            "wave_id": "d9e7cc9ae12445abb7fc858ee8bb4c2e"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 118,
+          "head_hash": "565a2914c7f3694fe267b9a07f1bfaef9e709c2d42affc2a22fb5ac93e91a398"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8c5d64ae9e6a4f8b903b1a61b4d90954\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8c5d64ae9e6a4f8b903b1a61b4d90954\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8c5d64ae9e6a4f8b903b1a61b4d90954\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8c5d64ae9e6a4f8b903b1a61b4d90954\\wave-003.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "8c5d64ae9e6a4f8b903b1a61b4d90954",
+        "wave_id": "d9e7cc9ae12445abb7fc858ee8bb4c2e",
+        "checkpoint_id": "cee5cb07551f441f98a1a1131a15414c",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "5c4ef280d73a18ebbe2a9cf36edc8ac24f46ba285b23ba3f81e0ff8bc9ae08bc",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Natural #3 acceptance recovery only: create a new adoption-only wave in the same RUN over the exact current bytes of the two surviving authoritative files. Do not change source bytes. Re-run the live read-only reporter from resources/coding-tools-mcp and the focused tests, then return to controller acceptance. Preserve the existing Problem contract, no stale reconciliation, no P5 mutation, no unrelated WIP changes.",
+          "objective_revision": 3,
+          "objective_sha256": "9ad857e36fc9b3da21c2600eb8ba118e5a2582911eeec16577f1dc2adf6fce3f",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "0537e63bce5c44389fea441e1d69465e",
+            "stage_id": "check:d19c219b7186c61b",
+            "status": "passed",
+            "duration_ms": 11374,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "f0bc601c6fc7440ea6d3e5c3d209428c",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 2952,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "029896b3b8b7acd91e363836f0fa2db208ec1e7f51bdda3031b67115d29ef9b4",
+    "completion_report_acknowledged_id": "029896b3b8b7acd91e363836f0fa2db208ec1e7f51bdda3031b67115d29ef9b4",
+    "completion_report_acknowledged_at": "2026-09-09T09:14:14.954Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-09T09:12:55.233Z",
+    "updated_at": "2026-09-09T09:14:28.350Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:12:55.233Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:12:55.500Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"PRL_RESOLUTION_ENVELOPE_REQUIRED|problem_resolution_envelope|closure_falsification|resolution envelope\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "nKiIgjtuTlSJgNOnB_HCEFAV"
+        }
+      },
+      {
+        "time": "2026-09-09T09:12:55.807Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"PRL_RESOLUTION_ENVELOPE_REQUIRED|problem_resolution_envelope|closure_falsification|resolution envelope\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:04.591Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A70 -B15 \"allowed = \\{\\\"schema_version\\\"|closure_falsification_probe\" resources/coding-tools-mcp/coding_tools_mcp/resolution_contract.py",
+          "session_id": "pEpjc6SHVzq6cxRyZ_UuNwo5"
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:04.867Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A70 -B15 \"allowed = \\{\\\"schema_version\\\"|closure_falsification_probe\" resources/coding-tools-mcp/coding_tools_mcp/resolution_contract.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:39.456Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:39.458Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:39.676Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "029896b3b8b7acd91e363836f0fa2db208ec1e7f51bdda3031b67115d29ef9b4"
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:57.307Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-09T09:13:57.438Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace .",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:14.954Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "029896b3b8b7acd91e363836f0fa2db208ec1e7f51bdda3031b67115d29ef9b4"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:28.350Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:14:28.464Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "be649c8468bd4cf1a2e9dd961c059a54",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ukH-OrZ7C-FEAzgcrYm_kQJ_",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 273,
+      "finished_at": "2026-09-09T09:15:07.648Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:14:28.464Z",
+    "updated_at": "2026-09-09T09:15:07.649Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:14:28.464Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:28.713Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace .",
+          "session_id": "hMLd-SdnJ8U4Cqk8RKte4XYu"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:35.604Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:55.942Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A90 -B30 \"stale_run_audit|threshold_sensitive_candidates|unbound_live_resource|projection_drift|TERMINAL_PARENT_CONTRADICTION\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "P5lqivu2K-WBmXmdpjTeihzU"
+        }
+      },
+      {
+        "time": "2026-09-09T09:14:56.266Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A90 -B30 \"stale_run_audit|threshold_sensitive_candidates|unbound_live_resource|projection_drift|TERMINAL_PARENT_CONTRADICTION\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:07.379Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A80 -B20 \"def _stale_run_audit|open_lifecycle_census_snapshot|lifecycle_census\\(\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "ukH-OrZ7C-FEAzgcrYm_kQJ_"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:07.648Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A80 -B20 \"def _stale_run_audit|open_lifecycle_census_snapshot|lifecycle_census\\(\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:15:14.813Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a37dd8075b9d42e98fdbfa21b4b0a1d8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "SddXfh1WnY4oosZWtqFHGJzI",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 240,
+      "finished_at": "2026-09-09T09:15:59.442Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:15:14.815Z",
+    "updated_at": "2026-09-09T09:15:59.442Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:15:14.815Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:15.139Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"lifecycle|stale\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "4yixgMN3D8DxYME1M3Q1x_iN"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:15.699Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"lifecycle|stale\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:24.532Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A80 -B10 \"def _stale_subtype\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "EyoxCkjI-NzPrSemBA8uVZVL"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:24.780Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A80 -B10 \"def _stale_subtype\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:38.016Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"^(from|import|def report)\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "PJLJcPVmYN9B134kB9iQs176"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:38.384Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"^(from|import|def report)\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:45.979Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A65 -B5 \"from coding_tools_mcp.lifecycle_census\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "zJImaG7tpNilOgDa3cZsvsYg"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:46.324Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A65 -B5 \"from coding_tools_mcp.lifecycle_census\" resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:59.212Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A115 -B20 \"def report\\(\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "SddXfh1WnY4oosZWtqFHGJzI"
+        }
+      },
+      {
+        "time": "2026-09-09T09:15:59.442Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A115 -B20 \"def report\\(\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:16:08.451Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fb9a54d118b04eb4859ad70d97d2a0f4",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-09T09:18:07.645Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-09T09:16:08.453Z",
+    "updated_at": "2026-09-09T09:18:07.645Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:16:08.453Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:16:08.728Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A120 -B20 \"stale_after_seconds: float\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "145WDl0IZrzC-mgs4I0HeZxk"
+        }
+      },
+      {
+        "time": "2026-09-09T09:16:09.004Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A120 -B20 \"stale_after_seconds: float\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:16:48.095Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A25 -B5 \"open_existing_ledger_analysis\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "ylKnIMfhzzjkp_w80aterjHt"
+        }
+      },
+      {
+        "time": "2026-09-09T09:16:48.350Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A25 -B5 \"open_existing_ledger_analysis\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:18:07.645Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import sys,time,json,collections; from pathlib import Path; sys.path[:0]=[r'resources/coding-tools-mcp/scripts',r'resources/coding-tools-mcp']; from report_lifecycle_census import report as lc; from report_empirical_readiness import _stale_subtype; from coding_tools_mcp.ledger_access import open_existing_ledger_analysis; root=Path('.').resolve(); life=lc(root,observed_at=time.time(),grace_seconds=900,stale_after_seconds=86400); cm=open_existing_ledger_analysis(root); snap=cm.__enter__",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:18:07.645Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:18:18.289Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8d79d0da5417421880173b0d209cdb88",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "g91K3Z9Ft25I-6wQQZTX0u0S",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 318,
+      "finished_at": "2026-09-09T09:19:42.386Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:18:18.291Z",
+    "updated_at": "2026-09-09T09:19:42.386Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:18:18.291Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:18:18.609Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace .",
+          "session_id": "pzE3vaUpCDTDtEMa0bUYeQCC"
+        }
+      },
+      {
+        "time": "2026-09-09T09:18:22.957Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace .",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:09.440Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"PASSED_PROOF_NO_ACCEPTED_CHECKPOINT|CHECKPOINT_PRESENT_ACTIVE_RUN|INACTIVE_ACTIVE_RUN_NO_TERMINAL_EVIDENCE|stale.*report|report.*stale|stale.*audit\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "l6LbO3g61irq9UKWrvOG2s6m"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:09.816Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"PASSED_PROOF_NO_ACCEPTED_CHECKPOINT|CHECKPOINT_PRESENT_ACTIVE_RUN|INACTIVE_ACTIVE_RUN_NO_TERMINAL_EVIDENCE|stale.*report|report.*stale|stale.*audit\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:26.708Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"CREATE TABLE.*(runs|checkpoints|proofs)|CREATE TABLE IF NOT EXISTS.*(runs|checkpoints|proofs)|FROM .*checkpoints|FROM .*proofs\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py",
+          "session_id": "_TdC_FTXX_GjwmpH5HbcNTHh"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:26.980Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CREATE TABLE.*(runs|checkpoints|proofs)|CREATE TABLE IF NOT EXISTS.*(runs|checkpoints|proofs)|FROM .*checkpoints|FROM .*proofs\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/ledger_analysis.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:34.656Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"ledger.*sqlite|orchestration.*db|\\.coding-tools.*orchestration\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/ledger_access.py",
+          "session_id": "_UgwNCy6jBfeCTmaTX4bcUIx"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:35.043Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"ledger.*sqlite|orchestration.*db|\\.coding-tools.*orchestration\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py resources/coding-tools-mcp/coding_tools_mcp/ledger_access.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:42.101Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 -version",
+          "session_id": "g91K3Z9Ft25I-6wQQZTX0u0S"
+        }
+      },
+      {
+        "time": "2026-09-09T09:19:42.386Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 -version",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:20:05.457Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "8f379e752f7a4b9194e579b6796810f6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "as5Jsjkn2hXYYVC3FHWxQZPC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 265,
+      "finished_at": "2026-09-09T09:20:06.042Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:20:05.457Z",
+    "updated_at": "2026-09-09T09:20:06.042Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:20:05.457Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:20:05.724Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT COUNT(*) FROM runs WHERE lower(status)='active';\"",
+          "session_id": "as5Jsjkn2hXYYVC3FHWxQZPC"
+        }
+      },
+      {
+        "time": "2026-09-09T09:20:06.042Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT COUNT(*) FROM runs WHERE lower(status)='active';\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:20:49.346Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "389dc8e89ec045c292db19fcfb893269",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3GJo89FD0ov5UHgazUNfvRSY",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 283,
+      "finished_at": "2026-09-09T09:22:05.999Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:20:49.348Z",
+    "updated_at": "2026-09-09T09:22:05.999Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:20:49.348Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:20:49.628Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"checkpoint|proof|passed|accepted|status\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781",
+          "session_id": "SqEGNQlLKqIo0QfZuyW-51g4"
+        }
+      },
+      {
+        "time": "2026-09-09T09:20:49.892Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"checkpoint|proof|passed|accepted|status\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:21:00.798Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"Acceptance checkpoints|Proof|proof|Verification|status\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781/run-summary.md",
+          "session_id": "QNQIBaMlPTln_Sp3SH3hCXF5"
+        }
+      },
+      {
+        "time": "2026-09-09T09:21:01.032Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"Acceptance checkpoints|Proof|proof|Verification|status\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781/run-summary.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:21:12.222Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -g \"run-summary.md\" \"Proof stages: \\*\\*[1-9][0-9]*\\*\\*|Acceptance checkpoints: \\*\\*[1-9][0-9]*\\*\\*\" .coding-tools/orchestration/reports",
+          "session_id": "JvboF6IbyhCREKQ842qNmqYM"
+        }
+      },
+      {
+        "time": "2026-09-09T09:21:12.543Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -g \"run-summary.md\" \"Proof stages: \\*\\*[1-9][0-9]*\\*\\*|Acceptance checkpoints: \\*\\*[1-9][0-9]*\\*\\*\" .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:05.729Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"Proof stages: \\*\\*[1-9][0-9]*\\*\\*|Acceptance checkpoints: \\*\\*[1-9][0-9]*\\*\\*\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781/run-summary.md .coding-tools/orchestration/reports/run-51ca0a74621e4502bfa3ce333209705d/run-summary.md .coding-tools/orchestration/reports/run-ce16e4a42bb64de2822e35a9bdf7359c/run-summary.md .coding-tools/orchestration/reports/run-1ee41aa02e934bc087caf54ce6c5fd11/run-summary.md .coding-tools/orchestration/reports/run-39c890b7de664ab094fff1",
+          "session_id": "3GJo89FD0ov5UHgazUNfvRSY"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:05.999Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"Proof stages: \\*\\*[1-9][0-9]*\\*\\*|Acceptance checkpoints: \\*\\*[1-9][0-9]*\\*\\*\" .coding-tools/orchestration/reports/run-73e2b11c37284f31864f73b497da1781/run-summary.md .coding-tools/orchestration/reports/run-51ca0a74621e4502bfa3ce333209705d/run-summary.md .coding-tools/orchestration/reports/run-ce16e4a42bb64de2822e35a9bdf7359c/run-summary.md .coding-tools/orchestration/reports/run-1ee41aa02e934bc087caf54ce6c5fd11/run-summary.md .coding-tools/orchestration/reports/run-39c890b7de664ab094fff1",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:22:35.744Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "e7b634299f094864bd80602e6b315145",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3M0fkxeanqEfsXTEzJ9r7Lek",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 3604,
+      "finished_at": "2026-09-09T09:27:01.737Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:22:35.754Z",
+    "updated_at": "2026-09-09T09:27:01.737Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:22:35.754Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:36.032Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"preflight_exact_stale_run_reconciliation|reconcile_exact_stale_run\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "session_id": "fpvN5ttUpHclRIFfGug10wcz"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:36.310Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"preflight_exact_stale_run_reconciliation|reconcile_exact_stale_run\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:44.578Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A90 -B10 \"def main|add_argument|preflight\" resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+          "session_id": "O0sRfyyQjQVANPcZiDA_cHmP"
+        }
+      },
+      {
+        "time": "2026-09-09T09:22:44.874Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A90 -B10 \"def main|add_argument|preflight\" resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:26:44.294Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "session_id": "bD497ONr4sGMibS4mk-PD0s4"
+        }
+      },
+      {
+        "time": "2026-09-09T09:26:44.694Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:26:58.158Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --workspace . --run-id 833b600f9a1b418ba7c2aafede1f65b6",
+          "session_id": "3M0fkxeanqEfsXTEzJ9r7Lek"
+        }
+      },
+      {
+        "time": "2026-09-09T09:27:01.737Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py --workspace . --run-id 833b600f9a1b418ba7c2aafede1f65b6",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:27:14.833Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0a03631e568748a78508e68f510c87bf",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "eTPG2iea6-x6j6FtQLOD88ou",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 311,
+      "finished_at": "2026-09-09T09:31:21.844Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-09T09:27:14.835Z",
+    "updated_at": "2026-09-09T09:31:21.845Z",
+    "events": [
+      {
+        "time": "2026-09-09T09:27:14.835Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-09T09:27:15.117Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"open_existing_ledger_analysis|stale_run|stale.*candidate|proofs_for_run|checkpoints_for_run\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "session_id": "PVRXmBWw4Xa2-Q-kEe4kJe2d"
+        }
+      },
+      {
+        "time": "2026-09-09T09:27:15.394Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"open_existing_ledger_analysis|stale_run|stale.*candidate|proofs_for_run|checkpoints_for_run\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:27:35.444Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --help",
+          "session_id": "SZlVZp9oVUirwqsIdXc7CpQY"
+        }
+      },
+      {
+        "time": "2026-09-09T09:27:35.894Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:28:01.480Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m coding_tools_mcp.ledger_analysis --help",
+          "session_id": "kKBnIfXlJu05SuveXUsvCvft"
+        }
+      },
+      {
+        "time": "2026-09-09T09:28:01.785Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m coding_tools_mcp.ledger_analysis --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-09T09:31:21.610Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A110 -B15 \"def _stale_run_audit\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "session_id": "eTPG2iea6-x6j6FtQLOD88ou"
+        }
+      },
+      {
+        "time": "2026-09-09T09:31:21.845Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A110 -B15 \"def _stale_run_audit\" resources/coding-tools-mcp/scripts/report_empirical_readiness.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-09T09:31:31.098Z",
+    "archive_reason": "finished"
+  }
+]

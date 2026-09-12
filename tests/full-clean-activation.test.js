@@ -189,6 +189,71 @@ function projectionSnapshot() {
   };
 }
 
+test('checkpoint-bound fresh activation observation forwards only explicit durable acceptance-pending policy', async (t) => {
+  const { root, paths } = fixture(t);
+  const sourceCheckpoint = acceptedSourceCheckpoint();
+  const operationId = id('operation-policy-propagation', '1001');
+  const calls = [];
+  const coordinator = new FullCleanActivation({
+    paths,
+    settings: { load: () => ({ workspace: root }) },
+    orchestrator: {
+      async verifyCodeActivation(...args) {
+        calls.push(args);
+        return {
+          safe: true,
+          code: 'READY',
+          reason: 'idle',
+          operation_id: operationId,
+          workspace: root,
+          fenced: false,
+          fence_operation_id: null,
+          counts: {
+            active_tool_calls: 0,
+            active_commands: 0,
+            starting_commands: 0,
+            active_background_operations: 0,
+            active_managed_processes: 0,
+            foreign_heavy_processes: 0,
+            active_agent_lanes: 0,
+            threshold_sensitive_stale_candidates: 0,
+            owned_codex_sidecar_residues: 0
+          },
+          source_checkpoint: { ok: true, code: 'ACTIVATABLE', ...sourceCheckpoint },
+          lifecycle: {
+            snapshot: projectionSnapshot(),
+            projection: {},
+            projection_classification: 'CHECKPOINTED',
+            unexplained_active_runs: 0,
+            unbound_live_resource_residues: 0
+          }
+        };
+      }
+    },
+    now: () => 1_700_000_000_000
+  });
+
+  for (const metadata of [
+    { allow_acceptance_pending: true },
+    { allow_acceptance_pending: false },
+    undefined
+  ]) {
+    const observation = await coordinator._freshActivationObservation({
+      operation_id: operationId,
+      source_checkpoint: sourceCheckpoint,
+      ...(metadata ? { metadata } : {})
+    });
+    assert.equal(observation.lifecycle_decision.clean, true);
+  }
+
+  assert.deepEqual(calls.map((args) => args.slice(0, 2)), [
+    [operationId, sourceCheckpoint],
+    [operationId, sourceCheckpoint],
+    [operationId, sourceCheckpoint]
+  ]);
+  assert.deepEqual(calls.map((args) => args[2]), [true, false, false]);
+});
+
 function projectionReceipt(root, overrides = {}) {
   const completedAtUnixMs = Object.hasOwn(overrides, 'completed_at_unix_ms')
     ? overrides.completed_at_unix_ms : 1_700_000_000_000;
@@ -1557,7 +1622,7 @@ test('replacement startup failure terminalizes the activation epoch and keeps ad
   assert.equal(terminal.error.code, 'MCP_START_FAILED');
 });
 
-test('replacement reconciles exact stale runs sequentially before Coding MCP start', async (t) => {
+test('replacement reconciles exact stale runs in one atomic helper invocation before Coding MCP start', async (t) => {
   const { root, paths } = fixture(t);
   const store = epochStore(paths);
   const firstRun = 'a'.repeat(32);
@@ -1581,18 +1646,28 @@ test('replacement reconciles exact stale runs sequentially before Coding MCP sta
     },
     now: () => 1_700_000_000_001
   });
-  coordinator._execExactStaleRunCli = async ({ runId, reconcile, snapshotSha256, logicalSha256 }) => {
-    calls.push(`${runId}:${reconcile ? 'reconcile' : 'preflight'}`);
-    if (!reconcile) {
-      return { snapshot: { sha256: '1'.repeat(64), logical_sha256: '2'.repeat(64) } };
-    }
-    assert.equal(snapshotSha256, '1'.repeat(64));
-    assert.equal(logicalSha256, '2'.repeat(64));
+  coordinator._execExactStaleRunCli = async ({ runIds, reconcile, snapshotSha256, logicalSha256 }) => {
+    calls.push(`batch:${reconcile ? 'reconcile' : 'preflight'}:${runIds.length}`);
+    assert.deepEqual(runIds, [firstRun, secondRun]);
+    assert.equal(reconcile, true);
+    assert.equal(snapshotSha256, undefined);
+    assert.equal(logicalSha256, undefined);
     return {
       schema_version: 1,
-      reconciliation: { changed: true, idempotent: false, chain_ok: true },
+      reconciliation: {
+        changed: true,
+        idempotent: false,
+        chain_ok: true,
+        results: [
+          { run_id: firstRun, changed: true, idempotent: false, chain_ok: true },
+          { run_id: secondRun, changed: true, idempotent: false, chain_ok: true }
+        ]
+      },
       postflight: {
-        target: { status: 'stale', classification: 'RECONCILED_STALE', already_reconciled: true }
+        targets: [
+          { run_id: firstRun, status: 'stale', classification: 'RECONCILED_STALE', already_reconciled: true },
+          { run_id: secondRun, status: 'stale', classification: 'RECONCILED_STALE', already_reconciled: true }
+        ]
       }
     };
   };
@@ -1602,13 +1677,25 @@ test('replacement reconciles exact stale runs sequentially before Coding MCP sta
     { code: 'MCP_START_FAILED' }
   );
   assert.deepEqual(calls, [
-    `${firstRun}:preflight`,
-    `${firstRun}:reconcile`,
-    `${secondRun}:preflight`,
-    `${secondRun}:reconcile`,
+    'batch:reconcile:2',
     'start'
   ]);
   assert.equal(store.current().state, 'FAILED');
+});
+
+test('exact stale-run maintenance accepts 64 exact IDs and rejects 65', async (t) => {
+  const { paths } = fixture(t);
+  const coordinator = new FullCleanActivation({ paths, settings: { load: () => ({}) } });
+  const sixtyFour = Array.from({ length: 64 }, (_value, index) => index.toString(16).padStart(32, '0'));
+  assert.deepEqual(
+    coordinator._exactStaleRunIds({ metadata: { reason: `exact_stale_runs:${sixtyFour.join(',')}` } }),
+    sixtyFour
+  );
+  const sixtyFive = [...sixtyFour, 'f'.repeat(32)];
+  assert.throws(
+    () => coordinator._exactStaleRunIds({ metadata: { reason: `exact_stale_runs:${sixtyFive.join(',')}` } }),
+    { code: 'EXACT_STALE_RUN_REQUEST_INVALID' }
+  );
 });
 
 test('replacement refuses malformed exact stale-run maintenance before Coding MCP start', async (t) => {

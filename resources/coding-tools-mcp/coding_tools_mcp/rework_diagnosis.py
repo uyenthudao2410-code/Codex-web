@@ -9,6 +9,21 @@ from .ledger_analysis import LedgerFacts
 WORKFLOW_ORDER = ("feature", "diagnose", "bugfix", "test_failure", "build_release", "custom", "refactor")
 P2_FAILURE_OBSERVATION_SCHEMA = "p2_failure_observation_v3"
 P2_GENERIC_FAILURE_CLASSES = frozenset({"CHECK_FAILED", "BUILD_VERIFICATION_FAILED"})
+P2_REQUEST_CONTROL_SHAPE_FAILURE_CLASSES = frozenset({
+    "EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED",
+    "INVALID_ARGUMENT",
+    "MODE_ROUTE_MISMATCH",
+})
+P2_REQUEST_CONTROL_SHAPE_CAUSE = "request_contract_correction"
+P2_PERMISSION_REASONS = frozenset({
+    "destructive_command",
+    "filesystem_escape",
+    "inline_script",
+    "network",
+    "privileged_executable",
+    "sensitive_env",
+    "shell_expansion",
+})
 P2_CHECK_COMMAND_FAMILIES = frozenset({
     "cargo_test",
     "go_test",
@@ -29,6 +44,13 @@ P2_BUILD_VERIFICATION_STAGES = frozenset({
     "artifact_missing",
     "verification_unspecified",
 })
+P2_ENGINEERING_ACTIVE_PHASE_KEYS = (
+    "preflight_ms",
+    "ready_wait_ms",
+    "dispatch_window_ms",
+    "execution_window_ms",
+    "proof_ms",
+)
 REPAIR_CAUSE_CODES = {
     "patch_context_ambiguity": {
         "PATCH_AMBIGUOUS",
@@ -36,7 +58,7 @@ REPAIR_CAUSE_CODES = {
         "PATCH_CONTEXT_NOT_FOUND",
         "PATCH_HUNKS_OVERLAP",
     },
-    "source_base_drift": {"BASE_DRIFT", "CONTRACT_DRIFT"},
+    "source_base_drift": {"ACCEPTANCE_FILE_SHA_MISMATCH", "BASE_DRIFT", "CONTRACT_DRIFT"},
     "environment_workdir": {"NOT_A_DIRECTORY", "RUNTIME_DIR_UNWRITABLE"},
     "runtime_tool_failure": {
         "BACKGROUND_OPERATION_FAILED",
@@ -57,6 +79,7 @@ PLANNED_REPAIR_CAUSES = (
     "wrong_root_cause",
     "oracle_weakness",
     "environment_workdir",
+    P2_REQUEST_CONTROL_SHAPE_CAUSE,
     "runtime_tool_failure",
     "missing_requirement",
     "provider_capacity",
@@ -142,6 +165,22 @@ def p2_build_verification_failure_detail(report: object, verification: object) -
     return detail
 
 
+def p2_permission_failure_detail(failure_class: object, details: object) -> dict[str, str] | None:
+    """Project an allowlisted permission discriminator without raw command/path text."""
+    if str(failure_class or "").strip().upper() != "PERMISSION_REQUIRED":
+        return None
+    value = details if isinstance(details, dict) else {}
+    permission = str(value.get("permission") or "").strip().lower()
+    if permission not in P2_PERMISSION_REASONS:
+        return None
+    return {
+        "schema": P2_FAILURE_OBSERVATION_SCHEMA,
+        "stage": "permission_policy",
+        "permission_reason": permission,
+        "causal_attribution": "unattributed",
+    }
+
+
 def p2_failure_detail_bucket(failure_class: object, detail: object) -> str | None:
     """Validate and render a prospective generic-failure detail bucket.
 
@@ -168,7 +207,86 @@ def p2_failure_detail_bucket(failure_class: object, detail: object) -> str | Non
             or (stage == "verification_unspecified" and value.get("unknown_reason") == "verification_evidence_insufficient")
         ):
             return f"{failure}:{stage}"
+    if failure == "PERMISSION_REQUIRED" and value.get("stage") == "permission_policy":
+        expected_keys = {"schema", "stage", "permission_reason", "causal_attribution"}
+        permission = str(value.get("permission_reason") or "")
+        if set(value) == expected_keys and permission in P2_PERMISSION_REASONS:
+            return f"{failure}:{permission}"
     return None
+
+
+def _generic_failure_proof_link(
+    failure_class: str,
+    event: dict[str, Any],
+    proofs: list[dict[str, Any]],
+) -> tuple[dict[str, Any] | None, str]:
+    """Link a generic failure only through an exact durable proof key."""
+    payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+    wave_id = str(event.get("wave_id") or "").strip()
+    if not wave_id:
+        return None, "missing_exact_key"
+    failed = [
+        proof for proof in proofs
+        if str(proof.get("wave_id") or "") == wave_id
+        and str(proof.get("status") or "").strip().lower() == "failed"
+    ]
+    normalized = str(failure_class or "").strip().upper()
+    if normalized == "CHECK_FAILED":
+        command_hash = str(payload.get("command_hash") or "").strip()
+        if not command_hash:
+            return None, "missing_exact_key"
+        candidates = [proof for proof in failed if str(proof.get("command_hash") or "") == command_hash]
+        exact_link = "exact_wave_command_hash"
+    elif normalized == "BUILD_VERIFICATION_FAILED":
+        verification = _normalized_text(payload.get("verification"))
+        if verification not in {"tests", "build", "all"}:
+            return None, "missing_exact_key"
+        stage_id = f"verify:{verification}"
+        candidates = [proof for proof in failed if str(proof.get("stage_id") or "") == stage_id]
+        exact_link = "exact_wave_verify_stage"
+    else:
+        return None, "not_applicable"
+    if len(candidates) == 1:
+        return candidates[0], exact_link
+    if not candidates:
+        return None, "missing_exact_proof"
+    return None, "ambiguous_exact_proof"
+
+
+def _generic_process_outcome(
+    failure_class: str,
+    payload: dict[str, Any],
+    proof: dict[str, Any],
+) -> str | None:
+    """Project content-free process outcome without assigning semantic cause."""
+    normalized = str(failure_class or "").strip().upper()
+    if normalized == "CHECK_FAILED":
+        exit_code = proof.get("exit_code")
+        if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+            return None
+        return "CHECK_FAILED:process_exit_zero" if exit_code == 0 else "CHECK_FAILED:process_exit_nonzero"
+    if normalized != "BUILD_VERIFICATION_FAILED":
+        return None
+    detail = payload.get("p2_failure_detail") if isinstance(payload.get("p2_failure_detail"), dict) else {}
+    if detail.get("schema") != P2_FAILURE_OBSERVATION_SCHEMA or detail.get("causal_attribution") != "unattributed":
+        return None
+    failure_stage = str(detail.get("verification_failure_stage") or "")
+    result_key = {
+        "test_command_failed": "test_result",
+        "build_command_failed": "build_result",
+    }.get(failure_stage)
+    if result_key is None:
+        return None
+    metadata = proof.get("metadata") if isinstance(proof.get("metadata"), dict) else {}
+    result = metadata.get("result") if isinstance(metadata.get("result"), dict) else {}
+    selected = result.get(result_key) if isinstance(result.get(result_key), dict) else {}
+    if _normalized_text(selected.get("status")) != "failed":
+        return None
+    exit_code = selected.get("exit_code")
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+        return None
+    exit_bucket = "process_exit_zero" if exit_code == 0 else "process_exit_nonzero"
+    return f"BUILD_VERIFICATION_FAILED:{failure_stage}:{exit_bucket}"
 
 
 def _percentile(values: list[int], percentile: int) -> int | None:
@@ -177,6 +295,45 @@ def _percentile(values: list[int], percentile: int) -> int | None:
     ordered = sorted(values)
     rank = max(1, min(len(ordered), (len(ordered) * percentile + 99) // 100))
     return int(ordered[rank - 1])
+
+
+def _phase_timing_observation(economics: object) -> dict[str, int | None] | None:
+    """Project complete EOCL phase timing without relabeling it as model latency.
+
+    ``engineering_active_ms`` is deliberately limited to lifecycle stages where
+    the engineering packet is being prepared, dispatched, executed, or proven.
+    ACCEPTING wait and REPLAN occupancy are reported separately because either
+    may include operator/runtime/external delay that the ledger cannot causally
+    attribute.
+    """
+    value = economics if isinstance(economics, dict) else {}
+    phase_timing = value.get("phase_timing") if isinstance(value.get("phase_timing"), dict) else {}
+    if not phase_timing.get("complete"):
+        return None
+    methodology = (
+        phase_timing.get("methodology_phase_ms")
+        if isinstance(phase_timing.get("methodology_phase_ms"), dict)
+        else {}
+    )
+    active_values: list[int] = []
+    for key in P2_ENGINEERING_ACTIVE_PHASE_KEYS:
+        phase_ms = methodology.get(key)
+        if not isinstance(phase_ms, int) or isinstance(phase_ms, bool) or phase_ms < 0:
+            return None
+        active_values.append(phase_ms)
+    accept_wait_ms = methodology.get("accept_wait_ms")
+    if not isinstance(accept_wait_ms, int) or isinstance(accept_wait_ms, bool) or accept_wait_ms < 0:
+        return None
+    replan_ms = methodology.get("replan_ms")
+    if replan_ms is not None and (
+        not isinstance(replan_ms, int) or isinstance(replan_ms, bool) or replan_ms < 0
+    ):
+        return None
+    return {
+        "engineering_active_ms": sum(active_values),
+        "accept_wait_ms": accept_wait_ms,
+        "replan_ms": replan_ms,
+    }
 
 
 def _workflow_name(metadata: dict[str, Any]) -> str:
@@ -191,6 +348,117 @@ def repair_cause_for_failure_class(failure_class: str) -> str | None:
         if normalized in codes:
             return cause
     return None
+
+
+def p2_repair_cause_for_failure_class(failure_class: str) -> str | None:
+    """Extend P2 diagnosis only where the typed failure class is itself causal."""
+    cause = repair_cause_for_failure_class(failure_class)
+    if cause is not None:
+        return cause
+    normalized = str(failure_class or "").strip().upper()
+    if normalized in P2_REQUEST_CONTROL_SHAPE_FAILURE_CLASSES:
+        return P2_REQUEST_CONTROL_SHAPE_CAUSE
+    return None
+
+
+def p2_request_contract_cause_from_replan_reason(
+    failure_class: object,
+    reason: object,
+) -> tuple[str | None, str | None]:
+    """Map only evidence-backed permission/protected-path strategy corrections.
+
+    The guard failure itself is not causal: PERMISSION_REQUIRED and
+    PROTECTED_PATH_WRITE are expected fail-closed policy outcomes.  P2 may
+    attribute avoidable request-shape rework only when the index-paired durable
+    ``wave_replanned`` reason proves that the subsequent strategy changed to a
+    workspace-safe/supported alternative.  Missing or permission-seeking-only
+    reasons therefore remain unknown.
+    """
+    failure = str(failure_class or "").strip().upper()
+    if failure not in {"PERMISSION_REQUIRED", "PROTECTED_PATH_WRITE"}:
+        return (None, None)
+    text = _normalized_text(reason)
+    if not text:
+        return (None, None)
+
+    if failure == "PROTECTED_PATH_WRITE":
+        protected_marker = any(
+            marker in text
+            for marker in ("protected_path_write", "protected-path", "protected path")
+        )
+        supported_strategy = any(
+            marker in text
+            for marker in (
+                "legal public-surface strategy",
+                "supported public-surface strategy",
+                "supported source strategy",
+                "supported write strategy",
+            )
+        )
+        if protected_marker and supported_strategy:
+            return (P2_REQUEST_CONTROL_SHAPE_CAUSE, "protected_path_strategy_correction")
+        return (None, None)
+
+    filesystem_marker = any(
+        marker in text
+        for marker in (
+            "filesystem_escape",
+            "filesystem escape",
+            "parent traversal",
+            "parent-traversal",
+        )
+    )
+    workspace_safe_strategy = any(
+        marker in text
+        for marker in (
+            "repository root",
+            "repo root",
+            "workspace root",
+            "workspace-relative",
+            "workspace relative",
+            "workspace-safe",
+            "without parent traversal",
+            "without parent-path",
+            "without parent path",
+        )
+    )
+    if filesystem_marker and workspace_safe_strategy:
+        return (P2_REQUEST_CONTROL_SHAPE_CAUSE, "permission_filesystem_escape_strategy_correction")
+
+    inline_marker = any(
+        marker in text
+        for marker in ("inline_script", "inline script", "inline python", "python -c")
+    )
+    supported_command_strategy = any(
+        marker in text
+        for marker in (
+            "remove inline",
+            "existing repository",
+            "existing script",
+            "supported read-only powershell",
+            "supported powershell",
+            "replace with powershell",
+            "replace the inline",
+        )
+    )
+    if inline_marker and supported_command_strategy:
+        return (P2_REQUEST_CONTROL_SHAPE_CAUSE, "permission_inline_script_strategy_correction")
+
+    network_marker = any(
+        marker in text
+        for marker in ("network_permission_required", "network permission", "network access", "http/network")
+    )
+    removed_network_probe = any(
+        marker in text
+        for marker in ("remove all http/network", "removes all http/network", "without network")
+    )
+    local_evidence_strategy = any(
+        marker in text
+        for marker in ("os-local", "os local", "local os", "local-only", "local only")
+    )
+    if network_marker and removed_network_probe and local_evidence_strategy:
+        return (P2_REQUEST_CONTROL_SHAPE_CAUSE, "permission_network_probe_strategy_correction")
+    return (None, None)
 
 
 def high_confidence_replan_reason_category(reason: Any) -> tuple[str | None, str | None]:
@@ -218,8 +486,136 @@ def high_confidence_replan_reason_category(reason: Any) -> tuple[str | None, str
     return (None, None)
 
 
+def p2_generic_replan_reason_category(
+    failure_class: object,
+    reason: object,
+) -> tuple[str | None, str | None]:
+    """Classify only generic P2 failures with exact paired durable reason evidence.
+
+    CHECK_FAILED and BUILD_VERIFICATION_FAILED are deliberately non-causal by
+    themselves.  These rules therefore consume only the index-paired durable
+    ``wave_replanned`` reason and require narrow corroborating markers for the
+    strategy or implementation correction.  Permission/protected failures and
+    every other failure class are rejected before text classification.
+    """
+    failure = str(failure_class or "").strip().upper()
+    if failure not in P2_GENERIC_FAILURE_CLASSES:
+        return (None, None)
+
+    existing = high_confidence_replan_reason_category(reason)
+    if existing != (None, None):
+        return existing
+
+    text = _normalized_text(reason)
+    if not text:
+        return (None, None)
+
+    workdir_marker = any(
+        marker in text
+        for marker in (
+            "workdir",
+            "working directory",
+            "repository root",
+            "repo root",
+            "component cwd",
+            "package cwd",
+        )
+    )
+    proof_marker = any(
+        marker in text
+        for marker in ("proof", "verification", "oracle", "pytest", "test command")
+    )
+    invocation_failure_marker = any(
+        marker in text
+        for marker in (
+            "not importable",
+            "import error",
+            "import failure",
+            "file-not-found",
+            "file not found",
+            "invocation error",
+            "oracle/workdir defect",
+        )
+    )
+    workdir_correction_marker = any(
+        marker in text
+        for marker in (
+            "change proof workdir",
+            "change only verification workdir",
+            "verification workdir",
+            "rerun from",
+            "re-run from",
+            "rerun the proof from",
+            "rerun python proof from",
+        )
+    )
+    if workdir_marker and proof_marker and invocation_failure_marker and workdir_correction_marker:
+        return ("oracle_selection_repair", "verification_workdir_correction")
+
+    cleanup_marker = any(
+        marker in text
+        for marker in (
+            "temp-tree",
+            "temp tree",
+            "temp cleanup",
+            "temporary directory",
+            "cleanup",
+            "teardown",
+            "rmsync",
+            "removetemptree",
+        )
+    )
+    contention_evidence = any(
+        marker in text
+        for marker in (
+            "contention",
+            "parallel",
+            "serial",
+            "isolated",
+            "unrelated",
+            "nondeterministic",
+            "file-lock",
+            "file lock",
+            "assertion",
+        )
+    )
+    if "eperm" in text and cleanup_marker and contention_evidence:
+        return ("environment_or_baseline_repair", "windows_temp_cleanup_contention")
+
+    module_size_marker = "module-size" in text or "module size" in text
+    module_guard_marker = "guard" in text or "budget" in text
+    extraction_marker = any(
+        marker in text
+        for marker in ("extract", "dedicated module", "domain module", "move the projection", "move helpers")
+    )
+    if module_size_marker and module_guard_marker and extraction_marker:
+        return ("causal_solution_repair", "module_size_architecture_correction")
+
+    command_too_long = "command line is too long" in text or "command-line is too long" in text
+    split_marker = "split" in text and any(marker in text for marker in ("bounded", "sequential", "commands", "steps"))
+    if command_too_long and split_marker:
+        return ("oracle_selection_repair", "windows_command_line_split")
+
+    fsync_descriptor_marker = any(
+        marker in text
+        for marker in ("writable descriptor", "writable file descriptor", "o_rdwr")
+    )
+    fsync_failure_marker = any(
+        marker in text
+        for marker in ("errno 9", "bad file descriptor", "windows", "_commit")
+    )
+    if "fsync" in text and fsync_descriptor_marker and fsync_failure_marker:
+        return ("causal_solution_repair", "windows_fsync_writable_descriptor")
+
+    expectation_marker = "test expectation" in text or "regression expectation" in text
+    if expectation_marker and "toolfailure" in text and "jsonrpcerror" in text:
+        return ("oracle_selection_repair", "public_validation_exception_expectation")
+
+    return (None, None)
+
+
 def _repair_cause(failure_class: str) -> str | None:
-    return repair_cause_for_failure_class(failure_class)
+    return p2_repair_cause_for_failure_class(failure_class)
 
 
 def _scope_observation(events: list[dict[str, Any]]) -> tuple[int | None, bool]:
@@ -384,6 +780,12 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
     overall_reason_fallback_structured = 0
     overall_reason_fallback_events = 0
     overall_unclassified_replan_events = 0
+    overall_generic_process_eligible = 0
+    overall_generic_process_observed = 0
+    overall_generic_process_eligible_by_class: Counter[str] = Counter()
+    overall_generic_process_observed_by_class: Counter[str] = Counter()
+    overall_generic_process_linkage: Counter[str] = Counter()
+    overall_generic_process_outcomes: Counter[str] = Counter()
     explicit_model_route = 0
 
     def bucket(workflow: str) -> dict[str, Any]:
@@ -396,6 +798,16 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
                 "all_ttar": [],
                 "first_ttar": [],
                 "repaired_ttar": [],
+                "phase_timing_observed": 0,
+                "phase_timing_unknown": 0,
+                "all_engineering_active": [],
+                "first_engineering_active": [],
+                "repaired_engineering_active": [],
+                "all_accept_wait": [],
+                "first_accept_wait": [],
+                "repaired_accept_wait": [],
+                "all_replan_time": [],
+                "repaired_replan_time": [],
                 "failure_classes": Counter(),
                 "cause_events": Counter({cause: 0 for cause in PLANNED_REPAIR_CAUSES}),
                 "cause_runs": defaultdict(set),
@@ -451,6 +863,27 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
             if isinstance(ttar, int) and not isinstance(ttar, bool) and ttar >= 0:
                 target["first_ttar"].append(ttar)
 
+        phase_observation = _phase_timing_observation(economics)
+        if phase_observation is None:
+            target["phase_timing_unknown"] += 1
+        else:
+            target["phase_timing_observed"] += 1
+            engineering_active_ms = int(phase_observation["engineering_active_ms"] or 0)
+            accept_wait_ms = int(phase_observation["accept_wait_ms"] or 0)
+            target["all_engineering_active"].append(engineering_active_ms)
+            target["all_accept_wait"].append(accept_wait_ms)
+            if repaired:
+                target["repaired_engineering_active"].append(engineering_active_ms)
+                target["repaired_accept_wait"].append(accept_wait_ms)
+            else:
+                target["first_engineering_active"].append(engineering_active_ms)
+                target["first_accept_wait"].append(accept_wait_ms)
+            replan_ms = phase_observation.get("replan_ms")
+            if isinstance(replan_ms, int) and not isinstance(replan_ms, bool):
+                target["all_replan_time"].append(replan_ms)
+                if repaired:
+                    target["repaired_replan_time"].append(replan_ms)
+
         events = ledger.list_events(run_id)
         scope_size, scope_censored = _scope_observation(events)
         if scope_size is None:
@@ -473,6 +906,7 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
 
         if not repaired:
             continue
+        proofs = ledger.list_proofs(run_id)
         causes_for_run: set[str] = set()
         failure_events = sorted(
             [event for event in events if event.get("event_type") == "failure_observed"],
@@ -488,11 +922,26 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
             target["failure_classes"][failure_class] += 1
             overall_failure_classes[failure_class] += 1
             if failure_class in P2_GENERIC_FAILURE_CLASSES:
+                overall_generic_process_eligible += 1
+                overall_generic_process_eligible_by_class[failure_class] += 1
+                linked_proof, linkage = _generic_failure_proof_link(failure_class, event, proofs)
+                overall_generic_process_linkage[linkage] += 1
+                if linked_proof is not None:
+                    process_outcome = _generic_process_outcome(failure_class, payload, linked_proof)
+                    if process_outcome is not None:
+                        overall_generic_process_observed += 1
+                        overall_generic_process_observed_by_class[failure_class] += 1
+                        overall_generic_process_outcomes[process_outcome] += 1
                 detail_bucket = p2_failure_detail_bucket(failure_class, payload.get("p2_failure_detail"))
                 if detail_bucket is None:
                     target["legacy_generic_detail_unavailable"][failure_class] += 1
                     overall_legacy_generic_detail_unavailable[failure_class] += 1
                 else:
+                    target["prospective_failure_details"][detail_bucket] += 1
+                    overall_prospective_failure_details[detail_bucket] += 1
+            elif failure_class == "PERMISSION_REQUIRED":
+                detail_bucket = p2_failure_detail_bucket(failure_class, payload.get("p2_failure_detail"))
+                if detail_bucket is not None:
                     target["prospective_failure_details"][detail_bucket] += 1
                     overall_prospective_failure_details[detail_bucket] += 1
             cause = _repair_cause(failure_class)
@@ -510,7 +959,27 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
                 if index < len(reason_events) and isinstance(reason_events[index].get("payload"), dict)
                 else {}
             )
-            category, rule = high_confidence_replan_reason_category(reason_payload.get("reason"))
+            request_cause, request_rule = p2_request_contract_cause_from_replan_reason(
+                failure_class,
+                reason_payload.get("reason"),
+            )
+            if request_cause is not None and request_rule is not None:
+                target["cause_events"][request_cause] += 1
+                overall_cause_events[request_cause] += 1
+                causes_for_run.add(request_cause)
+                target["reason_categories"][request_cause] += 1
+                target["reason_rules"][request_rule] += 1
+                target["classification_sources"]["durable_wave_replanned_reason_high_confidence"] += 1
+                overall_reason_categories[request_cause] += 1
+                overall_reason_rules[request_rule] += 1
+                overall_classification_sources["durable_wave_replanned_reason_high_confidence"] += 1
+                overall_reason_fallback_structured += 1
+                overall_reason_fallback_events += 1
+                continue
+            category, rule = p2_generic_replan_reason_category(
+                failure_class,
+                reason_payload.get("reason"),
+            )
             if category is not None and rule is not None:
                 target["reason_categories"][category] += 1
                 target["reason_rules"][rule] += 1
@@ -553,6 +1022,38 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
                 "first_pass_p90": _percentile(item["first_ttar"], 90),
                 "repaired_p50": _percentile(item["repaired_ttar"], 50),
                 "repaired_p90": _percentile(item["repaired_ttar"], 90),
+            },
+            "phase_aware_timing": {
+                "measurement": "accepted_result_economics.phase_timing.methodology_phase_ms",
+                "observed_runs": int(item["phase_timing_observed"]),
+                "unknown_runs": int(item["phase_timing_unknown"]),
+                "engineering_active_definition": list(P2_ENGINEERING_ACTIVE_PHASE_KEYS),
+                "engineering_active_ms": {
+                    "all_p50": _percentile(item["all_engineering_active"], 50),
+                    "all_p90": _percentile(item["all_engineering_active"], 90),
+                    "first_pass_p50": _percentile(item["first_engineering_active"], 50),
+                    "first_pass_p90": _percentile(item["first_engineering_active"], 90),
+                    "repaired_p50": _percentile(item["repaired_engineering_active"], 50),
+                    "repaired_p90": _percentile(item["repaired_engineering_active"], 90),
+                },
+                "accept_wait_ms": {
+                    "all_p50": _percentile(item["all_accept_wait"], 50),
+                    "all_p90": _percentile(item["all_accept_wait"], 90),
+                    "first_pass_p50": _percentile(item["first_accept_wait"], 50),
+                    "first_pass_p90": _percentile(item["first_accept_wait"], 90),
+                    "repaired_p50": _percentile(item["repaired_accept_wait"], 50),
+                    "repaired_p90": _percentile(item["repaired_accept_wait"], 90),
+                },
+                "replan_ms": {
+                    "all_p50": _percentile(item["all_replan_time"], 50),
+                    "all_p90": _percentile(item["all_replan_time"], 90),
+                    "repaired_p50": _percentile(item["repaired_replan_time"], 50),
+                    "repaired_p90": _percentile(item["repaired_replan_time"], 90),
+                },
+                "not_model_latency": True,
+                "not_cpu_time": True,
+                "accept_wait_cause_inferred": False,
+                "unknown_not_imputed": True,
             },
             "repair_failure_classes": dict(sorted(item["failure_classes"].items())),
             "repair_causes": {
@@ -643,6 +1144,24 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
             "prospective_failure_detail_schema": P2_FAILURE_OBSERVATION_SCHEMA,
             "legacy_generic_detail_not_inferred": True,
         },
+        "generic_failure_process_outcome": {
+            "measurement": "durable_failed_proof_process_outcome_v1",
+            "eligible_failure_events": overall_generic_process_eligible,
+            "observed_events": overall_generic_process_observed,
+            "unknown_events": overall_generic_process_eligible - overall_generic_process_observed,
+            "coverage": (
+                round(overall_generic_process_observed / overall_generic_process_eligible, 6)
+                if overall_generic_process_eligible
+                else None
+            ),
+            "eligible_by_failure_class": dict(sorted(overall_generic_process_eligible_by_class.items())),
+            "observed_by_failure_class": dict(sorted(overall_generic_process_observed_by_class.items())),
+            "linkage_counts": dict(sorted(overall_generic_process_linkage.items())),
+            "outcome_counts": dict(sorted(overall_generic_process_outcomes.items())),
+            "causal_attribution": "unattributed",
+            "historical_events_mutated": False,
+            "unknown_not_imputed": True,
+        },
         "oracle_observation": {
             "measurement": "oracle_preflight.strong_oracle",
             "eligible_runs": included,
@@ -670,8 +1189,15 @@ def stratified_rework_diagnosis(ledger: LedgerFacts, *, limit: int = 5000) -> di
             "unmatched_structured_failures_remain_unclassified": True,
             "generic_failure_details_are_prospective_only": True,
             "generic_failure_detail_is_not_a_causal_repair_label": True,
+            "generic_process_outcome_is_not_a_causal_repair_label": True,
+            "generic_process_outcome_uses_exact_durable_proof_linkage": True,
+            "permission_failure_details_are_prospective_only": True,
+            "permission_failure_detail_is_not_a_causal_repair_label": True,
+            "permission_or_protected_request_correction_requires_paired_replan_reason": True,
             "zero_planned_cause_without_evidence_is_not_proof_of_absence": True,
             "countermeasure_effect_requires_comparable_pre_post_or_paired_evidence": True,
             "scope_path_cap_censored_runs_excluded_from_scope_percentiles": True,
+            "phase_aware_timing_is_not_model_latency": True,
+            "phase_aware_timing_unknown_not_imputed": True,
         },
     }

@@ -1,0 +1,337 @@
+{
+  "version": 2,
+  "task_id": "4825e36fff3f43f5b858a9030f54938a",
+  "orchestration": {
+    "run_id": "568a3c9381454689af37320bc1153ee7",
+    "wave_id": "1417524d9a264c6384762ffafb41f708",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Converge Recovery Host and Coding MCP component state without source writes by no-patch provenance adoption of the pre-existing dirty subset and exact controller attestation of all 26 current component-file bytes, with fresh deterministic proof covering both runtime components.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-08T17:50:32.061Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-08T17:50:32.061Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-08T17:50:32.061Z"
+    }
+  ],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "dTJVldG4KVr2U8yRoPcIHqOG",
+    "kind": "test",
+    "status": "timeout",
+    "result_status": "failed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-08T17:50:31.736Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 30,
+        "head_hash": "88f7d3394f7b630a181250823a0717b200cea7b3565cec856f0d01b637f08bd6"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-568a3c9381454689af37320bc1153ee7\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-568a3c9381454689af37320bc1153ee7\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "568a3c9381454689af37320bc1153ee7",
+      "wave_id": "1417524d9a264c6384762ffafb41f708",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Converge Recovery Host and Coding MCP component state without source writes by no-patch provenance adoption of the pre-existing dirty subset and exact controller attestation of all 26 current component-file bytes, with fresh deterministic proof covering both runtime components.",
+        "objective_revision": 1,
+        "objective_sha256": "0b16c2b459ba9cb0dea6eca0aae110c7daf0c168b0b52974af2d1b5d129725c8",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "a8bc7218fbf9494d983fd0856feb9790",
+          "stage_id": "check:a28d809e2f83fe77",
+          "status": "passed",
+          "duration_ms": 64294,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "3cd6990ccbb948d696dca5baffcaff0a",
+          "stage_id": "check:ffce6415600af993",
+          "status": "passed",
+          "duration_ms": 524049,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "PROOF_TIMEOUT",
+      "reason": null,
+      "event_seq": 44212
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "64170ab7d3b120f49f75e4a0e937cfffba51bc0e61edacbd872d7ee722b481d8",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [
+    {
+      "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+      "status": "failed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 6 lines | tail: '.................................................................. [ 40%]'",
+      "finished_at": "2026-09-08T17:50:31.736Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "dTJVldG4KVr2U8yRoPcIHqOG"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "568a3c9381454689af37320bc1153ee7",
+        "owner_wave": "1417524d9a264c6384762ffafb41f708",
+        "size_bytes": 454,
+        "command_id": "dTJVldG4KVr2U8yRoPcIHqOG",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:dTJVldG4KVr2U8yRoPcIHqOG:stdout",
+            "total_stream_bytes": 454,
+            "total_retained_bytes": 454,
+            "head_retained_bytes": 454,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:dTJVldG4KVr2U8yRoPcIHqOG:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy.",
+  "created_at": "2026-09-08T17:40:36.157Z",
+  "updated_at": "2026-09-08T17:50:33.684Z",
+  "events": [
+    {
+      "time": "2026-09-08T17:40:36.157Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Converge Recovery Host and Coding MCP component state without source writes by no-patch provenance adoption of the pre-existing dirty subset and exact controller attestation of all 26 current component-file bytes, with fresh deterministic proof covering both runtime components."
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:37.904Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:39.926Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:40.982Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:40.990Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:42.321Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:42.801Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:40:43.591Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-reporter=tap tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "session_id": "HLjdcn5QkD4hHAgUvkIK1Xdb"
+      }
+    },
+    {
+      "time": "2026-09-08T17:41:47.271Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-reporter=tap tests/accepted-code-activation.test.js tests/component-revision.test.js tests/recovery-activation.test.js tests/recovery-bootstrap.test.js tests/recovery-host.test.js tests/runtime-lifecycle.test.js tests/full-clean-activation-command.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T17:41:48.321Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+        "session_id": "dTJVldG4KVr2U8yRoPcIHqOG"
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:31.736Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -B -m pytest --rootdir=resources/coding-tools-mcp -o pythonpath=. resources/coding-tools-mcp/tests -q -p no:cacheprovider",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:32.061Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:33.417Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:33.421Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:33.423Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:33.536Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "64170ab7d3b120f49f75e4a0e937cfffba51bc0e61edacbd872d7ee722b481d8"
+      }
+    },
+    {
+      "time": "2026-09-08T17:50:33.684Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

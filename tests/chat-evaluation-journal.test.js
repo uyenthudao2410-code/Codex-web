@@ -15,7 +15,11 @@ const {
   chatEvaluationDebugScript,
   journalPath,
   pendingTurnPath,
+  continuationConsentPath,
   bindingTurnPath,
+  parseContinuationConsentText,
+  CONTINUATION_CONSENT_SCHEMA_VERSION,
+  CONTINUATION_CONSENT_PREFIX,
   HOST_OBSERVATION_SCHEMA_VERSION,
   HOST_CORRELATION_SCHEMA_VERSION
 } = require('../electron/services/chatEvaluationJournal');
@@ -95,6 +99,38 @@ test('host evaluation journal appends JSONL under workspace and rotates bounded 
   for (let index = 0; index < 40; index += 1) journal.append(workspace, [{ ...event, observation_id: `u-${index}` }]);
   assert.ok(fs.existsSync(first.path));
   assert.ok(fs.existsSync(`${first.path}.1`));
+});
+
+test('explicit bounded continuation consent is distinct from user-turn correlation and content-free', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-continuation-consent-'));
+  const journal = new ChatEvaluationJournal();
+  const descriptor = {
+    action: 'authorize_bounded_continuation',
+    run_id: 'run-1', wave_id: 'wave-1', workspace_id: 'workspace-1', problem_id: 'problem-1', problem_revision: 1,
+    contract_fingerprint: 'a'.repeat(64), tool_contract_sha256: 'b'.repeat(64), runtime_behavior_fingerprint: 'c'.repeat(64),
+    activation_epoch_id: 'epoch-1', activation_admission: 'open', issuer_client_id: 'chatweb-1', scope_sha256: 'd'.repeat(64),
+    read_paths: ['src/read.py'], write_paths: ['src/write.py'], protected_paths: ['src/protected.py'], approved_check_hashes: ['e'.repeat(64)],
+    max_duration_seconds: 120, max_decision_turns: 2, max_patch_attempts: 1
+  };
+  assert.deepEqual(parseContinuationConsentText(`${CONTINUATION_CONSENT_PREFIX}${JSON.stringify(descriptor)}`), descriptor);
+  assert.equal(parseContinuationConsentText('I authorize background work'), null);
+  const user = {
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION, event_type: 'user_turn_visible', observation_id: 'u1', navigation_epoch: 1,
+    clock_domain: 'electron-renderer:1', monotonic_ms: 10, wall_time_ms: 1000, trace_id: 'trace-1', turn_id: 'turn-1',
+    observer_plane: 'electron_chatgpt_dom', measurement: 'observed_host_visible'
+  };
+  assert.equal(journal.stagePendingContinuationConsents(workspace, [user, {
+    kind: 'continuation_consent', schema_version: CONTINUATION_CONSENT_SCHEMA_VERSION, turn_id: 'turn-1', trace_id: 'trace-1',
+    descriptor, observer_plane: 'electron_chatgpt_dom'
+  }]), 1);
+  const receipt = JSON.parse(fs.readFileSync(continuationConsentPath(workspace), 'utf8'));
+  assert.deepEqual(Object.keys(receipt).sort(), ['descriptor', 'receipt_id', 'schema_version', 'staged_at_unix_ms', 'trace_id', 'turn_id']);
+  assert.deepEqual(receipt.descriptor, descriptor);
+  assert.equal(JSON.stringify(receipt).includes('I authorize'), false);
+  assert.equal(journal.stagePendingContinuationConsents(workspace, [{
+    kind: 'continuation_consent', schema_version: CONTINUATION_CONSENT_SCHEMA_VERSION, turn_id: 'turn-other', trace_id: 'trace-other',
+    descriptor, observer_plane: 'electron_chatgpt_dom'
+  }]), 0);
 });
 
 test('host correlation state is one-shot, content-free, and exact-identity matched', () => {
@@ -750,14 +786,29 @@ test('observer emits turn features from its own markers plus counts-only text me
   assert.match(script, /sseTypeSamples/);
   assert.match(script, /user_chars/);
   assert.match(script, /asst_chars/);
-  // Authorized policy change: length/code-block counts are measured in-memory
-  // and only numbers leave the page. No other content reader may exist here.
-  const helperStart = script.indexOf('const textMetrics = (node)');
-  assert.ok(helperStart >= 0, 'counts-only textMetrics helper must remain discoverable');
-  const helperBlock = script.slice(helperStart, helperStart + 800);
-  assert.match(helperBlock, /textContent/);
-  const rest = script.slice(0, helperStart) + script.slice(helperStart + 800);
-  assert.doesNotMatch(rest, /textContent/, 'textContent may appear only inside the counts-only textMetrics helper');
+  // The DOM message content has exactly two narrowly bounded readers:
+  // (1) textMetrics derives length/code-block counts and emits only numbers;
+  // (2) continuationConsentFromNode recognizes a single explicit command and
+  // emits only its normalized structured descriptor. No other observer path
+  // may read message text.
+  const metricsStart = script.indexOf('const textMetrics = (node)');
+  const metricsEnd = script.indexOf('const describeTurn =', metricsStart);
+  const consentStart = script.indexOf('const continuationConsentFromNode = (node)');
+  const consentEnd = script.indexOf('const emitVisible =', consentStart);
+  assert.ok(metricsStart >= 0 && metricsEnd > metricsStart, 'counts-only textMetrics helper must remain discoverable');
+  assert.ok(consentStart >= 0 && consentEnd > consentStart, 'explicit continuation-consent reader must remain discoverable');
+  const metricsBlock = script.slice(metricsStart, metricsEnd);
+  const consentBlock = script.slice(consentStart, consentEnd);
+  assert.match(metricsBlock, /textContent/);
+  assert.match(consentBlock, /textContent/);
+  assert.match(consentBlock, /startsWith\(prefix\)/);
+  assert.match(consentBlock, /text\.length > 16 \* 1024/);
+  assert.match(consentBlock, /JSON\.parse\(text\.slice\(prefix\.length\)\)/);
+  assert.doesNotMatch(consentBlock, /push\(|return text/);
+  const outsideTextReaders = script.slice(0, metricsStart)
+    + script.slice(metricsEnd, consentStart)
+    + script.slice(consentEnd);
+  assert.doesNotMatch(outsideTextReaders, /textContent/, 'textContent may appear only inside the counts-only metrics or explicit-consent helper');
   assert.doesNotMatch(script, /innerText|outerHTML|responseText/);
 });
 

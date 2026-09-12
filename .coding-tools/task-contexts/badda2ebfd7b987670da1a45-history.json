@@ -1,0 +1,476 @@
+[
+  {
+    "version": 2,
+    "task_id": "fd8339b22a2d489a8a7b93290ebd5d11",
+    "orchestration": {
+      "run_id": "2111cad805d64348aa38db14ad55a4be",
+      "wave_id": "711473279d1640ee9407028e2e85e42e",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "9a73c2fe7d0b30751722102d409c46871e105462c5020a9ef903ae7faf50d597",
+      "contract_fp": "a2b2c652db5edb2cc97ea8bbf02382b68c30ac0e007ac7480f71d121c7751625"
+    },
+    "objective": "Remove the PowerShell case-insensitive PID variable collision from the bounded Recovery Supervisor readiness wait and lock it with a focused regression guard.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:36:00.996Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:36:00.996Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T14:36:00.996Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Dz9eadIpdNg98FHc5btzis9F",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 626,
+      "finished_at": "2026-09-08T14:36:00.528Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/recovery-supervisor/recovery-supervisor.ps1",
+            "state": "file",
+            "sha256": "694bc85099a975e23e45475ae2ce9aada7e21ff727eeaaa14904c7e9a1a6fa5d",
+            "size_bytes": 28016,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "2111cad805d64348aa38db14ad55a4be",
+            "wave_id": "711473279d1640ee9407028e2e85e42e"
+          },
+          {
+            "path": "tests/recovery-supervisor.test.js",
+            "state": "file",
+            "sha256": "6803a3cf3b1eceba264c70bfc50c936141c4866528e023cf5977a12cc12a9688",
+            "size_bytes": 25756,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "2111cad805d64348aa38db14ad55a4be",
+            "wave_id": "711473279d1640ee9407028e2e85e42e"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 35,
+          "head_hash": "e1f63afce10c10c3260baa619560540382fa31cffbb070de4f6b97c7e7cd3d6e"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2111cad805d64348aa38db14ad55a4be\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2111cad805d64348aa38db14ad55a4be\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "2111cad805d64348aa38db14ad55a4be",
+        "wave_id": "711473279d1640ee9407028e2e85e42e",
+        "checkpoint_id": "cb2bd0c664f2491784b31d7943513d00",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "9a73c2fe7d0b30751722102d409c46871e105462c5020a9ef903ae7faf50d597",
+        "contract_fp": "a2b2c652db5edb2cc97ea8bbf02382b68c30ac0e007ac7480f71d121c7751625",
+        "objective_provenance": {
+          "effective_objective": "Remove the PowerShell case-insensitive PID variable collision from the bounded Recovery Supervisor readiness wait and lock it with a focused regression guard.",
+          "objective_revision": 1,
+          "objective_sha256": "885b0ad72c17fae4dfe446ff02f06fffa4ad3daa7701f25e2849b4ba3406744a",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 3,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "c70d5012e00e4e8586777abc98387d52",
+            "stage_id": "check:fe3ffbf7aa7a92a6",
+            "status": "passed",
+            "duration_ms": 24964,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "c331727c2073445280902ac3f7127077",
+            "stage_id": "check:46508d374f5d93c2",
+            "status": "passed",
+            "duration_ms": 1212,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "4e3437a581214d35967024ae8fe0e62d",
+            "stage_id": "check:d748b3f2c2065ed5",
+            "status": "passed",
+            "duration_ms": 1750,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "a56d2c4fa88febb9441e54665964929a03f9a18aa9bb2249058ff767cec8263b",
+    "completion_report_acknowledged_id": "a56d2c4fa88febb9441e54665964929a03f9a18aa9bb2249058ff767cec8263b",
+    "completion_report_acknowledged_at": "2026-09-08T14:39:14.566Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T14:35:25.788Z",
+    "updated_at": "2026-09-08T14:39:24.733Z",
+    "events": [
+      {
+        "time": "2026-09-08T14:35:25.788Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Remove the PowerShell case-insensitive PID variable collision from the bounded Recovery Supervisor readiness wait and lock it with a focused regression guard."
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:27.539Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:28.463Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:29.596Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:29.607Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:30.906Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:31.447Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:32.238Z",
+        "event": "command_started",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "session_id": "pcqByMCaMegunEny2x1Fjd-Y"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:56.564Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node --test tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:57.782Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$errors=$null;[void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'resources/recovery-supervisor/recovery-supervisor.ps1'),[ref]$null,[ref]$errors);if($errors.Count){exit 1}\"",
+          "session_id": "ShBR_nxPlLEqUNCtRlpRkyzi"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:58.336Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$errors=$null;[void][Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'resources/recovery-supervisor/recovery-supervisor.ps1'),[ref]$null,[ref]$errors);if($errors.Count){exit 1}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:35:59.415Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "session_id": "Dz9eadIpdNg98FHc5btzis9F"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:00.528Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff --check -- resources/recovery-supervisor/recovery-supervisor.ps1 tests/recovery-supervisor.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:00.986Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:00.996Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:01.400Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:01.403Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:01.520Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "ef52a7277a98694225f67cbb4306fdf52dade869c64ce3293af8828a5071e47c"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:01.751Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:15.201Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:15.788Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:33.061Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:33.366Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:40.080Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:36:40.363Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "OPERATOR_REPORT_ACK_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:38:34.347Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:38:48.084Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T14:38:48.088Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:38:48.260Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "a56d2c4fa88febb9441e54665964929a03f9a18aa9bb2249058ff767cec8263b"
+        }
+      },
+      {
+        "time": "2026-09-08T14:39:01.675Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T14:39:14.566Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "a56d2c4fa88febb9441e54665964929a03f9a18aa9bb2249058ff767cec8263b"
+        }
+      },
+      {
+        "time": "2026-09-08T14:39:24.733Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T14:39:24.897Z",
+    "archive_reason": "finished"
+  }
+]

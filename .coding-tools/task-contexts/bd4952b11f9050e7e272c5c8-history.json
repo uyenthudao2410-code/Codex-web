@@ -1,0 +1,615 @@
+[
+  {
+    "version": 2,
+    "task_id": "835eeefaec9c4ca6b554a708bacdf0a0",
+    "orchestration": {
+      "run_id": "790ec85390d344e8b6ca35f457bc2c8f",
+      "wave_id": "77a13ed5799d4e09a683cfad801783f2",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+      "contract_fp": ""
+    },
+    "objective": "Formal full_problem verification for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. The causal source repair is already accepted and activated; this attempt exists only to create authoritative exact-claim closure evidence. Re-run the current semantic lifecycle and controlled-restart preflight regression suite and bind the result to all seven acceptance criteria. Prove that terminalize-and-clear no longer exposes a stable false terminal-parent contradiction, genuine live-child/foreign/additional ownership and projection drift still fail closed, bounded self-controller quiescence is the only discounted restart-preflight case, lifecycle consumers use semantic projection health rather than exit-code-only health, durable history is not rewritten, and repeated lifecycle probes preserve SQLite integrity/foreign-key cleanliness. Read-only only: do not mutate source, runtime, durable history, package, release, deployment, or restart state; do not commit, push, clean, or reset unrelated worktree content.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-12T11:14:11.080Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T11:14:11.080Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "aYteBnzWUn6zRx1SIL49LkY7",
+      "kind": "test",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T11:14:10.612Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-terminal-projection-clear-restart-drift-20260912",
+        "problem_revision": 2,
+        "problem_state": "PROVISIONALLY_RESOLVED",
+        "resolution_status": "PROVISIONAL",
+        "contract_fingerprint": "e327cec6478eced616b75206c55cdd0c6e4206c006dc7bbaa3b72441efe4f99a",
+        "objective_summary": "Eliminate or truthfully fence the transient contextual-projection inconsistency window after terminal orchestration transitions and request-scoped task clear, so lifecycle and restart health checks do not temporarily report a fully terminal and quiescent orchestration run as missing or as a terminal-parent contradiction while preserving fail-closed behavior for genuine active, malformed, or live-resource state.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "transient_window_reproduction",
+            "summary": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation."
+          },
+          {
+            "criterion_id": "terminal_clear_atomic_visibility",
+            "summary": "After terminal transition and request-scoped clear are acknowledged, public and immutable lifecycle projection is either consistent or explicitly reports a bounded reconciliation-in-progress state; it must not expose a false terminal-parent contradiction as stable truth."
+          },
+          {
+            "criterion_id": "genuine_contradiction_preserved",
+            "summary": "A genuinely terminal parent with live child ownership, active resources, or malformed dependent state still classifies as TERMINAL_PARENT_CONTRADICTION and blocks unsafe restart."
+          },
+          {
+            "criterion_id": "restart_preflight_race_safe",
+            "summary": "Official controlled-restart preflight does not fail solely because it sampled the transient projection-reconciliation window; it observes consistent state or follows an authoritative bounded reconciliation gate."
+          },
+          {
+            "criterion_id": "reporter_semantic_oracle",
+            "summary": "Lifecycle health consumers evaluate semantic projection fields and do not treat reporter exit code zero alone as proof that projection state is healthy."
+          },
+          {
+            "criterion_id": "no_history_rewrite",
+            "summary": "The solution changes only derived projection, reconciliation visibility, or control sequencing and does not rewrite durable orchestration history."
+          },
+          {
+            "criterion_id": "postfix_repeated_probe",
+            "summary": "Repeated immediate and delayed probes across terminalize-and-clear no longer show a false projection-drift transition while SQLite integrity and foreign-key checks remain clean."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 7,
+          "criteria_proven": 7,
+          "criteria_unresolved": 0,
+          "coverage_status": "COMPLETE",
+          "missing_reason": null,
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "OBTAIN_INDEPENDENT_OUTCOME",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 8,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 6,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 1,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Identify the exact projection write, rebuild, or visibility ordering that creates the transient missing-state window.",
+          "Determine whether orchestration projection reconciliation is recorded before the contextual mapping becomes visible to an immutable lifecycle snapshot.",
+          "Choose the smallest safe correction among atomic projection update, an explicit RECONCILING state, or bounded preflight reconciliation."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "790ec85390d344e8b6ca35f457bc2c8f",
+          "wave_id": "77a13ed5799d4e09a683cfad801783f2",
+          "checkpoint_id": "1efa609d516841a69dc2102cfab6a75e"
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 10,
+        "latest_event": {
+          "seq": 192,
+          "event_id": "prl-provisional-v11-0af2d18dd53a760afa225ad864577f137fb16d050a6dd72146ef2b198e840f8a",
+          "event_hash": "1169c42b1576e0b3bf1249c943fca07529cf38900613e04783cde2f1371cb91a",
+          "relation_type": "PROVISIONAL_RESOLUTION",
+          "state_after": "PROVISIONALLY_RESOLVED",
+          "reason_code": "none",
+          "recorded_at": "2026-09-12T11:15:11.886Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 18,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 10,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 8,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 33,
+          "head_hash": "a11e640e44c5e7cad3e77ab0d4f6ca60d960410b2be0a28a97890a2977c4ec68"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-790ec85390d344e8b6ca35f457bc2c8f\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-790ec85390d344e8b6ca35f457bc2c8f\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "790ec85390d344e8b6ca35f457bc2c8f",
+        "wave_id": "77a13ed5799d4e09a683cfad801783f2",
+        "checkpoint_id": "1efa609d516841a69dc2102cfab6a75e",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Formal full_problem verification for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. The causal source repair is already accepted and activated; this attempt exists only to create authoritative exact-claim closure evidence. Re-run the current semantic lifecycle and controlled-restart preflight regression suite and bind the result to all seven acceptance criteria. Prove that terminalize-and-clear no longer exposes a stable false terminal-parent contradiction, genuine live-child/foreign/additional ownership and projection drift still fail closed, bounded self-controller quiescence is the only discounted restart-preflight case, lifecycle consumers use semantic projection health rather than exit-code-only health, durable history is not rewritten, and repeated lifecycle probes preserve SQLite integrity/foreign-key cleanliness. Read-only only: do not mutate source, runtime, durable history, package, release, deployment, or restart state; do not commit, push, clean, or reset unrelated worktree content.",
+          "objective_revision": 1,
+          "objective_sha256": "b463fd4f47150b2677ffd23bd5270e214f97e54669eefd54367744e186040216",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "27dedc3c9dd34794ab9e58e9ac763934",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 105250,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "ea266238a4790f3bafb410e656c086088fef96c771e660854fbb75178ebd5d82",
+    "completion_report_acknowledged_id": "ea266238a4790f3bafb410e656c086088fef96c771e660854fbb75178ebd5d82",
+    "completion_report_acknowledged_at": "2026-09-12T11:16:22.873Z",
+    "test_results": [
+      {
+        "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 4 lines | tail: '42 passed, 35 subtests passed in 102.36s (0:01:42)'",
+        "finished_at": "2026-09-12T11:12:19.414Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "4XopG45KWK5uedEluDUyq-5S"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "790ec85390d344e8b6ca35f457bc2c8f",
+          "owner_wave": "77a13ed5799d4e09a683cfad801783f2",
+          "size_bytes": 179,
+          "command_id": "4XopG45KWK5uedEluDUyq-5S",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:4XopG45KWK5uedEluDUyq-5S:stdout",
+              "total_stream_bytes": 179,
+              "total_retained_bytes": 179,
+              "head_retained_bytes": 179,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:4XopG45KWK5uedEluDUyq-5S:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 4 lines | tail: '42 passed, 35 subtests passed in 102.96s (0:01:42)'",
+        "finished_at": "2026-09-12T11:14:10.612Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "aYteBnzWUn6zRx1SIL49LkY7"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "790ec85390d344e8b6ca35f457bc2c8f",
+          "owner_wave": "77a13ed5799d4e09a683cfad801783f2",
+          "size_bytes": 179,
+          "command_id": "aYteBnzWUn6zRx1SIL49LkY7",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:aYteBnzWUn6zRx1SIL49LkY7:stdout",
+              "total_stream_bytes": 179,
+              "total_retained_bytes": 179,
+              "head_retained_bytes": 179,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:aYteBnzWUn6zRx1SIL49LkY7:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 105233,
+        "summary": "exit 0 | 0.0s | 4 lines | tail: '42 passed, 35 subtests passed in 102.96s (0:01:42)'",
+        "session_id": "aYteBnzWUn6zRx1SIL49LkY7",
+        "cancelled": false,
+        "timed_out": false,
+        "effective_timeout_ms": 480640
+      }
+    ],
+    "build_results": [],
+    "last_build_report": {
+      "project": {
+        "type": "python",
+        "name": "coding-tools-mcp",
+        "version": "1.0.0",
+        "package_manager": "pip",
+        "test_command": "python -m pytest",
+        "build_command": "python -m build",
+        "artifact_paths": [
+          "dist"
+        ]
+      },
+      "commands": {
+        "test": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+        "build": "python -m build"
+      },
+      "test_result": {
+        "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": 105233,
+        "summary": "exit 0 | 0.0s | 4 lines | tail: '42 passed, 35 subtests passed in 102.96s (0:01:42)'",
+        "session_id": "aYteBnzWUn6zRx1SIL49LkY7",
+        "cancelled": false,
+        "timed_out": false,
+        "effective_timeout_ms": 480640
+      },
+      "build_result": null,
+      "artifacts": [],
+      "hash_algorithm": "sha256",
+      "overall_status": "passed",
+      "failure": null,
+      "report_generated_at": "2026-09-12T11:14:10.614Z"
+    },
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-12T11:10:31.183Z",
+    "updated_at": "2026-09-12T11:16:35.387Z",
+    "events": [
+      {
+        "time": "2026-09-12T11:10:31.183Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Formal full_problem verification for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. The causal source repair is already accepted and activated; this attempt exists only to create authoritative exact-claim closure evidence. Re-run the current semantic lifecycle and controlled-restart preflight regression suite and bind the result to all seven acceptance criteria. Prove that terminalize-and-clear no longer exposes a stable false terminal-parent contradiction, genuine live-child/foreign/additional ownership and projection drift still fail closed, bounded self-controller quiescence is the only discounted restart-preflight case, lifecycle consumers use semantic projection health rather than exit-code-only health, durable history is not rewritten, and repeated lifecycle probes preserve SQLite integrity/foreign-key cleanliness. Read-only only: do not mutate source, runtime, durable history, package, release, deployment, or restart state; do not commit, push, clean, or reset unrelated worktree content."
+        }
+      },
+      {
+        "time": "2026-09-12T11:10:33.658Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T11:10:35.830Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+          "session_id": "4XopG45KWK5uedEluDUyq-5S"
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:19.414Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:20.498Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:22.216Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:22.226Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:24.117Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:25.146Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:12:26.222Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+          "session_id": "aYteBnzWUn6zRx1SIL49LkY7"
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:10.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q tests/test_lifecycle_census.py tests/test_activation_preflight.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:10.614Z",
+        "event": "build_verification_finished",
+        "details": {
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.073Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.080Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.811Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.813Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.920Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "e7e82784188736fd38f442dd15b8b19d9ed92dfdfe4f1dce2b3c38082486cfaf"
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:11.927Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T11:14:13.344Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:15:12.152Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-12T11:15:12.152Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:15:12.284Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "ea266238a4790f3bafb410e656c086088fef96c771e660854fbb75178ebd5d82"
+        }
+      },
+      {
+        "time": "2026-09-12T11:15:33.902Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T11:16:22.873Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "ea266238a4790f3bafb410e656c086088fef96c771e660854fbb75178ebd5d82"
+        }
+      },
+      {
+        "time": "2026-09-12T11:16:35.387Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T11:16:35.538Z",
+    "archive_reason": "cleared"
+  }
+]

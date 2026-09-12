@@ -4,6 +4,7 @@ import copy
 import os
 import re
 import secrets
+import threading
 import time
 from typing import Any
 
@@ -21,6 +22,11 @@ READY_COMMIT_DIGEST_RE = re.compile(r"^[0-9a-f]{64}$")
 ACTIVATION_GATE_OPEN = "open"
 ACTIVATION_GATE_CLOSED = "closed"
 ACTIVATION_GATE_VALUES = frozenset({ACTIVATION_GATE_OPEN, ACTIVATION_GATE_CLOSED})
+# A real current-client bootstrap took ~23s to reach READY on the retained
+# ledger. Wait inside the read request, not by manufacturing model turns.
+# This never extends the startup-bound activation deadline.
+ACTIVATION_BOOTSTRAP_WAIT_SECONDS = 25.0
+ACTIVATION_BOOTSTRAP_RETRY_AFTER_MS = 5_000
 
 
 class ActivationLifecycleMixin:
@@ -86,6 +92,8 @@ class ActivationLifecycleMixin:
         self.activation_expires_at_unix_ms = expires_at_unix_ms if expires_at_unix_ms > 0 else None
         self.activation_ready_commit_digest: str | None = None
         self.activation_completion_closed = False
+        self._activation_admission_changed = threading.Event()
+        self._activation_bootstrap_wait_slots = threading.BoundedSemaphore(4)
 
     def _initialize_projection_rebuild(self) -> None:
         self._projection_rebuild_started_at_unix_ms = int(time.time() * 1000)
@@ -362,6 +370,7 @@ class ActivationLifecycleMixin:
                 )
             self.activation_ready_commit_digest = supplied_digest
             self.activation_admission = "open"
+            self._activation_admission_changed.set()
             return {
                 "ok": True,
                 "action": "complete_epoch",
@@ -396,6 +405,7 @@ class ActivationLifecycleMixin:
                     )
             self.activation_admission = "closed"
             self.activation_completion_closed = True
+            self._activation_admission_changed.set()
             return {"ok": True, "action": "close_epoch", **self.activation_admission_snapshot()}
 
     def activation_epoch_control(
@@ -566,6 +576,23 @@ class ActivationLifecycleMixin:
 
     def activation_connector_bootstrap_result(self, name: str) -> dict[str, Any] | None:
         with self.activation_lock:
+            if str(name or "").strip() != "workspace_context":
+                return None
+            # Rollback is terminal, not an invitation to keep retrying the
+            # same process. Keep this result workspace-free even after a
+            # waiter is awakened by shutdown or an exact control rollback.
+            if self._closed or self.activation_completion_closed:
+                code = "RUNTIME_STOPPING" if self._closed else "ACTIVATION_ROLLED_BACK"
+                return {
+                    "ok": False, "completed": False, "retryable": False,
+                    "workspace_accessed": False,
+                    "activation": self.activation_admission_snapshot(),
+                    "error": {
+                        "code": code,
+                        "message": "This runtime cannot complete activation. Use supported Recovery Host recovery; do not repeat this handshake unchanged.",
+                        "category": "runtime", "retryable": False,
+                    },
+                }
             if not self.activation_connector_bootstrap_allowed(name):
                 return None
             epoch_id = str(getattr(self, "activation_epoch_id", None) or "")
@@ -578,6 +605,7 @@ class ActivationLifecycleMixin:
                     "completed": False,
                     "retryable": False,
                     "workspace_accessed": False,
+                    "activation": self.activation_admission_snapshot(),
                     "workspace_binding": self._workspace_binding_metadata(),
                     "error": {
                         "code": "ACTIVATION_REQUEST_EXPIRED",
@@ -609,6 +637,7 @@ class ActivationLifecycleMixin:
                     "completed": False,
                     "retryable": False,
                     "workspace_accessed": False,
+                    "activation": self.activation_admission_snapshot(),
                     "error": {
                         "code": "CONNECTOR_ACTIVATION_BINDING_UNVERIFIED",
                         "message": (
@@ -628,9 +657,13 @@ class ActivationLifecycleMixin:
                 }
             return {
                 "ok": True,
+                "status": "activation_pending",
                 "completed": False,
                 "retryable": True,
+                "retry_after_ms": min(ACTIVATION_BOOTSTRAP_RETRY_AFTER_MS, max(1, expires_at - int(time.time() * 1000))) if expires_at > 0 else ACTIVATION_BOOTSTRAP_RETRY_AFTER_MS,
                 "workspace_accessed": False,
+                "activation": self.activation_admission_snapshot(),
+                "observed_at_unix_ms": int(time.time() * 1000),
                 "workspace_binding": self._workspace_binding_metadata(),
                 "activation_bootstrap": {
                     "schema_version": 1,
@@ -638,8 +671,48 @@ class ActivationLifecycleMixin:
                     "accepted": True,
                     "retry_required": True,
                     "activation_epoch_id": epoch_id,
+                    "process_instance_id": self.process_instance_id,
+                    "server_instance_id": self.server_instance_id,
                 },
             }
+
+    def activation_connector_bootstrap_for_call(self, name: str) -> dict[str, Any] | None:
+        """Publish real contact before a bounded, workspace-free admission wait.
+
+        Waiting before publishing would deadlock the coordinator: its final
+        census needs this exact receipt. No active tool/workspace lease or
+        activation lock is held while waiting; only the owning Recovery Host
+        can open admission through the existing commit control action.
+        """
+        pending = self.activation_connector_bootstrap_result(name)
+        bootstrap = pending.get("activation_bootstrap") if isinstance(pending, dict) else None
+        if not isinstance(bootstrap, dict) or bootstrap.get("accepted") is not True:
+            return pending
+        self._record_activation_bootstrap_rpc_contact(
+            {"method": "tools/call", "params": {"name": name}},
+            {"result": {"structuredContent": pending}},
+            self._current_hub_client() or {},
+        )
+        # A bound on waiters protects HTTP capacity during reconnect bursts.
+        # Excess callers receive the same honest pending/retry contract.
+        if not self._activation_bootstrap_wait_slots.acquire(blocking=False):
+            return pending
+        try:
+            budget = max(0.0, ACTIVATION_BOOTSTRAP_WAIT_SECONDS)
+            expires_at = int(getattr(self, "activation_expires_at_unix_ms", 0) or 0)
+            if expires_at > 0:
+                budget = min(budget, max(0.0, expires_at / 1000 - time.time()))
+            deadline = time.monotonic() + budget
+            while budget > 0 and not self._closed:
+                if self._activation_admission_changed.wait(min(budget, 0.25)):
+                    break
+                budget = max(0.0, deadline - time.monotonic())
+            # Re-read, never replay the pending snapshot after admission has
+            # opened. Returning None continues the SAME read call/context
+            # through ordinary workspace validation and the admission guard.
+            return self.activation_connector_bootstrap_result(name)
+        finally:
+            self._activation_bootstrap_wait_slots.release()
 
     def _activation_enter_tool_call(self, name: str = "", args: dict[str, Any] | None = None) -> None:
         with self.activation_lock:
@@ -682,6 +755,7 @@ class ActivationLifecycleMixin:
         """Project activation blockers from one immutable Gate 0 snapshot."""
         census = self._projection_rebuild_census()
         run_ids_by_class: dict[str, list[str]] = {}
+        live_owned_runs: list[dict[str, Any]] = []
         for item in census.get("runs", []):
             if not isinstance(item, dict):
                 continue
@@ -689,12 +763,30 @@ class ActivationLifecycleMixin:
             run_id = str(item.get("run_id") or "")
             if classification and run_id:
                 run_ids_by_class.setdefault(classification, []).append(run_id)
+            if classification == "LIVE_OWNED" and run_id:
+                ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+                live_owned_runs.append({
+                    "run_id": run_id,
+                    "run_status": str(item.get("run_status") or ""),
+                    "latest_state_after": str(item.get("latest_state_after") or ""),
+                    "ownership": {
+                        key: int(ownership.get(key) or 0)
+                        for key in (
+                            "active_controller_leases",
+                            "active_write_fences",
+                            "running_background_operations",
+                            "live_agent_lanes",
+                            "live_managed_jobs",
+                        )
+                    },
+                })
         projection = census.get("projection") if isinstance(census.get("projection"), dict) else {}
         rebuild = self.projection_rebuild_snapshot()
         return {
             "snapshot": dict(census.get("snapshot") or {}),
             "classification_counts": dict((census.get("summary") or {}).get("run_classification_counts") or {}),
             "run_ids_by_class": {key: sorted(values)[:20] for key, values in sorted(run_ids_by_class.items())},
+            "live_owned_runs": sorted(live_owned_runs, key=lambda item: str(item.get("run_id") or ""))[:20],
             "projection": dict(projection),
             "projection_classification": str(projection.get("classification") or ""),
             "projection_rebuild": rebuild,

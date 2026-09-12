@@ -1,0 +1,229 @@
+{
+  "version": 2,
+  "task_id": "114c3ea7c53749b38eb82fedc65a39b1",
+  "orchestration": {
+    "run_id": "3b4aec8b5d1e42d68ceed32fbed13202",
+    "wave_id": "cf7bb80b558443aca9f4f0b1e2f60cd6",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "a70ba4f5fd17eac577e4c97ffed7f22608b4a0a6f8e11f5f3a2fbac24d11d70e",
+    "contract_fp": ""
+  },
+  "objective": "Natural #16: classify only structured INVALID_ARGUMENT and MODE_ROUTE_MISMATCH failure events into a bounded request/control-shape repair-cause category in P2 rework diagnosis, while preserving generic CHECK/BUILD/PERMISSION/security failures as unattributed and preserving all timing/execution semantics.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "qNWpbBiG03fIDNpjUEdZlPZr",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1956,
+    "finished_at": "2026-09-10T06:22:12.880Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 18,
+        "head_hash": "ee014df9767c9a7059b8de4f4f890fe5d741e46cd2c029f5b57a51621eb2742c"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3b4aec8b5d1e42d68ceed32fbed13202\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3b4aec8b5d1e42d68ceed32fbed13202\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "3b4aec8b5d1e42d68ceed32fbed13202",
+      "wave_id": "cf7bb80b558443aca9f4f0b1e2f60cd6",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "a70ba4f5fd17eac577e4c97ffed7f22608b4a0a6f8e11f5f3a2fbac24d11d70e",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Natural #16: classify only structured INVALID_ARGUMENT and MODE_ROUTE_MISMATCH failure events into a bounded request/control-shape repair-cause category in P2 rework diagnosis, while preserving generic CHECK/BUILD/PERMISSION/security failures as unattributed and preserving all timing/execution semantics.",
+        "objective_revision": 1,
+        "objective_sha256": "fa057b6f068c98e82aeaf340602aee8ca40b5ffca8fd481202661b7246145131",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": null,
+      "reason": "The requested RUN/WAVE is not the caller's current compatible prepare lineage.",
+      "event_seq": null
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "7f5198c2c34f783a3ed5dc9230d76ed6453b801b38642de672f05376374b632d",
+  "completion_report_acknowledged_id": "7f5198c2c34f783a3ed5dc9230d76ed6453b801b38642de672f05376374b632d",
+  "completion_report_acknowledged_at": "2026-09-10T06:24:35.342Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-10T06:20:23.157Z",
+  "updated_at": "2026-09-10T06:24:35.345Z",
+  "events": [
+    {
+      "time": "2026-09-10T06:20:23.157Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Natural #16: classify only structured INVALID_ARGUMENT and MODE_ROUTE_MISMATCH failure events into a bounded request/control-shape repair-cause category in P2 rework diagnosis, while preserving generic CHECK/BUILD/PERMISSION/security failures as unattributed and preserving all timing/execution semantics."
+      }
+    },
+    {
+      "time": "2026-09-10T06:20:25.141Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:20:33.594Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:20:33.600Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-10T06:21:50.553Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py','resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py' -Pattern 'CURRENT_DRE_CAUSES','repair_cause_for_failure_class' -Context 8,14\"",
+        "session_id": "rXWOZlF0dH27dd-mZLM54hDp"
+      }
+    },
+    {
+      "time": "2026-09-10T06:21:52.422Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/accepted_result_economics_report.py','resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py' -Pattern 'CURRENT_DRE_CAUSES','repair_cause_for_failure_class' -Context 8,14\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:22:11.268Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py' -Pattern 'REPLAN_DIAGNOSTIC_CATEGORY_BY_CAUSE' -Context 0,18; certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256; certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256\"",
+        "session_id": "qNWpbBiG03fIDNpjUEdZlPZr"
+      }
+    },
+    {
+      "time": "2026-09-10T06:22:12.880Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Select-String -Path 'resources/coding-tools-mcp/coding_tools_mcp/solution_economics.py' -Pattern 'REPLAN_DIAGNOSTIC_CATEGORY_BY_CAUSE' -Context 0,18; certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\rework_diagnosis.py SHA256; certutil -hashfile resources\\coding-tools-mcp\\tests\\test_rework_diagnosis.py SHA256\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-10T06:22:55.283Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:22:56.274Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-10T06:22:57.181Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "EXISTING_FILE_ADOPTION_PATCH_CONFLICT"
+      }
+    },
+    {
+      "time": "2026-09-10T06:23:39.973Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-10T06:24:09.394Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "7f5198c2c34f783a3ed5dc9230d76ed6453b801b38642de672f05376374b632d"
+      }
+    },
+    {
+      "time": "2026-09-10T06:24:21.565Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-10T06:24:35.342Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7f5198c2c34f783a3ed5dc9230d76ed6453b801b38642de672f05376374b632d"
+      }
+    }
+  ]
+}

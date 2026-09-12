@@ -105,6 +105,9 @@ class WorkspaceBindingBootstrapTests(unittest.TestCase):
             },
         )
         self.env.start()
+        waiter = patch("coding_tools_mcp.activation_lifecycle.ACTIVATION_BOOTSTRAP_WAIT_SECONDS", 0)
+        waiter.start()
+        self.addCleanup(waiter.stop)
 
     def tearDown(self) -> None:
         self.env.stop()

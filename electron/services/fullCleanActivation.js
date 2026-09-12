@@ -39,7 +39,7 @@ const execFileAsync = promisify(execFile);
 const HEX64 = /^[a-f0-9]{64}$/;
 const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
 const EXACT_STALE_RUN_ID = /^[a-f0-9]{32}$/;
-const EXACT_STALE_RUN_MAX_IDS = 16;
+const EXACT_STALE_RUN_MAX_IDS = 64;
 const TERMINAL_P5_LIFECYCLES = new Set(['EPOCH_CLOSED', 'EPOCH_HARD_STOPPED']);
 const PROJECTION_REBUILD_KIND = 'coding_tools_mcp_projection_rebuild';
 const PROJECTION_REBUILD_MAX_AGE_MS = 5 * 60 * 1000;
@@ -1321,7 +1321,11 @@ class FullCleanActivation {
     const sourceCheckpoint = record?.source_checkpoint;
     let raw;
     if (sourceCheckpoint && typeof this.orchestrator?.verifyCodeActivation === 'function') {
-      raw = await this.orchestrator.verifyCodeActivation(record.operation_id, sourceCheckpoint);
+      raw = await this.orchestrator.verifyCodeActivation(
+        record.operation_id,
+        sourceCheckpoint,
+        record.metadata?.allow_acceptance_pending === true
+      );
     } else if (!sourceCheckpoint && typeof this.orchestrator?.inspectCodeActivation === 'function') {
       // Operator/UI restarts do not necessarily originate from an accepted
       // RUN/WAVE checkpoint.  The authenticated GET preflight is still
@@ -1753,7 +1757,7 @@ class FullCleanActivation {
     return ids;
   }
 
-  async _execExactStaleRunCli({ workspace, runId, reconcile = false, snapshotSha256 = '', logicalSha256 = '', expiresAtUnixMs = 0 }) {
+  async _execExactStaleRunCli({ workspace, runIds, reconcile = false, snapshotSha256 = '', logicalSha256 = '', expiresAtUnixMs = 0 }) {
     if (!workspace || !path.isAbsolute(String(workspace))) {
       throw epochError('EXACT_STALE_RUN_WORKSPACE_INVALID', 'Exact stale-run maintenance requires an absolute workspace.');
     }
@@ -1772,19 +1776,23 @@ class FullCleanActivation {
     if (remainingMs <= 0) {
       throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Exact stale-run maintenance exceeded the activation deadline.');
     }
+    const ids = Array.isArray(runIds) ? runIds.map((value) => String(value || '')) : [];
+    if (!ids.length || ids.length > EXACT_STALE_RUN_MAX_IDS || ids.some((runId) => !EXACT_STALE_RUN_ID.test(runId)) || new Set(ids).size !== ids.length) {
+      throw epochError('EXACT_STALE_RUN_REQUEST_INVALID', 'Exact stale-run CLI batch is malformed.', {
+        requested_count: ids.length,
+        max_count: EXACT_STALE_RUN_MAX_IDS
+      });
+    }
     const args = [
       ...(python.prefixArgs || []),
       '-u', script,
-      '--workspace', root,
-      '--run-id', runId
+      '--workspace', root
     ];
+    for (const runId of ids) args.push('--run-id', runId);
     if (reconcile) {
-      args.push(
-        '--reconcile',
-        '--runtime-stopped',
-        '--expected-snapshot-sha256', snapshotSha256,
-        '--expected-logical-sha256', logicalSha256
-      );
+      args.push('--reconcile', '--runtime-stopped');
+      if (snapshotSha256) args.push('--expected-snapshot-sha256', snapshotSha256);
+      if (logicalSha256) args.push('--expected-logical-sha256', logicalSha256);
     }
     const env = {
       ...process.env,
@@ -1802,7 +1810,7 @@ class FullCleanActivation {
       });
     } catch (error) {
       throw epochError('EXACT_STALE_RUN_RECONCILIATION_FAILED', 'Exact stale-run maintenance command failed.', {
-        run_id: runId,
+        requested_count: ids.length,
         phase: reconcile ? 'reconcile' : 'preflight',
         exit_code: Number.isSafeInteger(Number(error?.code)) ? Number(error.code) : null
       });
@@ -1812,13 +1820,13 @@ class FullCleanActivation {
       envelope = JSON.parse(String(output.stdout || '').trim());
     } catch {
       throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run maintenance returned invalid JSON.', {
-        run_id: runId,
+        requested_count: ids.length,
         phase: reconcile ? 'reconcile' : 'preflight'
       });
     }
     if (envelope?.ok !== true || !envelope.result || typeof envelope.result !== 'object' || Array.isArray(envelope.result)) {
       throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run maintenance returned an invalid receipt.', {
-        run_id: runId,
+        requested_count: ids.length,
         phase: reconcile ? 'reconcile' : 'preflight'
       });
     }
@@ -1834,36 +1842,32 @@ class FullCleanActivation {
       record?.metadata?.reason,
       record?.metadata?.maintenance_workspace
     );
-    const reconciled = [];
-    for (const runId of runIds) {
-      const preflight = await this._execExactStaleRunCli({ workspace, runId, expiresAtUnixMs });
-      const snapshotSha256 = String(preflight?.snapshot?.sha256 || '').toLowerCase();
-      const logicalSha256 = String(preflight?.snapshot?.logical_sha256 || '').toLowerCase();
-      if (!HEX64.test(snapshotSha256) || !HEX64.test(logicalSha256)) {
-        throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run preflight lacks immutable snapshot hashes.', { run_id: runId });
-      }
-      const receipt = await this._execExactStaleRunCli({
-        workspace,
-        runId,
-        reconcile: true,
-        snapshotSha256,
-        logicalSha256,
-        expiresAtUnixMs
-      });
-      const postflightTarget = receipt?.postflight?.target || {};
-      if (receipt?.schema_version !== 1
-        || receipt?.reconciliation?.chain_ok !== true
+    const receipt = await this._execExactStaleRunCli({ workspace, runIds, reconcile: true, expiresAtUnixMs });
+    const resultRows = Array.isArray(receipt?.reconciliation?.results) ? receipt.reconciliation.results : [];
+    const postflightTargets = Array.isArray(receipt?.postflight?.targets) ? receipt.postflight.targets : [];
+    if (receipt?.schema_version !== 1
+      || receipt?.reconciliation?.chain_ok !== true
+      || resultRows.length !== runIds.length
+      || postflightTargets.length !== runIds.length) {
+      throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run batch receipt is incomplete.', { requested_count: runIds.length });
+    }
+    const resultByRun = new Map(resultRows.map((item) => [String(item?.run_id || ''), item]));
+    const postflightByRun = new Map(postflightTargets.map((item) => [String(item?.run_id || ''), item]));
+    const reconciled = runIds.map((runId) => {
+      const result = resultByRun.get(runId) || {};
+      const postflightTarget = postflightByRun.get(runId) || {};
+      if (result.chain_ok !== true
         || postflightTarget.status !== 'stale'
         || postflightTarget.classification !== 'RECONCILED_STALE'
         || postflightTarget.already_reconciled !== true) {
-        throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run reconciliation postflight did not prove a terminal reconciled target.', { run_id: runId });
+        throw epochError('EXACT_STALE_RUN_RECEIPT_INVALID', 'Exact stale-run batch postflight did not prove every terminal reconciled target.', { run_id: runId });
       }
-      reconciled.push({
+      return {
         run_id: runId,
-        changed: receipt.reconciliation.changed === true,
-        idempotent: receipt.reconciliation.idempotent === true
-      });
-    }
+        changed: result.changed === true,
+        idempotent: result.idempotent === true
+      };
+    });
     this.log?.info?.('Recovery Host exact stale-run maintenance completed', {
       activationEpochId: text(record?.activation_epoch_id),
       reconciledRunIds: reconciled.map((item) => item.run_id)

@@ -1,0 +1,135 @@
+{
+  "version": 2,
+  "task_id": "fbc5fea935b745a78d5a7cf8be0b7871",
+  "orchestration": {
+    "run_id": "4bf7a99c2bba4e36bfa2c94b02b59dfd",
+    "wave_id": "9fbf403345ae478c9bf8239298178fbd",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "aec9468f04470a22668a8be642645928b652c030f3873d82fe9774ea5c3690a3",
+    "contract_fp": ""
+  },
+  "objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, when readBootstrapResult returns state=completed with a canonical activation_epoch_id and code.activation_status is unavailable/not found, allow that exact completed bootstrap result to supply the operation/epoch handoff only if replacement descriptor epoch, status projected epoch, bootstrap result activation_epoch_id, and observed status operation ID all exactly match the expected operation/epoch. Reuse the bootstrapResult object as operation if suitable. Preserve terminal ACTIVATION_OPERATION_MISMATCH for any operation/epoch mismatch, preserve UPDATE_INCOMPLETE for failed/expired bootstrap, and keep pending bootstrap polling. Add a focused regression in tests/full-clean-activation-command.test.js proving exact completed bootstrap + exact descriptor/status succeeds when code.activation_status is unavailable/not found, with mismatch still rejected if practical. Preserve all unrelated WIP and protected foreign lineage; do not touch .coding-tools manually.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "idle",
+      "integrity": {
+        "ok": true,
+        "checked": 7,
+        "head_hash": "04ac25bc34f5924f9f977c883888411501f6c505055ec60fc0f756cdfee69f1b"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4bf7a99c2bba4e36bfa2c94b02b59dfd\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-4bf7a99c2bba4e36bfa2c94b02b59dfd\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "4bf7a99c2bba4e36bfa2c94b02b59dfd",
+      "wave_id": "9fbf403345ae478c9bf8239298178fbd",
+      "checkpoint_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "aec9468f04470a22668a8be642645928b652c030f3873d82fe9774ea5c3690a3",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Fix the proven deferred-observer defect only in scripts/full-clean-activation.js: in waitForReplacementOperation, when readBootstrapResult returns state=completed with a canonical activation_epoch_id and code.activation_status is unavailable/not found, allow that exact completed bootstrap result to supply the operation/epoch handoff only if replacement descriptor epoch, status projected epoch, bootstrap result activation_epoch_id, and observed status operation ID all exactly match the expected operation/epoch. Reuse the bootstrapResult object as operation if suitable. Preserve terminal ACTIVATION_OPERATION_MISMATCH for any operation/epoch mismatch, preserve UPDATE_INCOMPLETE for failed/expired bootstrap, and keep pending bootstrap polling. Add a focused regression in tests/full-clean-activation-command.test.js proving exact completed bootstrap + exact descriptor/status succeeds when code.activation_status is unavailable/not found, with mismatch still rejected if practical. Preserve all unrelated WIP and protected foreign lineage; do not touch .coding-tools manually.",
+        "objective_revision": 1,
+        "objective_sha256": "f5dd7aeea2805e6bc6e1e2591be969d744baf79b954358e1a5a494012343ed4d",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "2c56a0c96f7a8e5d299b7dbcc20d3334d549d72a5dfdfeb932c9865a7d9ace93",
+  "completion_report_acknowledged_id": "2c56a0c96f7a8e5d299b7dbcc20d3334d549d72a5dfdfeb932c9865a7d9ace93",
+  "completion_report_acknowledged_at": "2026-09-08T21:05:15.217Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-08T21:04:42.349Z",
+  "updated_at": "2026-09-08T21:05:15.222Z",
+  "events": [
+    {
+      "time": "2026-09-08T21:04:42.349Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "4bf7a99c2bba4e36bfa2c94b02b59dfd"
+      }
+    },
+    {
+      "time": "2026-09-08T21:04:56.700Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "2c56a0c96f7a8e5d299b7dbcc20d3334d549d72a5dfdfeb932c9865a7d9ace93"
+      }
+    },
+    {
+      "time": "2026-09-08T21:05:05.270Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T21:05:15.217Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "2c56a0c96f7a8e5d299b7dbcc20d3334d549d72a5dfdfeb932c9865a7d9ace93"
+      }
+    }
+  ]
+}

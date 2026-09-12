@@ -43,6 +43,27 @@ def background_operation_durability() -> dict[str, Any]:
 class BackgroundOperationsMixin:
     """Bounded background tool lifecycle and durable operation receipts."""
 
+    def _rebind_current_background_operation(self, ctx: Any) -> None:
+        operation_id = str(getattr(self.request_context, "background_operation_id", "") or "").strip()
+        if not operation_id:
+            return
+        run_id = str(getattr(ctx, "run_id", "") or "").strip()
+        wave_id = str(getattr(ctx, "wave_id", "") or "").strip()
+        if not run_id or not wave_id:
+            return
+        rebound = self.orchestration_ledger.rebind_background_operation(
+            operation_id,
+            run_id=run_id,
+            wave_id=wave_id,
+        )
+        if rebound is None:
+            return
+        with self.background_operations_lock:
+            operation = self.background_operations.get(operation_id)
+            if isinstance(operation, dict):
+                operation["run_id"] = run_id
+                operation["wave_id"] = wave_id
+
     def _background_operation_snapshot(self, operation: dict[str, Any], *, include_result: bool = False) -> dict[str, Any]:
         event = operation["event"]
         finished = event.is_set()
@@ -105,6 +126,8 @@ class BackgroundOperationsMixin:
         trace_context = dict(getattr(self.request_context, "trace_context", {}) or {})
         workspace_root = getattr(self.request_context, "workspace_root", None)
         trace_metadata = trace_context_metadata(trace_context)
+        current_task = self.task_state.get()
+        projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
         operation: dict[str, Any] = {
             "operation_id": operation_id,
             "tool": name,
@@ -118,9 +141,9 @@ class BackgroundOperationsMixin:
             "budget": budget,
             "cancel_event": cancel_event,
             "finalized": False,
+            "run_id": str(projection.get("run_id") or ""),
+            "wave_id": str(projection.get("wave_id") or ""),
         }
-        current_task = self.task_state.get()
-        projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
         self.orchestration_ledger.start_background_operation(
             operation_id=operation_id,
             server_instance_id=self.process_instance_id,
@@ -161,10 +184,12 @@ class BackgroundOperationsMixin:
                 "stateless_task_context_id": getattr(self.request_context, "stateless_task_context_id", None),
                 "trace_context": getattr(self.request_context, "trace_context", None),
                 "workspace_root": getattr(self.request_context, "workspace_root", None),
+                "background_operation_id": getattr(self.request_context, "background_operation_id", None),
             }
             had = {name: hasattr(self.request_context, name) for name in previous}
             self.request_context.background_cancel_event = cancel_event
             self.request_context.background_budget = budget
+            self.request_context.background_operation_id = operation_id
             if hub_identity:
                 self.request_context.hub_client = dict(hub_identity)
             if stateless_task_context_id:
@@ -179,7 +204,7 @@ class BackgroundOperationsMixin:
                 operation["error"] = {"code": "BACKGROUND_OPERATION_FAILED", "message": str(exc), "category": "runtime", "retryable": False}
             finally:
                 for attribute, value in previous.items():
-                    restore_none_by_deletion = attribute in {"background_cancel_event", "background_budget"}
+                    restore_none_by_deletion = attribute in {"background_cancel_event", "background_budget", "background_operation_id"}
                     if had[attribute] and not (restore_none_by_deletion and value is None):
                         setattr(self.request_context, attribute, value)
                     else:

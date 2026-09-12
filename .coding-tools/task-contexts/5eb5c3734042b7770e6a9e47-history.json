@@ -1,0 +1,556 @@
+[
+  {
+    "version": 2,
+    "task_id": "dc0ecedbeb1241d681f6abfe7e86a145",
+    "orchestration": {
+      "run_id": "988d5ab110934964a82510e060425944",
+      "wave_id": "5df31513864c4a67b4aea10c014f9729",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "156bf65c73eb3691eaaba38c1eabb8b7ae2d93068d657884f7a88633033e1161",
+      "contract_fp": "09e1ca748a1319b814734967959d667aa111d70c1e3720353e3c83b1da22ccb9"
+    },
+    "objective": "Checkpoint the prepared-workflow binding fix.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-08T23:09:55.190Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-08T23:09:55.190Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-08T23:09:55.190Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "eVkm0ObAKGyi89_xm6jWxN8i",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-08T23:09:54.794Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "docs/CURRENT_STATE.md",
+            "state": "file",
+            "sha256": "df2166ffacc29d1cb0b9676e3b08451d7adfcbcd01fd6279b912224bf0e736b2",
+            "size_bytes": 103611,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py",
+            "state": "file",
+            "sha256": "bbb34bc609341c8f961cc608c4f8cfea9c6c3a861692b0dd74e44a3547721366",
+            "size_bytes": 28996,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
+            "state": "file",
+            "sha256": "c7b582c70bae773c6208e73e42093cf877ae4cddc1701b1455b9f6002cc0b6fe",
+            "size_bytes": 78177,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+            "state": "file",
+            "sha256": "5296b9376f761e19a6a463ede5bf13bcb028f35ee9488242182831cce1a265bd",
+            "size_bytes": 87824,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/prepared_workflow_binding.py",
+            "state": "file",
+            "sha256": "662b7a20e57324a585a1ee3ec2adefc414d890e57827b05506d80ca3392915d7",
+            "size_bytes": 6633,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "state": "file",
+            "sha256": "4c86e0b5318dd5b74b5db0fd8b238a5bb07410d9ea4578885cc139ccd41c5dcd",
+            "size_bytes": 56340,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+            "state": "file",
+            "sha256": "24a8fe18346156cf6bb95bcb79a5cc8143aad3b7b420bb7800036b1c0d62eab1",
+            "size_bytes": 20084,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "988d5ab110934964a82510e060425944",
+            "wave_id": "5df31513864c4a67b4aea10c014f9729"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "179e98160079240d2a01ebc534baef52cfad311d7332f0981680f7a49af89040"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-988d5ab110934964a82510e060425944\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-988d5ab110934964a82510e060425944\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "988d5ab110934964a82510e060425944",
+        "wave_id": "5df31513864c4a67b4aea10c014f9729",
+        "checkpoint_id": "e3a13fe791ca41b3bc811e0455ea73e3",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "156bf65c73eb3691eaaba38c1eabb8b7ae2d93068d657884f7a88633033e1161",
+        "contract_fp": "09e1ca748a1319b814734967959d667aa111d70c1e3720353e3c83b1da22ccb9",
+        "objective_provenance": {
+          "effective_objective": "Checkpoint the prepared-workflow binding fix.",
+          "objective_revision": 1,
+          "objective_sha256": "74fb87ebeeea913bb69c78ef25b434100ed836fa4afb20991aaca6c4127b8961",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "d1e9514056c84e1e96322c4a9db9f574",
+            "stage_id": "check:b29c48234414d477",
+            "status": "passed",
+            "duration_ms": 34077,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "fc68c821534e432f8da0345ca6fa58e8",
+            "stage_id": "check:80a1a46bd01d26a3",
+            "status": "passed",
+            "duration_ms": 2609,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "1369d8246d64767b33f8afc178c548ca045ae506798cfefdda942eea214487a3",
+    "completion_report_acknowledged_id": "1369d8246d64767b33f8afc178c548ca045ae506798cfefdda942eea214487a3",
+    "completion_report_acknowledged_at": "2026-09-08T23:11:21.259Z",
+    "test_results": [
+      {
+        "command": "python -m pytest -q tests/test_orchestration_workflow.py tests/test_agent_workflow_idempotency.py",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '14 passed in 31.65s'",
+        "finished_at": "2026-09-08T23:09:51.214Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "dJmaQwVGvmrvbkKXSdUCW17v"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "988d5ab110934964a82510e060425944",
+          "owner_wave": "5df31513864c4a67b4aea10c014f9729",
+          "size_bytes": 102,
+          "command_id": "dJmaQwVGvmrvbkKXSdUCW17v",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:dJmaQwVGvmrvbkKXSdUCW17v:stdout",
+              "total_stream_bytes": 102,
+              "total_retained_bytes": 102,
+              "head_retained_bytes": 102,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:dJmaQwVGvmrvbkKXSdUCW17v:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-08T23:06:54.606Z",
+    "updated_at": "2026-09-08T23:11:28.586Z",
+    "events": [
+      {
+        "time": "2026-09-08T23:06:54.606Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Checkpoint the prepared-workflow binding fix."
+        }
+      },
+      {
+        "time": "2026-09-08T23:06:56.224Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T23:06:56.578Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:11.898Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:12.992Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:14.475Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:14.516Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:16.234Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:16.967Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:17.934Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest -q tests/test_orchestration_workflow.py tests/test_agent_workflow_idempotency.py",
+          "session_id": "dJmaQwVGvmrvbkKXSdUCW17v"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:51.214Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest -q tests/test_orchestration_workflow.py tests/test_agent_workflow_idempotency.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:53.654Z",
+        "event": "command_started",
+        "details": {
+          "command": "python scripts/check_module_size.py",
+          "session_id": "eVkm0ObAKGyi89_xm6jWxN8i"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:54.794Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python scripts/check_module_size.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:55.174Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:55.190Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:55.634Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:55.638Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:55.859Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "30776811d34bd9752f7d3c9a7c0e41771e8fcea290f2ef11597480410fd4312b"
+        }
+      },
+      {
+        "time": "2026-09-08T23:09:56.013Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-08T23:10:05.634Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:10:31.730Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-08T23:10:31.736Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:10:31.928Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "1369d8246d64767b33f8afc178c548ca045ae506798cfefdda942eea214487a3"
+        }
+      },
+      {
+        "time": "2026-09-08T23:10:52.092Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-08T23:11:21.259Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "1369d8246d64767b33f8afc178c548ca045ae506798cfefdda942eea214487a3"
+        }
+      },
+      {
+        "time": "2026-09-08T23:11:28.586Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T23:11:28.754Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "d1ba4d176f8a442cae40cd88120d3f21",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-08T23:11:28.772Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-08T23:11:28.757Z",
+    "updated_at": "2026-09-08T23:11:28.772Z",
+    "events": [
+      {
+        "time": "2026-09-08T23:11:28.757Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-08T23:11:28.772Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node -e \"const s=require('./package.json').scripts||{}; for (const k of Object.keys(s)) if (/activation|recovery/i.test(k)) console.log(k+'='+s[k])\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-08T23:11:28.772Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-08T23:11:38.741Z",
+    "archive_reason": "finished"
+  }
+]

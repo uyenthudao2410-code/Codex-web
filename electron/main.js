@@ -355,6 +355,51 @@ async function readOrchestrationControlSnapshot() {
   });
 }
 
+function canonicalTaskStateFromControl(control) {
+  const taskList = control?.task_list;
+  if (taskList?.source !== 'orchestration_ledger') {
+    throw new Error('MCP không trả task list canonical từ orchestration ledger.');
+  }
+  const canonical = taskList.current;
+  if (!canonical) return { exists: false, state: null, source: taskList.source };
+  const projection = control?.task && typeof control.task === 'object' ? control.task : {};
+  const canonicalTaskId = String(canonical.task_id || '').trim();
+  const canonicalRunId = String(canonical.run_id || '').trim();
+  const projectionTaskId = String(projection.task_id || '').trim();
+  const projectionRunId = String(projection.run_id || '').trim();
+  const controlRunId = String(control?.run_id || '').trim();
+  const exactDetailBinding = Boolean(
+    canonicalTaskId
+    && canonicalRunId
+    && projectionTaskId === canonicalTaskId
+    && projectionRunId === canonicalRunId
+    && controlRunId === canonicalRunId
+  );
+  const canonicalState = {
+    task_id: canonicalTaskId,
+    objective: canonical.objective || '',
+    status: canonical.status || 'unknown',
+    updated_at: canonical.finished_at || canonical.started_at || null,
+    orchestration: { run_id: canonicalRunId, source: taskList.source },
+    details_available: exactDetailBinding,
+    detail_binding: exactDetailBinding ? 'exact' : 'unavailable'
+  };
+  if (!exactDetailBinding) return { exists: true, source: taskList.source, state: canonicalState };
+  return {
+    exists: true,
+    source: taskList.source,
+    state: {
+      ...projection,
+      ...canonicalState,
+      task_id: canonicalTaskId,
+      objective: canonical.objective || projection.objective || '',
+      status: canonical.status || projection.status || 'unknown',
+      updated_at: canonical.finished_at || canonical.started_at || projection.updated_at || null,
+      orchestration: { run_id: canonicalRunId, source: taskList.source }
+    }
+  };
+}
+
 async function panelTaskControl(action) {
   const allowed = new Set(['pause', 'resume', 'stop', 'clear']);
   if (!allowed.has(action)) throw new Error('Thao tác nhiệm vụ từ bảng điều khiển không hợp lệ.');
@@ -400,6 +445,29 @@ async function panelTaskControl(action) {
 
 function structuredMcpResult(result) {
   return result?.structuredContent || result || null;
+}
+
+function executionControlCenterProgressObservation(orchestration) {
+  const truth = orchestration?.truth_snapshot?.orchestration;
+  const runId = String(orchestration?.run_id || truth?.run_id || '').trim().toLowerCase();
+  const waveId = String(truth?.wave_id || '').trim().toLowerCase();
+  if (!/^[0-9a-f]{32}$/.test(runId) || !/^[0-9a-f]{32}$/.test(waveId)) return null;
+  const snapshot = {
+    schema_version: 1,
+    run_id: runId,
+    wave_id: waveId,
+    orchestration_state: String(truth?.state || ''),
+    run_status: String(truth?.run_status || ''),
+    wave_status: String(truth?.wave_status || ''),
+    task_status: String(orchestration?.task?.status || '')
+  };
+  return {
+    run_id: runId,
+    wave_id: waveId,
+    snapshot_fingerprint: crypto.createHash('sha256')
+      .update(JSON.stringify(snapshot), 'utf8')
+      .digest('hex')
+  };
 }
 
 async function callP5TaskControl(p5Experiment, requestIdPrefix) {
@@ -738,6 +806,7 @@ function createChatWindow() {
           chatController?.getState()?.url
         );
         chatEvaluationJournal.stagePendingTurns(workspace, productSessionEvents);
+        chatEvaluationJournal.stagePendingContinuationConsents(workspace, productSessionEvents);
         correlated = chatEvaluationJournal.attachExplicitBindings(workspace, productSessionEvents);
         chatEvaluationJournal.append(workspace, correlated);
       } catch (error) {
@@ -825,7 +894,7 @@ function openManagerWindow() {
   managerWindow.removeMenu();
   const initialTheme = settings.load().theme === 'light' ? 'light' : 'dark';
   managerWindow.once('ready-to-show', () => managerWindow.show());
-  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'token-dashboard.html'), { query: { theme: initialTheme } });
+  managerWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), { query: { theme: initialTheme } });
   managerWindow.on('close', (event) => {
     if (forceQuit) return;
     event.preventDefault();
@@ -910,26 +979,7 @@ function registerIpc() {
     return { selected, snapshot };
   }));
   secureHandle('task-state:read', () => invokeSafely(async () => {
-    const control = await readOrchestrationControlSnapshot();
-    const taskList = control?.task_list;
-    if (taskList?.source !== 'orchestration_ledger') {
-      throw new Error('MCP không trả task list canonical từ orchestration ledger.');
-    }
-    const canonical = taskList.current;
-    if (!canonical) return { exists: false, state: null, source: taskList.source };
-    const projection = control?.task && typeof control.task === 'object' ? control.task : {};
-    return {
-      exists: true,
-      source: taskList.source,
-      state: {
-        ...projection,
-        task_id: canonical.task_id || projection.task_id || '',
-        objective: canonical.objective || projection.objective || '',
-        status: canonical.status || projection.status || 'unknown',
-        updated_at: canonical.finished_at || canonical.started_at || projection.updated_at || null,
-        orchestration: { run_id: canonical.run_id || '', source: taskList.source }
-      }
-    };
+    return canonicalTaskStateFromControl(await readOrchestrationControlSnapshot());
   }));
   secureHandle('task-state:clear', () => invokeSafely(() => panelTaskControl('clear')));
   secureHandle('task-state:pause', () => invokeSafely(() => panelTaskControl('pause')));
@@ -971,7 +1021,6 @@ function registerIpc() {
   secureHandle('token-dashboard:open', () => invokeSafely(async () => { openTokenWindow(); return true; }));
   secureHandle('token-dashboard:close', () => invokeSafely(async () => {
     if (tokenWindow && !tokenWindow.isDestroyed()) tokenWindow.close();
-    if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close();
     return true;
   }));
   secureHandle('chat:navigate', (_event, action) => invokeSafely(async () => chatController?.navigate(action)));
@@ -996,6 +1045,16 @@ function registerIpc() {
         orchestration_build_ms: nodePerformance.now() - startedAt,
         orchestration_size_bytes: jsonByteLength(orchestration)
       });
+      const progressObservation = executionControlCenterProgressObservation(orchestration);
+      if (progressObservation && typeof orchestrator?.recordExecutionControlCenterProgress === 'function') {
+        void orchestrator.recordExecutionControlCenterProgress(progressObservation).catch((error) => {
+          log.warn('Khong the ghi Control Center progress receipt vao EOCL ledger', {
+            stage: 'execution-control-center-observation',
+            code: error?.code || '',
+            error: safeMessage(error)
+          });
+        });
+      }
     }
     return orchestration;
   }));

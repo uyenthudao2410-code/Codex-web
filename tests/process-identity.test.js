@@ -13,6 +13,7 @@ const {
   normalizeProcessStartToken,
   observeProcessIdentity,
   observeProcessIdentityAsync,
+  observeLifecycleProcessIdentity,
   terminateExactProcessTree,
   waitForExactProcessExit
 } = require('../electron/services/processIdentity');
@@ -95,6 +96,45 @@ test('observation with an explicit different PID is unavailable', () => {
   assert.equal(observed.code, 'PROCESS_IDENTITY_UNVERIFIED');
   assert.equal(observed.pid, PID);
   assert.equal(observed.process_start_token, null);
+});
+
+test('lifecycle identity observation survives one transient unavailable probe without weakening exact identity', async () => {
+  const calls = [];
+  const observed = await observeLifecycleProcessIdentity(PID, {
+    observer: async (pid, options) => {
+      calls.push({ pid, options });
+      return calls.length === 1
+        ? { state: 'unavailable', pid, details: { reason: 'probe_timeout' } }
+        : live();
+    },
+    sleep: async () => {}
+  });
+
+  assert.deepEqual(observed, live());
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0], {
+    pid: PID,
+    options: { noCache: true, timeoutMs: 10_000 }
+  });
+});
+
+test('lifecycle identity observation remains fail-closed after its bounded retry budget', async () => {
+  let calls = 0;
+  const observed = await observeLifecycleProcessIdentity(PID, {
+    observer: async (pid) => {
+      calls += 1;
+      return { state: 'unavailable', pid, details: { reason: 'probe_timeout' } };
+    },
+    sleep: async () => {}
+  });
+
+  assert.equal(calls, 2);
+  assert.equal(observed.state, 'unavailable');
+  assert.equal(observed.pid, PID);
+  assert.equal(observed.process_start_token, null);
+  assert.equal(observed.details.reason, 'probe_timeout');
+  assert.equal(observed.details.attempts, 2);
+  assert.equal(observed.details.timeout_ms, 10_000);
 });
 
 test('Windows probe treats empty, malformed, multiline, and oversized output as unavailable', WINDOWS_ONLY, async (t) => {
@@ -236,6 +276,45 @@ test('exact exit wait returns immediately when the PID has been recycled', async
   assert.equal(result.observed.process_start_token, REPLACEMENT_TOKEN);
   assert.equal(observations, 1);
   assert.equal(sleeps, 0);
+});
+
+test('nonzero taskkill waits for the exact root to finish exiting without another kill', WINDOWS_ONLY, async () => {
+  let observations = 0;
+  let kills = 0;
+  let sleeps = 0;
+  const result = await terminateExactProcessTree(live(), {
+    observeProcessIdentity: async () => ++observations < 4 ? live() : { state: 'absent', pid: PID },
+    runProcess: async () => { kills += 1; return { code: 128 }; },
+    sleep: async () => { sleeps += 1; },
+    timeoutMs: 500
+  });
+  assert.equal(result.state, 'already_exited');
+  assert.equal(kills, 1);
+  assert.equal(sleeps, 2);
+  assert.equal(observations, 4);
+});
+
+test('nonzero taskkill still fails closed when the exact root remains alive', WINDOWS_ONLY, async () => {
+  let kills = 0;
+  await assert.rejects(terminateExactProcessTree(live(), {
+    observeProcessIdentity: async () => live(),
+    runProcess: async () => { kills += 1; return { code: 128 }; },
+    timeoutMs: 100
+  }), (error) => {
+    assert.equal(error.code, 'PROCESS_TERMINATION_FAILED');
+    assert.equal(error.details.exit_code, 128);
+    assert.equal(error.details.cause_code, 'PROCESS_TERMINATION_TIMEOUT');
+    return true;
+  });
+  assert.equal(kills, 1);
+});
+
+test('nonzero taskkill never treats an unavailable exit observation as success', WINDOWS_ONLY, async () => {
+  let observations = 0;
+  await assert.rejects(terminateExactProcessTree(live(), {
+    observeProcessIdentity: async () => ++observations === 1 ? live() : { state: 'unavailable', pid: PID },
+    runProcess: async () => ({ code: 128 })
+  }), { code: 'PROCESS_IDENTITY_UNVERIFIED' });
 });
 
 test('Windows observation uses fixed PowerShell command, structured argv, and bounded launch options', WINDOWS_ONLY, () => {

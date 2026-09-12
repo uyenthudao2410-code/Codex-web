@@ -1,0 +1,412 @@
+{
+  "version": 2,
+  "task_id": "060ba058784f4ff98b4f889df3d9e219",
+  "orchestration": {
+    "run_id": "605e0b189bb84cd89584aba832dff197",
+    "wave_id": "0879d362cca9474eba15da20e481cd41",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+    "contract_fp": ""
+  },
+  "objective": "Create one lifecycle re-arm checkpoint with no source writes for exactly resources/coding-tools-mcp/pyproject.toml, renderer/panel.html, and renderer/panel.js at HEAD 7bc1caee37107a15e74eb078b52fe314e5fa33ab, solely to create fresh AcceptedCodeActivationController intent identities after the prior accepted checkpoint exhausted automatic activation attempts. Preserve all source bytes and runtime evidence; do not edit accepted-code-activation.json, SQLite, projections, or replay any prior restart ticket.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-08T19:18:32.059Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-08T19:18:32.059Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "7B8TEvlCTgnOsr2GU78XqA9K",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 654,
+    "finished_at": "2026-09-08T19:18:31.724Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/pyproject.toml",
+          "state": "file",
+          "sha256": "118bf996879b6d420016dfc13dd2266854ba09f47e53dc073dcdd7ce59a0720a",
+          "size_bytes": 1347,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "605e0b189bb84cd89584aba832dff197",
+          "wave_id": "0879d362cca9474eba15da20e481cd41"
+        },
+        {
+          "path": "renderer/panel.html",
+          "state": "file",
+          "sha256": "b842ee1333194bd0686a41fbf43deee78754c151a296bd63b5090be4595c3e91",
+          "size_bytes": 25714,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "605e0b189bb84cd89584aba832dff197",
+          "wave_id": "0879d362cca9474eba15da20e481cd41"
+        },
+        {
+          "path": "renderer/panel.js",
+          "state": "file",
+          "sha256": "86ae7685246ba16b77897199da690f5395284fc2dc04ab71c72818ff8f5b2b77",
+          "size_bytes": 31232,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "605e0b189bb84cd89584aba832dff197",
+          "wave_id": "0879d362cca9474eba15da20e481cd41"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 30,
+        "head_hash": "c459a99bd376b71e169823d62078d542720a748261ceb5e812fd3840f2a46e65"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-605e0b189bb84cd89584aba832dff197\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-605e0b189bb84cd89584aba832dff197\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "605e0b189bb84cd89584aba832dff197",
+      "wave_id": "0879d362cca9474eba15da20e481cd41",
+      "checkpoint_id": "36b8bee50c5946fbbb830ee79ba01415",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "c1cab4fb02990a1430fe0a09bc30714357ae3344c7d25a3365d4f0f2b7e0268d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Create one lifecycle re-arm checkpoint with no source writes for exactly resources/coding-tools-mcp/pyproject.toml, renderer/panel.html, and renderer/panel.js at HEAD 7bc1caee37107a15e74eb078b52fe314e5fa33ab, solely to create fresh AcceptedCodeActivationController intent identities after the prior accepted checkpoint exhausted automatic activation attempts. Preserve all source bytes and runtime evidence; do not edit accepted-code-activation.json, SQLite, projections, or replay any prior restart ticket.",
+        "objective_revision": 1,
+        "objective_sha256": "fce3e29029dfaf9bb42e86a68f900daa2274756685ece5f693069e9cec35787a",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "d289cf89c2c94293a159f5afb95b7f95",
+          "stage_id": "check:980ee9ceaf654583",
+          "status": "passed",
+          "duration_ms": 1036,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "c4c012190b65441b83b197c4372d25c3",
+          "stage_id": "check:98dc02b104323ccf",
+          "status": "passed",
+          "duration_ms": 1094,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "0892c199c79eee2713c9ea874730a91024c8328604a2e1fb2293187d0c0b83e5",
+  "completion_report_acknowledged_id": "0892c199c79eee2713c9ea874730a91024c8328604a2e1fb2293187d0c0b83e5",
+  "completion_report_acknowledged_at": "2026-09-08T19:19:13.887Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-08T19:17:52.115Z",
+  "updated_at": "2026-09-08T19:19:13.891Z",
+  "events": [
+    {
+      "time": "2026-09-08T19:17:52.115Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-08T19:17:52.450Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$head=(git rev-parse HEAD).Trim(); $paths=@('resources/coding-tools-mcp/pyproject.toml','renderer/panel.html','renderer/panel.js'); $items=@(); foreach($p in $paths){$f=Get-Item -LiteralPath $p; $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $porc=(git status --porcelain -- $p | Out-String).Trim(); $items += [pscustomobject]@{path=$p;size_bytes=[int64]$f.Length;sha256=$h;porcelain=$porc}}; [pscustomobject]@{head=$head;targets=$items}|",
+        "session_id": "F36Mjf1lgh6iVQv3LYXemYa4"
+      }
+    },
+    {
+      "time": "2026-09-08T19:17:53.348Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$head=(git rev-parse HEAD).Trim(); $paths=@('resources/coding-tools-mcp/pyproject.toml','renderer/panel.html','renderer/panel.js'); $items=@(); foreach($p in $paths){$f=Get-Item -LiteralPath $p; $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(); $porc=(git status --porcelain -- $p | Out-String).Trim(); $items += [pscustomobject]@{path=$p;size_bytes=[int64]$f.Length;sha256=$h;porcelain=$porc}}; [pscustomobject]@{head=$head;targets=$items}|",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:11.366Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:12.594Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:12.602Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:25.107Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:25.983Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:27.157Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:27.157Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:28.397Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:28.917Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:29.691Z",
+      "event": "command_started",
+      "details": {
+        "command": "set REARM_FRESH_ORACLE=20260909A&& node --test --test-concurrency=1 --test-name-pattern=\"component gate accepts dirty bytes covered by the same-head accepted receipt union\" tests/accepted-code-activation.test.js",
+        "session_id": "evrL7zFYlQBxeQPHWcpG25HZ"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:30.114Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set REARM_FRESH_ORACLE=20260909A&& node --test --test-concurrency=1 --test-name-pattern=\"component gate accepts dirty bytes covered by the same-head accepted receipt union\" tests/accepted-code-activation.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:31.300Z",
+      "event": "command_started",
+      "details": {
+        "command": "set REARM_FRESH_DIFF=20260909A&& git --no-pager diff --no-ext-diff --no-color --check -- resources/coding-tools-mcp/pyproject.toml renderer/panel.html renderer/panel.js",
+        "session_id": "7B8TEvlCTgnOsr2GU78XqA9K"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:31.724Z",
+      "event": "command_finished",
+      "details": {
+        "command": "set REARM_FRESH_DIFF=20260909A&& git --no-pager diff --no-ext-diff --no-color --check -- resources/coding-tools-mcp/pyproject.toml renderer/panel.html renderer/panel.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.049Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.059Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.524Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.527Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.667Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "d8b359de7a1a75ee6d7418ed134508f528f2135f0cc7a28addd18f3e3ec4a687"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:32.808Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:48.703Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:50.998Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:51.004Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:18:51.164Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "0892c199c79eee2713c9ea874730a91024c8328604a2e1fb2293187d0c0b83e5"
+      }
+    },
+    {
+      "time": "2026-09-08T19:19:03.800Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-08T19:19:13.887Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "0892c199c79eee2713c9ea874730a91024c8328604a2e1fb2293187d0c0b83e5"
+      }
+    }
+  ]
+}

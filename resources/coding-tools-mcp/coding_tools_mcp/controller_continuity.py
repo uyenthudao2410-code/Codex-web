@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import marshal
 import re
 import sqlite3
 import time
@@ -11,6 +10,7 @@ from typing import Any
 
 from .errors import ToolFailure
 from .goal_pursuit import GoalPursuitError
+from .runtime_behavior_identity import stable_python_code_sha256
 from .controller_reattach import (
     CONTROLLER_REATTACH_MAX_ACTIVE_RUNS,
     attachment_row as _attachment_row,
@@ -1367,9 +1367,9 @@ class ControllerContinuityControlMixin:
         workspace_identity = source.get("workspace_identity") if isinstance(source.get("workspace_identity"), dict) else {}
         workspace_id = _opaque(workspace_identity.get("workspace_id"), "workspace_id", limit=512)
         behavior = self._loaded_behavior_identity()
-        continuity_code_fp = hashlib.sha256(
-            marshal.dumps(type(self)._controller_continuity_control.__code__)
-        ).hexdigest()
+        continuity_code_fp = stable_python_code_sha256(
+            type(self)._controller_continuity_control.__code__
+        )
         runtime_fp = _sha(
             {
                 "loaded_behavior_fingerprint": _digest(
@@ -1583,6 +1583,17 @@ class ControllerContinuityControlMixin:
                     source_fingerprint=str(source.get("source_fingerprint") or ""),
                     runtime_behavior_fingerprint=runtime_fp,
                 )
+                auto_resumed: list[dict[str, Any]] = []
+                for transfer in reattached.get("active_run_transfers") or []:
+                    if not isinstance(transfer, dict) or not str(transfer.get("run_id") or ""):
+                        continue
+                    auto_resumed.append(
+                        self._run_continuation_try_auto_resume(
+                            run_id=str(transfer["run_id"]),
+                            trigger="reattach",
+                            marker=reattach_id,
+                        )
+                    )
                 return {
                     "controller_reattach": reattached,
                     "knowledge_ack": acked,
@@ -1592,6 +1603,7 @@ class ControllerContinuityControlMixin:
                     "write_authority_granted": False,
                     "acceptance_authority_granted": False,
                     "authority_granted": False,
+                    "continuation_auto_resume": auto_resumed,
                 }
             raise ControllerContinuityError(
                 "CONTINUITY_ACTION_INVALID", f"unsupported continuity_action: {action}"

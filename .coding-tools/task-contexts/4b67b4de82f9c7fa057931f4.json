@@ -1,0 +1,314 @@
+{
+  "version": 2,
+  "task_id": "94f0a1d00765410abff761f40925d8e2",
+  "orchestration": {
+    "run_id": "234713daf77f427ca486a7044fefd204",
+    "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "deep_single_lane",
+    "route_requested": "sol_xhigh",
+    "route_resolved": "sol_xhigh",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "1835a28961e94b9b975e26ba3133ebb2",
+    "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+    "worktree_fp": "fd67e641922a7f6aa5a2c6c35969e95c94ee40f144a485570f0dabc083dc21b2",
+    "contract_fp": "03868d7a82de0500df01853c480a5d27d2d637b14371c81479b54b35fe76cb4c"
+  },
+  "objective": "Controlled continuation canary: implement clampCount(value, min, max) for finite integer arguments; return the value clamped to inclusive bounds; throw TypeError when any argument is not a number, non-finite, or non-integer; throw RangeError when min > max. The oracle test is immutable and only clamp-count.cjs may be changed.",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "7h5MDATNjMa_NvKyaep6apt-",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 820,
+    "finished_at": "2026-09-09T05:48:19.052Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs",
+          "state": "file",
+          "sha256": "57c68d00b0f59d62dc3035cf7f0a9c4700f0f448c2bae901f230133155db5452",
+          "size_bytes": 356,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "234713daf77f427ca486a7044fefd204",
+          "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 231,
+        "head_hash": "83c68f9b21664b18ba2e273df06f5ef64b59a53bb381c6d75417f9152e6f8859"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-234713daf77f427ca486a7044fefd204\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-234713daf77f427ca486a7044fefd204\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "234713daf77f427ca486a7044fefd204",
+      "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d",
+      "checkpoint_id": "ed07d255ab9d4daea5072baa2d62f766",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "fd67e641922a7f6aa5a2c6c35969e95c94ee40f144a485570f0dabc083dc21b2",
+      "contract_fp": "03868d7a82de0500df01853c480a5d27d2d637b14371c81479b54b35fe76cb4c",
+      "objective_provenance": {
+        "effective_objective": "Controlled continuation canary: implement clampCount(value, min, max) for finite integer arguments; return the value clamped to inclusive bounds; throw TypeError when any argument is not a number, non-finite, or non-integer; throw RangeError when min > max. The oracle test is immutable and only clamp-count.cjs may be changed.",
+        "objective_revision": 1,
+        "objective_sha256": "33d7ae95e46b665e8649414095b734db7adc813c344bb4bc242b3c81a2307a9f",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "6ffa5c0ae5fe4bf6830df0c6709d8a3d",
+          "stage_id": "run-continuation-check:43e0b81a738c1f8e",
+          "status": "passed",
+          "duration_ms": 736,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "b3851852e16da2ff35b8128367d41c8e4ccf6b0e6c407fcf0e25ed5dd6ba99dd",
+  "completion_report_acknowledged_id": "b3851852e16da2ff35b8128367d41c8e4ccf6b0e6c407fcf0e25ed5dd6ba99dd",
+  "completion_report_acknowledged_at": "2026-09-09T06:19:23.519Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-09T05:36:15.650Z",
+  "updated_at": "2026-09-09T06:27:48.560Z",
+  "events": [
+    {
+      "time": "2026-09-09T05:36:15.650Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Controlled continuation canary: implement clampCount(value, min, max) for finite integer arguments; return the value clamped to inclusive bounds; throw TypeError when any argument is not a number, non-finite, or non-integer; throw RangeError when min > max. The oracle test is immutable and only clamp-count.cjs may be changed."
+      }
+    },
+    {
+      "time": "2026-09-09T05:36:17.600Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-09T05:36:18.017Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "RUN_CONTINUATION_CONSENT_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T05:47:55.205Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:18.473Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-FileHash -Algorithm SHA256 'tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs'; $b=Get-FileHash -Algorithm SHA256 'tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs'; Write-Output ($a.Path + ' ' + $a.Hash); Write-Output ($b.Path + ' ' + $b.Hash)\"",
+        "session_id": "7h5MDATNjMa_NvKyaep6apt-"
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:19.052Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-FileHash -Algorithm SHA256 'tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.cjs'; $b=Get-FileHash -Algorithm SHA256 'tests/fixtures/continuation-canary/case-g2-clamp-001/clamp-count.test.cjs'; Write-Output ($a.Path + ' ' + $a.Hash); Write-Output ($b.Path + ' ' + $b.Hash)\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:29.707Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:31.040Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:42.919Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T05:48:44.276Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T05:49:03.658Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:07:13.805Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-09T06:07:23.748Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:18:59.432Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-09T06:18:59.435Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:18:59.544Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "b3851852e16da2ff35b8128367d41c8e4ccf6b0e6c407fcf0e25ed5dd6ba99dd"
+      }
+    },
+    {
+      "time": "2026-09-09T06:19:09.478Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-09T06:19:23.519Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "b3851852e16da2ff35b8128367d41c8e4ccf6b0e6c407fcf0e25ed5dd6ba99dd"
+      }
+    },
+    {
+      "time": "2026-09-09T06:27:48.560Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

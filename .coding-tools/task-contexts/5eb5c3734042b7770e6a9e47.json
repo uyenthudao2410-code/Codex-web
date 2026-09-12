@@ -1,0 +1,200 @@
+{
+  "version": 2,
+  "task_id": "af1baf2e861b434f8619218506df4d4d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "PBqDYxNZWg6QJaEnOdhmbQx6",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 282,
+    "finished_at": "2026-09-08T23:13:05.716Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-08T23:11:38.743Z",
+  "updated_at": "2026-09-08T23:13:05.716Z",
+  "events": [
+    {
+      "time": "2026-09-08T23:11:38.743Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:39.057Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm.cmd run",
+        "session_id": "J8V9KVzpS2ySJpI9SkcO7gDB"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:39.632Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm.cmd run",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:46.601Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /i \"preflight source-checkpoint component bootstrap help\" scripts\\trusted-recovery-bootstrap.js",
+        "session_id": "rdDUvJkgevj4AQ2vwQwiCtfV"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:46.917Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /i \"preflight source-checkpoint component bootstrap help\" scripts\\trusted-recovery-bootstrap.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:57.037Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js --preflight",
+        "session_id": "wYk_jkrGaiJqWQol63gdJ7EF"
+      }
+    },
+    {
+      "time": "2026-09-08T23:11:57.927Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/trusted-recovery-bootstrap.js --preflight",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:06.161Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /i \"Usage source_checkpoint checkpoint operation_id full-clean activation\" scripts\\full-clean-activation.js",
+        "session_id": "GwI9WLsYS36rk32Xh1-AkOr_"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:06.470Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /i \"Usage source_checkpoint checkpoint operation_id full-clean activation\" scripts\\full-clean-activation.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:15.110Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /i \"statusOnly preflightOnly executeOnly parsed.preflight parsed.execute\" scripts\\full-clean-activation.js",
+        "session_id": "_FdXXQtv5ZBADt2BdV_JKg2x"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:15.382Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /i \"statusOnly preflightOnly executeOnly parsed.preflight parsed.execute\" scripts\\full-clean-activation.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:22.700Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /c:\"const execute\" /c:\"--execute\" scripts\\full-clean-activation.js",
+        "session_id": "mA4RMZVWbZn9glZ0inruwxqO"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:22.975Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /c:\"const execute\" /c:\"--execute\" scripts\\full-clean-activation.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:31.937Z",
+      "event": "command_started",
+      "details": {
+        "command": "findstr /n /i \"For --execute persists parent call boundary deferred supervisor\" scripts\\full-clean-activation.js",
+        "session_id": "QDysDKZvgfVnaWy96yKXieXI"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:32.252Z",
+      "event": "command_finished",
+      "details": {
+        "command": "findstr /n /i \"For --execute persists parent call boundary deferred supervisor\" scripts\\full-clean-activation.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:46.070Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --execute",
+        "session_id": "U7IsGkt69zx01Sag5ObY3xsq"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:46.403Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --execute",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:53.075Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "session_id": "ZIS-3vmPA_0LCY9v140DeFuz"
+      }
+    },
+    {
+      "time": "2026-09-08T23:12:53.338Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-08T23:13:05.459Z",
+      "event": "command_started",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "session_id": "PBqDYxNZWg6QJaEnOdhmbQx6"
+      }
+    },
+    {
+      "time": "2026-09-08T23:13:05.716Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node scripts/full-clean-activation.js --status",
+        "status": "passed"
+      }
+    }
+  ]
+}

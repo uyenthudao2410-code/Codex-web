@@ -199,6 +199,34 @@ class CodexBridgeTests(unittest.TestCase):
             self.assertEqual(resume_params["approvalPolicy"], "never")
             self.assertEqual(resume_params["sandbox"], "read-only")
 
+    def test_persistent_restore_reclaims_the_registered_lane_without_turn_start(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            bridge = CodexAppServerBridge(lambda: root)
+            bridge._ensure_connected = lambda: None
+            calls = []
+
+            def fake_request(method, params):
+                calls.append((method, dict(params)))
+                if method == "thread/read":
+                    return {"thread": {"id": "persistent-thread", "sessionId": "session-1", "cwd": str(root)}}
+                if method == "thread/resume":
+                    return {"thread": {"id": "persistent-thread", "sessionId": "session-1", "cwd": str(root)}}
+                raise AssertionError(method)
+
+            bridge._request = fake_request
+            restored = bridge.restore_persistent_thread(
+                thread_id="persistent-thread",
+                expected_session_id="session-1",
+                profile="continuation_proposal",
+                model="gpt-5.6-sol",
+                effort="xhigh",
+            )
+            self.assertEqual(restored["creation_mode"], "persistent_restore")
+            self.assertEqual(restored["session_id"], "session-1")
+            self.assertTrue(bridge.owns_thread("persistent-thread"))
+            self.assertEqual([method for method, _params in calls], ["thread/read", "thread/resume"])
+
     def test_persistent_resume_rejects_workspace_or_session_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -320,6 +348,74 @@ class CodexBridgeTests(unittest.TestCase):
                 with self.assertRaises(CodexBridgeError) as custom:
                     strict.run("proposal", profile="continuation_proposal")
             self.assertEqual(custom.exception.code, "CONTINUATION_PROFILE_UNCERTIFIED_LAUNCH")
+
+    def test_turn_start_response_preserves_terminal_notification_state(self) -> None:
+        terminal_cases = (
+            ("completed", None),
+            ("failed", {"message": "terminal failure"}),
+            ("interrupted", None),
+        )
+        for index, (terminal_status, terminal_error) in enumerate(terminal_cases, start=1):
+            with self.subTest(status=terminal_status), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                bridge = CodexAppServerBridge(lambda: root)
+                bridge._ensure_connected = lambda: None
+                thread_id = f"terminal-thread-{index}"
+                turn_id = f"terminal-turn-{index}"
+                usage = {
+                    "last": {"inputTokens": 10, "cachedInputTokens": 2, "outputTokens": 3, "reasoningOutputTokens": 1},
+                    "total": {"inputTokens": 10, "cachedInputTokens": 2, "outputTokens": 3, "reasoningOutputTokens": 1},
+                    "modelContextWindow": 1_000,
+                }
+
+                def fake_request(method, _params):
+                    if method == "thread/start":
+                        return {"thread": {"id": thread_id}}
+                    if method == "turn/start":
+                        bridge._record_notification(
+                            "item/completed",
+                            {
+                                "threadId": thread_id,
+                                "turnId": turn_id,
+                                "item": {"type": "agentMessage", "text": f"terminal text {terminal_status}"},
+                            },
+                        )
+                        bridge._record_notification(
+                            "thread/tokenUsage/updated",
+                            {"threadId": thread_id, "turnId": turn_id, "tokenUsage": usage},
+                        )
+                        bridge._record_notification(
+                            "turn/completed",
+                            {
+                                "threadId": thread_id,
+                                "turn": {"id": turn_id, "status": terminal_status, "error": terminal_error},
+                            },
+                        )
+                        bridge._turn_states[turn_id]["started_monotonic"] = 123.0
+                        bridge._turn_states[turn_id]["finalized"] = True
+                        return {
+                            "turn": {
+                                "id": turn_id,
+                                "status": "inProgress",
+                                "error": {"message": "stale turn/start response"},
+                            }
+                        }
+                    raise AssertionError(method)
+
+                bridge._request = fake_request
+                result = bridge.run("review packet", profile="packet")
+                state = bridge._turn_states[turn_id]
+                self.assertEqual(result["status"], terminal_status)
+                self.assertEqual(state["status"], terminal_status)
+                self.assertEqual(state["error"], terminal_error)
+                self.assertEqual(state["agent_text"], f"terminal text {terminal_status}")
+                self.assertEqual(
+                    state["token_usage"],
+                    {"last": usage["last"], "total": usage["total"], "model_context_window": 1_000},
+                )
+                self.assertEqual(state["started_monotonic"], 123.0)
+                self.assertTrue(state["finalized"])
+
     def test_continue_reuses_only_bridge_owned_thread_and_preserves_route(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

@@ -1,0 +1,504 @@
+[
+  {
+    "version": 2,
+    "task_id": "a8f32ed9ecca44c18aa3aa8f9282a434",
+    "orchestration": {
+      "run_id": "8aa174e6591a4bec975916556dc0e508",
+      "wave_id": "7a38a7e9628a49f59a4a612773be8284",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+      "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+      "contract_fp": ""
+    },
+    "objective": "Finalize the pre-armed read-only timing observer for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Two fresh full semantic lifecycle probes were captured after strict-timing retry RUN 03e4ff4dad8b4cc38d77ee7a10da6d09 reached final acceptance at 2026-09-12T10:43:47.545Z and was ACKed/cleared. Probe _NUe-ECKcHpPmR90IdRPXnwN observed at 2026-09-12T10:44:31.057915Z, ~43.513 seconds after acceptance, inside the historical 60-second controller-lease window; probe avy9bjb1p0LcJRs7EiiSSogj observed at 2026-09-12T10:44:49.435945Z and confirmed stability. Both showed the retry canary absent from lifecycle-relevant runs, no TERMINAL_PARENT_CONTRADICTION, terminal_parent_lanes empty, projection_drift=false, projection missing/conflicting=0 and malformed=false, stale background/unbound/unexplained residues=0, FK rows=0, integrity=ok, canonical ledger unmutated, and only this observer LIVE_OWNED. Complete a durable read-only workflow proof; do not mutate source or runtime.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "verify",
+        "text": "Run tests and build verification",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:45:17.231Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-12T10:45:17.231Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "avy9bjb1p0LcJRs7EiiSSogj",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 4765,
+      "finished_at": "2026-09-12T10:44:54.023Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-terminal-projection-clear-restart-drift-20260912",
+        "problem_revision": 2,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "e327cec6478eced616b75206c55cdd0c6e4206c006dc7bbaa3b72441efe4f99a",
+        "objective_summary": "Eliminate or truthfully fence the transient contextual-projection inconsistency window after terminal orchestration transitions and request-scoped task clear, so lifecycle and restart health checks do not temporarily report a fully terminal and quiescent orchestration run as missing or as a terminal-parent contradiction while preserving fail-closed behavior for genuine active, malformed, or live-resource state.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "transient_window_reproduction",
+            "summary": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation."
+          },
+          {
+            "criterion_id": "terminal_clear_atomic_visibility",
+            "summary": "After terminal transition and request-scoped clear are acknowledged, public and immutable lifecycle projection is either consistent or explicitly reports a bounded reconciliation-in-progress state; it must not expose a false terminal-parent contradiction as stable truth."
+          },
+          {
+            "criterion_id": "genuine_contradiction_preserved",
+            "summary": "A genuinely terminal parent with live child ownership, active resources, or malformed dependent state still classifies as TERMINAL_PARENT_CONTRADICTION and blocks unsafe restart."
+          },
+          {
+            "criterion_id": "restart_preflight_race_safe",
+            "summary": "Official controlled-restart preflight does not fail solely because it sampled the transient projection-reconciliation window; it observes consistent state or follows an authoritative bounded reconciliation gate."
+          },
+          {
+            "criterion_id": "reporter_semantic_oracle",
+            "summary": "Lifecycle health consumers evaluate semantic projection fields and do not treat reporter exit code zero alone as proof that projection state is healthy."
+          },
+          {
+            "criterion_id": "no_history_rewrite",
+            "summary": "The solution changes only derived projection, reconciliation visibility, or control sequencing and does not rewrite durable orchestration history."
+          },
+          {
+            "criterion_id": "postfix_repeated_probe",
+            "summary": "Repeated immediate and delayed probes across terminalize-and-clear no longer show a false projection-drift transition while SQLite integrity and foreign-key checks remain clean."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 7,
+          "criteria_proven": 0,
+          "criteria_unresolved": 7,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "transient_window_reproduction",
+          "next_critical_gap": "A deterministic regression reproduces the terminalize-and-clear timing window that can temporarily yield missing projection state or TERMINAL_PARENT_CONTRADICTION before self-reconciliation.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 6,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 4,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Identify the exact projection write, rebuild, or visibility ordering that creates the transient missing-state window.",
+          "Determine whether orchestration projection reconciliation is recorded before the contextual mapping becomes visible to an immutable lifecycle snapshot.",
+          "Choose the smallest safe correction among atomic projection update, an explicit RECONCILING state, or bounded preflight reconciliation."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "8aa174e6591a4bec975916556dc0e508",
+          "wave_id": "7a38a7e9628a49f59a4a612773be8284",
+          "checkpoint_id": "c19c0213d5c34483ba06bb5662de200b"
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 7,
+        "latest_event": {
+          "seq": 189,
+          "event_id": "prl-bind-a210d1d30df55f9f3d7964e7468a223bc884f288fd11477b36f691a8db55c9eb",
+          "event_hash": "9c712248f91f8f5aebc9094baba24d94d6a5586a795dae357701dbfc9254caca",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-12T10:42:38.465Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 14,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 8,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 6,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 35,
+          "head_hash": "9c6543d6ce686fc424fca021a2a77c18ddff8367e3125636faeb819eec6a2fc3"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8aa174e6591a4bec975916556dc0e508\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-8aa174e6591a4bec975916556dc0e508\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "8aa174e6591a4bec975916556dc0e508",
+        "wave_id": "7a38a7e9628a49f59a4a612773be8284",
+        "checkpoint_id": "c19c0213d5c34483ba06bb5662de200b",
+        "base_head": "7bc1caee37107a15e74eb078b52fe314e5fa33ab",
+        "worktree_fp": "3388a2f3375dbd7e9858133bfd7aeb840c4053256947a77fedfb1b4f13ab022d",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Pre-armed read-only timing observer for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Remain available in this isolated context so that, immediately after a separate mini-canary is accepted, operator-ACKed, and request-scoped-cleared, this observer can run the full immutable lifecycle census without spending time creating a new observer. The purpose is to prove with durable timestamps that post-terminal semantic health is clean inside the historical controller-lease TTL window (<60 seconds). Read-only only; no source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "277d2813a3d03e55f137d9f40710880ffd95f01f65d10c01cbd749ac525e3ce1",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "e313c3b9444b4d418e31dc67444b9efa",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 0,
+            "exit_code": null,
+            "cache_hit": true
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "f16cc4d7c84011bf39004de83c88f99938bdabc7b9537d13e7fecdf851dbf9c5",
+    "completion_report_acknowledged_id": "f16cc4d7c84011bf39004de83c88f99938bdabc7b9537d13e7fecdf851dbf9c5",
+    "completion_report_acknowledged_at": "2026-09-12T10:46:26.378Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-12T10:39:17.185Z",
+    "updated_at": "2026-09-12T10:46:37.744Z",
+    "events": [
+      {
+        "time": "2026-09-12T10:39:17.185Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Pre-armed read-only timing observer for Problem prl-terminal-projection-clear-restart-drift-20260912 revision 2. Remain available in this isolated context so that, immediately after a separate mini-canary is accepted, operator-ACKed, and request-scoped-cleared, this observer can run the full immutable lifecycle census without spending time creating a new observer. The purpose is to prove with durable timestamps that post-terminal semantic health is clean inside the historical controller-lease TTL window (<60 seconds). Read-only only; no source mutation, restart, ledger-history rewrite, commit, push, clean, reset, package, release, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:19.992Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:21.716Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:39:21.725Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:11.029Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "kxgiKbFVxLGlGhYACkiHAcRv"
+        }
+      },
+      {
+        "time": "2026-09-12T10:42:16.073Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:31.127Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "_NUe-ECKcHpPmR90IdRPXnwN"
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:35.677Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:49.457Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "session_id": "avy9bjb1p0LcJRs7EiiSSogj"
+        }
+      },
+      {
+        "time": "2026-09-12T10:44:54.023Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:12.058Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:13.039Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:14.496Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:14.501Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:15.871Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:16.547Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:17.222Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:17.231Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:17.841Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:17.844Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:17.956Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "48416c1d63f3c668fe27aee575f1b6edd31e2012c548e167cad78fe449b5ec82"
+        }
+      },
+      {
+        "time": "2026-09-12T10:45:18.147Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:01.659Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:05.280Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:05.280Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:05.397Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "f16cc4d7c84011bf39004de83c88f99938bdabc7b9537d13e7fecdf851dbf9c5"
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:15.327Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:26.378Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "f16cc4d7c84011bf39004de83c88f99938bdabc7b9537d13e7fecdf851dbf9c5"
+        }
+      },
+      {
+        "time": "2026-09-12T10:46:37.744Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T10:46:37.881Z",
+    "archive_reason": "cleared"
+  }
+]

@@ -18,6 +18,32 @@ from .code_mode import (
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
 SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] = {
+    # Reviewed 2026-09-10: the exact prepare -> execute RUN/WAVE binding adds
+    # only optional agent_workflow inputs.  The expanded
+    # problem_resolution_envelope schema makes the already-enforced runtime
+    # validator visible to clients; it does not remove any request that the
+    # previous runtime accepted.  Cached 09e1... clients therefore remain
+    # valid for the narrow, attested, no-workspace activation bootstrap.
+    "d52c8895711d4655be0bdbe35cff6e3dcd1bd72f5caa98563ad37dd34835b677": (
+        "09e1ca748a1319b814734967959d667aa111d70c1e3720353e3c83b1da22ccb9",
+    ),
+    # Reviewed 2026-09-09: exact prepare -> execute RUN/WAVE binding adds only
+    # optional agent_workflow inputs and keeps every prior request valid. The
+    # runtime validates both identifiers against the caller-scoped active
+    # prepare lineage before a new RUN or write lease can be created.
+    "09e1ca748a1319b814734967959d667aa111d70c1e3720353e3c83b1da22ccb9": (
+        "98064347d3d27bec950b64d57319a3bc4a442bc12f6849a583cae7560f395f97",
+    ),
+    # Reviewed 2026-09-08: durable RUN continuation is additive inside the
+    # existing eight-tool smart-v3 surface. agent_workflow keeps accepting the
+    # legacy string continuation and additionally accepts the bounded grant
+    # object; task_control retains every existing action and adds optional
+    # continuation controls. Cached 642... clients therefore remain valid for
+    # the narrow current-process bootstrap only; this relation never certifies
+    # rediscovery, controller authority, dispatch, or an effect.
+    "98064347d3d27bec950b64d57319a3bc4a442bc12f6849a583cae7560f395f97": (
+        "6420537a2150a7d8e0152eabde4b298c3c689645a4515ba17fd254d60fc43cdf",
+    ),
     # Reviewed 2026-09-04: bounded context controls on agent_workflow are
     # optional/additive, existing maxima are only widened, and the public
     # smart-v3 surface remains exactly eight tools. Older requests therefore
