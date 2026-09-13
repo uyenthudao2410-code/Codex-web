@@ -843,6 +843,17 @@ background evidence, a live matching process, an unverifiable process identity,
 leases, fences, live lanes, projection drift, and integrity failures still
 block activation.
 
+Contextual task files are current views, not a complete index of historical
+RUNs. An `AWAITING_ACCEPTANCE` RUN with a valid canonical wave/state, no live
+ownership and activity older than the census grace window may have no remaining
+context binding without causing `PROJECTION_DRIFT`. The read-only census reports
+this as `unprojected_historical_acceptance_count`; the RUN remains active and
+awaiting acceptance. The separate acceptance gate still blocks accepted-code
+activation unless the existing explicit process-refresh policy preserves pending
+acceptance. Fresh missing bindings, present-but-conflicting projections and live
+ownership remain fail-closed. Stopped-runtime refusals include the bounded census
+`reason` in the CLI error instead of discarding it at the bootstrap boundary.
+
 Low-level/legacy tools may still exist in compatibility or non-smart modes, but new agent workflows should prefer the compact smart surface.
 
 ## 4. Authority, EOCL, routing, and handoff

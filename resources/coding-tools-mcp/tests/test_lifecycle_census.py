@@ -404,6 +404,72 @@ class LifecycleCensusTests(unittest.TestCase):
                 )
             self.assertEqual(drift["projection"]["classification"], "PROJECTION_DRIFT")
 
+    def test_contextual_projection_preserves_only_unowned_historical_acceptance_without_a_current_binding(self) -> None:
+        for case, age, projected, live_lease, has_wave, expected in (
+            ("historical_missing", 3_600, None, False, True, "CONTEXTUAL_PROJECTIONS"),
+            ("exact_grace_boundary", 900, None, False, True, "PROJECTION_DRIFT"),
+            ("recent_missing", 60, None, False, True, "PROJECTION_DRIFT"),
+            ("historical_live_owner", 3_600, None, True, True, "PROJECTION_DRIFT"),
+            ("historical_conflict", 3_600, "PROVING", False, True, "PROJECTION_DRIFT"),
+            ("historical_wrong_wave", 3_600, "wrong_wave", False, True, "PROJECTION_DRIFT"),
+            ("historical_malformed", 3_600, "malformed", False, True, "PROJECTION_DRIFT"),
+            ("historical_no_canonical_wave", 3_600, None, False, False, "PROJECTION_DRIFT"),
+            ("historical_exact", 3_600, "ACCEPTING", False, True, "CONTEXTUAL_PROJECTIONS"),
+        ):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                ledger = OrchestrationLedger(root)
+                with patch("coding_tools_mcp.orchestration_ledger.utc_now", return_value=_iso(OBSERVED_AT - age)):
+                    run_id = ledger.create_run(objective="historical acceptance")
+                    wave_id = ledger.create_wave(run_id, execution_mode="mcp_only") if has_wave else ""
+                    ledger.append_event(run_id, wave_id=wave_id or None, event_type="state", state_after="ACCEPTING")
+                with patch("coding_tools_mcp.orchestration_ledger.utc_now", return_value=_iso(OBSERVED_AT - 30)):
+                    current_run = ledger.create_run(objective="current context")
+                    current_wave = ledger.create_wave(current_run, execution_mode="mcp_only")
+                    ledger.append_event(current_run, wave_id=current_wave, event_type="state", state_after="PROVING")
+                if live_lease:
+                    with ledger._lock, ledger._connect() as connection:
+                        connection.execute(
+                            """INSERT INTO controller_leases(
+                                run_id,fencing_token,lease_id,owner_client_id,status,expires_at,updated_at
+                            ) VALUES(?,?,?,?,?,?,?)""",
+                            (run_id, 1, "live-lease", "controller", "active", OBSERVED_AT + 120, _iso(OBSERVED_AT - age)),
+                        )
+                context_dir = root / ".coding-tools" / "task-contexts"
+                context_dir.mkdir()
+                context_file = context_dir / "current.json"
+                context_file.write_text(json.dumps({"orchestration": {
+                    "run_id": current_run, "wave_id": current_wave, "orchestration_state": "PROVING",
+                }}), encoding="utf-8")
+                if projected:
+                    (context_dir / "historical.json").write_text(json.dumps({"orchestration": {
+                        "run_id": run_id,
+                        "wave_id": "different-wave" if projected == "wrong_wave" else wave_id,
+                        "orchestration_state": "" if projected == "malformed" else (
+                            "ACCEPTING" if projected == "wrong_wave" else projected
+                        ),
+                    }}), encoding="utf-8")
+                before_ledger = ledger.path.read_bytes()
+                before_contexts = {file.name: file.read_bytes() for file in context_dir.glob("*.json")}
+                with open_lifecycle_census_snapshot(root) as snapshot:
+                    result = lifecycle_census(
+                        snapshot, workspace=root, observed_at=OBSERVED_AT,
+                        projection=read_task_projection(root), process_probe=self._probe,
+                    )
+                self.assertEqual(result["projection"]["classification"], expected)
+                if case == "historical_missing":
+                    self.assertEqual(result["projection"]["unprojected_historical_acceptance_count"], 1)
+                    self.assertEqual(result["projection"]["relevant_run_count"], 1)
+                    self.assertEqual(result["projection"]["bound_relevant_run_count"], 1)
+                    self.assertEqual(result["projection"]["missing_run_count"], 0)
+                pending = next(item for item in result["runs"] if item["run_id"] == run_id)
+                self.assertEqual(pending["run_status"], "active")
+                self.assertEqual(pending["classification"], "AWAITING_ACCEPTANCE")
+                self.assertEqual(pending["latest_state_after"], "ACCEPTING")
+                self.assertFalse(result["mutated_canonical_ledger"])
+                self.assertEqual(ledger.path.read_bytes(), before_ledger)
+                self.assertEqual({file.name: file.read_bytes() for file in context_dir.glob("*.json")}, before_contexts)
+
     def test_read_task_projection_prefers_contextual_over_nonempty_stale_global(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

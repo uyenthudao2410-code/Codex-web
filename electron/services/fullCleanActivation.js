@@ -1228,7 +1228,9 @@ class FullCleanActivation {
         });
       }
       if (!census || census.safe !== true) {
-        throw epochError(census?.code || 'ORCHESTRATION_STATE_UNCERTAIN', 'Canonical ledger census refused stopped-runtime activation.', census || {});
+        const reason = text(census?.reason);
+        const diagnostic = /^[a-z][a-z0-9_]{0,119}$/.test(reason) ? ` reason=${reason}` : '';
+        throw epochError(census?.code || 'ORCHESTRATION_STATE_UNCERTAIN', `Canonical ledger census refused stopped-runtime activation.${diagnostic}`, census || {});
       }
       runtime = {
         ...runtime,

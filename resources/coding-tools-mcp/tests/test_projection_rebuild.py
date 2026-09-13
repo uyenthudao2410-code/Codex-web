@@ -344,6 +344,15 @@ class ProjectionRebuildReceiptTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             bootstrap = Runtime(root, auth_token="projection-token")
+            # A cold runtime must also rebuild its receipt when an old pending
+            # acceptance has no current context, without accepting that RUN.
+            with patch("coding_tools_mcp.orchestration_ledger.utc_now", return_value="2000-01-01T00:00:00.000Z"):
+                historical_run = bootstrap.orchestration_ledger.create_run(objective="historical acceptance")
+                historical_wave = bootstrap.orchestration_ledger.create_wave(historical_run, execution_mode="mcp_only")
+                bootstrap.orchestration_ledger.append_event(
+                    historical_run, wave_id=historical_wave, event_type="state", state_after="ACCEPTING",
+                )
+            historical_events = bootstrap.orchestration_ledger.list_events(historical_run)
             run_ids: list[tuple[str, str, str]] = []
             for index, state in enumerate(("ACCEPTING", "PROVING")):
                 task_id = f"task-contextual-{index}"
@@ -379,6 +388,8 @@ class ProjectionRebuildReceiptTests(unittest.TestCase):
                 self.assertEqual(receipt["projection"]["mode"], "contextual")
                 self.assertEqual(receipt["projection"]["context_count"], 2)
                 self.assertEqual(len(receipt["projection"]["contextual_sha256"]), 64)
+                self.assertEqual(runtime.orchestration_ledger.get_run(historical_run)["status"], "active")
+                self.assertEqual(runtime.orchestration_ledger.list_events(historical_run), historical_events)
             finally:
                 runtime.close()
 
