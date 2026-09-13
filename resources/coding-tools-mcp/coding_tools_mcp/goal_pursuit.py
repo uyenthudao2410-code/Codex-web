@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
+import hmac
 import json
+import secrets
 import sqlite3
 from typing import Any
 
@@ -11,10 +14,14 @@ from .problem_lineage import PROBLEM_EVENT_SCHEMA_V11, PROBLEM_SCHEMA_VERSION
 
 GOAL_PURSUIT_SCHEMA_VERSION = 1
 GOAL_PURSUIT_MAX_CANDIDATES = 10
+GOAL_PURSUIT_MAX_CANDIDATE_PAGE_SIZE = 50
+GOAL_PURSUIT_CANDIDATE_CURSOR_SCHEMA_VERSION = 1
+GOAL_PURSUIT_CANDIDATE_CURSOR_MAX_CHARS = 2048
 GOAL_PURSUIT_MAX_ATTEMPTS = 50
 GOAL_PURSUIT_MAX_CORRELATIONS = 50
 GOAL_PURSUIT_LIVE_MAX_CHECKPOINTS = GOAL_PURSUIT_MAX_ATTEMPTS * 20
 GOAL_PURSUIT_LIVE_MAX_PROOF_REFS = 300
+_PROCESS_GOAL_CANDIDATE_CURSOR_SECRET = secrets.token_bytes(32)
 
 
 class GoalPursuitError(ValueError):
@@ -67,6 +74,98 @@ def _goal_candidate(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+def _candidate_page_limit(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_LIMIT_INVALID",
+            "candidate_limit must be an integer",
+        )
+    if value < 1 or value > GOAL_PURSUIT_MAX_CANDIDATE_PAGE_SIZE:
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_LIMIT_INVALID",
+            f"candidate_limit must be between 1 and {GOAL_PURSUIT_MAX_CANDIDATE_PAGE_SIZE}",
+        )
+    return value
+
+
+def _encode_goal_candidate_cursor(payload: dict[str, Any]) -> str:
+    raw = _json(payload).encode("utf-8")
+    signature = hmac.new(_PROCESS_GOAL_CANDIDATE_CURSOR_SECRET, raw, hashlib.sha256).digest()
+    body = base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+    proof = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+    return f"{body}.{proof}"
+
+
+def _decode_goal_candidate_cursor(token: Any) -> dict[str, Any]:
+    text = str(token or "").strip()
+    if (
+        not text
+        or len(text) > GOAL_PURSUIT_CANDIDATE_CURSOR_MAX_CHARS
+        or text.count(".") != 1
+        or any(character.isspace() for character in text)
+    ):
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_CURSOR_INVALID",
+            "candidate_cursor is invalid",
+        )
+    body, proof = text.split(".", 1)
+    try:
+        raw = base64.urlsafe_b64decode(body + "=" * (-len(body) % 4))
+        signature = base64.urlsafe_b64decode(proof + "=" * (-len(proof) % 4))
+        if (
+            base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=") != body
+            or base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=") != proof
+        ):
+            raise ValueError("non-canonical base64url encoding")
+        expected = hmac.new(_PROCESS_GOAL_CANDIDATE_CURSOR_SECRET, raw, hashlib.sha256).digest()
+        if not hmac.compare_digest(signature, expected):
+            raise ValueError("signature mismatch")
+        payload = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_CURSOR_INVALID",
+            "candidate_cursor is invalid",
+        ) from exc
+    if (
+        not isinstance(payload, dict)
+        or payload.get("schema_version") != GOAL_PURSUIT_CANDIDATE_CURSOR_SCHEMA_VERSION
+        or payload.get("operation_kind") != "goal_candidate_page"
+    ):
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_CURSOR_INVALID",
+            "candidate_cursor is unsupported",
+        )
+    numeric_fields = ("candidate_count", "latest_problem_event_seq", "position", "page_limit")
+    if any(isinstance(payload.get(name), bool) or not isinstance(payload.get(name), int) for name in numeric_fields):
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_CURSOR_INVALID",
+            "candidate_cursor contains invalid pagination state",
+        )
+    after_problem_id = str(payload.get("after_problem_id") or "").strip()
+    if (
+        int(payload["candidate_count"]) < 2
+        or int(payload["latest_problem_event_seq"]) < 1
+        or int(payload["position"]) < 1
+        or int(payload["position"]) >= int(payload["candidate_count"])
+        or int(payload["page_limit"]) < 1
+        or int(payload["page_limit"]) > GOAL_PURSUIT_MAX_CANDIDATE_PAGE_SIZE
+        or not after_problem_id
+        or len(after_problem_id) > 128
+        or any(character.isspace() for character in after_problem_id)
+    ):
+        raise GoalPursuitError(
+            "GOAL_CANDIDATE_CURSOR_INVALID",
+            "candidate_cursor contains invalid pagination state",
+        )
+    return {
+        "candidate_count": int(payload["candidate_count"]),
+        "latest_problem_event_seq": int(payload["latest_problem_event_seq"]),
+        "position": int(payload["position"]),
+        "page_limit": int(payload["page_limit"]),
+        "after_problem_id": after_problem_id,
+    }
+
+
 class GoalPursuitLedgerMixin:
     @staticmethod
     def _require_goal_schema(connection: sqlite3.Connection) -> None:
@@ -102,19 +201,44 @@ class GoalPursuitLedgerMixin:
             "problem_revision": int(rows[0]["problem_revision"]),
         }
 
+    @staticmethod
+    def _goal_candidate_snapshot(connection: sqlite3.Connection) -> dict[str, Any]:
+        row = connection.execute(
+            """SELECT COUNT(*) AS candidate_count,
+                      COALESCE(MAX(latest_problem_event_seq),0) AS latest_problem_event_seq
+               FROM problem_threads
+               WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED')"""
+        ).fetchone()
+        candidate_count = int(row["candidate_count"] if row is not None else 0)
+        latest_problem_event_seq = int(row["latest_problem_event_seq"] if row is not None else 0)
+        material = {
+            "candidate_count": candidate_count,
+            "latest_problem_event_seq": latest_problem_event_seq,
+        }
+        return {**material, "snapshot_fingerprint": _sha(material)}
+
     def goal_pursuit_resolve_identity(
         self,
         *,
         problem_id: str = "",
         problem_revision: int | None = None,
         run_id: str = "",
+        candidate_cursor: str = "",
+        candidate_limit: int | None = None,
     ) -> dict[str, Any]:
         explicit_problem = _opaque(problem_id, "problem_id", required=False)
         explicit_revision = _positive_revision(problem_revision, "problem_revision", required=False)
         exact_run = _opaque(run_id, "run_id", required=False)
+        page_cursor = str(candidate_cursor or "").strip()
+        requested_page_limit = _candidate_page_limit(candidate_limit) if candidate_limit is not None else None
         if explicit_revision is not None and not explicit_problem:
             raise GoalPursuitError(
                 "GOAL_IDENTITY_REQUIRED", "problem_revision cannot be supplied without problem_id"
+            )
+        if (page_cursor or requested_page_limit is not None) and (explicit_problem or exact_run):
+            raise GoalPursuitError(
+                "GOAL_CANDIDATE_PAGE_CONFLICT",
+                "candidate pagination cannot be combined with an exact Problem or RUN identity",
             )
         with self._lock, self._connect() as connection:
             self._require_goal_schema(connection)
@@ -197,32 +321,85 @@ class GoalPursuitLedgerMixin:
                     "revision_refreshed": run_binding["problem_revision"] != current_revision,
                     "timestamp_selection_used": False,
                 }
-            candidate_count = int(
-                connection.execute(
-                    """SELECT COUNT(*) FROM problem_threads
-                       WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED')"""
-                ).fetchone()[0]
-            )
-            rows = connection.execute(
-                """SELECT problem_id,current_revision,resolution_state
-                   FROM problem_threads
-                   WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED')
-                   ORDER BY problem_id LIMIT ?""",
-                (GOAL_PURSUIT_MAX_CANDIDATES,),
-            ).fetchall()
+            snapshot = self._goal_candidate_snapshot(connection)
+            candidate_count = int(snapshot["candidate_count"])
+            latest_problem_event_seq = int(snapshot["latest_problem_event_seq"])
+            position = 0
+            after_problem_id = ""
+            page_limit = requested_page_limit or GOAL_PURSUIT_MAX_CANDIDATES
+            if page_cursor:
+                cursor = _decode_goal_candidate_cursor(page_cursor)
+                if (
+                    cursor["candidate_count"] != candidate_count
+                    or cursor["latest_problem_event_seq"] != latest_problem_event_seq
+                ):
+                    raise GoalPursuitError(
+                        "GOAL_CANDIDATE_SNAPSHOT_CHANGED",
+                        "unresolved Goal backlog changed after the candidate page cursor was issued",
+                        details={
+                            "candidate_count": candidate_count,
+                            "candidate_snapshot_fingerprint": snapshot["snapshot_fingerprint"],
+                            "timestamp_selection_used": False,
+                        },
+                    )
+                if requested_page_limit is not None and requested_page_limit != cursor["page_limit"]:
+                    raise GoalPursuitError(
+                        "GOAL_CANDIDATE_CURSOR_SCOPE_MISMATCH",
+                        "candidate_limit does not match the issued candidate page cursor",
+                    )
+                position = int(cursor["position"])
+                after_problem_id = str(cursor["after_problem_id"])
+                page_limit = int(cursor["page_limit"])
             if candidate_count == 0:
                 raise GoalPursuitError(
                     "GOAL_IDENTITY_NOT_FOUND", "no unresolved Goal exists in the workspace"
                 )
+            if page_cursor and candidate_count <= 1:
+                raise GoalPursuitError(
+                    "GOAL_CANDIDATE_CURSOR_INVALID",
+                    "candidate_cursor no longer refers to an ambiguous Goal backlog",
+                )
+            rows = connection.execute(
+                """SELECT problem_id,current_revision,resolution_state
+                   FROM problem_threads
+                   WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED') AND problem_id>?
+                   ORDER BY problem_id LIMIT ?""",
+                (after_problem_id, page_limit),
+            ).fetchall()
             if candidate_count != 1:
                 candidates = [_goal_candidate(row) for row in rows]
+                if not candidates or position + len(candidates) > candidate_count:
+                    raise GoalPursuitError(
+                        "GOAL_CANDIDATE_CURSOR_INVALID",
+                        "candidate_cursor does not identify a valid page in the unresolved Goal backlog",
+                    )
+                next_position = position + len(candidates)
+                has_more = next_position < candidate_count
+                next_candidate_cursor = ""
+                if has_more:
+                    next_candidate_cursor = _encode_goal_candidate_cursor(
+                        {
+                            "schema_version": GOAL_PURSUIT_CANDIDATE_CURSOR_SCHEMA_VERSION,
+                            "operation_kind": "goal_candidate_page",
+                            "candidate_count": candidate_count,
+                            "latest_problem_event_seq": latest_problem_event_seq,
+                            "position": next_position,
+                            "page_limit": page_limit,
+                            "after_problem_id": str(rows[-1]["problem_id"]),
+                        }
+                    )
                 raise GoalPursuitError(
                     "GOAL_IDENTITY_AMBIGUOUS",
                     "more than one unresolved Goal exists; select an exact Problem identity",
                     details={
                         "candidate_count": candidate_count,
                         "candidates": candidates,
-                        "candidates_truncated": candidate_count > GOAL_PURSUIT_MAX_CANDIDATES,
+                        "candidates_truncated": len(candidates) != candidate_count,
+                        "candidate_page_position": position,
+                        "candidate_page_limit": page_limit,
+                        "candidate_page_has_more": has_more,
+                        "candidate_snapshot_fingerprint": snapshot["snapshot_fingerprint"],
+                        "next_candidate_cursor": next_candidate_cursor,
                         "timestamp_selection_used": False,
                     },
                 )
@@ -878,6 +1055,8 @@ class GoalPursuitControlMixin:
                 problem_id=str(event.get("problem_id") or ""),
                 problem_revision=event.get("problem_revision"),
                 run_id=str(event.get("run_id") or ""),
+                candidate_cursor=str(event.get("candidate_cursor") or ""),
+                candidate_limit=event.get("candidate_limit"),
             )
             projection = self.orchestration_ledger.goal_pursuit_projection(
                 problem_id=str(identity["problem_id"]),

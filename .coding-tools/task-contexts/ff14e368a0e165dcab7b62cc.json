@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "3e4cf05762a84b8094b6bbf863151263",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "4TlJ_8UX1hrtX7BNHCersCfE",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1452,
+    "finished_at": "2026-09-12T12:40:25.084Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T12:40:23.352Z",
+  "updated_at": "2026-09-12T12:40:25.084Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:40:23.352Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:40:23.614Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryActionStore.js'; $c=Get-Content $p; foreach($r in @(@(720,835),@(1040,1130),@(1235,1425))){ for($i=$r[0];$i -le $r[1];$i++){ '{0}:{1}' -f ($i+1),$c[$i] }; '---' }\"",
+        "session_id": "4TlJ_8UX1hrtX7BNHCersCfE"
+      }
+    },
+    {
+      "time": "2026-09-12T12:40:25.084Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='electron/services/recoveryActionStore.js'; $c=Get-Content $p; foreach($r in @(@(720,835),@(1040,1130),@(1235,1425))){ for($i=$r[0];$i -le $r[1];$i++){ '{0}:{1}' -f ($i+1),$c[$i] }; '---' }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

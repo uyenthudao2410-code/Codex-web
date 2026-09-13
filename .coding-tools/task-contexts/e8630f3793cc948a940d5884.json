@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "b82f643ac4af463baf6ea8b7c225fe8f",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-12T12:41:54.585Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+  "next_step": "",
+  "created_at": "2026-09-12T12:41:54.578Z",
+  "updated_at": "2026-09-12T12:41:54.585Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:41:54.578Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:41:54.585Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -c \"import sqlite3,json; db=sqlite3.connect(r'.coding-tools/orchestration/ledger.sqlite3'); rows=db.execute(\\\"select checkpoint_id,run_id,wave_id,git_head,proof_fingerprint,created_at,metadata_json from checkpoints where status='accepted' and git_head=? order by created_at desc limit 20\\\",('228b91e6128479d4b3699e622d4f51dd431acb24',)).fetchall(); out=[]; [out.append({'checkpoint_id':r[0],'run_id':r[1],'wave_id':r[2],'git_head':r[3],'proof_fingerprint':r[4],'created_at':r[5],'accepted_path",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-12T12:41:54.585Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "PERMISSION_REQUIRED"
+      }
+    }
+  ]
+}

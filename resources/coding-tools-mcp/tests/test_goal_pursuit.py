@@ -164,6 +164,74 @@ class GoalPursuitIdentityTests(unittest.TestCase):
             )
             self.assertFalse(ambiguous.exception.details["timestamp_selection_used"])
 
+    def test_unresolved_goal_candidates_are_paginated_without_skip_or_duplicate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = OrchestrationLedger(Path(directory))
+            ledger.migrate_problem_lineage_schema()
+            expected = sorted(
+                str(open_problem(ledger, f"Paged-{index:02d}")["event"]["problem_id"])
+                for index in range(13)
+            )
+            observed: list[str] = []
+            cursor = ""
+            while True:
+                with self.assertRaises(GoalPursuitError) as ambiguous:
+                    ledger.goal_pursuit_resolve_identity(
+                        candidate_cursor=cursor,
+                        candidate_limit=5,
+                    )
+                self.assertEqual(ambiguous.exception.code, "GOAL_IDENTITY_AMBIGUOUS")
+                details = ambiguous.exception.details
+                self.assertEqual(details["candidate_count"], 13)
+                self.assertLessEqual(len(details["candidates"]), 5)
+                observed.extend(item["problem_id"] for item in details["candidates"])
+                next_cursor = details["next_candidate_cursor"]
+                if not next_cursor:
+                    self.assertFalse(details["candidate_page_has_more"])
+                    break
+                self.assertTrue(details["candidate_page_has_more"])
+                cursor = next_cursor
+            self.assertEqual(observed, expected)
+            self.assertEqual(len(observed), len(set(observed)))
+
+    def test_goal_candidate_cursor_fails_closed_when_backlog_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = OrchestrationLedger(Path(directory))
+            ledger.migrate_problem_lineage_schema()
+            for index in range(12):
+                open_problem(ledger, f"Snapshot-{index:02d}")
+            with self.assertRaises(GoalPursuitError) as first_page:
+                ledger.goal_pursuit_resolve_identity(candidate_limit=4)
+            cursor = first_page.exception.details["next_candidate_cursor"]
+            self.assertTrue(cursor)
+            open_problem(ledger, "Snapshot-New")
+            with self.assertRaises(GoalPursuitError) as changed:
+                ledger.goal_pursuit_resolve_identity(
+                    candidate_cursor=cursor,
+                    candidate_limit=4,
+                )
+            self.assertEqual(changed.exception.code, "GOAL_CANDIDATE_SNAPSHOT_CHANGED")
+
+    def test_goal_candidate_cursor_is_tamper_evident_and_query_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ledger = OrchestrationLedger(Path(directory))
+            ledger.migrate_problem_lineage_schema()
+            for index in range(12):
+                open_problem(ledger, f"Tamper-{index:02d}")
+            with self.assertRaises(GoalPursuitError) as first_page:
+                ledger.goal_pursuit_resolve_identity(candidate_limit=4)
+            cursor = first_page.exception.details["next_candidate_cursor"]
+            tampered = cursor[:-1] + ("A" if cursor[-1] != "A" else "B")
+            with self.assertRaises(GoalPursuitError) as invalid:
+                ledger.goal_pursuit_resolve_identity(candidate_cursor=tampered)
+            self.assertEqual(invalid.exception.code, "GOAL_CANDIDATE_CURSOR_INVALID")
+            with self.assertRaises(GoalPursuitError) as scope_mismatch:
+                ledger.goal_pursuit_resolve_identity(
+                    candidate_cursor=cursor,
+                    candidate_limit=5,
+                )
+            self.assertEqual(scope_mismatch.exception.code, "GOAL_CANDIDATE_CURSOR_SCOPE_MISMATCH")
+
     def test_exact_run_binding_resolves_and_conflicting_explicit_goal_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             ledger = OrchestrationLedger(Path(directory))
@@ -323,6 +391,14 @@ class GoalPursuitSurfaceTests(unittest.TestCase):
                 "action": "goal",
                 "goal_action": "get",
                 "goal_event": {"problem_id": "problem-1", "problem_revision": 1},
+            },
+        )
+        validate_arguments(
+            "task_control",
+            {
+                "action": "goal",
+                "goal_action": "resolve",
+                "goal_event": {"candidate_limit": 25},
             },
         )
         with self.assertRaises(JsonRpcError):

@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "dbe672634996425a9d432e30321cb8b9",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "-91lzgAd0_bcyHExixN2M9Ac",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 347,
+    "finished_at": "2026-09-12T12:42:50.039Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T12:42:49.385Z",
+  "updated_at": "2026-09-12T12:42:50.039Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:42:49.385Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:42:49.743Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"run_semantic_localization\" 7bc1caee37107a15e74eb078b52fe314e5fa33ab -- resources/coding-tools-mcp/coding_tools_mcp/context_tools.py && git show 7bc1caee37107a15e74eb078b52fe314e5fa33ab:resources/coding-tools-mcp/coding_tools_mcp/context_tools.py | findstr /n /c:\"run_semantic_localization\" /c:\"semantic_provider_resource_status\"",
+        "session_id": "-91lzgAd0_bcyHExixN2M9Ac"
+      }
+    },
+    {
+      "time": "2026-09-12T12:42:50.039Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"run_semantic_localization\" 7bc1caee37107a15e74eb078b52fe314e5fa33ab -- resources/coding-tools-mcp/coding_tools_mcp/context_tools.py && git show 7bc1caee37107a15e74eb078b52fe314e5fa33ab:resources/coding-tools-mcp/coding_tools_mcp/context_tools.py | findstr /n /c:\"run_semantic_localization\" /c:\"semantic_provider_resource_status\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

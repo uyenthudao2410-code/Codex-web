@@ -1,0 +1,924 @@
+[
+  {
+    "version": 2,
+    "task_id": "4d7ddb193ba044448c29d665b5b0b83f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Nc3OyQtOKWEBu08gECZkn-yl",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 345,
+      "finished_at": "2026-09-12T14:44:05.734Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T14:43:28.965Z",
+    "updated_at": "2026-09-12T14:44:05.734Z",
+    "events": [
+      {
+        "time": "2026-09-12T14:43:28.965Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:29.366Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"PROVISIONALLY_RESOLVED|problem_state|candidate_count\" resources scripts tests -g \"*.py\"",
+          "session_id": "2iNoppG1AVg0nUblyXDcW0oE"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:29.640Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"PROVISIONALLY_RESOLVED|problem_state|candidate_count\" resources scripts tests -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:36.649Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"candidate_count|resolution_state|LIMIT\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+          "session_id": "SUldunmun2zcnx0TmnDhhVH8"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:36.931Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"candidate_count|resolution_state|LIMIT\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:43.656Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"SELECT|LIMIT|resolution_state|candidates\\[:|candidates =|rows =\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+          "session_id": "MrXdr63r9pvqLPr8ZmL3QGcG"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:43.876Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"SELECT|LIMIT|resolution_state|candidates\\[:|candidates =|rows =\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:56.390Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"GOAL_PURSUIT_LIVE_MAX|MAX_CANDIDATE|candidate_count\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+          "session_id": "cjYHdvIamRhs5YslDM1DFwq8"
+        }
+      },
+      {
+        "time": "2026-09-12T14:43:56.693Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"GOAL_PURSUIT_LIVE_MAX|MAX_CANDIDATE|candidate_count\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:05.415Z",
+        "event": "command_started",
+        "details": {
+          "command": "where sqlite3 && sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT resolution_state,COUNT(*) FROM problem_threads GROUP BY resolution_state ORDER BY resolution_state; SELECT problem_id,current_revision,resolution_state,updated_at FROM problem_threads WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED') ORDER BY resolution_state,updated_at,problem_id;\"",
+          "session_id": "Nc3OyQtOKWEBu08gECZkn-yl"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:05.734Z",
+        "event": "command_finished",
+        "details": {
+          "command": "where sqlite3 && sqlite3 .coding-tools/orchestration/ledger.sqlite3 \"SELECT resolution_state,COUNT(*) FROM problem_threads GROUP BY resolution_state ORDER BY resolution_state; SELECT problem_id,current_revision,resolution_state,updated_at FROM problem_threads WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED') ORDER BY resolution_state,updated_at,problem_id;\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T14:44:28.462Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "852ac972d32d48a39aaf7e2f9618e653",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-12T14:47:10.095Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Inline interpreter or shell code requires explicit permission because network and filesystem effects cannot be verified statically.",
+    "next_step": "",
+    "created_at": "2026-09-12T14:44:28.464Z",
+    "updated_at": "2026-09-12T14:47:10.095Z",
+    "events": [
+      {
+        "time": "2026-09-12T14:44:28.464Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:28.749Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_resolution_economics|resolution_outcomes|provisional_threads\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "tTOjWXlnDDUTlw3QQiaHlIHK"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:29.010Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_resolution_economics|resolution_outcomes|provisional_threads\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:39.706Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "session_id": "Q44VzKqMMlw1tcLair6buusQ"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:40.059Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:50.157Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web",
+          "session_id": "dNA2a4atdtDbmiVc611ZLTKm"
+        }
+      },
+      {
+        "time": "2026-09-12T14:44:53.210Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:03.023Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.resolution_outcomes | ConvertTo-Json -Depth 8\"",
+          "session_id": "F9NnJtfI4y2oIqfRfbej9EVN"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:07.686Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.resolution_outcomes | ConvertTo-Json -Depth 8\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:17.498Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | Select-Object -First 1 | ConvertTo-Json -Depth 6\"",
+          "session_id": "QYfBcdy7aJrc8Ua5PyWudyoR"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:22.194Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | Select-Object -First 1 | ConvertTo-Json -Depth 6\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:28.191Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.PSObject.Properties.Name\"",
+          "session_id": "EEi4gRTAhDbnqNpHTZW_tgik"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:32.768Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:39.024Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.outcome | ConvertTo-Json -Depth 5\"",
+          "session_id": "F3GF_JjC7l0W6FgYQWz_UALt"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:43.976Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.outcome | ConvertTo-Json -Depth 5\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:49.666Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.coverage | ConvertTo-Json -Depth 5\"",
+          "session_id": "87YdjnUfkKUgPmEW1_Bus-Q0"
+        }
+      },
+      {
+        "time": "2026-09-12T14:45:54.319Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; $j.coverage | ConvertTo-Json -Depth 5\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:00.516Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --help",
+          "session_id": "v_XwppabqlEyWU_2I6DqVii0"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:00.952Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:09.650Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r | ConvertTo-Json -Depth 8\"",
+          "session_id": "05cEpl3-0fO-IjaGJhQ8PiCA"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:14.918Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r | ConvertTo-Json -Depth 8\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:24.681Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "session_id": "K5QYyX9eKRxAQDGHtJ-sVnNa"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:29.965Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_lineage_canary.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:40.640Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "session_id": "-M_bcv8aeqGK2Pip7dTdFsgW"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:45.201Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:46:55.507Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'human:'; $j.human.PSObject.Properties.Name; 'lifecycle:'; $j.lifecycle_economics.PSObject.Properties.Name; 'time:'; $j.time.PSObject.Properties.Name\"",
+          "session_id": "qT5l6s0PBaCYlYJKh297MnO3"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:00.140Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j = $r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'human:'; $j.human.PSObject.Properties.Name; 'lifecycle:'; $j.lifecycle_economics.PSObject.Properties.Name; 'time:'; $j.time.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:10.095Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -c \"import sqlite3,json; c=sqlite3.connect('file:.coding-tools/orchestration/ledger.sqlite3?mode=ro',uri=True); c.row_factory=sqlite3.Row; rows=c.execute(\\\"SELECT problem_id,current_revision,resolution_state,created_at,updated_at,closed_at FROM problem_threads WHERE resolution_state NOT IN ('RESOLVED_CONFIRMED','ABANDONED') ORDER BY resolution_state,updated_at,problem_id\\\").fetchall(); print(json.dumps([dict(r) for r in rows],ensure_ascii=False,indent=2))\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:10.095Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "PERMISSION_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T14:47:18.988Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a911a06f5eb6487fa730a586083470b0",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "PWoKEJVTDjQA2KLMF8j6G_3P",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1439,
+      "finished_at": "2026-09-12T14:53:32.190Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T14:47:18.990Z",
+    "updated_at": "2026-09-12T14:53:32.190Z",
+    "events": [
+      {
+        "time": "2026-09-12T14:47:18.990Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:19.340Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state|PROVISIONALLY_RESOLVED|BLOCKED|RESOLVED_CONFIRMED\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "session_id": "pc9xXt0EAMHHfVZn0v_STjgs"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:19.632Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state|PROVISIONALLY_RESOLVED|BLOCKED|RESOLVED_CONFIRMED\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:28.573Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --help",
+          "session_id": "ANMC-iPJ9RyQqjMClcSIH1Yv"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:28.940Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:37.287Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "session_id": "nDJ3UOpEUzEBHF-vkV0H40bN"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:47.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:47:54.548Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace E:\\DEV\\Codex-web",
+          "session_id": "13Erjh07W3-SSnIfOtycKb94"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:02.573Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace E:\\DEV\\Codex-web",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:12.598Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' --stale-details | ConvertFrom-Json; [pscustomobject]@{ lifecycle_summary=$r.lifecycle_summary; stale_run_audit=$r.stale_run_audit } | ConvertTo-Json -Depth 8\"",
+          "session_id": "Z5XzmfjKyCpmpqbjEeDzXDkS"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:21.678Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' --stale-details | ConvertFrom-Json; [pscustomobject]@{ lifecycle_summary=$r.lifecycle_summary; stale_run_audit=$r.stale_run_audit } | ConvertTo-Json -Depth 8\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:30.202Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' --stale-details | ConvertFrom-Json; $r.PSObject.Properties.Name\"",
+          "session_id": "NDbWgLU-CRfN2_UaTH3KDwQ_"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:39.790Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_empirical_readiness.py --workspace 'E:\\DEV\\Codex-web' --stale-details | ConvertFrom-Json; $r.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:45.813Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"unbound_live_resource_residues|managed_job_classification_counts|LIVE_OWNED\" resources/coding-tools-mcp -g \"*.py\"",
+          "session_id": "AePTF4qbGyxieMiFAx8DlZxS"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:46.074Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"unbound_live_resource_residues|managed_job_classification_counts|LIVE_OWNED\" resources/coding-tools-mcp -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:54.964Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"report_lifecycle_census\" -S resources/coding-tools-mcp scripts tests",
+          "session_id": "k0ndfcz5b9RlayXA18Bd4R4V"
+        }
+      },
+      {
+        "time": "2026-09-12T14:48:55.173Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"report_lifecycle_census\" -S resources/coding-tools-mcp scripts tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:04.170Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --help",
+          "session_id": "4zFci6ZnHJ50I7B-ExZpUlTT"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:04.523Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --help",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:13.298Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.PSObject.Properties.Name\"",
+          "session_id": "qi4jFT0775FD9YsFYELgS1DR"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:19.248Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:28.536Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; 'run_props'; ($r.runs | Select-Object -First 1).PSObject.Properties.Name; 'job_props'; ($r.managed_jobs | Select-Object -First 1).PSObject.Properties.Name; 'unbound_props'; ($r.unbound_live_resources | Select-Object -First 1).PSObject.Properties.Name\"",
+          "session_id": "8Q8rir8bvlEVbLK-vohstLZ7"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:34.582Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; 'run_props'; ($r.runs | Select-Object -First 1).PSObject.Properties.Name; 'job_props'; ($r.managed_jobs | Select-Object -First 1).PSObject.Properties.Name; 'unbound_props'; ($r.unbound_live_resources | Select-Object -First 1).PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:44.198Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; [pscustomobject]@{ active_candidates=@($r.runs | Where-Object { $_.classification -eq 'THRESHOLD_SENSITIVE_STALE_CANDIDATE' }); live_jobs=@($r.managed_jobs | Where-Object { $_.classification -eq 'LIVE_OWNED' }); unbound_live_resources=@($r.unbound_live_resources) } | ConvertTo-Json -Depth 8\"",
+          "session_id": "a906vTVw01R2HJVJupLBr2Zm"
+        }
+      },
+      {
+        "time": "2026-09-12T14:49:50.589Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; [pscustomobject]@{ active_candidates=@($r.runs | Where-Object { $_.classification -eq 'THRESHOLD_SENSITIVE_STALE_CANDIDATE' }); live_jobs=@($r.managed_jobs | Where-Object { $_.classification -eq 'LIVE_OWNED' }); unbound_live_resources=@($r.unbound_live_resources) } | ConvertTo-Json -Depth 8\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:52:51.233Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_RUN_UNBOUND"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:00.493Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); $r.runs | Where-Object { $ids -contains $_.run_id } | Select-Object run_id,state,active_wave_id,objective,task_id,problem_id,problem_revision,updated_at,created_at,proof_count,passed_proof_count,applied_patch,terminal_archival_ev",
+          "session_id": "rlCZrzuMKnfxg1yWzsrD0vyL"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:06.664Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); $r.runs | Where-Object { $ids -contains $_.run_id } | Select-Object run_id,state,active_wave_id,objective,task_id,problem_id,problem_revision,updated_at,created_at,proof_count,passed_proof_count,applied_patch,terminal_archival_ev",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:15.531Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; ($r.runs | Where-Object { $_.run_id -eq 'e60e4e8bba6b439eba1b1c8808640002' }).PSObject.Properties.Name\"",
+          "session_id": "4BklnLK5fqxFkubaRrnkpYDb"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:21.565Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; ($r.runs | Where-Object { $_.run_id -eq 'e60e4e8bba6b439eba1b1c8808640002' }).PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:30.697Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); foreach($id in $ids){ $x=$r.runs|Where-Object{$_.run_id -eq $id}; if($x){ [pscustomobject]@{run_id=$id;run_status=$x.run_status;last_event=$x.last_event;latest_state_after=$x.latest_state_after;latest_activity_at=$x.latest_activi",
+          "session_id": "PWoKEJVTDjQA2KLMF8j6G_3P"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:32.190Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); foreach($id in $ids){ $x=$r.runs|Where-Object{$_.run_id -eq $id}; if($x){ [pscustomobject]@{run_id=$id;run_status=$x.run_status;last_event=$x.last_event;latest_state_after=$x.latest_state_after;latest_activity_at=$x.latest_activi",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T14:53:41.459Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6d5424f30b6c4d3387dd342ce10b28fe",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "qmtDvWdvfUD2u-V3RKrbvHOy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 315,
+      "finished_at": "2026-09-12T14:54:54.239Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T14:53:41.461Z",
+    "updated_at": "2026-09-12T14:54:54.239Z",
+    "events": [
+      {
+        "time": "2026-09-12T14:53:41.461Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:41.797Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); $out=@(); foreach($id in $ids){ $x=$r.runs|Where-Object{$_.run_id -eq $id}; if($null -ne $x){ $out += [pscustomobject]@{run_id=$id;run_status=$x.run_status;last_event=$x.last_event;latest_state_after=$x.latest_state_after;latest_",
+          "session_id": "8qaQ8eRbKEKNg9Dnp80LhsWh"
+        }
+      },
+      {
+        "time": "2026-09-12T14:53:48.122Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $ids=@('e60e4e8bba6b439eba1b1c8808640002','166516b0ce8b4f8586029b1bb2c70df0','85f2addad7884a4687f69eb409c03973'); $out=@(); foreach($id in $ids){ $x=$r.runs|Where-Object{$_.run_id -eq $id}; if($null -ne $x){ $out += [pscustomobject]@{run_id=$id;run_status=$x.run_status;last_event=$x.last_event;latest_state_after=$x.latest_state_after;latest_",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:05.547Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | Select-Object -First 2 | ConvertTo-Json -Depth 10\"",
+          "session_id": "yYe7foKUTR21LuXjBfxyQftV"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:10.208Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | Select-Object -First 2 | ConvertTo-Json -Depth 10\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:19.647Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; ($r.result.problem_revision_journeys.journeys | Select-Object -First 1).PSObject.Properties.Name\"",
+          "session_id": "yysMsP6LbuyyIe4C1P2DuQ1v"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:24.440Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; ($r.result.problem_revision_journeys.journeys | Select-Object -First 1).PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:34.748Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; (($r.result.problem_revision_journeys.journeys | Select-Object -First 1).outcome).PSObject.Properties.Name\"",
+          "session_id": "3w83t__RFdSoweBNIbhSapRP"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:39.334Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; (($r.result.problem_revision_journeys.journeys | Select-Object -First 1).outcome).PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:54.003Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"def .*problem|problem_threads|resolution_state\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" | Select-Object -First 200",
+          "session_id": "qmtDvWdvfUD2u-V3RKrbvHOy"
+        }
+      },
+      {
+        "time": "2026-09-12T14:54:54.239Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"def .*problem|problem_threads|resolution_state\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" | Select-Object -First 200",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T14:55:02.388Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "7935a51f1d56401fa21dc3a59e0f6701",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "2LFWlCUS-Q3_totXFf9x8dzy",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 310,
+      "finished_at": "2026-09-12T14:56:01.766Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-12T14:55:02.390Z",
+    "updated_at": "2026-09-12T14:56:01.766Z",
+    "events": [
+      {
+        "time": "2026-09-12T14:55:02.390Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:02.671Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+          "session_id": "tuY7fUSUNqcjrKxTf8XQHqB-"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:02.922Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"problem_threads|resolution_state\" resources/coding-tools-mcp/scripts resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:11.372Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'human'; $j.human.PSObject.Properties.Name; 'time'; $j.time.PSObject.Properties.Name; 'coverage'; $j.coverage.PSObject.Properties.Name; 'lifecycle'; $j.lifecycle_economics.PSObject.Properties.Name\"",
+          "session_id": "3eSCGJoecvpor4nCEESlriVU"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:16.043Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'human'; $j.human.PSObject.Properties.Name; 'time'; $j.time.PSObject.Properties.Name; 'coverage'; $j.coverage.PSObject.Properties.Name; 'lifecycle'; $j.lifecycle_economics.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:21.631Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'problem_attribution'; $j.coverage.problem_attribution.PSObject.Properties.Name; 'outcome_receipt'; $j.coverage.outcome_receipt.PSObject.Properties.Name; 'lifecycle'; $j.coverage.lifecycle.PSObject.Properties.Name\"",
+          "session_id": "1UOuL0M8EXjqBPk7W4sNEo2y"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:26.314Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Select-Object -First 1; 'problem_attribution'; $j.coverage.problem_attribution.PSObject.Properties.Name; 'outcome_receipt'; $j.coverage.outcome_receipt.PSObject.Properties.Name; 'lifecycle'; $j.coverage.lifecycle.PSObject.Properties.Name\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:48.447Z",
+        "event": "command_started",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web | rg -n -C 4 \"\\\"resolution_state\\\"|\\\"BLOCKED\\\"|\\\"OPEN\\\"|\\\"PROVISIONALLY_RESOLVED\\\"\"",
+          "session_id": "_o9DcgZvLoI_tHghixJRkE0y"
+        }
+      },
+      {
+        "time": "2026-09-12T14:55:51.191Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace E:\\DEV\\Codex-web | rg -n -C 4 \"\\\"resolution_state\\\"|\\\"BLOCKED\\\"|\\\"OPEN\\\"|\\\"PROVISIONALLY_RESOLVED\\\"\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-12T14:56:01.508Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l \"problem_threads\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "session_id": "2LFWlCUS-Q3_totXFf9x8dzy"
+        }
+      },
+      {
+        "time": "2026-09-12T14:56:01.766Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l \"problem_threads\" resources/coding-tools-mcp/scripts -g \"*.py\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-12T14:56:17.463Z",
+    "archive_reason": "finished"
+  }
+]

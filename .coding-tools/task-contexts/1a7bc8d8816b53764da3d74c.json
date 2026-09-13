@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "bcb701f2753a4c56a930a4ee1d2779d8",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "occwR-6bfQaYuf75TIj_9T5M",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 269,
+    "finished_at": "2026-09-12T12:38:44.405Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T12:38:43.856Z",
+  "updated_at": "2026-09-12T12:38:44.405Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:38:43.856Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:38:44.131Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"supervisorRequestFile\" -- electron",
+        "session_id": "occwR-6bfQaYuf75TIj_9T5M"
+      }
+    },
+    {
+      "time": "2026-09-12T12:38:44.405Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"supervisorRequestFile\" -- electron",
+        "status": "passed"
+      }
+    }
+  ]
+}

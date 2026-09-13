@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c549319443af49b990adf71a3d9c2cab",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "tflQW9D1cBKfpU-LU702n2_o",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 255,
+    "duration_ms": 269,
+    "finished_at": "2026-09-12T12:38:21.339Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T12:38:20.816Z",
+  "updated_at": "2026-09-12T12:38:21.339Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:38:20.816Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:38:21.105Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"serviceSupervisorRestartRequest\\|claimSupervisorRestartRequest\\|supervisorRestart\" -- electron/services/runtimeOrchestrator.js electron | head -n 120",
+        "session_id": "tflQW9D1cBKfpU-LU702n2_o"
+      }
+    },
+    {
+      "time": "2026-09-12T12:38:21.339Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"serviceSupervisorRestartRequest\\|claimSupervisorRestartRequest\\|supervisorRestart\" -- electron/services/runtimeOrchestrator.js electron | head -n 120",
+        "status": "failed"
+      }
+    }
+  ]
+}

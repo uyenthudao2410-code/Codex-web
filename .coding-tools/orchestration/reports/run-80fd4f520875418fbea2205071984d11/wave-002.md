@@ -10,7 +10,7 @@
 - Base HEAD: `7bc1caee37107a15e74eb078b52fe314e5fa33ab`
 - Worktree fingerprint: `66042a7a697d73e6b7e4d1211071977fe3b3cc4309703bac082a15491933f60c`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -50,6 +50,12 @@
 | 51948 | 2026-09-12T11:58:01.682Z | managed_process_admitted |  |  | owner=default |
 | 51949 | 2026-09-12T11:58:02.130Z | managed_process_started |  |  | owner=default |
 | 51950 | 2026-09-12T11:58:02.748Z | managed_process_terminal |  |  | owner=default |
+| 52133 | 2026-09-12T13:53:24.125Z | continuity_telemetry_recorded |  |  |  |
+| 52134 | 2026-09-12T13:53:34.558Z | observation_span_recorded |  |  |  |
+| 52135 | 2026-09-12T13:53:34.786Z | failure_observed | ACCEPTING | ACCEPTING | reason=Regression oracle is green, but full_problem exact-wave coverage is incomplete because the required live native-semantic known-symbol and measurement_recovery evidence was obtained after activation in a different diagnostic wave. Replan the same RUN to capture live semantic handling and rerun the focused regression oracle in one canonical wave without further source changes.; failure_class=SOL_REJECTED |
+| 52136 | 2026-09-12T13:53:35.023Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
+| 52137 | 2026-09-12T13:53:35.207Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 52138 | 2026-09-12T13:55:10.878Z | continuity_telemetry_recorded |  |  |  |
 
 ## Proof
 
@@ -66,5 +72,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `59`
-- Chain head: `2258492c5c9e13cffda76a5993e036e39b441dfb0ae5db8a2eadd2835e536039`
+- Events checked: `139`
+- Chain head: `016a500b3c49003bd430657c6775f289598ec0bd9fa862541bfa1fd281abe16b`

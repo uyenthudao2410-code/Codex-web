@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "c8af712132b64ef6a323364177a6a06a",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "T6Hux90q8KYZiwF_ayEYPjuU",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1317,
+    "finished_at": "2026-09-12T12:42:34.327Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-12T12:42:32.704Z",
+  "updated_at": "2026-09-12T12:42:34.327Z",
+  "events": [
+    {
+      "time": "2026-09-12T12:42:32.704Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T12:42:33.044Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py'; $c=Get-Content $p; for($i=930;$i -le 1035;$i++){ '{0}:{1}' -f ($i+1),$c[$i] }; '---'; for($i=1110;$i -le 1195;$i++){ '{0}:{1}' -f ($i+1),$c[$i] }\"",
+        "session_id": "T6Hux90q8KYZiwF_ayEYPjuU"
+      }
+    },
+    {
+      "time": "2026-09-12T12:42:34.327Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p='resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py'; $c=Get-Content $p; for($i=930;$i -le 1035;$i++){ '{0}:{1}' -f ($i+1),$c[$i] }; '---'; for($i=1110;$i -le 1195;$i++){ '{0}:{1}' -f ($i+1),$c[$i] }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

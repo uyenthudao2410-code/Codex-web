@@ -1,0 +1,195 @@
+{
+  "version": 2,
+  "task_id": "69414dc47358412a94c7e99537d7cdfa",
+  "orchestration": {
+    "run_id": "62ba1e703d02490b8d39ac2b70580a44",
+    "wave_id": "7c67f3049c83462ca8ddb91d5cddb8ce",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "228b91e6128479d4b3699e622d4f51dd431acb24",
+    "worktree_fp": "00697acc77f9b41ec1be4e83a56a6d0fb4962e27baf8ef02662a5bd8b4ea7aaf",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "0DrxA-FROlO6RmhCjAAIV96n",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1932,
+    "finished_at": "2026-09-12T14:06:40.455Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "786198db6dab05e554b625c95092cc76453de583f22743e42128709aa53141db"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-62ba1e703d02490b8d39ac2b70580a44\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-62ba1e703d02490b8d39ac2b70580a44\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "62ba1e703d02490b8d39ac2b70580a44",
+      "wave_id": "7c67f3049c83462ca8ddb91d5cddb8ce",
+      "checkpoint_id": "",
+      "base_head": "228b91e6128479d4b3699e622d4f51dd431acb24",
+      "worktree_fp": "00697acc77f9b41ec1be4e83a56a6d0fb4962e27baf8ef02662a5bd8b4ea7aaf",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Independent post-checkpoint observer after canonical checkpoint ff7f767ab89a4a419142f84a5e3f4cd2. Read-only only. Verify that the accepted semantic-provider outcome remains live outside the accepted RUN: query known symbol normalize_semantic_scope through the current semantic-first context path and observe whether webcodex_native_lsp handles it without text fallback or SEMANTIC_PROVIDER_CALL_FAILED. Do not mutate source, Problem state, accepted RUN, package, release, deploy, restart, commit, push, clean, or reset.",
+        "objective_revision": 1,
+        "objective_sha256": "3805fd0f77c1614900da24afcbbe96c610ef5a45af45560cc60bf849104ab2ee",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "d238a9d0b11ee526b813015f1e48ad43386921c050ccda62d13cb3bdc0148655",
+  "completion_report_acknowledged_id": "d238a9d0b11ee526b813015f1e48ad43386921c050ccda62d13cb3bdc0148655",
+  "completion_report_acknowledged_at": "2026-09-12T14:08:19.491Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-12T14:06:26.564Z",
+  "updated_at": "2026-09-12T14:08:19.784Z",
+  "events": [
+    {
+      "time": "2026-09-12T14:06:26.564Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-12T14:06:26.890Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"git grep -n -E 'OBTAIN_INDEPENDENT_OUTCOME|reconcile_provisional|outcome_receipt|PROVISIONALLY_RESOLVED|CONFIRMED_RESOLUTION' -- resources/coding-tools-mcp electron tests | Select-Object -First 360\"",
+        "session_id": "NOnzdHOG9lXzZZDRo79YM4h3"
+      }
+    },
+    {
+      "time": "2026-09-12T14:06:28.759Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"git grep -n -E 'OBTAIN_INDEPENDENT_OUTCOME|reconcile_provisional|outcome_receipt|PROVISIONALLY_RESOLVED|CONFIRMED_RESOLUTION' -- resources/coding-tools-mcp electron tests | Select-Object -First 360\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T14:06:38.541Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py',180,315),@('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py',1180,1305),@('resources/coding-tools-mcp/tests/test_problem_lineage.py',825,885)); foreach($s in $sets){$p=$s[0];$a=[int]$s[1];$b=[int]$s[2]; '---'+$p+'---'; $c=Get-Content -LiteralPath $p; for($i=$a-1;$i -lt [Math]::Min($b,$c.Count);$i++){('{0}:{1}' -f ($i+1),$c[$i])}}\"",
+        "session_id": "0DrxA-FROlO6RmhCjAAIV96n"
+      }
+    },
+    {
+      "time": "2026-09-12T14:06:40.455Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$sets=@(@('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage_control.py',180,315),@('resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py',1180,1305),@('resources/coding-tools-mcp/tests/test_problem_lineage.py',825,885)); foreach($s in $sets){$p=$s[0];$a=[int]$s[1];$b=[int]$s[2]; '---'+$p+'---'; $c=Get-Content -LiteralPath $p; for($i=$a-1;$i -lt [Math]::Min($b,$c.Count);$i++){('{0}:{1}' -f ($i+1),$c[$i])}}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-12T14:06:58.068Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-12T14:07:01.751Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-12T14:07:01.757Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-12T14:07:25.674Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "d238a9d0b11ee526b813015f1e48ad43386921c050ccda62d13cb3bdc0148655"
+      }
+    },
+    {
+      "time": "2026-09-12T14:07:32.342Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-12T14:08:19.491Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "d238a9d0b11ee526b813015f1e48ad43386921c050ccda62d13cb3bdc0148655"
+      }
+    }
+  ]
+}
