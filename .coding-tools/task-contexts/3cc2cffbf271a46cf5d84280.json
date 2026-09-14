@@ -1,0 +1,225 @@
+{
+  "version": 2,
+  "task_id": "da508a07c6db4d869532053d0bde4910",
+  "orchestration": {
+    "run_id": "0bc471f379924d81be114112733dc681",
+    "wave_id": "e935468f90634604a252952489a7ca68",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "74987f7ab6fe7151abc3dec844762710aad996d1d047389a538b2c603087ff73",
+    "contract_fp": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea"
+  },
+  "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 from next gap C01 only. Diagnose the supported cold-start entrypoint when the previously managed MCP/Recovery Host/Tunnel process is gone. Distinguish installed/direct startup from dev refresh; identify the exact owner that is allowed to create a fresh activation epoch; prove no child MCP spawn can occur under terminal READY/READY_COMMITTED/FAILED state; and identify the smallest source/test change, if any, needed so cold start recovers without manual refresh/login/state deletion. This wave is diagnosis/preparation only: no restart, reboot, process termination, source mutation, commit, push, package, release, deploy, or state deletion. Preserve unrelated dirty work and exclude Goal pagination/P5/public tool contract changes.",
+  "status": "completed",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 21,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 7,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "0bc471f379924d81be114112733dc681",
+        "wave_id": "e935468f90634604a252952489a7ca68",
+        "checkpoint_id": "a4eef404332a473ab459bfed4f6ec860"
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 22,
+      "latest_event": {
+        "seq": 237,
+        "event_id": "prl-bind-89bbe2c4f9fccf37bdd7b777460f94d6c6f39f0e7e271ed7eac27dca7a856bf7",
+        "event_hash": "cca03d0d4d53cb3df4baa46eb76e180d380b8227b2e1a9666134ffc675660bb1",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-14T11:40:13.182Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 39,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 28,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 11,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 85,
+        "head_hash": "4f27a77a91b03f7c010dd9b2166d7d76184d6c53c5350086ab7902fa22524097"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "0bc471f379924d81be114112733dc681",
+      "wave_id": "e935468f90634604a252952489a7ca68",
+      "checkpoint_id": "a4eef404332a473ab459bfed4f6ec860",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "74987f7ab6fe7151abc3dec844762710aad996d1d047389a538b2c603087ff73",
+      "contract_fp": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_provenance": {
+        "effective_objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, C01 only, on current source. Create the next proof-only wave under the existing RUN 0bc471f379924d81be114112733dc681 after source/worktree drift. Verify the installed/direct/logon cold-start chain and the invariant that READY_COMMITTED/READY/FAILED terminal activation epochs cannot spawn or replace Coding MCP in place. No source mutation, restart, reboot, process termination, install/package, commit, push, release, state deletion, Goal pagination, P5, or public tool contract changes. Preserve unrelated dirty work.",
+        "objective_revision": 2,
+        "objective_sha256": "f8861214b75819b34ddabe65cf4da6fbebda0fef88cc2d5c4685976c175c2817",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "787f45124caa4009b291ef3c2b2da9bc",
+          "stage_id": "check:965472564dbbb29a",
+          "status": "passed",
+          "duration_ms": 3911,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "e687c830401b42da986d71239c6c4b34",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 2328,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "7f17cc1f2cb45740300721a6ebb2808545ff03af10234fc0edb679d583f3957f",
+  "completion_report_acknowledged_id": "7f17cc1f2cb45740300721a6ebb2808545ff03af10234fc0edb679d583f3957f",
+  "completion_report_acknowledged_at": "2026-09-14T12:00:39.591Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-14T11:59:53.643Z",
+  "updated_at": "2026-09-14T12:00:39.923Z",
+  "events": [
+    {
+      "time": "2026-09-14T11:59:53.643Z",
+      "event": "orchestration_projection_exact_run_restored",
+      "details": {
+        "source": "canonical_ledger",
+        "run_id": "0bc471f379924d81be114112733dc681"
+      }
+    },
+    {
+      "time": "2026-09-14T11:59:53.714Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "7f17cc1f2cb45740300721a6ebb2808545ff03af10234fc0edb679d583f3957f"
+      }
+    },
+    {
+      "time": "2026-09-14T12:00:36.258Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T12:00:39.591Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7f17cc1f2cb45740300721a6ebb2808545ff03af10234fc0edb679d583f3957f"
+      }
+    }
+  ]
+}

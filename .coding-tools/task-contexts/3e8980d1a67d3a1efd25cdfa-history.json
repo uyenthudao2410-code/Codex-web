@@ -1,0 +1,118 @@
+[
+  {
+    "version": 2,
+    "task_id": "de6fe84e55d04bb88279e5da09c95863",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "UBwSUZ18uDluuV2szfY-t8py",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 307,
+      "finished_at": "2026-09-14T12:42:12.115Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T12:42:11.173Z",
+    "updated_at": "2026-09-14T12:42:12.115Z",
+    "events": [
+      {
+        "time": "2026-09-14T12:42:11.174Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T12:42:11.803Z",
+        "event": "command_started",
+        "details": {
+          "command": "$paths = @('resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py'); foreach ($p in $paths) { $h = Get-FileHash -Algorithm SHA256 $p; $i = Get-Item $p; [pscustomobject]@{Path=$p;SHA256=$h.Hash.ToLower();Length=$i.Length;LastWriteUtc=$i.LastWriteTimeUtc.ToString('o')} | ConvertTo-Json -Compress }; Write-Output '---RUN_PREFIX_MATCHES---'; rg -n --hidden --glob '*.json",
+          "session_id": "UBwSUZ18uDluuV2szfY-t8py"
+        }
+      },
+      {
+        "time": "2026-09-14T12:42:12.115Z",
+        "event": "command_finished",
+        "details": {
+          "command": "$paths = @('resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py','resources/coding-tools-mcp/tests/test_stateless_http_2026.py'); foreach ($p in $paths) { $h = Get-FileHash -Algorithm SHA256 $p; $i = Get-Item $p; [pscustomobject]@{Path=$p;SHA256=$h.Hash.ToLower();Length=$i.Length;LastWriteUtc=$i.LastWriteTimeUtc.ToString('o')} | ConvertTo-Json -Compress }; Write-Output '---RUN_PREFIX_MATCHES---'; rg -n --hidden --glob '*.json",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T12:42:23.557Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "c94df869994d45b4a25253217b71ed95",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T12:42:23.787Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-14T12:42:23.558Z",
+    "updated_at": "2026-09-14T12:42:23.787Z",
+    "events": [
+      {
+        "time": "2026-09-14T12:42:23.558Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T12:42:23.787Z",
+        "event": "command_finished",
+        "details": {
+          "command": "for %F in (\"resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py\" \"resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py\" \"resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py\") do @echo --- %~F & @certutil -hashfile \"%~F\" SHA256 | findstr /R /V \"CertUtil hash\" & @for %A in (\"%~F\") do @echo SIZE=%~zA & @echo. & echo ---RUN_PREFIX_MATCHES--- & rg -n --hidden --glob \"*.json\" \"0bc471|f32812\" .coding-tools 2>nul",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T12:42:23.787Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T12:42:32.540Z",
+    "archive_reason": "finished"
+  }
+]

@@ -205,6 +205,53 @@ test('activation epoch status distinguishes a valid empty store from unavailable
   });
 });
 
+test('terminal activation epochs block runtime start before MCP or Tunnel mutation', async () => {
+  const calls = { settings: 0, environment: 0, nativeStart: 0, tunnelStart: 0 };
+  const orchestrator = new RuntimeOrchestrator({
+    settings: {
+      load: () => {
+        calls.settings += 1;
+        return { workspace: process.cwd(), tunnelId: 'terminal-epoch-test' };
+      }
+    },
+    secrets: { get: () => 'unused-terminal-epoch-secret' },
+    environment: {
+      inspect: async () => {
+        calls.environment += 1;
+        return { tunnelClient: { installed: true } };
+      }
+    },
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.native.start = async () => { calls.nativeStart += 1; return true; };
+  orchestrator.tunnel.start = async () => { calls.tunnelStart += 1; return true; };
+
+  for (const state of ['READY_COMMITTED', 'READY', 'FAILED']) {
+    const suffix = state.toLowerCase().replace('_', '-');
+    const activationEpochId = `activation-terminal-${suffix}`;
+    orchestrator.activationEpochStore = {
+      current: () => ({
+        activation_epoch_id: activationEpochId,
+        operation_id: `operation-terminal-${suffix}`,
+        state,
+        admission_state: state === 'READY' ? 'OPEN' : 'CLOSED'
+      })
+    };
+    orchestrator.setActivationEpoch(activationEpochId);
+
+    await assert.rejects(
+      orchestrator.start({ automatic: true, fullClean: true, activationEpochId, activationGate: 'closed' }),
+      (error) => error?.code === 'UPDATE_INCOMPLETE'
+        && error?.details?.epoch_state === state
+        && error?.details?.full_clean_activation_required === true
+    );
+    assert.equal(orchestrator.busy, false);
+  }
+
+  assert.deepEqual(calls, { settings: 0, environment: 0, nativeStart: 0, tunnelStart: 0 });
+});
+
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {
   const token = 'token';
   const server = http.createServer((request, response) => { assert.equal(request.headers.authorization, `Bearer ${token}`); const body = JSON.stringify({ ready: true, workspace: 'C:\\work\\one', device_id: 'device-a' }); response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }); response.end(body); });
@@ -1445,6 +1492,95 @@ test('reviewed exact predecessor requires live current-process ChatWeb contact b
   assert.equal(persisted.chatgptToolContractCompatibilityContactSha256, undefined);
   assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, undefined);
   assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, undefined);
+});
+
+test('reviewed compatibility closure admits a skipped-version ChatWeb bootstrap without weakening identity gates', () => {
+  const currentSha = 'd69436cabfbb6dca7b365df507f4b507857d9b29c11a44883fab77de54f67810';
+  const directSha = 'd52c8895711d4655be0bdbe35cff6e3dcd1bd72f5caa98563ad37dd34835b677';
+  const skippedSha = '98064347d3d27bec950b64d57319a3bc4a442bc12f6849a583cae7560f395f97';
+  const activationEpochId = 'activation-skipped-version-0001';
+  const processInstanceId = 'process-skipped-version-0001';
+  const serverInstanceId = 'server-skipped-version-00001';
+  const observedAt = new Date(Date.now() - 10).toISOString();
+  fs.writeFileSync(runtimeStatePath, JSON.stringify({
+    manualStop: false,
+    chatgptToolContractSha256: skippedSha,
+    chatgptToolContractSchemaVersion: 1,
+    chatgptToolContractProfile: 'smart-v3'
+  }), 'utf8');
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ workspace: 'C:\\work\\one' }) },
+    secrets: { get: () => '' },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {},
+    activationEpochId
+  });
+  const contract = {
+    schema_version: 1,
+    profile: 'smart-v3',
+    sha256: currentSha,
+    compatible_predecessor_sha256: [directSha, skippedSha]
+  };
+  const bootstrap = {
+    current_contract_contact: true,
+    identity_source: 'attested_transport',
+    attestation_verified: true,
+    client_id: 'chatweb-skipped-version',
+    client_type: 'chatweb',
+    method: 'tools/call',
+    tool_name: 'workspace_context',
+    workspace_accessed: false,
+    contract_sha256: currentSha,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    server_instance_id: serverInstanceId,
+    observed_at: observedAt
+  };
+  const health = {
+    ready: true,
+    activation_epoch_id: activationEpochId,
+    process_instance_id: processInstanceId,
+    instance_id: serverInstanceId,
+    tool_contract: contract,
+    connector_tool_discovery: null,
+    connector_client_contact: null,
+    connector_activation_bootstrap: bootstrap
+  };
+
+  assert.equal(
+    orchestrator.connectorContractStatus(contract, null, null, null, health).contractState,
+    'CHANGED_NEEDS_DISCOVERY'
+  );
+  for (const invalidBootstrap of [
+    { ...bootstrap, process_instance_id: 'wrong-process' },
+    { ...bootstrap, server_instance_id: 'wrong-server' },
+    { ...bootstrap, activation_epoch_id: 'wrong-epoch' },
+    { ...bootstrap, client_type: 'generic-client' },
+    { ...bootstrap, workspace_accessed: true }
+  ]) {
+    assert.equal(
+      orchestrator.connectorContractStatus(contract, null, null, invalidBootstrap, health).contractState,
+      'CHANGED_NEEDS_DISCOVERY'
+    );
+  }
+
+  const compatible = orchestrator.connectorContractStatus(contract, null, null, bootstrap, health);
+  assert.equal(compatible.contractState, 'CHANGED_COMPATIBLE_NEEDS_ACK');
+  assert.equal(compatible.compatibilitySource, 'declared_exact_predecessor_activation_bootstrap');
+  assert.equal(compatible.refreshRequired, false);
+
+  const acknowledged = orchestrator.acknowledgeExactConnectorDiscovery(health, {
+    activationEpochId,
+    nowUnixMs: Date.now()
+  });
+  assert.equal(acknowledged.contractState, 'CURRENT_COMPATIBLE_ACKNOWLEDGED');
+  assert.equal(acknowledged.acknowledgedSha256, currentSha);
+  const persisted = JSON.parse(fs.readFileSync(runtimeStatePath, 'utf8'));
+  assert.equal(persisted.chatgptToolContractCompatibilityPredecessorSha256, skippedSha);
+  assert.equal(persisted.chatgptToolContractCompatibilityProcessInstanceId, processInstanceId);
+  assert.equal(persisted.chatgptToolContractCompatibilityServerInstanceId, serverInstanceId);
+  assert.equal(persisted.chatgptToolContractCompatibilityActivationEpochId, activationEpochId);
 });
 
 test('compatibility route stays fail closed for undeclared or boundary-changing contracts', () => {

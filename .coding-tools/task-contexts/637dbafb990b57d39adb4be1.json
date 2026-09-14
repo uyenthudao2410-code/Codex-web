@@ -1,0 +1,218 @@
+{
+  "version": 2,
+  "task_id": "b6dfd1f5d69647c5817c91366becbae8",
+  "orchestration": {
+    "run_id": "2dc2dc3a3e9d42e5ae5f18e39094b31e",
+    "wave_id": "00399ffbf0ec4dfba57ba1f1173b31ba",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "040697b3da54854e17f7eb6a9d4405204217cbea6705207af6c3e113345ffcb9",
+    "contract_fp": ""
+  },
+  "objective": "Establish Machine-A persistent-install pre-reboot state for C01 using exact accepted installer SHA256 050a09bc4426b1f882c57cff86c5fdc7940c9f973778a4606e88b20c88bb46c8. Silently install per-user to the normal NSIS default location without launching the app. Before install snapshot the production Recovery Host descriptor hash and WebMCP Recovery Supervisor task XML hash. After install require exactly one Coding Tools MCP uninstall entry, installed executable exists, no process is running from that installed executable, no HKCU Run entry points to Coding Tools MCP, and both production descriptor and Recovery Supervisor task hashes are unchanged. Output only non-secret identity/proof fields. Do not enable autostart, launch packaged UI/Recovery Host, reboot, restart runtime, modify source, commit, push, publish, release or deploy.",
+  "status": "stopped",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "in_progress",
+      "updated_at": "2026-09-14T14:05:03.338Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-14T14:05:03.338Z"
+    }
+  ],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "RRC1cpk6QRCxK86ozGxUgwJ_",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1157,
+    "finished_at": "2026-09-14T14:05:27.437Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Abort the pre-reboot persistent-install wave because its first execute attempt failed in command parsing before any installer execution, leaving the wave in PROVING without compatible prepare binding. Only read-only baseline hashes were collected afterward; modified_files remains empty and no persistent install/autostart/reboot occurred. Recreate the same bounded objective in a fresh RUN with split commands.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-14T14:03:27.575Z",
+  "updated_at": "2026-09-14T14:06:44.634Z",
+  "events": [
+    {
+      "time": "2026-09-14T14:03:27.576Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Prepare Machine-A persistent-install pre-reboot state for C01 using exact accepted installer SHA256 050a09bc4426b1f882c57cff86c5fdc7940c9f973778a4606e88b20c88bb46c8. Install the candidate silently as a per-user persistent installation to its normal/default NSIS location without launching the app, without enabling startWithWindows, without changing the currently running development Recovery descriptor/Scheduled Task, and without reboot/restart. Then verify installed executable path, uninstall registration, executable/file identity if available, and absence of a Coding Tools MCP login item. This wave must not launch the packaged UI/Recovery Host or alter source. No commit/push/publish/release/deploy."
+      }
+    },
+    {
+      "time": "2026-09-14T14:03:29.598Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T14:03:36.377Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T14:03:36.384Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T14:04:59.909Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:00.809Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:01.889Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:01.895Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:03.024Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:03.338Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:03.931Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:17.200Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "session_id": "PSmS4YpuKJWWDUE7DAUUENBj"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:17.887Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:26.773Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML | Out-String); $b=[Text.Encoding]::UTF8.GetBytes($x); $s=[Security.Cryptography.SHA256]::Create(); try { ([BitConverter]::ToString($s.ComputeHash($b))).Replace('-','').ToLowerInvariant() } finally { $s.Dispose() }\"",
+        "session_id": "RRC1cpk6QRCxK86ozGxUgwJ_"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:27.437Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML | Out-String); $b=[Text.Encoding]::UTF8.GetBytes($x); $s=[Security.Cryptography.SHA256]::Create(); try { ([BitConverter]::ToString($s.ComputeHash($b))).Replace('-','').ToLowerInvariant() } finally { $s.Dispose() }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:05:49.148Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-14T14:06:20.200Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:06:20.203Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:06:44.303Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

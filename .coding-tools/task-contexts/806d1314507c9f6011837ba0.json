@@ -1,0 +1,88 @@
+{
+  "version": 2,
+  "task_id": "0e41dc6efc3e48ea8475bdf2eb8dc705",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "UpNIaRa8PNEvxJIKUibrwlfA",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 538,
+    "finished_at": "2026-09-14T11:46:11.868Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-14T11:45:52.214Z",
+  "updated_at": "2026-09-14T11:46:11.868Z",
+  "events": [
+    {
+      "time": "2026-09-14T11:45:52.214Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T11:45:52.506Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 120 -F -e \"def recover_exact_run_context\" -e \"recover_exact_run_context(\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "session_id": "eOY9d7MYXnKDe41okyK666FG"
+      }
+    },
+    {
+      "time": "2026-09-14T11:45:52.943Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 120 -F -e \"def recover_exact_run_context\" -e \"recover_exact_run_context(\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:46:01.508Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 120 -F -e \"def _recover_exact_run_context\" -e \"def recover_exact_run_context\" -e \"recover_exact_run_context=\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "x2asv5Sse3GIioU1IOHqU3yw"
+      }
+    },
+    {
+      "time": "2026-09-14T11:46:01.947Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 120 -F -e \"def _recover_exact_run_context\" -e \"def recover_exact_run_context\" -e \"recover_exact_run_context=\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:46:11.116Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 140 -F \"def stateless_task_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "UpNIaRa8PNEvxJIKUibrwlfA"
+      }
+    },
+    {
+      "time": "2026-09-14T11:46:11.868Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 140 -F \"def stateless_task_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    }
+  ]
+}

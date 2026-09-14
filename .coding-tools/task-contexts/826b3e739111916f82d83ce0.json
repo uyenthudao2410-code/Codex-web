@@ -1,0 +1,578 @@
+{
+  "version": 2,
+  "task_id": "798e3ce785b64c0ca97f25adc3f3f933",
+  "orchestration": {
+    "run_id": "0be390446ab24656b68ea29a2b9ee1b7",
+    "wave_id": "a5d812dafdbf4ddb8d030003d906b5f0",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "b94b13bb6ccb04d016beaa47636cc182bc1b8ef1a00e327a2d08283892f83906",
+    "contract_fp": "1f8d61854fc8a4c03b5a4a8b772b82a19944bc305947f251da23c7340782c12a"
+  },
+  "objective": "Execute the prepared repair for canonical Problem prl-c76b20e025edfe48b4d18d478d2db09d revision 1. Isolate the smallest causal bug that lets a prepared RUN/WAVE be replaced by a transient/non-durable task projection before immediate execute, then patch only the orchestration binding/projection code and add a deterministic regression proving prepare -> immediate execute preserves the exact canonical RUN/WAVE and any PREPARED_RUN_BINDING_MISMATCH can reference only durable resumable lineage. Preserve fail-closed admission, one-writer ownership, exact Problem/base-head/worktree binding, immutable failure history, and current routing policy. Do not touch tool_contract.py, tests/test_efficiency_runtime.py, P5 policy, public tool count, unrelated dirty files, live runtime, Git history, package/release state. No restart, commit, push, package, release, or deploy.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-09-14T05:17:51.251Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-14T05:17:51.251Z"
+    }
+  ],
+  "current_step": "Replan report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "PRIPrJvU4L3Uv8GDTPDktpGh",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-14T05:17:50.270Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-c76b20e025edfe48b4d18d478d2db09d",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "1f8d61854fc8a4c03b5a4a8b772b82a19944bc305947f251da23c7340782c12a",
+      "objective_summary": "Eliminate non-durable orchestration projection ghost/churn that replaces the exact prepared RUN/WAVE between agent_workflow prepare and execute, causing PREPARED_RUN_BINDING_MISMATCH and blocking safe mutation of the parent boot/recovery Problem. Preserve one-writer, fail-closed binding and durable lineage while making prepare-to-execute ownership stable and resumable.",
+      "contract_capsule_included": true,
+      "contract_capsule_omission_reason": null,
+      "criteria": [
+        {
+          "criterion_id": "P01",
+          "summary": "A prepared feature/bugfix RUN/WAVE remains the canonical task projection through routing/resource cleanup until execute either acquires its write lease or terminalizes; an internal transient projection cannot silently replace it."
+        },
+        {
+          "criterion_id": "P02",
+          "summary": "PREPARED_RUN_BINDING_MISMATCH may reference only a durable canonical RUN/WAVE that task_control can retrieve/resume; no ghost/non-resumable current projection is emitted."
+        },
+        {
+          "criterion_id": "P03",
+          "summary": "A deterministic regression reproducing prepare then immediate execute proves stable exact binding with no intervening controller command and fails on the pre-fix behavior."
+        },
+        {
+          "criterion_id": "P04",
+          "summary": "Resource-claim cleanup/routing transitions preserve exact Problem, task, RUN, WAVE, base HEAD and worktree fingerprint ownership; one-writer and fail-closed admission remain intact."
+        },
+        {
+          "criterion_id": "P05",
+          "summary": "Mismatch paths remain pre-mutation: no write lease/source write/proof is recorded under an unbound or ghost lineage, and typed failure history is retained."
+        }
+      ],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 5,
+        "criteria_proven": 0,
+        "criteria_unresolved": 5,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "P01",
+        "next_critical_gap": "A prepared feature/bugfix RUN/WAVE remains the canonical task projection through routing/resource cleanup until execute either acquires its write lease or terminalizes; an internal transient projection cannot silently replace it.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 1,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 0,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [
+        "Root cause in projection reconciliation/routing/resource-cleanup path is not yet isolated.",
+        "No causal source patch or regression proof has yet been produced for this projection race."
+      ],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "0be390446ab24656b68ea29a2b9ee1b7",
+        "wave_id": "a5d812dafdbf4ddb8d030003d906b5f0",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 2,
+      "latest_event": {
+        "seq": 214,
+        "event_id": "prl-bind-ee69a26833943731772b1752f4b1f3f0c2b6e9d011dba4b3b761141f8e19ad70",
+        "event_hash": "68e398ccffddfea1b6ba8cee2f7d210a30e7c47dbe5277fff087f2e859b11ea1",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-14T05:12:34.932Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 1,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 1,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 0,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 28,
+        "head_hash": "941522833d89bd2d20ea0a367fc018847c4cb48247d4a3e0018c0a3d397bda76"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0be390446ab24656b68ea29a2b9ee1b7\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-0be390446ab24656b68ea29a2b9ee1b7\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "0be390446ab24656b68ea29a2b9ee1b7",
+      "wave_id": "a5d812dafdbf4ddb8d030003d906b5f0",
+      "checkpoint_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "b94b13bb6ccb04d016beaa47636cc182bc1b8ef1a00e327a2d08283892f83906",
+      "contract_fp": "1f8d61854fc8a4c03b5a4a8b772b82a19944bc305947f251da23c7340782c12a",
+      "objective_provenance": {
+        "effective_objective": "Diagnose and repair canonical Problem prl-c76b20e025edfe48b4d18d478d2db09d revision 1: a freshly prepared exact RUN/WAVE is replaced in the task projection before immediate execute, producing PREPARED_RUN_BINDING_MISMATCH; mismatch-reported replacement IDs can be non-resumable/ghost-like and prevent safe source mutation in the parent boot/recovery Problem. Reproduction already observed twice with no intervening controller command and before any write lease/source mutation. Find the smallest causal defect in prepared-run binding/projection reconciliation/routing/resource-claim cleanup. Preserve fail-closed admission and one-writer semantics. Add a deterministic regression that exercises prepare -> immediate execute binding stability and proves any mismatch references only durable canonical lineage. Do not touch Goal-pagination files tool_contract.py or tests/test_efficiency_runtime.py, P5 policy, public tool count, unrelated dirty files, or live runtime. No restart, commit, push, package, release, or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "872e034b852991fcb0f03e8f49a9d2b86ba4d4cda829d9dda58a2b39d99e5470",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "9f45e6b746414a82a0fad9c7cdacae17",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 226811,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "SOL_REJECTED",
+      "reason": "Reject this wave as non-causal evidence only. Exact prepare->execute binding happened to remain stable and the existing Python suite passed, but modified_files is empty, no deterministic projection-binding regression was added, and the Problem contract itself reports P01-P05 0/5 proven with root cause still unresolved. Preserve this as a useful negative/control observation showing the race is conditional, then replan with focused source localization and a discriminating regression before any acceptance.",
+      "event_seq": 52926
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "bedcbf65620c2fef94b4a9d89838c04a009a16e7e7cb72b2308d1879e81c7124",
+  "completion_report_acknowledged_id": "bedcbf65620c2fef94b4a9d89838c04a009a16e7e7cb72b2308d1879e81c7124",
+  "completion_report_acknowledged_at": "2026-09-14T05:18:58.058Z",
+  "test_results": [
+    {
+      "command": "python -m pytest",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 14 lines | tail: 'tests\\\\test_activation_preflight.py ............................'",
+      "finished_at": "2026-09-14T05:17:50.270Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "PRIPrJvU4L3Uv8GDTPDktpGh"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "0be390446ab24656b68ea29a2b9ee1b7",
+        "owner_wave": "a5d812dafdbf4ddb8d030003d906b5f0",
+        "size_bytes": 739,
+        "command_id": "PRIPrJvU4L3Uv8GDTPDktpGh",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:PRIPrJvU4L3Uv8GDTPDktpGh:stdout",
+            "total_stream_bytes": 739,
+            "total_retained_bytes": 739,
+            "head_retained_bytes": 739,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:PRIPrJvU4L3Uv8GDTPDktpGh:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 226794,
+      "summary": "exit 0 | 0.0s | 14 lines | tail: 'tests\\\\test_activation_preflight.py ............................'",
+      "session_id": "PRIPrJvU4L3Uv8GDTPDktpGh",
+      "cancelled": false,
+      "timed_out": false,
+      "effective_timeout_ms": 589547
+    }
+  ],
+  "build_results": [],
+  "last_build_report": {
+    "project": {
+      "type": "python",
+      "name": "coding-tools-mcp",
+      "version": "1.0.0",
+      "package_manager": "pip",
+      "test_command": "python -m pytest",
+      "build_command": "python -m build",
+      "artifact_paths": [
+        "dist"
+      ]
+    },
+    "commands": {
+      "test": "python -m pytest",
+      "build": "python -m build"
+    },
+    "test_result": {
+      "command": "python -m pytest",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 226794,
+      "summary": "exit 0 | 0.0s | 14 lines | tail: 'tests\\\\test_activation_preflight.py ............................'",
+      "session_id": "PRIPrJvU4L3Uv8GDTPDktpGh",
+      "cancelled": false,
+      "timed_out": false,
+      "effective_timeout_ms": 589547
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "passed",
+    "failure": null,
+    "report_generated_at": "2026-09-14T05:17:50.270Z"
+  },
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-14T05:12:33.709Z",
+  "updated_at": "2026-09-14T05:18:58.373Z",
+  "events": [
+    {
+      "time": "2026-09-14T05:12:33.709Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Diagnose and repair canonical Problem prl-c76b20e025edfe48b4d18d478d2db09d revision 1: a freshly prepared exact RUN/WAVE is replaced in the task projection before immediate execute, producing PREPARED_RUN_BINDING_MISMATCH; mismatch-reported replacement IDs can be non-resumable/ghost-like and prevent safe source mutation in the parent boot/recovery Problem. Reproduction already observed twice with no intervening controller command and before any write lease/source mutation. Find the smallest causal defect in prepared-run binding/projection reconciliation/routing/resource-claim cleanup. Preserve fail-closed admission and one-writer semantics. Add a deterministic regression that exercises prepare -> immediate execute binding stability and proves any mismatch references only durable canonical lineage. Do not touch Goal-pagination files tool_contract.py or tests/test_efficiency_runtime.py, P5 policy, public tool count, unrelated dirty files, or live runtime. No restart, commit, push, package, release, or deploy."
+      }
+    },
+    {
+      "time": "2026-09-14T05:12:35.157Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T05:12:43.352Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T05:12:43.352Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T05:13:58.627Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T05:13:59.718Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-14T05:14:00.800Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-14T05:14:00.949Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:14:03.035Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-14T05:14:03.268Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:14:04.235Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest",
+        "session_id": "PRIPrJvU4L3Uv8GDTPDktpGh"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:28.368Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:50.270Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:50.277Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:51.242Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:51.251Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:52.044Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:52.048Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:52.281Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "fba7536a9f8881115a0c3ac472ffa3b98be1cff27cd80c976955bd5a6bc97d36"
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:52.509Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T05:17:59.659Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:16.391Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "fba7536a9f8881115a0c3ac472ffa3b98be1cff27cd80c976955bd5a6bc97d36"
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:27.882Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:30.233Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:30.237Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:30.632Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "bedcbf65620c2fef94b4a9d89838c04a009a16e7e7cb72b2308d1879e81c7124"
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:42.576Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T05:18:58.058Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "bedcbf65620c2fef94b4a9d89838c04a009a16e7e7cb72b2308d1879e81c7124"
+      }
+    }
+  ]
+}

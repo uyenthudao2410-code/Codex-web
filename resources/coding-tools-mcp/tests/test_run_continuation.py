@@ -9,7 +9,8 @@ import unittest
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from coding_tools_mcp.errors import ToolFailure
 from coding_tools_mcp.host_correlation import (
@@ -28,7 +29,9 @@ from coding_tools_mcp.run_continuation import (
     RUN_CONTINUATION_PROPOSAL_SCHEMA,
     RunContinuationError,
     RunContinuationLedgerMixin,
+    RunContinuationMixin,
     bind_run_continuation_consent,
+    build_goal_continuation_policy,
     build_run_continuation_policy,
     continuation_consent_descriptor,
     parse_run_continuation_proposal,
@@ -85,12 +88,57 @@ def policy(run_id: str, request: dict[str, object] | None = None) -> dict[str, o
     )
 
 
+def goal_policy(origin_run_id: str, request: dict[str, object] | None = None) -> dict[str, object]:
+    goal = build_goal_continuation_policy(
+        request or grant_request(),
+        origin_run_id=origin_run_id,
+        workspace_id="workspace-test",
+        problem_id="problem-test",
+        problem_revision=1,
+        contract_fingerprint="b" * 64,
+        tool_contract_sha256="c" * 64,
+        runtime_behavior_fingerprint="d" * 64,
+        activation_epoch_id="epoch-test",
+        activation_admission="open",
+        issuer_client_id="chatweb-test",
+        controller_generation=7,
+        controller_endpoint_id="endpoint-test",
+        controller_owner_client_id="chatweb-test",
+        wave_id="wave-origin",
+    )
+    descriptor = continuation_consent_descriptor(goal)
+    return bind_run_continuation_consent(
+        goal,
+        {
+            "receipt_id": "chatweb-continuation-consent:goal-ledger",
+            "turn_id": "chatweb-turn:goal-ledger",
+            "trace_id": "trace-goal-ledger",
+            "descriptor": descriptor,
+        },
+    )
+
+
 class RunContinuationLedgerTests(unittest.TestCase):
     def _ledger_with_run(self, root: Path) -> tuple[OrchestrationLedger, str]:
         ledger = OrchestrationLedger(root)
         run_id = ledger.create_run(objective="bounded durable repair")
         ledger.create_wave(run_id, execution_mode="deep_single_lane")
         return ledger, run_id
+
+    def _problem_bound_run(self, ledger: OrchestrationLedger, *, objective: str) -> str:
+        run_id = ledger.create_run(
+            objective=objective,
+            metadata={
+                "problem_resolution": {
+                    "work_origin": "problem",
+                    "problem_id": "problem-test",
+                    "problem_revision": 1,
+                },
+                "workspace_identity": {"workspace_id": "workspace-test"},
+            },
+        )
+        ledger.create_wave(run_id, execution_mode="deep_single_lane")
+        return run_id
 
     def test_existing_continuation_schema_gains_read_and_dispatch_cursor_columns(self) -> None:
         """A pre-cursor ledger must upgrade in place without a second store."""
@@ -190,6 +238,26 @@ class RunContinuationLedgerTests(unittest.TestCase):
             ))
             self.assertFalse(pending.exists())
 
+            goal_descriptor = continuation_consent_descriptor(goal_policy("run-goal-consent"))
+            pending.write_text(json.dumps({
+                "schema_version": CONTINUATION_CONSENT_SCHEMA_VERSION,
+                "receipt_id": "chatweb-continuation-consent:test-goal",
+                "turn_id": "chatweb-turn:test-goal",
+                "trace_id": "trace-goal",
+                "staged_at_unix_ms": 1_000_000,
+                "descriptor": goal_descriptor,
+            }), encoding="utf-8")
+            goal_claimed = claim_pending_continuation_consent(
+                root,
+                process_instance_id="runtime-test",
+                expected_descriptor=goal_descriptor,
+                now_ms=1_000_100,
+            )
+            self.assertIsNotNone(goal_claimed)
+            assert goal_claimed is not None
+            self.assertEqual(goal_claimed["descriptor"]["action"], "authorize_bounded_goal_continuation")
+            consume_pending_continuation_consent(goal_claimed)
+
     def test_grant_is_durable_idempotent_and_conflicts_on_policy_change(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -225,6 +293,370 @@ class RunContinuationLedgerTests(unittest.TestCase):
                 )
             self.assertEqual(changed.exception.code, "RUN_CONTINUATION_GRANT_CONFLICT")
             self.assertTrue(reopened.verify_chain(run_id)["ok"])
+
+    def test_goal_episode_contract_is_distinct_exact_and_controller_fenced(self) -> None:
+        goal = build_goal_continuation_policy(
+            grant_request(),
+            origin_run_id="run-origin",
+            workspace_id="workspace-test",
+            problem_id="problem-test",
+            problem_revision=3,
+            contract_fingerprint="b" * 64,
+            tool_contract_sha256="c" * 64,
+            runtime_behavior_fingerprint="d" * 64,
+            activation_epoch_id="epoch-test",
+            activation_admission="open",
+            issuer_client_id="chatweb-test",
+            controller_generation=7,
+            controller_endpoint_id="endpoint-test",
+            controller_owner_client_id="chatweb-test",
+            wave_id="wave-origin",
+        )
+        descriptor = continuation_consent_descriptor(goal)
+        self.assertEqual(goal["scope_kind"], "goal_episode")
+        self.assertEqual(descriptor["action"], "authorize_bounded_goal_continuation")
+        self.assertEqual(descriptor["episode_id"], goal["episode_id"])
+        self.assertEqual(descriptor["controller_generation"], 7)
+        self.assertEqual(descriptor["max_no_progress"], 2)
+        self.assertEqual(len(str(goal["episode_id"])), 64)
+
+        changed_controller = build_goal_continuation_policy(
+            grant_request(),
+            origin_run_id="run-origin",
+            workspace_id="workspace-test",
+            problem_id="problem-test",
+            problem_revision=3,
+            contract_fingerprint="b" * 64,
+            tool_contract_sha256="c" * 64,
+            runtime_behavior_fingerprint="d" * 64,
+            activation_epoch_id="epoch-test",
+            activation_admission="open",
+            issuer_client_id="chatweb-test",
+            controller_generation=8,
+            controller_endpoint_id="endpoint-test",
+            controller_owner_client_id="chatweb-test",
+            wave_id="wave-origin",
+        )
+        self.assertNotEqual(goal["episode_id"], changed_controller["episode_id"])
+        self.assertNotEqual(descriptor["scope_sha256"], continuation_consent_descriptor(changed_controller)["scope_sha256"])
+
+        legacy = continuation_consent_descriptor(policy("run-legacy"))
+        self.assertEqual(legacy["action"], "authorize_bounded_continuation")
+        with self.assertRaises(RunContinuationError) as legacy_receipt:
+            bind_run_continuation_consent(goal, {
+                "receipt_id": "chatweb-continuation-consent:legacy",
+                "turn_id": "chatweb-turn:legacy",
+                "trace_id": "trace-legacy",
+                "descriptor": legacy,
+            })
+        self.assertEqual(legacy_receipt.exception.code, "RUN_CONTINUATION_CONSENT_MISMATCH")
+
+        bound = bind_run_continuation_consent(goal, {
+            "receipt_id": "chatweb-continuation-consent:goal",
+            "turn_id": "chatweb-turn:goal",
+            "trace_id": "trace-goal",
+            "descriptor": descriptor,
+        })
+        self.assertEqual(bound["consent"]["scope_sha256"], descriptor["scope_sha256"])
+
+    def test_goal_episode_parent_ledger_materializes_exact_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger = OrchestrationLedger(root)
+            origin_run = self._problem_bound_run(ledger, objective="origin Goal episode")
+            child_run = self._problem_bound_run(ledger, objective="exact child")
+            parent_policy = goal_policy(origin_run)
+            attachment = {
+                "workspace_id": "workspace-test",
+                "problem_id": "problem-test",
+                "problem_revision": 1,
+                "generation": 7,
+                "owner_client_id": "chatweb-test",
+                "controller_endpoint_id": "endpoint-test",
+            }
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                issued = ledger.issue_goal_continuation(
+                    policy=parent_policy,
+                    issuer_receipt_sha256="e" * 64,
+                )
+                episode_id = str(issued["goal_continuation"]["episode_id"])
+                materialized = ledger.materialize_goal_continuation(
+                    run_id=child_run,
+                    episode_id=episode_id,
+                    grant_wave_id="wave-child",
+                )
+            child = materialized["continuation"]
+            self.assertEqual(child["parent_episode_id"], episode_id)
+            self.assertEqual(child["policy"]["parent_episode_id"], episode_id)
+            self.assertEqual(child["remaining_decision_turns"], 4)
+            self.assertEqual(child["remaining_patch_attempts"], 2)
+            self.assertIsNone(child["policy"]["consent"])
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["policy"]["scope_kind"], "goal_episode")
+            self.assertEqual(parent["remaining_decision_turns"], 4)
+            self.assertTrue(ledger.verify_chain(origin_run)["ok"])
+            self.assertTrue(ledger.verify_chain(child_run)["ok"])
+
+    def test_goal_episode_parent_revocation_fences_existing_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger = OrchestrationLedger(root)
+            origin_run = self._problem_bound_run(ledger, objective="origin Goal episode")
+            child_run = self._problem_bound_run(ledger, objective="child before revoke")
+            parent_policy = goal_policy(origin_run)
+            attachment = {
+                "workspace_id": "workspace-test",
+                "problem_id": "problem-test",
+                "problem_revision": 1,
+                "generation": 7,
+                "owner_client_id": "chatweb-test",
+                "controller_endpoint_id": "endpoint-test",
+            }
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                issued = ledger.issue_goal_continuation(
+                    policy=parent_policy,
+                    issuer_receipt_sha256="e" * 64,
+                )
+                episode_id = str(issued["goal_continuation"]["episode_id"])
+                ledger.materialize_goal_continuation(
+                    run_id=child_run,
+                    episode_id=episode_id,
+                    grant_wave_id="wave-child",
+                )
+            ledger.set_goal_continuation_state(
+                episode_id=episode_id,
+                action="revoke",
+                reason="operator cancelled Goal episode",
+            )
+            with self.assertRaises(RunContinuationError) as revoked:
+                ledger.claim_run_continuation(
+                    run_id=child_run,
+                    runtime_instance_id="runtime-child",
+                    expected_generation=0,
+                )
+            self.assertEqual(revoked.exception.code, "GOAL_CONTINUATION_REVOKED")
+
+    def test_goal_episode_shared_budget_is_authoritative_across_child_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger = OrchestrationLedger(root)
+            origin_run = self._problem_bound_run(ledger, objective="shared budget origin")
+            first_run = self._problem_bound_run(ledger, objective="shared budget child one")
+            second_run = self._problem_bound_run(ledger, objective="shared budget child two")
+            parent_policy = goal_policy(origin_run)
+            attachment = {
+                "workspace_id": "workspace-test",
+                "problem_id": "problem-test",
+                "problem_revision": 1,
+                "generation": 7,
+                "owner_client_id": "chatweb-test",
+                "controller_endpoint_id": "endpoint-test",
+            }
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                issued = ledger.issue_goal_continuation(policy=parent_policy, issuer_receipt_sha256="e" * 64)
+                episode_id = str(issued["goal_continuation"]["episode_id"])
+                ledger.materialize_goal_continuation(run_id=first_run, episode_id=episode_id, grant_wave_id="wave-first")
+                ledger.materialize_goal_continuation(run_id=second_run, episode_id=episode_id, grant_wave_id="wave-second")
+
+            first_claim = ledger.claim_run_continuation(run_id=first_run, runtime_instance_id="runtime-first", expected_generation=0)
+            second_claim = ledger.claim_run_continuation(run_id=second_run, runtime_instance_id="runtime-second", expected_generation=0)
+            first_generation = int(first_claim["continuation"]["driver_generation"])
+            second_generation = int(second_claim["continuation"]["driver_generation"])
+            first_action = ledger.reserve_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_kind="proposal", request_hash="1" * 64, expected_action_seq=1,
+            )
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["remaining_decision_turns"], 3)
+
+            second_action = ledger.reserve_run_continuation_action(
+                run_id=second_run, driver_generation=second_generation, runtime_instance_id="runtime-second",
+                action_kind="proposal", request_hash="2" * 64, expected_action_seq=1,
+            )
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["remaining_decision_turns"], 2)
+
+            released = ledger.release_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_id=str(first_action["action_id"]),
+            )
+            self.assertEqual(released["next_action_seq"], 2)
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["remaining_decision_turns"], 3)
+
+            spent = ledger.consume_run_continuation_patch_attempt(
+                run_id=second_run, driver_generation=second_generation, runtime_instance_id="runtime-second",
+                action_id=str(second_action["action_id"]),
+            )
+            self.assertTrue(spent["consumed"])
+            replay = ledger.consume_run_continuation_patch_attempt(
+                run_id=second_run, driver_generation=second_generation, runtime_instance_id="runtime-second",
+                action_id=str(second_action["action_id"]),
+            )
+            self.assertTrue(replay["idempotent"])
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["remaining_patch_attempts"], 1)
+
+            third_run = self._problem_bound_run(ledger, objective="shared budget child three")
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                third = ledger.materialize_goal_continuation(run_id=third_run, episode_id=episode_id, grant_wave_id="wave-third")
+            self.assertEqual(third["continuation"]["remaining_decision_turns"], 3)
+            self.assertEqual(third["continuation"]["remaining_patch_attempts"], 1)
+            self.assertTrue(ledger.verify_chain(origin_run)["ok"])
+            self.assertTrue(ledger.verify_chain(first_run)["ok"])
+            self.assertTrue(ledger.verify_chain(second_run)["ok"])
+            self.assertTrue(ledger.verify_chain(third_run)["ok"])
+
+    def test_goal_episode_no_progress_is_proof_driven_idempotent_and_fenced(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger = OrchestrationLedger(root)
+            origin_run = self._problem_bound_run(ledger, objective="no progress origin")
+            first_run = self._problem_bound_run(ledger, objective="no progress child one")
+            second_run = self._problem_bound_run(ledger, objective="no progress child two")
+            parent_policy = goal_policy(origin_run, grant_request(max_decision_turns=8))
+            attachment = {
+                "workspace_id": "workspace-test",
+                "problem_id": "problem-test",
+                "problem_revision": 1,
+                "generation": 7,
+                "owner_client_id": "chatweb-test",
+                "controller_endpoint_id": "endpoint-test",
+            }
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                issued = ledger.issue_goal_continuation(policy=parent_policy, issuer_receipt_sha256="e" * 64)
+                episode_id = str(issued["goal_continuation"]["episode_id"])
+                ledger.materialize_goal_continuation(run_id=first_run, episode_id=episode_id, grant_wave_id="wave-first")
+                ledger.materialize_goal_continuation(run_id=second_run, episode_id=episode_id, grant_wave_id="wave-second")
+
+            first_claim = ledger.claim_run_continuation(run_id=first_run, runtime_instance_id="runtime-first", expected_generation=0)
+            second_claim = ledger.claim_run_continuation(run_id=second_run, runtime_instance_id="runtime-second", expected_generation=0)
+            first_generation = int(first_claim["continuation"]["driver_generation"])
+            second_generation = int(second_claim["continuation"]["driver_generation"])
+
+            model_only = ledger.reserve_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_kind="proposal", request_hash="1" * 64, expected_action_seq=1,
+            )
+            ledger.complete_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_id=str(model_only["action_id"]), consumed_event_seq=1,
+            )
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["no_progress_count"], 0)
+
+            first_failure = ledger.reserve_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_kind="proposal", request_hash="2" * 64, expected_action_seq=2,
+            )
+            first_observation = ledger.complete_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_id=str(first_failure["action_id"]), consumed_event_seq=2,
+                proof_observation_id="a" * 64, proof_identity_sha256="b" * 64, proof_outcome="no_progress",
+            )
+            self.assertFalse(first_observation["goal_observation"]["stopped"])
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["no_progress_count"], 1)
+
+            duplicate = ledger.reserve_run_continuation_action(
+                run_id=second_run, driver_generation=second_generation, runtime_instance_id="runtime-second",
+                action_kind="proposal", request_hash="3" * 64, expected_action_seq=1,
+            )
+            replayed = ledger.complete_run_continuation_action(
+                run_id=second_run, driver_generation=second_generation, runtime_instance_id="runtime-second",
+                action_id=str(duplicate["action_id"]), consumed_event_seq=1,
+                proof_observation_id="a" * 64, proof_identity_sha256="b" * 64, proof_outcome="no_progress",
+            )
+            self.assertTrue(replayed["goal_observation"]["idempotent"])
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["no_progress_count"], 1)
+
+            progress = ledger.reserve_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_kind="proposal", request_hash="4" * 64, expected_action_seq=3,
+            )
+            ledger.complete_run_continuation_action(
+                run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                action_id=str(progress["action_id"]), consumed_event_seq=3,
+                proof_observation_id="c" * 64, proof_identity_sha256="d" * 64, proof_outcome="progress",
+            )
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["no_progress_count"], 0)
+
+            for seq, request_hash, observation_id, proof_identity in (
+                (4, "5" * 64, "e" * 64, "f" * 64),
+                (5, "6" * 64, "7" * 64, "8" * 64),
+            ):
+                reserved = ledger.reserve_run_continuation_action(
+                    run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                    action_kind="proposal", request_hash=request_hash, expected_action_seq=seq,
+                )
+                completed = ledger.complete_run_continuation_action(
+                    run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                    action_id=str(reserved["action_id"]), consumed_event_seq=seq,
+                    proof_observation_id=observation_id, proof_identity_sha256=proof_identity, proof_outcome="no_progress",
+                )
+
+            self.assertTrue(completed["goal_observation"]["stopped"])
+            self.assertEqual(completed["goal_observation"]["reason"], "GOAL_CONTINUATION_NO_PROGRESS")
+            parent = ledger.get_goal_continuation(episode_id)
+            assert parent is not None
+            self.assertEqual(parent["no_progress_count"], 2)
+            self.assertFalse(parent["enabled"])
+            self.assertEqual(parent["pause_reason"], "GOAL_CONTINUATION_NO_PROGRESS")
+            with self.assertRaises(RunContinuationError) as stopped:
+                ledger.reserve_run_continuation_action(
+                    run_id=first_run, driver_generation=first_generation, runtime_instance_id="runtime-first",
+                    action_kind="proposal", request_hash="9" * 64, expected_action_seq=6,
+                )
+            self.assertEqual(stopped.exception.code, "GOAL_CONTINUATION_NO_PROGRESS")
+            self.assertTrue(ledger.verify_chain(first_run)["ok"])
+            self.assertTrue(ledger.verify_chain(second_run)["ok"])
+
+    def test_matching_goal_episode_materializes_only_exact_child_binding(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger = OrchestrationLedger(root)
+            origin_run = self._problem_bound_run(ledger, objective="matching Goal origin")
+            child_run = self._problem_bound_run(ledger, objective="matching Goal child")
+            attachment = {
+                "workspace_id": "workspace-test",
+                "problem_id": "problem-test",
+                "problem_revision": 1,
+                "generation": 7,
+                "owner_client_id": "chatweb-test",
+                "controller_endpoint_id": "endpoint-test",
+            }
+            with patch.object(ledger, "_controller_assert_goal_run_precondition", return_value=attachment):
+                issued = ledger.issue_goal_continuation(
+                    policy=goal_policy(origin_run),
+                    issuer_receipt_sha256="e" * 64,
+                )
+                matched = ledger.materialize_matching_goal_continuation(
+                    run_id=child_run,
+                    grant_wave_id="wave-auto",
+                )
+                replay = ledger.materialize_matching_goal_continuation(
+                    run_id=child_run,
+                    grant_wave_id="wave-auto",
+                )
+            episode_id = str(issued["goal_continuation"]["episode_id"])
+            self.assertEqual(matched["status"], "MATERIALIZED")
+            self.assertEqual(matched["continuation"]["parent_episode_id"], episode_id)
+            self.assertTrue(replay["idempotent"])
+
+            unbound = ledger.create_run(objective="unbound child")
+            ledger.create_wave(unbound, execution_mode="deep_single_lane")
+            self.assertEqual(ledger.materialize_matching_goal_continuation(run_id=unbound)["status"], "MISSING")
 
     def test_claim_generation_scope_check_and_cursor_are_fenced(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -297,6 +729,139 @@ class RunContinuationLedgerTests(unittest.TestCase):
             )
             self.assertEqual(completed["consumed_event_seq"], 42)
             self.assertFalse(completed["pending_action_id"])
+
+    def test_reserved_action_release_restores_budget_without_reusing_sequence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger, run_id = self._ledger_with_run(root)
+            ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
+            claim = ledger.claim_run_continuation(run_id=run_id, runtime_instance_id="runtime", expected_generation=0)
+            generation = int(claim["continuation"]["driver_generation"])
+            before = ledger._run_continuation_get_raw(run_id)
+            assert before is not None
+            first = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_kind="proposal",
+                request_hash="9" * 64,
+                expected_action_seq=1,
+            )
+            reserved = ledger._run_continuation_get_raw(run_id)
+            assert reserved is not None
+            self.assertEqual(reserved["remaining_decision_turns"], before["remaining_decision_turns"] - 1)
+            self.assertEqual(reserved["next_action_seq"], 2)
+
+            released = ledger.release_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_id=str(first["action_id"]),
+            )
+            self.assertEqual(released["remaining_decision_turns"], before["remaining_decision_turns"])
+            self.assertEqual(released["next_action_seq"], 2)
+            self.assertFalse(released["pending_action_id"])
+
+            second = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_kind="proposal",
+                request_hash="8" * 64,
+                expected_action_seq=2,
+            )
+            self.assertNotEqual(first["action_id"], second["action_id"])
+            self.assertTrue(ledger.verify_chain(run_id)["ok"])
+
+    def test_reserved_action_release_requires_effect_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger, run_id = self._ledger_with_run(root)
+            ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
+            claim = ledger.claim_run_continuation(run_id=run_id, runtime_instance_id="runtime", expected_generation=0)
+            generation = int(claim["continuation"]["driver_generation"])
+            action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_kind="proposal",
+                request_hash="9" * 64,
+                expected_action_seq=1,
+            )["action_id"]
+            manifest = {
+                "backup_root": ".coding-tools/orchestration/continuation-effects/release-test",
+                "files": [{
+                    "path": "resources/coding-tools-mcp/coding_tools_mcp/target.py",
+                    "preimage_sha256": "b" * 64,
+                    "postimage_sha256": "c" * 64,
+                    "backup_path": ".coding-tools/orchestration/continuation-effects/release-test/target.py",
+                }],
+            }
+            ledger.prepare_run_continuation_effect(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_id=str(action),
+                effect_kind="patch",
+                manifest=manifest,
+            )
+            with self.assertRaises(RunContinuationError) as pending:
+                ledger.release_run_continuation_action(
+                    run_id=run_id,
+                    driver_generation=generation,
+                    runtime_instance_id="runtime",
+                    action_id=str(action),
+                )
+            self.assertEqual(pending.exception.code, "RUN_CONTINUATION_EFFECT_RECONCILE_REQUIRED")
+
+            ledger.record_run_continuation_effect_observation(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_id=str(action),
+                status="not_applied",
+            )
+            released = ledger.release_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_id=str(action),
+            )
+            self.assertFalse(released["pending_action_id"])
+            self.assertEqual(released["next_action_seq"], 2)
+
+    def test_reserved_action_release_refuses_dispatched_action(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ledger, run_id = self._ledger_with_run(root)
+            ledger.issue_run_continuation(run_id=run_id, policy=policy(run_id), issuer_receipt_sha256="e" * 64)
+            claim = ledger.claim_run_continuation(run_id=run_id, runtime_instance_id="runtime", expected_generation=0)
+            generation = int(claim["continuation"]["driver_generation"])
+            action = ledger.reserve_run_continuation_action(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_kind="proposal",
+                request_hash="9" * 64,
+                expected_action_seq=1,
+            )["action_id"]
+            ledger.set_run_continuation_dispatch(
+                run_id=run_id,
+                driver_generation=generation,
+                runtime_instance_id="runtime",
+                action_id=str(action),
+                lane_id="lane-test",
+                thread_id="thread-test",
+                turn_id="turn-test",
+            )
+            with self.assertRaises(RunContinuationError) as dispatched:
+                ledger.release_run_continuation_action(
+                    run_id=run_id,
+                    driver_generation=generation,
+                    runtime_instance_id="runtime",
+                    action_id=str(action),
+                )
+            self.assertEqual(dispatched.exception.code, "RUN_CONTINUATION_EFFECT_RECONCILE_REQUIRED")
 
     def test_missing_expired_revoked_and_takeover_race_are_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1075,6 +1640,74 @@ class RunContinuationSurfaceTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_problem_bound_public_grant_issues_goal_parent_materializes_child_and_starts_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            ctx = SimpleNamespace(run_id="run-public-goal", wave_id="wave-public-goal", contract_fp="b" * 64)
+            identity = {"workspace_identity": {"workspace_id": "workspace-test"}}
+            controller = {"lease_id": "controller-lease", "fencing_token": 9, "owner_client_id": "chatweb-test"}
+            hub = {"client_type": "chatweb", "role": "controller", "identity_source": "attested_transport", "attestation_verified": True}
+            ledger = Mock()
+            ledger.controller_run_problem_binding.return_value = {"problem_id": "problem-test", "problem_revision": 1}
+
+            def issue_goal(*, policy: dict[str, object], issuer_receipt_sha256: str) -> dict[str, object]:
+                self.assertEqual(policy["scope_kind"], "goal_episode")
+                self.assertEqual(len(issuer_receipt_sha256), 64)
+                return {"status": "GRANTED", "idempotent": False, "goal_continuation": {"episode_id": policy["episode_id"], "policy": policy}}
+
+            ledger.issue_goal_continuation.side_effect = issue_goal
+            ledger.materialize_goal_continuation.side_effect = lambda **kwargs: {
+                "status": "MATERIALIZED", "idempotent": False,
+                "continuation": {"run_id": kwargs["run_id"], "parent_episode_id": kwargs["episode_id"]},
+            }
+            runtime = SimpleNamespace(
+                task_state=Mock(get=Mock(return_value={"objective": "bounded Goal continuation"})),
+                _agent_orchestration_context=Mock(return_value=(ctx, identity)),
+                _require_hub_controller=Mock(return_value=controller),
+                _current_hub_client=Mock(return_value=hub),
+                orchestration_ledger=ledger,
+                _loaded_behavior_identity=Mock(return_value={"fingerprint": "d" * 64}),
+                activation_admission_snapshot=Mock(return_value={"admission": "open", "activation_epoch_id": "epoch-test"}),
+                _hub_client_record_id=Mock(return_value="chatweb-test"),
+                tool_contract={"sha256": "c" * 64},
+                _continuity_goal_controller_precondition=Mock(return_value={
+                    "workspace_id": "workspace-test", "problem_id": "problem-test", "problem_revision": 1,
+                    "expected_generation": 7, "owner_client_id": "chatweb-test", "controller_endpoint_id": "endpoint-test",
+                }),
+                _run_continuation_environment_hash=Mock(return_value="a" * 64),
+                workspace=SimpleNamespace(root=root), process_instance_id="process-test",
+                _run_continuation_http_challenge=Mock(), _project_orchestration=Mock(),
+                _run_continuation_start_driver=Mock(return_value={"run_id": "run-public-goal", "status": "PROPOSING"}),
+                _orchestration_result=Mock(return_value={"run_id": "run-public-goal"}),
+            )
+            observed_descriptors: list[dict[str, object]] = []
+
+            def claim(_root: Path, *, process_instance_id: str, expected_descriptor: dict[str, object]) -> dict[str, object]:
+                self.assertEqual(process_instance_id, "process-test")
+                observed_descriptors.append(expected_descriptor)
+                return {
+                    "receipt_id": "chatweb-continuation-consent:goal-public", "turn_id": "chatweb-turn:goal-public",
+                    "trace_id": "trace-goal-public", "descriptor": expected_descriptor,
+                }
+
+            with (
+                patch("coding_tools_mcp.run_continuation.claim_pending_continuation_consent", side_effect=claim),
+                patch("coding_tools_mcp.run_continuation.consume_pending_continuation_consent"),
+            ):
+                result = RunContinuationMixin._run_continuation_grant(
+                    runtime,
+                    {"workflow": "feature", "phase": "prepare", "objective": "bounded Goal continuation"},
+                    grant_request(),
+                )
+            self.assertEqual(observed_descriptors[0]["action"], "authorize_bounded_goal_continuation")
+            ledger.issue_goal_continuation.assert_called_once()
+            ledger.issue_run_continuation.assert_not_called()
+            ledger.materialize_goal_continuation.assert_called_once()
+            runtime._run_continuation_start_driver.assert_called_once_with({"run_id": "run-public-goal"})
+            self.assertEqual(result["auto_start"]["status"], "PROPOSING")
+            self.assertEqual(result["continuation"]["continuation"]["run_id"], "run-public-goal")
+            self.assertEqual(result["continuation"]["goal_continuation"]["policy"]["scope_kind"], "goal_episode")
+
     def test_model_evidence_fails_closed_on_sensitive_problem_or_source_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
             root = Path(directory)
@@ -1794,6 +2427,35 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
                 self.assertIn("resume", {item["event_type"] for item in events})
                 self.assertIn("continuation_success", {item["event_type"] for item in events})
+            finally:
+                runtime.close()
+
+    def test_auto_resume_materializes_goal_parent_before_one_dispatch(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                existing = runtime.orchestration_ledger._run_continuation_get_raw(ctx.run_id)
+                assert existing is not None
+                synthetic_child = {
+                    **existing,
+                    "enabled": True,
+                    "revoked_at": None,
+                    "pending_action_id": "",
+                    "pending_job_id": "",
+                    "pending_patch_action_id": "",
+                }
+                raw_reads = [None, synthetic_child, synthetic_child]
+                with (
+                    patch.object(runtime.orchestration_ledger, "_run_continuation_get_raw", side_effect=lambda _run: raw_reads.pop(0) if raw_reads else synthetic_child),
+                    patch.object(runtime.orchestration_ledger, "materialize_matching_goal_continuation", return_value={"status": "MATERIALIZED", "continuation": synthetic_child}) as materialized,
+                    patch.object(runtime, "_run_continuation_validate_execution_rebind", return_value={"wave_rebound": False, "successor_activation": False}),
+                    patch.object(runtime, "_run_continuation_start_driver", return_value={"status": "PROPOSING", "run_id": ctx.run_id, "continue_observing": True}) as started,
+                ):
+                    result = runtime._run_continuation_try_auto_resume(run_id=ctx.run_id, trigger="reconnect", marker="wake-one")
+                self.assertTrue(result["auto_resumed"])
+                materialized.assert_called_once()
+                started.assert_called_once()
             finally:
                 runtime.close()
 

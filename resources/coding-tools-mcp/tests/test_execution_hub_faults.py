@@ -359,7 +359,10 @@ class ExecutionHubFaultTests(unittest.TestCase):
             reclaimed_chatweb_controller_id = str(reclaimed["owner_client_id"])
             self.assertTrue(reclaimed_chatweb_controller_id.startswith("chatweb:"), reclaimed_chatweb_controller_id)
             self.assertEqual(reclaimed_chatweb_controller_id, first_chatweb_controller_id)
-            self.assertEqual(reclaimed["status"], "active")
+            # Accept reclaims the expired historical controller long enough to
+            # authorize this exact RUN, but CHECKPOINTED is terminal and the
+            # atomic acceptance path must release the controller lease.
+            self.assertEqual(reclaimed["status"], "released")
             self.assertEqual(reclaimed["fencing_token"], 2)
             self.assertEqual(hub.runtime.orchestration_ledger.get_run(historical.run_id)["status"], "accepted")
             self.assertEqual(hub.runtime.orchestration_ledger.get_run(ambient.run_id)["status"], "active")

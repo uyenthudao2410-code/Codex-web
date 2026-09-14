@@ -26,6 +26,7 @@ from .errors import ToolFailure
 from .orchestration_control import OrchestrationControlError, RunContext
 from .problem_lineage import ProblemLineageError
 from .run_continuation import (
+    GOAL_CONTINUATION_NO_PROGRESS,
     RUN_CONTINUATION_PROFILE,
     RunContinuationError,
     _canonical_json,
@@ -400,7 +401,27 @@ class ContinuationDriverMixin:
         with self._run_continuation_driver_lock():
             record = self.orchestration_ledger._run_continuation_get_raw(run_id)
             if record is None:
-                return {"status": "MISSING", "run_id": run_id}
+                ctx_before_materialize = self.orchestration_control.snapshot(run_id)
+                try:
+                    materialized = self.orchestration_ledger.materialize_matching_goal_continuation(
+                        run_id=run_id,
+                        grant_wave_id=str(getattr(ctx_before_materialize, "wave_id", "") or ""),
+                    )
+                except RunContinuationError as exc:
+                    code = str(exc.code)
+                    self._run_continuation_record_telemetry(
+                        run_id,
+                        "continuation_failure",
+                        outcome="failed",
+                        code=code,
+                        marker=marker or trigger,
+                    )
+                    return {"status": "BLOCKED", "run_id": run_id, "reason": code, "continue_observing": False}
+                if str(materialized.get("status") or "") == "MISSING":
+                    return {"status": "MISSING", "run_id": run_id}
+                record = self.orchestration_ledger._run_continuation_get_raw(run_id)
+                if record is None:
+                    return {"status": "BLOCKED", "run_id": run_id, "reason": "GOAL_CONTINUATION_MATERIALIZATION_LOST"}
             pending = bool(
                 record.get("pending_action_id")
                 or record.get("pending_job_id")
@@ -981,13 +1002,43 @@ class ContinuationDriverMixin:
             results.append(result)
             proof_ids.append(proof_id)
             if result.get("status") != "passed":
-                self.orchestration_ledger.complete_run_continuation_action(
+                observation_kwargs: dict[str, str] = {}
+                if str(record.get("parent_episode_id") or ""):
+                    proof_identity = hashlib.sha256(
+                        _canonical_json({
+                            "schema_version": 1,
+                            "kind": "approved_check",
+                            "proof_id": str(proof_id),
+                            "definition_hash": str(check.get("definition_hash") or ""),
+                            "status": "failed",
+                        }).encode("utf-8")
+                    ).hexdigest()
+                    observation_kwargs = {
+                        "proof_observation_id": hashlib.sha256(
+                            f"goal-continuation-proof-v1\0no_progress\0{proof_identity}".encode("utf-8")
+                        ).hexdigest(),
+                        "proof_identity_sha256": proof_identity,
+                        "proof_outcome": "no_progress",
+                    }
+                completed = self.orchestration_ledger.complete_run_continuation_action(
                     run_id=ctx.run_id,
                     driver_generation=int(record["driver_generation"]),
                     runtime_instance_id=self._run_continuation_runtime_instance_id(),
                     action_id=action_id,
                     consumed_event_seq=consumed_event_seq,
+                    **observation_kwargs,
                 )
+                goal_observation = completed.get("goal_observation") if isinstance(completed, dict) else None
+                if isinstance(goal_observation, dict) and goal_observation.get("stopped"):
+                    return {
+                        "status": "PAUSED",
+                        "run_id": ctx.run_id,
+                        "proof_ids": proof_ids,
+                        "check_results": results,
+                        "reason": GOAL_CONTINUATION_NO_PROGRESS,
+                        "no_progress_count": goal_observation.get("no_progress_count"),
+                        "continue_observing": False,
+                    }
                 technical_replan = {
                     "failure": "CHECK_FAILED",
                     "check_id": str(check.get("check_id") or "unknown-check"),
@@ -1023,12 +1074,31 @@ class ContinuationDriverMixin:
                         "continue_observing": False,
                     }
                 return {**repaired, "proof_ids": proof_ids, "check_results": results}
+        success_observation_kwargs: dict[str, str] = {}
+        if str(record.get("parent_episode_id") or ""):
+            proof_identity = hashlib.sha256(
+                _canonical_json({
+                    "schema_version": 1,
+                    "kind": "approved_checks",
+                    "proof_ids": sorted(str(item) for item in proof_ids),
+                    "definition_hashes": sorted(required_hashes),
+                    "status": "passed",
+                }).encode("utf-8")
+            ).hexdigest()
+            success_observation_kwargs = {
+                "proof_observation_id": hashlib.sha256(
+                    f"goal-continuation-proof-v1\0progress\0{proof_identity}".encode("utf-8")
+                ).hexdigest(),
+                "proof_identity_sha256": proof_identity,
+                "proof_outcome": "progress",
+            }
         self.orchestration_ledger.complete_run_continuation_action(
             run_id=ctx.run_id,
             driver_generation=int(record["driver_generation"]),
             runtime_instance_id=self._run_continuation_runtime_instance_id(),
             action_id=action_id,
             consumed_event_seq=consumed_event_seq,
+            **success_observation_kwargs,
         )
         try:
             self.orchestration_control.mark_accepting(ctx, proof_summary={"continuation": True, "proof_ids": proof_ids, "checks": [item.get("check_id") for item in checks]})

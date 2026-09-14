@@ -1,0 +1,122 @@
+{
+  "version": 2,
+  "task_id": "21014eb8efd34c2fbdea6ae683b89bc4",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-14T11:33:06.585Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The current task was stopped. Start or resume a task before continuing.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-14T11:31:28.153Z",
+  "updated_at": "2026-09-14T11:33:06.585Z",
+  "events": [
+    {
+      "time": "2026-09-14T11:31:28.153Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-14T11:31:28.171Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T11:31:52.674Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -m 60 \"da508a07c6db4d869532053d0bde4910|0bc471f379924d81be114112733dc681\" .coding-tools/task-contexts .coding-tools/evaluation .coding-tools/performance.json .coding-tools/task-state.json",
+        "session_id": "9AuGnMR9y4E9ROOAucOCh7JE"
+      }
+    },
+    {
+      "time": "2026-09-14T11:31:53.141Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -m 60 \"da508a07c6db4d869532053d0bde4910|0bc471f379924d81be114112733dc681\" .coding-tools/task-contexts .coding-tools/evaluation .coding-tools/performance.json .coding-tools/task-state.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:32:01.242Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -m 40 \"ctx_|task_context|completion_report_id|completion_report_acknowledged|continuation|run_id|wave_id\" .coding-tools/task-contexts/3cc2cffbf271a46cf5d84280.json",
+        "session_id": "DRj52Mi0TuBAlnE8IwMJw_1j"
+      }
+    },
+    {
+      "time": "2026-09-14T11:32:01.504Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -m 40 \"ctx_|task_context|completion_report_id|completion_report_acknowledged|continuation|run_id|wave_id\" .coding-tools/task-contexts/3cc2cffbf271a46cf5d84280.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:32:10.908Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -m 30 \"3cc2cffbf271a46cf5d84280\" .coding-tools",
+        "session_id": "0XMbGM9-UrKRPy5-Bno3WYc9"
+      }
+    },
+    {
+      "time": "2026-09-14T11:32:11.536Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -m 30 \"3cc2cffbf271a46cf5d84280\" .coding-tools",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:32:49.597Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T11:33:06.585Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -m 100 \"da508a07c6db4d869532053d0bde4910\" .coding-tools",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T11:33:06.585Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "TASK_STOPPED"
+      }
+    }
+  ]
+}

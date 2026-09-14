@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "213717e6c5244b9096946a49330be697",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "0JjOdr1W0MY0UPdWYKhyP55J",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 809,
+    "finished_at": "2026-09-14T14:03:04.233Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-14T14:03:02.890Z",
+  "updated_at": "2026-09-14T14:03:04.233Z",
+  "events": [
+    {
+      "time": "2026-09-14T14:03:02.890Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T14:03:03.684Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 16 \"oneClick|perMachine|allowToChangeInstallationDirectory|runAfterFinish|createDesktopShortcut|createStartMenuShortcut|setLoginItemSettings|startWithWindows|settings:save|--recovery-host\" package.json electron scripts tests",
+        "session_id": "0JjOdr1W0MY0UPdWYKhyP55J"
+      }
+    },
+    {
+      "time": "2026-09-14T14:03:04.233Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 16 \"oneClick|perMachine|allowToChangeInstallationDirectory|runAfterFinish|createDesktopShortcut|createStartMenuShortcut|setLoginItemSettings|startWithWindows|settings:save|--recovery-host\" package.json electron scripts tests",
+        "status": "passed"
+      }
+    }
+  ]
+}

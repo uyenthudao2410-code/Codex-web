@@ -1,0 +1,304 @@
+{
+  "version": 2,
+  "task_id": "1ffa4f183f6b43bdb1a0ac76b4412487",
+  "orchestration": {
+    "run_id": "34a7e1b003c4422389a72b8c1ee2c90c",
+    "wave_id": "cfe60fb2010c4bf8b53b7adc572c9a09",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "040697b3da54854e17f7eb6a9d4405204217cbea6705207af6c3e113345ffcb9",
+    "contract_fp": ""
+  },
+  "objective": "Machine-A C01 persistent-install pre-reboot proof. Use exact accepted installer dist\\coding-tools-mcp-setup-1.0.0.exe SHA256 050a09bc4426b1f882c57cff86c5fdc7940c9f973778a4606e88b20c88bb46c8. Immediately-before-install baselines are production Recovery descriptor SHA256 90cd716495beda127cf00aaf44614ef71b7cb80471e02b1176e30e756f8941f6 and WebMCP Recovery Supervisor task XML SHA256 68b7d4a018fbe21c044d34a409ec09248b47198a35400d82a3bd1f552a043295. Silently install per-user to normal NSIS default without launching. After install prove one Coding Tools MCP uninstall entry, installed exe exists, no packaged process is running, no HKCU Run value points to Coding Tools MCP, descriptor hash unchanged, supervisor task XML hash unchanged. Do not enable autostart, launch packaged UI/Recovery Host, reboot, restart runtime, modify source, commit, push, publish, release or deploy.",
+  "status": "stopped",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "in_progress",
+      "updated_at": "2026-09-14T14:07:50.292Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-14T14:07:50.292Z"
+    }
+  ],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "p679PbVGDDtIDEikQN4qqkOr",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 863,
+    "finished_at": "2026-09-14T14:09:52.291Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Persistent NSIS install itself succeeded and independent post-install checks passed, but agent_workflow hit an internal command-parser error before it could complete proof bookkeeping. Preserve the verified external install state; abort this orchestration wave as tooling-incomplete with modified_files empty. A fresh proof-only reconciliation wave will verify the installed state, hashes, no packaged process, no login item, and unchanged production Recovery descriptor/Supervisor task before any further action.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-14T14:07:36.308Z",
+  "updated_at": "2026-09-14T14:10:06.358Z",
+  "events": [
+    {
+      "time": "2026-09-14T14:07:36.308Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Machine-A C01 persistent-install pre-reboot proof. Use exact accepted installer dist\\coding-tools-mcp-setup-1.0.0.exe SHA256 050a09bc4426b1f882c57cff86c5fdc7940c9f973778a4606e88b20c88bb46c8. Immediately-before-install baselines are production Recovery descriptor SHA256 90cd716495beda127cf00aaf44614ef71b7cb80471e02b1176e30e756f8941f6 and WebMCP Recovery Supervisor task XML SHA256 68b7d4a018fbe21c044d34a409ec09248b47198a35400d82a3bd1f552a043295. Silently install per-user to normal NSIS default without launching. After install prove one Coding Tools MCP uninstall entry, installed exe exists, no packaged process is running, no HKCU Run value points to Coding Tools MCP, descriptor hash unchanged, supervisor task XML hash unchanged. Do not enable autostart, launch packaged UI/Recovery Host, reboot, restart runtime, modify source, commit, push, publish, release or deploy."
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:39.080Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:46.817Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:48.099Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:48.110Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:49.747Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:50.292Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:51.374Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+        "session_id": "WXR_nqdYCQljcXkLUOM9631v"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:52.043Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:55.165Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "session_id": "IQwNMhdX8DT8EE_Hyq2ZRPey"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:55.877Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:57.592Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "session_id": "x9-X93Fo4MQC79tU4msf-_YK"
+      }
+    },
+    {
+      "time": "2026-09-14T14:07:58.800Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:08:00.907Z",
+      "event": "command_started",
+      "details": {
+        "command": "dist\\coding-tools-mcp-setup-1.0.0.exe /S",
+        "session_id": "QqLKutjYUaDwnvrMHr2j77-m"
+      }
+    },
+    {
+      "time": "2026-09-14T14:08:16.632Z",
+      "event": "command_finished",
+      "details": {
+        "command": "dist\\coding-tools-mcp-setup-1.0.0.exe /S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:08:17.419Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    },
+    {
+      "time": "2026-09-14T14:08:55.142Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "session_id": "rmw4p0miARwb1UadhnMJwK1h"
+      }
+    },
+    {
+      "time": "2026-09-14T14:08:55.857Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:05.131Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%LOCALAPPDATA%\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe\" SHA256",
+        "session_id": "6qRc-auvS_X5XyKNXrcSJRPN"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:05.901Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%LOCALAPPDATA%\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:16.933Z",
+      "event": "command_started",
+      "details": {
+        "command": "tasklist /FI \"IMAGENAME eq Coding Tools MCP.exe\"",
+        "session_id": "s_wdDl7PlNDvzS1DC3sKyokM"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:17.524Z",
+      "event": "command_finished",
+      "details": {
+        "command": "tasklist /FI \"IMAGENAME eq Coding Tools MCP.exe\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:29.547Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"",
+        "session_id": "HR-eRQAWz6_H0C0sYRkwxbl2"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:30.166Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:40.841Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "session_id": "E6aGDTr7A7sMqDbaYWEid4iO"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:41.424Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:51.679Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "session_id": "p679PbVGDDtIDEikQN4qqkOr"
+      }
+    },
+    {
+      "time": "2026-09-14T14:09:52.291Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:10:06.353Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:10:06.356Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

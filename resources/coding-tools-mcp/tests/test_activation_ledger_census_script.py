@@ -1,17 +1,35 @@
 from __future__ import annotations
 
+import io
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
+from coding_tools_mcp import activation_ledger_census
 from coding_tools_mcp.ledger_file_gate import LedgerGateTimeout, ledger_access_gate
 from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 
 
 class ActivationLedgerCensusModuleTests(unittest.TestCase):
+    def test_cli_maps_ledger_gate_timeout_to_typed_sanitized_cause(self) -> None:
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                activation_ledger_census,
+                "main",
+                side_effect=LedgerGateTimeout("secret-ledger-path-must-not-leak"),
+            ),
+            redirect_stderr(stderr),
+        ):
+            self.assertEqual(activation_ledger_census._run_cli(), 75)
+        self.assertEqual(stderr.getvalue().strip(), "ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT")
+        self.assertNotIn("secret-ledger-path", stderr.getvalue())
+
     def test_held_census_blocks_supported_writers_until_epoch_commit_release(self) -> None:
         package_root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as temporary:

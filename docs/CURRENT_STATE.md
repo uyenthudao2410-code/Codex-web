@@ -737,6 +737,73 @@ A first installation still requires the operator to select/authorize a workspace
 and supply its separately created Tunnel ID and runtime credential; those are
 authorization inputs that cannot be inferred safely from hostname or local disk.
 
+### BOOT_HOST_TRANSITION_RECONNECTION_LOOP — working-tree source fixed / current-device live pass
+
+The remaining implementation packets, acceptance matrix, and closure boundaries
+are defined in [the detailed closure plan](BOOT_HOST_TRANSITION_CLOSURE_PLAN.md).
+That plan is not a claim that the whole product problem has been closed.
+
+This product problem tracks repeated manual repair, refresh, login, or connector
+recovery after a same-device cold start or after returning on a device that
+skipped one or more compatible releases. Account session, endpoint/workspace
+identity, and connector-contract acknowledgement remain three separate layers:
+the Electron ChatGPT view uses the durable `persist:chatgpt-session` partition;
+each installation keeps its own device-bound endpoint identity; and connector
+freshness stays bound to the exact current process, server, activation epoch,
+workspace generation, and public contract SHA. A new device may still require
+one real account login and separately provisioned local credentials. Credentials
+or mutation authority must never be copied or silently failed over between
+devices.
+
+The Problem is closed only when all of the following are demonstrated:
+
+- a same-device cold boot reuses a non-revoked ChatGPT session and the saved
+  workspace/device identity without source repair or repeated refresh;
+- Recovery Host, Coding MCP, and the device's own Tunnel start or recover into
+  the exact configured workspace, with admission opened only after the guarded
+  connector path completes;
+- a client that skipped one or more reviewed additive releases can bootstrap
+  through the reviewed compatibility closure, while a breaking or unknown
+  contract still requires real discovery;
+- a new device asks for account login and local credential/workspace setup only
+  when they are genuinely absent or revoked, never by copying another device's
+  token or authority;
+- Coding-VP Live and a separately tunnelled Coding MCP remain distinct routes,
+  and no write-capable task silently fails over between them; and
+- focused cold-start/skipped-version/two-device tests plus an installed Windows
+  logon smoke pass for the exact release candidate.
+
+The `ae04947` public contract changed from `d52c889...` to `d69436c...` by adding
+only optional `candidate_cursor` and `candidate_limit` fields to
+`task_control.goal_event` plus a descriptive pagination update. The committed
+source omitted the reviewed compatibility edge and retained the stale exact-SHA
+test, so an already acknowledged client correctly fell into
+`CHANGED_NEEDS_DISCOVERY`. The current working tree now records the reviewed direct
+`d69436c... -> d52c889...` edge and publishes the deterministic transitive
+closure of the existing reviewed additive-edge graph. This lets a device skip
+multiple compatible releases without manual per-release discovery. Unknown or
+malformed hashes and any reachable graph cycle return no compatibility; an
+undeclared or schema/profile-changing contract still requires real current-
+process `tools/list` or `server/discover`.
+
+Compatibility metadata alone never opens admission. The narrow bootstrap still
+requires an attested ChatWeb `workspace_context` contact with no workspace read,
+matching current contract/process/server/epoch identity, and the final activation
+census independently requires the exact device and workspace binding. Focused
+Python tests cover exact SHA, multi-hop order, unknown hashes, malformed edges,
+and cycles. Electron tests cover skipped-version acknowledgement plus negative
+process/server/epoch/client/workspace-access cases, while the existing connector
+binding and full-clean suites retain their independent fail-closed gates.
+
+The controlled development refresh captured on 2026-09-14 completed epoch
+`activation-mu0nwtkj-5b558ae4a52562fb6c739de983b52912` as `READY`, with
+MCP and Tunnel ready, admission open, `fully_ready=true`, and
+`CURRENT_COMPATIBLE_ACKNOWLEDGED`; both current and acknowledged contract SHA are
+`d69436cabfbb6dca7b365df507f4b507857d9b29c11a44883fab77de54f67810`.
+This is a current-device development live pass, not an installed Windows logon,
+two-device, package, release, deployment, or production claim. Those boundary
+smokes remain required before closing the whole cross-machine product problem.
+
 ### Authorized-root workspace projection (source contract)
 
 When the Runtime has more than one authorized root, `workspace_context(path)`

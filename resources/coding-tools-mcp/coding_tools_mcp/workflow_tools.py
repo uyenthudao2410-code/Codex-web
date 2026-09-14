@@ -344,6 +344,32 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
         projection = current_task.get("orchestration") if isinstance(current_task.get("orchestration"), dict) else {}
         run_id = str(projection.get("run_id") or "")
         current_ctx = self.orchestration_control.snapshot(run_id) if run_id else None
+        requested_phase = str(args.get("phase", "prepare")).strip().lower() or "prepare"
+        requested_run_id = str(args.get("run_id") or "").strip()
+        requested_wave_id = str(args.get("wave_id") or "").strip()
+        projected_run_id = run_id
+        projected_wave_id = str(projection.get("wave_id") or "").strip()
+        prepared_projection_reconciled = False
+        if (
+            requested_phase == "execute"
+            and requested_run_id
+            and requested_wave_id
+            and (projected_run_id != requested_run_id or projected_wave_id != requested_wave_id)
+            and (current_ctx is None or str(current_ctx.state) in {"CHECKPOINTED", "BLOCKED", "ABORTED"})
+        ):
+            requested_ctx = self.orchestration_control.snapshot(requested_run_id)
+            if (
+                requested_ctx is not None
+                and str(requested_ctx.run_id) == requested_run_id
+                and str(requested_ctx.wave_id) == requested_wave_id
+                and str(requested_ctx.state) in {"PREFLIGHT", "READY"}
+            ):
+                current_ctx = requested_ctx
+                projection = requested_ctx.projection()
+                run_id = requested_run_id
+                current_task = dict(current_task)
+                current_task["orchestration"] = dict(projection)
+                prepared_projection_reconciled = True
 
         if not current_task.get("task_id") or (
             str(current_task.get("status") or "") in {"completed", "stopped"}
@@ -367,6 +393,20 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
             current_run=current_run or {},
             ledger=self.orchestration_ledger,
         )
+        if prepared_projection_reconciled and current_ctx is not None:
+            self.orchestration_ledger.append_event(
+                current_ctx.run_id,
+                wave_id=current_ctx.wave_id,
+                event_type="prepared_projection_reconciled",
+                state_before=current_ctx.state,
+                state_after=current_ctx.state,
+                payload={
+                    "projected_run_id": projected_run_id or None,
+                    "projected_wave_id": projected_wave_id or None,
+                    "requested_run_id": requested_run_id,
+                    "requested_wave_id": requested_wave_id,
+                },
+            )
 
         # A new explicit objective detaches stale/foreign projections. The one
         # exception is an exact caller-scoped prepare binding, which keeps the
@@ -623,7 +663,10 @@ class AgentWorkflowMixin(CompletionReadinessWorkflowMixin):
                     },
                 )
 
-        self._project_orchestration(current_ctx, event="orchestration_context_ready")
+        self._project_orchestration(
+            current_ctx,
+            event="prepared_projection_reconciled" if prepared_projection_reconciled else "orchestration_context_ready",
+        )
         return current_ctx, identity
 
     def _agent_solution_shadow_enrollment(

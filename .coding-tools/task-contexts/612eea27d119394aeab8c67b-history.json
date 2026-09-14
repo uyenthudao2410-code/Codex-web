@@ -1,0 +1,318 @@
+[
+  {
+    "version": 2,
+    "task_id": "49af12997031423ebd3d5869d343de02",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T03:11:19.834Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "The supplied RUN/WAVE is quiescing or terminal and cannot admit new execution.",
+    "next_step": "",
+    "created_at": "2026-09-14T03:09:44.505Z",
+    "updated_at": "2026-09-14T03:11:19.834Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:09:44.505Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T03:09:44.884Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id\" resources/coding-tools-mcp -S",
+          "session_id": "akxrm2DC2AAj4Y0IgxJKwgjW"
+        }
+      },
+      {
+        "time": "2026-09-14T03:09:45.380Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id\" resources/coding-tools-mcp -S",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:09:52.339Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"continuity_action|CONTINUITY_IDENTITY_REQUIRED|last_reattach_id|reattach_id|record_reattach|reattach\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py -S",
+          "session_id": "KaV4fmDSDqchkab0wCReMGZ6"
+        }
+      },
+      {
+        "time": "2026-09-14T03:09:52.706Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"continuity_action|CONTINUITY_IDENTITY_REQUIRED|last_reattach_id|reattach_id|record_reattach|reattach\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py -S",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:02.447Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 \"if action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "RvWqWoYBmEKhmU7W3Mh6K_ia"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:02.882Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"if action == \\\"reattach\\\"\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:09.234Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 70 -B 5 \"CONTROLLER_REATTACH_IDENTITY_CONFLICT\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "m4uZH5jvin-EjWhReendQYTp"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:09.616Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -B 5 \"CONTROLLER_REATTACH_IDENTITY_CONFLICT\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:17.235Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 70 -B 10 \"def controller_ack_knowledge\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "QoP-MuPc99z1EiN6IwnRLtcr"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:17.517Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -B 10 \"def controller_ack_knowledge\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:24.321Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 55 -B 3 \"elif knowledge_revision is None\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "U65TNL5eRr97GLHEGDXZVqOi"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:24.617Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 55 -B 3 \"elif knowledge_revision is None\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:10:32.917Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CAPSULE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:19.834Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"replan_reason|REPLAN\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S | rg \"agent_workflow|workflow|new_wave|create_wave|run_id\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:19.834Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "EXECUTION_OWNER_INVALID"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:11:28.629Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "f79b1a82bb674b4289fe21a3e160cb32",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T03:13:05.733Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-14T03:11:28.631Z",
+    "updated_at": "2026-09-14T03:13:05.733Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:11:28.631Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:28.931Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"replan_reason|REPLAN\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S | rg \"agent_workflow|workflow|new_wave|create_wave|run_id\"",
+          "session_id": "2A9hic1tE-UvaG_ufN9kqH79"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:29.265Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"replan_reason|REPLAN\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S | rg \"agent_workflow|workflow|new_wave|create_wave|run_id\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:41.008Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"replan_reason =\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "session_id": "LiWyGK9Y81L-KwndSKzx516R"
+        }
+      },
+      {
+        "time": "2026-09-14T03:11:41.281Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 130 -B 20 \"replan_reason =\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:02.601Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"controller_reattach|goal_attachment|active_run|problem_resolution\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+          "session_id": "xzVUUQIGamaDsJ5mmGY_mh-i"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:02.881Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"controller_reattach|goal_attachment|active_run|problem_resolution\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:13.457Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 110 -B 25 \"problem_resolution = self._problem_resolution_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "session_id": "I3t6wEJ5xHyeRRKEXFq5KKNV"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:13.772Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 110 -B 25 \"problem_resolution = self._problem_resolution_context_for_run\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:24.109Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+          "session_id": "XK8HWNK87JnDA9embKMaethS"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:24.409Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:37.608Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -A 70 -B 5 \"if action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "session_id": "8R-Vmb_RpwQI2kmEPP_cvK_s"
+        }
+      },
+      {
+        "time": "2026-09-14T03:12:37.878Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -A 70 -B 5 \"if action == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:13:05.733Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"phase == \\\"resume\\\"|phase in .*resume|workflow == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:13:05.733Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:13:14.274Z",
+    "archive_reason": "finished"
+  }
+]

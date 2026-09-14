@@ -1,0 +1,48 @@
+{
+  "action": "problem",
+  "problem_event": {
+    "operation": "open",
+    "event_id": "open-single-goal-background-20260914-v1",
+    "task_class": "feature",
+    "engineering_floor": "REQUIRED",
+    "contract_capsule": {
+      "objective_summary": "Cho phép một Goal đã chọn tiếp tục chạy nền sau khi lượt ChatWeb kết thúc: runtime nhận kết quả, kiểm chứng, sinh yêu cầu có cấu trúc và thực sự gọi worker tiếp theo trong phạm vi và tổng ngân sách đã cấp. Người dùng không phải chuyển báo cáo giữa các chat hoặc nhắc tiếp tục tại boundary thông thường. Mỗi attempt đồng thời tạo bằng chứng nhân quả để cải tiến hệ thống; nghiệm thu và user outcome vẫn tách biệt.",
+      "acceptance_criteria": [
+        {"criterion_id": "BG01", "summary": "Một Goal bind exact Problem Revision, workspace, endpoint và controller; request lặp không tạo pursuit hay RUN trùng."},
+        {"criterion_id": "BG02", "summary": "Sau opt-in grant hợp lệ, worker tiếp tục sau ChatWeb response end mà không cần user message; explicit stop hoặc revoke vẫn dừng."},
+        {"criterion_id": "BG03", "summary": "Kết quả worker được runtime thu và đối chiếu oracle thành đạt, chưa đạt hoặc chưa biết; văn bản model không tự thành proof."},
+        {"criterion_id": "BG04", "summary": "Khi chưa đạt và còn bước hợp lệ, runtime tạo đề xuất typed, validate scope/evidence và dispatch thật; có outcome liên kết, không chỉ sinh lời nhắc cho người dùng copy."},
+        {"criterion_id": "BG05", "summary": "Parent budget bền vững bảo toàn qua các đợt con và restart; có giới hạn tổng, reservation nguyên tử, expiry và không tự gia hạn."},
+        {"criterion_id": "BG06", "summary": "Event lặp, response mất hoặc hai wake đồng thời không lặp mutation; pending effect chưa rõ buộc reconcile, không dispatch lại mù."},
+        {"criterion_id": "BG07", "summary": "Resume sau reconnect hoặc runtime replacement được phép phải revalidate revision, source, environment và quyền; không đổi máy hoặc mở rộng phạm vi ngầm."},
+        {"criterion_id": "BG08", "summary": "No-progress, parent budget hết, oracle không đủ, authority drift, explicit pause/stop và blocker thật tạo trạng thái dừng có lý do, không retry storm."},
+        {"criterion_id": "BG09", "summary": "Readiness và review request được đưa về cùng giao diện; ACCEPTING vẫn cần controller được phép accept/reject, không executor tự nghiệm thu."},
+        {"criterion_id": "BG10", "summary": "Ca live tự nhiên trên đúng Goal có zero manual relay và zero unnecessary nudge trong cửa sổ đã cấp; legitimate approval/outcome được đếm riêng."},
+        {"criterion_id": "BG11", "summary": "Failure, replan, dispatch, proof, budget, recovery và acceptance liên kết được từ Problem Revision qua RUN/WAVE đến outcome trong canonical ledger hiện có."},
+        {"criterion_id": "BG12", "summary": "Telemetry deduplicate, privacy-safe, tách synthetic và natural, số liệu thiếu là unknown; reporter công bố coverage và không suy ra ROI từ test xanh."},
+        {"criterion_id": "BG13", "summary": "Có regression, isolated process fault proof và exact source/runtime acceptance; rollback giữ nguyên ledger và không làm mất lịch sử attempt."},
+        {"criterion_id": "BG14", "summary": "Chỉ confirmed resolution khi có kết quả sử dụng và xác nhận độc lập của đúng Problem Revision; technical pass chỉ là provisional theo guard."}
+      ],
+      "protected_invariants": [
+        "One Runtime authority; MCP sole writer; exact lease, proof fingerprint và terminal epoch guards.",
+        "Worker output là đề xuất; không cấp quyền sửa, restart, publish hoặc accept từ model text.",
+        "Không copy credential, giả danh ChatWeb, replay unknown effect, tạo database cạnh tranh hoặc sửa SQLite trực tiếp.",
+        "Giữ failure/replan/reopen và mọi evidence bắt buộc; không tạo user consent, outcome hoặc số liệu giả.",
+        "Tám public tools smart-v3 giữ nguyên; không thêm scheduler chọn Goal khác hay tự động routing/policy promotion."
+      ],
+      "constraints": [
+        "Ban đầu chỉ một Goal đã chọn và một execution owner; tái sử dụng RUN continuation và App Server bridge hiện có.",
+        "Event-driven continuation, watchdog chỉ quan sát liveness; không cron gửi tiếp tục và không dùng browser DOM làm core authority.",
+        "Technical acceptance giữ controller_required; hết lượt ChatWeb không phải bằng chứng Goal đã xong.",
+        "Grant cần explicit bounded consent; tạo Problem không tự cấp background budget, paid dispatch, restart hay deploy authority.",
+        "Mỗi WAVE có operator checkpoint; giữ dirty work của tác vụ khác; commit/push/package/install/restart cần quyền riêng."
+      ],
+      "unresolved_conditions": [
+        "Đối chiếu Problem no-manual-nudge và continuity hiện có để revise/reuse hoặc tạo lineage mới có lý do, không duplicate mơ hồ.",
+        "Chốt parent grant scope, budget, no-progress threshold và current-runtime recovery policy trước implementation.",
+        "Kiểm chứng delivery review request trong giao diện có authority; không hứa tự đánh thức tab ChatGPT.com.",
+        "Cần ca live tự nhiên, quyền provider/runtime cần thiết và independent outcome receipt trước khi đóng."
+      ]
+    }
+  }
+}

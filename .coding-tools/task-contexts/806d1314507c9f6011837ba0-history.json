@@ -1,0 +1,378 @@
+[
+  {
+    "version": 2,
+    "task_id": "6cdbc275b6484201ab19cf5c53127b9e",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T11:44:27.892Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-14T11:41:39.669Z",
+    "updated_at": "2026-09-14T11:44:27.892Z",
+    "events": [
+      {
+        "time": "2026-09-14T11:41:39.669Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T11:41:39.965Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"ensureAutoActivationStarted|prepareBootstrapStart|requiresNewEpoch|assertMcpReplacementAllowed|READY_COMMITTED|FAILED\" electron/services/recoveryHost.js electron/services/fullCleanActivation.js",
+          "session_id": "Y9wXY7MC11h7M4lAE50vkRyt"
+        }
+      },
+      {
+        "time": "2026-09-14T11:41:40.310Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"ensureAutoActivationStarted|prepareBootstrapStart|requiresNewEpoch|assertMcpReplacementAllowed|READY_COMMITTED|FAILED\" electron/services/recoveryHost.js electron/services/fullCleanActivation.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:41:51.465Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"ensureAutoActivationStarted|prepareBootstrapStart|requiresNewEpoch\" electron/services/recoveryHost.js",
+          "session_id": "xP66hVif5vuFBGwqpxFiI0O5"
+        }
+      },
+      {
+        "time": "2026-09-14T11:41:51.832Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"ensureAutoActivationStarted|prepareBootstrapStart|requiresNewEpoch\" electron/services/recoveryHost.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:42:03.124Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 \"recovery-supervisor|setLoginItemSettings|openAtLogin|autoStartServices|auto-start|startup|logon|login\" electron resources scripts package.json",
+          "session_id": "CQyLjrOTFEwn4VJn7-wVLvyB"
+        }
+      },
+      {
+        "time": "2026-09-14T11:42:03.547Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 \"recovery-supervisor|setLoginItemSettings|openAtLogin|autoStartServices|auto-start|startup|logon|login\" electron resources scripts package.json",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:42:14.814Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 25 \"recovery-supervisor|setLoginItemSettings|openAtLogin|autoStartServices|Startup\" electron scripts package.json resources/recovery-supervisor",
+          "session_id": "yeYwJ2HOpwalFHUWO6xsCSuL"
+        }
+      },
+      {
+        "time": "2026-09-14T11:42:15.100Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 25 \"recovery-supervisor|setLoginItemSettings|openAtLogin|autoStartServices|Startup\" electron scripts package.json resources/recovery-supervisor",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:28.359Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 \"recoveryLoginItemArguments|ensureRecoveryHost\" electron/main.js electron/services/recoveryHostLauncher.js",
+          "session_id": "HNzQJ3UXSwzPnfR2NMAgFzlM"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:28.709Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"recoveryLoginItemArguments|ensureRecoveryHost\" electron/main.js electron/services/recoveryHostLauncher.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:37.741Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 \"assertMcpReplacementAllowed\" electron/services tests",
+          "session_id": "IcNuyLhSNgCnAyXQqBmGCHLB"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:38.045Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"assertMcpReplacementAllowed\" electron/services tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:49.231Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 55 \"^  assertMcpReplacementAllowed\\(\" electron/services/runtimeOrchestrator.js",
+          "session_id": "XEcDx6LMSopGVltX0vlX8QZF"
+        }
+      },
+      {
+        "time": "2026-09-14T11:43:49.610Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 55 \"^  assertMcpReplacementAllowed\\(\" electron/services/runtimeOrchestrator.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:00.142Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 24 \"startWithWindows|recoveryLoginItemArguments|--recovery-host|requiresNewEpoch|RECOVERY_BOOTSTRAP_TERMINAL|READY_COMMITTED|assertMcpReplacementAllowed|terminal activation cannot replace|fresh activation epoch\" tests scripts/packaged-recovery-smoke.js",
+          "session_id": "eMDth0fnON8b9IgXjkKzLr4w"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:00.495Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"startWithWindows|recoveryLoginItemArguments|--recovery-host|requiresNewEpoch|RECOVERY_BOOTSTRAP_TERMINAL|READY_COMMITTED|assertMcpReplacementAllowed|terminal activation cannot replace|fresh activation epoch\" tests scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:16.632Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"requiresNewEpoch|RECOVERY_BOOTSTRAP_TERMINAL|prepareBootstrapStart\" tests/recovery-host.test.js tests/recovery-bootstrap.test.js tests/runtime-lifecycle.test.js",
+          "session_id": "0gVfRAZTd86lXOcV3prqa3yz"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:16.945Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"requiresNewEpoch|RECOVERY_BOOTSTRAP_TERMINAL|prepareBootstrapStart\" tests/recovery-host.test.js tests/recovery-bootstrap.test.js tests/runtime-lifecycle.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:27.892Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"already terminal|terminal without a matching durable epoch|ACTIVATION_EPOCH_ACTIVE|requiresNewEpoch, false|requiresNewEpoch.*false\" tests/recovery-bootstrap.test.js tests/recovery-host.test.js",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:27.892Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T11:44:37.196Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "90cb5eed1c6c4ec3ae0452b164264da8",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Hys94SUlGCinyku9LmI48XY-",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 301,
+      "finished_at": "2026-09-14T11:44:37.808Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T11:44:37.203Z",
+    "updated_at": "2026-09-14T11:44:37.809Z",
+    "events": [
+      {
+        "time": "2026-09-14T11:44:37.203Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:37.508Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 -e \"already terminal\" -e \"terminal without a matching durable epoch\" -e \"ACTIVATION_EPOCH_ACTIVE\" -e \"requiresNewEpoch, false\" tests/recovery-bootstrap.test.js tests/recovery-host.test.js",
+          "session_id": "Hys94SUlGCinyku9LmI48XY-"
+        }
+      },
+      {
+        "time": "2026-09-14T11:44:37.809Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 -e \"already terminal\" -e \"terminal without a matching durable epoch\" -e \"ACTIVATION_EPOCH_ACTIVE\" -e \"requiresNewEpoch, false\" tests/recovery-bootstrap.test.js tests/recovery-host.test.js",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T11:45:33.528Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "74a6d990c1714a5892fc8fd5907201dd",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T11:45:33.534Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-14T11:45:33.529Z",
+    "updated_at": "2026-09-14T11:45:33.534Z",
+    "events": [
+      {
+        "time": "2026-09-14T11:45:33.529Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T11:45:33.534Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 120 \"def recover_exact_run_context|recover_exact_run_context\\(\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T11:45:33.534Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T11:45:42.269Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "a452d548fc2c40598bb50e77391a707d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "JUSA1VDnzxIufpkG20-d5O-P",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 289,
+      "finished_at": "2026-09-14T11:45:42.843Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T11:45:42.271Z",
+    "updated_at": "2026-09-14T11:45:42.843Z",
+    "events": [
+      {
+        "time": "2026-09-14T11:45:42.271Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T11:45:42.558Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 120 -e \"def recover_exact_run_context\" -e \"recover_exact_run_context(\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "session_id": "JUSA1VDnzxIufpkG20-d5O-P"
+        }
+      },
+      {
+        "time": "2026-09-14T11:45:42.843Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 120 -e \"def recover_exact_run_context\" -e \"recover_exact_run_context(\" resources/coding-tools-mcp/coding_tools_mcp/stateless_context.py resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T11:45:52.211Z",
+    "archive_reason": "finished"
+  }
+]

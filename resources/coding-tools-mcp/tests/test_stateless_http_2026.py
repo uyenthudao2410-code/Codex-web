@@ -76,6 +76,10 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.env.stop()
         self.temp.cleanup()
 
+    def enable_test_compatibility_bootstrap(self) -> None:
+        """Exercise the generic bootstrap path without weakening the live contract."""
+        self.runtime.tool_contract["compatible_predecessor_sha256"] = ["f" * 64]
+
     def request(self, method: str, params: dict, *, request_id: int = 1, extra_headers: dict[str, str] | None = None, timeout: float = 5) -> tuple[int, dict[str, str], dict]:
         headers = {
             "Content-Type": "application/json",
@@ -405,6 +409,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertFalse(self.runtime.connector_activation_bootstrap()["observed"])
 
     def test_closed_epoch_workspace_context_keeps_first_bootstrap_across_retries_and_open_retry(self) -> None:
+        self.enable_test_compatibility_bootstrap()
         self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
         self.runtime.activation_epoch_id = "activation-bootstrap-connector-0001"
         self.runtime.activation_gate_config = "closed"
@@ -482,6 +487,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(after_open_retry["client_id"], first_client_id)
 
     def test_closed_epoch_workspace_context_without_attestation_reports_binding_failure(self) -> None:
+        self.enable_test_compatibility_bootstrap()
         self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
         self.runtime.activation_epoch_id = "activation-bootstrap-binding-failure-0001"
         self.runtime.activation_gate_config = "closed"
@@ -513,6 +519,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(self.runtime.activation_admission, "closed")
 
     def test_one_http_bootstrap_survives_23_second_commit_without_client_retry(self) -> None:
+        self.enable_test_compatibility_bootstrap()
         self.runtime.activation_epoch_id = "activation-bootstrap-delayed-http-0001"
         self.runtime.activation_gate_config = "closed"
         self.runtime.activation_admission = "closed"
@@ -574,6 +581,7 @@ class StatelessHttp2026Tests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     def test_expired_epoch_workspace_context_returns_terminal_error_without_contact(self) -> None:
+        self.enable_test_compatibility_bootstrap()
         self.assertTrue(self.runtime.tool_contract["compatible_predecessor_sha256"])
         self.runtime.activation_epoch_id = "activation-bootstrap-expired-0001"
         self.runtime.activation_gate_config = "closed"

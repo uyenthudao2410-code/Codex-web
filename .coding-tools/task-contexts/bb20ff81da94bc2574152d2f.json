@@ -1,0 +1,541 @@
+{
+  "version": 2,
+  "task_id": "1ffc7317f42040e6b60738a29f1d9b86",
+  "orchestration": {
+    "run_id": "94d12f71be29494cbaf3dfc430b5cf3e",
+    "wave_id": "d87d6d29c0a74889967ae65cbecfeaaa",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "040697b3da54854e17f7eb6a9d4405204217cbea6705207af6c3e113345ffcb9",
+    "contract_fp": ""
+  },
+  "objective": "Proof-only reconciliation of the already-installed Machine-A C01 candidate after the prior orchestration parser failure. Do not install again. Verify current persistent state only: one Coding Tools MCP uninstall registration at the normal per-user location, installed executable exists and hash is captured, no packaged process is running, HKCU Run has no Coding Tools MCP entry, production Recovery descriptor remains SHA256 90cd716495beda127cf00aaf44614ef71b7cb80471e02b1176e30e756f8941f6, and WebMCP Recovery Supervisor task XML remains SHA256 68b7d4a018fbe21c044d34a409ec09248b47198a35400d82a3bd1f552a043295. No source edits, launch, autostart enable, reboot/runtime restart, commit/push/publish/release/deploy.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-14T14:11:15.770Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-14T14:11:15.770Z"
+    }
+  ],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "_luDjyVB0S1Nj73ij_Nz-mKl",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 862,
+    "finished_at": "2026-09-14T14:11:15.273Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 30,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 13,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "94d12f71be29494cbaf3dfc430b5cf3e",
+        "wave_id": "d87d6d29c0a74889967ae65cbecfeaaa",
+        "checkpoint_id": "23cfc9c9ed69490caf63591ee317c369"
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 31,
+      "latest_event": {
+        "seq": 249,
+        "event_id": "prl-bind-e14b3a5e30c30aa0aba4cdcc8266d65fd93aad97da76f669627b4eb4cacf22e7",
+        "event_hash": "698651aa9deb86f5b04c9dc1ae437b93ab108e4dd940ac2367a7f8b351579e67",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-14T14:10:54.185Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 62,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 44,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 18,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 56,
+        "head_hash": "df0f7af0a582714c4232e9b0497e481d5ec3fa05078c051fafea4d9a2b6ae92e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-94d12f71be29494cbaf3dfc430b5cf3e\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-94d12f71be29494cbaf3dfc430b5cf3e\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "94d12f71be29494cbaf3dfc430b5cf3e",
+      "wave_id": "d87d6d29c0a74889967ae65cbecfeaaa",
+      "checkpoint_id": "23cfc9c9ed69490caf63591ee317c369",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "040697b3da54854e17f7eb6a9d4405204217cbea6705207af6c3e113345ffcb9",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Proof-only reconciliation of the already-installed Machine-A C01 candidate after the prior orchestration parser failure. Do not install again. Verify current persistent state only: one Coding Tools MCP uninstall registration at the normal per-user location, installed executable exists and hash is captured, no packaged process is running, HKCU Run has no Coding Tools MCP entry, production Recovery descriptor remains SHA256 90cd716495beda127cf00aaf44614ef71b7cb80471e02b1176e30e756f8941f6, and WebMCP Recovery Supervisor task XML remains SHA256 68b7d4a018fbe21c044d34a409ec09248b47198a35400d82a3bd1f552a043295. No source edits, launch, autostart enable, reboot/runtime restart, commit/push/publish/release/deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "08758d109846934209192ba4950df11d30dc0a6d6be31e64f1e8039dbee47fca",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 6,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "c4e2d5d5fe1d4ec08641cbfc02b1e42a",
+          "stage_id": "check:7c235aeadb94ec7e",
+          "status": "passed",
+          "duration_ms": 1344,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "bf5c2901e3b24e168796e30d37396dfe",
+          "stage_id": "check:18dbc6049c4207bc",
+          "status": "passed",
+          "duration_ms": 1378,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "6ed53ce4ed2b4dca911ec5eec4f9635c",
+          "stage_id": "check:84a2a6ee761b2fd3",
+          "status": "passed",
+          "duration_ms": 1270,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "8da51588f95f432cb20f0d5df6ded8ad",
+          "stage_id": "check:2f6c1b6b180db301",
+          "status": "passed",
+          "duration_ms": 1392,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "96dd8aa9f41646b0ba5a8c4f7d6d21ca",
+          "stage_id": "check:564df5f1546757a9",
+          "status": "passed",
+          "duration_ms": 1197,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "a60c379287a24241b7497c0f450cc126",
+          "stage_id": "check:113ac9c59cdb7236",
+          "status": "passed",
+          "duration_ms": 1318,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "594403a7c57e31cee88918eac868542553b2ba4daf307271173cd75b6c19fcd5",
+  "completion_report_acknowledged_id": "594403a7c57e31cee88918eac868542553b2ba4daf307271173cd75b6c19fcd5",
+  "completion_report_acknowledged_at": "2026-09-14T14:12:12.829Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-14T14:10:52.452Z",
+  "updated_at": "2026-09-14T14:12:13.212Z",
+  "events": [
+    {
+      "time": "2026-09-14T14:10:52.452Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Proof-only reconciliation of the already-installed Machine-A C01 candidate after the prior orchestration parser failure. Do not install again. Verify current persistent state only: one Coding Tools MCP uninstall registration at the normal per-user location, installed executable exists and hash is captured, no packaged process is running, HKCU Run has no Coding Tools MCP entry, production Recovery descriptor remains SHA256 90cd716495beda127cf00aaf44614ef71b7cb80471e02b1176e30e756f8941f6, and WebMCP Recovery Supervisor task XML remains SHA256 68b7d4a018fbe21c044d34a409ec09248b47198a35400d82a3bd1f552a043295. No source edits, launch, autostart enable, reboot/runtime restart, commit/push/publish/release/deploy."
+      }
+    },
+    {
+      "time": "2026-09-14T14:10:54.571Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:01.588Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:02.599Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:02.605Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:03.749Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:04.029Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:05.066Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "session_id": "RFVsuwgtdFOuIWXTqOpyefWE"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:05.534Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:06.940Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%LOCALAPPDATA%\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe\" SHA256",
+        "session_id": "MGfHbRFfOV-uLb16Djg2rv4w"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:07.495Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%LOCALAPPDATA%\\Programs\\Coding Tools MCP\\Coding Tools MCP.exe\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:08.782Z",
+      "event": "command_started",
+      "details": {
+        "command": "tasklist /FI \"IMAGENAME eq Coding Tools MCP.exe\"",
+        "session_id": "1G9tCJMVNywPNNMpk9zzEIly"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:09.280Z",
+      "event": "command_finished",
+      "details": {
+        "command": "tasklist /FI \"IMAGENAME eq Coding Tools MCP.exe\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:11.023Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"",
+        "session_id": "GofWTsIblh_tKFyonv868rpW"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:11.489Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:12.858Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "session_id": "BylDociQowjIC0B0yXzjLMmu"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:13.357Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile \"%APPDATA%\\web-mcp-assistant\\recovery-host.json\" SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:14.763Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "session_id": "_luDjyVB0S1Nj73ij_Nz-mKl"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:15.273Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=(schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML|Out-String);$s=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($s.ComputeHash([Text.Encoding]::UTF8.GetBytes($x)))).Replace('-','').ToLowerInvariant()}finally{$s.Dispose()}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:15.763Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:15.770Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:16.595Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:16.598Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:16.720Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "a2170cced0607980d4685ef81d08a29ee8fef277cf9bcc7f36d9cff726a2887c"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:16.877Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:28.561Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:31.378Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "a2170cced0607980d4685ef81d08a29ee8fef277cf9bcc7f36d9cff726a2887c"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:39.966Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:43.491Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:43.494Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:43.621Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "594403a7c57e31cee88918eac868542553b2ba4daf307271173cd75b6c19fcd5"
+      }
+    },
+    {
+      "time": "2026-09-14T14:11:58.185Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T14:12:12.829Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "594403a7c57e31cee88918eac868542553b2ba4daf307271173cd75b6c19fcd5"
+      }
+    }
+  ]
+}

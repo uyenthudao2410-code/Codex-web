@@ -35,6 +35,13 @@ const DEFAULT_TTL_MS = 600_000;
 // 60-second validation window. Keep a small transport/clock margin while the
 // durable full-clean epoch retains the longer end-to-end deadline above.
 const MCP_PREPARE_FENCE_TTL_MS = 55_000;
+// A cold Backup-API copy, integrity check, and logical hash of the canonical
+// ledger can legitimately cross 15 seconds on Windows storage. Keep this
+// bounded below the outer Recovery Host bootstrap window while leaving enough
+// room for both the initial and exclusive admission censuses.
+const CANONICAL_LEDGER_CENSUS_TIMEOUT_MS = 30_000;
+const CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS = 5_000;
+const CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS = 5_000;
 const execFileAsync = promisify(execFile);
 const HEX64 = /^[a-f0-9]{64}$/;
 const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
@@ -81,6 +88,106 @@ function epochError(code, message, details = {}) {
 }
 
 function text(value) { return String(value || '').trim(); }
+
+function canonicalLedgerCensusFailure(error) {
+  const code = text(error?.code);
+  if (code === 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT') {
+    return Object.assign(new Error('Canonical ledger census could not acquire its exclusive ledger gate.'), {
+      code: 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT'
+    });
+  }
+  if (code === 'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN') {
+    return Object.assign(new Error('Canonical ledger census child cleanup could not be confirmed.'), {
+      code: 'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN',
+      timedOut: error?.timedOut === true,
+      cleanupConfirmed: false,
+      cleanupOutcome: 'unconfirmed',
+      ...(Number.isFinite(Number(error?.cleanupBudgetMs))
+        ? { cleanupBudgetMs: Number(error.cleanupBudgetMs) }
+        : {})
+    });
+  }
+  if (code === 'CANONICAL_LEDGER_CENSUS_TIMEOUT') {
+    return Object.assign(new Error('Canonical ledger census exceeded its bounded deadline.'), {
+      code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+      timedOut: true,
+      ...(error?.cleanupConfirmed === true
+        ? { cleanupConfirmed: true, cleanupOutcome: 'confirmed' }
+        : {})
+    });
+  }
+  if (String(error?.stderr || '').includes('ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT')) {
+    return Object.assign(new Error('Canonical ledger census could not acquire its exclusive ledger gate.'), {
+      code: 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT'
+    });
+  }
+  if (error?.killed === true && error?.signal) {
+    return Object.assign(new Error('Canonical ledger census exceeded its bounded deadline.'), {
+      code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+      timedOut: true
+    });
+  }
+  return Object.assign(new Error('Canonical ledger census process failed.'), {
+    code: code || 'ORCHESTRATION_STATE_UNCERTAIN',
+    ...(Number.isSafeInteger(error?.exitCode) ? { exit_code: error.exitCode } : {})
+  });
+}
+
+function censusProcessError(stderr, exitCode) {
+  if (String(stderr || '').includes('ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT')) {
+    return Object.assign(new Error('Canonical ledger census could not acquire its exclusive ledger gate.'), {
+      code: 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT',
+      ...(Number.isSafeInteger(exitCode) ? { exit_code: exitCode } : {})
+    });
+  }
+  return Object.assign(new Error('Canonical ledger census process exited before producing valid evidence.'), {
+    code: 'ORCHESTRATION_STATE_UNCERTAIN',
+    ...(Number.isSafeInteger(exitCode) ? { exit_code: exitCode } : {})
+  });
+}
+
+function terminateOwnedCensusChild(child, cleanupTimeoutMs = CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    if (!child || child.exitCode !== null || child.signalCode !== null) {
+      resolve({ cleanupConfirmed: true, cleanupOutcome: 'confirmed' });
+      return;
+    }
+    let done = false;
+    let cleanupTimer = null;
+    const cleanupUncertain = () => Object.assign(
+      new Error('Canonical ledger census child cleanup could not be confirmed.'),
+      {
+        code: 'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN',
+        timedOut: true,
+        cleanupConfirmed: false,
+        cleanupOutcome: 'unconfirmed',
+        cleanupBudgetMs: cleanupTimeoutMs
+      }
+    );
+    const finish = (result, error = null) => {
+      if (done) return;
+      done = true;
+      if (cleanupTimer) clearTimeout(cleanupTimer);
+      child.removeListener?.('exit', onTerminated);
+      child.removeListener?.('close', onTerminated);
+      child.removeListener?.('error', onError);
+      if (error) reject(error);
+      else resolve(result);
+    };
+    const onTerminated = () => finish({ cleanupConfirmed: true, cleanupOutcome: 'confirmed' });
+    const onError = () => finish(null, cleanupUncertain());
+    child.once('exit', onTerminated);
+    child.once('close', onTerminated);
+    child.once('error', onError);
+    cleanupTimer = setTimeout(() => finish(null, cleanupUncertain()), cleanupTimeoutMs);
+    try {
+      const signalled = child.kill();
+      if (!signalled && (child.exitCode !== null || child.signalCode !== null)) queueMicrotask(onTerminated);
+    } catch {
+      finish(null, cleanupUncertain());
+    }
+  });
+}
 
 function isActivationResponseLoss(error) {
   return ACTIVATION_RESPONSE_LOSS_CODES.has(String(error?.code || '').trim().toUpperCase());
@@ -636,9 +743,99 @@ async function runtimeStateHasLiveManagedProcess(paths, processIdentityObserver 
   return false;
 }
 
+function oneShotCensus(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const spawnFn = options.spawnFn || spawn;
+    const timeoutMs = Number(options.timeoutMs ?? CANONICAL_LEDGER_CENSUS_TIMEOUT_MS);
+    const cleanupTimeoutMs = Number(options.cleanupTimeoutMs ?? CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS);
+    let child;
+    try {
+      child = spawnFn(command, args, {
+        cwd: options.cwd,
+        env: options.env,
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch (error) {
+      reject(canonicalLedgerCensusFailure(error));
+      return;
+    }
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    let terminating = false;
+    let timeout = null;
+    const settleReject = (error) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      reject(error);
+    };
+    const settleResolve = (value) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      resolve(value);
+    };
+    const terminateThenReject = async (error) => {
+      if (settled || terminating) return;
+      terminating = true;
+      try {
+        const cleanup = await terminateOwnedCensusChild(child, cleanupTimeoutMs);
+        settleReject(Object.assign(error, cleanup, { cleanupBudgetMs: cleanupTimeoutMs }));
+      } catch (cleanupError) {
+        settleReject(cleanupError);
+      }
+    };
+    timeout = setTimeout(() => {
+      void terminateThenReject(Object.assign(new Error('Canonical ledger census process timed out.'), {
+        code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+        timedOut: true,
+        budgetMs: timeoutMs
+      }));
+    }, timeoutMs);
+    timeout.unref?.();
+    child.stderr?.setEncoding?.('utf8');
+    child.stderr?.on?.('data', (chunk) => {
+      if (stderr.length < 64 * 1024) stderr += chunk;
+    });
+    child.stdout?.setEncoding?.('utf8');
+    child.stdout?.on?.('data', (chunk) => {
+      if (settled || terminating) return;
+      stdout += chunk;
+      if (Buffer.byteLength(stdout, 'utf8') > 8 * 1024 * 1024) {
+        void terminateThenReject(Object.assign(new Error('Canonical ledger census output exceeded limit.'), {
+          code: 'ORCHESTRATION_STATE_UNCERTAIN'
+        }));
+      }
+    });
+    child.once('error', (error) => {
+      if (settled || terminating) return;
+      settleReject(canonicalLedgerCensusFailure(error));
+    });
+    child.once('close', (code) => {
+      if (settled || terminating) return;
+      if (code !== 0) {
+        settleReject(censusProcessError(stderr, code));
+        return;
+      }
+      try {
+        settleResolve(JSON.parse(String(stdout || '').trim()));
+      } catch {
+        settleReject(Object.assign(new Error('Canonical ledger census output was not valid JSON.'), {
+          code: 'ORCHESTRATION_STATE_UNCERTAIN'
+        }));
+      }
+    });
+  });
+}
+
 function heldCensus(command, args, options) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const spawnFn = options.spawnFn || spawn;
+    const timeoutMs = Number(options.timeoutMs ?? CANONICAL_LEDGER_CENSUS_TIMEOUT_MS);
+    const cleanupTimeoutMs = Number(options.cleanupTimeoutMs ?? CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS);
+    const child = spawnFn(command, args, {
       cwd: options.cwd,
       env: options.env,
       windowsHide: true,
@@ -647,77 +844,116 @@ function heldCensus(command, args, options) {
     let stdout = '';
     let stderr = '';
     let settled = false;
+    let terminating = false;
+    const settleReject = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    };
+    const terminateThenReject = async (error) => {
+      if (settled || terminating) return;
+      terminating = true;
+      clearTimeout(timeout);
+      try {
+        const cleanup = await terminateOwnedCensusChild(child, cleanupTimeoutMs);
+        settleReject(Object.assign(error, cleanup, { cleanupBudgetMs: cleanupTimeoutMs }));
+      } catch (cleanupError) {
+        settleReject(cleanupError);
+      }
+    };
     const timeout = setTimeout(() => {
-      child.kill();
-      reject(Object.assign(new Error('Canonical ledger census exclusive gate timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
-    }, 15_000);
+      void terminateThenReject(Object.assign(new Error('Canonical ledger census exclusive gate timed out.'), {
+        code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+        timedOut: true,
+        budgetMs: timeoutMs
+      }));
+    }, timeoutMs);
     timeout.unref?.();
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk) => { if (stderr.length < 64 * 1024) stderr += chunk; });
     child.stdout.setEncoding('utf8');
     child.stdout.on('data', (chunk) => {
-      if (settled) return;
+      if (settled || terminating) return;
       stdout += chunk;
       if (stdout.length > 8 * 1024 * 1024) {
-        settled = true;
-        clearTimeout(timeout);
-        child.kill();
-        reject(Object.assign(new Error('Canonical ledger census exceeded its output bound.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+        void terminateThenReject(Object.assign(
+          new Error('Canonical ledger census exceeded its output bound.'),
+          { code: 'ORCHESTRATION_STATE_UNCERTAIN' }
+        ));
         return;
       }
       const newline = stdout.indexOf('\n');
       if (newline < 0) return;
-      settled = true;
-      clearTimeout(timeout);
       const line = stdout.slice(0, newline).trim();
       let raw;
       try { raw = JSON.parse(line); }
-      catch (error) {
-        child.kill();
-        reject(Object.assign(new Error('Canonical ledger census returned invalid held evidence.'), {
-          code: 'ORCHESTRATION_STATE_UNCERTAIN', cause: error
+      catch {
+        void terminateThenReject(Object.assign(new Error('Canonical ledger census returned invalid held evidence.'), {
+          code: 'ORCHESTRATION_STATE_UNCERTAIN'
         }));
         return;
       }
+      settled = true;
+      clearTimeout(timeout);
       let released = false;
       const release = () => new Promise((releaseResolve, releaseReject) => {
         if (released) { releaseResolve(true); return; }
         released = true;
-        const releaseTimeout = setTimeout(() => {
-          child.kill();
-          releaseReject(Object.assign(new Error('Canonical ledger census gate release timed out.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' }));
+        let releaseSettled = false;
+        let forcedRelease = false;
+        let releaseTimeout = null;
+        const finishRelease = (error = null) => {
+          if (releaseSettled) return;
+          releaseSettled = true;
+          if (releaseTimeout) clearTimeout(releaseTimeout);
+          if (error) releaseReject(error);
+          else releaseResolve(true);
+        };
+        releaseTimeout = setTimeout(() => {
+          if (releaseSettled) return;
+          forcedRelease = true;
+          void terminateOwnedCensusChild(child, cleanupTimeoutMs).then(
+            (cleanup) => finishRelease(Object.assign(
+              new Error('Canonical ledger census gate release timed out.'),
+              { code: 'ORCHESTRATION_STATE_UNCERTAIN', ...cleanup, cleanupBudgetMs: cleanupTimeoutMs }
+            )),
+            finishRelease
+          );
         }, 5000);
         releaseTimeout.unref?.();
-        child.once('error', (error) => { clearTimeout(releaseTimeout); releaseReject(error); });
+        child.once('error', (error) => {
+          if (forcedRelease) return;
+          finishRelease(canonicalLedgerCensusFailure(error));
+        });
         child.once('exit', (code) => {
-          clearTimeout(releaseTimeout);
-          if (code === 0) releaseResolve(true);
-          else releaseReject(Object.assign(new Error('Canonical ledger census gate holder exited abnormally.'), {
-            code: 'ORCHESTRATION_STATE_UNCERTAIN', details: { exit_code: code, stderr: stderr.slice(0, 1000) }
-          }));
+          if (forcedRelease) return;
+          if (code === 0) finishRelease();
+          else finishRelease(censusProcessError(stderr, code));
         });
         child.stdin.end('release\n');
       });
       resolve({ raw, release });
     });
     child.once('error', (error) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      reject(error);
+      if (settled || terminating) return;
+      settleReject(canonicalLedgerCensusFailure(error));
     });
     child.once('exit', (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeout);
-      reject(Object.assign(new Error('Canonical ledger census gate holder exited before publishing evidence.'), {
-        code: 'ORCHESTRATION_STATE_UNCERTAIN', details: { exit_code: code, stderr: stderr.slice(0, 1000) }
-      }));
+      if (settled || terminating) return;
+      settleReject(censusProcessError(stderr, code));
     });
   });
 }
 
-async function canonicalLedgerCensus({ paths, workspace, allowAcceptancePending = false, sourceCheckpoint = null, holdExclusive = false } = {}) {
+async function canonicalLedgerCensus({
+  paths,
+  workspace,
+  allowAcceptancePending = false,
+  sourceCheckpoint = null,
+  holdExclusive = false,
+  pythonStatusFn = pythonStatus
+} = {}) {
   const rawWorkspace = text(workspace);
   if (!rawWorkspace || !path.isAbsolute(rawWorkspace)) {
     throw Object.assign(new Error('Canonical ledger census requires an absolute workspace.'), {
@@ -736,7 +972,12 @@ async function canonicalLedgerCensus({ paths, workspace, allowAcceptancePending 
   if (!fs.existsSync(helper)) {
     throw Object.assign(new Error('Canonical ledger census helper is unavailable.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
   }
-  const python = await pythonStatus(paths);
+  let python;
+  try {
+    python = await pythonStatusFn(paths, { budgetMs: CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS });
+  } catch (error) {
+    throw canonicalLedgerCensusFailure(error);
+  }
   if (!python.installed) {
     throw Object.assign(new Error('Python runtime is unavailable for canonical ledger census.'), { code: 'ORCHESTRATION_STATE_UNCERTAIN' });
   }
@@ -762,20 +1003,24 @@ async function canonicalLedgerCensus({ paths, workspace, allowAcceptancePending 
       raw = held.raw;
       releaseExclusive = held.release;
     } else {
-      const output = await execFileAsync(python.command, args, {
+      raw = await oneShotCensus(python.command, args, {
         cwd: root,
         env,
-        windowsHide: true,
-        maxBuffer: 8 * 1024 * 1024,
-        timeout: 15_000
+        timeoutMs: CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,
+        cleanupTimeoutMs: CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS
       });
-      raw = JSON.parse(String(output.stdout || '').trim());
     }
   } catch (error) {
     if (releaseExclusive) await releaseExclusive().catch(() => false);
+    const cause = canonicalLedgerCensusFailure(error);
+    const typedCode = new Set([
+      'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT',
+      'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+      'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN'
+    ]).has(cause.code) ? cause.code : 'ORCHESTRATION_STATE_UNCERTAIN';
     throw Object.assign(new Error('Canonical ledger census could not be completed.'), {
-      code: 'ORCHESTRATION_STATE_UNCERTAIN',
-      cause: error
+      code: typedCode,
+      cause
     });
   }
   const result = summarizeCensus({ ...raw, workspace: root, ledger_path: ledgerPath }, {
@@ -2595,8 +2840,14 @@ module.exports = {
   FullCleanActivation,
   COMPONENTS,
   DEFAULT_TTL_MS,
+  CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,
+  CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS,
+  CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS,
   operationId,
   canonicalLedgerCensus,
+  canonicalLedgerCensusFailure,
+  oneShotCensus,
+  heldCensus,
   runtimeStateHasLiveManagedProcess,
   canonicalSnapshot,
   summarizeCensus,

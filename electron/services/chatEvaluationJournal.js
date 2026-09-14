@@ -295,26 +295,30 @@ function continuationConsentPath(workspace) {
 
 function normalizedContinuationConsentDescriptor(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const required = new Set([
-    'action', 'run_id', 'wave_id', 'workspace_id', 'problem_id', 'problem_revision',
+  const commonRequired = [
+    'action', 'workspace_id', 'problem_id', 'problem_revision',
     'contract_fingerprint', 'tool_contract_sha256', 'runtime_behavior_fingerprint',
     'activation_epoch_id', 'activation_admission', 'issuer_client_id', 'scope_sha256',
     'read_paths', 'write_paths', 'protected_paths', 'approved_check_hashes',
     'max_duration_seconds', 'max_decision_turns', 'max_patch_attempts'
-  ]);
+  ];
+  const isGoal = value.action === 'authorize_bounded_goal_continuation';
+  const required = new Set(isGoal
+    ? [...commonRequired, 'episode_id', 'origin_run_id', 'origin_wave_id', 'controller_generation', 'controller_endpoint_id', 'controller_owner_client_id', 'max_no_progress']
+    : [...commonRequired, 'run_id', 'wave_id']);
   if (Object.keys(value).length !== required.size || Object.keys(value).some((key) => !required.has(key))) return null;
-  if (value.action !== 'authorize_bounded_continuation') return null;
+  if (!isGoal && value.action !== 'authorize_bounded_continuation') return null;
   const opaque = {};
-  for (const [key, maximum] of Object.entries({
-    run_id: 128, wave_id: 128, workspace_id: 512, problem_id: 128,
-    activation_epoch_id: 128, activation_admission: 32, issuer_client_id: 512
-  })) {
+  const opaqueShape = isGoal
+    ? { origin_run_id: 128, origin_wave_id: 128, workspace_id: 512, problem_id: 128, controller_endpoint_id: 512, controller_owner_client_id: 512, activation_epoch_id: 128, activation_admission: 32, issuer_client_id: 512 }
+    : { run_id: 128, wave_id: 128, workspace_id: 512, problem_id: 128, activation_epoch_id: 128, activation_admission: 32, issuer_client_id: 512 };
+  for (const [key, maximum] of Object.entries(opaqueShape)) {
     const normalized = boundedText(value[key], maximum, true);
     if (!normalized) return null;
     opaque[key] = normalized;
   }
   const hashes = {};
-  for (const key of ['contract_fingerprint', 'tool_contract_sha256', 'runtime_behavior_fingerprint', 'scope_sha256']) {
+  for (const key of [...(isGoal ? ['episode_id'] : []), 'contract_fingerprint', 'tool_contract_sha256', 'runtime_behavior_fingerprint', 'scope_sha256']) {
     const normalized = boundedText(value[key], 64, true);
     if (!normalized || !/^[0-9a-f]{64}$/.test(normalized)) return null;
     hashes[key] = normalized;
@@ -330,16 +334,21 @@ function normalizedContinuationConsentDescriptor(value) {
     lists[key] = normalized;
   }
   if (!Number.isSafeInteger(value.problem_revision) || value.problem_revision < 1) return null;
-  for (const key of ['max_duration_seconds', 'max_decision_turns', 'max_patch_attempts']) {
+  for (const key of [...(isGoal ? ['controller_generation', 'max_no_progress'] : []), 'max_duration_seconds', 'max_decision_turns', 'max_patch_attempts']) {
     if (!Number.isSafeInteger(value[key]) || value[key] < 1) return null;
   }
-  return {
-    action: 'authorize_bounded_continuation', ...opaque, problem_revision: value.problem_revision,
+  const normalized = {
+    action: value.action, ...opaque, problem_revision: value.problem_revision,
     ...hashes, ...lists,
     max_duration_seconds: value.max_duration_seconds,
     max_decision_turns: value.max_decision_turns,
     max_patch_attempts: value.max_patch_attempts
   };
+  if (isGoal) {
+    normalized.controller_generation = value.controller_generation;
+    normalized.max_no_progress = value.max_no_progress;
+  }
+  return normalized;
 }
 
 function parseContinuationConsentText(value) {

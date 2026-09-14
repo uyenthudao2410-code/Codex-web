@@ -133,7 +133,6 @@ class ActivationEpochTests(unittest.TestCase):
     def test_workspace_bootstrap_deadline_is_terminal_without_workspace_access(self) -> None:
         runtime = Runtime(Path(self.temp.name))
         try:
-            self.assertTrue(runtime.tool_contract["compatible_predecessor_sha256"])
             for offset_ms in (-1, 0, 1):
                 expired = offset_ms >= 0
                 with self.subTest(offset_ms=offset_ms), patch(
@@ -178,6 +177,47 @@ class ActivationEpochTests(unittest.TestCase):
                 else:
                     self.assertTrue(structured["activation_bootstrap"]["accepted"])
                     self.assertTrue(structured["activation_bootstrap"]["retry_required"])
+        finally:
+            runtime.close()
+
+    def test_same_sha_workspace_bootstrap_allows_empty_predecessor_list(self) -> None:
+        runtime = Runtime(Path(self.temp.name))
+        try:
+            runtime.tool_contract["compatible_predecessor_sha256"] = []
+            runtime.request_context.hub_client = {
+                "client_id": "chatweb-same-sha-empty-predecessor",
+                "client_type": "chatweb",
+                "identity_source": "attested_transport",
+                "attestation_verified": True,
+                "attestation_source": "managed_tunnel",
+            }
+            with patch.object(
+                runtime,
+                "_set_request_workspace_scope",
+                side_effect=AssertionError("same-SHA bootstrap must not select a workspace"),
+            ), patch.object(
+                runtime,
+                "_call_tool_dispatch",
+                side_effect=AssertionError("same-SHA bootstrap must not dispatch a workspace tool"),
+            ):
+                response = runtime.call_tool(
+                    "workspace_context",
+                    {"path": "must-not-read", "detail": "compact"},
+                )
+
+            self.assertFalse(response["isError"])
+            value = response["structuredContent"]
+            self.assertEqual(value["status"], "activation_pending")
+            self.assertFalse(value["completed"])
+            self.assertFalse(value["workspace_accessed"])
+            self.assertTrue(value["retryable"])
+            self.assertTrue(value["activation_bootstrap"]["accepted"])
+            self.assertTrue(value["activation_bootstrap"]["retry_required"])
+            self.assertEqual(
+                value["activation_bootstrap"]["activation_epoch_id"],
+                "epoch-test-001",
+            )
+            self.assertEqual(runtime.tool_contract["compatible_predecessor_sha256"], [])
         finally:
             runtime.close()
 

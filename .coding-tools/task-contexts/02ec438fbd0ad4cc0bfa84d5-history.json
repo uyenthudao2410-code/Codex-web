@@ -1,0 +1,92 @@
+[
+  {
+    "version": 2,
+    "task_id": "d8bc119c491a4184bbad4e9499c172f6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ZKQcQvF8kaBKXdYKQlYXdfZf",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 464,
+      "finished_at": "2026-09-14T14:02:52.114Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T14:02:19.384Z",
+    "updated_at": "2026-09-14T14:02:52.114Z",
+    "events": [
+      {
+        "time": "2026-09-14T14:02:19.384Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:19.842Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 14 \"startWithWindows|setLoginItemSettings|getLoginItemSettings|recoveryLoginItemArguments|--recovery-host\" electron scripts tests docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md",
+          "session_id": "5vrYHGSCw6faGQQufbasmxQR"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:20.339Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 14 \"startWithWindows|setLoginItemSettings|getLoginItemSettings|recoveryLoginItemArguments|--recovery-host\" electron scripts tests docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:30.308Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 \"startWithWindows|setLoginItemSettings|getLoginItemSettings|recoveryLoginItemArguments\" electron\\main.js electron\\services\\settingsStore.js electron\\services\\recoveryHostLauncher.js tests",
+          "session_id": "MgH0VRIJHP906F-zO6sDOFRZ"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:30.783Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 \"startWithWindows|setLoginItemSettings|getLoginItemSettings|recoveryLoginItemArguments\" electron\\main.js electron\\services\\settingsStore.js electron\\services\\recoveryHostLauncher.js tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:51.755Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 16 \"oneClick|perMachine|allowToChangeInstallationDirectory|runAfterFinish|createDesktopShortcut|createStartMenuShortcut|setLoginItemSettings|startWithWindows|settings:save|--recovery-host\" package.json electron scripts tests | head -n 500",
+          "session_id": "ZKQcQvF8kaBKXdYKQlYXdfZf"
+        }
+      },
+      {
+        "time": "2026-09-14T14:02:52.114Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 16 \"oneClick|perMachine|allowToChangeInstallationDirectory|runAfterFinish|createDesktopShortcut|createStartMenuShortcut|setLoginItemSettings|startWithWindows|settings:save|--recovery-host\" package.json electron scripts tests | head -n 500",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T14:03:02.886Z",
+    "archive_reason": "finished"
+  }
+]

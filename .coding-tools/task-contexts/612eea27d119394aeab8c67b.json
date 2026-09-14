@@ -1,0 +1,307 @@
+{
+  "version": 2,
+  "task_id": "67f5d720506947b6bb8d54379b3cc25d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "mGU_DyPNOs8s3pu2Xg-sleWj",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 320,
+    "finished_at": "2026-09-14T03:16:35.893Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Recover canonical Goal pagination RUN f32812e06c43492294fe33e83e4361b9 from the durable ledger.",
+  "created_at": "2026-09-14T03:13:14.280Z",
+  "updated_at": "2026-09-14T03:16:48.870Z",
+  "events": [
+    {
+      "time": "2026-09-14T03:13:14.280Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:14.559Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"phase == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+        "session_id": "QmPZJ_R9tAcsoWfCFBdiiFrL"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:14.868Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"phase == \\\"resume\\\"\" resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:29.558Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 120 -B 20 \"goal_controller_precondition\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "QsFa4lIN2eWZkOE5IIiFmxR5"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:29.859Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 120 -B 20 \"goal_controller_precondition\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:38.763Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 120 -B 30 \"goal_controller_precondition\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py -S",
+        "session_id": "RvYWBgZLK-Tzq_-MHvAXdMd1"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:39.060Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 120 -B 30 \"goal_controller_precondition\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_control.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:47.756Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 160 -B 30 \"def create_run\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py -S",
+        "session_id": "Zkx7NB-l3A2sVYBeBzOs2ZRG"
+      }
+    },
+    {
+      "time": "2026-09-14T03:13:48.042Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 160 -B 30 \"def create_run\" resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:14:48.540Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 45 \"active_run_transfers|controller_reattach|_project_orchestration|reattach:\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+        "session_id": "xML31WFGYzrOOrQh5pFoT1pW"
+      }
+    },
+    {
+      "time": "2026-09-14T03:14:48.851Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 45 \"active_run_transfers|controller_reattach|_project_orchestration|reattach:\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:14:59.559Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 80 -B 10 \"def _project_orchestration\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "3Wggf7RAd_rFjGnZmoiyCQj3"
+      }
+    },
+    {
+      "time": "2026-09-14T03:14:59.887Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 80 -B 10 \"def _project_orchestration\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:08.247Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 30 \"set_orchestration_projection|task_orchestration_projection|projection_reconciled|controller_reattach_goal\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "vVfFUVgS91ikb3MhspHzYPtT"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:08.545Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 30 \"set_orchestration_projection|task_orchestration_projection|projection_reconciled|controller_reattach_goal\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:16.887Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"def set_orchestration_projection|def reconcile|orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py -S",
+        "session_id": "HkuuSfjxBn1CY92e26OY2-NJ"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:17.154Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"def set_orchestration_projection|def reconcile|orchestration_projection\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:24.640Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 50 -B 40 \"orchestration_projection_restored\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py -S",
+        "session_id": "JEpKanxn3pOzzTXNgQg5he66"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:24.924Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 50 -B 40 \"orchestration_projection_restored\" resources/coding-tools-mcp/coding_tools_mcp/task_state.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:32.867Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 45 \"restore_from_ledger\\(\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "EP_AJKm1Rr8ds22nV9_4laGd"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:33.133Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 45 \"restore_from_ledger\\(\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:46.517Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"projection_rebuild|rebuild_projection|restore_from_ledger\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py -S",
+        "session_id": "YMzbxcVhXVwShD12xZZRT2mb"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:46.769Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"projection_rebuild|rebuild_projection|restore_from_ledger\" resources/coding-tools-mcp/coding_tools_mcp/server.py resources/coding-tools-mcp/coding_tools_mcp/coordination.py resources/coding-tools-mcp/coding_tools_mcp/activation_lifecycle.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:55.153Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 55 -B 10 \"if action == \\\"clear\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py -S",
+        "session_id": "7dgOMewMbn_0_udUDli0v4Hd"
+      }
+    },
+    {
+      "time": "2026-09-14T03:15:55.459Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 55 -B 10 \"if action == \\\"clear\\\"\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:05.448Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 140 -B 80 \"restoring_exact_run\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py -S",
+        "session_id": "3C8XmNt4coszKniBNMUthKbF"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:05.717Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 140 -B 80 \"restoring_exact_run\" resources/coding-tools-mcp/coding_tools_mcp/projection_rebuild.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:17.989Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"requested_run_id\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "zb-Z3TdsysQ0v12gwbXcK5GI"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:18.283Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"requested_run_id\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:27.481Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"_reconcile_task_orchestration_projection\\(\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "session_id": "Fi8D4ZqEn6eshI_An4bFuTHl"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:27.726Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"_reconcile_task_orchestration_projection\\(\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\" -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:35.639Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -A 95 -B 65 \"projection_recovery_run\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py -S",
+        "session_id": "mGU_DyPNOs8s3pu2Xg-sleWj"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:35.893Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -A 95 -B 65 \"projection_recovery_run\" resources/coding-tools-mcp/coding_tools_mcp/coordination.py -S",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T03:16:48.868Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -3,51 +3,24 @@
   "task_id": "84c0a1a8f1644ebf84f53153f31e0674",
   "orchestration": {
     "run_id": "f32812e06c43492294fe33e83e4361b9",
-    "wave_id": "fdb02fdf348644d886ef677774769056",
-    "orchestration_state": "REPLAN",
+    "wave_id": "2ff68d67d3114bbea358cfaae971633a",
+    "orchestration_state": "PREFLIGHT",
     "execution_mode": "mcp_only",
-    "route_requested": "deterministic",
-    "route_resolved": "deterministic",
+    "route_requested": "",
+    "route_resolved": "",
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "228b91e6128479d4b3699e622d4f51dd431acb24",
-    "worktree_fp": "00697acc77f9b41ec1be4e83a56a6d0fb4962e27baf8ef02662a5bd8b4ea7aaf",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
     "contract_fp": ""
   },
-  "objective": "Implement bounded deterministic pagination for unresolved Goal discovery so callers can traverse all unresolved Goal candidates beyond the fixed cap while exact Problem identity selection remains fail-closed. Preserve bounded/privacy-safe results, no timestamp-based implicit selection, and stable/fail-closed continuation under backlog drift. Add focused regression with >10 unresolved Goals.",
+  "objective": "Implement bounded deterministic pagination for unresolved Goal discovery so callers can traverse all unresolved Goal candidates beyond the fixed cap while exact Problem identity selection remains fail-closed. Preserve bounded/privacy-safe results, no timestamp-based implicit selection, and stable/fail-closed continuation under backlog drift. Add focused regression with >10 unresolved Goals and prove current backlog is traversable.",
   "status": "waiting",
-  "steps": [
-    {
-      "id": "apply",
-      "text": "Apply workspace changes",
-      "status": "completed",
-      "updated_at": "2026-09-12T15:04:17.171Z"
-    },
-    {
-      "id": "verify",
-      "text": "Run tests and build verification",
-      "status": "failed",
-      "updated_at": "2026-09-12T15:04:17.171Z"
-    },
-    {
-      "id": "finalize",
-      "text": "Finalize verified result",
-      "status": "pending",
-      "updated_at": "2026-09-12T15:04:17.171Z"
-    }
-  ],
-  "current_step": "Replan report acknowledged",
+  "steps": [],
+  "current_step": "Waiting for model",
   "current_command": null,
-  "last_command_result": {
-    "command_id": "4UdDDWclifW4xZSL30y2lJFK",
-    "kind": "test",
-    "status": "exited",
-    "result_status": "failed",
-    "exit_code": 2,
-    "duration_ms": null,
-    "finished_at": "2026-09-12T15:04:16.844Z"
-  },
+  "last_command_result": null,
   "completion_report": {
     "schema_version": 1,
     "operator_visible_required": true,
@@ -110,7 +83,7 @@
         "next_action": "SATISFY_UNRESOLVED_CRITERION",
         "fact_window": {
           "attempt_pair_limit": 50,
-          "attempt_pair_count": 1,
+          "attempt_pair_count": 3,
           "accepted_checkpoint_limit": 1000,
           "accepted_checkpoint_count": 0,
           "proof_reference_limit": 300,
@@ -126,28 +99,28 @@
       "unresolved_conditions_truncated": false,
       "current_attempt": {
         "run_id": "f32812e06c43492294fe33e83e4361b9",
-        "wave_id": "fdb02fdf348644d886ef677774769056",
+        "wave_id": "b5ffa029f0c84a74a4a4cb9f785d87b0",
         "checkpoint_id": ""
       },
       "latest_feedback_relation": "UNKNOWN",
-      "event_count": 2,
+      "event_count": 4,
       "latest_event": {
-        "seq": 201,
-        "event_id": "prl-bind-75c28e6ead4da2a9fa00f1f66926fc962ecda238b417f144a2fe61a85163760a",
-        "event_hash": "ad2c6c4dc0ac52e70cd545c867a2f40a05562ea9502f1e2527dd2db0db93f54c",
+        "seq": 206,
+        "event_id": "prl-bind-6bcf183342368e69e2da3df59ee0dca6ade5e01cb4b982a8b38aaf5825c80508",
+        "event_hash": "5a5320a5bbf030a7376db891817f283aa0553fad5d010c3b1169aacc538fe2cc",
         "relation_type": "ENGINEERING_ATTEMPT_BOUND",
         "state_after": "OPEN",
         "reason_code": "engineering_attempt_bound",
-        "recorded_at": "2026-09-12T14:59:30.152Z"
+        "recorded_at": "2026-09-14T04:09:12.174Z"
       },
       "optimization_telemetry": {
         "status": "AVAILABLE",
         "complete": true,
-        "event_count": 0,
+        "event_count": 3,
         "manual_nudge_count": 0,
         "interruption_count": 0,
         "replan_count": 0,
-        "report_gate_count": 0,
+        "report_gate_count": 3,
         "continuation_attempt_count": 0,
         "continuation_success_count": 0,
         "continuation_failure_count": 0,
@@ -168,41 +141,8 @@
     },
     "what_changed": {
       "files": [],
-      "source": "canonical_patch_surface_observations",
-      "raw_source_or_command_output_included": false,
-      "patch_surface_observations": {
-        "schema_version": 1,
-        "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
-        "matching_event_count": 1,
-        "observation_count": 1,
-        "rejected_event_count": 0,
-        "complete": true,
-        "truncated": false,
-        "invalid": false,
-        "observations": [
-          {
-            "event_id": "3fc784d733b54b289f99472e6e052200",
-            "seq": 52275,
-            "event_time": "2026-09-12T15:04:13.098Z",
-            "measurement": "applied_patch_delta_v1",
-            "path_hash_semantics": "sha256_of_path_string_not_content_hash",
-            "path_hashes_sha256": [
-              "065be0105b456cd68845cd0b56e5302383eece2fc8bced2edf9b7d31c553977f",
-              "823bb214c9c2e810e9c713ffac05d1db95de89a78245a4b712b0f4a5fccdac0b",
-              "dbe7b739bb00c3c057a2a4b0cf9d0cd5e2e74e40313fae0332d281a5924e9671"
-            ],
-            "file_count": 3,
-            "additions": 272,
-            "removals": 15,
-            "line_changes": 287,
-            "producer_complete": true,
-            "complete": true,
-            "truncated": false,
-            "invalid": false,
-            "invalid_fields": []
-          }
-        ]
-      }
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
     },
     "current_state": {
       "orchestration_state": "REPLAN",
@@ -211,606 +151,87 @@
       "task_status": "waiting",
       "integrity": {
         "ok": true,
-        "checked": 61,
-        "head_hash": "dba3d0bbfaffec146cc05ccbe761bce2e94a34c18a97e5d088480d830d216ce4"
+        "checked": 136,
+        "head_hash": "117696ac578398744f1c2ed0be708d621c2d6573bdba6f45c0da8a0495cea214"
       },
-      "reports": {
-        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f32812e06c43492294fe33e83e4361b9\\run-summary.md",
-        "wave_reports": [
-          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f32812e06c43492294fe33e83e4361b9\\wave-001.md"
-        ]
-      }
+      "reports": {}
     },
     "source_run_wave": {
       "run_id": "f32812e06c43492294fe33e83e4361b9",
-      "wave_id": "fdb02fdf348644d886ef677774769056",
+      "wave_id": "b5ffa029f0c84a74a4a4cb9f785d87b0",
       "checkpoint_id": "",
-      "base_head": "228b91e6128479d4b3699e622d4f51dd431acb24",
-      "worktree_fp": "00697acc77f9b41ec1be4e83a56a6d0fb4962e27baf8ef02662a5bd8b4ea7aaf",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "09c75f369c6f78772b646c0b442363ac3458ce9ba5cf1a60d54378260af0e069",
       "contract_fp": "",
       "objective_provenance": {
-        "effective_objective": "Implement bounded deterministic pagination for unresolved Goal discovery so callers can traverse all unresolved Goal candidates beyond the fixed cap while exact Problem identity selection remains fail-closed. Preserve bounded/privacy-safe results, no timestamp-based implicit selection, and stable/fail-closed continuation under backlog drift. Add focused regression with >10 unresolved Goals and prove current backlog is traversable.",
-        "objective_revision": 1,
-        "objective_sha256": "1c3a0bd9a8db1243b40603a6151da5f5c8f2bf17c0018ee3209c050b729f3757",
-        "objective_source": "run_initial_objective",
-        "objective_changed_from_previous": false,
+        "effective_objective": "Continue the canonical Goal candidate pagination Problem in the same active RUN. Diagnose and close the remaining public-surface gap: focused Goal pagination tests pass, but the currently exposed Coding-VP Live task_control.goal_event schema still lacks candidate_cursor/candidate_limit. Determine the exact schema generation/registration path used by the live public task_control wrapper; minimally fix only the missing causal layer if source is incomplete, or prove the exact activation/connector boundary if the source is already correct. Preserve exact Problem identity fail-closed selection, bounded deterministic traversal, stable/fail-closed continuation under backlog drift, bounded privacy-safe results, and no timestamp-based implicit selection. Do not restart, commit, push, clean, reset, package, release, or deploy.",
+        "objective_revision": 3,
+        "objective_sha256": "ed49f4a43b259a0e640365dfc09fb6e4bc83b88ebbc1a6412c9110a39c72fa64",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
         "objective_hash_valid": true,
         "legacy_fallback": false
       }
     },
     "proof_actually_run": {
-      "count": 1,
+      "count": 0,
       "all_recorded_proofs_passed": false,
-      "proofs": [
-        {
-          "proof_id": "dde8ea9c58a445b79fcca39fedf3fded",
-          "stage_id": "verify:tests",
-          "status": "failed",
-          "duration_ms": 1983,
-          "exit_code": null,
-          "cache_hit": false
-        }
-      ]
+      "proofs": []
     },
     "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
     "blocker_or_failure": {
-      "failure_class": "BUILD_VERIFICATION_FAILED",
+      "failure_class": "BASE_DRIFT",
       "reason": null,
-      "event_seq": 52285
+      "event_seq": 52461
     },
     "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
     "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
   },
-  "completion_report_id": "fa5be8821eec7a8df078bb15fc8745c2122d3455d7196bed52f7d1a86c234853",
-  "completion_report_acknowledged_id": "fa5be8821eec7a8df078bb15fc8745c2122d3455d7196bed52f7d1a86c234853",
-  "completion_report_acknowledged_at": "2026-09-12T15:04:40.354Z",
-  "test_results": [
-    {
-      "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-      "status": "failed",
-      "exit_code": 2,
-      "duration_ms": null,
-      "summary": "exit 2 | 0.0s | 17 lines | tail: '1 error in 0.28s'",
-      "finished_at": "2026-09-12T15:04:16.844Z",
-      "artifact_ref": {
-        "schema_version": 1,
-        "kind": "command_output",
-        "scope": "runtime_retained",
-        "source": "command",
-        "locator": {
-          "command_id": "4UdDDWclifW4xZSL30y2lJFK"
-        },
-        "durability": "process_runtime",
-        "restart_safe": false,
-        "content_addressed": false,
-        "retrieval": {
-          "tool": "command_control",
-          "action": "read"
-        },
-        "owner_run": "f32812e06c43492294fe33e83e4361b9",
-        "owner_wave": "fdb02fdf348644d886ef677774769056",
-        "size_bytes": 1017,
-        "command_id": "4UdDDWclifW4xZSL30y2lJFK",
-        "streams": {
-          "stdout": {
-            "output_ref": "command:4UdDDWclifW4xZSL30y2lJFK:stdout",
-            "total_stream_bytes": 1017,
-            "total_retained_bytes": 1017,
-            "head_retained_bytes": 1017,
-            "tail_retained_bytes": 0,
-            "evicted_gap_bytes": 0,
-            "evicted_bytes_total": 0
-          },
-          "stderr": {
-            "output_ref": "command:4UdDDWclifW4xZSL30y2lJFK:stderr",
-            "total_stream_bytes": 0,
-            "total_retained_bytes": 0,
-            "head_retained_bytes": 0,
-            "tail_retained_bytes": 0,
-            "evicted_gap_bytes": 0,
-            "evicted_bytes_total": 0
-          }
-        }
-      }
-    },
-    {
-      "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-      "status": "failed",
-      "exit_code": 2,
-      "duration_ms": 1993,
-      "summary": "exit 2 | 0.0s | 17 lines | tail: '1 error in 0.28s'",
-      "session_id": "4UdDDWclifW4xZSL30y2lJFK",
-      "cancelled": false,
-      "timed_out": false,
-      "effective_timeout_ms": 589639
-    }
-  ],
+  "completion_report_id": "769c0deb50bacd675b6874fb3e7f7ad86f19f8b6a098e82c1cfafab0d3f04767",
+  "completion_report_acknowledged_id": "769c0deb50bacd675b6874fb3e7f7ad86f19f8b6a098e82c1cfafab0d3f04767",
+  "completion_report_acknowledged_at": "2026-09-14T04:12:56.358Z",
+  "test_results": [],
   "build_results": [],
-  "last_build_report": {
-    "project": {
-      "type": "electron",
-      "name": "coding-tools-mcp",
-      "version": "1.0.0",
-      "package_manager": "npm",
-      "test_command": "npm run test",
-      "build_command": "npm run dist",
-      "artifact_paths": [
-        "dist",
-        "build"
-      ]
-    },
-    "commands": {
-      "test": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-      "build": "npm run dist"
-    },
-    "test_result": {
-      "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-      "status": "failed",
-      "exit_code": 2,
-      "duration_ms": 1993,
-      "summary": "exit 2 | 0.0s | 17 lines | tail: '1 error in 0.28s'",
-      "session_id": "4UdDDWclifW4xZSL30y2lJFK",
-      "cancelled": false,
-      "timed_out": false,
-      "effective_timeout_ms": 589639
-    },
-    "build_result": null,
-    "artifacts": [],
-    "hash_algorithm": "sha256",
-    "overall_status": "failed",
-    "failure": "Tests failed.",
-    "report_generated_at": "2026-09-12T15:04:16.844Z"
-  },
-  "modified_files": [
-    {
-      "path": "resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py",
-      "operation": "update",
-      "updated_at": "2026-09-12T15:04:18.430Z"
-    },
-    {
-      "path": "resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
-      "operation": "update",
-      "updated_at": "2026-09-12T15:04:18.430Z"
-    },
-    {
-      "path": "resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-      "operation": "update",
-      "updated_at": "2026-09-12T15:04:18.430Z"
-    }
-  ],
+  "last_build_report": null,
+  "modified_files": [],
   "failure": null,
   "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
-  "created_at": "2026-09-12T14:56:17.465Z",
-  "updated_at": "2026-09-12T15:04:40.733Z",
+  "created_at": "2026-09-14T04:11:37.567Z",
+  "updated_at": "2026-09-14T04:13:31.542Z",
   "events": [
     {
-      "time": "2026-09-12T14:56:17.465Z",
-      "event": "task_auto_started",
+      "time": "2026-09-14T04:11:37.567Z",
+      "event": "orchestration_projection_exact_run_restored",
       "details": {
-        "objective": "Run a workspace command"
+        "source": "canonical_ledger",
+        "run_id": "f32812e06c43492294fe33e83e4361b9"
       }
     },
     {
-      "time": "2026-09-12T14:56:17.789Z",
-      "event": "command_started",
+      "time": "2026-09-14T04:11:53.801Z",
+      "event": "tool_failed",
       "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.resolution_outcomes | ConvertTo-Json -Depth 6\"",
-        "session_id": "lhRTjhU2y31baMpW50Bkgp_D"
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
       }
     },
     {
-      "time": "2026-09-12T14:56:23.893Z",
-      "event": "command_finished",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.resolution_outcomes | ConvertTo-Json -Depth 6\"",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T14:56:32.617Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n \"argparse|add_argument|def main|resolution_outcomes|thread_projection_state_counts|state_counts\" resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
-        "session_id": "LFjPbvCI1ioewunPfznDQd7J"
-      }
-    },
-    {
-      "time": "2026-09-12T14:56:32.875Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n \"argparse|add_argument|def main|resolution_outcomes|thread_projection_state_counts|state_counts\" resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py resources/coding-tools-mcp/coding_tools_mcp/problem_resolution_economics.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T14:56:42.318Z",
-      "event": "command_started",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | ForEach-Object { '{0}|{1}' -f $_.problem_id,$_.problem_revision }\"",
-        "session_id": "K4984AhqByYahlH6kCgdDsCs"
-      }
-    },
-    {
-      "time": "2026-09-12T14:56:47.325Z",
-      "event": "command_finished",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $r.result.problem_revision_journeys.journeys | ForEach-Object { '{0}|{1}' -f $_.problem_id,$_.problem_revision }\"",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T14:56:59.689Z",
-      "event": "command_started",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Where-Object { $_.problem_id -eq 'prl-goal-candidate-pagination-20260912' }; [pscustomobject]@{problem_id=$j.problem_id;revision=$j.problem_revision;outcome=$j.outcome;human=$j.human;lifecycle=$j.lifecycle_economics;time=$j.time} | ConvertTo-Json -Depth 8\"",
-        "session_id": "8EEp2TSeS4EC9V3THNPP6SVp"
-      }
-    },
-    {
-      "time": "2026-09-12T14:57:04.042Z",
-      "event": "command_finished",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $j=$r.result.problem_revision_journeys.journeys | Where-Object { $_.problem_id -eq 'prl-goal-candidate-pagination-20260912' }; [pscustomobject]@{problem_id=$j.problem_id;revision=$j.problem_revision;outcome=$j.outcome;human=$j.human;lifecycle=$j.lifecycle_economics;time=$j.time} | ConvertTo-Json -Depth 8\"",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T14:58:26.606Z",
-      "event": "command_started",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $latest=$r.result.problem_revision_journeys.journeys | Group-Object problem_id | ForEach-Object { $_.Group | Sort-Object problem_revision -Descending | Select-Object -First 1 }; $latest | Where-Object { $_.lifecycle_economics.segments.post_technical_acceptance_confirmation_observation.technical_acceptance_event_observed -eq $fals",
-        "session_id": "apHFz6eZvXV6vDQztS2p9WNf"
-      }
-    },
-    {
-      "time": "2026-09-12T14:58:31.691Z",
-      "event": "command_finished",
-      "details": {
-        "command": "powershell -NoProfile -Command \"$r = python resources/coding-tools-mcp/scripts/report_problem_resolution_economics.py --workspace 'E:\\DEV\\Codex-web' | ConvertFrom-Json; $latest=$r.result.problem_revision_journeys.journeys | Group-Object problem_id | ForEach-Object { $_.Group | Sort-Object problem_revision -Descending | Select-Object -First 1 }; $latest | Where-Object { $_.lifecycle_economics.segments.post_technical_acceptance_confirmation_observation.technical_acceptance_event_observed -eq $fals",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T14:59:30.388Z",
-      "event": "orchestration_context_ready",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-09-12T14:59:34.435Z",
-      "event": "orchestration_prepared",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-09-12T14:59:34.470Z",
-      "event": "files_modified",
-      "details": {
-        "count": 0
-      }
-    },
-    {
-      "time": "2026-09-12T15:00:50.683Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 35 -e GOAL_IDENTITY_AMBIGUOUS -e candidates_truncated -e candidate_count -e goal_action resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "session_id": "NmzKVwOEy3iui2V84O5qFQOv"
-      }
-    },
-    {
-      "time": "2026-09-12T15:00:51.128Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 35 -e GOAL_IDENTITY_AMBIGUOUS -e candidates_truncated -e candidate_count -e goal_action resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:03.782Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 30 -e goal_event -e DIFF_CONTINUATION_TOKEN_MAX_CHARS -e continuation_token -e continuation resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-        "session_id": "f4cLDnnu9QY-iO34JYxZMpRa"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:04.432Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 30 -e goal_event -e DIFF_CONTINUATION_TOKEN_MAX_CHARS -e continuation_token -e continuation resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:14.122Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 22 \"goal_event\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
-        "session_id": "CWKdk4CFzi7qw07_2VHklGaG"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:14.616Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 22 \"goal_event\" resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:25.265Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 14 -e \"def .*continuation\" -e \"continuation.*sha\" -e \"base64.*continu\" -e \"DIFF_CONTINUATION_TOKEN_MAX_CHARS\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
-        "session_id": "q3yAt0iAX2FE-WpC8qtUxWeT"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:25.777Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 14 -e \"def .*continuation\" -e \"continuation.*sha\" -e \"base64.*continu\" -e \"DIFF_CONTINUATION_TOKEN_MAX_CHARS\" resources/coding-tools-mcp/coding_tools_mcp/context_tools.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:43.327Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 16 -e \"encode.*continuation\" -e \"decode.*continuation\" -e \"continuation.*token\" -e source_fenced -e SOURCE_FENCED -e continuation_payload resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
-        "session_id": "Wq1G0nRxGJ4tsWfJVGYwJDzj"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:43.884Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 16 -e \"encode.*continuation\" -e \"decode.*continuation\" -e \"continuation.*token\" -e source_fenced -e SOURCE_FENCED -e continuation_payload resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:52.605Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 18 -e source_fenced -e continuation_token -e continuation_payload resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-        "session_id": "lx8sGfsSyQTdukq23DoUGDSI"
-      }
-    },
-    {
-      "time": "2026-09-12T15:01:53.081Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 18 -e source_fenced -e continuation_token -e continuation_payload resources/coding-tools-mcp/coding_tools_mcp/context_tools.py",
-        "status": "failed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:01.507Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 12 -e urlsafe_b64encode -e urlsafe_b64decode -e \"continuation.*fingerprint\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
-        "session_id": "arH5KcTleuD6AqLNsAFeDD8o"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:02.389Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 12 -e urlsafe_b64encode -e urlsafe_b64decode -e \"continuation.*fingerprint\" resources/coding-tools-mcp/coding_tools_mcp -g \"*.py\"",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:21.215Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 24 -e \"def open_problem\" -e \"def _encode_committed_review_continuation\" -e \"def _decode_committed_review_continuation\" resources/coding-tools-mcp/tests/test_goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
-        "session_id": "rH5I-Pg-xyzX1EHBhgdFNEPx"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:21.692Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 24 -e \"def open_problem\" -e \"def _encode_committed_review_continuation\" -e \"def _decode_committed_review_continuation\" resources/coding-tools-mcp/tests/test_goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:31.581Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 26 -e \"PROCESS_DIFF_CONTINUATION_SECRET\" -e \"COMMITTED_REVIEW_SCHEMA_VERSION\" -e \"Unsupported committed review continuation\" resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
-        "session_id": "a8hdKwA-xs-Mv8cCKjyCN6Ue"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:32.132Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 26 -e \"PROCESS_DIFF_CONTINUATION_SECRET\" -e \"COMMITTED_REVIEW_SCHEMA_VERSION\" -e \"Unsupported committed review continuation\" resources/coding-tools-mcp/coding_tools_mcp/git_tools.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:39.998Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 45 -e \"GOAL_PURSUIT_MAX_CANDIDATES\" -e \"def goal_pursuit_resolve_identity\" -e \"def _goal_control\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
-        "session_id": "lg-Bl_Rq2zbVYfOymgMOTnkd"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:40.478Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 45 -e \"GOAL_PURSUIT_MAX_CANDIDATES\" -e \"def goal_pursuit_resolve_identity\" -e \"def _goal_control\" resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:52.051Z",
-      "event": "command_started",
-      "details": {
-        "command": "rg -n -C 14 -e \"CREATE TABLE IF NOT EXISTS problem_threads\" -e latest_problem_event_seq resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
-        "session_id": "2jVrIPU3YrqdG4Ro34x7z79H"
-      }
-    },
-    {
-      "time": "2026-09-12T15:02:52.643Z",
-      "event": "command_finished",
-      "details": {
-        "command": "rg -n -C 14 -e \"CREATE TABLE IF NOT EXISTS problem_threads\" -e latest_problem_event_seq resources/coding-tools-mcp/coding_tools_mcp/problem_lineage.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:03:22.446Z",
-      "event": "command_started",
-      "details": {
-        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "session_id": "eZ8pDgfuIev_BBRr3iJcH7t_"
-      }
-    },
-    {
-      "time": "2026-09-12T15:03:22.845Z",
-      "event": "command_finished",
-      "details": {
-        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/goal_pursuit.py resources/coding-tools-mcp/coding_tools_mcp/tool_schema.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "status": "passed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:10.406Z",
-      "event": "orchestration_context_ready",
-      "details": {
-        "state": "PREFLIGHT"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:11.220Z",
-      "event": "orchestration_routed",
-      "details": {
-        "state": "ROUTED"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:12.448Z",
-      "event": "mcp_write_lease_active",
-      "details": {
-        "state": "EXECUTING"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:12.454Z",
-      "event": "continuous_workflow_started",
-      "details": {
-        "fields": [
-          "current_step",
-          "next_step",
-          "objective",
-          "status",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:14.122Z",
-      "event": "orchestration_proving",
-      "details": {
-        "state": "PROVING"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:14.639Z",
-      "event": "task_updated",
-      "details": {
-        "fields": [
-          "current_step",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:15.588Z",
-      "event": "command_started",
-      "details": {
-        "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "session_id": "4UdDDWclifW4xZSL30y2lJFK"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:16.844Z",
-      "event": "command_finished",
-      "details": {
-        "command": "python -m pytest -q resources/coding-tools-mcp/tests/test_goal_pursuit.py",
-        "status": "failed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:16.844Z",
-      "event": "build_verification_finished",
-      "details": {
-        "status": "failed"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:17.171Z",
-      "event": "task_updated",
-      "details": {
-        "fields": [
-          "current_step",
-          "steps"
-        ]
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:18.137Z",
-      "event": "orchestration_failure_projected",
+      "time": "2026-09-14T04:12:07.594Z",
+      "event": "orchestration_drift_detected",
       "details": {
         "state": "REPLAN"
       }
     },
     {
-      "time": "2026-09-12T15:04:18.140Z",
-      "event": "task_updated",
+      "time": "2026-09-14T04:12:07.711Z",
+      "event": "tool_failed",
       "details": {
-        "fields": [
-          "current_step",
-          "failure",
-          "next_step",
-          "status"
-        ]
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
       }
     },
     {
-      "time": "2026-09-12T15:04:18.150Z",
-      "event": "execution_failed",
-      "details": {
-        "state": "REPLAN"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:18.276Z",
-      "event": "command_completion_report_required",
-      "details": {
-        "command_id": "",
-        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
-        "report_id": "fa5be8821eec7a8df078bb15fc8745c2122d3455d7196bed52f7d1a86c234853"
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:18.430Z",
-      "event": "files_modified",
-      "details": {
-        "count": 4
-      }
-    },
-    {
-      "time": "2026-09-12T15:04:26.776Z",
+      "time": "2026-09-14T04:12:26.133Z",
       "event": "orchestration_projection_reconciled",
       "details": {
         "fields": [
@@ -823,10 +244,89 @@
       }
     },
     {
-      "time": "2026-09-12T15:04:40.354Z",
+      "time": "2026-09-14T04:12:27.010Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-14T04:12:37.245Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "769c0deb50bacd675b6874fb3e7f7ad86f19f8b6a098e82c1cfafab0d3f04767"
+      }
+    },
+    {
+      "time": "2026-09-14T04:12:53.130Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T04:12:56.358Z",
       "event": "operator_completion_report_acknowledged",
       "details": {
-        "report_id": "fa5be8821eec7a8df078bb15fc8745c2122d3455d7196bed52f7d1a86c234853"
+        "report_id": "769c0deb50bacd675b6874fb3e7f7ad86f19f8b6a098e82c1cfafab0d3f04767"
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:09.901Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:10.929Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:11.189Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:21.501Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:31.524Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T04:13:31.542Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
       }
     }
   ]

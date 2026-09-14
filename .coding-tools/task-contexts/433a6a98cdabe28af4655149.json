@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "d7fe7e55a0804e05a093ad679f92b7a7",
+  "orchestration": {},
+  "objective": "Read-only localization for an already reproduced execution-hub lifecycle defect. The failing test is tests/test_execution_hub_faults.py::ExecutionHubFaultTests::test_chatweb_accept_reclaims_expired_explicit_historical_run. Successful accept reaches CHECKPOINTED and preserves the same ChatWeb controller identity, but get_controller_lease(run_id) reports status='released' rather than 'active'. Locate the smallest causal source path that reclaims and then releases the controller lease during explicit historical-run acceptance. Do not mutate files, create a patch, or run tests.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "This controller endpoint is fenced from the durable Goal",
+  "next_step": "",
+  "created_at": "2026-09-14T13:14:18.076Z",
+  "updated_at": "2026-09-14T13:14:18.619Z",
+  "events": [
+    {
+      "time": "2026-09-14T13:14:18.076Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only localization for an already reproduced execution-hub lifecycle defect. The failing test is tests/test_execution_hub_faults.py::ExecutionHubFaultTests::test_chatweb_accept_reclaims_expired_explicit_historical_run. Successful accept reaches CHECKPOINTED and preserves the same ChatWeb controller identity, but get_controller_lease(run_id) reports status='released' rather than 'active'. Locate the smallest causal source path that reclaims and then releases the controller lease during explicit historical-run acceptance. Do not mutate files, create a patch, or run tests."
+      }
+    },
+    {
+      "time": "2026-09-14T13:14:18.619Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    }
+  ]
+}

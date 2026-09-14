@@ -133,6 +133,33 @@ test('explicit bounded continuation consent is distinct from user-turn correlati
   }]), 0);
 });
 
+test('goal episode continuation consent is normalized and staged with exact controller fence', () => {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-goal-continuation-consent-'));
+  const journal = new ChatEvaluationJournal();
+  const descriptor = {
+    action: 'authorize_bounded_goal_continuation',
+    episode_id: 'f'.repeat(64), origin_run_id: 'run-1', origin_wave_id: 'wave-1',
+    workspace_id: 'workspace-1', problem_id: 'problem-1', problem_revision: 1,
+    controller_generation: 7, controller_endpoint_id: 'endpoint-1', controller_owner_client_id: 'chatweb-1',
+    contract_fingerprint: 'a'.repeat(64), tool_contract_sha256: 'b'.repeat(64), runtime_behavior_fingerprint: 'c'.repeat(64),
+    activation_epoch_id: 'epoch-1', activation_admission: 'open', issuer_client_id: 'chatweb-1', scope_sha256: 'd'.repeat(64),
+    read_paths: ['src/read.py'], write_paths: ['src/write.py'], protected_paths: ['src/protected.py'], approved_check_hashes: ['e'.repeat(64)],
+    max_duration_seconds: 120, max_decision_turns: 2, max_patch_attempts: 1, max_no_progress: 2
+  };
+  assert.deepEqual(parseContinuationConsentText(`${CONTINUATION_CONSENT_PREFIX}${JSON.stringify(descriptor)}`), descriptor);
+  const user = {
+    schema_version: HOST_OBSERVATION_SCHEMA_VERSION, event_type: 'user_turn_visible', observation_id: 'u-goal', navigation_epoch: 1,
+    clock_domain: 'electron-renderer:1', monotonic_ms: 10, wall_time_ms: 1000, trace_id: 'trace-goal', turn_id: 'turn-goal',
+    observer_plane: 'electron_chatgpt_dom', measurement: 'observed_host_visible'
+  };
+  assert.equal(journal.stagePendingContinuationConsents(workspace, [user, {
+    kind: 'continuation_consent', schema_version: CONTINUATION_CONSENT_SCHEMA_VERSION, turn_id: 'turn-goal', trace_id: 'trace-goal',
+    descriptor, observer_plane: 'electron_chatgpt_dom'
+  }]), 1);
+  const receipt = JSON.parse(fs.readFileSync(continuationConsentPath(workspace), 'utf8'));
+  assert.deepEqual(receipt.descriptor, descriptor);
+});
+
 test('host correlation state is one-shot, content-free, and exact-identity matched', () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'chat-correlation-'));
   const journal = new ChatEvaluationJournal();

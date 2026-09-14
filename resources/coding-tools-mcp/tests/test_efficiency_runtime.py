@@ -17,7 +17,12 @@ from coding_tools_mcp.orchestration_ledger import OrchestrationLedger
 from coding_tools_mcp.performance_trace import ERROR_TAXONOMY_EPOCH, PerformanceTraceStore
 from coding_tools_mcp.server import Runtime, server_card_payload
 from coding_tools_mcp.task_state import TaskStateStore
-from coding_tools_mcp.tool_contract import CAPABILITY_PROFILES, TOOL_CONTRACT_RUNTIME
+from coding_tools_mcp.tool_contract import (
+    CAPABILITY_PROFILES,
+    SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA,
+    TOOL_CONTRACT_RUNTIME,
+    smart_tool_contract_compatible_predecessors,
+)
 
 
 class EfficiencyRuntimeTests(unittest.TestCase):
@@ -682,12 +687,10 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                 self.assertEqual(contract["profile"], "smart-v3")
                 self.assertEqual(contract["tool_count"], 8)
                 self.assertEqual(len(contract["sha256"]), 64)
-                self.assertEqual(contract["sha256"], "d52c8895711d4655be0bdbe35cff6e3dcd1bd72f5caa98563ad37dd34835b677")
+                self.assertEqual(contract["sha256"], "d69436cabfbb6dca7b365df507f4b507857d9b29c11a44883fab77de54f67810")
                 self.assertEqual(contract["schema_version"], 1)
                 self.assertEqual(contract["profile"], "smart-v3")
-                self.assertEqual(contract["compatible_predecessor_sha256"], [
-                    "09e1ca748a1319b814734967959d667aa111d70c1e3720353e3c83b1da22ccb9",
-                ])
+                self.assertEqual(contract["compatible_predecessor_sha256"], [])
                 self.assertTrue(contract["evaluation"]["supported"])
                 self.assertEqual(contract["evaluation"]["schema_version"], 2)
                 self.assertEqual(
@@ -736,6 +739,45 @@ class EfficiencyRuntimeTests(unittest.TestCase):
         self.assertEqual(TOOL_CONTRACT_RUNTIME.presentation("git_diff")["card"], "diff")
         self.assertFalse(CAPABILITY_PROFILES["deep_code"].checkout_write)
         self.assertFalse(CAPABILITY_PROFILES["deep_code"].network)
+
+    def test_reviewed_tool_contract_compatibility_is_transitive_and_fails_closed(self) -> None:
+        current_goal_pagination_contract = "d69436cabfbb6dca7b365df507f4b507857d9b29c11a44883fab77de54f67810"
+        self.assertNotIn(
+            current_goal_pagination_contract,
+            SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA,
+        )
+        self.assertEqual(
+            smart_tool_contract_compatible_predecessors(current_goal_pagination_contract),
+            [],
+        )
+
+        newest = "a" * 64
+        middle = "b" * 64
+        oldest = "c" * 64
+        with patch.dict(
+            SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA,
+            {newest: (middle,), middle: (oldest,)},
+            clear=True,
+        ):
+            self.assertEqual(
+                smart_tool_contract_compatible_predecessors(newest),
+                [middle, oldest],
+            )
+            self.assertEqual(smart_tool_contract_compatible_predecessors("d" * 64), [])
+
+        with patch.dict(
+            SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA,
+            {newest: (middle,), middle: (newest,)},
+            clear=True,
+        ):
+            self.assertEqual(smart_tool_contract_compatible_predecessors(newest), [])
+
+        with patch.dict(
+            SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA,
+            {newest: ("not-a-sha",)},
+            clear=True,
+        ):
+            self.assertEqual(smart_tool_contract_compatible_predecessors(newest), [])
 
     def test_stale_run_reconciliation_preserves_live_owners(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

@@ -1,0 +1,292 @@
+{
+  "version": 2,
+  "task_id": "81267c07ab474a179860d292f30c9a48",
+  "orchestration": {
+    "run_id": "675050cd3aab4368bc2ba91d8933d53a",
+    "wave_id": "fbae1f11c1e242168aeddb27240cf9a9",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "98bf3186f4d3afde2d4e2ad80afb15480ffb3f23b654397e3afbdc5d1ba3944c",
+    "contract_fp": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea"
+  },
+  "objective": "Continue Parent Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 without source mutation. Reconstruct exact accepted evidence for C01 from canonical repository/runtime artifacts and reports, especially RUN 5aac4e076a3047b7b6d10fb0e22ce594 and checkpoint b9f9cda61be24ceea854f1098337aa8b. Parent event binds that RUN to wave a542d4cddd9445259a44291f5c96aacf; distinguish any execution/checkpoint wave identity rather than assuming equivalence. Determine whether C01's required unit/integration plus real reboot according to the criterion matrix was actually executed and accepted, or whether only unit/integration/simulated proof exists. Identify why Parent criteria_proven remains 0/12 and the canonical supported reconciliation path. Do not mark any criterion proven, mutate source, restart runtime, cancel/delete stale runs, commit, push, package, or release. Preserve dirty worktree.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "39HacxlWUL5BRrfIMYmSWKCP",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": 924,
+    "finished_at": "2026-09-14T10:11:55.251Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 20,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 7,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "675050cd3aab4368bc2ba91d8933d53a",
+        "wave_id": "fbae1f11c1e242168aeddb27240cf9a9",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 21,
+      "latest_event": {
+        "seq": 235,
+        "event_id": "prl-bind-3dfe8885c0524ddbd54f9466aacd9e9adde51c7eb3e42595cc33d7d2ad4c21ac",
+        "event_hash": "22576c2e0a6ac932f2a732f5b2f5b70d86d08dec5b91d94ee5f308882c9f0bea",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-14T10:11:02.895Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 29,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 20,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 9,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 9,
+        "head_hash": "c5e69a14dd517bd3e9b0b17417017fe471d5b5d969f01ab3b0f1dfcd965530d5"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-675050cd3aab4368bc2ba91d8933d53a\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-675050cd3aab4368bc2ba91d8933d53a\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "675050cd3aab4368bc2ba91d8933d53a",
+      "wave_id": "fbae1f11c1e242168aeddb27240cf9a9",
+      "checkpoint_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "98bf3186f4d3afde2d4e2ad80afb15480ffb3f23b654397e3afbdc5d1ba3944c",
+      "contract_fp": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_provenance": {
+        "effective_objective": "Continue Parent Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 without source mutation. Reconstruct exact accepted evidence for C01 from canonical repository/runtime artifacts and reports, especially RUN 5aac4e076a3047b7b6d10fb0e22ce594 and checkpoint b9f9cda61be24ceea854f1098337aa8b. Parent event binds that RUN to wave a542d4cddd9445259a44291f5c96aacf; distinguish any execution/checkpoint wave identity rather than assuming equivalence. Determine whether C01's required unit/integration plus real reboot according to the criterion matrix was actually executed and accepted, or whether only unit/integration/simulated proof exists. Identify why Parent criteria_proven remains 0/12 and the canonical supported reconciliation path. Do not mark any criterion proven, mutate source, restart runtime, cancel/delete stale runs, commit, push, package, or release. Preserve dirty worktree.",
+        "objective_revision": 1,
+        "objective_sha256": "7d450334218219ad271a0310c6dd0013e87ce2620f641eaabb39b95267ccf647",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "42667f95b5bd30046aa29e47e872ab656fe32d39a70383b9860eaddc34725f91",
+  "completion_report_acknowledged_id": "42667f95b5bd30046aa29e47e872ab656fe32d39a70383b9860eaddc34725f91",
+  "completion_report_acknowledged_at": "2026-09-14T10:14:24.221Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-14T10:11:01.505Z",
+  "updated_at": "2026-09-14T10:14:47.902Z",
+  "events": [
+    {
+      "time": "2026-09-14T10:11:01.505Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continue Parent Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 without source mutation. Reconstruct exact accepted evidence for C01 from canonical repository/runtime artifacts and reports, especially RUN 5aac4e076a3047b7b6d10fb0e22ce594 and checkpoint b9f9cda61be24ceea854f1098337aa8b. Parent event binds that RUN to wave a542d4cddd9445259a44291f5c96aacf; distinguish any execution/checkpoint wave identity rather than assuming equivalence. Determine whether C01's required unit/integration plus real reboot according to the criterion matrix was actually executed and accepted, or whether only unit/integration/simulated proof exists. Identify why Parent criteria_proven remains 0/12 and the canonical supported reconciliation path. Do not mark any criterion proven, mutate source, restart runtime, cancel/delete stale runs, commit, push, package, or release. Preserve dirty worktree."
+      }
+    },
+    {
+      "time": "2026-09-14T10:11:03.171Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:11:09.675Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:11:09.682Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T10:11:54.721Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --no-heading -S \"5aac4e076a3047b7b6d10fb0e22ce594|b9f9cda61be24ceea854f1098337aa8b|a542d4cddd9445259a44291f5c96aacf|96236faf87374418bc330176818069a1\" reports .coding-tools docs",
+        "session_id": "39HacxlWUL5BRrfIMYmSWKCP"
+      }
+    },
+    {
+      "time": "2026-09-14T10:11:55.251Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --no-heading -S \"5aac4e076a3047b7b6d10fb0e22ce594|b9f9cda61be24ceea854f1098337aa8b|a542d4cddd9445259a44291f5c96aacf|96236faf87374418bc330176818069a1\" reports .coding-tools docs",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:12:01.492Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T10:12:25.553Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "document_workflow",
+        "code": "NOT_FOUND"
+      }
+    },
+    {
+      "time": "2026-09-14T10:12:36.153Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T10:13:54.129Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "42667f95b5bd30046aa29e47e872ab656fe32d39a70383b9860eaddc34725f91"
+      }
+    },
+    {
+      "time": "2026-09-14T10:14:03.406Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T10:14:24.221Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "42667f95b5bd30046aa29e47e872ab656fe32d39a70383b9860eaddc34725f91"
+      }
+    },
+    {
+      "time": "2026-09-14T10:14:30.359Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -35,18 +35,24 @@ from .continuation_contract import (
     _require_sha256,
     _utc_now,
     bind_run_continuation_consent,
+    build_goal_continuation_policy,
     build_run_continuation_policy,
     continuation_consent_descriptor,
     parse_run_continuation_proposal,
 )
 from .errors import ToolFailure
 from .continuation_consent_http import CONTINUATION_CONSENT_HTTP_PATH
+from .controller_continuity import ControllerContinuityError
+from .controller_reattach import run_binding_from_metadata as _controller_run_binding_from_metadata
 from .host_correlation import (
     claim_pending_continuation_consent,
     consume_pending_continuation_consent,
     restore_pending_continuation_consent,
 )
 from .ledger_event_chain import append_hash_chained_event
+
+
+GOAL_CONTINUATION_NO_PROGRESS = "GOAL_CONTINUATION_NO_PROGRESS"
 
 
 class RunContinuationLedgerMixin:
@@ -56,8 +62,41 @@ class RunContinuationLedgerMixin:
     def _run_continuation_ensure_schema(connection: sqlite3.Connection) -> None:
         connection.executescript(
             """
+            CREATE TABLE IF NOT EXISTS goal_continuations (
+                episode_id TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                problem_id TEXT NOT NULL,
+                problem_revision INTEGER NOT NULL CHECK(problem_revision>=1),
+                policy_json TEXT NOT NULL,
+                policy_sha256 TEXT NOT NULL,
+                issuer_receipt_sha256 TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                pause_reason TEXT NOT NULL DEFAULT '',
+                revoked_at TEXT,
+                remaining_decision_turns INTEGER NOT NULL,
+                remaining_patch_attempts INTEGER NOT NULL,
+                no_progress_count INTEGER NOT NULL DEFAULT 0,
+                expires_at_unix_ms INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_goal_continuations_active_identity
+                ON goal_continuations(workspace_id, problem_id, problem_revision)
+                WHERE enabled=1 AND revoked_at IS NULL;
+            CREATE TABLE IF NOT EXISTS goal_continuation_observations (
+                observation_id TEXT PRIMARY KEY,
+                episode_id TEXT NOT NULL REFERENCES goal_continuations(episode_id) ON DELETE CASCADE,
+                run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
+                action_id TEXT NOT NULL,
+                outcome TEXT NOT NULL CHECK(outcome IN ('progress','no_progress')),
+                proof_identity_sha256 TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_goal_continuation_observations_episode
+                ON goal_continuation_observations(episode_id, created_at);
             CREATE TABLE IF NOT EXISTS run_continuations (
                 run_id TEXT PRIMARY KEY REFERENCES runs(run_id) ON DELETE CASCADE,
+                parent_episode_id TEXT NOT NULL DEFAULT '',
                 workspace_id TEXT NOT NULL,
                 problem_id TEXT NOT NULL,
                 problem_revision INTEGER NOT NULL CHECK(problem_revision>=1),
@@ -109,6 +148,8 @@ class RunContinuationLedgerMixin:
             """
         )
         columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(run_continuations)").fetchall()}
+        if "parent_episode_id" not in columns:
+            connection.execute("ALTER TABLE run_continuations ADD COLUMN parent_episode_id TEXT NOT NULL DEFAULT ''")
         if "pending_evidence_hash" not in columns:
             connection.execute("ALTER TABLE run_continuations ADD COLUMN pending_evidence_hash TEXT NOT NULL DEFAULT ''")
         if "pending_evidence_paths_json" not in columns:
@@ -354,10 +395,33 @@ class RunContinuationLedgerMixin:
         return continuation
 
     @staticmethod
+    def _goal_continuation_row(row: sqlite3.Row) -> dict[str, Any]:
+        policy = json.loads(str(row["policy_json"] or "{}"))
+        return {
+            "episode_id": str(row["episode_id"]),
+            "workspace_id": str(row["workspace_id"]),
+            "problem_id": str(row["problem_id"]),
+            "problem_revision": int(row["problem_revision"]),
+            "policy_sha256": str(row["policy_sha256"]),
+            "issuer_receipt_sha256": str(row["issuer_receipt_sha256"]),
+            "enabled": bool(row["enabled"]),
+            "pause_reason": str(row["pause_reason"]),
+            "revoked_at": row["revoked_at"],
+            "remaining_decision_turns": int(row["remaining_decision_turns"]),
+            "remaining_patch_attempts": int(row["remaining_patch_attempts"]),
+            "no_progress_count": int(row["no_progress_count"]),
+            "expires_at_unix_ms": int(row["expires_at_unix_ms"]),
+            "created_at": str(row["created_at"]),
+            "updated_at": str(row["updated_at"]),
+            "policy": policy,
+        }
+
+    @staticmethod
     def _run_continuation_row(row: sqlite3.Row) -> dict[str, Any]:
         policy = json.loads(str(row["policy_json"] or "{}"))
         return {
             "run_id": str(row["run_id"]),
+            "parent_episode_id": str(row["parent_episode_id"]),
             "workspace_id": str(row["workspace_id"]),
             "problem_id": str(row["problem_id"]),
             "problem_revision": int(row["problem_revision"]),
@@ -428,6 +492,426 @@ class RunContinuationLedgerMixin:
         record["policy"] = _policy_projection(record["policy"])
         return record
 
+    def _goal_continuation_get_raw(
+        self,
+        episode_id: str,
+        *,
+        connection: sqlite3.Connection | None = None,
+    ) -> dict[str, Any] | None:
+        episode = _require_sha256(episode_id, "episode_id")
+        if connection is not None:
+            row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            return self._goal_continuation_row(row) if row is not None else None
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+        return self._goal_continuation_row(row) if row is not None else None
+
+    def get_goal_continuation(self, episode_id: str) -> dict[str, Any] | None:
+        record = self._goal_continuation_get_raw(episode_id)
+        if record is None:
+            return None
+        record["policy"] = _policy_projection(record["policy"])
+        return record
+
+    @staticmethod
+    def _assert_goal_continuation_row(
+        record: dict[str, Any] | None,
+        *,
+        episode_id: str,
+        now_unix_ms: int | None = None,
+    ) -> dict[str, Any]:
+        if record is None:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_GRANT_REQUIRED",
+                "No durable Goal-episode continuation authority exists.",
+            )
+        now_ms = _now_ms() if now_unix_ms is None else int(now_unix_ms)
+        if record["revoked_at"]:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_REVOKED",
+                "The Goal-episode continuation authority is revoked.",
+                details={"episode_id": episode_id},
+            )
+        if not record["enabled"]:
+            reason = str(record.get("pause_reason") or "GOAL_CONTINUATION_PAUSED")
+            code = GOAL_CONTINUATION_NO_PROGRESS if reason == GOAL_CONTINUATION_NO_PROGRESS else "GOAL_CONTINUATION_PAUSED"
+            raise RunContinuationError(
+                code,
+                "The Goal-episode continuation authority is paused.",
+                details={"episode_id": episode_id, "pause_reason": reason},
+            )
+        if now_ms >= int(record["expires_at_unix_ms"]):
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_EXPIRED",
+                "The Goal-episode continuation authority has expired.",
+                details={"episode_id": episode_id},
+            )
+        return record
+
+    def issue_goal_continuation(
+        self,
+        *,
+        policy: dict[str, Any],
+        issuer_receipt_sha256: str,
+        now_unix_ms: int | None = None,
+    ) -> dict[str, Any]:
+        if str(policy.get("scope_kind") or "") != "goal_episode":
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_POLICY_INVALID",
+                "Goal continuation issuance requires a goal_episode policy.",
+            )
+        episode = _require_sha256(policy.get("episode_id"), "episode_id")
+        receipt = _require_sha256(issuer_receipt_sha256, "issuer_receipt_sha256")
+        origin_run = _require_opaque(policy.get("origin_run_id"), "origin_run_id")
+        controller_generation = policy.get("controller_generation")
+        if isinstance(controller_generation, bool) or not isinstance(controller_generation, int) or controller_generation < 1:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_CONTROLLER_INVALID",
+                "Goal continuation authority requires a positive controller generation.",
+            )
+        policy_json = _canonical_json(policy)
+        policy_sha = hashlib.sha256(policy_json.encode("utf-8")).hexdigest()
+        now_ms = _now_ms() if now_unix_ms is None else int(now_unix_ms)
+        expires_at = now_ms + int(policy["max_duration_seconds"]) * 1_000
+        now = _utc_now()
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            self._controller_continuity_ensure_schema(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            self._controller_assert_goal_run_precondition(
+                connection,
+                {
+                    "workspace_id": str(policy["workspace_id"]),
+                    "problem_id": str(policy["problem_id"]),
+                    "problem_revision": int(policy["problem_revision"]),
+                    "expected_generation": int(controller_generation),
+                    "owner_client_id": str(policy["controller_owner_client_id"]),
+                    "controller_endpoint_id": str(policy["controller_endpoint_id"]),
+                },
+            )
+            origin = connection.execute(
+                "SELECT status FROM runs WHERE run_id=?", (origin_run,)
+            ).fetchone()
+            if origin is None or str(origin["status"] or "") != "active":
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_ORIGIN_RUN_INVALID",
+                    "Goal continuation authority requires an active origin RUN.",
+                )
+            existing_row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            if existing_row is not None:
+                existing = self._goal_continuation_row(existing_row)
+                if (
+                    existing["enabled"]
+                    and not existing["revoked_at"]
+                    and existing["policy_sha256"] == policy_sha
+                    and existing["issuer_receipt_sha256"] == receipt
+                ):
+                    connection.commit()
+                    existing["policy"] = _policy_projection(existing["policy"])
+                    return {"status": "GRANTED", "idempotent": True, "goal_continuation": existing}
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_GRANT_CONFLICT",
+                    "The content-addressed Goal episode already exists with different or terminal authority.",
+                    details={"episode_id": episode},
+                )
+            competing = connection.execute(
+                """SELECT episode_id FROM goal_continuations
+                   WHERE workspace_id=? AND problem_id=? AND problem_revision=?
+                     AND enabled=1 AND revoked_at IS NULL""",
+                (policy["workspace_id"], policy["problem_id"], int(policy["problem_revision"])),
+            ).fetchone()
+            if competing is not None:
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_GRANT_CONFLICT",
+                    "Another active Goal continuation already owns this exact Problem Revision.",
+                    details={"episode_id": str(competing["episode_id"])},
+                )
+            connection.execute(
+                """INSERT INTO goal_continuations(
+                       episode_id,workspace_id,problem_id,problem_revision,policy_json,policy_sha256,
+                       issuer_receipt_sha256,enabled,pause_reason,revoked_at,
+                       remaining_decision_turns,remaining_patch_attempts,no_progress_count,
+                       expires_at_unix_ms,created_at,updated_at
+                   ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    episode, policy["workspace_id"], policy["problem_id"], int(policy["problem_revision"]),
+                    policy_json, policy_sha, receipt, 1, "", None,
+                    int(policy["max_decision_turns"]), int(policy["max_patch_attempts"]), 0,
+                    expires_at, now, now,
+                ),
+            )
+            self._append_run_continuation_event(
+                connection,
+                run_id=origin_run,
+                event_type="goal_continuation_granted",
+                payload={
+                    "episode_id": episode,
+                    "policy_sha256": policy_sha,
+                    "controller_generation": int(controller_generation),
+                    "expires_at_unix_ms": expires_at,
+                },
+            )
+            row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            connection.commit()
+        assert row is not None
+        result = self._goal_continuation_row(row)
+        result["policy"] = _policy_projection(result["policy"])
+        return {"status": "GRANTED", "idempotent": False, "goal_continuation": result}
+
+    def set_goal_continuation_state(
+        self,
+        *,
+        episode_id: str,
+        action: str,
+        reason: str = "",
+    ) -> dict[str, Any]:
+        episode = _require_sha256(episode_id, "episode_id")
+        operation = _bounded(action, 32).lower()
+        if operation not in {"pause", "resume", "revoke"}:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_CONTROL_INVALID",
+                "Unsupported Goal continuation control action.",
+            )
+        bounded_reason = _bounded(reason, 512)
+        now = _utc_now()
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            record = self._goal_continuation_row(row) if row is not None else None
+            if record is None:
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_GRANT_REQUIRED",
+                    "No Goal continuation authority exists for this episode.",
+                )
+            if operation == "resume" and record["revoked_at"]:
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_REVOKED",
+                    "A revoked Goal continuation cannot be resumed.",
+                )
+            enabled = 1 if operation == "resume" else 0
+            revoked_at = now if operation == "revoke" else record["revoked_at"]
+            pause_reason = "" if operation == "resume" else (bounded_reason or operation)
+            connection.execute(
+                "UPDATE goal_continuations SET enabled=?,pause_reason=?,revoked_at=?,updated_at=? WHERE episode_id=?",
+                (enabled, pause_reason, revoked_at, now, episode),
+            )
+            origin_run = str(record["policy"].get("origin_run_id") or "")
+            if origin_run:
+                self._append_run_continuation_event(
+                    connection,
+                    run_id=origin_run,
+                    event_type=("goal_continuation_revoked" if operation == "revoke" else f"goal_continuation_{operation}d"),
+                    payload={"episode_id": episode, "reason": pause_reason},
+                )
+            updated = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            connection.commit()
+        assert updated is not None
+        result = self._goal_continuation_row(updated)
+        result["policy"] = _policy_projection(result["policy"])
+        return result
+
+    def materialize_goal_continuation(
+        self,
+        *,
+        run_id: str,
+        episode_id: str,
+        grant_wave_id: str = "",
+        now_unix_ms: int | None = None,
+    ) -> dict[str, Any]:
+        normalized_run = _require_opaque(run_id, "run_id")
+        episode = _require_sha256(episode_id, "episode_id")
+        wave = _require_opaque(grant_wave_id, "grant_wave_id") if grant_wave_id else ""
+        now_ms = _now_ms() if now_unix_ms is None else int(now_unix_ms)
+        now = _utc_now()
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            self._controller_continuity_ensure_schema(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            goal_row = connection.execute(
+                "SELECT * FROM goal_continuations WHERE episode_id=?", (episode,)
+            ).fetchone()
+            goal = self._assert_goal_continuation_row(
+                self._goal_continuation_row(goal_row) if goal_row is not None else None,
+                episode_id=episode,
+                now_unix_ms=now_ms,
+            )
+            goal_policy = goal["policy"]
+            self._controller_assert_goal_run_precondition(
+                connection,
+                {
+                    "workspace_id": str(goal_policy["workspace_id"]),
+                    "problem_id": str(goal_policy["problem_id"]),
+                    "problem_revision": int(goal_policy["problem_revision"]),
+                    "expected_generation": int(goal_policy["controller_generation"]),
+                    "owner_client_id": str(goal_policy["controller_owner_client_id"]),
+                    "controller_endpoint_id": str(goal_policy["controller_endpoint_id"]),
+                },
+            )
+            run = connection.execute(
+                "SELECT status,metadata_json FROM runs WHERE run_id=?", (normalized_run,)
+            ).fetchone()
+            if run is None or str(run["status"] or "") != "active":
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_RUN_NOT_ACTIVE",
+                    "Goal continuation materialization requires an active child RUN.",
+                )
+            try:
+                metadata = json.loads(str(run["metadata_json"] or "{}"))
+            except (TypeError, json.JSONDecodeError):
+                metadata = {}
+            binding = _controller_run_binding_from_metadata(metadata)
+            if not isinstance(binding, dict) or (
+                str(binding.get("workspace_id") or "") != str(goal_policy["workspace_id"])
+                or str(binding.get("problem_id") or "") != str(goal_policy["problem_id"])
+                or int(binding.get("problem_revision") or 0) != int(goal_policy["problem_revision"])
+            ):
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_CHILD_BINDING_MISMATCH",
+                    "Child RUN must bind the exact Goal workspace and Problem Revision before materialization.",
+                )
+            child_policy = {
+                "schema_version": RUN_CONTINUATION_SCHEMA_VERSION,
+                "run_id": normalized_run,
+                "parent_episode_id": episode,
+                "workspace_id": goal_policy["workspace_id"],
+                "problem_id": goal_policy["problem_id"],
+                "problem_revision": int(goal_policy["problem_revision"]),
+                "contract_fingerprint": goal_policy["contract_fingerprint"],
+                "tool_contract_sha256": goal_policy["tool_contract_sha256"],
+                "runtime_behavior_fingerprint": goal_policy["runtime_behavior_fingerprint"],
+                "activation_epoch_id": goal_policy["activation_epoch_id"],
+                "activation_admission": goal_policy["activation_admission"],
+                "issuer_client_id": goal_policy["issuer_client_id"],
+                "grant_wave_id": wave,
+                "route": goal_policy["route"],
+                "profile": goal_policy["profile"],
+                "acceptance_mode": goal_policy["acceptance_mode"],
+                "restart_policy": goal_policy["restart_policy"],
+                "read_paths": list(goal_policy["read_paths"]),
+                "write_paths": list(goal_policy["write_paths"]),
+                "protected_paths": list(goal_policy["protected_paths"]),
+                "approved_checks": list(goal_policy["approved_checks"]),
+                "max_duration_seconds": int(goal_policy["max_duration_seconds"]),
+                "max_decision_turns": int(goal_policy["max_decision_turns"]),
+                "max_patch_attempts": int(goal_policy["max_patch_attempts"]),
+            }
+            child_policy_json = _canonical_json(child_policy)
+            child_policy_sha = hashlib.sha256(child_policy_json.encode("utf-8")).hexdigest()
+            existing_row = connection.execute(
+                "SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)
+            ).fetchone()
+            if existing_row is not None:
+                existing = self._run_continuation_row(existing_row)
+                if existing["parent_episode_id"] == episode and existing["enabled"] and not existing["revoked_at"]:
+                    connection.commit()
+                    existing["policy"] = _policy_projection(existing["policy"])
+                    return {"status": "MATERIALIZED", "idempotent": True, "continuation": existing}
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_GRANT_CONFLICT",
+                    "Child RUN already has different continuation authority.",
+                )
+            connection.execute(
+                """INSERT INTO run_continuations(
+                       run_id,parent_episode_id,workspace_id,problem_id,problem_revision,policy_json,policy_sha256,issuer_receipt_sha256,
+                       policy_revision,enabled,pause_reason,revoked_at,driver_generation,claimed_runtime_instance,
+                       claim_expires_at_unix_ms,next_action_seq,consumed_event_seq,pending_action_id,pending_evidence_hash,pending_evidence_paths_json,pending_replan_json,pending_dispatch_action_id,pending_job_id,pending_patch_action_id,lane_id,
+                       thread_id,thread_session_id,last_turn_id,remaining_decision_turns,remaining_patch_attempts,expires_at_unix_ms,created_at,updated_at
+                   ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    normalized_run, episode, goal["workspace_id"], goal["problem_id"], int(goal["problem_revision"]),
+                    child_policy_json, child_policy_sha, goal["issuer_receipt_sha256"], 1, 1, "", None, 0, "", 0, 1, 0,
+                    "", "", "[]", "{}", "", "", "", "", "", "", "",
+                    int(goal["remaining_decision_turns"]), int(goal["remaining_patch_attempts"]), int(goal["expires_at_unix_ms"]), now, now,
+                ),
+            )
+            self._append_run_continuation_event(
+                connection,
+                run_id=normalized_run,
+                event_type="run_continuation_materialized_from_goal",
+                payload={
+                    "episode_id": episode,
+                    "policy_sha256": child_policy_sha,
+                    "remaining_decision_turns": int(goal["remaining_decision_turns"]),
+                    "remaining_patch_attempts": int(goal["remaining_patch_attempts"]),
+                },
+            )
+            row = connection.execute(
+                "SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)
+            ).fetchone()
+            connection.commit()
+        assert row is not None
+        result = self._run_continuation_row(row)
+        result["policy"] = _policy_projection(result["policy"])
+        return {"status": "MATERIALIZED", "idempotent": False, "continuation": result}
+
+    def materialize_matching_goal_continuation(
+        self,
+        *,
+        run_id: str,
+        grant_wave_id: str = "",
+        now_unix_ms: int | None = None,
+    ) -> dict[str, Any]:
+        """Materialize the one exact live Goal episode already authorized for a child RUN."""
+        normalized_run = _require_opaque(run_id, "run_id")
+        now_ms = _now_ms() if now_unix_ms is None else int(now_unix_ms)
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            run = connection.execute(
+                "SELECT status,metadata_json FROM runs WHERE run_id=?", (normalized_run,)
+            ).fetchone()
+            if run is None or str(run["status"] or "") != "active":
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_RUN_NOT_ACTIVE",
+                    "Goal continuation auto-materialization requires an active child RUN.",
+                )
+            try:
+                metadata = json.loads(str(run["metadata_json"] or "{}"))
+            except (TypeError, json.JSONDecodeError):
+                metadata = {}
+            binding = _controller_run_binding_from_metadata(metadata)
+            if not isinstance(binding, dict):
+                return {"status": "MISSING", "run_id": normalized_run}
+            workspace_id = str(binding.get("workspace_id") or "").strip()
+            problem_id = str(binding.get("problem_id") or "").strip()
+            problem_revision = int(binding.get("problem_revision") or 0)
+            if not workspace_id or not problem_id or problem_revision < 1:
+                return {"status": "MISSING", "run_id": normalized_run}
+            rows = connection.execute(
+                """SELECT episode_id FROM goal_continuations
+                   WHERE workspace_id=? AND problem_id=? AND problem_revision=?
+                     AND enabled=1 AND revoked_at IS NULL AND expires_at_unix_ms>?
+                   ORDER BY episode_id""",
+                (workspace_id, problem_id, problem_revision, now_ms),
+            ).fetchall()
+        if not rows:
+            return {"status": "MISSING", "run_id": normalized_run}
+        if len(rows) != 1:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_AMBIGUOUS",
+                "More than one live Goal continuation matches the exact child RUN binding.",
+                details={"run_id": normalized_run, "count": len(rows)},
+            )
+        return self.materialize_goal_continuation(
+            run_id=normalized_run,
+            episode_id=str(rows[0]["episode_id"]),
+            grant_wave_id=grant_wave_id,
+            now_unix_ms=now_ms,
+        )
+
     def issue_run_continuation(
         self,
         *,
@@ -474,7 +958,7 @@ class RunContinuationLedgerMixin:
                 policy_revision = int(existing["policy_revision"]) + 1
                 connection.execute(
                     """UPDATE run_continuations
-                       SET workspace_id=?,problem_id=?,problem_revision=?,policy_json=?,policy_sha256=?,issuer_receipt_sha256=?,
+                       SET parent_episode_id='',workspace_id=?,problem_id=?,problem_revision=?,policy_json=?,policy_sha256=?,issuer_receipt_sha256=?,
                            policy_revision=?,enabled=1,pause_reason='',revoked_at=NULL,
                            claimed_runtime_instance='',claim_expires_at_unix_ms=0,next_action_seq=1,consumed_event_seq=0,pending_evidence_hash='',pending_evidence_paths_json='[]',pending_replan_json='{}',pending_dispatch_action_id='',pending_patch_action_id='',
                            lane_id='',thread_id='',thread_session_id='',last_turn_id='',
@@ -531,6 +1015,7 @@ class RunContinuationLedgerMixin:
         driver_generation: int | None = None,
         runtime_instance_id: str = "",
         now_unix_ms: int | None = None,
+        connection: sqlite3.Connection | None = None,
     ) -> dict[str, Any]:
         if record is None:
             raise RunContinuationError("RUN_CONTINUATION_GRANT_REQUIRED", "No durable execution grant exists for this RUN.")
@@ -539,6 +1024,22 @@ class RunContinuationLedgerMixin:
             raise RunContinuationError("RUN_CONTINUATION_REVOKED", "The continuation grant is revoked or disabled.")
         if now_ms >= int(record["expires_at_unix_ms"]):
             raise RunContinuationError("RUN_CONTINUATION_EXPIRED", "The continuation grant has expired.")
+        parent_episode = str(record.get("parent_episode_id") or "")
+        if parent_episode:
+            parent = self._assert_goal_continuation_row(
+                self._goal_continuation_get_raw(parent_episode, connection=connection),
+                episode_id=parent_episode,
+                now_unix_ms=now_ms,
+            )
+            if (
+                str(parent["workspace_id"]) != str(record["workspace_id"])
+                or str(parent["problem_id"]) != str(record["problem_id"])
+                or int(parent["problem_revision"]) != int(record["problem_revision"])
+            ):
+                raise RunContinuationError(
+                    "GOAL_CONTINUATION_CHILD_BINDING_MISMATCH",
+                    "Child continuation identity no longer matches its parent Goal episode.",
+                )
         if driver_generation is not None and int(driver_generation) != int(record["driver_generation"]):
             raise RunContinuationError(
                 "RUN_CONTINUATION_STALE_GENERATION",
@@ -737,6 +1238,7 @@ class RunContinuationLedgerMixin:
                 driver_generation=driver_generation,
                 runtime_instance_id=runtime_instance_id,
                 now_unix_ms=now_ms,
+                connection=connection,
             )
             allowed_reads = set(record["policy"].get("read_paths") or [])
             denied_evidence_paths = sorted(set(normalized_evidence_paths).difference(allowed_reads))
@@ -746,7 +1248,17 @@ class RunContinuationLedgerMixin:
                     "An evidence packet includes a path outside the immutable continuation read scope.",
                     details={"paths": denied_evidence_paths},
                 )
-            if int(record["remaining_decision_turns"]) < 1:
+            parent_episode = str(record.get("parent_episode_id") or "")
+            parent = None
+            remaining_decision_turns = int(record["remaining_decision_turns"])
+            if parent_episode:
+                parent = self._assert_goal_continuation_row(
+                    self._goal_continuation_get_raw(parent_episode, connection=connection),
+                    episode_id=parent_episode,
+                    now_unix_ms=now_ms,
+                )
+                remaining_decision_turns = int(parent["remaining_decision_turns"])
+            if remaining_decision_turns < 1:
                 raise RunContinuationError("RUN_CONTINUATION_DECISION_BUDGET_EXHAUSTED", "No continuation decision turns remain.")
             current_seq = int(record["next_action_seq"])
             action_id = hashlib.sha256(
@@ -763,17 +1275,23 @@ class RunContinuationLedgerMixin:
                     "The continuation action cursor changed; do not create a second effect identity.",
                     details={"expected_action_seq": current_seq},
                 )
+            next_remaining_decision_turns = remaining_decision_turns - 1
+            if parent is not None:
+                connection.execute(
+                    "UPDATE goal_continuations SET remaining_decision_turns=?,updated_at=? WHERE episode_id=?",
+                    (next_remaining_decision_turns, now, parent_episode),
+                )
             connection.execute(
                 """UPDATE run_continuations
-                   SET pending_action_id=?,pending_evidence_hash=?,pending_evidence_paths_json=?,pending_replan_json=?,pending_dispatch_action_id='',pending_job_id='',pending_patch_action_id='',next_action_seq=?,remaining_decision_turns=remaining_decision_turns-1,updated_at=?
+                   SET pending_action_id=?,pending_evidence_hash=?,pending_evidence_paths_json=?,pending_replan_json=?,pending_dispatch_action_id='',pending_job_id='',pending_patch_action_id='',next_action_seq=?,remaining_decision_turns=?,updated_at=?
                    WHERE run_id=?""",
-                (action_id, evidence_digest, _canonical_json(normalized_evidence_paths), _canonical_json(normalized_replan), current_seq + 1, now, normalized_run),
+                (action_id, evidence_digest, _canonical_json(normalized_evidence_paths), _canonical_json(normalized_replan), current_seq + 1, next_remaining_decision_turns, now, normalized_run),
             )
             self._append_run_continuation_event(
                 connection,
                 run_id=normalized_run,
                 event_type="run_continuation_action_reserved",
-                payload={"action_id": action_id, "action_seq": current_seq, "action_kind": kind, "driver_generation": driver_generation, "request_hash": request_digest, "evidence_hash": evidence_digest, "evidence_path_count": len(normalized_evidence_paths), "technical_replan": bool(normalized_replan)},
+                payload={"action_id": action_id, "action_seq": current_seq, "action_kind": kind, "driver_generation": driver_generation, "request_hash": request_digest, "evidence_hash": evidence_digest, "evidence_path_count": len(normalized_evidence_paths), "technical_replan": bool(normalized_replan), "parent_episode_id": parent_episode, "remaining_decision_turns": next_remaining_decision_turns},
             )
             updated = connection.execute("SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)).fetchone()
             connection.commit()
@@ -782,19 +1300,22 @@ class RunContinuationLedgerMixin:
         continuation["policy"] = _policy_projection(continuation["policy"])
         return {"reserved": True, "idempotent": False, "action_id": action_id, "continuation": continuation}
 
-    def complete_run_continuation_action(
+    def release_run_continuation_action(
         self,
         *,
         run_id: str,
         driver_generation: int,
         runtime_instance_id: str,
         action_id: str,
-        consumed_event_seq: int = 0,
     ) -> dict[str, Any]:
+        """Release an exact decision reservation only while replay is provably safe.
+
+        The action sequence is intentionally not rewound. A released action id
+        therefore cannot be regenerated even though its decision-budget unit is
+        returned to the bounded grant.
+        """
         normalized_run = _require_opaque(run_id, "run_id")
         normalized_action = _require_sha256(action_id, "action_id")
-        if isinstance(consumed_event_seq, bool) or not isinstance(consumed_event_seq, int) or consumed_event_seq < 0:
-            raise RunContinuationError("RUN_CONTINUATION_ACTION_INVALID", "consumed_event_seq must be non-negative.")
         now = _utc_now()
         with self._lock, self._connect() as connection:
             self._run_continuation_ensure_schema(connection)
@@ -806,9 +1327,219 @@ class RunContinuationLedgerMixin:
                 run_id=normalized_run,
                 driver_generation=driver_generation,
                 runtime_instance_id=runtime_instance_id,
+                connection=connection,
+            )
+            if record["pending_action_id"] != normalized_action:
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_ACTION_MISMATCH",
+                    "Only the exact pending action can release its decision reservation.",
+                )
+            downstream = [
+                name
+                for name, value in (
+                    ("dispatch", record["pending_dispatch_action_id"]),
+                    ("job", record["pending_job_id"]),
+                    ("patch", record["pending_patch_action_id"]),
+                )
+                if value
+            ]
+            if downstream:
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_EFFECT_RECONCILE_REQUIRED",
+                    "The pending action has downstream execution state; reconcile it before releasing the reservation.",
+                    details={"pending": downstream},
+                )
+            effect = connection.execute(
+                "SELECT status FROM run_continuation_effects WHERE action_id=? AND run_id=?",
+                (normalized_action, normalized_run),
+            ).fetchone()
+            effect_status = str(effect["status"]) if effect is not None else ""
+            if effect is not None and effect_status != "not_applied":
+                raise RunContinuationError(
+                    "RUN_CONTINUATION_EFFECT_RECONCILE_REQUIRED",
+                    "The pending action has an effect whose outcome is not safely classified as not_applied.",
+                    details={"effect_status": effect_status},
+                )
+            parent_episode = str(record.get("parent_episode_id") or "")
+            parent = None
+            restored_decision_turns = int(record["remaining_decision_turns"]) + 1
+            if parent_episode:
+                parent = self._assert_goal_continuation_row(
+                    self._goal_continuation_get_raw(parent_episode, connection=connection),
+                    episode_id=parent_episode,
+                )
+                restored_decision_turns = int(parent["remaining_decision_turns"]) + 1
+                if restored_decision_turns > int(parent["policy"]["max_decision_turns"]):
+                    raise RunContinuationError(
+                        "GOAL_CONTINUATION_BUDGET_CONFLICT",
+                        "Decision budget refund would exceed the immutable Goal episode budget.",
+                    )
+                connection.execute(
+                    "UPDATE goal_continuations SET remaining_decision_turns=?,updated_at=? WHERE episode_id=?",
+                    (restored_decision_turns, now, parent_episode),
+                )
+            connection.execute(
+                """UPDATE run_continuations
+                   SET pending_action_id='',pending_evidence_hash='',pending_evidence_paths_json='[]',pending_replan_json='{}',
+                       pending_dispatch_action_id='',pending_job_id='',pending_patch_action_id='',
+                       remaining_decision_turns=?,updated_at=?
+                   WHERE run_id=?""",
+                (restored_decision_turns, now, normalized_run),
+            )
+            self._append_run_continuation_event(
+                connection,
+                run_id=normalized_run,
+                event_type="run_continuation_action_released",
+                payload={
+                    "action_id": normalized_action,
+                    "driver_generation": driver_generation,
+                    "effect_status": effect_status,
+                    "decision_budget_restored": True,
+                    "parent_episode_id": parent_episode,
+                    "remaining_decision_turns": restored_decision_turns,
+                },
+            )
+            updated = connection.execute("SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)).fetchone()
+            connection.commit()
+        assert updated is not None
+        continuation = self._run_continuation_row(updated)
+        continuation["policy"] = _policy_projection(continuation["policy"])
+        return continuation
+
+    def complete_run_continuation_action(
+        self,
+        *,
+        run_id: str,
+        driver_generation: int,
+        runtime_instance_id: str,
+        action_id: str,
+        consumed_event_seq: int = 0,
+        proof_observation_id: str = "",
+        proof_identity_sha256: str = "",
+        proof_outcome: str = "",
+    ) -> dict[str, Any]:
+        normalized_run = _require_opaque(run_id, "run_id")
+        normalized_action = _require_sha256(action_id, "action_id")
+        if isinstance(consumed_event_seq, bool) or not isinstance(consumed_event_seq, int) or consumed_event_seq < 0:
+            raise RunContinuationError("RUN_CONTINUATION_ACTION_INVALID", "consumed_event_seq must be non-negative.")
+        observation_fields = [bool(proof_observation_id), bool(proof_identity_sha256), bool(proof_outcome)]
+        if any(observation_fields) and not all(observation_fields):
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_OBSERVATION_INVALID",
+                "A proof observation requires observation id, proof identity, and outcome together.",
+            )
+        observation_id = _require_sha256(proof_observation_id, "proof_observation_id") if proof_observation_id else ""
+        proof_identity = _require_sha256(proof_identity_sha256, "proof_identity_sha256") if proof_identity_sha256 else ""
+        observation_outcome = _bounded(proof_outcome, 32).lower() if proof_outcome else ""
+        if observation_outcome and observation_outcome not in {"progress", "no_progress"}:
+            raise RunContinuationError(
+                "GOAL_CONTINUATION_OBSERVATION_INVALID",
+                "Proof observation outcome must be progress or no_progress.",
+            )
+        now = _utc_now()
+        goal_observation: dict[str, Any] | None = None
+        with self._lock, self._connect() as connection:
+            self._run_continuation_ensure_schema(connection)
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)).fetchone()
+            record = self._run_continuation_row(row) if row is not None else None
+            record = self._assert_run_continuation_row(
+                record,
+                run_id=normalized_run,
+                driver_generation=driver_generation,
+                runtime_instance_id=runtime_instance_id,
+                connection=connection,
             )
             if record["pending_action_id"] != normalized_action:
                 raise RunContinuationError("RUN_CONTINUATION_ACTION_MISMATCH", "Only the exact pending action can advance the continuation cursor.")
+            parent_episode = str(record.get("parent_episode_id") or "")
+            if observation_id and parent_episode:
+                existing = connection.execute(
+                    "SELECT * FROM goal_continuation_observations WHERE observation_id=?",
+                    (observation_id,),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        str(existing["episode_id"]) != parent_episode
+                        or str(existing["outcome"]) != observation_outcome
+                        or str(existing["proof_identity_sha256"]) != proof_identity
+                    ):
+                        raise RunContinuationError(
+                            "GOAL_CONTINUATION_OBSERVATION_CONFLICT",
+                            "A proof observation id is already bound to different Goal evidence.",
+                        )
+                    parent_row = connection.execute(
+                        "SELECT * FROM goal_continuations WHERE episode_id=?", (parent_episode,)
+                    ).fetchone()
+                    if parent_row is None:
+                        raise RunContinuationError("GOAL_CONTINUATION_GRANT_REQUIRED", "The parent Goal episode disappeared.")
+                    parent = self._goal_continuation_row(parent_row)
+                    goal_observation = {
+                        "observation_id": observation_id,
+                        "outcome": observation_outcome,
+                        "idempotent": True,
+                        "no_progress_count": int(parent["no_progress_count"]),
+                        "stopped": (not parent["enabled"] and str(parent["pause_reason"]) == GOAL_CONTINUATION_NO_PROGRESS),
+                        "reason": str(parent["pause_reason"] or ""),
+                    }
+                else:
+                    parent_row = connection.execute(
+                        "SELECT * FROM goal_continuations WHERE episode_id=?", (parent_episode,)
+                    ).fetchone()
+                    parent = self._assert_goal_continuation_row(
+                        self._goal_continuation_row(parent_row) if parent_row is not None else None,
+                        episode_id=parent_episode,
+                    )
+                    max_no_progress = int(parent["policy"].get("max_no_progress") or 0)
+                    if max_no_progress < 1:
+                        raise RunContinuationError(
+                            "GOAL_CONTINUATION_POLICY_INVALID",
+                            "Goal continuation no-progress threshold is missing or invalid.",
+                        )
+                    if observation_outcome == "progress":
+                        next_no_progress = 0
+                    else:
+                        next_no_progress = min(int(parent["no_progress_count"]) + 1, max_no_progress)
+                    stopped = observation_outcome == "no_progress" and next_no_progress >= max_no_progress
+                    connection.execute(
+                        """INSERT INTO goal_continuation_observations(
+                               observation_id,episode_id,run_id,action_id,outcome,proof_identity_sha256,created_at
+                           ) VALUES(?,?,?,?,?,?,?)""",
+                        (observation_id, parent_episode, normalized_run, normalized_action, observation_outcome, proof_identity, now),
+                    )
+                    if stopped:
+                        connection.execute(
+                            "UPDATE goal_continuations SET enabled=0,pause_reason=?,no_progress_count=?,updated_at=? WHERE episode_id=?",
+                            (GOAL_CONTINUATION_NO_PROGRESS, next_no_progress, now, parent_episode),
+                        )
+                    else:
+                        connection.execute(
+                            "UPDATE goal_continuations SET no_progress_count=?,updated_at=? WHERE episode_id=?",
+                            (next_no_progress, now, parent_episode),
+                        )
+                    self._append_run_continuation_event(
+                        connection,
+                        run_id=normalized_run,
+                        event_type="goal_continuation_proof_observed",
+                        payload={
+                            "episode_id": parent_episode,
+                            "observation_id": observation_id,
+                            "outcome": observation_outcome,
+                            "proof_identity_sha256": proof_identity,
+                            "no_progress_count": next_no_progress,
+                            "max_no_progress": max_no_progress,
+                            "stopped": stopped,
+                            "reason": GOAL_CONTINUATION_NO_PROGRESS if stopped else "",
+                        },
+                    )
+                    goal_observation = {
+                        "observation_id": observation_id,
+                        "outcome": observation_outcome,
+                        "idempotent": False,
+                        "no_progress_count": next_no_progress,
+                        "stopped": stopped,
+                        "reason": GOAL_CONTINUATION_NO_PROGRESS if stopped else "",
+                    }
             connection.execute(
                 """UPDATE run_continuations
                    SET pending_action_id='',pending_evidence_hash='',pending_evidence_paths_json='[]',pending_replan_json='{}',pending_dispatch_action_id='',pending_job_id='',pending_patch_action_id='',consumed_event_seq=MAX(consumed_event_seq,?),updated_at=? WHERE run_id=?""",
@@ -825,6 +1556,8 @@ class RunContinuationLedgerMixin:
         assert updated is not None
         continuation = self._run_continuation_row(updated)
         continuation["policy"] = _policy_projection(continuation["policy"])
+        if goal_observation is not None:
+            continuation["goal_observation"] = goal_observation
         return continuation
 
     def consume_run_continuation_patch_attempt(
@@ -849,6 +1582,7 @@ class RunContinuationLedgerMixin:
                 run_id=normalized_run,
                 driver_generation=driver_generation,
                 runtime_instance_id=runtime_instance_id,
+                connection=connection,
             )
             if record["pending_action_id"] != normalized_action:
                 raise RunContinuationError("RUN_CONTINUATION_ACTION_MISMATCH", "Only the exact pending action may spend a PATCH attempt.")
@@ -859,17 +1593,32 @@ class RunContinuationLedgerMixin:
                 connection.commit()
                 record["policy"] = _policy_projection(record["policy"])
                 return {"consumed": False, "idempotent": True, "continuation": record}
-            if int(record["remaining_patch_attempts"]) < 1:
+            parent_episode = str(record.get("parent_episode_id") or "")
+            parent = None
+            remaining_patch_attempts = int(record["remaining_patch_attempts"])
+            if parent_episode:
+                parent = self._assert_goal_continuation_row(
+                    self._goal_continuation_get_raw(parent_episode, connection=connection),
+                    episode_id=parent_episode,
+                )
+                remaining_patch_attempts = int(parent["remaining_patch_attempts"])
+            if remaining_patch_attempts < 1:
                 raise RunContinuationError("RUN_CONTINUATION_PATCH_BUDGET_EXHAUSTED", "No continuation PATCH attempts remain.")
+            next_remaining_patch_attempts = remaining_patch_attempts - 1
+            if parent is not None:
+                connection.execute(
+                    "UPDATE goal_continuations SET remaining_patch_attempts=?,updated_at=? WHERE episode_id=?",
+                    (next_remaining_patch_attempts, now, parent_episode),
+                )
             connection.execute(
-                "UPDATE run_continuations SET pending_patch_action_id=?,remaining_patch_attempts=remaining_patch_attempts-1,updated_at=? WHERE run_id=?",
-                (normalized_action, now, normalized_run),
+                "UPDATE run_continuations SET pending_patch_action_id=?,remaining_patch_attempts=?,updated_at=? WHERE run_id=?",
+                (normalized_action, next_remaining_patch_attempts, now, normalized_run),
             )
             self._append_run_continuation_event(
                 connection,
                 run_id=normalized_run,
                 event_type="run_continuation_patch_attempt_consumed",
-                payload={"action_id": normalized_action, "driver_generation": driver_generation},
+                payload={"action_id": normalized_action, "driver_generation": driver_generation, "parent_episode_id": parent_episode, "remaining_patch_attempts": next_remaining_patch_attempts},
             )
             updated = connection.execute("SELECT * FROM run_continuations WHERE run_id=?", (normalized_run,)).fetchone()
             connection.commit()
@@ -1097,7 +1846,8 @@ class RunContinuationMixin:
         policy = approved.get("policy") if isinstance(approved.get("policy"), dict) else {}
         receipt = approved.get("receipt") if isinstance(approved.get("receipt"), dict) else {}
         controller = approved.get("controller") if isinstance(approved.get("controller"), dict) else {}
-        run_id = str(policy.get("run_id") or "").strip()
+        goal_scope = str(policy.get("scope_kind") or "") == "goal_episode"
+        run_id = str(policy.get("origin_run_id") if goal_scope else policy.get("run_id") or "").strip()
         if not run_id:
             raise ToolFailure("RUN_CONTINUATION_APPROVAL_INVALID", "The local approval has no exact RUN binding.", category="security")
         try:
@@ -1106,8 +1856,23 @@ class RunContinuationMixin:
             raise self._run_continuation_tool_failure(exc) from exc
         self._run_continuation_assert_runtime(bound_policy)
         current_ctx = self.orchestration_control.snapshot(run_id)
-        if current_ctx is None or str(current_ctx.wave_id) != str(bound_policy.get("grant_wave_id") or ""):
+        expected_wave = str(bound_policy.get("origin_wave_id") if goal_scope else bound_policy.get("grant_wave_id") or "")
+        if current_ctx is None or str(current_ctx.wave_id) != expected_wave:
             raise ToolFailure("RUN_CONTINUATION_WAVE_STALE", "The RUN/WAVE changed before local approval.", category="security")
+        if goal_scope:
+            try:
+                goal_precondition = self._continuity_goal_controller_precondition(
+                    problem_id=str(bound_policy.get("problem_id") or ""),
+                    problem_revision=int(bound_policy.get("problem_revision") or 0),
+                )
+            except ControllerContinuityError as exc:
+                raise self._continuity_tool_failure(exc) from exc
+            if (
+                int(goal_precondition.get("expected_generation") or 0) != int(bound_policy.get("controller_generation") or 0)
+                or str(goal_precondition.get("owner_client_id") or "") != str(bound_policy.get("controller_owner_client_id") or "")
+                or str(goal_precondition.get("controller_endpoint_id") or "") != str(bound_policy.get("controller_endpoint_id") or "")
+            ):
+                raise ToolFailure("RUN_CONTINUATION_CONTROLLER_CHANGED", "Goal controller authority changed after the approval challenge was issued.", category="security")
         current_controller = self.orchestration_ledger.peek_controller_lease(run_id) or {}
         if (
             str(current_controller.get("status") or "") == "active"
@@ -1120,6 +1885,9 @@ class RunContinuationMixin:
         issuer_receipt = hashlib.sha256(
             _canonical_json({
                 "run_id": run_id,
+                "episode_id": str(bound_policy.get("episode_id") or ""),
+                "controller_generation": int(bound_policy.get("controller_generation") or 0),
+                "controller_endpoint_id": str(bound_policy.get("controller_endpoint_id") or ""),
                 "controller_lease_id": controller.get("lease_id"),
                 "controller_fencing_token": controller.get("fencing_token"),
                 "controller_client_id": str(bound_policy.get("issuer_client_id") or ""),
@@ -1129,14 +1897,32 @@ class RunContinuationMixin:
             }).encode("utf-8")
         ).hexdigest()
         try:
-            issued = self.orchestration_ledger.issue_run_continuation(
-                run_id=run_id,
-                policy=bound_policy,
-                issuer_receipt_sha256=issuer_receipt,
-            )
+            if goal_scope:
+                goal_issued = self.orchestration_ledger.issue_goal_continuation(
+                    policy=bound_policy,
+                    issuer_receipt_sha256=issuer_receipt,
+                )
+                parent = goal_issued["goal_continuation"]
+                materialized = self.orchestration_ledger.materialize_goal_continuation(
+                    run_id=run_id,
+                    episode_id=str(parent["episode_id"]),
+                    grant_wave_id=str(current_ctx.wave_id),
+                )
+                issued = {
+                    "status": goal_issued.get("status"),
+                    "idempotent": bool(goal_issued.get("idempotent")) and bool(materialized.get("idempotent")),
+                    "continuation": materialized["continuation"],
+                    "goal_continuation": parent,
+                }
+            else:
+                issued = self.orchestration_ledger.issue_run_continuation(
+                    run_id=run_id,
+                    policy=bound_policy,
+                    issuer_receipt_sha256=issuer_receipt,
+                )
         except RunContinuationError as exc:
             raise self._run_continuation_tool_failure(exc) from exc
-        self._project_orchestration(current_ctx, event="run_continuation_granted")
+        self._project_orchestration(current_ctx, event="goal_continuation_granted" if goal_scope else "run_continuation_granted")
         try:
             started = self._run_continuation_start_driver({"run_id": run_id})
         except ToolFailure as exc:
@@ -1147,7 +1933,13 @@ class RunContinuationMixin:
                 "code": exc.code,
                 "message": exc.message,
             }
-        return {**started, "grant_status": issued.get("status"), "approval_challenge_id": approved.get("challenge_id")}
+        return {
+            **started,
+            "grant_status": issued.get("status"),
+            "continuation": issued.get("continuation"),
+            **({"goal_continuation": issued.get("goal_continuation")} if goal_scope else {}),
+            "approval_challenge_id": approved.get("challenge_id"),
+        }
 
     def _run_continuation_grant(self, args: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
         workflow = str(args.get("workflow") or "custom").strip().lower()
@@ -1205,9 +1997,13 @@ class RunContinuationMixin:
             )
         claimed_consent: dict[str, Any] | None = None
         try:
-            policy = build_run_continuation_policy(
+            goal_precondition = self._continuity_goal_controller_precondition(
+                problem_id=str(binding.get("problem_id") or ""),
+                problem_revision=int(binding.get("problem_revision") or 0),
+            )
+            policy = build_goal_continuation_policy(
                 request,
-                run_id=ctx.run_id,
+                origin_run_id=ctx.run_id,
                 workspace_id=workspace_id,
                 problem_id=str(binding.get("problem_id") or ""),
                 problem_revision=int(binding.get("problem_revision") or 0),
@@ -1217,6 +2013,9 @@ class RunContinuationMixin:
                 activation_epoch_id=epoch_id,
                 activation_admission=admission_state,
                 issuer_client_id=self._hub_client_record_id(hub),
+                controller_generation=int(goal_precondition.get("expected_generation") or 0),
+                controller_endpoint_id=str(goal_precondition.get("controller_endpoint_id") or ""),
+                controller_owner_client_id=str(goal_precondition.get("owner_client_id") or ""),
                 wave_id=ctx.wave_id,
             )
             consent_descriptor = continuation_consent_descriptor(policy)
@@ -1258,6 +2057,9 @@ class RunContinuationMixin:
             issuer_receipt = hashlib.sha256(
                 _canonical_json({
                     "run_id": ctx.run_id,
+                    "episode_id": policy["episode_id"],
+                    "controller_generation": policy["controller_generation"],
+                    "controller_endpoint_id": policy["controller_endpoint_id"],
                     "controller_lease_id": controller.get("lease_id"),
                     "controller_fencing_token": controller.get("fencing_token"),
                     "controller_client_id": self._hub_client_record_id(hub),
@@ -1266,11 +2068,26 @@ class RunContinuationMixin:
                     "consent_scope_sha256": consent_descriptor["scope_sha256"],
                 }).encode("utf-8")
             ).hexdigest()
-            issued = self.orchestration_ledger.issue_run_continuation(
-                run_id=ctx.run_id,
+            goal_issued = self.orchestration_ledger.issue_goal_continuation(
                 policy=policy,
                 issuer_receipt_sha256=issuer_receipt,
             )
+            parent = goal_issued["goal_continuation"]
+            materialized = self.orchestration_ledger.materialize_goal_continuation(
+                run_id=ctx.run_id,
+                episode_id=str(parent["episode_id"]),
+                grant_wave_id=ctx.wave_id,
+            )
+            issued = {
+                "status": goal_issued.get("status"),
+                "idempotent": bool(goal_issued.get("idempotent")) and bool(materialized.get("idempotent")),
+                "continuation": materialized["continuation"],
+                "goal_continuation": parent,
+            }
+        except ControllerContinuityError as exc:
+            if claimed_consent is not None:
+                restore_pending_continuation_consent(self.workspace.root, claimed_consent)
+            raise self._continuity_tool_failure(exc) from exc
         except RunContinuationError as exc:
             if claimed_consent is not None:
                 restore_pending_continuation_consent(self.workspace.root, claimed_consent)
@@ -1282,14 +2099,19 @@ class RunContinuationMixin:
         else:
             assert claimed_consent is not None
             consume_pending_continuation_consent(claimed_consent)
-        self._project_orchestration(ctx, event="run_continuation_granted")
+        self._project_orchestration(ctx, event="goal_continuation_granted")
+        try:
+            auto_start = self._run_continuation_start_driver({"run_id": ctx.run_id})
+        except ToolFailure as exc:
+            auto_start = {"run_id": ctx.run_id, "status": "GRANTED_NOT_STARTED", "code": exc.code, "message": exc.message}
         return {
             "workflow": workflow,
             "phase": "prepare",
             "continuation": issued,
+            "auto_start": auto_start,
             "orchestration": self._orchestration_result(ctx),
             "task": self.task_state.get(),
-            "recommended_next_action": "The grant is durable and binds the current continuation execution environment. Start it explicitly through task_control action=run_continuation/run_continuation_action=start; MCP, not the model, will then own exact dispatch observation, mutation, proof, and the technical ACCEPTING transition.",
+            "recommended_next_action": "The bounded Goal authority is durable, the current RUN is materialized under its shared budget, and the existing continuation driver was started automatically when possible. MCP owns exact dispatch observation, mutation, proof, and the technical ACCEPTING transition.",
         }
 
     def _run_continuation_canonical_evidence(
@@ -1448,8 +2270,26 @@ class RunContinuationMixin:
             if raw_policy is None:
                 raise RunContinuationError("RUN_CONTINUATION_GRANT_REQUIRED", "Continuation grant disappeared during driver claim.")
             policy = raw_policy["policy"]
+            parent_episode_id = str(raw_policy.get("parent_episode_id") or "")
+            if parent_episode_id:
+                parent = self.orchestration_ledger._goal_continuation_get_raw(parent_episode_id)
+                parent = self.orchestration_ledger._assert_goal_continuation_row(
+                    parent,
+                    episode_id=parent_episode_id,
+                )
+                authority_policy = parent["policy"]
+                consent = authority_policy.get("consent") if isinstance(authority_policy.get("consent"), dict) else {}
+                descriptor = continuation_consent_descriptor(authority_policy)
+                if (
+                    not str(consent.get("receipt_id") or "")
+                    or str(consent.get("scope_sha256") or "") != descriptor["scope_sha256"]
+                ):
+                    raise RunContinuationError(
+                        "RUN_CONTINUATION_CONSENT_REQUIRED",
+                        "Materialized Goal continuation requires the original exact Goal consent receipt.",
+                    )
             restored_lane = False
-            if raw_policy.get("thread_id"):
+            if raw_policy.get("thread_id") and not parent_episode_id:
                 consent = policy.get("consent") if isinstance(policy.get("consent"), dict) else {}
                 descriptor = continuation_consent_descriptor(policy)
                 if (

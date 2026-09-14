@@ -1,0 +1,555 @@
+[
+  {
+    "version": 2,
+    "task_id": "8dd699ecd0ae4a9ab392fd6e8f630b4b",
+    "orchestration": {
+      "run_id": "29b0d6ec72b0467c9b82d5dc2198417a",
+      "wave_id": "4301050509cb4877a6d44ade17c6d331",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "auto",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "994e868094d728a5ae2c6dd5a2590fad7a52876964583a4ba0854569a2842d39",
+      "contract_fp": ""
+    },
+    "objective": "Determine the exact supported controller-continuity recovery sequence for GOAL_CONTROLLER_FENCE_STALE on canonical Problem prl-goal-candidate-pagination-20260912. Identify how a runtime-issued reattach_id is obtained and consumed. Read-only only; no patch, no restart, no mutation, no new RUN for implementation.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "active foreign controller lease must be released or expire before reattach",
+    "next_step": "",
+    "created_at": "2026-09-14T07:52:56.071Z",
+    "updated_at": "2026-09-14T07:53:23.698Z",
+    "events": [
+      {
+        "time": "2026-09-14T07:52:56.071Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Determine the exact supported controller-continuity recovery sequence for GOAL_CONTROLLER_FENCE_STALE on canonical Problem prl-goal-candidate-pagination-20260912. Identify how a runtime-issued reattach_id is obtained and consumed. Read-only only; no patch, no restart, no mutation, no new RUN for implementation."
+        }
+      },
+      {
+        "time": "2026-09-14T07:52:57.007Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:02.774Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:02.782Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:23.698Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTROLLER_HANDOFF_REQUIRED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T07:53:44.580Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "d7c1e263f463435c8d8afcf7c7c46762",
+    "orchestration": {
+      "run_id": "11f5493c418345fab86d49676733c0ec",
+      "wave_id": "ca9466737bbe4f19a1cf986be7ac55c4",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "b21e758edb1eb2bd15e810dc9a2ed68331b405adad74b924be730ad9c5513916",
+      "contract_fp": ""
+    },
+    "objective": "Read-only: identify the supported public task_control path that releases or transfers a foreign ChatWeb controller lease after CONTROLLER_HANDOFF_REQUIRED, especially action=handoff semantics. No patch or restart.",
+    "status": "completed",
+    "steps": [],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-14T07:58:35.052Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-goal-candidate-pagination-20260912",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "3c1c5aba0399cde71d69ca00b4f8dd6815bb51c185eb4e760e25ed9f9fafdefd",
+        "objective_summary": "Make unresolved Goal discovery operable when more than the fixed candidate cap exists by providing bounded deterministic pagination or equivalent complete traversal, while preserving exact-identity fail-closed selection and avoiding timestamp-based guessing.",
+        "contract_capsule_included": true,
+        "contract_capsule_omission_reason": null,
+        "criteria": [
+          {
+            "criterion_id": "bounded_traversal",
+            "summary": "A caller can traverse all unresolved Goal candidates through bounded pages or an equivalent deterministic continuation instead of receiving only the first fixed subset."
+          },
+          {
+            "criterion_id": "cursor_or_limit_semantics",
+            "summary": "The public Goal surface exposes and honors stable pagination or bounded enumeration semantics rather than silently ignoring caller pagination inputs."
+          },
+          {
+            "criterion_id": "selection_fail_closed",
+            "summary": "Multiple unresolved Goals still require exact Problem identity; pagination never selects a Goal implicitly by time or position."
+          },
+          {
+            "criterion_id": "stable_page_identity",
+            "summary": "Continuation is bound to a stable candidate-set identity or otherwise fails closed on concurrent backlog changes rather than silently skipping or duplicating candidates."
+          },
+          {
+            "criterion_id": "over_cap_regression",
+            "summary": "A focused regression with more than ten unresolved Goals proves complete deterministic traversal and exact selection."
+          },
+          {
+            "criterion_id": "current_backlog_operable",
+            "summary": "The current unresolved Goal backlog can be enumerated without candidate truncation preventing project-health review."
+          }
+        ],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 6,
+          "criteria_proven": 0,
+          "criteria_unresolved": 6,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "bounded_traversal",
+          "next_critical_gap": "A caller can traverse all unresolved Goal candidates through bounded pages or an equivalent deterministic continuation instead of receiving only the first fixed subset.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 4,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [
+          "Choose the smallest public pagination contract that composes with the existing Goal resolver and task_control schema.",
+          "Define concurrency behavior when the unresolved Problem set changes between pages."
+        ],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "11f5493c418345fab86d49676733c0ec",
+          "wave_id": "ca9466737bbe4f19a1cf986be7ac55c4",
+          "checkpoint_id": "da17935982d346008e489f661d7ac8f4"
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 5,
+        "latest_event": {
+          "seq": 209,
+          "event_id": "prl-bind-ae64d1fb52db294629fdff874f4821f17192cb261742c4ddb160ddca06d605bf",
+          "event_hash": "a2170d2959da6a20ad204687b299b4178297667edd658137b0e96f2c0e6c361d",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-14T04:43:49.396Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 6,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 5,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 1,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/tests/test_stateless_http_2026.py",
+            "state": "file",
+            "sha256": "a5f000c25ad869640ee21ca7333c7ec881ef1b6d6a4fe08c66e3659d9c35a29b",
+            "size_bytes": 80584,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "11f5493c418345fab86d49676733c0ec",
+            "wave_id": "ca9466737bbe4f19a1cf986be7ac55c4"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false,
+        "patch_surface_observations": {
+          "schema_version": 1,
+          "authority": "observation_only_not_exact_byte_receipt_proof_acceptance_or_user_outcome",
+          "matching_event_count": 1,
+          "observation_count": 1,
+          "rejected_event_count": 0,
+          "complete": true,
+          "truncated": false,
+          "invalid": false,
+          "observations": [
+            {
+              "event_id": "0b6ee145ab1142d59d8bf5763c29d1a4",
+              "seq": 53264,
+              "event_time": "2026-09-14T06:56:26.318Z",
+              "measurement": "applied_patch_delta_v1",
+              "path_hash_semantics": "sha256_of_path_string_not_content_hash",
+              "path_hashes_sha256": [
+                "47a702601b228feeeadca6d9f120a7d3185fa5ac50b1037d38bef435a16eb9bd"
+              ],
+              "file_count": 1,
+              "additions": 1,
+              "removals": 1,
+              "line_changes": 2,
+              "producer_complete": true,
+              "complete": true,
+              "truncated": false,
+              "invalid": false,
+              "invalid_fields": []
+            }
+          ]
+        }
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 243,
+          "head_hash": "caf7d042af7cfabaec65859eefe9e133a3f5ec1b01aaf8dd4012c9ef8849b3be"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\wave-004.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-11f5493c418345fab86d49676733c0ec\\wave-005.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "11f5493c418345fab86d49676733c0ec",
+        "wave_id": "ca9466737bbe4f19a1cf986be7ac55c4",
+        "checkpoint_id": "da17935982d346008e489f661d7ac8f4",
+        "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+        "worktree_fp": "b21e758edb1eb2bd15e810dc9a2ed68331b405adad74b924be730ad9c5513916",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Continue canonical Problem prl-goal-candidate-pagination-20260912 to technical closure. Keep the current d694 Goal-pagination contract non-compatible with stale predecessor schemas so public candidate_cursor/candidate_limit requires real tools/list rediscovery. Repair only the focused stateless activation-bootstrap regression caused by the first test fixture strategy: direct mutation of runtime.tool_contract compatible_predecessor_sha256 did not make the HTTP bootstrap request eligible and all four filtered tests returned no normal result/receipt. Determine the exact bootstrap eligibility inputs and use the smallest test seam that exercises generic compatibility bootstrap without restoring the live d694->d52c freshness edge. Preserve all unrelated dirty work and existing older compatibility semantics. No restart, commit, push, package, release, reset or clean.",
+          "objective_revision": 2,
+          "objective_sha256": "7390e737b87c23b043bf3d4ed95e574c141238c596a5e33c9ec238bcc02b69bb",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "e0d22f3bd0dc47c2acaa0799159462f5",
+            "stage_id": "check:29ad77f7e8e13ced",
+            "status": "passed",
+            "duration_ms": 1550,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "df20a917ab97477d93b2bdbd04ab7191",
+            "stage_id": "verify:tests",
+            "status": "passed",
+            "duration_ms": 54186,
+            "exit_code": null,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "6cf6f80c408afd854ffe1eb03f8013e78802c8fcbabc90d722e67672ea42d277",
+    "completion_report_acknowledged_id": "6cf6f80c408afd854ffe1eb03f8013e78802c8fcbabc90d722e67672ea42d277",
+    "completion_report_acknowledged_at": "2026-09-14T07:58:51.925Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-14T07:53:44.581Z",
+    "updated_at": "2026-09-14T07:59:11.392Z",
+    "events": [
+      {
+        "time": "2026-09-14T07:53:44.581Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:45.252Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:50.918Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T07:53:50.924Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:25.071Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 28 \"requested exact run is not bound to this task context|stateless_exact_run_recovery_id|exact_run_recovery\" resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "xHlWQ3y6MzMVi5xUE70HY35N"
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:25.519Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 28 \"requested exact run is not bound to this task context|stateless_exact_run_recovery_id|exact_run_recovery\" resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:38.420Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 45 \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "HxZr3EZ9838ZYDhp4ri13UOz"
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:38.892Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 45 \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:44.729Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -A 95 \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "session_id": "2g8RMDVjU2hYv0sQUUP6_gSI"
+        }
+      },
+      {
+        "time": "2026-09-14T07:56:45.245Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -A 95 \"def stateless_task_context_for_run\" -- resources/coding-tools-mcp/coding_tools_mcp/runtime_stateless_context.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:57:01.075Z",
+        "event": "command_started",
+        "details": {
+          "command": "git grep -n -C 22 -E \"goal_controller_attachment_granted|controller_reattach|stateless_task_context_for_run|GOAL_CONTROLLER_FENCE_STALE\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "session_id": "Cv-pJxgPuOYV3tsrVFV4F3c0"
+        }
+      },
+      {
+        "time": "2026-09-14T07:57:01.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 22 -E \"goal_controller_attachment_granted|controller_reattach|stateless_task_context_for_run|GOAL_CONTROLLER_FENCE_STALE\" -- resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:57:48.623Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:01.406Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py SHA256",
+          "session_id": "uloK4hkTeFKj45r6hRp8DHji"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:01.870Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile resources\\coding-tools-mcp\\coding_tools_mcp\\tool_contract.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_efficiency_runtime.py SHA256 && certutil -hashfile resources\\coding-tools-mcp\\tests\\test_stateless_http_2026.py SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:09.420Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:20.982Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:21.006Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:22.299Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "6cf6f80c408afd854ffe1eb03f8013e78802c8fcbabc90d722e67672ea42d277"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:34.741Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:35.052Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git grep -n -C 24 \"resolution_claim\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests | findstr /I /C:\"full_problem\" /C:\"resolution_claim\" /C:\"problem_context\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-14T07:58:51.925Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "6cf6f80c408afd854ffe1eb03f8013e78802c8fcbabc90d722e67672ea42d277"
+        }
+      },
+      {
+        "time": "2026-09-14T07:59:11.392Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T07:59:11.731Z",
+    "archive_reason": "finished"
+  }
+]

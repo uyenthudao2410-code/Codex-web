@@ -1,0 +1,294 @@
+[
+  {
+    "version": 2,
+    "task_id": "e91b18f470a543029035b900d83fe6b0",
+    "orchestration": {},
+    "objective": "C01 operational closure, machine A only: establish an exact-source Windows installed/logon candidate for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, then run real M02 reboot evidence only if candidate identity, installation, login-item opt-in, Recovery Supervisor health, continuation receipts, and post-reboot observability are all fail-closed safe. Do not reuse the 2026-09-06 installer as current proof unless source equivalence is proven. Do not include unrelated continuation/Goal dirty source in the candidate. No machine reboot in prepare. No commit, push, release, publish, tag, deploy, or manual ledger edits.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "sK8NNsmMhNjsHEV78PxXMWL9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 226,
+      "finished_at": "2026-09-14T10:45:05.025Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T10:42:09.102Z",
+    "updated_at": "2026-09-14T10:45:05.025Z",
+    "events": [
+      {
+        "time": "2026-09-14T10:42:09.102Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "C01 operational closure, machine A only: establish an exact-source Windows installed/logon candidate for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, then run real M02 reboot evidence only if candidate identity, installation, login-item opt-in, Recovery Supervisor health, continuation receipts, and post-reboot observability are all fail-closed safe. Do not reuse the 2026-09-06 installer as current proof unless source equivalence is proven. Do not include unrelated continuation/Goal dirty source in the candidate. No machine reboot in prepare. No commit, push, release, publish, tag, deploy, or manual ledger edits."
+        }
+      },
+      {
+        "time": "2026-09-14T10:42:09.362Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PRL_EXACT_BINDING_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-14T10:42:27.004Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-14T10:42:47.173Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_EVENT_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-14T10:42:56.973Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 material_event_kind resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "ZM1GYmf12xjelw0alinXHgYn"
+        }
+      },
+      {
+        "time": "2026-09-14T10:42:57.701Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 material_event_kind resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:06.274Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 8 material_event_kind= resources/coding-tools-mcp/tests",
+          "session_id": "r69oApqu9TnVhZKGKqHIu1yH"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:06.708Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 8 material_event_kind= resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:18.851Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 24 \"first = ledger.controller_record_knowledge_checkpoint\" resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "session_id": "ls5Jx3FnsShgMtZEiCUUlxsc"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:19.237Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 24 \"first = ledger.controller_record_knowledge_checkpoint\" resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:28.258Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "MATERIAL_EVENT_STATE_CONFLICT"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:36.300Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 30 controller_knowledge_policy resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "session_id": "2cS9enTxvqkkxbuq4WJpQB4s"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:36.710Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 30 controller_knowledge_policy resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:44.499Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 45 \"if action == \\\"checkpoint\\\":\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "6rVMAPYQXtfwwHTFtR4mhpgN"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:44.792Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 45 \"if action == \\\"checkpoint\\\":\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:50.732Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 45 \"if action == \\\"ack\\\":\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "rVRe1Vraa_zitLc6NueDn9XE"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:51.076Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 45 \"if action == \\\"ack\\\":\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:57.559Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F -C 60 \"reattach_id = _opaque\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "sn8jGucOpXZQFll0y-JUOZx1"
+        }
+      },
+      {
+        "time": "2026-09-14T10:43:57.978Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F -C 60 \"reattach_id = _opaque\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:04.661Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"reattach_id\" resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "session_id": "sK8NNsmMhNjsHEV78PxXMWL9"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:05.025Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"reattach_id\" resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_stateless_http_2026.py resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T10:45:12.047Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2599dbd3e6ee4f6aacf266ecdd414c4b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "cMTK5-IJrZFSYKHKMgUy3ysK",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 365,
+      "finished_at": "2026-09-14T10:45:30.433Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T10:45:12.049Z",
+    "updated_at": "2026-09-14T10:45:30.433Z",
+    "events": [
+      {
+        "time": "2026-09-14T10:45:12.049Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:12.379Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 10 \"reattach\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "session_id": "ySUxO8DJpOev3wL4OF1VA9LZ"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:12.662Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 10 \"reattach\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:22.250Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"controller_reattach_goal\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "session_id": "8WKK146VbBD893w_oZieDq1J"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:22.575Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"controller_reattach_goal\" resources/coding-tools-mcp/tests resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/orchestration_ledger.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:30.074Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 40 \"controller_reattach_goal\" resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "session_id": "cMTK5-IJrZFSYKHKMgUy3ysK"
+        }
+      },
+      {
+        "time": "2026-09-14T10:45:30.433Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"controller_reattach_goal\" resources/coding-tools-mcp/tests/test_controller_continuity.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T10:45:40.112Z",
+    "archive_reason": "finished"
+  }
+]

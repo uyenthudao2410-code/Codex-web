@@ -1,0 +1,99 @@
+{
+  "version": 2,
+  "task_id": "e438df3bcfca44f8a38d57523c9257ce",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-14T12:15:07.016Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The current task was stopped. Start or resume a task before continuing.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-14T12:11:03.681Z",
+  "updated_at": "2026-09-14T12:15:07.016Z",
+  "events": [
+    {
+      "time": "2026-09-14T12:11:03.681Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T12:11:04.042Z",
+      "event": "command_started",
+      "details": {
+        "command": "git ls-files \"*tool_contract.py\" \"*test_efficiency_runtime.py\"",
+        "session_id": "BWaJQmOnvouGYyA1-t4RNPeN"
+      }
+    },
+    {
+      "time": "2026-09-14T12:11:04.313Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git ls-files \"*tool_contract.py\" \"*test_efficiency_runtime.py\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:11:10.667Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py' | ForEach-Object { $_.Path + ' ' + $_.Hash.ToLowerInvariant() }\"",
+        "session_id": "eY57YAOMd44nd4mnX5RRWFoc"
+      }
+    },
+    {
+      "time": "2026-09-14T12:11:11.603Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"Get-FileHash -Algorithm SHA256 'resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py' | ForEach-Object { $_.Path + ' ' + $_.Hash.ToLowerInvariant() }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:13:58.062Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T12:15:07.016Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff --stat -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:15:07.016Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "exec_command",
+        "code": "TASK_STOPPED"
+      }
+    }
+  ]
+}

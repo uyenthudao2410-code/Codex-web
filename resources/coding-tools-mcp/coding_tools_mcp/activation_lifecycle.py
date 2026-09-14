@@ -498,9 +498,11 @@ class ActivationLifecycleMixin:
         ``workspace_context`` schema without issuing a fresh ``tools/list``
         after process replacement.  Ordinary tool execution must remain
         blocked, but returning only a bootstrap receipt gives Recovery Host an
-        exact current-process contact it can compare with the declared
-        predecessor relation.  No workspace lookup, ledger access, or tool
-        dispatch occurs on this path.
+        exact current-process/current-contract contact.  Recovery Host owns
+        the separate predecessor review for changed contracts, so this receipt
+        must also be available for a same-SHA activation when the predecessor
+        list is empty.  No workspace lookup, ledger access, or tool dispatch
+        occurs on this path.
         """
         with self.activation_lock:
             return bool(
@@ -508,7 +510,6 @@ class ActivationLifecycleMixin:
                 and str(getattr(self, "activation_admission", "open") or "open").lower() != "open"
                 and str(getattr(self, "activation_gate_config", "open") or "open").lower() == "closed"
                 and str(getattr(self, "activation_epoch_id", None) or "").strip()
-                and list((getattr(self, "tool_contract", {}) or {}).get("compatible_predecessor_sha256") or [])
                 and not bool(getattr(self, "activation_completion_closed", False))
             )
 

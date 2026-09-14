@@ -46,6 +46,23 @@ def policy(*, run_id: str = "run-test", wave_id: str = "wave-test") -> dict[str,
     }
 
 
+def goal_policy(*, run_id: str = "run-test", wave_id: str = "wave-test") -> dict[str, object]:
+    legacy = policy(run_id=run_id, wave_id=wave_id)
+    legacy.pop("run_id")
+    legacy.pop("grant_wave_id")
+    return {
+        **legacy,
+        "episode_id": "f" * 64,
+        "scope_kind": "goal_episode",
+        "controller_generation": 7,
+        "controller_endpoint_id": "endpoint-test",
+        "controller_owner_client_id": "chatweb:test",
+        "origin_run_id": run_id,
+        "origin_wave_id": wave_id,
+        "max_no_progress": 2,
+    }
+
+
 def issue(store: ContinuationConsentChallengeStore, *, now_ms: int = 1_000_000) -> dict[str, object]:
     current_policy = policy()
     return store.issue(
@@ -184,6 +201,47 @@ class ContinuationConsentFinalizationTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(Exception, "Controller authority changed"):
             RunContinuationMixin._run_continuation_approve_http_challenge(runtime, approved)
+
+    def test_goal_click_issues_parent_materializes_child_and_starts_once(self) -> None:
+        current_policy = goal_policy()
+        descriptor = continuation_consent_descriptor(current_policy)
+        receipt = {
+            "receipt_id": "chatweb-continuation-consent-web:goal", "turn_id": "chatweb-trace:trace-goal",
+            "trace_id": "trace-goal", "descriptor": descriptor,
+        }
+        controller = {"owner_client_id": "chatweb:test", "lease_id": "client:chatweb:test", "fencing_token": 4}
+        ledger = Mock()
+        ledger.peek_controller_lease.return_value = {**controller, "status": "active"}
+        ledger.issue_goal_continuation.return_value = {
+            "status": "GRANTED", "idempotent": False,
+            "goal_continuation": {"episode_id": current_policy["episode_id"], "policy": current_policy},
+        }
+        ledger.materialize_goal_continuation.return_value = {
+            "status": "MATERIALIZED", "idempotent": False,
+            "continuation": {"run_id": "run-test", "parent_episode_id": current_policy["episode_id"]},
+        }
+        runtime = SimpleNamespace(
+            tool_contract={"sha256": "b" * 64}, orchestration_ledger=ledger,
+            orchestration_control=Mock(snapshot=Mock(return_value=SimpleNamespace(wave_id="wave-test"))),
+            _run_continuation_assert_runtime=Mock(),
+            _continuity_goal_controller_precondition=Mock(return_value={
+                "workspace_id": "workspace-test", "problem_id": "problem-test", "problem_revision": 1,
+                "expected_generation": 7, "owner_client_id": "chatweb:test", "controller_endpoint_id": "endpoint-test",
+            }),
+            _project_orchestration=Mock(),
+            _run_continuation_start_driver=Mock(return_value={"run_id": "run-test", "status": "PROPOSING"}),
+            _run_continuation_tool_failure=RunContinuationMixin._run_continuation_tool_failure,
+        )
+        approved = {"challenge_id": "challenge-goal", "policy": current_policy, "controller": controller, "receipt": receipt}
+        result = RunContinuationMixin._run_continuation_approve_http_challenge(runtime, approved)
+        self.assertEqual(result["status"], "PROPOSING")
+        self.assertEqual(result["goal_continuation"]["episode_id"], current_policy["episode_id"])
+        ledger.issue_goal_continuation.assert_called_once()
+        ledger.issue_run_continuation.assert_not_called()
+        ledger.materialize_goal_continuation.assert_called_once_with(
+            run_id="run-test", episode_id=current_policy["episode_id"], grant_wave_id="wave-test"
+        )
+        runtime._run_continuation_start_driver.assert_called_once_with({"run_id": "run-test"})
 
 
 if __name__ == "__main__":

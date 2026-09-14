@@ -15,11 +15,13 @@ from typing import Any, Iterable
 
 
 RUN_CONTINUATION_SCHEMA_VERSION = 3
+GOAL_CONTINUATION_SCHEMA_VERSION = 1
 RUN_CONTINUATION_ROUTE = "sol_xhigh"
 RUN_CONTINUATION_PROFILE = "continuation_proposal"
 RUN_CONTINUATION_MAX_DURATION_SECONDS = 15 * 60
 RUN_CONTINUATION_MAX_DECISION_TURNS = 12
 RUN_CONTINUATION_MAX_PATCH_ATTEMPTS = 3
+GOAL_CONTINUATION_MAX_NO_PROGRESS = 2
 RUN_CONTINUATION_LEASE_SECONDS = 60
 RUN_CONTINUATION_MAX_EVIDENCE_REQUESTS = 16
 RUN_CONTINUATION_MAX_REPLACEMENTS = 32
@@ -489,6 +491,63 @@ def build_run_continuation_policy(
     }
 
 
+def build_goal_continuation_policy(
+    request: dict[str, Any],
+    *,
+    origin_run_id: str,
+    workspace_id: str,
+    problem_id: str,
+    problem_revision: int,
+    contract_fingerprint: str,
+    tool_contract_sha256: str,
+    runtime_behavior_fingerprint: str,
+    activation_epoch_id: str,
+    activation_admission: str,
+    issuer_client_id: str,
+    controller_generation: int,
+    controller_endpoint_id: str,
+    controller_owner_client_id: str,
+    wave_id: str = "",
+) -> dict[str, Any]:
+    """Build immutable Problem/Goal episode authority without widening v3 RUN grants."""
+    if isinstance(controller_generation, bool) or not isinstance(controller_generation, int) or controller_generation < 1:
+        raise RunContinuationError(
+            "GOAL_CONTINUATION_CONTROLLER_INVALID",
+            "A Goal continuation requires a positive durable controller generation.",
+        )
+    base = build_run_continuation_policy(
+        request,
+        run_id=origin_run_id,
+        workspace_id=workspace_id,
+        problem_id=problem_id,
+        problem_revision=problem_revision,
+        contract_fingerprint=contract_fingerprint,
+        tool_contract_sha256=tool_contract_sha256,
+        runtime_behavior_fingerprint=runtime_behavior_fingerprint,
+        activation_epoch_id=activation_epoch_id,
+        activation_admission=activation_admission,
+        issuer_client_id=issuer_client_id,
+        wave_id=wave_id,
+    )
+    authority = {
+        key: value
+        for key, value in base.items()
+        if key not in {"schema_version", "run_id", "grant_wave_id", "consent"}
+    }
+    authority.update({
+        "schema_version": GOAL_CONTINUATION_SCHEMA_VERSION,
+        "scope_kind": "goal_episode",
+        "controller_generation": controller_generation,
+        "controller_endpoint_id": _require_opaque(controller_endpoint_id, "controller_endpoint_id"),
+        "controller_owner_client_id": _require_opaque(controller_owner_client_id, "controller_owner_client_id"),
+        "origin_run_id": _require_opaque(origin_run_id, "origin_run_id"),
+        "origin_wave_id": _require_opaque(wave_id, "origin_wave_id") if wave_id else "",
+        "max_no_progress": GOAL_CONTINUATION_MAX_NO_PROGRESS,
+    })
+    episode_id = hashlib.sha256(_canonical_json(authority).encode("utf-8")).hexdigest()
+    return {"episode_id": episode_id, **authority}
+
+
 def continuation_consent_descriptor(policy: dict[str, Any]) -> dict[str, Any]:
     """Return the exact, content-free terms a host user must approve once.
 
@@ -499,6 +558,38 @@ def continuation_consent_descriptor(policy: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(policy, dict):
         raise RunContinuationError("RUN_CONTINUATION_POLICY_INVALID", "Cannot build consent terms from an invalid continuation policy.")
     scope = {key: value for key, value in policy.items() if key != "consent"}
+    if scope.get("scope_kind") == "goal_episode":
+        return {
+            "action": "authorize_bounded_goal_continuation",
+            "episode_id": str(scope.get("episode_id") or ""),
+            "origin_run_id": str(scope.get("origin_run_id") or ""),
+            "origin_wave_id": str(scope.get("origin_wave_id") or ""),
+            "workspace_id": str(scope.get("workspace_id") or ""),
+            "problem_id": str(scope.get("problem_id") or ""),
+            "problem_revision": int(scope.get("problem_revision") or 0),
+            "controller_generation": int(scope.get("controller_generation") or 0),
+            "controller_endpoint_id": str(scope.get("controller_endpoint_id") or ""),
+            "controller_owner_client_id": str(scope.get("controller_owner_client_id") or ""),
+            "contract_fingerprint": str(scope.get("contract_fingerprint") or ""),
+            "tool_contract_sha256": str(scope.get("tool_contract_sha256") or ""),
+            "runtime_behavior_fingerprint": str(scope.get("runtime_behavior_fingerprint") or ""),
+            "activation_epoch_id": str(scope.get("activation_epoch_id") or ""),
+            "activation_admission": str(scope.get("activation_admission") or ""),
+            "issuer_client_id": str(scope.get("issuer_client_id") or ""),
+            "scope_sha256": hashlib.sha256(_canonical_json(scope).encode("utf-8")).hexdigest(),
+            "read_paths": list(scope.get("read_paths") or []),
+            "write_paths": list(scope.get("write_paths") or []),
+            "protected_paths": list(scope.get("protected_paths") or []),
+            "approved_check_hashes": sorted(
+                str(item.get("definition_hash") or "")
+                for item in scope.get("approved_checks") or []
+                if isinstance(item, dict)
+            ),
+            "max_duration_seconds": int(scope.get("max_duration_seconds") or 0),
+            "max_decision_turns": int(scope.get("max_decision_turns") or 0),
+            "max_patch_attempts": int(scope.get("max_patch_attempts") or 0),
+            "max_no_progress": int(scope.get("max_no_progress") or 0),
+        }
     return {
         "action": "authorize_bounded_continuation",
         "run_id": str(scope.get("run_id") or ""),
@@ -552,6 +643,14 @@ def _policy_projection(policy: dict[str, Any]) -> dict[str, Any]:
     return {
         "schema_version": policy.get("schema_version"),
         "run_id": policy.get("run_id"),
+        "parent_episode_id": policy.get("parent_episode_id"),
+        "scope_kind": policy.get("scope_kind") or "run",
+        "episode_id": policy.get("episode_id"),
+        "origin_run_id": policy.get("origin_run_id"),
+        "origin_wave_id": policy.get("origin_wave_id"),
+        "controller_generation": policy.get("controller_generation"),
+        "controller_endpoint_id": policy.get("controller_endpoint_id"),
+        "controller_owner_client_id": policy.get("controller_owner_client_id"),
         "workspace_id": policy.get("workspace_id"),
         "problem_id": policy.get("problem_id"),
         "problem_revision": policy.get("problem_revision"),
@@ -577,6 +676,7 @@ def _policy_projection(policy: dict[str, Any]) -> dict[str, Any]:
             "max_duration_seconds": policy.get("max_duration_seconds"),
             "max_decision_turns": policy.get("max_decision_turns"),
             "max_patch_attempts": policy.get("max_patch_attempts"),
+            "max_no_progress": policy.get("max_no_progress"),
         },
         "consent": {
             "receipt_id": (policy.get("consent") or {}).get("receipt_id"),

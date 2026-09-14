@@ -1,0 +1,397 @@
+{
+  "version": 2,
+  "task_id": "7760525a004e49b1b2d2ec7eb25f1848",
+  "orchestration": {
+    "run_id": "32c5440300704d9b9a9c24760207121b",
+    "wave_id": "2e38da7a3e624137b00c457f2c23b693",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "98bf3186f4d3afde2d4e2ad80afb15480ffb3f23b654397e3afbdc5d1ba3944c",
+    "contract_fp": ""
+  },
+  "objective": "Locate the canonical Problem identity and prior accepted C01/C11 lineage for BOOT_HOST_TRANSITION_RECONNECTION_LOOP without mutating source. Find exact problem_id/revision/contract fingerprint, criterion C01 binding, and any RUN/WAVE/checkpoint references for C01 or C11 in durable reports/tests/docs.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "r_42DMgOGowCcW5WXlw_djYh",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 783,
+    "finished_at": "2026-09-14T10:41:04.120Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "C01 discovery complete. No source mutation. Stopping read-only diagnostic PREFLIGHT before opening exact Problem-bound operational C01 lane.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-14T10:35:26.891Z",
+  "updated_at": "2026-09-14T10:41:44.517Z",
+  "events": [
+    {
+      "time": "2026-09-14T10:35:26.891Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Locate the canonical Problem identity and prior accepted C01/C11 lineage for BOOT_HOST_TRANSITION_RECONNECTION_LOOP without mutating source. Find exact problem_id/revision/contract fingerprint, criterion C01 binding, and any RUN/WAVE/checkpoint references for C01 or C11 in durable reports/tests/docs."
+      }
+    },
+    {
+      "time": "2026-09-14T10:35:28.000Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:35:34.397Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:35:34.405Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T10:36:57.663Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 4 \"96236faf87374418bc330176818069a1|b9f9cda61be24ceea854f1098337aa8b\" .coding-tools",
+        "session_id": "S95GeiwgeKLCuN7cKGUIy0h3"
+      }
+    },
+    {
+      "time": "2026-09-14T10:36:58.213Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 4 \"96236faf87374418bc330176818069a1|b9f9cda61be24ceea854f1098337aa8b\" .coding-tools",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:37:15.779Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 12 \"b9f9cda61be24ceea854f1098337aa8b\" .coding-tools/orchestration .coding-tools/task-contexts",
+        "session_id": "7QuHZoWhU_H0wKa-S8eZEPPP"
+      }
+    },
+    {
+      "time": "2026-09-14T10:37:16.321Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 \"b9f9cda61be24ceea854f1098337aa8b\" .coding-tools/orchestration .coding-tools/task-contexts",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:31.981Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 M02 docs .coding-tools/orchestration .coding-tools/task-contexts electron tests",
+        "session_id": "t6SYHmTU5yp8mNn-nAD-9O2g"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:32.595Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 M02 docs .coding-tools/orchestration .coding-tools/task-contexts electron tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:39.466Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 \"shutdown /r\" docs electron resources tests scripts package.json",
+        "session_id": "ybijPtCGeVScwx_HpSLLCweh"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:40.037Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 \"shutdown /r\" docs electron resources tests scripts package.json",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:48.829Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 6 Restart-Computer docs electron resources tests scripts package.json",
+        "session_id": "3KO5isDQCvgtE-ppwz6QRaUF"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:49.444Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 6 Restart-Computer docs electron resources tests scripts package.json",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:57.156Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 6 RunOnce docs electron resources tests scripts package.json",
+        "session_id": "pCIepcbhYGLq__8zf9D9tG6e"
+      }
+    },
+    {
+      "time": "2026-09-14T10:38:58.070Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 6 RunOnce docs electron resources tests scripts package.json",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:04.029Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 5 reboot docs electron resources tests scripts package.json",
+        "session_id": "QUq6rY2w5hXLl5Cl7G43PHK0"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:04.576Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 5 reboot docs electron resources tests scripts package.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:12.483Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"Windows reboot\" docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md",
+        "session_id": "ypsxYkYfLKT3v32DZXSe43vq"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:13.164Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"Windows reboot\" docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:22.455Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 \"Scheduled Task\" docs electron resources tests scripts package.json",
+        "session_id": "_cTzpLsujpEVy747noSOaErh"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:23.205Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 \"Scheduled Task\" docs electron resources tests scripts package.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:32.321Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 12 recovery:supervisor:install package.json docs/RECOVERY_HOST.md scripts electron",
+        "session_id": "V_0Wj70IlHMMrLsruXliG96_"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:32.826Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 recovery:supervisor:install package.json docs/RECOVERY_HOST.md scripts electron",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:39.521Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 12 New-ScheduledTaskTrigger resources/recovery-supervisor/recovery-supervisor.ps1",
+        "session_id": "ZEppL5sjYCwm1wVUURrFX1bB"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:40.103Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 12 New-ScheduledTaskTrigger resources/recovery-supervisor/recovery-supervisor.ps1",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:49.238Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "session_id": "o4OA2i2ZJkqgfOO4J_-WNtq5"
+      }
+    },
+    {
+      "time": "2026-09-14T10:39:55.026Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run recovery:supervisor:status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:03.096Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 10 setLoginItemSettings electron scripts tests",
+        "session_id": "IscdLOvPGkwSoVdP6hZPGHTw"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:03.737Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 10 setLoginItemSettings electron scripts tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:11.488Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 startWithWindows electron tests scripts docs/RECOVERY_HOST.md",
+        "session_id": "0mcU2jf1mAP0BGk0S1Rg76XC"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:12.108Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 startWithWindows electron tests scripts docs/RECOVERY_HOST.md",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:25.013Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 6 productName package.json electron-builder.yml electron-builder.yaml builder-effective-config.yaml docs",
+        "session_id": "QfHavBHm0y5onqfgVF0OYjYy"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:25.626Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 6 productName package.json electron-builder.yml electron-builder.yaml builder-effective-config.yaml docs",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:33.163Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "session_id": "QR9w5IXIv1cf5Fvv9O0hTjiS"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:33.668Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\" /s /f \"Coding Tools MCP\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:40.097Z",
+      "event": "command_started",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /s /f \"Coding Tools MCP\"",
+        "session_id": "3Uh0F7JC8OnOHX2dT95weoDR"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:40.719Z",
+      "event": "command_finished",
+      "details": {
+        "command": "reg query \"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\" /s /f \"Coding Tools MCP\"",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:50.073Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 coding-tools-mcp-setup docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md .coding-tools",
+        "session_id": "1XSj8_l7fMm0fvANiN74l8TH"
+      }
+    },
+    {
+      "time": "2026-09-14T10:40:50.921Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 coding-tools-mcp-setup docs/CURRENT_STATE.md docs/RELEASE_CHECKLIST.md .coding-tools",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:41:03.647Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+        "session_id": "r_42DMgOGowCcW5WXlw_djYh"
+      }
+    },
+    {
+      "time": "2026-09-14T10:41:04.120Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile dist\\coding-tools-mcp-setup-1.0.0.exe SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T10:41:44.514Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-14T10:41:44.517Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

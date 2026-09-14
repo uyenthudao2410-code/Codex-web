@@ -1,0 +1,76 @@
+[
+  {
+    "version": 2,
+    "task_id": "ef30a9eb5a7e4d638eb986674ffb232b",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ehSbKDUMaFPZhl2vwlnw_rDE",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 363,
+      "finished_at": "2026-09-14T10:22:47.660Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T10:22:36.847Z",
+    "updated_at": "2026-09-14T10:22:47.661Z",
+    "events": [
+      {
+        "time": "2026-09-14T10:22:36.847Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-14T10:22:37.466Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"material_event_id|reattach_id|continuity_action|CONTINUITY_IDENTITY_REQUIRED\" resources/coding-tools-mcp electron tests",
+          "session_id": "a-R-8Qz78DYPqp_5dcCkM8yo"
+        }
+      },
+      {
+        "time": "2026-09-14T10:22:37.819Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"material_event_id|reattach_id|continuity_action|CONTINUITY_IDENTITY_REQUIRED\" resources/coding-tools-mcp electron tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T10:22:47.269Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 'continuity_action\": \"checkpoint|material_event_id|last_reattach_id' resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py",
+          "session_id": "ehSbKDUMaFPZhl2vwlnw_rDE"
+        }
+      },
+      {
+        "time": "2026-09-14T10:22:47.661Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 'continuity_action\": \"checkpoint|material_event_id|last_reattach_id' resources/coding-tools-mcp/tests/test_controller_reattach.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/product_session_receipts.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T10:22:54.888Z",
+    "archive_reason": "finished"
+  }
+]

@@ -148,32 +148,47 @@ def validate_pending_continuation_consent(
     descriptor = value.get("descriptor")
     if not isinstance(descriptor, dict):
         return None
-    required = {
-        "action", "run_id", "wave_id", "workspace_id", "problem_id", "problem_revision",
+    action = descriptor.get("action")
+    common_required = {
+        "action", "workspace_id", "problem_id", "problem_revision",
         "contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint",
         "activation_epoch_id", "activation_admission", "issuer_client_id", "scope_sha256",
         "read_paths", "write_paths", "protected_paths", "approved_check_hashes",
         "max_duration_seconds", "max_decision_turns", "max_patch_attempts",
     }
-    if set(descriptor) != required or descriptor.get("action") != "authorize_bounded_continuation":
+    if action == "authorize_bounded_continuation":
+        required = common_required | {"run_id", "wave_id"}
+        opaque_fields = {
+            "run_id": 128, "wave_id": 128, "workspace_id": 512, "problem_id": 128,
+            "activation_epoch_id": 128, "activation_admission": 32, "issuer_client_id": 512,
+        }
+        hash_fields = {"contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint", "scope_sha256"}
+        integer_fields = {"max_duration_seconds", "max_decision_turns", "max_patch_attempts"}
+    elif action == "authorize_bounded_goal_continuation":
+        required = common_required | {
+            "episode_id", "origin_run_id", "origin_wave_id", "controller_generation",
+            "controller_endpoint_id", "controller_owner_client_id", "max_no_progress",
+        }
+        opaque_fields = {
+            "origin_run_id": 128, "origin_wave_id": 128, "workspace_id": 512, "problem_id": 128,
+            "controller_endpoint_id": 512, "controller_owner_client_id": 512,
+            "activation_epoch_id": 128, "activation_admission": 32, "issuer_client_id": 512,
+        }
+        hash_fields = {"episode_id", "contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint", "scope_sha256"}
+        integer_fields = {"controller_generation", "max_duration_seconds", "max_decision_turns", "max_patch_attempts", "max_no_progress"}
+    else:
         return None
-    for field, maximum in {
-        "run_id": 128,
-        "wave_id": 128,
-        "workspace_id": 512,
-        "problem_id": 128,
-        "activation_epoch_id": 128,
-        "activation_admission": 32,
-        "issuer_client_id": 512,
-    }.items():
+    if set(descriptor) != required:
+        return None
+    for field, maximum in opaque_fields.items():
         if not _opaque(descriptor.get(field), maximum=maximum):
             return None
-    for field in {"contract_fingerprint", "tool_contract_sha256", "runtime_behavior_fingerprint", "scope_sha256"}:
+    for field in hash_fields:
         if not _sha256(descriptor.get(field)):
             return None
     if isinstance(descriptor.get("problem_revision"), bool) or not isinstance(descriptor.get("problem_revision"), int) or int(descriptor["problem_revision"]) < 1:
         return None
-    for field in {"max_duration_seconds", "max_decision_turns", "max_patch_attempts"}:
+    for field in integer_fields:
         if isinstance(descriptor.get(field), bool) or not isinstance(descriptor.get(field), int) or int(descriptor[field]) < 1:
             return None
     if _exact_string_list(descriptor.get("read_paths"), maximum_items=256, item_maximum=512) is None:

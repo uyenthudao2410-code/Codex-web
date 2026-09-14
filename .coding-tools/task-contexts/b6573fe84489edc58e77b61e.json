@@ -1,0 +1,362 @@
+{
+  "version": 2,
+  "task_id": "cbc16f7626da4b8583869ceb53bba9a9",
+  "orchestration": {
+    "run_id": "a916e8d7fb43443eb43581df2eaefa63",
+    "wave_id": "dc4699f4ab1044c284d06137b7290423",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "74987f7ab6fe7151abc3dec844762710aad996d1d047389a538b2c603087ff73",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "QIhkarodGS8FFXSo0Dig9msx",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1082,
+    "finished_at": "2026-09-14T12:22:25.850Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Close temporary read-only provenance command projection before exact recovery of canonical pagination RUN 11f5493c418345fab86d49676733c0ec. No source mutation was performed.",
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-14T12:15:25.823Z",
+  "updated_at": "2026-09-14T12:22:49.395Z",
+  "events": [
+    {
+      "time": "2026-09-14T12:15:25.823Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T12:15:26.134Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff --stat -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+        "session_id": "PxGDNJ_KaNxSV2OYFNwM2yk6"
+      }
+    },
+    {
+      "time": "2026-09-14T12:15:26.649Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff --stat -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:16:45.850Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T12:16:52.637Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T12:16:52.648Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T12:17:53.082Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -l --glob \"*.json\" --glob \"*.jsonl\" \"GOAL_CONTROLLER_FENCE_RUNTIME_BINDING_V1|GOAL_SELECTION_STATE_CHANNEL_V1|GOAL_COMPATIBILITY_PRESELECT_TERMS_V1|goal_authority_model|coding-tools-mcp.v2\" .coding-tools",
+        "session_id": "j_z5VLdA6zaP02HMFrtDK_jd"
+      }
+    },
+    {
+      "time": "2026-09-14T12:17:53.582Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -l --glob \"*.json\" --glob \"*.jsonl\" \"GOAL_CONTROLLER_FENCE_RUNTIME_BINDING_V1|GOAL_SELECTION_STATE_CHANNEL_V1|GOAL_COMPATIBILITY_PRESELECT_TERMS_V1|goal_authority_model|coding-tools-mcp.v2\" .coding-tools",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:02.982Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"64cebcec|50d76612|87a39b8809fa9e2fb4f40989d784a45d39da6947626c282fb5ce533dbed1242e|593b05c8701c5253c951368ad6bac638b9e2ba0190c307ebe44aca1a050bbf38\" .coding-tools",
+        "session_id": "UGeaxCJ5TY4oZrxYUWTWrxuD"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:03.494Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"64cebcec|50d76612|87a39b8809fa9e2fb4f40989d784a45d39da6947626c282fb5ce533dbed1242e|593b05c8701c5253c951368ad6bac638b9e2ba0190c307ebe44aca1a050bbf38\" .coding-tools",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:16.844Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py'); foreach($f in $p){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLowerInvariant(); $i=Get-Item $f; Write-Output ($f+'|'+$h+'|'+$i.LastWriteTimeUtc.ToString('o'))}\"",
+        "session_id": "pTblAk_JmYv9TfIQFFqHqC1W"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:17.547Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py','resources/coding-tools-mcp/tests/test_efficiency_runtime.py'); foreach($f in $p){$h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLowerInvariant(); $i=Get-Item $f; Write-Output ($f+'|'+$h+'|'+$i.LastWriteTimeUtc.ToString('o'))}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:26.966Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py|resources/coding-tools-mcp/tests/test_efficiency_runtime.py\" .coding-tools",
+        "session_id": "84oapL4_3FR06dqMAYBdw4qp"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:27.613Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py|resources/coding-tools-mcp/tests/test_efficiency_runtime.py\" .coding-tools",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:48.612Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json','.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20-history.json'); foreach($f in $files){ if(Test-Path $f){ $j=Get-Content -Raw $f | ConvertFrom-Json; Write-Output ('=== '+$f+' ==='); Write-Output ('keys='+(($j.psobject.Properties.Name) -join ',')); foreach($k in @('t",
+        "session_id": "vpFiYk17Ww7ydPc2ujQaOPo2"
+      }
+    },
+    {
+      "time": "2026-09-14T12:18:49.298Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json','.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20-history.json'); foreach($f in $files){ if(Test-Path $f){ $j=Get-Content -Raw $f | ConvertFrom-Json; Write-Output ('=== '+$f+' ==='); Write-Output ('keys='+(($j.psobject.Properties.Name) -join ',')); foreach($k in @('t",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:02.599Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$targets=@('tool_contract.py','test_efficiency_runtime.py'); $files=@('.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20-history.json'); foreach($f in $files){$arr=@(Get-Content -Raw $f | ConvertFrom-Json); Write-Output ('=== '+$f+' count='+$arr.Count+' ==='); for($i=0;$i -lt $arr.Count;$i++){ $e=$arr[$i]; $mf=@($e.modified_files); $hit=($mf | Where-Object {$_ -match 'tool_contract.py|test_effi",
+        "session_id": "9Wn4fccwgf7Vn0mKeXV4OXN3"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:03.341Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$targets=@('tool_contract.py','test_efficiency_runtime.py'); $files=@('.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json','.coding-tools/task-contexts/d2e4f8ff8b8cc756473b5b20-history.json'); foreach($f in $files){$arr=@(Get-Content -Raw $f | ConvertFrom-Json); Write-Output ('=== '+$f+' count='+$arr.Count+' ==='); for($i=0;$i -lt $arr.Count;$i++){ $e=$arr[$i]; $mf=@($e.modified_files); $hit=($mf | Where-Object {$_ -match 'tool_contract.py|test_effi",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:21.550Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$dir='.coding-tools/task-contexts'; $targetRx='resources/coding-tools-mcp/(coding_tools_mcp/tool_contract.py|tests/test_efficiency_runtime.py)'; Get-ChildItem $dir -Filter '*.json' -File | Where-Object {$_.Name -notmatch '-history'} | ForEach-Object { try{$j=Get-Content -Raw $_.FullName | ConvertFrom-Json}catch{return}; $mf=@($j.modified_files); $hit=@($mf | Where-Object {$_ -match $targetRx}); $evHit=@($j.events | Where-Object {($_.event -eq 'files_modified') -or",
+        "session_id": "9Y6IgMWmDIzbxVG3abXVZZWI"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:30.077Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$dir='.coding-tools/task-contexts'; $targetRx='resources/coding-tools-mcp/(coding_tools_mcp/tool_contract.py|tests/test_efficiency_runtime.py)'; Get-ChildItem $dir -Filter '*.json' -File | Where-Object {$_.Name -notmatch '-history'} | ForEach-Object { try{$j=Get-Content -Raw $_.FullName | ConvertFrom-Json}catch{return}; $mf=@($j.modified_files); $hit=@($mf | Where-Object {$_ -match $targetRx}); $evHit=@($j.events | Where-Object {($_.event -eq 'files_modified') -or",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:43.445Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$dir='.coding-tools/task-contexts'; $rx='resources/coding-tools-mcp/(coding_tools_mcp/tool_contract.py|tests/test_efficiency_runtime.py)'; Get-ChildItem $dir -Filter '*.json' -File | Where-Object {$_.Name -notmatch '-history'} | ForEach-Object { try{$j=Get-Content -Raw $_.FullName | ConvertFrom-Json}catch{return}; $mf=@($j.modified_files); $mjson=($mf | ConvertTo-Json -Compress -Depth 8); if($mjson -match $rx){$o=$j.orchestration; Write-Output ('=== '+$_.Name+' ==",
+        "session_id": "FEQkpSeEol_I-W0JTxwPJiS1"
+      }
+    },
+    {
+      "time": "2026-09-14T12:19:48.839Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$dir='.coding-tools/task-contexts'; $rx='resources/coding-tools-mcp/(coding_tools_mcp/tool_contract.py|tests/test_efficiency_runtime.py)'; Get-ChildItem $dir -Filter '*.json' -File | Where-Object {$_.Name -notmatch '-history'} | ForEach-Object { try{$j=Get-Content -Raw $_.FullName | ConvertFrom-Json}catch{return}; $mf=@($j.modified_files); $mjson=($mf | ConvertTo-Json -Compress -Depth 8); if($mjson -match $rx){$o=$j.orchestration; Write-Output ('=== '+$_.Name+' ==",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:03.008Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"ba8a93b899554f65a6139798b5c257a6|54010cbd41be77c4ae4dd402d90c82134a04d40ac4820fbdb7f8af39e4c7d7f|ca9466732d614500a4831f3bae83ce8c\" .coding-tools",
+        "session_id": "YYf2AbnhKhFqqS_ucpaPj3qj"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:03.482Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n --glob \"*.json\" --glob \"*.jsonl\" \"ba8a93b899554f65a6139798b5c257a6|54010cbd41be77c4ae4dd402d90c82134a04d40ac4820fbdb7f8af39e4c7d7f|ca9466732d614500a4831f3bae83ce8c\" .coding-tools",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:14.310Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; $j.modified_files | ConvertTo-Json -Depth 12; if($j.orchestration){$j.orchestration | ConvertTo-Json -Depth 12}; if($j.completion){$j.completion | ConvertTo-Json -Depth 12}; if($j.acceptance){$j.acceptance | ConvertTo-Json -Depth 12}\"",
+        "session_id": "aI69-MFrOAXnEpFgPxQbAnDT"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:14.943Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; $j.modified_files | ConvertTo-Json -Depth 12; if($j.orchestration){$j.orchestration | ConvertTo-Json -Depth 12}; if($j.completion){$j.completion | ConvertTo-Json -Depth 12}; if($j.acceptance){$j.acceptance | ConvertTo-Json -Depth 12}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:37.909Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; Write-Output ('root_keys='+(($j.psobject.Properties.Name)-join ',')); $m=$j.modified_files; if($null -eq $m){Write-Output 'modified_type=NULL'} else {Write-Output ('modified_type='+$m.GetType().FullName); Write-Output ('modified_props='+(($m.psobject.Properties.Name)-join ',')); foreach($p in $m.psobject.Properties){Write-Output ('PATH='+$p.Name); $p.Value | Convert",
+        "session_id": "o0dZymofkOOIoYVZAQuIcC9U"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:38.495Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; Write-Output ('root_keys='+(($j.psobject.Properties.Name)-join ',')); $m=$j.modified_files; if($null -eq $m){Write-Output 'modified_type=NULL'} else {Write-Output ('modified_type='+$m.GetType().FullName); Write-Output ('modified_props='+(($m.psobject.Properties.Name)-join ',')); foreach($p in $m.psobject.Properties){Write-Output ('PATH='+$p.Name); $p.Value | Convert",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:48.435Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; Write-Output ('root_keys='+(($j.psobject.Properties.Name)-join ',')); $m=$j.modified_files; if($null -eq $m){Write-Output 'modified=NULL'} else {Write-Output ('modified_type='+$m.GetType().FullName); Write-Output ('modified_props='+(($m.psobject.Properties.Name)-join ',')); foreach($p in $m.psobject.Properties){Write-Output ('PATH='+$p.Name); Write-Output ($p.Value ",
+        "session_id": "1s6J2dRLQtPI6y6eRYgFyj4r"
+      }
+    },
+    {
+      "time": "2026-09-14T12:21:49.387Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$j=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f.json' | ConvertFrom-Json; Write-Output ('root_keys='+(($j.psobject.Properties.Name)-join ',')); $m=$j.modified_files; if($null -eq $m){Write-Output 'modified=NULL'} else {Write-Output ('modified_type='+$m.GetType().FullName); Write-Output ('modified_props='+(($m.psobject.Properties.Name)-join ',')); foreach($p in $m.psobject.Properties){Write-Output ('PATH='+$p.Name); Write-Output ($p.Value ",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:01.497Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=@(Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json); for($i=0;$i -lt $a.Count;$i++){ $e=$a[$i]; $m=@($e.modified_files); if($m.Count -gt 0){ Write-Output ('INDEX='+$i); Write-Output ('updated='+$e.updated_at); Write-Output ('status='+$e.status); Write-Output ('run='+$e.orchestration.run_id); Write-Output ('wave='+$e.orchestration.wave_id); Write-Output ('orch='+$e.orchestration.orchestration_state); Write-O",
+        "session_id": "JyivnIhn4WlCsA_77-4YS83R"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:02.117Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=@(Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json); for($i=0;$i -lt $a.Count;$i++){ $e=$a[$i]; $m=@($e.modified_files); if($m.Count -gt 0){ Write-Output ('INDEX='+$i); Write-Output ('updated='+$e.updated_at); Write-Output ('status='+$e.status); Write-Output ('run='+$e.orchestration.run_id); Write-Output ('wave='+$e.orchestration.wave_id); Write-Output ('orch='+$e.orchestration.orchestration_state); Write-O",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:12.274Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$h=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json; Write-Output ('type='+$h.GetType().FullName); Write-Output ('keys='+(($h.psobject.Properties.Name)-join ',')); foreach($p in $h.psobject.Properties){ $v=$p.Value; if($v -is [System.Array]){Write-Output ($p.Name+'.count='+$v.Count)} }\"",
+        "session_id": "AQmo8HDwQThgYP7AyOflBKi9"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:12.914Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$h=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json; Write-Output ('type='+$h.GetType().FullName); Write-Output ('keys='+(($h.psobject.Properties.Name)-join ',')); foreach($p in $h.psobject.Properties){ $v=$p.Value; if($v -is [System.Array]){Write-Output ($p.Name+'.count='+$v.Count)} }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:25.224Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$h=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json; Write-Output ('count='+$h.Length); for($i=0;$i -lt $h.Length;$i++){ $e=$h[$i]; Write-Output ('===INDEX '+$i+'==='); Write-Output ('updated='+$e.updated_at); Write-Output ('status='+$e.status); Write-Output ('objective='+$e.objective); Write-Output ('run='+$e.orchestration.run_id); Write-Output ('wave='+$e.orchestration.wave_id); Write-Output ('orch='+$e.orch",
+        "session_id": "QIhkarodGS8FFXSo0Dig9msx"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:25.850Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$h=Get-Content -Raw '.coding-tools/task-contexts/3423ef68b34d148acf3ea81f-history.json' | ConvertFrom-Json; Write-Output ('count='+$h.Length); for($i=0;$i -lt $h.Length;$i++){ $e=$h[$i]; Write-Output ('===INDEX '+$i+'==='); Write-Output ('updated='+$e.updated_at); Write-Output ('status='+$e.status); Write-Output ('objective='+$e.objective); Write-Output ('run='+$e.orchestration.run_id); Write-Output ('wave='+$e.orchestration.wave_id); Write-Output ('orch='+$e.orch",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:42.141Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:42.146Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T12:22:49.395Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -1194,7 +1194,11 @@ class RecoveryHost {
       writeBootstrapResult(this.paths, {
         operation_id: this.bootstrap.operation_id,
         state,
-        error: { code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED', message: error?.message || String(error) },
+        error: {
+          code: error?.code || 'RECOVERY_BOOTSTRAP_FAILED',
+          message: error?.message || String(error),
+          details: error?.details || null
+        },
         result: { activation_epoch_id: null, admission_open: false, fully_ready: false }
       });
     } catch (persistError) {

@@ -4,10 +4,18 @@ const fs = require('node:fs');
 const http = require('node:http');
 const os = require('node:os');
 const path = require('node:path');
+const { EventEmitter } = require('node:events');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { ActivationEpochStore } = require('../electron/services/activationEpoch');
 const {
   FullCleanActivation,
+  CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,
+  CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS,
+  CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS,
+  canonicalLedgerCensus,
+  canonicalLedgerCensusFailure,
+  oneShotCensus,
+  heldCensus,
   canonicalProjectionRebuildSha256,
   validateProjectionRebuildGate,
   validateConnectorReadyGate,
@@ -53,6 +61,255 @@ function epochStore(paths) {
 function codedError(code, message = code) {
   return Object.assign(new Error(message), { code });
 }
+
+test('canonical ledger census keeps a bounded cold-snapshot budget and classifies timeout causes', () => {
+  assert.equal(CANONICAL_LEDGER_CENSUS_TIMEOUT_MS, 30_000);
+  assert.equal(CANONICAL_LEDGER_CENSUS_DISCOVERY_TIMEOUT_MS, 5_000);
+  assert.equal(CANONICAL_LEDGER_CENSUS_CLEANUP_TIMEOUT_MS, 5_000);
+  const nativeTimeout = Object.assign(new Error('Command failed'), { killed: true, signal: 'SIGTERM' });
+  const classified = canonicalLedgerCensusFailure(nativeTimeout);
+  assert.equal(classified.code, 'CANONICAL_LEDGER_CENSUS_TIMEOUT');
+  assert.equal(classified.timedOut, true);
+  assert.equal(Object.hasOwn(classified, 'cause'), false);
+
+  const lockFailure = canonicalLedgerCensusFailure(Object.assign(new Error('helper failed'), {
+    stderr: 'activation ledger census failed: RuntimeError: ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT secret-output'
+  }));
+  assert.equal(lockFailure.code, 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT');
+  assert.equal(JSON.stringify(lockFailure).includes('secret-output'), false);
+
+  const ordinaryFailure = codedError('ENOENT');
+  const sanitized = canonicalLedgerCensusFailure(ordinaryFailure);
+  assert.notEqual(sanitized, ordinaryFailure);
+  assert.equal(sanitized.code, 'ENOENT');
+  assert.equal(Object.hasOwn(sanitized, 'stdout'), false);
+  assert.equal(Object.hasOwn(sanitized, 'stderr'), false);
+});
+
+test('canonical ledger census gives Python discovery one five-second budget and preserves its typed timeout', async (t) => {
+  const { root, paths } = fixture(t);
+  const ledgerPath = path.join(root, '.coding-tools', 'orchestration', 'ledger.sqlite3');
+  const helperPath = path.join(
+    paths.resourcesRoot(),
+    'coding-tools-mcp',
+    'coding_tools_mcp',
+    'activation_ledger_census.py'
+  );
+  fs.mkdirSync(path.dirname(ledgerPath), { recursive: true });
+  fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+  fs.writeFileSync(ledgerPath, 'fixture', 'utf8');
+  fs.writeFileSync(helperPath, '# fixture\n', 'utf8');
+  let observedOptions = null;
+
+  await assert.rejects(
+    canonicalLedgerCensus({
+      paths,
+      workspace: root,
+      pythonStatusFn: async (_paths, options) => {
+        observedOptions = options;
+        throw Object.assign(new Error('discovery deadline reached'), {
+          code: 'PYTHON_DISCOVERY_TIMEOUT',
+          stderr: 'must-not-leak'
+        });
+      }
+    }),
+    (error) => {
+      assert.equal(error.code, 'PYTHON_DISCOVERY_TIMEOUT');
+      assert.equal(Object.hasOwn(error, 'stderr'), false);
+      assert.equal(JSON.stringify(error).includes('must-not-leak'), false);
+      return true;
+    }
+  );
+  assert.deepEqual(observedOptions, { budgetMs: 5_000 });
+});
+
+class FakeCensusChild extends EventEmitter {
+  constructor(onKill = null) {
+    super();
+    this.stdout = new EventEmitter();
+    this.stderr = new EventEmitter();
+    this.stdout.setEncoding = () => {};
+    this.stderr.setEncoding = () => {};
+    this.stdin = { end() {} };
+    this.exitCode = null;
+    this.signalCode = null;
+    this.onKill = onKill;
+  }
+  kill() {
+    return this.onKill?.(this) ?? true;
+  }
+}
+
+test('one-shot canonical census timeout waits for owned child exit before settling', { timeout: 2000 }, async () => {
+  let settled = false;
+  const pending = oneShotCensus('fake-census', [], {
+    cwd: process.cwd(),
+    env: {},
+    timeoutMs: 5,
+    cleanupTimeoutMs: 200,
+    spawnFn: () => new FakeCensusChild((owned) => {
+      setTimeout(() => {
+        owned.exitCode = 1;
+        owned.signalCode = 'SIGTERM';
+        owned.emit('close', 1, 'SIGTERM');
+      }, 45);
+      return true;
+    })
+  }).finally(() => { settled = true; });
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(settled, false, 'one-shot census timeout must await owned child close/exit');
+  await assert.rejects(pending, (error) => {
+    assert.equal(error.code, 'CANONICAL_LEDGER_CENSUS_TIMEOUT');
+    assert.equal(error.timedOut, true);
+    assert.equal(error.cleanupConfirmed, true);
+    assert.equal(error.cleanupOutcome, 'confirmed');
+    assert.equal(error.cleanupBudgetMs, 200);
+    return true;
+  });
+});
+
+test('one-shot canonical census fails closed when owned child cleanup is unconfirmed', { timeout: 2000 }, async () => {
+  await assert.rejects(
+    oneShotCensus('fake-stuck-census', [], {
+      cwd: process.cwd(),
+      env: {},
+      timeoutMs: 5,
+      cleanupTimeoutMs: 15,
+      spawnFn: () => new FakeCensusChild(() => true)
+    }),
+    (error) => {
+      assert.equal(error.code, 'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN');
+      assert.equal(error.cleanupConfirmed, false);
+      assert.equal(error.cleanupOutcome, 'unconfirmed');
+      assert.equal(error.cleanupBudgetMs, 15);
+      return true;
+    }
+  );
+});
+
+test('one-shot canonical census keeps lock timeout distinct and does not leak stderr', async () => {
+  const secret = 'SECRET-ONE-SHOT-CENSUS-OUTPUT';
+  await assert.rejects(
+    oneShotCensus('fake-lock-timeout', [], {
+      cwd: process.cwd(),
+      env: {},
+      timeoutMs: 200,
+      cleanupTimeoutMs: 15,
+      spawnFn: () => {
+        const child = new FakeCensusChild();
+        queueMicrotask(() => {
+          child.stderr.emit('data', `ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT ${secret}`);
+          child.exitCode = 1;
+          child.emit('close', 1, null);
+        });
+        return child;
+      }
+    }),
+    (error) => {
+      assert.equal(error.code, 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT');
+      assert.equal(error.exit_code, 1);
+      assert.equal(JSON.stringify(error).includes(secret), false);
+      return true;
+    }
+  );
+});
+
+test('held canonical census timeout waits for owned child exit before settling', { timeout: 2000 }, async () => {
+  let settled = false;
+  const pending = heldCensus('fake-census', [], {
+    cwd: process.cwd(),
+    env: {},
+    timeoutMs: 5,
+    cleanupTimeoutMs: 200,
+    spawnFn: () => new FakeCensusChild((owned) => {
+      setTimeout(() => {
+        owned.exitCode = 1;
+        owned.signalCode = 'SIGTERM';
+        owned.emit('close', 1, 'SIGTERM');
+      }, 45);
+      return true;
+    })
+  }).finally(() => { settled = true; });
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(settled, false, 'held census timeout must await owned child close/exit');
+  await assert.rejects(pending, (error) => {
+    assert.equal(error.code, 'CANONICAL_LEDGER_CENSUS_TIMEOUT');
+    assert.equal(error.timedOut, true);
+    assert.equal(error.cleanupConfirmed, true);
+    assert.equal(error.cleanupOutcome, 'confirmed');
+    assert.equal(error.cleanupBudgetMs, 200);
+    return true;
+  });
+});
+
+test('held canonical census fails closed when owned child cleanup is unconfirmed', { timeout: 2000 }, async () => {
+  await assert.rejects(
+    heldCensus('fake-stuck-census', [], {
+      cwd: process.cwd(),
+      env: {},
+      timeoutMs: 5,
+      cleanupTimeoutMs: 15,
+      spawnFn: () => new FakeCensusChild(() => true)
+    }),
+    (error) => {
+      assert.equal(error.code, 'CANONICAL_LEDGER_CENSUS_CLEANUP_UNCERTAIN');
+      assert.equal(error.cleanupConfirmed, false);
+      assert.equal(error.cleanupOutcome, 'unconfirmed');
+      assert.equal(error.cleanupBudgetMs, 15);
+      return true;
+    }
+  );
+});
+
+test('held canonical census keeps lock timeout distinct and does not leak stderr', async () => {
+  const secret = 'SECRET-CENSUS-PROCESS-OUTPUT';
+  await assert.rejects(
+    heldCensus('fake-lock-timeout', [], {
+      cwd: process.cwd(),
+      env: {},
+      timeoutMs: 200,
+      cleanupTimeoutMs: 15,
+      spawnFn: () => {
+        const child = new FakeCensusChild();
+        queueMicrotask(() => {
+          child.stderr.emit('data', `activation ledger census failed: ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT ${secret}`);
+          child.exitCode = 1;
+          child.emit('exit', 1, null);
+        });
+        return child;
+      }
+    }),
+    (error) => {
+      assert.equal(error.code, 'ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT');
+      assert.equal(error.exit_code, 1);
+      assert.equal(JSON.stringify(error).includes(secret), false);
+      assert.equal(Object.hasOwn(error, 'stderr'), false);
+      return true;
+    }
+  );
+});
+
+test('Recovery Host bootstrap failure receipt retains a typed census cause without process output', (t) => {
+  const { paths } = fixture(t);
+  const operationId = id('bootstrap-census-timeout', '0001');
+  const host = Object.create(RecoveryHost.prototype);
+  host.paths = paths;
+  host.bootstrap = { operation_id: operationId };
+  host.bootstrapActivation = null;
+  host.recordBootstrapFailure(Object.assign(new Error('Canonical ledger census was unavailable.'), {
+    code: 'ORCHESTRATION_STATE_UNCERTAIN',
+    details: {
+      cause_code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT',
+      stderr: 'must not persist process output'
+    }
+  }));
+
+  const receipt = JSON.parse(fs.readFileSync(paths.recoveryHostBootstrapResultFile(operationId), 'utf8'));
+  assert.deepEqual(receipt.error.details, { cause_code: 'CANONICAL_LEDGER_CENSUS_TIMEOUT' });
+  assert.equal(JSON.stringify(receipt).includes('must not persist process output'), false);
+});
 
 test('pending activation census replaces stale durable component evidence without opening admission', (t) => {
   const { paths } = fixture(t);

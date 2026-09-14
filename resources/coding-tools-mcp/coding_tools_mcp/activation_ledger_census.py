@@ -10,7 +10,7 @@ import time
 from contextlib import nullcontext
 from pathlib import Path
 
-from .ledger_file_gate import ledger_access_gate
+from .ledger_file_gate import LedgerGateTimeout, ledger_access_gate
 from .lifecycle_census import lifecycle_census, open_lifecycle_census_snapshot, read_task_projection
 
 
@@ -76,9 +76,19 @@ def main() -> int:
     return 0
 
 
+def _run_cli() -> int:
+    try:
+        return main()
+    except LedgerGateTimeout:
+        # Machine-readable typed cause only. Do not put the ledger path or the
+        # raw lock exception into the cross-process failure channel.
+        print("ACTIVATION_LEDGER_CENSUS_LOCK_TIMEOUT", file=sys.stderr)
+        return 75
+
+
 if __name__ == "__main__":
     try:
-        raise SystemExit(main())
+        raise SystemExit(_run_cli())
     except Exception as exc:  # stdout must remain machine-readable only on success.
         print(f"activation ledger census failed: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise

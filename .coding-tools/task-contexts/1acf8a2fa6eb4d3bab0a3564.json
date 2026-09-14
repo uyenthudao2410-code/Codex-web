@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "task_id": "0b21a9dac417437c8aa7b44bf8f31692",
+  "orchestration": {
+    "run_id": "3089445074b741e1bf662d9f103913df",
+    "wave_id": "add10767fb474adca7464b1bdc14b959",
+    "orchestration_state": "PREFLIGHT",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "98bf3186f4d3afde2d4e2ad80afb15480ffb3f23b654397e3afbdc5d1ba3944c",
+    "contract_fp": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea"
+  },
+  "objective": "Continue Parent Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 without source mutation. Reconstruct the exact accepted evidence for C01 from canonical repository/runtime artifacts, especially RUN 5aac4e076a3047b7b6d10fb0e22ce594, WAVE 96236faf87374418bc330176818069a1, checkpoint b9f9cda61be24ceea854f1098337aa8b. Determine whether C01's required real cold-start/reboot matrix was actually executed and accepted, or whether only unit/integration/simulated proof exists. Also identify why Parent projection remains criteria_proven 0/12 and the canonical supported reconciliation path; do not mark any criterion proven without exact proof linkage. Preserve dirty worktree and do not restart, patch, commit, push, package, release, or delete stale runs.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-14T10:09:48.651Z",
+  "updated_at": "2026-09-14T10:10:13.973Z",
+  "events": [
+    {
+      "time": "2026-09-14T10:09:48.651Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continue Parent Problem prl-22e670302757c9b7663170e226ed7c26 revision 1 without source mutation. Reconstruct the exact accepted evidence for C01 from canonical repository/runtime artifacts, especially RUN 5aac4e076a3047b7b6d10fb0e22ce594, WAVE 96236faf87374418bc330176818069a1, checkpoint b9f9cda61be24ceea854f1098337aa8b. Determine whether C01's required real cold-start/reboot matrix was actually executed and accepted, or whether only unit/integration/simulated proof exists. Also identify why Parent projection remains criteria_proven 0/12 and the canonical supported reconciliation path; do not mark any criterion proven without exact proof linkage. Preserve dirty worktree and do not restart, patch, commit, push, package, release, or delete stale runs."
+      }
+    },
+    {
+      "time": "2026-09-14T10:09:48.935Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PRL_EXACT_BINDING_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-14T10:10:07.593Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:10:13.965Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T10:10:13.973Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

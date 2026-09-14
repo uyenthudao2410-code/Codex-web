@@ -18,6 +18,13 @@ from .code_mode import (
 TOOL_CONTRACT_SCHEMA_VERSION = 1
 SMART_TOOL_PROFILE = "smart-v3"
 SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] = {
+    # Intentionally no d69436... -> d52c889... edge. Bounded Goal pagination
+    # adds optional request fields, so cached predecessor requests remain wire
+    # valid, but a predecessor client cannot express candidate_cursor or
+    # candidate_limit. Treating that client as freshness-compatible would make
+    # the runtime READY while the public capability is still unavailable.
+    # The current pagination contract therefore requires a real tools/list
+    # rediscovery; older reviewed compatibility edges remain available below.
     # Reviewed 2026-09-10: the exact prepare -> execute RUN/WAVE binding adds
     # only optional agent_workflow inputs.  The expanded
     # problem_resolution_envelope schema makes the already-enforced runtime
@@ -74,13 +81,51 @@ SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA: dict[str, tuple[str, ...]] =
 }
 
 
+def _is_sha256(value: str) -> bool:
+    return len(value) == 64 and all(char in "0123456789abcdef" for char in value)
+
+
 def smart_tool_contract_compatible_predecessors(current_sha256: str) -> list[str]:
-    return list(
-        SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA.get(
-            str(current_sha256 or "").strip().lower(),
-            (),
-        )
-    )
+    """Return the fail-closed transitive closure of reviewed compatibility edges.
+
+    Each map entry remains one explicitly reviewed direct edge.  Publishing its
+    closure lets a cached client skip several additive releases without turning
+    an unknown or cyclic graph into compatibility authority.
+    """
+    current = str(current_sha256 or "").strip().lower()
+    if not _is_sha256(current):
+        return []
+
+    ordered: list[str] = []
+    emitted: set[str] = set()
+    visiting: set[str] = set()
+    visited: set[str] = set()
+    valid = True
+
+    def visit(node: str) -> None:
+        nonlocal valid
+        if not valid or node in visited:
+            return
+        if node in visiting:
+            valid = False
+            return
+        visiting.add(node)
+        for raw_predecessor in SMART_TOOL_CONTRACT_COMPATIBLE_PREDECESSORS_BY_SHA.get(node, ()):
+            predecessor = str(raw_predecessor or "").strip().lower()
+            if not _is_sha256(predecessor):
+                valid = False
+                break
+            if predecessor not in emitted:
+                emitted.add(predecessor)
+                ordered.append(predecessor)
+            visit(predecessor)
+            if not valid:
+                break
+        visiting.remove(node)
+        visited.add(node)
+
+    visit(current)
+    return ordered if valid else []
 
 
 TOOL_RISK_CLASSES = ("read_only", "project_write", "job_run", "account_manage", "unknown")

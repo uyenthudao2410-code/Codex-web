@@ -1,0 +1,669 @@
+{
+  "version": 2,
+  "task_id": "f810e946b44846d99c10a533dc165cbf",
+  "orchestration": {
+    "run_id": "2b3cd9677a254cc480a028e21ea251ca",
+    "wave_id": "4c30dcf5ece744188f7c5d59ec2f4aa6",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+    "worktree_fp": "994e868094d728a5ae2c6dd5a2590fad7a52876964583a4ba0854569a2842d39",
+    "contract_fp": "3c1c5aba0399cde71d69ca00b4f8dd6815bb51c185eb4e760e25ed9f9fafdefd"
+  },
+  "objective": "Prove technical closure of canonical Problem prl-goal-candidate-pagination-20260912 without additional source mutation. Demonstrate bounded deterministic traversal of unresolved Goal candidates, public cursor/limit semantics, exact-identity fail-closed selection, stable snapshot/tamper-evident cursor behavior, over-cap traversal, and operable backlog enumeration using the focused Goal pursuit regression suite. Preserve all unrelated dirty work. Do not commit, push, package, release, deploy, restart, reset, clean, or rebase.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "verify",
+      "text": "Run tests and build verification",
+      "status": "completed",
+      "updated_at": "2026-09-14T08:01:39.179Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-14T08:01:39.179Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "cdmQktjQKieSwdLdxWk3f61q",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-14T08:01:38.820Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-goal-candidate-pagination-20260912",
+      "problem_revision": 1,
+      "problem_state": "PROVISIONALLY_RESOLVED",
+      "resolution_status": "PROVISIONAL",
+      "contract_fingerprint": "3c1c5aba0399cde71d69ca00b4f8dd6815bb51c185eb4e760e25ed9f9fafdefd",
+      "objective_summary": "Make unresolved Goal discovery operable when more than the fixed candidate cap exists by providing bounded deterministic pagination or equivalent complete traversal, while preserving exact-identity fail-closed selection and avoiding timestamp-based guessing.",
+      "contract_capsule_included": true,
+      "contract_capsule_omission_reason": null,
+      "criteria": [
+        {
+          "criterion_id": "bounded_traversal",
+          "summary": "A caller can traverse all unresolved Goal candidates through bounded pages or an equivalent deterministic continuation instead of receiving only the first fixed subset."
+        },
+        {
+          "criterion_id": "cursor_or_limit_semantics",
+          "summary": "The public Goal surface exposes and honors stable pagination or bounded enumeration semantics rather than silently ignoring caller pagination inputs."
+        },
+        {
+          "criterion_id": "selection_fail_closed",
+          "summary": "Multiple unresolved Goals still require exact Problem identity; pagination never selects a Goal implicitly by time or position."
+        },
+        {
+          "criterion_id": "stable_page_identity",
+          "summary": "Continuation is bound to a stable candidate-set identity or otherwise fails closed on concurrent backlog changes rather than silently skipping or duplicating candidates."
+        },
+        {
+          "criterion_id": "over_cap_regression",
+          "summary": "A focused regression with more than ten unresolved Goals proves complete deterministic traversal and exact selection."
+        },
+        {
+          "criterion_id": "current_backlog_operable",
+          "summary": "The current unresolved Goal backlog can be enumerated without candidate truncation preventing project-health review."
+        }
+      ],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 6,
+        "criteria_proven": 6,
+        "criteria_unresolved": 0,
+        "coverage_status": "COMPLETE",
+        "missing_reason": null,
+        "next_critical_gap_id": null,
+        "next_critical_gap": null,
+        "next_action": "OBTAIN_INDEPENDENT_OUTCOME",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 5,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 1,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 1,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [
+        "Choose the smallest public pagination contract that composes with the existing Goal resolver and task_control schema.",
+        "Define concurrency behavior when the unresolved Problem set changes between pages."
+      ],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "2b3cd9677a254cc480a028e21ea251ca",
+        "wave_id": "4c30dcf5ece744188f7c5d59ec2f4aa6",
+        "checkpoint_id": "993ac59e97a0486f811e236870ecddb0"
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 7,
+      "latest_event": {
+        "seq": 223,
+        "event_id": "prl-provisional-v11-5d0b7e077a365cbfa6583ed6226b1dd37fd2be868b3dfc6d7136f285f4337dab",
+        "event_hash": "26b66a9a348af513af4ade33074494cdf1d4d346177452037f93b81a655ee089",
+        "relation_type": "PROVISIONAL_RESOLUTION",
+        "state_after": "PROVISIONALLY_RESOLVED",
+        "reason_code": "none",
+        "recorded_at": "2026-09-14T08:02:56.348Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 8,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 6,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 2,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 37,
+        "head_hash": "07f3cc0934ba8a3096e1186aa07ae1b6466fcf93e0f87deec9cbe95e0293a104"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2b3cd9677a254cc480a028e21ea251ca\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2b3cd9677a254cc480a028e21ea251ca\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "2b3cd9677a254cc480a028e21ea251ca",
+      "wave_id": "4c30dcf5ece744188f7c5d59ec2f4aa6",
+      "checkpoint_id": "993ac59e97a0486f811e236870ecddb0",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "994e868094d728a5ae2c6dd5a2590fad7a52876964583a4ba0854569a2842d39",
+      "contract_fp": "3c1c5aba0399cde71d69ca00b4f8dd6815bb51c185eb4e760e25ed9f9fafdefd",
+      "objective_provenance": {
+        "effective_objective": "Prove technical closure of canonical Problem prl-goal-candidate-pagination-20260912 without additional source mutation. Demonstrate bounded deterministic traversal of unresolved Goal candidates, public cursor/limit semantics, exact-identity fail-closed selection, stable snapshot/tamper-evident cursor behavior, over-cap traversal, and operable backlog enumeration using the focused Goal pursuit regression suite. Preserve all unrelated dirty work. Do not commit, push, package, release, deploy, restart, reset, clean, or rebase.",
+        "objective_revision": 1,
+        "objective_sha256": "7c2dd631ae75644bc08fae4b8b6bd066b453ae3407a322ed6dd2a8ae76373832",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "160bfdc86476430ea4018a2f1704683a",
+          "stage_id": "verify:tests",
+          "status": "passed",
+          "duration_ms": 17797,
+          "exit_code": null,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "ca9e7a4ff739a1daedd7f2da8a77e8416211514e7ffa1d37ff54dd86918fcb93",
+  "completion_report_acknowledged_id": "ca9e7a4ff739a1daedd7f2da8a77e8416211514e7ffa1d37ff54dd86918fcb93",
+  "completion_report_acknowledged_at": "2026-09-14T08:03:24.527Z",
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_goal_pursuit.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '12 passed in 15.06s'",
+      "finished_at": "2026-09-14T08:01:16.422Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "bDbqhdZhUOPMzxHTbZCw1qNC"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "2b3cd9677a254cc480a028e21ea251ca",
+        "owner_wave": "4c30dcf5ece744188f7c5d59ec2f4aa6",
+        "size_bytes": 102,
+        "command_id": "bDbqhdZhUOPMzxHTbZCw1qNC",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:bDbqhdZhUOPMzxHTbZCw1qNC:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:bDbqhdZhUOPMzxHTbZCw1qNC:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest -q tests/test_goal_pursuit.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '12 passed in 15.67s'",
+      "finished_at": "2026-09-14T08:01:38.820Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "cdmQktjQKieSwdLdxWk3f61q"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "2b3cd9677a254cc480a028e21ea251ca",
+        "owner_wave": "4c30dcf5ece744188f7c5d59ec2f4aa6",
+        "size_bytes": 102,
+        "command_id": "cdmQktjQKieSwdLdxWk3f61q",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:cdmQktjQKieSwdLdxWk3f61q:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:cdmQktjQKieSwdLdxWk3f61q:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest -q tests/test_goal_pursuit.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 17787,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '12 passed in 15.67s'",
+      "session_id": "cdmQktjQKieSwdLdxWk3f61q",
+      "cancelled": false,
+      "timed_out": false,
+      "effective_timeout_ms": 271719
+    }
+  ],
+  "build_results": [],
+  "last_build_report": {
+    "project": {
+      "type": "python",
+      "name": "coding-tools-mcp",
+      "version": "1.0.0",
+      "package_manager": "pip",
+      "test_command": "python -m pytest",
+      "build_command": "python -m build",
+      "artifact_paths": [
+        "dist"
+      ]
+    },
+    "commands": {
+      "test": "python -m pytest -q tests/test_goal_pursuit.py",
+      "build": "python -m build"
+    },
+    "test_result": {
+      "command": "python -m pytest -q tests/test_goal_pursuit.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 17787,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '12 passed in 15.67s'",
+      "session_id": "cdmQktjQKieSwdLdxWk3f61q",
+      "cancelled": false,
+      "timed_out": false,
+      "effective_timeout_ms": 271719
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "passed",
+    "failure": null,
+    "report_generated_at": "2026-09-14T08:01:38.823Z"
+  },
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-14T07:59:11.733Z",
+  "updated_at": "2026-09-14T08:04:17.344Z",
+  "events": [
+    {
+      "time": "2026-09-14T07:59:11.733Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-14T07:59:12.061Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 28 \"full_problem\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_problem_lineage.py resources/coding-tools-mcp/tests/test_goal_pursuit.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+        "session_id": "HYrW6Q_t8O_EpKvs6uf2dj2z"
+      }
+    },
+    {
+      "time": "2026-09-14T07:59:12.407Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 28 \"full_problem\" -- resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests/test_problem_lineage.py resources/coding-tools-mcp/tests/test_goal_pursuit.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T07:59:27.932Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n \"def test_\" -- resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+        "session_id": "xxo6aIU4Jo0n5WQFagarWr0q"
+      }
+    },
+    {
+      "time": "2026-09-14T07:59:28.261Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n \"def test_\" -- resources/coding-tools-mcp/tests/test_goal_pursuit.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T08:00:00.160Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T08:00:00.411Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "SOLUTION_SHADOW_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-14T08:00:32.870Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 45 \"SOLUTION_SHADOW_REQUIRED\" -- resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/agent_tools.py",
+        "session_id": "zcCU0S7Xm2lCRMyT5nvJczwn"
+      }
+    },
+    {
+      "time": "2026-09-14T08:00:33.477Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 45 \"SOLUTION_SHADOW_REQUIRED\" -- resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/agent_tools.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T08:00:58.265Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:00.101Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_goal_pursuit.py",
+        "session_id": "bDbqhdZhUOPMzxHTbZCw1qNC"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:16.422Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_goal_pursuit.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:17.510Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:19.194Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:19.203Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:20.561Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:20.833Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:21.687Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_goal_pursuit.py",
+        "session_id": "cdmQktjQKieSwdLdxWk3f61q"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:38.820Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_goal_pursuit.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:38.824Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.168Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.179Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.686Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.686Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.861Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "a41eaf652f38aca24a83897e5a9d0ff4c39f392c96e010d031b7a2c423633e2e"
+      }
+    },
+    {
+      "time": "2026-09-14T08:01:39.866Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-14T08:02:52.369Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:02:56.689Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-14T08:02:56.692Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:02:56.808Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "ca9e7a4ff739a1daedd7f2da8a77e8416211514e7ffa1d37ff54dd86918fcb93"
+      }
+    },
+    {
+      "time": "2026-09-14T08:03:08.446Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-14T08:03:24.527Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "ca9e7a4ff739a1daedd7f2da8a77e8416211514e7ffa1d37ff54dd86918fcb93"
+      }
+    },
+    {
+      "time": "2026-09-14T08:03:31.752Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

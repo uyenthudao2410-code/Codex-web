@@ -1,0 +1,858 @@
+[
+  {
+    "version": 2,
+    "task_id": "ecc99e307ded47aa9f86e57eed0273d3",
+    "orchestration": {
+      "run_id": "298b663715f54f13adec22b20af0e50b",
+      "wave_id": "cc2ebf0673e94667b29e604b63168915",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+      "contract_fp": ""
+    },
+    "objective": "W0 preflight only: identify whether the current boot/Recovery Host transition issue already has a canonical Problem/Revision; inspect ownership/lineage of the existing dirty changes in recoveryHost.js, fullCleanActivation.js, lifecycle tests and BOOT_HOST_TRANSITION_CLOSURE_PLAN.md; determine the smallest safe next implementation packet. Do not mutate files, do not accept/ACK/close anything, do not restart runtime.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "7rBpvg4WzhDEjjesgYWsVF2k",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 827,
+      "finished_at": "2026-09-14T03:51:38.868Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-14T03:50:17.360Z",
+    "updated_at": "2026-09-14T03:51:38.868Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:50:17.360Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "W0 preflight only: identify whether the current boot/Recovery Host transition issue already has a canonical Problem/Revision; inspect ownership/lineage of the existing dirty changes in recoveryHost.js, fullCleanActivation.js, lifecycle tests and BOOT_HOST_TRANSITION_CLOSURE_PLAN.md; determine the smallest safe next implementation packet. Do not mutate files, do not accept/ACK/close anything, do not restart runtime."
+        }
+      },
+      {
+        "time": "2026-09-14T03:50:18.192Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:50:26.971Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:50:26.979Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:51:10.174Z",
+        "event": "command_started",
+        "details": {
+          "command": "git status --short && git diff -- electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "session_id": "mRfJgsEGnGPikDC1CnOzsABs"
+        }
+      },
+      {
+        "time": "2026-09-14T03:51:10.612Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git status --short && git diff -- electron/services/recoveryHost.js electron/services/fullCleanActivation.js tests/full-clean-activation.test.js tests/runtime-lifecycle.test.js resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:51:19.424Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:51:38.343Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 .coding-tools/orchestration/ledger.sqlite3 \".tables\"",
+          "session_id": "7rBpvg4WzhDEjjesgYWsVF2k"
+        }
+      },
+      {
+        "time": "2026-09-14T03:51:38.868Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 .coding-tools/orchestration/ledger.sqlite3 \".tables\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:51:59.468Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "024ab82ede2d418fbfee9ee93135948e",
+    "orchestration": {
+      "run_id": "d5a83d94e92b46a187b1045524cb8907",
+      "wave_id": "428cdef65f6740e8a4b7e7ab374e99e3",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+      "contract_fp": ""
+    },
+    "objective": "Complete W0 canonical-Problem lookup for the Recovery Host boot/host-transition issue. Use only authoritative project/orchestration state available to the runtime. Determine whether an existing Problem/Revision already represents this exact issue: startup/recovery can strand or mis-handle a durable READY epoch when managed MCP/Recovery Host/Tunnel process is gone; same-SHA empty-predecessor bootstrap and reviewed skipped-compatible versions must remain fail-closed on identity; census/cleanup attempts must be bounded and typed. Also identify whether the current dirty changes in electron/services/fullCleanActivation.js, electron/services/recoveryHost.js, tests/full-clean-activation.test.js, and tests/runtime-lifecycle.test.js are owned by another active RUN/WAVE. Return exact problem_id/revision and ownership if found; otherwise state no exact canonical Problem found. Do not mutate files, do not create a Problem, do not restart, do not accept/ACK/close anything.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-14T03:51:59.468Z",
+    "updated_at": "2026-09-14T03:52:09.927Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:51:59.468Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:52:00.140Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:52:09.918Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:52:09.927Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:52:54.701Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "3b5d3c3df43a41f19355360f41d305f7",
+    "orchestration": {
+      "run_id": "46cfccbb45ca403b8bf905a610cd1401",
+      "wave_id": "1858eb2d79d144568816b6e58a268647",
+      "orchestration_state": "PREFLIGHT",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+      "contract_fp": ""
+    },
+    "objective": "W0 only. Search authoritative project/orchestration evidence for an existing canonical Problem that exactly covers the Recovery Host boot/host-transition defect described in docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md: durable READY epoch with missing managed MCP/Recovery Host/Tunnel process; same-SHA ACK with empty predecessor versus reviewed compatible historical SHA; bounded canonical census plus cleanup. Also report whether the existing dirty bytes in electron/services/fullCleanActivation.js, electron/services/recoveryHost.js, tests/full-clean-activation.test.js, tests/runtime-lifecycle.test.js have an active RUN/WAVE writer. Return a compact conclusion: existing problem_id+revision or NO_EXACT_PROBLEM; then active writer ownership or NO_ACTIVE_WRITER; then the smallest safe next packet. Read-only only: no mutation, no Problem creation, no restart, no acceptance or ACK.",
+    "status": "waiting",
+    "steps": [],
+    "current_step": "Waiting for model",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Generate the result from the inspected content, then save it once.",
+    "created_at": "2026-09-14T03:52:54.701Z",
+    "updated_at": "2026-09-14T03:54:02.268Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:52:54.701Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:52:55.306Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:53:01.876Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:53:01.887Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:53:46.030Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "GOAL_IDENTITY_AMBIGUOUS"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:02.268Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:54:22.067Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "f6fb711d456c4c79b36b9c070d644a33",
+    "orchestration": {
+      "run_id": "f3bb940b34ff4294bfbd1468fae90b11",
+      "wave_id": "19016e211754457495fce79f53228176",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+      "contract_fp": ""
+    },
+    "objective": "Read-only W0 authority audit for the boot/Recovery Host transition issue. Do not mutate source or orchestration Problem state. Determine from workspace source, task contexts, orchestration reports and current Git state: (1) whether there is evidence of an already-existing canonical Problem/Revision specifically covering durable READY epoch recovery when managed MCP/Recovery Host/Tunnel is missing, same-SHA ACK with empty predecessor versus reviewed compatible historical SHA, and bounded canonical census/cleanup; (2) whether the existing dirty bytes in electron/services/fullCleanActivation.js, electron/services/recoveryHost.js, tests/full-clean-activation.test.js and tests/runtime-lifecycle.test.js are currently owned by an active write RUN/WAVE; (3) exact current SHA256 for those four dirty files so they can be adopted safely if no active writer exists; (4) smallest safe implementation packet. Return explicit NO_EXACT_PROBLEM only if no exact canonical lineage evidence is found in the bounded sources; otherwise return exact problem_id and revision. Do not create/revise/reopen/accept/ACK any Problem, do not restart, do not write files.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": null,
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 23,
+          "head_hash": "4874574fec7fb812916fa3cd09c0f0078745ff56570bf4ac509f3bac848542c4"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f3bb940b34ff4294bfbd1468fae90b11\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f3bb940b34ff4294bfbd1468fae90b11\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f3bb940b34ff4294bfbd1468fae90b11\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "f3bb940b34ff4294bfbd1468fae90b11",
+        "wave_id": "19016e211754457495fce79f53228176",
+        "checkpoint_id": "",
+        "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+        "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "W0 read-only authority audit only. Do not mutate. Find exact existing Problem/Revision evidence for the boot/Recovery Host transition issue and active write ownership of four dirty boot files. If no exact Problem evidence is present in bounded context, record that as bounded evidence only, not as a global claim. Also surface matching task-context/report paths so controller can inspect exact lineage.",
+          "objective_revision": 2,
+          "objective_sha256": "f9eadad0bfddf4a14036c0a355eef6a61a0bf4681dcd31a36c9a263ab5217ad0",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": null,
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "504a64a032ad8c910f6efcd7d5ded214b3bdd9392d63187e395e90df045b5e7e",
+    "completion_report_acknowledged_id": "504a64a032ad8c910f6efcd7d5ded214b3bdd9392d63187e395e90df045b5e7e",
+    "completion_report_acknowledged_at": "2026-09-14T03:58:03.927Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-14T03:54:22.067Z",
+    "updated_at": "2026-09-14T03:58:10.975Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:54:22.067Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:22.851Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:32.586Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:33.534Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:34.814Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:34.816Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:34.816Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:42.743Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:54:43.260Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "REPLAN_REASON_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-14T03:55:03.738Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:55:10.151Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:55:10.158Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:56:07.266Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:56:21.601Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:56:45.816Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+        }
+      },
+      {
+        "time": "2026-09-14T03:57:01.031Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_EVENT_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-14T03:57:32.551Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "504a64a032ad8c910f6efcd7d5ded214b3bdd9392d63187e395e90df045b5e7e"
+        }
+      },
+      {
+        "time": "2026-09-14T03:57:48.278Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:58:03.927Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "504a64a032ad8c910f6efcd7d5ded214b3bdd9392d63187e395e90df045b5e7e"
+        }
+      },
+      {
+        "time": "2026-09-14T03:58:10.975Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T03:58:11.138Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "c8b9cbc54a0d44088e9d3975841ad2aa",
+    "orchestration": {
+      "run_id": "ab004f4a1a16417bbe87c6a7d361672e",
+      "wave_id": "700eb433b6534886a0d5c4452b854ef9",
+      "orchestration_state": "ABORTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "",
+      "route_resolved": "",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+      "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+      "contract_fp": ""
+    },
+    "objective": "Implement W3 for canonical Problem prl-22e670302757c9b7663170e226ed7c26 revision 1: bounded Python discovery/census/cleanup with typed causal evidence, preserving fail-closed authority and unrelated dirty work.",
+    "status": "stopped",
+    "steps": [],
+    "current_step": "Aborted - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "OKteLtmyy8yS2WnNtkegBfJ9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": 861,
+      "finished_at": "2026-09-14T03:59:38.551Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 12,
+          "criteria_proven": 0,
+          "criteria_unresolved": 12,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "C01",
+          "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 1,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "ab004f4a1a16417bbe87c6a7d361672e",
+          "wave_id": "700eb433b6534886a0d5c4452b854ef9",
+          "checkpoint_id": ""
+        },
+        "latest_feedback_relation": "UNKNOWN",
+        "event_count": 2,
+        "latest_event": {
+          "seq": 203,
+          "event_id": "prl-bind-32f3d67953f2f3531c21cfda5e67c96a9bd0bcfa241850262e0851e2a18c3f1e",
+          "event_hash": "040e4064c590595975a92ce5d207ce909fa47271d68fedefeed11950b76eb250",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-14T03:58:20.408Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 0,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 0,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 0,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 0,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "ABORTED",
+        "run_status": "aborted",
+        "wave_status": "aborted",
+        "task_status": "waiting",
+        "integrity": {
+          "ok": true,
+          "checked": 10,
+          "head_hash": "7a8f6b0014c1e95b7da1af466367b7ca7e7b8917f51bc4fcbe7ac3e32e4a2944"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ab004f4a1a16417bbe87c6a7d361672e\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-ab004f4a1a16417bbe87c6a7d361672e\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "ab004f4a1a16417bbe87c6a7d361672e",
+        "wave_id": "700eb433b6534886a0d5c4452b854ef9",
+        "checkpoint_id": "",
+        "base_head": "ae04947d5969e9ee92bf1fe7532bf30e186f8280",
+        "worktree_fp": "3308ea4d281db95406b349030610a0cfb40055a10f3b2104edcdceafe90c94f4",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Problem prl-22e670302757c9b7663170e226ed7c26 rev1, W3 first engineering packet. Diagnose and prepare the smallest causal fix for bounded Python discovery, canonical census timeout, child termination/cleanup and lock-contention classification. Preserve all pre-existing dirty bytes and do not touch resources/coding-tools-mcp/coding_tools_mcp/tool_contract.py or resources/coding-tools-mcp/tests/test_efficiency_runtime.py because they belong to the separate Goal-pagination lineage. Inspect current implementations in environmentService.js, commandRunner.js and fullCleanActivation.js plus focused tests. Requirements: operation-level remaining deadline; interpreter discovery bounded to <=5s initial budget; census child <=30s; cleanup <=5s; exclusive lock stays within child budget; timeout kills only owned child then awaits close/exit within cleanup budget; cleanup uncertainty fails closed; lock contention remains distinct; receipts persist typed stage/cause/elapsed/budget/cleanup outcome only, not raw stdout/stderr/argv/secrets. Identify exact existing dirty W3 changes that can be adopted and the minimal additional edits/tests. Do not restart runtime, commit, push, release, or modify source in prepare.",
+          "objective_revision": 1,
+          "objective_sha256": "74664e6d7ac5b31bd8af697c11a45b4b157b55b4d59512d7b1e9689425144dfb",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+      "blocker_or_failure": {
+        "failure_class": null,
+        "reason": "The requested prepared RUN/WAVE does not match the caller's current scoped task projection.",
+        "event_seq": null
+      },
+      "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+      "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+    },
+    "completion_report_id": "72350b4a10a365f8fd874f8d3f77c7d7ecc7806d97c6616a545d8498d2d7b5a5",
+    "completion_report_acknowledged_id": "72350b4a10a365f8fd874f8d3f77c7d7ecc7806d97c6616a545d8498d2d7b5a5",
+    "completion_report_acknowledged_at": "2026-09-14T04:01:03.688Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+    "created_at": "2026-09-14T03:58:11.138Z",
+    "updated_at": "2026-09-14T04:01:09.499Z",
+    "events": [
+      {
+        "time": "2026-09-14T03:58:11.138Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T03:58:20.606Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:58:31.307Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-14T03:58:31.315Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T03:59:38.042Z",
+        "event": "command_started",
+        "details": {
+          "command": "certutil -hashfile electron\\services\\fullCleanActivation.js SHA256 && certutil -hashfile tests\\full-clean-activation.test.js SHA256 && certutil -hashfile tests\\runtime-lifecycle.test.js SHA256 && certutil -hashfile electron\\services\\recoveryHost.js SHA256",
+          "session_id": "OKteLtmyy8yS2WnNtkegBfJ9"
+        }
+      },
+      {
+        "time": "2026-09-14T03:59:38.551Z",
+        "event": "command_finished",
+        "details": {
+          "command": "certutil -hashfile electron\\services\\fullCleanActivation.js SHA256 && certutil -hashfile tests\\full-clean-activation.test.js SHA256 && certutil -hashfile tests\\runtime-lifecycle.test.js SHA256 && certutil -hashfile electron\\services\\recoveryHost.js SHA256",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-14T03:59:51.376Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-14T04:00:17.396Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-14T04:00:42.872Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+          "report_id": "72350b4a10a365f8fd874f8d3f77c7d7ecc7806d97c6616a545d8498d2d7b5a5"
+        }
+      },
+      {
+        "time": "2026-09-14T04:00:49.443Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-14T04:01:03.688Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "72350b4a10a365f8fd874f8d3f77c7d7ecc7806d97c6616a545d8498d2d7b5a5"
+        }
+      },
+      {
+        "time": "2026-09-14T04:01:09.499Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-14T04:01:09.680Z",
+    "archive_reason": "superseded"
+  }
+]

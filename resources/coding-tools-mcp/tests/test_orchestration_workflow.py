@@ -60,6 +60,58 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
             finally:
                 runtime.close()
 
+    def test_prepare_execute_exact_binding_recovers_from_projection_ghost(self) -> None:
+        with tempfile.TemporaryDirectory() as temp, patch.dict(
+            "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}
+        ):
+            root = Path(temp)
+            target = root / "app.py"
+            target.write_text("VALUE = 1\n", encoding="utf-8")
+            runtime = Runtime(root, permission_mode="dangerous")
+            try:
+                prepared = runtime.agent_workflow({
+                    "workflow": "bugfix",
+                    "phase": "prepare",
+                    "objective": "investigate the exact value defect",
+                    "queries": ["VALUE"],
+                    "evaluation": {"provenance": "synthetic"},
+                })
+                binding = prepared["prepared_binding"]
+                runtime.task_state.set_orchestration_projection(
+                    {
+                        "run_id": "ghost-run",
+                        "wave_id": "ghost-wave",
+                        "orchestration_state": "PREFLIGHT",
+                    },
+                    event="test_projection_ghost",
+                )
+
+                execute_args = {
+                    "workflow": "bugfix",
+                    "phase": "execute",
+                    "objective": "set the proven value to two",
+                    "run_id": binding["run_id"],
+                    "wave_id": binding["wave_id"],
+                    "execution_route": "deterministic",
+                    "patch": "*** Begin Patch\n*** Update File: app.py\n@@\n-VALUE = 1\n+VALUE = 2\n*** End Patch",
+                    "verification": "none",
+                    "evaluation": {"provenance": "synthetic"},
+                }
+                executed = runtime.call_tool("agent_workflow", execute_args)["structuredContent"]
+
+                self.assertEqual(executed["orchestration"]["run_id"], binding["run_id"])
+                self.assertEqual(executed["orchestration"]["wave_id"], binding["wave_id"])
+                self.assertEqual(len(runtime.orchestration_ledger.list_runs(limit=10)), 1)
+                self.assertEqual(target.read_text(encoding="utf-8"), "VALUE = 2\n")
+                events = runtime.orchestration_ledger.list_events(
+                    binding["run_id"], wave_id=binding["wave_id"]
+                )
+                self.assertTrue(
+                    any(item.get("event_type") == "prepared_projection_reconciled" for item in events)
+                )
+            finally:
+                runtime.close()
+
     def test_prepare_execute_refined_objective_without_binding_fails_before_rebind(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

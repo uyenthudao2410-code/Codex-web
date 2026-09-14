@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "task_id": "7f7f4f1be3b34c9d97215fe4fab8848b",
+  "orchestration": {},
+  "objective": "Continue canonical Problem prl-goal-candidate-pagination-20260912 to technical closure. Diagnose why the source/public contract now supports candidate_cursor and candidate_limit but the live Coding-VP task_control public schema still advertises the predecessor goal_event contract. Inspect the current pagination diff/source, tool-schema generation, connector discovery/rediscovery/current-schema readiness and contract fingerprint compatibility. Preserve exact-identity fail-closed selection, stable cursor snapshot semantics, predecessor bootstrap compatibility only where safe, and fail closed rather than silently serving a schema-incompatible stale public contract. Produce the smallest safe implementation plan and exact focused proof commands. Do not touch unrelated dirty work; no commit, push, package, release, reset, clean or restart.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "This controller endpoint is fenced from the durable Goal",
+  "next_step": "",
+  "created_at": "2026-09-14T04:41:10.860Z",
+  "updated_at": "2026-09-14T04:41:11.351Z",
+  "events": [
+    {
+      "time": "2026-09-14T04:41:10.860Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continue canonical Problem prl-goal-candidate-pagination-20260912 to technical closure. Diagnose why the source/public contract now supports candidate_cursor and candidate_limit but the live Coding-VP task_control public schema still advertises the predecessor goal_event contract. Inspect the current pagination diff/source, tool-schema generation, connector discovery/rediscovery/current-schema readiness and contract fingerprint compatibility. Preserve exact-identity fail-closed selection, stable cursor snapshot semantics, predecessor bootstrap compatibility only where safe, and fail closed rather than silently serving a schema-incompatible stale public contract. Produce the smallest safe implementation plan and exact focused proof commands. Do not touch unrelated dirty work; no commit, push, package, release, reset, clean or restart."
+      }
+    },
+    {
+      "time": "2026-09-14T04:41:11.351Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    }
+  ]
+}
