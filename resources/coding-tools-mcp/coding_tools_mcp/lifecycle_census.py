@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import sqlite3
 import tempfile
@@ -348,6 +349,7 @@ def _projection_status(
     *,
     facts: LedgerFacts,
     records: list[Mapping[str, Any]] | None = None,
+    grace_seconds: float = 15 * 60,
 ) -> dict[str, Any]:
     value = dict(projection or {})
     nested = value.get("orchestration") if isinstance(value.get("orchestration"), Mapping) else value
@@ -388,12 +390,31 @@ def _projection_status(
         ]
         missing: list[str] = []
         conflicting: list[str] = []
+        historical_unprojected = 0
         for record in relevant:
             relevant_run_id = str(record.get("run_id") or "").strip()
             waves = facts.list_waves(relevant_run_id) if relevant_run_id else []
             expected_wave_id = str(waves[-1].get("wave_id") or "").strip() if waves else ""
             expected_state = str(record.get("latest_state_after") or "").strip().upper()
             candidates = by_run.get(relevant_run_id, [])
+            age = record.get("activity_age_seconds")
+            ownership = record.get("ownership") or {}
+            # Context files are current views, not an index of every historical
+            # RUN. An old, unowned acceptance may have lost its context binding;
+            # that absence must not deadlock the runtime needed to resume it.
+            # Keep the canonical AWAITING_ACCEPTANCE record (and its separate
+            # activation gate) intact. Fresh omissions, live ownership, and any
+            # present-but-conflicting projection still fail closed.
+            if (
+                not candidates
+                and record.get("classification") == "AWAITING_ACCEPTANCE"
+                and record.get("run_status") == _ACTIVE_RUN_STATUS
+                and expected_wave_id and expected_state == "ACCEPTING"
+                and age is not None and math.isfinite(age) and age > grace_seconds
+                and ownership and all(value == 0 for value in ownership.values())
+            ):
+                historical_unprojected += 1
+                continue
             exact = [
                 item for item in candidates
                 if item["wave_id"] == expected_wave_id and item["orchestration_state"] == expected_state
@@ -424,8 +445,9 @@ def _projection_status(
             "orchestration_state": "",
             "context_count": context_count if isinstance(context_count, int) else 0,
             "contextual_sha256": digest,
-            "relevant_run_count": len(relevant),
-            "bound_relevant_run_count": len(relevant) - len(set(missing)),
+            "relevant_run_count": len(relevant) - historical_unprojected,
+            "bound_relevant_run_count": len(relevant) - historical_unprojected - len(set(missing)),
+            "unprojected_historical_acceptance_count": historical_unprojected,
             "missing_run_count": len(set(missing)),
             "conflicting_run_count": len(set(conflicting)),
             "malformed_context_projection": malformed,
@@ -773,7 +795,7 @@ def lifecycle_census(
                 updated_at=str(item["job_updated_at"]),
             )
 
-    projection_result = _projection_status(projection, facts=facts, records=records)
+    projection_result = _projection_status(projection, facts=facts, records=records, grace_seconds=grace)
     counts = Counter(str(item["classification"]) for item in records)
     job_counts = Counter(str(item["classification"]) for item in job_records)
     return {

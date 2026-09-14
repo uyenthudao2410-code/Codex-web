@@ -2350,7 +2350,10 @@ test('stopped-runtime retry refuses dangerous unresolved acceptance from the can
     now: () => 1_700_000_000_032
   });
 
-  await assert.rejects(coordinator.restart({ operationId: id('operation-epoch', '0012'), sourceCheckpoint: acceptedSourceCheckpoint() }), { code: 'ACCEPTANCE_PENDING' });
+  await assert.rejects(coordinator.restart({ operationId: id('operation-epoch', '0012'), sourceCheckpoint: acceptedSourceCheckpoint() }), {
+    code: 'ACCEPTANCE_PENDING',
+    message: /reason=acceptance_pending/
+  });
   assert.equal(store.current().activation_epoch_id, previous.activation_epoch_id);
   assert.equal(store.current().state, 'FAILED');
 });
