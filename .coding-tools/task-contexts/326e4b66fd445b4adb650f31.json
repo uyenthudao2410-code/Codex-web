@@ -1,0 +1,245 @@
+{
+  "version": 2,
+  "task_id": "b5fe1fba02364da898f68d1dd3d1e47e",
+  "orchestration": {
+    "run_id": "296524809ea8431b97a622b2c94a63d0",
+    "wave_id": "a268515a40ba45a8b437dfe73128656a",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "fb147819daf1f46c9bdd1619dfc75732c1b7d80d806804871a526a338afd9e44",
+    "contract_fp": ""
+  },
+  "objective": "READ-ONLY diagnosis for Parent Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Locate existing official verification harnesses/scripts and durable receipts needed to finish C01-C12 without creating a second control path. Return exact paths/commands/prerequisites and already-existing evidence for: packaged smoke; persistent NSIS install; installed direct launch; Windows login-start/watchdog; durable pre-reboot continuation receipt/ticket and actual OS reboot/post-logon resume; C07 host-only restart then Tunnel loss authorized live fault; C09 Machine A/B exact endpoint/workspace/tunnel plus real read operation receipts; C10 rollback; C11 successful-case/results table; natural-use >=48h. Also identify current mutable owners/write leases/global jobs that would make install/reboot unsafe. No writes, no install, no restart/reboot, no RUN execution, no commit/push/publish/release.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 35,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 14,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "296524809ea8431b97a622b2c94a63d0",
+        "wave_id": "a268515a40ba45a8b437dfe73128656a",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 37,
+      "latest_event": {
+        "seq": 258,
+        "event_id": "prl-bind-656b7e636dfdc976f65e55a71d99de6186bc4b52f5a70d1971d4695257d302e6",
+        "event_hash": "d6b8e575e358892df7769b77ca7155be6496c4e299f9d9e63d20cc482f23f2e0",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T04:27:18.810Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 84,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 59,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 3,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 22,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 6,
+        "head_hash": "a46e933a7a505263a1534d72463865df688f6328cf1b705c51f4d82cf5c49b5e"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-296524809ea8431b97a622b2c94a63d0\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-296524809ea8431b97a622b2c94a63d0\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "296524809ea8431b97a622b2c94a63d0",
+      "wave_id": "a268515a40ba45a8b437dfe73128656a",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "fb147819daf1f46c9bdd1619dfc75732c1b7d80d806804871a526a338afd9e44",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "READ-ONLY diagnosis for Parent Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Locate existing official verification harnesses/scripts and durable receipts needed to finish C01-C12 without creating a second control path. Return exact paths/commands/prerequisites and already-existing evidence for: packaged smoke; persistent NSIS install; installed direct launch; Windows login-start/watchdog; durable pre-reboot continuation receipt/ticket and actual OS reboot/post-logon resume; C07 host-only restart then Tunnel loss authorized live fault; C09 Machine A/B exact endpoint/workspace/tunnel plus real read operation receipts; C10 rollback; C11 successful-case/results table; natural-use >=48h. Also identify current mutable owners/write leases/global jobs that would make install/reboot unsafe. No writes, no install, no restart/reboot, no RUN execution, no commit/push/publish/release.",
+        "objective_revision": 1,
+        "objective_sha256": "2fc11b19767ae51e66cc6c8f85e0e928dfbc1ca09945703735f29550b358ac61",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": null,
+      "reason": "Run is in PREFLIGHT, not ACCEPTING.",
+      "event_seq": null
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "5e767ad5f7e288358f54b8a7d6522754822a7133d6b891b605ef11aaa3161d92",
+  "completion_report_acknowledged_id": "5e767ad5f7e288358f54b8a7d6522754822a7133d6b891b605ef11aaa3161d92",
+  "completion_report_acknowledged_at": "2026-09-15T04:29:34.826Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-15T04:27:17.582Z",
+  "updated_at": "2026-09-15T04:29:35.352Z",
+  "events": [
+    {
+      "time": "2026-09-15T04:27:17.583Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "READ-ONLY diagnosis for Parent Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Locate existing official verification harnesses/scripts and durable receipts needed to finish C01-C12 without creating a second control path. Return exact paths/commands/prerequisites and already-existing evidence for: packaged smoke; persistent NSIS install; installed direct launch; Windows login-start/watchdog; durable pre-reboot continuation receipt/ticket and actual OS reboot/post-logon resume; C07 host-only restart then Tunnel loss authorized live fault; C09 Machine A/B exact endpoint/workspace/tunnel plus real read operation receipts; C10 rollback; C11 successful-case/results table; natural-use >=48h. Also identify current mutable owners/write leases/global jobs that would make install/reboot unsafe. No writes, no install, no restart/reboot, no RUN execution, no commit/push/publish/release."
+      }
+    },
+    {
+      "time": "2026-09-15T04:27:19.003Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T04:27:28.187Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T04:27:28.193Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T04:28:47.789Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "FINAL_ACCEPTANCE_NOT_READY"
+      }
+    },
+    {
+      "time": "2026-09-15T04:28:58.927Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "5e767ad5f7e288358f54b8a7d6522754822a7133d6b891b605ef11aaa3161d92"
+      }
+    },
+    {
+      "time": "2026-09-15T04:29:22.965Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T04:29:34.826Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "5e767ad5f7e288358f54b8a7d6522754822a7133d6b891b605ef11aaa3161d92"
+      }
+    }
+  ]
+}

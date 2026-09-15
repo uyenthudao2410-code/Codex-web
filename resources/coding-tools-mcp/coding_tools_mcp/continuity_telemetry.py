@@ -37,6 +37,7 @@ CONTINUITY_TELEMETRY_EVENT_TYPES = frozenset(
 CONTINUITY_TELEMETRY_OUTCOMES = frozenset(
     {"", "attempted", "observed", "succeeded", "failed", "prevented", "blocked", "terminal", "pending"}
 )
+CONTINUITY_TELEMETRY_PROVENANCE = frozenset({"natural", "synthetic", "legacy_unknown"})
 _ID_RE = re.compile(r"^[A-Za-z0-9_.:@-]+$")
 _MAX_ID = 256
 _MAX_CODE = 128
@@ -78,6 +79,7 @@ def _row(row: sqlite3.Row) -> dict[str, Any]:
         "outcome": str(row["outcome"]),
         "code": str(row["code"]),
         "duration_ms": None if row["duration_ms"] is None else int(row["duration_ms"]),
+        "provenance": str(row["provenance"] or "legacy_unknown"),
         "event_time": str(row["event_time"]),
         "record_sha256": str(row["record_sha256"]),
     }
@@ -113,6 +115,8 @@ class ContinuityTelemetryLedgerMixin:
                 outcome TEXT NOT NULL DEFAULT '',
                 code TEXT NOT NULL DEFAULT '',
                 duration_ms INTEGER,
+                provenance TEXT NOT NULL DEFAULT 'legacy_unknown'
+                    CHECK(provenance IN ('natural','synthetic','legacy_unknown')),
                 event_time TEXT NOT NULL,
                 record_sha256 TEXT NOT NULL
             );
@@ -124,6 +128,15 @@ class ContinuityTelemetryLedgerMixin:
                 ON continuity_telemetry(event_type,event_time,logical_id);
             """
         )
+        columns = {
+            str(row["name"] if isinstance(row, sqlite3.Row) else row[1])
+            for row in connection.execute("PRAGMA table_info(continuity_telemetry)").fetchall()
+        }
+        if "provenance" not in columns:
+            connection.execute(
+                "ALTER TABLE continuity_telemetry ADD COLUMN provenance TEXT NOT NULL "
+                "DEFAULT 'legacy_unknown' CHECK(provenance IN ('natural','synthetic','legacy_unknown'))"
+            )
 
     def record_continuity_telemetry(
         self,
@@ -142,6 +155,7 @@ class ContinuityTelemetryLedgerMixin:
         outcome: str = "",
         code: str = "",
         duration_ms: int | None = None,
+        provenance: str = "legacy_unknown",
     ) -> dict[str, Any]:
         logical = _typed_id(logical_id, "logical_id", required=True)
         run = _typed_id(run_id, "run_id", required=True)
@@ -158,6 +172,9 @@ class ContinuityTelemetryLedgerMixin:
         result = str(outcome or "").strip().lower()
         if result not in CONTINUITY_TELEMETRY_OUTCOMES:
             raise ValueError("CONTINUITY_TELEMETRY_OUTCOME_INVALID")
+        evidence_provenance = str(provenance or "").strip().lower()
+        if evidence_provenance not in CONTINUITY_TELEMETRY_PROVENANCE:
+            raise ValueError("CONTINUITY_TELEMETRY_PROVENANCE_INVALID")
         machine_code = _typed_id(code, "code", limit=_MAX_CODE)
         duration: int | None
         if duration_ms is None:
@@ -181,8 +198,12 @@ class ContinuityTelemetryLedgerMixin:
             "outcome": result,
             "code": machine_code,
             "duration_ms": duration,
+            "provenance": evidence_provenance,
         }
-        digest = hashlib.sha256(_json(record).encode("utf-8")).hexdigest()
+        # Provenance is attribution metadata, not event identity. Excluding it
+        # preserves legacy digests and prevents replay/reconnect from creating
+        # duplicates merely because provenance classification changed.
+        digest = hashlib.sha256(_json(_identity_payload(record)).encode("utf-8")).hexdigest()
         event_time = _now()
         with self._lock, self._connect() as connection:
             self._continuity_telemetry_ensure_schema(connection)
@@ -206,12 +227,12 @@ class ContinuityTelemetryLedgerMixin:
                 """INSERT INTO continuity_telemetry(
                     logical_id,run_id,wave_id,event_type,problem_id,problem_revision,task_context_id,
                     activation_epoch_id,process_instance_id,server_instance_id,restart_ticket_id,outcome,
-                    code,duration_ms,event_time,record_sha256
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    code,duration_ms,provenance,event_time,record_sha256
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     logical, run, wave, kind, problem, revision, record["task_context_id"],
                     record["activation_epoch_id"], record["process_instance_id"], record["server_instance_id"],
-                    record["restart_ticket_id"], result, machine_code, duration, event_time, digest,
+                    record["restart_ticket_id"], result, machine_code, duration, evidence_provenance, event_time, digest,
                 ),
             )
             append_hash_chained_event(
@@ -293,6 +314,7 @@ class ContinuityTelemetryLedgerMixin:
         counts: dict[str, int] = {}
         outcomes: dict[str, int] = {}
         codes: dict[str, int] = {}
+        provenance_counts = {key: 0 for key in sorted(CONTINUITY_TELEMETRY_PROVENANCE)}
         durations: dict[str, list[int]] = {}
         for event in events:
             kind = str(event["event_type"])
@@ -303,6 +325,8 @@ class ContinuityTelemetryLedgerMixin:
             code = str(event["code"] or "")
             if code:
                 codes[code] = codes.get(code, 0) + 1
+            evidence_provenance = str(event.get("provenance") or "legacy_unknown")
+            provenance_counts[evidence_provenance] = provenance_counts.get(evidence_provenance, 0) + 1
             if event["duration_ms"] is not None:
                 durations.setdefault(kind, []).append(int(event["duration_ms"]))
 
@@ -320,6 +344,10 @@ class ContinuityTelemetryLedgerMixin:
             "counts_by_type": counts,
             "counts_by_outcome": outcomes,
             "counts_by_code": codes,
+            "counts_by_provenance": provenance_counts,
+            "natural_event_count": provenance_counts.get("natural", 0),
+            "synthetic_event_count": provenance_counts.get("synthetic", 0),
+            "legacy_unknown_event_count": provenance_counts.get("legacy_unknown", 0),
             "manual_nudge_count": counts.get("manual_nudge", 0),
             "interruption_count": counts.get("interruption", 0),
             "replan_count": counts.get("replan", 0),

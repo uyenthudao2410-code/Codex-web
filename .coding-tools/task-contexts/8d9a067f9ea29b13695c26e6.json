@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "aa675927243e4f9a8fb78c9d949b93f0",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Mqz267_A9ymWhJcCKDmNKaT7",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1199,
+    "finished_at": "2026-09-15T07:00:19.255Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T07:00:17.657Z",
+  "updated_at": "2026-09-15T07:00:19.255Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:00:17.658Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T07:00:18.120Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$log='Microsoft-Windows-TaskScheduler/Operational'; try{$events=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=(Get-Date).AddMinutes(-10)} -ErrorAction Stop | Where-Object {$_.Message -like '*WebMCP Recovery Supervisor*'} | Select-Object -First 20 TimeCreated,Id,LevelDisplayName,Message; $events|ConvertTo-Json -Depth 4 -Compress}catch{[pscustomobject]@{error=$_.Exception.Message}|ConvertTo-Json -Compress}\"",
+        "session_id": "Mqz267_A9ymWhJcCKDmNKaT7"
+      }
+    },
+    {
+      "time": "2026-09-15T07:00:19.255Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$log='Microsoft-Windows-TaskScheduler/Operational'; try{$events=Get-WinEvent -FilterHashtable @{LogName=$log;StartTime=(Get-Date).AddMinutes(-10)} -ErrorAction Stop | Where-Object {$_.Message -like '*WebMCP Recovery Supervisor*'} | Select-Object -First 20 TimeCreated,Id,LevelDisplayName,Message; $events|ConvertTo-Json -Depth 4 -Compress}catch{[pscustomobject]@{error=$_.Exception.Message}|ConvertTo-Json -Compress}\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

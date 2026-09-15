@@ -314,6 +314,96 @@ function assessRecoveryHostFreshness({ paths, descriptor, status, expectedDiskRe
   };
 }
 
+function sameWorkspace(left, right) {
+  const first = text(left);
+  const second = text(right);
+  if (!first || !second) return false;
+  try {
+    return path.resolve(first).toLowerCase() === path.resolve(second).toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+async function proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs = 15_000 } = {}) {
+  const expected = expectedIdentity(paths);
+  const observed = normalizeDescriptorIdentity(descriptor);
+  if (expected.mode !== 'development' || observed.runtime_mode !== 'packaged') {
+    throw bootstrapError(
+      'RECOVERY_HOST_INSTALLATION_MISMATCH',
+      'Cross-installation handoff is supported only from an idle packaged host to the selected development checkout.'
+    );
+  }
+  if (!client || typeof client.status !== 'function' || typeof client.call !== 'function') {
+    throw bootstrapError(
+      'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED',
+      'The packaged Recovery Host cannot provide an authenticated idle-handoff proof.'
+    );
+  }
+  const request = {
+    ...descriptorRequestOptions(descriptor),
+    timeout: Math.min(8_000, Math.max(1_500, Number(timeoutMs) || 8_000))
+  };
+  let status;
+  let runtime;
+  try {
+    status = await client.status(request);
+    runtime = await client.call('runtime.lightweight_snapshot', [], request);
+  } catch (error) {
+    throw bootstrapError(
+      'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED',
+      'The packaged Recovery Host idle state could not be verified.',
+      { cause_code: String(error?.code || '') || null }
+    );
+  }
+  const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
+  const statusToken = normalizeProcessStartToken(status?.process_start_token);
+  const exactHost = Number(status?.pid || 0) === Number(descriptor?.owner_pid || 0)
+    && text(status?.instance_id) === text(descriptor?.instance_id)
+    && Boolean(descriptorToken && statusToken === descriptorToken);
+  const workspace = text(runtime?.device?.workspace || runtime?.workspace);
+  const epochState = text(runtime?.activationEpoch?.epoch_state || runtime?.activationEpoch?.state).toUpperCase();
+  const terminalEpoch = ['NONE', 'READY', 'FAILED'].includes(epochState);
+  const workspaceMatches = sameWorkspace(workspace, paths.appRoot());
+  const safe = exactHost
+    && status?.electron_ui_recovery?.alive === false
+    && runtime?.telemetryAvailable === true
+    && runtime?.signalStale === false
+    && runtime?.snapshotBusy === false
+    && runtime?.busy !== true
+    && runtime?.recovering !== true
+    && runtime?.mcpRunning === false
+    && runtime?.nativeAlive === false
+    && runtime?.tunnelRunning === false
+    && terminalEpoch
+    && workspaceMatches;
+  if (!safe) {
+    throw bootstrapError(
+      'RECOVERY_HOST_IDLE_HANDOFF_REFUSED',
+      'The packaged Recovery Host is not provably idle for a development-checkout handoff.',
+      {
+        exact_host: exactHost,
+        ui_alive: status?.electron_ui_recovery?.alive === true,
+        telemetry_available: runtime?.telemetryAvailable === true,
+        signal_stale: runtime?.signalStale !== false,
+        snapshot_busy: runtime?.snapshotBusy !== false,
+        recovering: runtime?.recovering === true,
+        mcp_running: runtime?.mcpRunning === true,
+        native_alive: runtime?.nativeAlive === true,
+        tunnel_running: runtime?.tunnelRunning === true,
+        activation_epoch_state: epochState || null,
+        workspace_matches: workspaceMatches
+      }
+    );
+  }
+  return {
+    exact_host: true,
+    workspace,
+    activation_epoch_state: epochState,
+    observed_at_unix_ms: Date.now()
+  };
+}
+
 function buildBootstrapEnvelope({
   paths,
   descriptor,
@@ -613,6 +703,7 @@ async function bootstrapCurrentRecoveryHost({
   refresh = false,
   trustedRecoveryBootstrap = null,
   forceRefresh = false,
+  allowIdlePackagedHandoff = false,
   requestedAtUnixMs = Date.now(),
   expiresAtUnixMs = Number(requestedAtUnixMs) + DEFAULT_TTL_MS,
   timeoutMs = 15_000,
@@ -626,7 +717,21 @@ async function bootstrapCurrentRecoveryHost({
   log = null
 } = {}) {
   const freshness = assessRecoveryHostFreshness({ paths, descriptor, status, expectedDiskRevision });
-  if (!freshness.installation_matches) throw bootstrapError('RECOVERY_HOST_INSTALLATION_MISMATCH', 'Refused to terminate a Recovery Host from another installation.', freshness);
+  let idlePackagedHandoff = null;
+  if (!freshness.installation_matches) {
+    const eligible = allowIdlePackagedHandoff === true
+      && refresh === true
+      && forceRefresh === true
+      && (sourceCheckpoint === null || sourceCheckpoint === undefined || sourceCheckpoint === '')
+      && !trustedRecoveryBootstrap
+      && !text(activationEpochId)
+      && freshness.expected_runtime_mode === 'development'
+      && freshness.observed_runtime_mode === 'packaged';
+    if (!eligible) {
+      throw bootstrapError('RECOVERY_HOST_INSTALLATION_MISMATCH', 'Refused to terminate a Recovery Host from another installation.', freshness);
+    }
+    idlePackagedHandoff = await proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs });
+  }
   if (freshness.current && forceRefresh !== true) {
     return { required: false, stale: false, descriptor, status, freshness };
   }
@@ -803,7 +908,15 @@ async function bootstrapCurrentRecoveryHost({
     };
     const pid = await spawnRecoveryHost(app, spawnProcess, launchOptions);
     log?.info?.('Started current-checkout Recovery Host through stale-host bootstrap', { operationId: envelope.operation_id, oldPid: ownerPid, pid });
-    return { required: true, stale: true, bootstrap: envelope, bootstrap_path: file, pid, freshness };
+    return {
+      required: true,
+      stale: true,
+      bootstrap: envelope,
+      bootstrap_path: file,
+      pid,
+      freshness,
+      ...(idlePackagedHandoff ? { idle_packaged_handoff: idlePackagedHandoff } : {})
+    };
   } catch (error) {
     const state = String(error?.code || '') === 'RECOVERY_BOOTSTRAP_EXPIRED' || Date.now() >= envelope.expires_at_unix_ms
       ? 'expired' : 'failed';
@@ -861,6 +974,7 @@ module.exports = {
   canonicalDigest,
   bootstrapCapability,
   assessRecoveryHostFreshness,
+  proveIdlePackagedHandoff,
   buildBootstrapEnvelope,
   validateBootstrapEnvelope,
   readBootstrapEnvelope,

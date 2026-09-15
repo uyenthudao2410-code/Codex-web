@@ -1,0 +1,1649 @@
+[
+  {
+    "version": 2,
+    "task_id": "1484dce459fc4876957929f9d783087f",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "08E66BcJErtyVweEq7dXi84L",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1711,
+      "finished_at": "2026-09-15T09:03:14.970Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T09:03:12.723Z",
+    "updated_at": "2026-09-15T09:03:14.970Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:03:12.723Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:13.648Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $root=Join-Path $env:APPDATA 'web-mcp-assistant'; $manifest=Join-Path $root 'recovery-supervisor\\manifest.json'; $status=Join-Path $root 'recovery-supervisor-status.json'; $desc=Join-Path $root 'recovery-host.json'; function H([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}else{",
+          "session_id": "08E66BcJErtyVweEq7dXi84L"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:14.970Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $root=Join-Path $env:APPDATA 'web-mcp-assistant'; $manifest=Join-Path $root 'recovery-supervisor\\manifest.json'; $status=Join-Path $root 'recovery-supervisor-status.json'; $desc=Join-Path $root 'recovery-host.json'; function H([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}else{",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:03:27.553Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "6d53b0d6a82b4070a3fdb07f5325131d",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "rjpp7zKGPLDafz41zPPjJILH",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 255,
+      "duration_ms": 1110,
+      "finished_at": "2026-09-15T09:03:44.118Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T09:03:27.554Z",
+    "updated_at": "2026-09-15T09:03:44.118Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:03:27.554Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:28.281Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $root=Join-Path $env:APPDATA 'web-mcp-assistant'; $manifest=Join-Path $root 'recovery-supervisor\\manifest.json'; $status=Join-Path $root 'recovery-supervisor-status.json'; $desc=Join-Path $root 'recovery-host.json'; function HashFile([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(",
+          "session_id": "aC7Br4ykNBo2T1lijduKqnpR"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:30.034Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $root=Join-Path $env:APPDATA 'web-mcp-assistant'; $manifest=Join-Path $root 'recovery-supervisor\\manifest.json'; $status=Join-Path $root 'recovery-supervisor-status.json'; $desc=Join-Path $root 'recovery-host.json'; function HashFile([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant(",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:43.593Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"rg -n \\\"last_spawned_pid|function Install-Supervisor|function Run-Supervisor|Write-SupervisorStatus|state = 'healthy'|state='healthy'\\\" resources/recovery-supervisor/recovery-supervisor.ps1; Write-Output '---RUN BLOCK---'; Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-supervisor.ps1' | Select-Object -Skip 720 -First 250; Write-Output '---INSTALL BLOCK---'; Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-superviso",
+          "session_id": "rjpp7zKGPLDafz41zPPjJILH"
+        }
+      },
+      {
+        "time": "2026-09-15T09:03:44.118Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"rg -n \\\"last_spawned_pid|function Install-Supervisor|function Run-Supervisor|Write-SupervisorStatus|state = 'healthy'|state='healthy'\\\" resources/recovery-supervisor/recovery-supervisor.ps1; Write-Output '---RUN BLOCK---'; Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-supervisor.ps1' | Select-Object -Skip 720 -First 250; Write-Output '---INSTALL BLOCK---'; Get-Content -LiteralPath 'resources/recovery-supervisor/recovery-superviso",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:03:55.310Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "17f84fb47138456ea617df92a5a66781",
+    "orchestration": {
+      "run_id": "2bc2b16616de4077857003881bd16256",
+      "wave_id": "870b8f57db2345ae959422d568998d43",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+      "contract_fp": ""
+    },
+    "objective": "Diagnose the current packaged Recovery Supervisor Install failure for C01/M02 on Machine A without leaving packaged state behind. The previous Install reached the official installed supervisor script, returned exit 1 after about 26 seconds, and the wrapper successfully restored development/healthy state. Current rollback state is supervisor development/healthy and Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a. Re-run the exact packaged Install only to capture its official JSON output and a safe non-secret transitional snapshot before rollback: manifest mode/hash, supervisor state/pid/last_check/last_error/capability/manifest_sha/last_host/last_spawned, Scheduled Task state/last result/action. Never expose recovery descriptor token. Always restore development supervisor afterward whether Install succeeds or fails, and verify rollback health plus unchanged Recovery Host identity. Do not reboot/logoff/restart runtime, edit source, commit, push, release, publish, or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T09:37:52.260Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T09:37:52.260Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "gauo5ZWfRnx2jph0Uus_MQcM",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T09:37:50.825Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "unavailable",
+          "criteria_total": 12,
+          "criteria_proven": null,
+          "criteria_unresolved": null,
+          "coverage_status": "UNAVAILABLE",
+          "missing_reason": "attempt_pair_window_truncated",
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "UNAVAILABLE",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 50,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": true,
+            "missing_reason": "attempt_pair_window_truncated"
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "2bc2b16616de4077857003881bd16256",
+          "wave_id": "870b8f57db2345ae959422d568998d43",
+          "checkpoint_id": "6c821be1d56f4db196d8c2f5032c8cfd"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 55,
+        "latest_event": {
+          "seq": 299,
+          "event_id": "prl-bind-47fbba6063b3671406f268a29531d513255b37889e711e0a683a398c9e36c25b",
+          "event_hash": "790b63e84943c45cfe0c59f32c0159f8dd9ec6ce70cfcd11d0bb471dbdd9e585",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T09:05:08.223Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 157,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 106,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 15,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 36,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 126,
+          "head_hash": "a1b6c357935ccb198a60f090f208d3c0dbec36c62138d7762fa8ed0a545815c5"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\wave-004.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-2bc2b16616de4077857003881bd16256\\wave-005.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "2bc2b16616de4077857003881bd16256",
+        "wave_id": "870b8f57db2345ae959422d568998d43",
+        "checkpoint_id": "6c821be1d56f4db196d8c2f5032c8cfd",
+        "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Diagnose the current packaged Recovery Supervisor Install failure for C01/M02 on Machine A without leaving packaged state behind. The previous Install reached the official installed supervisor script, returned exit 1 after about 26 seconds, and the wrapper successfully restored development/healthy state. Current rollback state is supervisor development/healthy PID 43300 and Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a. Re-run the exact packaged Install only to capture its official JSON output and a safe non-secret transitional snapshot before rollback: manifest mode/hash, supervisor state/pid/last_check/last_error/capability/manifest_sha/last_host/last_spawned, Scheduled Task state/last result/action. Never expose recovery descriptor token. Always restore development supervisor afterward whether Install succeeds or fails, and verify rollback health plus unchanged Recovery Host identity. Do not reboot/logoff/restart runtime, edit source, commit, push, release, publish, or deploy.",
+          "objective_revision": 5,
+          "objective_sha256": "da63505e8814db3b0e107e5596a4bd5f80b4c507cf828a8eca402b7412a8fa9c",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "b872f2db0baa4788b1b4ead3a3dcda0f",
+            "stage_id": "check:cf7f79ca69217ce2",
+            "status": "passed",
+            "duration_ms": 26478,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "2d0cc9516a9177b5928d216c5fadc723776386b6baf86c053a9daa5be45f54fc",
+    "completion_report_acknowledged_id": "2d0cc9516a9177b5928d216c5fadc723776386b6baf86c053a9daa5be45f54fc",
+    "completion_report_acknowledged_at": "2026-09-15T09:39:02.696Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T09:03:55.311Z",
+    "updated_at": "2026-09-15T09:39:43.553Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:07:05.546Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:07.135Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:07.466Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:09.712Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:09.712Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:10.146Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PERMISSION_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:07:23.234Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:08:09.109Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:08:09.687Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-15T09:08:50.019Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:08:57.409Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:08:57.422Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:32.233Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:33.458Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:35.318Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:35.326Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:36.925Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:37.301Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:39.324Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$packagedExe=Join-Path $acc 'Coding Tools MCP.exe';$packagedScript=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$packagedLauncher=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$devScript=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';",
+          "session_id": "UWPDfDOdjuxXPMsnI0DBFl3y"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:40.699Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$packagedExe=Join-Path $acc 'Coding Tools MCP.exe';$packagedScript=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$packagedLauncher=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$devScript=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:41.625Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:43.050Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:43.052Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:43.173Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:45.028Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "d492085c8c8ece37e157072e4428d2a706744daf2b9c5f7499fd3f8b60a35c19"
+        }
+      },
+      {
+        "time": "2026-09-15T09:09:45.423Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:10:00.999Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:10:01.396Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:11:05.396Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "d492085c8c8ece37e157072e4428d2a706744daf2b9c5f7499fd3f8b60a35c19"
+        }
+      },
+      {
+        "time": "2026-09-15T09:11:20.405Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:11:21.640Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:11:27.680Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:11:27.690Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:45.605Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:46.759Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:48.710Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:48.719Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:50.349Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:50.650Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:52.448Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$packagedExe=Join-Path $acc 'Coding Tools MCP.exe';$packagedScript=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$packagedLauncher=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$devScript=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';",
+          "session_id": "y2RRgWQnwEFyXYjH7jSEvbBM"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:53.549Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$packagedExe=Join-Path $acc 'Coding Tools MCP.exe';$packagedScript=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$packagedLauncher=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$devScript=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:54.306Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:56.449Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:56.452Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:56.478Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:58.593Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "dbd5386d28555fa7dfeed4717fa169fba21c2c6ddd336883109d9e7b23cc0e47"
+        }
+      },
+      {
+        "time": "2026-09-15T09:12:59.287Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:17.058Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:20.131Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "dbd5386d28555fa7dfeed4717fa169fba21c2c6ddd336883109d9e7b23cc0e47"
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:41.187Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:42.836Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:49.327Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:13:49.337Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:29.670Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:30.565Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:31.713Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:31.730Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:32.866Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:33.257Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:34.375Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$e=Join-Path $a 'Coding Tools MCP.exe';$s=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$l=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$r=Join-Path $env:APPDATA 'web-mcp-assistant';$m=Get-Content -Raw (Join-Path $r 'recovery-supervisor\\manifest.json')|ConvertFrom-Json;$z=Get-Content -Raw ",
+          "session_id": "d7dugYC7CeRwQQN5D5ozsEfh"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:37.582Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$e=Join-Path $a 'Coding Tools MCP.exe';$s=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$l=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';$r=Join-Path $env:APPDATA 'web-mcp-assistant';$m=Get-Content -Raw (Join-Path $r 'recovery-supervisor\\manifest.json')|ConvertFrom-Json;$z=Get-Content -Raw ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:14:39.149Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $a 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.exe';$",
+          "session_id": "bLi3qKXKLJgBSer2WC5Qlld1"
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:04.701Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $a 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.exe';$",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:05.384Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:06.521Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:06.527Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:06.540Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:06.808Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "2315540a0226d66497581af0c3f650b4b327255f958ec5bc38412f71c48e9f2e"
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:06.940Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:15.471Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:15:17.927Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:16:37.311Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "2315540a0226d66497581af0c3f650b4b327255f958ec5bc38412f71c48e9f2e"
+        }
+      },
+      {
+        "time": "2026-09-15T09:19:21.076Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:19:21.803Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-15T09:19:47.051Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:19:54.095Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:19:54.105Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:18.949Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:20.396Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:22.190Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:22.198Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:23.781Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:24.075Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:25.712Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $a 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.exe';$",
+          "session_id": "gauo5ZWfRnx2jph0Uus_MQcM"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:50.825Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$a=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $a 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $a 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.exe';$",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:52.022Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:52.260Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:53.090Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:53.096Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:53.434Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "9bbd9428237dbb820fae3da7395d945b92649d08bffbb9bea0f577952d9638c3"
+        }
+      },
+      {
+        "time": "2026-09-15T09:37:53.793Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:04.870Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:05.327Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:12.466Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:39.446Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:39.453Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:39.773Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "2d0cc9516a9177b5928d216c5fadc723776386b6baf86c053a9daa5be45f54fc"
+        }
+      },
+      {
+        "time": "2026-09-15T09:38:52.386Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:02.696Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "2d0cc9516a9177b5928d216c5fadc723776386b6baf86c053a9daa5be45f54fc"
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:43.553Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:39:44.226Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "1ffdcd9d63f446a0a04b1a7657c9f495",
+    "orchestration": {
+      "run_id": "3f19f32283594da4aa307161a21a88b8",
+      "wave_id": "14f630349956401da959305baf2d5ede",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+      "contract_fp": ""
+    },
+    "objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, discriminate whether the packaged Recovery Supervisor failure is inside the packaged script/manifest path or only in the Scheduled Task launch context. Start from development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a. Attempt the exact packaged Install once. If Install returns nonzero, while its packaged manifest is still active and before rollback, invoke the installed roaming recovery-supervisor.ps1 directly with -Action Once and capture only safe status/manifest/task fields and the official JSON output; never read or print the recovery descriptor token. Always restore the development supervisor afterward and verify development/healthy plus unchanged Recovery Host identity. Do not reboot yet, do not edit source, commit, push, release, publish, or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T09:40:23.704Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T09:40:23.704Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "XLUgN6lQJ-9JvJQZ4Jv4IFgq",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T09:40:23.066Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "unavailable",
+          "criteria_total": 12,
+          "criteria_proven": null,
+          "criteria_unresolved": null,
+          "coverage_status": "UNAVAILABLE",
+          "missing_reason": "attempt_pair_window_truncated",
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "UNAVAILABLE",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 50,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": true,
+            "missing_reason": "attempt_pair_window_truncated"
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "3f19f32283594da4aa307161a21a88b8",
+          "wave_id": "14f630349956401da959305baf2d5ede",
+          "checkpoint_id": "33668ceeeecb4b81871a8ef59b7c760a"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 56,
+        "latest_event": {
+          "seq": 302,
+          "event_id": "prl-bind-4f205a15776249a6e928ce81b78785d871c81f408e7c5cd49421945ad65b8810",
+          "event_hash": "218a6b0e40534e46750c887bdaf441aa05a71ce27c1b2d2575e88d96692c5e63",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T09:39:46.618Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 160,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 107,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 16,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 37,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "9066372b59ac122912869cd3569980799a37ede6f9262ec3179071aa8b6753d8"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3f19f32283594da4aa307161a21a88b8\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-3f19f32283594da4aa307161a21a88b8\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "3f19f32283594da4aa307161a21a88b8",
+        "wave_id": "14f630349956401da959305baf2d5ede",
+        "checkpoint_id": "33668ceeeecb4b81871a8ef59b7c760a",
+        "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, discriminate whether the packaged Recovery Supervisor failure is inside the packaged script/manifest path or only in the Scheduled Task launch context. Start from development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a. Attempt the exact packaged Install once. If Install returns nonzero, while its packaged manifest is still active and before rollback, invoke the installed roaming recovery-supervisor.ps1 directly with -Action Once and capture only safe status/manifest/task fields and the official JSON output; never read or print the recovery descriptor token. Always restore the development supervisor afterward and verify development/healthy plus unchanged Recovery Host identity. Do not reboot yet, do not edit source, commit, push, release, publish, or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "97e91b2bddc4cc9e1ddf6086a91cb5263c12ca6c51dd541005adfc46f98b1395",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "685d98e55617435c8f3d4ea396e7137e",
+            "stage_id": "check:cc8d3cdeb6f66ca8",
+            "status": "passed",
+            "duration_ms": 28088,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "50b31b7eeb1a9758044d99018affded1a6f573db88031b171dbc2f593d9d00c6",
+    "completion_report_acknowledged_id": "50b31b7eeb1a9758044d99018affded1a6f573db88031b171dbc2f593d9d00c6",
+    "completion_report_acknowledged_at": "2026-09-15T09:42:16.312Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T09:39:44.226Z",
+    "updated_at": "2026-09-15T09:42:40.593Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:39:44.226Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, discriminate whether the packaged Recovery Supervisor failure is inside the packaged script/manifest path or only in the Scheduled Task launch context. Start from development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a. Attempt the exact packaged Install once. If Install returns nonzero, while its packaged manifest is still active and before rollback, invoke the installed roaming recovery-supervisor.ps1 directly with -Action Once and capture only safe status/manifest/task fields and the official JSON output; never read or print the recovery descriptor token. Always restore the development supervisor afterward and verify development/healthy plus unchanged Recovery Host identity. Do not reboot yet, do not edit source, commit, push, release, publish, or deploy."
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:47.308Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:50.322Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:52.573Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:52.579Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:54.334Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:54.673Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:39:56.776Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $acc 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.",
+          "session_id": "XLUgN6lQJ-9JvJQZ4Jv4IFgq"
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:23.066Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $acc 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:23.697Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:23.704Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:24.908Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:24.911Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:25.069Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "4194058232d967e78082051a932ffce5f0a76783fbb25ad3abdefa99588e5b13"
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:25.300Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T09:40:33.097Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:41:08.416Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T09:41:08.418Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:41:08.543Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "50b31b7eeb1a9758044d99018affded1a6f573db88031b171dbc2f593d9d00c6"
+        }
+      },
+      {
+        "time": "2026-09-15T09:42:06.422Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:42:16.312Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "50b31b7eeb1a9758044d99018affded1a6f573db88031b171dbc2f593d9d00c6"
+        }
+      },
+      {
+        "time": "2026-09-15T09:42:40.593Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:42:41.281Z",
+    "archive_reason": "finished"
+  }
+]

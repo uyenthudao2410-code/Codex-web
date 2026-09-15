@@ -10,7 +10,7 @@
 - Base HEAD: `ae04947d5969e9ee92bf1fe7532bf30e186f8280`
 - Worktree fingerprint: `a6ecbad2c9ddda465e21bcafcc4666dea24f3feeebd8c63ca2f1ad006984e632`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **replanned**
 
 ## Delegations
 
@@ -72,6 +72,20 @@
 | 55379 | 2026-09-14T14:03:26.700Z | observation_span_recorded |  |  |  |
 | 55380 | 2026-09-14T14:03:26.893Z | state_transition | PROVING | ACCEPTING | reason=required_proof_green |
 | 55381 | 2026-09-14T14:03:27.094Z | observation_stage_anchor_recorded | ACCEPTING | ACCEPTING |  |
+| 55518 | 2026-09-15T02:23:32.810Z | managed_process_admitted |  |  | owner=default |
+| 55519 | 2026-09-15T02:23:33.206Z | managed_process_started |  |  | owner=default |
+| 55520 | 2026-09-15T02:23:33.911Z | managed_process_terminal |  |  | owner=default |
+| 55521 | 2026-09-15T02:23:46.692Z | managed_process_admitted |  |  | owner=default |
+| 55522 | 2026-09-15T02:23:47.002Z | managed_process_started |  |  | owner=default |
+| 55523 | 2026-09-15T02:23:47.979Z | managed_process_terminal |  |  | owner=default |
+| 55524 | 2026-09-15T02:23:58.766Z | managed_process_admitted |  |  | owner=default |
+| 55525 | 2026-09-15T02:23:59.194Z | managed_process_started |  |  | owner=default |
+| 55526 | 2026-09-15T02:23:59.867Z | managed_process_terminal |  |  | owner=default |
+| 55527 | 2026-09-15T02:24:17.418Z | continuity_telemetry_recorded |  |  |  |
+| 55528 | 2026-09-15T02:25:09.061Z | failure_observed | ACCEPTING | ACCEPTING | reason=Wave A no-progress semantics are technically proven: source invariants inspected and python -m pytest tests/test_run_continuation.py -q passed 49 tests + 2 subtests. Reject only because the current RUN objective and canonical Problem revision 2 are not yet complete: Gap B privacy-safe natural/synthetic/legacy_unknown telemetry provenance and later integrated/live acceptance gates remain. Preserve the proven Wave A bytes and proof; do not rollback.; failure_class=SOL_REJECTED |
+| 55529 | 2026-09-15T02:25:09.336Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
+| 55530 | 2026-09-15T02:25:09.640Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 55531 | 2026-09-15T02:27:04.784Z | continuity_telemetry_recorded |  |  |  |
 
 ## Proof
 
@@ -88,5 +102,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `94`
-- Chain head: `db3d751be79d5d288267673e14a2cabad9916d5d69505452729fe1d6649f27f9`
+- Events checked: `173`
+- Chain head: `261209329a985f9fff66d9dcb7859f4d6edf27472b5b2e13cc1f1661cf05486e`

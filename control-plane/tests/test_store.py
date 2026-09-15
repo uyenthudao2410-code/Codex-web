@@ -1,11 +1,69 @@
 from __future__ import annotations
 
+import io
+import hashlib
+import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
+import sqlite3
+import threading
+import urllib.error
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
 
-from control_plane.node_agent import parse_dev_ui_status, runtime_readiness
-from control_plane.store import ConflictError, ControlPlaneStore, PermissionError
+from control_plane.maintenance import main as maintenance_main
+from control_plane.node_agent import (
+    READ_ONLY_JOURNAL_SCHEMA_VERSION,
+    _journal_path,
+    _request,
+    _read_journal,
+    _read_only_bridge_request,
+    _write_json_atomic,
+    parse_dev_ui_status,
+    poll,
+    poll_read_only_once,
+    recovery_identity_observation,
+    runtime_heartbeat_projection,
+    runtime_readiness,
+)
+from control_plane.store import (
+    ConflictError,
+    ControlPlaneStore,
+    NotFoundError,
+    PermissionError,
+    ValidationError,
+    create_recovery_restore_candidate,
+    create_verified_backup,
+    inspect_verified_snapshot,
+)
+
+
+FACADE_CONTRACT = {
+    "schema_version": 3,
+    "profile": "control-plane-read-only-queue-v2",
+    "sha256": "f" * 64,
+}
+
+
+class _CommitFailingConnection:
+    """Inject a post-write COMMIT failure while keeping SQLite rollback real."""
+
+    def __init__(self, connection: sqlite3.Connection) -> None:
+        self._connection = connection
+
+    def execute(self, statement: str, parameters: object = ()) -> sqlite3.Cursor:
+        if statement.strip().upper() == "COMMIT":
+            self._connection.execute("ROLLBACK")
+            raise sqlite3.OperationalError("simulated durable commit failure")
+        return self._connection.execute(statement, parameters)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._connection, name)
 
 
 class ControlPlaneStoreTests(unittest.TestCase):
@@ -25,12 +83,138 @@ class ControlPlaneStoreTests(unittest.TestCase):
         request = self.store.create_work_request(owner_id="owner_default", context_id=context["context_id"], objective="Inspect canary", criteria={"kind": "read_only"}, scope={"root": "canary"}, expires_at_ms=self.now + 30_000)
         return context, request
 
+    def _ready_node(self, *, runtime_instance_id: str = "runtime-alpha", mcp_server_instance_id: str = "server-alpha", activation_epoch: str = "epoch-alpha", contract_version: str = "smart-v3") -> None:
+        self.store.heartbeat(
+            device_id="device-alpha",
+            endpoint_id="endpoint-alpha",
+            runtime_instance_id=runtime_instance_id,
+            mcp_server_instance_id=mcp_server_instance_id,
+            activation_epoch=activation_epoch,
+            contract_version=contract_version,
+            readiness="ready",
+        )
+
     def test_context_is_owner_and_binding_scoped(self) -> None:
         context, _ = self._request()
         with self.assertRaises(PermissionError):
             self.store.context(owner_id="another_owner", context_id=context["context_id"])
         self.assertEqual(context["device_id"], "device-alpha")
         self.assertEqual(context["workspace_id"], "workspace-alpha")
+
+    def test_two_bound_nodes_with_the_same_workspace_id_poll_only_their_own_action(self) -> None:
+        bravo = self.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-bravo",
+            endpoint_id="endpoint-bravo",
+            display_name="Bravo node",
+        )
+        alpha_binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Alpha shared path",
+        )
+        bravo_binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id=bravo["device_id"],
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Bravo shared path",
+        )
+        alpha_context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=alpha_binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        bravo_context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=bravo_binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        alpha_request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=alpha_context["context_id"],
+            objective="Inspect alpha binding",
+            criteria={"kind": "read_only"},
+            scope={"root": "shared"},
+            expires_at_ms=self.now + 30_000,
+        )
+        bravo_request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=bravo_context["context_id"],
+            objective="Inspect bravo binding",
+            criteria={"kind": "read_only"},
+            scope={"root": "shared"},
+            expires_at_ms=self.now + 30_000,
+        )
+        alpha_action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=alpha_request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-shared-path-alpha-0001",
+            admission_reference="admission-shared-path-alpha-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        bravo_action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=bravo_request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-shared-path-bravo-0001",
+            admission_reference="admission-shared-path-bravo-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        self.store.heartbeat(
+            device_id=bravo["device_id"],
+            endpoint_id="endpoint-bravo",
+            runtime_instance_id="runtime-bravo",
+            mcp_server_instance_id="server-bravo",
+            activation_epoch="epoch-bravo",
+            contract_version="smart-v3",
+            readiness="ready",
+        )
+
+        alpha_delivered = self.store.poll_actions(device_id="device-alpha")
+        bravo_delivered = self.store.poll_actions(device_id=bravo["device_id"])
+        self.assertEqual([item["action_id"] for item in alpha_delivered], [alpha_action["action_id"]])
+        self.assertEqual([item["action_id"] for item in bravo_delivered], [bravo_action["action_id"]])
+        self.assertEqual(alpha_delivered[0]["device_id"], "device-alpha")
+        self.assertEqual(bravo_delivered[0]["device_id"], bravo["device_id"])
+        self.assertEqual(alpha_delivered[0]["workspace_id"], bravo_delivered[0]["workspace_id"])
+        self.assertEqual(alpha_delivered[0]["workspace_generation"], bravo_delivered[0]["workspace_generation"])
+        self.assertNotEqual(alpha_delivered[0]["binding_id"], bravo_delivered[0]["binding_id"])
+        self.assertNotEqual(alpha_delivered[0]["context_id"], bravo_delivered[0]["context_id"])
+
+    def test_observation_inventory_is_owner_scoped_and_omits_node_credentials(self) -> None:
+        context, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-0020",
+            admission_reference="admission-0020",
+            expires_at_ms=self.now + 20_000,
+        )
+        node = self.store.node_observation(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(node["device_id"], "device-alpha")
+        self.assertNotIn("credential_hash", node)
+        self.assertNotIn("node_secret", node)
+        self.assertEqual([item["device_id"] for item in self.store.list_nodes(owner_id="owner_default")], ["device-alpha"])
+        self.assertEqual(self.store.list_nodes(owner_id="another_owner"), [])
+        self.assertEqual([item["context_id"] for item in self.store.list_contexts(owner_id="owner_default")], [context["context_id"]])
+        self.assertEqual([item["request_id"] for item in self.store.list_work_requests(owner_id="owner_default")], [request["request_id"]])
+        observed_request = self.store.work_request_observation(owner_id="owner_default", request_id=request["request_id"])
+        self.assertEqual([item["action_id"] for item in observed_request["actions"]], [action["action_id"]])
+        self.assertNotIn("arguments_json", observed_request["actions"][0])
+        self.assertNotIn("admission_reference", observed_request["actions"][0])
+        with self.assertRaises(PermissionError):
+            self.store.node_observation(owner_id="another_owner", device_id="device-alpha")
+        with self.assertRaises(PermissionError):
+            self.store.work_request_observation(owner_id="another_owner", request_id=request["request_id"])
 
     def test_sealed_action_replays_only_when_immutable_payload_matches(self) -> None:
         _, request = self._request()
@@ -40,23 +224,158 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(ConflictError):
             self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "other"}, idempotency_key="action-key-0001", admission_reference="admission-0001", expires_at_ms=self.now + 20_000)
 
-    def test_poll_marks_delivery_unknown_before_return_and_receipt_settles(self) -> None:
+    def test_mcp_read_only_intent_is_atomic_fixed_and_replays_only_exactly(self) -> None:
+        context, _ = self._request()
+        request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="A generic action must not impersonate the fixed read-only lane.",
+            criteria={"kind": "read_only"},
+            scope={"kind": "workspace_context"},
+            expires_at_ms=self.now + 30_000,
+        )
+        with self.assertRaisesRegex(ValidationError, "reserved for the MCP facade"):
+            self.store.seal_action(
+                owner_id="owner_default",
+                request_id=request["request_id"],
+                tool_name="workspace_context",
+                arguments={"detail": "compact", "max_entries": 1},
+                idempotency_key="generic-impersonation-0001",
+                admission_reference="mcp_facade:" + "f" * 64,
+                expires_at_ms=self.now + 20_000,
+            )
+        first = self.store.request_mcp_read_only_workspace_context(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            idempotency_key="mcp-read-only-intent-0001",
+            expires_at_ms=self.now + 20_000,
+            facade_contract=FACADE_CONTRACT,
+        )
+        self.assertFalse(first["replayed"])
+        action = self.store.action(owner_id="owner_default", action_id=first["action_id"])
+        self.assertEqual(action["tool_name"], "workspace_context")
+        self.assertEqual(json.loads(action["arguments_json"]), {"detail": "compact", "max_entries": 1})
+        self.assertEqual(action["admission_reference"], f"mcp_facade:{first['intent_digest']}")
+        self.assertEqual(self.store.health()["counts"]["mcp_read_only_intents"], 1)
+        self.assertEqual(self.store.health()["counts"]["work_requests"], 3)
+        self.assertEqual(self.store.health()["counts"]["actions"], 1)
+
+        replay = self.store.request_mcp_read_only_workspace_context(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            idempotency_key="mcp-read-only-intent-0001",
+            expires_at_ms=self.now + 20_000,
+            facade_contract=FACADE_CONTRACT,
+        )
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(replay["request_id"], first["request_id"])
+        self.assertEqual(replay["action_id"], first["action_id"])
+        with self.assertRaisesRegex(ConflictError, "idempotency key"):
+            self.store.request_mcp_read_only_workspace_context(
+                owner_id="owner_default",
+                context_id=context["context_id"],
+                idempotency_key="mcp-read-only-intent-0001",
+                expires_at_ms=self.now + 20_001,
+                facade_contract=FACADE_CONTRACT,
+            )
+        self.assertEqual(self.store.health()["counts"]["mcp_read_only_intents"], 1)
+        self.assertEqual(self.store.health()["counts"]["actions"], 1)
+
+        self._ready_node()
+        delivered = self.store.poll_actions(device_id="device-alpha")
+        self.assertEqual([item["action_id"] for item in delivered], [first["action_id"]])
+        self.assertEqual(delivered[0]["mcp_read_only_intent_digest"], first["intent_digest"])
+        self.assertEqual(delivered[0]["admission_reference"], f"mcp_facade:{first['intent_digest']}")
+        self.assertEqual(delivered[0]["mcp_facade_schema_version"], FACADE_CONTRACT["schema_version"])
+        self.assertEqual(delivered[0]["mcp_facade_profile"], FACADE_CONTRACT["profile"])
+        self.assertEqual(delivered[0]["mcp_facade_contract_sha256"], FACADE_CONTRACT["sha256"])
+
+        self.store.set_admission_mode(mode="recovery")
+        with self.assertRaisesRegex(ConflictError, "recovery"):
+            self.store.request_mcp_read_only_workspace_context(
+                owner_id="owner_default",
+                context_id=context["context_id"],
+                idempotency_key="mcp-read-only-intent-0002",
+                expires_at_ms=self.now + 20_000,
+                facade_contract=FACADE_CONTRACT,
+            )
+        self.assertEqual(self.store.health()["counts"]["mcp_read_only_intents"], 1)
+        self.assertEqual(self.store.health()["counts"]["actions"], 1)
+
+    def test_commit_failure_does_not_ack_or_persist_the_fixed_read_only_intent(self) -> None:
+        context, _ = self._request()
+        original_connection = self.store._connection
+
+        @contextmanager
+        def commit_failure_connection():
+            with original_connection() as connection:
+                yield _CommitFailingConnection(connection)
+
+        with mock.patch.object(self.store, "_connection", commit_failure_connection):
+            with self.assertRaisesRegex(sqlite3.OperationalError, "simulated durable commit failure"):
+                self.store.request_mcp_read_only_workspace_context(
+                    owner_id="owner_default",
+                    context_id=context["context_id"],
+                    idempotency_key="action-key-commit-failure-0001",
+                    expires_at_ms=self.now + 20_000,
+                    facade_contract=FACADE_CONTRACT,
+                )
+
+        with self.store._connection() as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM mcp_read_only_intents").fetchone()[0], 0)
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM actions").fetchone()[0], 0)
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM events WHERE event_type = 'mcp_read_only_intent_created'"
+                ).fetchone()[0],
+                0,
+            )
+        self._ready_node()
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+
+    def test_poll_requires_fresh_attributable_ready_node_and_receipt_replays(self) -> None:
         _, request = self._request()
         action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0002", admission_reference="admission-0002", expires_at_ms=self.now + 20_000)
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        self._ready_node()
         polled = self.store.poll_actions(device_id="device-alpha")
         self.assertEqual([item["action_id"] for item in polled], [action["action_id"]])
         self.assertEqual(polled[0]["delivery_state"], "dispatch_unconfirmed")
-        retry = self.store.poll_actions(device_id="device-alpha")
-        self.assertEqual(retry[0]["action_id"], action["action_id"])
-        receipt = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], receipt_state="completed", local_handle="cmd-1", payload={"proof": "ok"})
-        self.assertEqual(receipt["delivery_state"], "settled")
+        self.assertTrue(polled[0]["attempt_id"].startswith("try_"))
         self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        receipt = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=polled[0]["attempt_id"], receipt_state="completed", local_handle="cmd-1", payload={"proof": "ok"})
+        self.assertEqual(receipt["delivery_state"], "settled")
+        self.assertFalse(receipt["replayed"])
+        replay = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=polled[0]["attempt_id"], receipt_state="completed", local_handle="cmd-1", payload={"proof": "ok"})
+        self.assertEqual(replay["receipt_id"], receipt["receipt_id"])
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(len(observation["attempts"]), 1)
+        self.assertEqual(len(observation["receipts"]), 1)
+
+    def test_ordinary_poll_does_not_dequeue_an_action_without_a_receipt_lane(self) -> None:
+        config_path = Path(self.tempdir.name) / "ordinary-poll-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "http://127.0.0.1:8765",
+            "device_id": "device-alpha",
+            "node_secret": "node-secret-ordinary-poll-0001",
+        }), encoding="utf-8")
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request") as request, redirect_stdout(output):
+            self.assertEqual(poll(SimpleNamespace(config=str(config_path), limit=10)), 0)
+        request.assert_not_called()
+        self.assertEqual(json.loads(output.getvalue()), {
+            "received_action_ids": [],
+            "execution": "not_implemented",
+            "code": "POLL_EXECUTION_DISABLED",
+        })
 
     def test_cross_node_receipt_is_refused(self) -> None:
         _, request = self._request()
         action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0003", admission_reference="admission-0003", expires_at_ms=self.now + 20_000)
         with self.assertRaises(PermissionError):
-            self.store.record_receipt(device_id="device-other", action_id=action["action_id"], receipt_state="accepted", local_handle="", payload={})
+            self.store.record_receipt(device_id="device-other", action_id=action["action_id"], attempt_id="try-other-0001", receipt_state="accepted", local_handle="handle-other", payload={})
 
     def test_unknown_tool_and_receipt_before_poll_are_refused(self) -> None:
         _, request = self._request()
@@ -64,7 +383,628 @@ class ControlPlaneStoreTests(unittest.TestCase):
             self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="arbitrary_shell", arguments={}, idempotency_key="action-key-0004", admission_reference="admission-0004", expires_at_ms=self.now + 20_000)
         action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0005", admission_reference="admission-0005", expires_at_ms=self.now + 20_000)
         with self.assertRaises(ConflictError):
-            self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], receipt_state="accepted", local_handle="", payload={})
+            self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id="try-alpha-0001", receipt_state="accepted", local_handle="handle-alpha", payload={})
+
+    def test_unknown_receipt_requires_terminal_reconciliation_and_never_redelivers(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0006", admission_reference="admission-0006", expires_at_ms=self.now + 20_000)
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        unknown = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="unknown", local_handle="", payload={"reason": "network_lost_after_admission"})
+        self.assertEqual(unknown["delivery_state"], "reconcile_required")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        with self.assertRaises(ConflictError):
+            self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="accepted", local_handle="handle-alpha", payload={})
+        terminal = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="failed", local_handle="", payload={"reason": "confirmed_not_executed"})
+        self.assertEqual(terminal["delivery_state"], "settled")
+
+    def test_rotate_credential_invalidates_old_secret_and_increments_generation(self) -> None:
+        original = self.store.node(device_id="device-alpha")
+        rotated = self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(rotated["credential_generation"], original["credential_generation"] + 1)
+        with self.assertRaises(PermissionError):
+            self.store.authenticate_node(device_id="device-alpha", node_secret=self.node_secret)
+        authenticated = self.store.authenticate_node(device_id="device-alpha", node_secret=rotated["node_secret"])
+        self.assertEqual(authenticated["credential_generation"], rotated["credential_generation"])
+
+    def test_cancel_or_revoke_refuses_never_sent_action_without_settling_sent_action(self) -> None:
+        _, request = self._request()
+        queued = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0010", admission_reference="admission-0010", expires_at_ms=self.now + 20_000)
+        canceled = self.store.cancel_work_request(owner_id="owner_default", request_id=request["request_id"])
+        self.assertEqual(canceled["canceled_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "settled")
+        with self.assertRaises(ConflictError):
+            self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "identity"}, idempotency_key="action-key-0011", admission_reference="admission-0011", expires_at_ms=self.now + 20_000)
+
+        _, second_request = self._request()
+        sent = self.store.seal_action(owner_id="owner_default", request_id=second_request["request_id"], tool_name="workspace_context", arguments={"mode": "identity"}, idempotency_key="action-key-0012", admission_reference="admission-0012", expires_at_ms=self.now + 20_000)
+        self._ready_node()
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha")[0]["action_id"], sent["action_id"])
+        revoked = self.store.revoke_node(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(revoked["revoked_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=sent["action_id"])["delivery_state"], "dispatch_unconfirmed")
+        with self.assertRaises(ConflictError):
+            self.store.seal_action(owner_id="owner_default", request_id=second_request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0014", admission_reference="admission-0014", expires_at_ms=self.now + 20_000)
+
+    def test_revoked_binding_blocks_new_work_and_refuses_queued_actions(self) -> None:
+        context, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0013", admission_reference="admission-0013", expires_at_ms=self.now + 20_000)
+        revoked = self.store.revoke_binding(owner_id="owner_default", binding_id=context["binding_id"])
+        self.assertEqual(revoked["revoked_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "settled")
+        with self.assertRaises(ConflictError):
+            self.store.create_work_request(owner_id="owner_default", context_id=context["context_id"], objective="must not be accepted", criteria={}, scope={}, expires_at_ms=self.now + 10_000)
+
+    def test_closed_context_refuses_queued_actions(self) -> None:
+        context, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0015", admission_reference="admission-0015", expires_at_ms=self.now + 20_000)
+        closed = self.store.close_context(owner_id="owner_default", context_id=context["context_id"])
+        self.assertEqual(closed["closed_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "settled")
+
+    def test_revoked_node_blocks_fresh_context_and_work_request_admission(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-revoked-node",
+            workspace_generation="generation-revoked-node",
+            display_name="Revoked-node workspace",
+        )
+        context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        self.store.revoke_node(owner_id="owner_default", device_id="device-alpha")
+        with self.assertRaisesRegex(ConflictError, "node is revoked"):
+            self.store.create_context(
+                owner_id="owner_default",
+                binding_id=binding["binding_id"],
+                expires_at_ms=self.now + 60_000,
+            )
+        with self.assertRaisesRegex(ConflictError, "node is revoked"):
+            self.store.create_work_request(
+                owner_id="owner_default",
+                context_id=context["context_id"],
+                objective="Must not attach new work to a revoked node",
+                criteria={"kind": "read_only"},
+                scope={"root": "canary"},
+                expires_at_ms=self.now + 30_000,
+            )
+
+    def test_recovery_mode_blocks_new_admission_but_keeps_late_receipts_reconcilable(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0017", admission_reference="admission-0017", expires_at_ms=self.now + 20_000)
+        self._ready_node()
+        self.assertEqual(self.store.set_admission_mode(mode="recovery")["admission_mode"], "recovery")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "queued")
+        with self.assertRaises(ConflictError):
+            self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "identity"}, idempotency_key="action-key-0018", admission_reference="admission-0018", expires_at_ms=self.now + 20_000)
+        self.assertEqual(self.store.set_admission_mode(mode="open")["admission_mode"], "open")
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        self.store.set_admission_mode(mode="recovery")
+        receipt = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="completed", local_handle="cmd-recovery-1", payload={"proof": "late"})
+        self.assertEqual(receipt["delivery_state"], "settled")
+
+    def test_recovery_mode_and_unresolved_receipt_survive_store_reopen(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0019", admission_reference="admission-0019", expires_at_ms=self.now + 20_000)
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="unknown", local_handle="", payload={"reason": "awaiting_reconcile"})
+        self.store.set_admission_mode(mode="recovery")
+        reopened = ControlPlaneStore(self.store.path, clock=lambda: self.now)
+        self.assertEqual(reopened.admission_status()["admission_mode"], "recovery")
+        self.assertEqual(reopened.poll_actions(device_id="device-alpha"), [])
+        observation = reopened.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "reconcile_required")
+        self.assertEqual(len(observation["attempts"]), 1)
+        self.assertEqual(len(observation["receipts"]), 1)
+
+    def test_expired_queued_action_is_refused_without_delivery(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0007", admission_reference="admission-0007", expires_at_ms=self.now + 10_000)
+        self._ready_node()
+        self.now += 10_001
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "settled")
+
+    def test_unverified_or_stale_ready_heartbeat_does_not_admit_delivery(self) -> None:
+        _, request = self._request()
+        first = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0008", admission_reference="admission-0008", expires_at_ms=self.now + 20_000)
+        self._ready_node(runtime_instance_id="unreported")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=first["action_id"])["delivery_state"], "queued")
+
+        self._ready_node(mcp_server_instance_id="unreported")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+
+        self._ready_node()
+        second = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "identity"}, idempotency_key="action-key-0009", admission_reference="admission-0009", expires_at_ms=self.now + 20_000)
+        self.store.heartbeat_max_age_ms = 10
+        self.now += 11
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=second["action_id"])["delivery_state"], "queued")
+
+    def test_legacy_receipts_table_is_migrated_without_claiming_new_provenance(self) -> None:
+        legacy_path = Path(self.tempdir.name) / "legacy.sqlite3"
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                "CREATE TABLE receipts (receipt_id TEXT PRIMARY KEY, action_id TEXT NOT NULL, device_id TEXT NOT NULL, local_handle TEXT, receipt_state TEXT NOT NULL, payload_json TEXT NOT NULL, received_at_ms INTEGER NOT NULL)"
+            )
+            connection.execute(
+                "INSERT INTO receipts VALUES ('rcpt-legacy-001', 'act-legacy-001', 'device-legacy-001', 'handle-legacy', 'completed', '{}', 1700000000000)"
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        ControlPlaneStore(legacy_path, clock=lambda: self.now)
+        connection = sqlite3.connect(legacy_path)
+        try:
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(receipts)")}
+            self.assertIn("receipt_digest", columns)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertIn("mcp_server_instance_id", {row[1] for row in connection.execute("PRAGMA table_info(nodes)")})
+            self.assertEqual(
+                connection.execute("SELECT receipt_digest FROM receipts WHERE receipt_id = 'rcpt-legacy-001'").fetchone()[0],
+                "legacy:rcpt-legacy-001",
+            )
+        finally:
+            connection.close()
+
+    def test_v4_node_observations_gain_the_exact_mcp_server_identity_column(self) -> None:
+        legacy_path = Path(self.tempdir.name) / "v4-nodes.sqlite3"
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                "CREATE TABLE nodes (device_id TEXT PRIMARY KEY, endpoint_id TEXT NOT NULL, owner_id TEXT NOT NULL, display_name TEXT NOT NULL, credential_hash TEXT NOT NULL, credential_created_at_ms INTEGER NOT NULL, credential_generation INTEGER NOT NULL DEFAULT 1, revoked_at_ms INTEGER, last_seen_at_ms INTEGER, runtime_instance_id TEXT, activation_epoch TEXT, contract_version TEXT, readiness TEXT NOT NULL DEFAULT 'unknown')"
+            )
+            connection.execute("PRAGMA user_version = 4")
+            connection.commit()
+        finally:
+            connection.close()
+        ControlPlaneStore(legacy_path, clock=lambda: self.now)
+        connection = sqlite3.connect(legacy_path)
+        try:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertIn("mcp_server_instance_id", {row[1] for row in connection.execute("PRAGMA table_info(nodes)")})
+        finally:
+            connection.close()
+
+    def test_v6_mcp_read_only_intents_gain_an_empty_fail_closed_facade_pin(self) -> None:
+        legacy_path = Path(self.tempdir.name) / "v6-mcp-intents.sqlite3"
+        connection = sqlite3.connect(legacy_path)
+        try:
+            connection.execute(
+                """
+                CREATE TABLE mcp_read_only_intents (
+                    owner_id TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(owner_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
+                )
+                """
+            )
+            connection.execute("PRAGMA user_version = 6")
+            connection.commit()
+        finally:
+            connection.close()
+
+        ControlPlaneStore(legacy_path)
+
+        connection = sqlite3.connect(legacy_path)
+        try:
+            columns = {
+                row[1]: row[4]
+                for row in connection.execute("PRAGMA table_info(mcp_read_only_intents)")
+            }
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertEqual(columns["facade_schema_version"], "0")
+            self.assertEqual(columns["facade_profile"], "''")
+            self.assertEqual(columns["facade_contract_sha256"], "''")
+        finally:
+            connection.close()
+
+    def test_failed_schema_initialization_rolls_back_new_tables_and_version(self) -> None:
+        broken_path = Path(self.tempdir.name) / "broken.sqlite3"
+        connection = sqlite3.connect(broken_path)
+        try:
+            connection.execute("CREATE TABLE receipts (receipt_id TEXT PRIMARY KEY)")
+            connection.commit()
+        finally:
+            connection.close()
+        with self.assertRaises(sqlite3.OperationalError):
+            ControlPlaneStore(broken_path, clock=lambda: self.now)
+        connection = sqlite3.connect(broken_path)
+        try:
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+            self.assertEqual(tables, {"receipts"})
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 0)
+        finally:
+            connection.close()
+
+    def test_backup_api_snapshot_is_verified_and_never_overwrites_destination(self) -> None:
+        backup_path = Path(self.tempdir.name) / "control.backup.sqlite3"
+        snapshot = self.store.backup_to(backup_path)
+        self.assertEqual(snapshot["sqlite_integrity"], "ok")
+        self.assertEqual(snapshot["schema_version"], 7)
+        self.assertGreater(snapshot["bytes"], 0)
+        self.assertEqual(snapshot["snapshot_sha256"], hashlib.sha256(backup_path.read_bytes()).hexdigest())
+        connection = sqlite3.connect(backup_path)
+        try:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM nodes").fetchone()[0], 1)
+        finally:
+            connection.close()
+        with self.assertRaises(ConflictError):
+            self.store.backup_to(backup_path)
+
+    def test_explicit_snapshot_of_an_existing_database_never_initializes_or_migrates_source(self) -> None:
+        source_path = Path(self.tempdir.name) / "legacy-before-migration.sqlite3"
+        destination_path = Path(self.tempdir.name) / "snapshots" / "legacy.sqlite3"
+        connection = sqlite3.connect(source_path)
+        try:
+            connection.execute("CREATE TABLE preserved_marker (value TEXT NOT NULL)")
+            connection.execute("INSERT INTO preserved_marker(value) VALUES ('before-migration')")
+            connection.execute("PRAGMA user_version = 3")
+            connection.commit()
+        finally:
+            connection.close()
+
+        snapshot = create_verified_backup(source_path, destination_path)
+        self.assertEqual(snapshot["sqlite_integrity"], "ok")
+        self.assertEqual(snapshot["schema_version"], 3)
+        self.assertTrue(destination_path.is_file())
+        self.assertEqual(snapshot["snapshot_sha256"], hashlib.sha256(destination_path.read_bytes()).hexdigest())
+        connection = sqlite3.connect(source_path)
+        try:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 3)
+            self.assertEqual(connection.execute("SELECT value FROM preserved_marker").fetchone()[0], "before-migration")
+            self.assertIsNone(connection.execute("SELECT name FROM sqlite_master WHERE name = 'control_plane_state'").fetchone())
+        finally:
+            connection.close()
+
+        missing_source = Path(self.tempdir.name) / "does-not-exist.sqlite3"
+        with self.assertRaises(NotFoundError):
+            create_verified_backup(missing_source, Path(self.tempdir.name) / "missing.sqlite3")
+        self.assertFalse(missing_source.exists())
+
+    def test_maintenance_snapshot_cli_returns_content_free_receipts_and_typed_failure(self) -> None:
+        destination_path = Path(self.tempdir.name) / "cli-snapshot.sqlite3"
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                maintenance_main(["snapshot", "--source", str(self.store.path), "--destination", str(destination_path)]),
+                0,
+            )
+        receipt = json.loads(stdout.getvalue())
+        self.assertEqual(receipt["operation"], "verified_sqlite_snapshot")
+        self.assertEqual(receipt["sqlite_integrity"], "ok")
+        self.assertRegex(receipt["snapshot_sha256"], r"^[a-f0-9]{64}$")
+        self.assertNotIn(str(self.store.path), stdout.getvalue())
+        self.assertNotIn(str(destination_path), stdout.getvalue())
+
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            self.assertEqual(
+                maintenance_main([
+                    "snapshot",
+                    "--source",
+                    str(Path(self.tempdir.name) / "missing.sqlite3"),
+                    "--destination",
+                    str(Path(self.tempdir.name) / "unused.sqlite3"),
+                ]),
+                2,
+            )
+        self.assertEqual(json.loads(stderr.getvalue()), {"error": {"code": "NOT_FOUND"}})
+
+    def test_maintenance_package_fingerprint_is_source_only_and_content_free(self) -> None:
+        before = self.store.health()
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(maintenance_main(["package-fingerprint"]), 0)
+        receipt = json.loads(stdout.getvalue())
+        self.assertEqual(receipt["operation"], "control_plane_package_source_fingerprint")
+        self.assertRegex(receipt["package_source_sha256"], r"^sha256:[a-f0-9]{64}$")
+        self.assertNotIn(str(self.store.path), stdout.getvalue())
+        self.assertEqual(self.store.health(), before)
+
+    def test_recovery_restore_candidate_is_non_overwriting_and_keeps_dispatch_locked(self) -> None:
+        context, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-restore-candidate-0001",
+            admission_reference="admission-restore-candidate-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        source_snapshot = Path(self.tempdir.name) / "restore-candidate-source.sqlite3"
+        source_receipt = self.store.backup_to(source_snapshot)
+        candidate_path = Path(self.tempdir.name) / "restore-candidate.sqlite3"
+
+        candidate = create_recovery_restore_candidate(
+            source_snapshot,
+            candidate_path,
+            expected_sha256=str(source_receipt["snapshot_sha256"]),
+        )
+        self.assertTrue(candidate_path.is_file())
+        self.assertEqual(candidate["admission_mode"], "recovery")
+        self.assertEqual(candidate["source_snapshot_sha256"], source_receipt["snapshot_sha256"])
+        self.assertEqual(candidate["candidate_sha256"], hashlib.sha256(candidate_path.read_bytes()).hexdigest())
+        self.assertEqual(inspect_verified_snapshot(source_snapshot)["admission_mode"], "open")
+        self.assertEqual(inspect_verified_snapshot(candidate_path)["admission_mode"], "recovery")
+        restored = ControlPlaneStore(candidate_path, clock=lambda: self.now)
+        restored.heartbeat(
+            device_id="device-alpha",
+            endpoint_id="endpoint-alpha",
+            runtime_instance_id="runtime-alpha",
+            mcp_server_instance_id="server-alpha",
+            activation_epoch="epoch-alpha",
+            contract_version="smart-v3",
+            readiness="ready",
+        )
+        self.assertEqual(restored.poll_actions(device_id="device-alpha"), [])
+        self.assertEqual(restored.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "queued")
+        with self.assertRaises(ConflictError):
+            create_recovery_restore_candidate(source_snapshot, candidate_path)
+
+        stdout = io.StringIO()
+        cli_path = Path(self.tempdir.name) / "restore-candidate-cli.sqlite3"
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                maintenance_main([
+                    "prepare-recovery-restore",
+                    "--source",
+                    str(source_snapshot),
+                    "--destination",
+                    str(cli_path),
+                    "--expected-sha256",
+                    str(source_receipt["snapshot_sha256"]),
+                ]),
+                0,
+            )
+        cli_receipt = json.loads(stdout.getvalue())
+        self.assertEqual(cli_receipt["operation"], "recovery_restore_candidate")
+        self.assertEqual(cli_receipt["admission_mode"], "recovery")
+        self.assertNotIn(str(source_snapshot), stdout.getvalue())
+        self.assertNotIn(str(cli_path), stdout.getvalue())
+
+    def test_snapshot_inspection_binds_exact_artifact_and_reports_only_reconciliation_preflight(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-snapshot-preflight-0001",
+            admission_reference="admission-snapshot-preflight-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        self.store.record_receipt(
+            device_id="device-alpha",
+            action_id=action["action_id"],
+            attempt_id=attempt,
+            receipt_state="unknown",
+            local_handle="",
+            payload={"reason": "requires_reconciliation"},
+        )
+        snapshot_path = Path(self.tempdir.name) / "restore-preflight.sqlite3"
+        snapshot = self.store.backup_to(snapshot_path)
+        inspected = inspect_verified_snapshot(snapshot_path, expected_sha256=str(snapshot["snapshot_sha256"]))
+        self.assertEqual(inspected["sqlite_integrity"], "ok")
+        self.assertEqual(inspected["snapshot_sha256"], snapshot["snapshot_sha256"])
+        self.assertEqual(inspected["admission_mode"], "open")
+        self.assertEqual(inspected["delivery_state_counts"], {"reconcile_required": 1})
+        self.assertEqual(inspected["unresolved_action_count"], 1)
+        with self.assertRaises(ConflictError):
+            inspect_verified_snapshot(snapshot_path, expected_sha256="f" * 64)
+        with self.assertRaises(ValidationError):
+            inspect_verified_snapshot(snapshot_path, expected_sha256="not-a-sha256")
+        wal_path = Path(f"{snapshot_path}-wal")
+        wal_path.write_bytes(b"not-a-database")
+        try:
+            with self.assertRaises(ConflictError):
+                inspect_verified_snapshot(snapshot_path)
+        finally:
+            wal_path.unlink()
+
+    def test_maintenance_snapshot_inspection_cli_is_read_only_and_returns_typed_digest_conflict(self) -> None:
+        snapshot_path = Path(self.tempdir.name) / "inspection-cli.sqlite3"
+        snapshot = self.store.backup_to(snapshot_path)
+        stdout = io.StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                maintenance_main([
+                    "inspect-snapshot",
+                    "--source",
+                    str(snapshot_path),
+                    "--expected-sha256",
+                    str(snapshot["snapshot_sha256"]),
+                ]),
+                0,
+            )
+        result = json.loads(stdout.getvalue())
+        self.assertEqual(result["operation"], "verified_snapshot_inspection")
+        self.assertEqual(result["snapshot_sha256"], snapshot["snapshot_sha256"])
+        self.assertNotIn(str(snapshot_path), stdout.getvalue())
+        stderr = io.StringIO()
+        with redirect_stderr(stderr):
+            self.assertEqual(
+                maintenance_main([
+                    "inspect-snapshot",
+                    "--source",
+                    str(snapshot_path),
+                    "--expected-sha256",
+                    "f" * 64,
+                ]),
+                2,
+            )
+        self.assertEqual(json.loads(stderr.getvalue()), {"error": {"code": "CONFLICT"}})
+
+    def test_concurrent_poll_delivers_one_attempt_and_concurrent_receipt_replays(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(owner_id="owner_default", request_id=request["request_id"], tool_name="workspace_context", arguments={"mode": "status"}, idempotency_key="action-key-0016", admission_reference="admission-0016", expires_at_ms=self.now + 20_000)
+        self._ready_node()
+
+        def concurrent_call(callback):
+            barrier = threading.Barrier(2)
+            results: list[dict | list] = []
+            errors: list[BaseException] = []
+            lock = threading.Lock()
+
+            def worker() -> None:
+                try:
+                    barrier.wait(timeout=2)
+                    result = callback()
+                    with lock:
+                        results.append(result)
+                except BaseException as error:  # test fixture captures thread failure for assertion below
+                    with lock:
+                        errors.append(error)
+
+            threads = [threading.Thread(target=worker) for _ in range(2)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(timeout=6)
+            self.assertTrue(all(not thread.is_alive() for thread in threads))
+            self.assertEqual(errors, [])
+            return results
+
+        polls = concurrent_call(lambda: self.store.poll_actions(device_id="device-alpha"))
+        delivered = [item for result in polls for item in result]
+        self.assertEqual([item["action_id"] for item in delivered], [action["action_id"]])
+        attempt_id = delivered[0]["attempt_id"]
+        receipts = concurrent_call(
+            lambda: self.store.record_receipt(
+                device_id="device-alpha",
+                action_id=action["action_id"],
+                attempt_id=attempt_id,
+                receipt_state="completed",
+                local_handle="cmd-concurrent-1",
+                payload={"proof": "ok"},
+            )
+        )
+        self.assertEqual(sorted(result["replayed"] for result in receipts), [False, True])
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(len(observation["attempts"]), 1)
+        self.assertEqual(len(observation["receipts"]), 1)
+
+    def test_process_exit_after_dispatch_commit_leaves_action_reconcilable_not_redeliverable(self) -> None:
+        """A real central-process exit after polling cannot create a safe retry.
+
+        The subprocess exits immediately after SQLite commits the attempt and
+        returns it. Reopening in this process must see the durable
+        `dispatch_unconfirmed` state and preserve the exact attempt for a
+        truthful late receipt rather than returning the action again.
+        """
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-0021",
+            admission_reference="admission-0021",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        package_root = Path(__file__).resolve().parents[1]
+        env = {**os.environ, "PYTHONPATH": str(package_root)}
+        program = (
+            "import json, sys\n"
+            "from control_plane.store import ControlPlaneStore\n"
+            "store = ControlPlaneStore(sys.argv[1], clock=lambda: int(sys.argv[2]))\n"
+            "print(json.dumps(store.poll_actions(device_id=sys.argv[3]), separators=(',', ':')))\n"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-W", "error", "-B", "-c", program, str(self.store.path), str(self.now), "device-alpha"],
+            cwd=package_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        delivered = json.loads(completed.stdout)
+        self.assertEqual([item["action_id"] for item in delivered], [action["action_id"]])
+        attempt_id = delivered[0]["attempt_id"]
+
+        reopened = ControlPlaneStore(self.store.path, clock=lambda: self.now)
+        self.assertEqual(reopened.poll_actions(device_id="device-alpha"), [])
+        observation = reopened.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual([item["attempt_id"] for item in observation["attempts"]], [attempt_id])
+        receipt = reopened.record_receipt(
+            device_id="device-alpha",
+            action_id=action["action_id"],
+            attempt_id=attempt_id,
+            receipt_state="unknown",
+            local_handle="",
+            payload={"reason": "node_effect_unconfirmed_after_process_exit"},
+        )
+        self.assertEqual(receipt["delivery_state"], "reconcile_required")
+
+    def test_process_exit_before_dispatch_commit_rolls_back_without_a_phantom_attempt(self) -> None:
+        """A central-process exit before COMMIT must leave no partial delivery.
+
+        The child replaces only the event append immediately after the poll has
+        written the action/attempt rows and then exits the process before the
+        surrounding transaction can commit. SQLite must roll back both writes;
+        a later healthy poll may issue the first and only durable attempt.
+        """
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-0022",
+            admission_reference="admission-0022",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        package_root = Path(__file__).resolve().parents[1]
+        env = {**os.environ, "PYTHONPATH": str(package_root)}
+        program = (
+            "import os, sys\n"
+            "from control_plane.store import ControlPlaneStore\n"
+            "store = ControlPlaneStore(sys.argv[1], clock=lambda: int(sys.argv[2]))\n"
+            "def crash_before_commit(*_args):\n"
+            "    os._exit(73)\n"
+            "store._event = crash_before_commit\n"
+            "store.poll_actions(device_id=sys.argv[3])\n"
+        )
+        completed = subprocess.run(
+            [sys.executable, "-W", "error", "-B", "-c", program, str(self.store.path), str(self.now), "device-alpha"],
+            cwd=package_root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 73, completed.stderr)
+
+        reopened = ControlPlaneStore(self.store.path, clock=lambda: self.now)
+        observation = reopened.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "queued")
+        self.assertEqual(observation["attempts"], [])
+        delivered = reopened.poll_actions(device_id="device-alpha")
+        self.assertEqual([item["action_id"] for item in delivered], [action["action_id"]])
+        self.assertEqual(delivered[0]["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual(delivered[0]["attempt_id"], reopened.action_observation(owner_id="owner_default", action_id=action["action_id"])["attempts"][0]["attempt_id"])
 
     def test_node_generated_enrollment_requires_explicit_approval(self) -> None:
         request = self.store.request_enrollment(device_id="device-beta", endpoint_id="endpoint-beta", display_name="Second node", credential_hash="a" * 64)
@@ -79,10 +1019,618 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "DEV_UI STATUS state=CURRENT host=available instance=runtime-1 components_ready=false fully_ready=false "
             "runtime_telemetry_available=true error_code=none"
         )
-        self.assertEqual(runtime_readiness(pending), ("degraded", "admission_or_connector_pending"))
-        ready = parse_dev_ui_status(
-            "DEV_UI STATUS state=CURRENT host=available instance=runtime-2 components_ready=true fully_ready=true "
-            "runtime_telemetry_available=true error_code=none"
+        self.assertEqual(runtime_readiness(pending), ("degraded", "runtime_identity_unproven"))
+        compatible = parse_dev_ui_status(
+            "DEV_UI STATUS state=CURRENT host=available installation=current instance=runtime-2 "
+            "mcp_update_pending=false mcp_running_revision=sha-a mcp_disk_revision=sha-a "
+            "components_ready=true fully_ready=true runtime_update_incomplete=false "
+            "runtime_telemetry_available=true runtime_signal_stale=false "
+            "connector_state=CURRENT_COMPATIBLE_ACKNOWLEDGED connector_rediscovered=false "
+            "connector_rediscovered_at=none connector_freshness_mode=compatible_activation_bootstrap "
+            "connector_refresh_required=false connector_ack_pending=false connector_current_sha=sha-a connector_ack_sha=sha-a "
+            "error_code=none"
         )
-        self.assertEqual(runtime_readiness(ready), ("ready", "fully_ready"))
+        self.assertEqual(runtime_readiness(compatible), ("degraded", "strict_connector_rediscovery_required"))
+        stale_mcp = parse_dev_ui_status(
+            "DEV_UI STATUS state=CURRENT host=available installation=current instance=runtime-3 "
+            "mcp_update_pending=true mcp_running_revision=sha-old mcp_disk_revision=sha-new "
+            "components_ready=true fully_ready=true runtime_update_incomplete=true "
+            "runtime_telemetry_available=true runtime_signal_stale=false "
+            "connector_state=CURRENT_ACKNOWLEDGED connector_rediscovered=true connector_rediscovered_at=2026-09-15T00:00:00Z "
+            "connector_freshness_mode=current_process_discovery connector_refresh_required=false connector_ack_pending=false "
+            "connector_current_sha=sha-a connector_ack_sha=sha-a error_code=none"
+        )
+        self.assertEqual(runtime_readiness(stale_mcp), ("degraded", "mcp_revision_unproven"))
+        strict = parse_dev_ui_status(
+            "DEV_UI STATUS state=CURRENT host=available installation=current instance=runtime-4 "
+            "mcp_update_pending=false mcp_running_revision=sha-a mcp_disk_revision=sha-a "
+            "components_ready=true fully_ready=true runtime_update_incomplete=false "
+            "runtime_telemetry_available=true runtime_signal_stale=false "
+            "connector_state=CURRENT_ACKNOWLEDGED connector_rediscovered=true connector_rediscovered_at=2026-09-15T00:00:00Z "
+            "connector_freshness_mode=current_process_discovery connector_refresh_required=false connector_ack_pending=false "
+            "connector_current_sha=sha-a connector_ack_sha=sha-a error_code=none"
+        )
+        self.assertEqual(runtime_readiness(strict), ("ready", "strict_current_process_discovery"))
+        projection = runtime_heartbeat_projection(strict)
+        self.assertEqual(projection["readiness"], "degraded")
+        self.assertEqual(projection["reason"], "runtime_identity_unproven")
+        self.assertEqual(projection["runtime_instance_id"], "unreported")
+        self.assertEqual(projection["mcp_server_instance_id"], "unreported")
+        self.assertEqual(projection["activation_epoch"], "unreported")
+        self.assertEqual(projection["contract_version"], "unreported")
+        observed = runtime_heartbeat_projection(strict, {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True,
+            "identity_current": True,
+            "mcp_process_instance_id": "coding-mcp-process-0001",
+            "mcp_server_instance_id": "coding-mcp-server-0001",
+            "activation_epoch_id": "activation-epoch-0001",
+            "current_activation_epoch_id": "activation-epoch-0001",
+            "tool_contract_sha256": "f" * 64,
+        })
+        self.assertEqual(observed["readiness"], "ready")
+        self.assertEqual(observed["runtime_instance_id"], "coding-mcp-process-0001")
+        self.assertEqual(observed["mcp_server_instance_id"], "coding-mcp-server-0001")
+        self.assertEqual(observed["activation_epoch"], "activation-epoch-0001")
+        self.assertEqual(observed["contract_version"], "sha256:" + "f" * 64)
+        unbound = runtime_heartbeat_projection(strict, {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True,
+            "identity_current": True,
+            "mcp_process_instance_id": "coding-mcp-process-0001",
+            "mcp_server_instance_id": "coding-mcp-server-0001",
+            "activation_epoch_id": "old-epoch",
+            "current_activation_epoch_id": "new-epoch",
+            "tool_contract_sha256": "f" * 64,
+        })
+        self.assertEqual(unbound["readiness"], "degraded")
+        self.assertEqual(unbound["reason"], "runtime_identity_unproven")
         self.assertEqual(runtime_readiness({"state": "MISSING", "host": "unavailable"}), ("blocked", "runtime_unavailable"))
+        self.assertEqual(
+            runtime_readiness({"state": "MISSING", "host": "available", "components_ready": "true", "fully_ready": "true", "runtime_telemetry_available": "true", "error_code": "none"}),
+            ("blocked", "runtime_unavailable"),
+        )
+
+    def test_recovery_identity_observation_accepts_only_structured_read_only_output(self) -> None:
+        args = SimpleNamespace(node="node", timeout_seconds=20)
+        expected = {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "identity_current": True,
+        }
+        with mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True, "observation": expected}))) as run:
+            self.assertEqual(recovery_identity_observation(args, Path.cwd()), expected)
+        command = run.call_args.args[0]
+        self.assertEqual(command[0], "node")
+        self.assertEqual(command[-2:], ["--project-root", str(Path.cwd())])
+        with mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=json.dumps({"ok": False, "error": {"code": "MCP_IDENTITY_OBSERVATION_UNBOUND"}}))):
+            self.assertIsNone(recovery_identity_observation(args, Path.cwd()))
+
+    @staticmethod
+    def _strict_runtime_status() -> dict[str, str]:
+        return {
+            "state": "CURRENT",
+            "host": "available",
+            "installation": "current",
+            "mcp_update_pending": "false",
+            "mcp_running_revision": "sha-current",
+            "mcp_disk_revision": "sha-current",
+            "components_ready": "true",
+            "fully_ready": "true",
+            "runtime_update_incomplete": "false",
+            "runtime_telemetry_available": "true",
+            "runtime_signal_stale": "false",
+            "connector_state": "CURRENT_ACKNOWLEDGED",
+            "connector_rediscovered": "true",
+            "connector_rediscovered_at": "2026-09-15T00:00:00Z",
+            "connector_freshness_mode": "current_process_discovery",
+            "connector_refresh_required": "false",
+            "connector_ack_pending": "false",
+            "connector_current_sha": "sha-current",
+            "connector_ack_sha": "sha-current",
+            "error_code": "none",
+        }
+
+    @staticmethod
+    def _strict_identity_observation() -> dict[str, object]:
+        return {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True,
+            "identity_current": True,
+            "mcp_process_instance_id": "mcp-process-node-bridge-0001",
+            "mcp_server_instance_id": "mcp-server-node-bridge-0001",
+            "activation_epoch_id": "activation-node-bridge-0001",
+            "current_activation_epoch_id": "activation-node-bridge-0001",
+            "tool_contract_sha256": "a" * 64,
+        }
+
+    def test_read_only_node_lane_persists_a_safe_completed_receipt_before_submitting_it(self) -> None:
+        config_path = Path(self.tempdir.name) / "node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-0001",
+            "attempt_id": "try-node-bridge-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        local_result = {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "action_id": action["action_id"],
+            "attempt_id": action["attempt_id"],
+            "local_handle": "cp_ro_" + "b" * 48,
+            "workspace_accessed": True,
+            "policy_sha256": "c" * 64,
+            "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+            "runtime_identity": {
+                "activation_epoch_id": "activation-node-bridge-0001",
+                "process_instance_id": "mcp-process-node-bridge-0001",
+                "server_instance_id": "mcp-server-node-bridge-0001",
+                "tool_contract_sha256": "d" * 64,
+            },
+            "facade_contract": dict(FACADE_CONTRACT),
+            "response_sha256": "e" * 64,
+            "workspace": "E:/must-never-reach-central",
+        }
+        requests: list[tuple[str, dict[str, object]]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            requests.append((path, payload))
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            self.assertEqual(payload["receipt_state"], "completed")
+            self.assertEqual(payload["local_handle"], local_result["local_handle"])
+            self.assertNotIn("must-never-reach-central", json.dumps(payload))
+            return {"receipt_id": "receipt-node-bridge-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge", return_value=(local_result, None)):
+            self.assertEqual(poll_read_only_once(args), 0)
+
+        self.assertEqual([path for path, _ in requests], [
+            "/v1/nodes/device-node-bridge-0001/poll",
+            "/v1/nodes/device-node-bridge-0001/receipts",
+        ])
+        journal = _read_journal(_journal_path(config_path))
+        entry = journal["entries"]["act-node-bridge-0001|try-node-bridge-0001"]
+        self.assertEqual(entry["state"], "completed")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+        self.assertNotIn("must-never-reach-central", json.dumps(entry))
+
+    def test_read_only_bridge_requires_canonical_facade_intent_provenance(self) -> None:
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }
+        action = {
+            "action_id": "act-node-bridge-provenance-0001",
+            "attempt_id": "try-node-bridge-provenance-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        request = _read_only_bridge_request(action, config)
+        self.assertNotIn("intent_digest", request)
+        self.assertEqual(request["facade_contract"], FACADE_CONTRACT)
+        for field, value in (
+            ("mcp_read_only_intent_digest", None),
+            ("mcp_read_only_intent_digest", "not-a-digest"),
+            ("admission_reference", "mcp_facade:" + "e" * 64),
+            ("mcp_facade_schema_version", 0),
+            ("mcp_facade_profile", "bad profile"),
+            ("mcp_facade_contract_sha256", "not-a-digest"),
+        ):
+            rejected = dict(action)
+            rejected[field] = value
+            with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_BRIDGE_ACTION_DENIED"):
+                _read_only_bridge_request(rejected, config)
+
+    def test_read_only_node_lane_rejects_missing_provenance_before_bridge_effect(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-missing-provenance.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-missing-provenance-0001",
+            "attempt_id": "try-node-bridge-missing-provenance-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        requests: list[tuple[str, dict[str, object]]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            requests.append((path, payload))
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            return {"receipt_id": "receipt-node-bridge-missing-provenance-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge") as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        bridge.assert_not_called()
+        self.assertEqual([path for path, _ in requests], [
+            "/v1/nodes/device-node-bridge-0001/poll",
+            "/v1/nodes/device-node-bridge-0001/receipts",
+        ])
+        receipt = requests[-1][1]
+        self.assertEqual(receipt["receipt_state"], "rejected")
+        self.assertEqual(receipt["payload"], {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "code": "CONTROL_PLANE_BRIDGE_ACTION_DENIED",
+        })
+
+    def test_read_only_node_lane_reconciles_a_prepared_effect_as_unknown_without_reexecution(self) -> None:
+        config_path = Path(self.tempdir.name) / "node.json"
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        journal_path = _journal_path(config_path)
+        _write_json_atomic(journal_path, {
+            "schema_version": READ_ONLY_JOURNAL_SCHEMA_VERSION,
+            "entries": {
+                "act-node-bridge-0002|try-node-bridge-0002": {
+                    "state": "prepared",
+                    "action_id": "act-node-bridge-0002",
+                    "attempt_id": "try-node-bridge-0002",
+                }
+            },
+        })
+        receipts: list[dict[str, object]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            self.assertTrue(path.endswith("/receipts"), "prepared recovery must settle before any new poll")
+            receipts.append(payload)
+            return {"receipt_id": "receipt-node-bridge-0002"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value={"state": "MISSING", "host": "unavailable"}), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge") as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        bridge.assert_not_called()
+        self.assertEqual(receipts[0]["receipt_state"], "unknown")
+        self.assertEqual(receipts[0]["local_handle"], "")
+        self.assertEqual(receipts[0]["payload"], {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+        })
+        journal = _read_journal(journal_path)
+        entry = journal["entries"]["act-node-bridge-0002|try-node-bridge-0002"]
+        self.assertEqual(entry["state"], "unknown")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+
+    def test_node_agent_subprocess_crash_after_prepared_marker_recovers_unknown_without_bridge_reexecution(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-subprocess-crash.json"
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-subprocess-crash-0001",
+            "attempt_id": "try-node-bridge-subprocess-crash-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        crash_script = """
+import json
+import os
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+from control_plane import node_agent
+
+config_path = Path(sys.argv[1])
+project_root = Path(sys.argv[2])
+action = json.loads(sys.argv[3])
+strict_status = {
+    'state': 'CURRENT', 'host': 'available', 'installation': 'current',
+    'mcp_update_pending': 'false', 'mcp_running_revision': 'sha-current',
+    'mcp_disk_revision': 'sha-current', 'components_ready': 'true',
+    'fully_ready': 'true', 'runtime_update_incomplete': 'false',
+    'runtime_telemetry_available': 'true', 'runtime_signal_stale': 'false',
+    'connector_state': 'CURRENT_ACKNOWLEDGED', 'connector_rediscovered': 'true',
+    'connector_rediscovered_at': '2026-09-15T00:00:00Z',
+    'connector_freshness_mode': 'current_process_discovery',
+    'connector_refresh_required': 'false', 'connector_ack_pending': 'false',
+    'connector_current_sha': 'sha-current', 'connector_ack_sha': 'sha-current',
+    'error_code': 'none',
+}
+identity = {
+    'observation_schema_version': 1, 'observation_kind': 'mcp_identity_read_only',
+    'mcp_ready': True, 'identity_current': True,
+    'mcp_process_instance_id': 'mcp-process-node-bridge-0001',
+    'mcp_server_instance_id': 'mcp-server-node-bridge-0001',
+    'activation_epoch_id': 'activation-node-bridge-0001',
+    'current_activation_epoch_id': 'activation-node-bridge-0001',
+    'tool_contract_sha256': 'a' * 64,
+}
+def request(_url, path, _payload, _authorization=None):
+    if path.endswith('/poll'):
+        return {'actions': [action]}
+    raise AssertionError('node process must exit before submitting a receipt')
+def crash_bridge(*_args):
+    os._exit(73)
+args = SimpleNamespace(config=str(config_path), project_root=str(project_root), node='node', timeout_seconds=20, limit=1)
+with mock.patch('control_plane.node_agent._request', side_effect=request), \
+     mock.patch('control_plane.node_agent._runtime_status', return_value=strict_status), \
+     mock.patch('control_plane.node_agent.recovery_identity_observation', return_value=identity), \
+     mock.patch('control_plane.node_agent.recovery_read_only_bridge', side_effect=crash_bridge):
+    node_agent.poll_read_only_once(args)
+"""
+        environment = dict(os.environ)
+        environment["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
+        crashed = subprocess.run(
+            [sys.executable, "-c", crash_script, str(config_path), str(Path.cwd()), json.dumps(action)],
+            cwd=Path(__file__).resolve().parents[1],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=15,
+        )
+        self.assertEqual(crashed.returncode, 73, crashed.stderr)
+        journal_path = _journal_path(config_path)
+        journal = _read_journal(journal_path)
+        entry = journal["entries"]["act-node-bridge-subprocess-crash-0001|try-node-bridge-subprocess-crash-0001"]
+        self.assertEqual(entry, {
+            "state": "prepared",
+            "action_id": action["action_id"],
+            "attempt_id": action["attempt_id"],
+        })
+        receipts: list[dict[str, object]] = []
+
+        def recovery_request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            self.assertTrue(path.endswith("/receipts"), "prepared crash recovery must settle before any poll")
+            receipts.append(payload)
+            return {"receipt_id": "receipt-node-bridge-subprocess-crash-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=recovery_request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value={"state": "MISSING", "host": "unavailable"}), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge") as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        bridge.assert_not_called()
+        self.assertEqual(receipts, [{
+            "action_id": action["action_id"],
+            "attempt_id": action["attempt_id"],
+            "receipt_state": "unknown",
+            "local_handle": "",
+            "payload": {
+                "schema_version": 1,
+                "operation_kind": "control_plane_read_only_workspace_context",
+                "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+            },
+        }])
+        journal = _read_journal(journal_path)
+        entry = journal["entries"]["act-node-bridge-subprocess-crash-0001|try-node-bridge-subprocess-crash-0001"]
+        self.assertEqual(entry["state"], "unknown")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+
+    def test_read_only_bridge_timeout_is_unknown_and_never_reexecuted_for_a_duplicate_action(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-bridge-timeout.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-timeout-0001",
+            "endpoint_id": "endpoint-node-bridge-timeout-0001",
+            "node_secret": "node-secret-not-printed",
+        }), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-timeout-0001",
+            "attempt_id": "try-node-bridge-timeout-0001",
+            "owner_id": "owner-node-bridge-timeout-0001",
+            "device_id": "device-node-bridge-timeout-0001",
+            "endpoint_id": "endpoint-node-bridge-timeout-0001",
+            "workspace_id": "workspace-node-bridge-timeout-0001",
+            "workspace_generation": "generation-node-bridge-timeout-0001",
+            "context_id": "ctx-node-bridge-timeout-0001",
+            "binding_id": "bind-node-bridge-timeout-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        requests: list[tuple[str, dict[str, object]]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            requests.append((path, payload))
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            self.assertEqual(payload, {
+                "action_id": action["action_id"],
+                "attempt_id": action["attempt_id"],
+                "receipt_state": "unknown",
+                "local_handle": "",
+                "payload": {
+                    "schema_version": 1,
+                    "operation_kind": "control_plane_read_only_workspace_context",
+                    "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                },
+            })
+            return {"receipt_id": "receipt-node-bridge-timeout-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch(
+                 "control_plane.node_agent.subprocess.run",
+                 side_effect=subprocess.TimeoutExpired(cmd=["node"], timeout=args.timeout_seconds),
+             ) as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        self.assertEqual(bridge.call_count, 1)
+        journal = _read_journal(_journal_path(config_path))
+        entry = journal["entries"]["act-node-bridge-timeout-0001|try-node-bridge-timeout-0001"]
+        self.assertEqual(entry["state"], "unknown")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+
+        # If a transport delivered the same sealed action again, the durable
+        # unknown record wins over any bridge retry.
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent.subprocess.run") as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        bridge.assert_not_called()
+        self.assertEqual([path for path, _ in requests], [
+            "/v1/nodes/device-node-bridge-timeout-0001/poll",
+            "/v1/nodes/device-node-bridge-timeout-0001/receipts",
+            "/v1/nodes/device-node-bridge-timeout-0001/poll",
+        ])
+
+    def test_node_transport_failure_is_a_typed_safe_error(self) -> None:
+        with mock.patch(
+            "control_plane.node_agent.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("offline"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_TRANSPORT_UNAVAILABLE$"):
+                _request("https://control.example.test", "/healthz", {})
+
+    def test_read_only_node_lane_replays_durable_receipt_after_transport_failure_without_reexecution(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-receipt-replay.json"
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        journal_path = _journal_path(config_path)
+        _write_json_atomic(journal_path, {
+            "schema_version": READ_ONLY_JOURNAL_SCHEMA_VERSION,
+            "entries": {
+                "act-node-bridge-replay-0001|try-node-bridge-replay-0001": {
+                    "state": "completed",
+                    "action_id": "act-node-bridge-replay-0001",
+                    "attempt_id": "try-node-bridge-replay-0001",
+                    "receipt": {
+                        "action_id": "act-node-bridge-replay-0001",
+                        "attempt_id": "try-node-bridge-replay-0001",
+                        "receipt_state": "completed",
+                        "local_handle": "cp_ro_" + "b" * 48,
+                        "payload": {
+                            "schema_version": 1,
+                            "operation_kind": "control_plane_read_only_workspace_context",
+                            "workspace_accessed": True,
+                            "response_sha256": "e" * 64,
+                        },
+                        "receipt_submitted": False,
+                    },
+                },
+            },
+        })
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        receipt_calls: list[dict[str, object]] = []
+
+        def unavailable_request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            self.assertTrue(path.endswith("/receipts"), "pending receipt must flush before a new poll")
+            receipt_calls.append(payload)
+            raise RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+
+        with mock.patch("control_plane.node_agent._request", side_effect=unavailable_request), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge") as bridge:
+            with self.assertRaisesRegex(RuntimeError, "^CONTROL_PLANE_TRANSPORT_UNAVAILABLE$"):
+                poll_read_only_once(args)
+        bridge.assert_not_called()
+        journal = _read_journal(journal_path)
+        entry = journal["entries"]["act-node-bridge-replay-0001|try-node-bridge-replay-0001"]
+        self.assertEqual(entry["state"], "completed")
+        self.assertFalse(entry["receipt"]["receipt_submitted"])
+
+        def recovered_request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            self.assertTrue(path.endswith("/receipts"), "receipt recovery must not fetch new work")
+            receipt_calls.append(payload)
+            return {"receipt_id": "receipt-node-bridge-replay-0001", "replayed": True}
+
+        with mock.patch("control_plane.node_agent._request", side_effect=recovered_request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value={"state": "MISSING", "host": "unavailable"}), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge") as bridge:
+            self.assertEqual(poll_read_only_once(args), 0)
+        bridge.assert_not_called()
+        self.assertEqual(len(receipt_calls), 2)
+        self.assertEqual(receipt_calls[0], receipt_calls[1])
+        journal = _read_journal(journal_path)
+        entry = journal["entries"]["act-node-bridge-replay-0001|try-node-bridge-replay-0001"]
+        self.assertEqual(entry["state"], "completed")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])

@@ -10,7 +10,7 @@
 - Base HEAD: `ae04947d5969e9ee92bf1fe7532bf30e186f8280`
 - Worktree fingerprint: `b94b13bb6ccb04d016beaa47636cc182bc1b8ef1a00e327a2d08283892f83906`
 - Contract fingerprint: `1f8d61854fc8a4c03b5a4a8b772b82a19944bc305947f251da23c7340782c12a`
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -50,6 +50,9 @@
 | 52926 | 2026-09-14T05:18:29.526Z | failure_observed | ACCEPTING | ACCEPTING | reason=Reject this wave as non-causal evidence only. Exact prepare->execute binding happened to remain stable and the existing Python suite passed, but modified_files is empty, no deterministic projection-binding regression was added, and the Problem contract itself reports P01-P05 0/5 proven with root cause still unresolved. Preserve this as a useful negative/control observation showing the race is conditional, then replan with focused source localization and a discriminating regression before any acceptance.; failure_class=SOL_REJECTED |
 | 52927 | 2026-09-14T05:18:29.777Z | state_transition | ACCEPTING | REPLAN | reason=SOL_REJECTED; failure_class=SOL_REJECTED |
 | 52928 | 2026-09-14T05:18:30.032Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 52929 | 2026-09-14T05:18:58.067Z | continuity_telemetry_recorded |  |  |  |
+| 58682 | 2026-09-15T09:00:52.076Z | state_transition | REPLAN | ABORTED | reason=Terminalize only this stale REPLAN engineering attempt to reconcile restart projection. Canonical Problem prl-c76b20e025edfe48b4d18d478d2db09d rev1 remains OPEN; retain its passed control proof, failure/replan telemetry, and unresolved contract. No source mutation or acceptance is being claimed. |
+| 58683 | 2026-09-15T09:00:52.972Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -66,5 +69,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `28`
-- Chain head: `941522833d89bd2d20ea0a367fc018847c4cb48247d4a3e0018c0a3d397bda76`
+- Events checked: `31`
+- Chain head: `cf1ff9cf38d1ec070819d20a28a6066fc9e4dea532f56dcb7f88b88cd0a57dd6`

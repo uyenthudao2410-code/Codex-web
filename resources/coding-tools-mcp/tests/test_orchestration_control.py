@@ -295,19 +295,22 @@ class OrchestrationControlTests(unittest.TestCase):
     def test_write_lease_expiry_and_renewal_are_enforced(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            ledger = OrchestrationLedger(root)
-            control = OrchestrationControl(root, ledger)
-            ctx = control.begin(objective="ttl", task_id="ttl", execution_mode="mcp_only", base_head="a", worktree_fp="w")
-            control.mark_ready(ctx)
-            control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
-            lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only", ttl_seconds=1.0)
-            before = lease.expires_at
-            renewed = control.renew_write_lease(ctx, owner="MCP", ttl_seconds=2.0)
-            self.assertGreater(renewed.expires_at, before)
-            time.sleep(2.1)
-            with self.assertRaises(OrchestrationControlError) as expired:
-                control.assert_write_allowed(ctx, owner="MCP")
-            self.assertEqual(expired.exception.code, "WRITE_LEASE_EXPIRED")
+            clock = [1_000.0]
+            with patch("coding_tools_mcp.orchestration_ledger.time.time", side_effect=lambda: clock[0]):
+                ledger = OrchestrationLedger(root)
+                control = OrchestrationControl(root, ledger)
+                ctx = control.begin(objective="ttl", task_id="ttl", execution_mode="mcp_only", base_head="a", worktree_fp="w")
+                control.mark_ready(ctx)
+                control.select_route(ctx, {"requested": "auto", "selected": "deterministic"})
+                lease = control.acquire_write_lease(ctx, owner="MCP", mode="mcp_only", ttl_seconds=1.0)
+                before = lease.expires_at
+                clock[0] = 1_000.2
+                renewed = control.renew_write_lease(ctx, owner="MCP", ttl_seconds=2.0)
+                self.assertGreater(renewed.expires_at, before)
+                clock[0] = 1_002.3
+                with self.assertRaises(OrchestrationControlError) as expired:
+                    control.assert_write_allowed(ctx, owner="MCP")
+                self.assertEqual(expired.exception.code, "WRITE_LEASE_EXPIRED")
 
     def test_write_lease_enforces_session_source_dirty_and_protected_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

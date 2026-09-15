@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "4986022cccec4285a0cf0e13d1d97241",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "YDM4AeGLX2kBNHuqBt_aoAJS",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 878,
+    "finished_at": "2026-09-15T06:58:58.684Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:58:57.236Z",
+  "updated_at": "2026-09-15T06:58:58.684Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:58:57.236Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:58:57.605Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$m=Get-Content (Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\manifest.json') -Raw|ConvertFrom-Json; $script=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor.ps1'; $launcher=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor-launcher.vbs'; [pscustomobject]@{manifest=$m;script_exists=(Test-Path $script);script_hash=if(Test-Path $script){(Get-FileHash -Algorithm SHA256 $script).Hash.ToLowerInvar",
+        "session_id": "YDM4AeGLX2kBNHuqBt_aoAJS"
+      }
+    },
+    {
+      "time": "2026-09-15T06:58:58.684Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$m=Get-Content (Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\manifest.json') -Raw|ConvertFrom-Json; $script=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor.ps1'; $launcher=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor-launcher.vbs'; [pscustomobject]@{manifest=$m;script_exists=(Test-Path $script);script_hash=if(Test-Path $script){(Get-FileHash -Algorithm SHA256 $script).Hash.ToLowerInvar",
+        "status": "failed"
+      }
+    }
+  ]
+}

@@ -638,11 +638,13 @@ function createRuntimeDependencies(options = {}) {
     const installationMatches = descriptor.runtime_mode === 'development'
       && descriptorMatchesInstallation(descriptor, expectedIdentity);
     if (!installationMatches) {
+      const client = new RecoveryIpcClient({ paths });
       return {
         ...unavailableObservation(),
         hostAvailable: true,
         installationMatches: false,
         descriptor,
+        client,
         errorCode: 'DEV_UI_INSTALLATION_MISMATCH'
       };
     }
@@ -748,6 +750,7 @@ function createRuntimeDependencies(options = {}) {
         expectedDiskRevision,
         refresh: true,
         forceRefresh: true,
+        allowIdlePackagedHandoff: observation.installationMatches === false,
         requestedAtUnixMs,
         // This is a full-system process refresh, not the short 55-second
         // component activation request.  The deadline must cover a cold
@@ -916,6 +919,13 @@ function assertSameDevelopmentInstallation(observation) {
       'The live Recovery Host belongs to another checkout or installation. Refusing to signal or replace that UI.'
     );
   }
+}
+
+function isPackagedHandoffTarget(observation) {
+  return observation?.hostAvailable === true
+    && observation?.installationMatches === false
+    && String(observation?.descriptor?.runtime_mode || '') === 'packaged'
+    && Boolean(observation?.client && observation?.descriptor);
 }
 
 async function waitForObservation(deps, predicate, label) {
@@ -1177,6 +1187,12 @@ async function statusLifecycle(deps) {
 
 async function startLifecycle(deps) {
   const initial = await deps.inspect();
+  if (initial?.hostAvailable === true
+    && initial?.installationMatches === false
+    && String(initial?.descriptor?.runtime_mode || '') === 'packaged') {
+    deps.output('DEV_UI START action=cold_start reason=idle_packaged_handoff lifecycle=full_clean');
+    return refreshLifecycle(deps);
+  }
   assertSameDevelopmentInstallation(initial);
   // Start is also the supported cold-start entry point. Reuse full-clean's
   // exact installation/census/epoch guards, rather than creating children
@@ -1433,7 +1449,7 @@ async function refreshLifecycle(deps) {
   let before = typeof deps.inspectRefreshTarget === 'function'
     ? await deps.inspectRefreshTarget()
     : await deps.inspect();
-  assertSameDevelopmentInstallation(before);
+  if (!isPackagedHandoffTarget(before)) assertSameDevelopmentInstallation(before);
   if (!before.hostAvailable || !before.client || !before.descriptor) {
     if (typeof deps.ensureRefreshHost !== 'function') {
       throw lifecycleError(

@@ -57,6 +57,7 @@
 | 55359 | 2026-09-14T14:01:11.705Z | observation_span_recorded |  |  |  |
 | 55360 | 2026-09-14T14:01:11.963Z | observation_span_recorded |  |  |  |
 | 55361 | 2026-09-14T14:01:12.175Z | continuity_telemetry_recorded |  |  |  |
+| 55362 | 2026-09-14T14:01:48.968Z | continuity_telemetry_recorded |  |  |  |
 
 ## Proof
 
@@ -74,5 +75,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `35`
-- Chain head: `9d02b6cf270eabf962422687cf0cfd2c312718b169c04bad379278e4eced1bb0`
+- Events checked: `36`
+- Chain head: `3bd729a4d22d7b3328b9562d23e5b6e59af3c9632a816be042e9c9af265856c2`

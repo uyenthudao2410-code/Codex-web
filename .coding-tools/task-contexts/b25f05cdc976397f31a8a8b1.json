@@ -1,0 +1,1680 @@
+{
+  "version": 2,
+  "task_id": "1e57a5e693074656a56fbb69e7151edb",
+  "orchestration": {
+    "run_id": "d2bc327185d0479395b57a06d4650f70",
+    "wave_id": "62cd8229fb5646eda551e465c6e88c84",
+    "orchestration_state": "ACCEPTING",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "7a876d1e3e8fe051a28b9435b3ab3b38a9d1eedf8aaf6a55bfc4026f4af730ec",
+    "contract_fp": ""
+  },
+  "objective": "Recover the current RUN from the failed adoption-path validation. Exact-byte adopt the two already-proven dirty backend test files using workspace-root paths, without changing their bytes: resources/coding-tools-mcp/tests/test_orchestration_workflow.py and resources/coding-tools-mcp/tests/test_efficiency_runtime.py. Re-run the sufficient oracle set on those exact adopted bytes from resources/coding-tools-mcp. No production-code changes, no boot/recovery C01 changes, no full 1155-test suite, no package/install/reboot/runtime restart/commit/push/publish/release/deploy.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-15T03:02:29.316Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-15T03:02:29.316Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-15T03:02:29.316Z"
+    }
+  ],
+  "current_step": "Waiting for ChatWeb Sol acceptance",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "0FGMnImlIZX7VLaS1yHL7u_W",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-15T03:02:28.577Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 31,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 13,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "d2bc327185d0479395b57a06d4650f70",
+        "wave_id": "62cd8229fb5646eda551e465c6e88c84",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 32,
+      "latest_event": {
+        "seq": 250,
+        "event_id": "prl-bind-ba3b32bcb4759bae1c7c1b27250ce79cc8059ccd31c111f19b38739aec4b89e3",
+        "event_hash": "00fc0de7e9e50b9af4327743ab2ba652c32789bf98402da24f3de0c87ca2c8e8",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T02:39:53.362Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 67,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 49,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 0,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 18,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [
+        {
+          "path": "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "operation": "update"
+        },
+        {
+          "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "operation": "update"
+        }
+      ],
+      "source": "aligned_task_modified_files",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ACCEPTING",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 150,
+        "head_hash": "b956f5cb90fe2efbb07ede2c9cdfa3ffdf74ed20be44a14e6debb30f3782cfae"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\wave-001.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\wave-002.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\wave-003.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\wave-004.md",
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d2bc327185d0479395b57a06d4650f70\\wave-005.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d2bc327185d0479395b57a06d4650f70",
+      "wave_id": "62cd8229fb5646eda551e465c6e88c84",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "7a876d1e3e8fe051a28b9435b3ab3b38a9d1eedf8aaf6a55bfc4026f4af730ec",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Recover the current RUN from the failed adoption-path validation. Exact-byte adopt the two already-proven dirty backend test files using workspace-root paths, without changing their bytes: resources/coding-tools-mcp/tests/test_orchestration_workflow.py and resources/coding-tools-mcp/tests/test_efficiency_runtime.py. Re-run the sufficient oracle set on those exact adopted bytes from resources/coding-tools-mcp. No production-code changes, no boot/recovery C01 changes, no full 1155-test suite, no package/install/reboot/runtime restart/commit/push/publish/release/deploy.",
+        "objective_revision": 5,
+        "objective_sha256": "4eb4c4c7b0af9cc94d662a2ecd21f5fc879af923664d940663113e47ee7b8f32",
+        "objective_source": "replan_request",
+        "objective_changed_from_previous": true,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 3,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "2b4c734eb30446ee9e75ff376a757f6a",
+          "stage_id": "check:33819b98d9cbbafe",
+          "status": "passed",
+          "duration_ms": 16231,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "fffb7d592949458f9eca2d114fde40e8",
+          "stage_id": "check:61fe412bab5eabf9",
+          "status": "passed",
+          "duration_ms": 11260,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "67c172ea10d64c56b199f262fb7476f6",
+          "stage_id": "check:aec52a94f06cb088",
+          "status": "passed",
+          "duration_ms": 123606,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+    "blocker_or_failure": null,
+    "what_remains": "Final controller acceptance or rejection is still required for this proven wave.",
+    "next_critical_action": "Present this completion_report to the operator, inspect durable proof, then call task_control action=accept or reject."
+  },
+  "completion_report_id": "08daf7d96cdb0b26c910df92d8bab4eb8a74efc353e091abfb721ce030c3f1c4",
+  "completion_report_acknowledged_id": "08daf7d96cdb0b26c910df92d8bab4eb8a74efc353e091abfb721ce030c3f1c4",
+  "completion_report_acknowledged_at": "2026-09-15T03:48:12.152Z",
+  "test_results": [
+    {
+      "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '1 passed in 6.25s'",
+      "finished_at": "2026-09-15T02:40:10.530Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "JZqR6BYjN4EadbIlv7yvwKZL"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "0824fe99d0274225bbc7b8a80128a4bd",
+        "size_bytes": 100,
+        "command_id": "JZqR6BYjN4EadbIlv7yvwKZL",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:JZqR6BYjN4EadbIlv7yvwKZL:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:JZqR6BYjN4EadbIlv7yvwKZL:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '37 passed, 2 subtests passed in 107.23s (0:01:47)'",
+      "finished_at": "2026-09-15T02:42:00.051Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "SwDcuTWQ9gKdoicGAHYAlZcJ"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "0824fe99d0274225bbc7b8a80128a4bd",
+        "size_bytes": 130,
+        "command_id": "SwDcuTWQ9gKdoicGAHYAlZcJ",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:SwDcuTWQ9gKdoicGAHYAlZcJ:stdout",
+            "total_stream_bytes": 130,
+            "total_retained_bytes": 130,
+            "head_retained_bytes": 130,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:SwDcuTWQ9gKdoicGAHYAlZcJ:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest",
+      "status": "failed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 40 lines | tail: 'tests\\\\test_exact_completed_agent_lane_reconciliation.py'",
+      "finished_at": "2026-09-15T02:49:47.402Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "YhEGEHMKU82c0WYQx3M8ZiD1"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "0824fe99d0274225bbc7b8a80128a4bd",
+        "size_bytes": 2838,
+        "command_id": "YhEGEHMKU82c0WYQx3M8ZiD1",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:YhEGEHMKU82c0WYQx3M8ZiD1:stdout",
+            "total_stream_bytes": 2838,
+            "total_retained_bytes": 2838,
+            "head_retained_bytes": 2838,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:YhEGEHMKU82c0WYQx3M8ZiD1:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest",
+      "status": "timed_out",
+      "exit_code": 0,
+      "duration_ms": 466764,
+      "summary": "exit 0 | 0.0s | 40 lines | tail: 'tests\\\\test_exact_completed_agent_lane_reconciliation.py'",
+      "session_id": "YhEGEHMKU82c0WYQx3M8ZiD1",
+      "cancelled": false,
+      "timed_out": true,
+      "effective_timeout_ms": 466453
+    },
+    {
+      "command": "python -m pytest tests/test_efficiency_runtime.py -x -vv",
+      "status": "failed",
+      "exit_code": 1,
+      "duration_ms": null,
+      "summary": "exit 1 | 0.0s | 89 lines | tail: '======================== 1 failed, 16 passed in 6.08s ========================='",
+      "finished_at": "2026-09-15T02:52:34.213Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "lfZNnpu1Vs4mS0YBh1nSI-n1"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "048642464eca4813b164952fa317c8ee",
+        "size_bytes": 6391,
+        "command_id": "lfZNnpu1Vs4mS0YBh1nSI-n1",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:lfZNnpu1Vs4mS0YBh1nSI-n1:stdout",
+            "total_stream_bytes": 6391,
+            "total_retained_bytes": 6391,
+            "head_retained_bytes": 6391,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:lfZNnpu1Vs4mS0YBh1nSI-n1:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '24 passed in 19.95s'",
+      "finished_at": "2026-09-15T02:54:18.212Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "cUQSZCWCwvIajBLR5h8VA31v"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "6611889de49c4c15ba95c13a037e6c8d",
+        "size_bytes": 102,
+        "command_id": "cUQSZCWCwvIajBLR5h8VA31v",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:cUQSZCWCwvIajBLR5h8VA31v:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:cUQSZCWCwvIajBLR5h8VA31v:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '1 passed in 6.50s'",
+      "finished_at": "2026-09-15T02:54:27.847Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "bOeLcWzidv52E_Avk-g7gne_"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "6611889de49c4c15ba95c13a037e6c8d",
+        "size_bytes": 100,
+        "command_id": "bOeLcWzidv52E_Avk-g7gne_",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:bOeLcWzidv52E_Avk-g7gne_:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:bOeLcWzidv52E_Avk-g7gne_:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '37 passed, 2 subtests passed in 109.93s (0:01:49)'",
+      "finished_at": "2026-09-15T02:56:20.032Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "oA1o_IIOwUHpNoUh-DKHnKv7"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "6611889de49c4c15ba95c13a037e6c8d",
+        "size_bytes": 130,
+        "command_id": "oA1o_IIOwUHpNoUh-DKHnKv7",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:oA1o_IIOwUHpNoUh-DKHnKv7:stdout",
+            "total_stream_bytes": 130,
+            "total_retained_bytes": 130,
+            "head_retained_bytes": 130,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:oA1o_IIOwUHpNoUh-DKHnKv7:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '24 passed in 13.39s'",
+      "finished_at": "2026-09-15T03:00:12.379Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Lqjof52QAQ2AQf7fp6keZexr"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "62cd8229fb5646eda551e465c6e88c84",
+        "size_bytes": 102,
+        "command_id": "Lqjof52QAQ2AQf7fp6keZexr",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Lqjof52QAQ2AQf7fp6keZexr:stdout",
+            "total_stream_bytes": 102,
+            "total_retained_bytes": 102,
+            "head_retained_bytes": 102,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Lqjof52QAQ2AQf7fp6keZexr:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '1 passed in 9.11s'",
+      "finished_at": "2026-09-15T03:00:24.261Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "vAx7hm9dZJcKL9yPC92nL4G8"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "62cd8229fb5646eda551e465c6e88c84",
+        "size_bytes": 100,
+        "command_id": "vAx7hm9dZJcKL9yPC92nL4G8",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:vAx7hm9dZJcKL9yPC92nL4G8:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:vAx7hm9dZJcKL9yPC92nL4G8:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    },
+    {
+      "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "summary": "exit 0 | 0.0s | 3 lines | tail: '37 passed, 2 subtests passed in 121.59s (0:02:01)'",
+      "finished_at": "2026-09-15T03:02:28.577Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "0FGMnImlIZX7VLaS1yHL7u_W"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "d2bc327185d0479395b57a06d4650f70",
+        "owner_wave": "62cd8229fb5646eda551e465c6e88c84",
+        "size_bytes": 130,
+        "command_id": "0FGMnImlIZX7VLaS1yHL7u_W",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:0FGMnImlIZX7VLaS1yHL7u_W:stdout",
+            "total_stream_bytes": 130,
+            "total_retained_bytes": 130,
+            "head_retained_bytes": 130,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:0FGMnImlIZX7VLaS1yHL7u_W:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": {
+    "project": {
+      "type": "python",
+      "name": "coding-tools-mcp",
+      "version": "1.0.0",
+      "package_manager": "pip",
+      "test_command": "python -m pytest",
+      "build_command": "python -m build",
+      "artifact_paths": [
+        "dist"
+      ]
+    },
+    "commands": {
+      "test": "python -m pytest",
+      "build": "python -m build"
+    },
+    "test_result": {
+      "command": "python -m pytest",
+      "status": "timed_out",
+      "exit_code": 0,
+      "duration_ms": 466764,
+      "summary": "exit 0 | 0.0s | 40 lines | tail: 'tests\\\\test_exact_completed_agent_lane_reconciliation.py'",
+      "session_id": "YhEGEHMKU82c0WYQx3M8ZiD1",
+      "cancelled": false,
+      "timed_out": true,
+      "effective_timeout_ms": 466453
+    },
+    "build_result": null,
+    "artifacts": [],
+    "hash_algorithm": "sha256",
+    "overall_status": "failed",
+    "failure": "Tests failed.",
+    "report_generated_at": "2026-09-15T02:49:47.405Z"
+  },
+  "modified_files": [
+    {
+      "path": "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+      "operation": "update",
+      "updated_at": "2026-09-15T02:49:49.121Z"
+    },
+    {
+      "path": "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+      "operation": "update",
+      "updated_at": "2026-09-15T02:56:21.755Z"
+    }
+  ],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then inspect the durable proof and call task_control action=accept or reject; do not retry completed tool calls.",
+  "created_at": "2026-09-15T02:29:35.940Z",
+  "updated_at": "2026-09-15T03:48:12.152Z",
+  "events": [
+    {
+      "time": "2026-09-15T02:39:59.895Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:00.828Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:00.829Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:02.053Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:02.304Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:03.170Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "session_id": "JZqR6BYjN4EadbIlv7yvwKZL"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:10.530Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:11.822Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "session_id": "SwDcuTWQ9gKdoicGAHYAlZcJ"
+      }
+    },
+    {
+      "time": "2026-09-15T02:42:00.051Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:42:00.423Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:42:01.513Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest",
+        "session_id": "YhEGEHMKU82c0WYQx3M8ZiD1"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:47.402Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:47.406Z",
+      "event": "build_verification_finished",
+      "details": {
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:47.972Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:48.994Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:48.998Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:49.006Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:49.116Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "26d1b4d74b063011719544b6c0b3c738ee8fd4db5d971820ac2f4194f6c0a138"
+      }
+    },
+    {
+      "time": "2026-09-15T02:49:49.121Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-15T02:51:14.282Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:51:30.162Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "26d1b4d74b063011719544b6c0b3c738ee8fd4db5d971820ac2f4194f6c0a138"
+      }
+    },
+    {
+      "time": "2026-09-15T02:51:40.817Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:51:56.173Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_PHASE_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:10.510Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:20.858Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:22.798Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:23.704Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:23.713Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:24.705Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:25.007Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:26.074Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -x -vv",
+        "session_id": "lfZNnpu1Vs4mS0YBh1nSI-n1"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:34.213Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -x -vv",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:34.655Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:35.529Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:35.534Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:35.546Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:35.699Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "9d66758bb9eb9bedcf5c0123dcd8b5dc3d578e2a1cb463d12d1eadf0bd0b8964"
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:35.710Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T02:52:47.308Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:05.533Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "9d66758bb9eb9bedcf5c0123dcd8b5dc3d578e2a1cb463d12d1eadf0bd0b8964"
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:15.523Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:48.985Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:51.272Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:52.435Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:52.446Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:54.455Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:54.690Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:53:56.266Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+        "session_id": "cUQSZCWCwvIajBLR5h8VA31v"
+      }
+    },
+    {
+      "time": "2026-09-15T02:54:18.212Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:54:20.114Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "session_id": "bOeLcWzidv52E_Avk-g7gne_"
+      }
+    },
+    {
+      "time": "2026-09-15T02:54:27.847Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:54:29.071Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "session_id": "oA1o_IIOwUHpNoUh-DKHnKv7"
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:20.032Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:20.737Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:20.745Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:21.531Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:21.539Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:21.746Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "22cb5a43a682ae4fa71c18d5b43f5ad58fb26fbb9894fca9e3a0f375af4c788e"
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:21.755Z",
+      "event": "files_modified",
+      "details": {
+        "count": 1
+      }
+    },
+    {
+      "time": "2026-09-15T02:56:22.702Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:04.414Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "22cb5a43a682ae4fa71c18d5b43f5ad58fb26fbb9894fca9e3a0f375af4c788e"
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:13.569Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:14.568Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ACCEPTANCE_FILE_ATTESTATION_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:32.301Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:33.880Z",
+      "event": "final_acceptance_rejected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:33.884Z",
+      "event": "task_rejected",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:57:34.092Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "c0a0a14cfa79bef5f2d7d0f6f66d3c777b7d2e7e362444b8ade69d0fd077ce70"
+      }
+    },
+    {
+      "time": "2026-09-15T02:58:33.849Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:58:34.364Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "OPERATOR_REPORT_ACK_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:58:53.803Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "c0a0a14cfa79bef5f2d7d0f6f66d3c777b7d2e7e362444b8ade69d0fd077ce70"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:06.346Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:07.506Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:09.869Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:10.686Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:10.694Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:12.096Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:12.106Z",
+      "event": "execution_exception",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:12.110Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:12.114Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "EXISTING_FILE_ADOPTION_PREEXISTING_DIRTY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:24.985Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:51.275Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:53.489Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:54.457Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:54.466Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:55.664Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:55.943Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:59:56.949Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+        "session_id": "Lqjof52QAQ2AQf7fp6keZexr"
+      }
+    },
+    {
+      "time": "2026-09-15T03:00:12.379Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_efficiency_runtime.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T03:00:13.680Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "session_id": "vAx7hm9dZJcKL9yPC92nL4G8"
+      }
+    },
+    {
+      "time": "2026-09-15T03:00:24.261Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_orchestration_workflow.py::OrchestrationWorkflowIntegrationTests::test_runtime_records_content_free_a2_stage_spans_without_new_contract_surface -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T03:00:26.280Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "session_id": "0FGMnImlIZX7VLaS1yHL7u_W"
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:28.577Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest tests/test_execution_hub_faults.py tests/test_controller_reattach.py tests/test_controller_continuity.py tests/test_orchestration_workflow.py -q",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:29.306Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:29.316Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:29.953Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:29.958Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:30.227Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "08daf7d96cdb0b26c910df92d8bab4eb8a74efc353e091abfb721ce030c3f1c4"
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:30.235Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T03:02:39.611Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T03:48:12.152Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "08daf7d96cdb0b26c910df92d8bab4eb8a74efc353e091abfb721ce030c3f1c4"
+      }
+    }
+  ]
+}

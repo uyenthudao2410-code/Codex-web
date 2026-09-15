@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "8df0df5fb8a34c42b6f0600127ee4c51",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "JmvjhQfAmgxnQnjqvP1Fa4BI",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2461,
+    "finished_at": "2026-09-15T06:52:21.833Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:52:18.965Z",
+  "updated_at": "2026-09-15T06:52:21.833Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:52:18.965Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:52:19.487Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $sup=@(Get-ChildItem -LiteralPath $acc -Recurse -File -Filter 'recovery-supervisor.ps1' -ErrorAction SilentlyContinue | Select-Object -First 5 FullName,Length); $exe=@(Get-ChildItem -LiteralPath $acc -File -Filter '*.exe' -ErrorAction SilentlyContinue | Select-Object FullName,Length); $descPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; $manifestPath=Join-Path $env:LOCAL",
+        "session_id": "JmvjhQfAmgxnQnjqvP1Fa4BI"
+      }
+    },
+    {
+      "time": "2026-09-15T06:52:21.833Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $sup=@(Get-ChildItem -LiteralPath $acc -Recurse -File -Filter 'recovery-supervisor.ps1' -ErrorAction SilentlyContinue | Select-Object -First 5 FullName,Length); $exe=@(Get-ChildItem -LiteralPath $acc -File -Filter '*.exe' -ErrorAction SilentlyContinue | Select-Object FullName,Length); $descPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; $manifestPath=Join-Path $env:LOCAL",
+        "status": "passed"
+      }
+    }
+  ]
+}

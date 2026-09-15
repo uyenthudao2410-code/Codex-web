@@ -288,6 +288,7 @@ class ContinuationDriverMixin:
                 outcome=outcome,
                 code=safe_code,
                 duration_ms=duration_ms,
+                provenance="natural",
             )
         except Exception:
             # Optimization telemetry is deliberately non-authoritative. A

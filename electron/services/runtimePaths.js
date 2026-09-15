@@ -63,6 +63,10 @@ class RuntimePaths {
   supervisorRequestFile() { return path.join(this.dataRootPath, 'runtime-supervisor-request.json'); }
   recoveryHostDescriptorFile() { return path.join(this.dataRootPath, 'recovery-host.json'); }
   recoveryHostLockFile() { return path.join(this.dataRootPath, 'recovery-host.lock'); }
+  // This policy is operator-installed, defaults to absent/disabled, and is
+  // deliberately separate from settings and secrets.  It only grants the
+  // narrow control-plane read-only bridge; it is never generated at startup.
+  controlPlaneReadOnlyPolicyFile() { return path.join(this.dataRootPath, 'control-plane-read-only-policy.json'); }
   // A stale Recovery Host cannot safely execute a full-clean request.  The
   // bootstrap envelope is a small, integrity-bound control-plane handoff used
   // to start the current checkout before the activation coordinator runs.  It

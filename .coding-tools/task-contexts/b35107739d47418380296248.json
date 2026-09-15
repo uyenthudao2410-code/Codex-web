@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "5beb14d10faa4ef88484a494f7b979bf",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "8YekXKvBO4FqBh2jSHyOAZpy",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 2893,
+    "finished_at": "2026-09-15T07:14:33.147Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T07:14:29.707Z",
+  "updated_at": "2026-09-15T07:14:33.147Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:14:29.707Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T07:14:30.314Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ir=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor';$mp=Join-Path $ir 'manifest.json';$sp=Join-Path $ir 'stop.request';$stp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$dp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$tn='WebMCP Recovery Supervisor';$m=$null;$st=$null;$d=$null;try{$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json}catch{};try{$st=Get-Content -LiteralPath $stp -Raw|ConvertFro",
+        "session_id": "8YekXKvBO4FqBh2jSHyOAZpy"
+      }
+    },
+    {
+      "time": "2026-09-15T07:14:33.147Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ir=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor';$mp=Join-Path $ir 'manifest.json';$sp=Join-Path $ir 'stop.request';$stp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$dp=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$tn='WebMCP Recovery Supervisor';$m=$null;$st=$null;$d=$null;try{$m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json}catch{};try{$st=Get-Content -LiteralPath $stp -Raw|ConvertFro",
+        "status": "passed"
+      }
+    }
+  ]
+}

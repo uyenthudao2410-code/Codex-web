@@ -3,9 +3,9 @@
 - Run: `e60e4e8bba6b439eba1b1c8808640002`
 - Task: `ee6d9a082bd849739aecbbeeceb471d5`
 - Objective: Create a narrow accepted-code activation-authority checkpoint for the already-committed semantic-provider fix at current HEAD. Do not edit source. Adopt only the exact existing semantic_localization.py and context_tools.py bytes, run bounded semantic-provider regression proof, and accept this auxiliary non-problem wave solely so coding_mcp may be restarted. Do not close or supersede the canonical Problem RUN 80fd4f520875418fbea2205071984d11.
-- Status: **active**
+- Status: **aborted**
 - Started: `2026-09-12T12:45:26.981Z`
-- Finished: `None`
+- Finished: `2026-09-15T08:59:42.142Z`
 
 ## Outcome metrics
 
@@ -24,7 +24,7 @@
 | 1 | `69d7d44953f14c5da26e7648cab28ea0` | 1 | `run_initial_objective` | `mcp_only` | `228b91e6128479d4b3699e622d4f51dd431acb24` | replanned |
 | 2 | `13dd060b09444341a6d5fbde51d728b3` | 2 | `replan_request` | `mcp_only` | `228b91e6128479d4b3699e622d4f51dd431acb24` | replanned |
 | 3 | `debb29ce64fe428191d2f79f1072edd7` | 3 | `replan_request` | `mcp_only` | `228b91e6128479d4b3699e622d4f51dd431acb24` | replanned |
-| 4 | `50b2f828ce734cccac6aba1aa4aac0a4` | 4 | `replan_request` | `mcp_only` | `228b91e6128479d4b3699e622d4f51dd431acb24` | active |
+| 4 | `50b2f828ce734cccac6aba1aa4aac0a4` | 4 | `replan_request` | `mcp_only` | `228b91e6128479d4b3699e622d4f51dd431acb24` | aborted |
 
 ## Acceptance checkpoints
 
@@ -51,7 +51,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `84`
-- Chain head: `96c99b72d509dce97ccfce567abdcce926d6ca0df42045b460494c8eceb1784f`
+- Events checked: `86`
+- Chain head: `a1e9e62bc135fd80ee11a45cf4424c2e0199556dfe3485dc430eb14b108768c3`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

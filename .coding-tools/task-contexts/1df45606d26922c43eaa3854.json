@@ -1,0 +1,338 @@
+{
+  "version": 2,
+  "task_id": "79872f4150c14443b86631fba35b5511",
+  "orchestration": {
+    "run_id": "507227665bb742e0b95078c0072f21df",
+    "wave_id": "275a64e19e73425895eedcc6d091909c",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "6a03b8b995bb3b11ddb3a463e6b7e28621ff59579eab3bb288ce69038f89aa10",
+    "contract_fp": ""
+  },
+  "objective": "Read-only trace of the exact agent_workflow continuation-grant call path that invokes build_goal_continuation_policy/build_run_continuation_policy. Determine which contract_fingerprint value is passed into continuation policy construction and why a canonical 64-hex Problem contract fingerprint can still produce RUN_CONTINUATION_POLICY_INVALID. Do not mutate source, create a continuation grant, restart runtime, or alter acceptance authority.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "",
+    "kind": "command",
+    "status": "failed",
+    "result_status": "failed",
+    "exit_code": null,
+    "duration_ms": null,
+    "finished_at": "2026-09-15T09:45:30.841Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-e918c7d33e70c2d304d0797e11b05fcb",
+      "problem_revision": 2,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 18,
+        "criteria_proven": 0,
+        "criteria_unresolved": 18,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "continuity.auto_resume",
+        "next_critical_gap": "Eligible long-running work resumes automatically across ordinary REPLAN, report-gate, reconnect, and accepted controlled-restart boundaries without requiring a manual 'continue' message.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 33,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 4,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "507227665bb742e0b95078c0072f21df",
+        "wave_id": "275a64e19e73425895eedcc6d091909c",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 34,
+      "latest_event": {
+        "seq": 295,
+        "event_id": "prl-bind-d7a9d431198748ba137a83e46f01d0cc839928c3b4986504477d9505ff80d035",
+        "event_hash": "4d575ea1b6f804bc4b3db366d9e1e2cc2c68408cd66e6eca2581dfac5ae6694a",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T08:14:31.094Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 90,
+        "manual_nudge_count": 1,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 60,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 15,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 14,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 10,
+        "head_hash": "96460359ed77f6ab7ae1fcacd143a3d9593205524e8302f65dbe462c02fce628"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-507227665bb742e0b95078c0072f21df\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-507227665bb742e0b95078c0072f21df\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "507227665bb742e0b95078c0072f21df",
+      "wave_id": "275a64e19e73425895eedcc6d091909c",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "6a03b8b995bb3b11ddb3a463e6b7e28621ff59579eab3bb288ce69038f89aa10",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only trace of the exact agent_workflow continuation-grant call path that invokes build_goal_continuation_policy/build_run_continuation_policy. Determine which contract_fingerprint value is passed into continuation policy construction and why a canonical 64-hex Problem contract fingerprint can still produce RUN_CONTINUATION_POLICY_INVALID. Do not mutate source, create a continuation grant, restart runtime, or alter acceptance authority.",
+        "objective_revision": 1,
+        "objective_sha256": "c4f351393b2037b76f535428eeada2d315f31536b5f91d22e720d7ebeb435a5e",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "a74909a44c2062b84bc5cbcf5173bf8a1a4f8d420fa70b2d586078da292a74cc",
+  "completion_report_acknowledged_id": "a74909a44c2062b84bc5cbcf5173bf8a1a4f8d420fa70b2d586078da292a74cc",
+  "completion_report_acknowledged_at": "2026-09-15T08:31:35.428Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-15T08:11:07.468Z",
+  "updated_at": "2026-09-15T09:47:37.865Z",
+  "events": [
+    {
+      "time": "2026-09-15T08:11:07.468Z",
+      "event": "task_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "new_task",
+          "next_step",
+          "objective",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T08:11:14.046Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:11:22.641Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:11:22.648Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T08:11:46.691Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"build_goal_continuation_policy\" resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+        "session_id": "sTjfrJdevDebXjuhDEE7SbnC"
+      }
+    },
+    {
+      "time": "2026-09-15T08:11:47.477Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"build_goal_continuation_policy\" resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T08:28:40.016Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "RUNTIME_BUSY"
+      }
+    },
+    {
+      "time": "2026-09-15T08:28:56.193Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T08:29:41.531Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T08:30:05.900Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "IDEMPOTENCY_CONFLICT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:30:29.838Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "a74909a44c2062b84bc5cbcf5173bf8a1a4f8d420fa70b2d586078da292a74cc"
+      }
+    },
+    {
+      "time": "2026-09-15T08:30:40.107Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T08:31:35.428Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "a74909a44c2062b84bc5cbcf5173bf8a1a4f8d420fa70b2d586078da292a74cc"
+      }
+    },
+    {
+      "time": "2026-09-15T08:31:45.517Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:45:30.841Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node -e \"const fs=require('fs'),c=require('crypto'); for(const p of process.argv.slice(1)){const h=c.createHash('sha256').update(fs.readFileSync(p)).digest('hex'); console.log(h+'  '+p)}\" electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js electron/services/controlPlaneReadOnlyBridge.js",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:47:22.671Z",
+      "event": "task_resumed",
+      "details": {
+        "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof."
+      }
+    },
+    {
+      "time": "2026-09-15T09:47:37.865Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ],
+  "pause_reason": ""
+}

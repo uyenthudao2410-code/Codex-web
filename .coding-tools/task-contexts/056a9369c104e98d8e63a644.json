@@ -1,0 +1,452 @@
+{
+  "version": 2,
+  "task_id": "a842997cbab24634b5c449ed2ae4e30c",
+  "orchestration": {
+    "run_id": "1342fc0d766f4c9fb714d1e74bb23710",
+    "wave_id": "250c3d137e39477e942baa7435816cc9",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "7601159c3d2936edc610275656921a6bffe8c489ac1a527f976610c20d1ff452",
+    "contract_fp": ""
+  },
+  "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix the newly observed automatic-recovery retry storm only. Root cause: RuntimeOrchestrator.supervise catches typed UPDATE_INCOMPLETE/full_clean_activation_required from soft recovery after source revision drift, logs retryAfterMs, and retries indefinitely every watchdog tick. Preserve assertActivationRevisionContinuity and all fail-closed source/epoch guards. Make deterministic source-authority/revision mismatch latch autoRecoveryBlocked with a typed lastStartFailure/recovery projection so later supervise ticks do not invoke another automatic recovery until an explicit authorized start/full-clean path clears the block. Add a focused regression proving one recovery attempt then zero repeats across later supervise ticks, while transient failures retain bounded retry behavior. Preserve unrelated dirty work. No restart, reboot, commit, push, release, install, or packaging in this wave.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "WobN0MDra4JdUm5kOyGy_qAX",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1585,
+    "finished_at": "2026-09-15T05:45:26.125Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Temporary read-only continuity diagnosis completed after controller reattach. No source mutation, no proof, no checkpoint. Stop this non-Parent diagnostic projection before continuing the canonical Parent bugfix lineage.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-15T04:51:11.271Z",
+  "updated_at": "2026-09-15T05:46:36.389Z",
+  "events": [
+    {
+      "time": "2026-09-15T04:51:11.271Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix the newly observed automatic-recovery retry storm only. Root cause: RuntimeOrchestrator.supervise catches typed UPDATE_INCOMPLETE/full_clean_activation_required from soft recovery after source revision drift, logs retryAfterMs, and retries indefinitely every watchdog tick. Preserve assertActivationRevisionContinuity and all fail-closed source/epoch guards. Make deterministic source-authority/revision mismatch latch autoRecoveryBlocked with a typed lastStartFailure/recovery projection so later supervise ticks do not invoke another automatic recovery until an explicit authorized start/full-clean path clears the block. Add a focused regression proving one recovery attempt then zero repeats across later supervise ticks, while transient failures retain bounded retry behavior. Preserve unrelated dirty work. No restart, reboot, commit, push, release, install, or packaging in this wave."
+      }
+    },
+    {
+      "time": "2026-09-15T04:51:11.524Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PRL_EXACT_BINDING_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T04:52:20.123Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T04:52:40.618Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T05:40:19.974Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T05:40:34.161Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T05:40:35.078Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T05:40:35.085Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T05:40:51.646Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:04.863Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo noop",
+        "session_id": "sMDtoLqHHr9gstdibpPqneyP"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:05.363Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo noop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:16.162Z",
+      "event": "command_started",
+      "details": {
+        "command": "exit 0",
+        "session_id": "SJpQ_QIbgZoJGKXh35lLrh5J"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:16.706Z",
+      "event": "command_finished",
+      "details": {
+        "command": "exit 0",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:28.490Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo skip",
+        "session_id": "sp91YSVkktT7cZTYGF-zjjH2"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:28.960Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo skip",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:38.539Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo ready",
+        "session_id": "3foaXYbPGSqkF_SdUMO7qqRM"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:39.038Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo ready",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:51.010Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo continue",
+        "session_id": "PBPZCJclJb_juKRpG455S6Qq"
+      }
+    },
+    {
+      "time": "2026-09-15T05:41:51.478Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo continue",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:03.370Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo final-noop",
+        "session_id": "GdcYoX588QNsHM4RbbERvymO"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:03.922Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo final-noop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:16.373Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo mistake",
+        "session_id": "bTZqw8qWLERVuTaCzSmoB9JK"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:16.838Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo mistake",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:28.123Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo stop-loop",
+        "session_id": "-PEJ-tcIG52YUjquoFdlkEXo"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:28.610Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo stop-loop",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:41.532Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo x",
+        "session_id": "1ZNrSa58lIV9VnBCEeD34h65"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:42.056Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo x",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:55.642Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo task-control-next",
+        "session_id": "QnbJqyFcbgsOW_l9cC4GkFLf"
+      }
+    },
+    {
+      "time": "2026-09-15T05:42:56.112Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo task-control-next",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:08.963Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo correction",
+        "session_id": "dEI32ohucXziY03CXzqkqfdy"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:09.440Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo correction",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:23.799Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo wrong-again",
+        "session_id": "DYX2zUjqJZ9MyNcN95_L2vgL"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:24.294Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo wrong-again",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:36.835Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo PLEASE",
+        "session_id": "zrYKxxugWqUQpKnQ91v1mNzl"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:37.407Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo PLEASE",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:52.541Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo sanity",
+        "session_id": "l7HgSI5aOYvVWtTTAn9jVIsu"
+      }
+    },
+    {
+      "time": "2026-09-15T05:43:53.308Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo sanity",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:06.049Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo tool-bug",
+        "session_id": "ppFIi9qTfMEAqu408iM8poas"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:07.025Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo tool-bug",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:22.940Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo impossible",
+        "session_id": "Io6KpkZMzJg2VR4pDQVUQP-x"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:23.511Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo impossible",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:36.732Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo should-have-been-task-control",
+        "session_id": "DQ63BA0yRzC_JaIUc-Unw9Aj"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:37.224Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo should-have-been-task-control",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:48.891Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo reset-test",
+        "session_id": "o9fiG4NZXbIQhge8X6g95ZkS"
+      }
+    },
+    {
+      "time": "2026-09-15T05:44:49.708Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo reset-test",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:45:03.652Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo oh-no",
+        "session_id": "EcHr2g7ZjJHlD7oeBxx7yhxj"
+      }
+    },
+    {
+      "time": "2026-09-15T05:45:04.460Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo oh-no",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:45:25.195Z",
+      "event": "command_started",
+      "details": {
+        "command": "echo new-context",
+        "session_id": "WobN0MDra4JdUm5kOyGy_qAX"
+      }
+    },
+    {
+      "time": "2026-09-15T05:45:26.125Z",
+      "event": "command_finished",
+      "details": {
+        "command": "echo new-context",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:46:36.383Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-15T05:46:36.386Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

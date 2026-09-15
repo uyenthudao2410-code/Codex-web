@@ -1,0 +1,120 @@
+{
+  "version": 2,
+  "task_id": "29d5eec218e040279fa9a1dd585be63d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "up0mHgDMp2eMwgR3CFLFCWZ3",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1220,
+    "finished_at": "2026-09-15T05:13:08.385Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T05:12:11.048Z",
+  "updated_at": "2026-09-15T05:13:08.385Z",
+  "events": [
+    {
+      "time": "2026-09-15T05:12:11.048Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:11.597Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$now=Get-Date; git status --porcelain=v1 | ForEach-Object { if($_.Length -ge 4){ $p=$_.Substring(3); if($p -notlike '.coding-tools/*' -and (Test-Path -LiteralPath $p)){ $i=Get-Item -LiteralPath $p; if(($now-$i.LastWriteTime).TotalSeconds -lt 180){ [pscustomobject]@{Path=$p;AgeSec=[math]::Round(($now-$i.LastWriteTime).TotalSeconds,1);LastWrite=$i.LastWriteTime.ToString('o');Length=$i.Length} } } } } | Sort-Object AgeSec | Format-Table -AutoSize\"",
+        "session_id": "AdtjDZY2f9Bo_rWceYpgHBmB"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:12.487Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$now=Get-Date; git status --porcelain=v1 | ForEach-Object { if($_.Length -ge 4){ $p=$_.Substring(3); if($p -notlike '.coding-tools/*' -and (Test-Path -LiteralPath $p)){ $i=Get-Item -LiteralPath $p; if(($now-$i.LastWriteTime).TotalSeconds -lt 180){ [pscustomobject]@{Path=$p;AgeSec=[math]::Round(($now-$i.LastWriteTime).TotalSeconds,1);LastWrite=$i.LastWriteTime.ToString('o');Length=$i.Length} } } } } | Sort-Object AgeSec | Format-Table -AutoSize\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:26.002Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n -m 200 -C 4 'control-plane/tests/test_store.py|control-plane/tests/test_http_api.py' .coding-tools/task-contexts | Select-String -Pattern 'task-contexts|run_id|wave_id|objective|modified_files|test_store.py|test_http_api.py' | Select-Object -Last 320\"",
+        "session_id": "XzW852vqyp4iOWas6-WFR8cS"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:27.387Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n -m 200 -C 4 'control-plane/tests/test_store.py|control-plane/tests/test_http_api.py' .coding-tools/task-contexts | Select-String -Pattern 'task-contexts|run_id|wave_id|objective|modified_files|test_store.py|test_http_api.py' | Select-Object -Last 320\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:38.952Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content '.coding-tools/task-contexts/736e237ca27b6b662665d73b-history.json' -TotalCount 220\"",
+        "session_id": "UV9-ENXMXcKFmyOv0SKmOC9l"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:39.484Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content '.coding-tools/task-contexts/736e237ca27b6b662665d73b-history.json' -TotalCount 220\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:54.096Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem '.coding-tools/task-contexts' -Filter '*.json' | Sort-Object LastWriteTime -Descending | Select-Object -First 25 | ForEach-Object { try { $j=Get-Content $_.FullName -Raw | ConvertFrom-Json; [pscustomobject]@{File=$_.Name;LastWrite=$_.LastWriteTime.ToString('o');Status=$j.status;Task=$j.task_id;Objective=([string]$j.objective).Substring(0,[Math]::Min(140,([string]$j.objective).Length));Run=$j.orchestration.run_id;Wave=$j.orchestrat",
+        "session_id": "99RXHEehY4hDQ2a8lsNyx5PI"
+      }
+    },
+    {
+      "time": "2026-09-15T05:12:55.113Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-ChildItem '.coding-tools/task-contexts' -Filter '*.json' | Sort-Object LastWriteTime -Descending | Select-Object -First 25 | ForEach-Object { try { $j=Get-Content $_.FullName -Raw | ConvertFrom-Json; [pscustomobject]@{File=$_.Name;LastWrite=$_.LastWriteTime.ToString('o');Status=$j.status;Task=$j.task_id;Objective=([string]$j.objective).Substring(0,[Math]::Min(140,([string]$j.objective).Length));Run=$j.orchestration.run_id;Wave=$j.orchestrat",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:13:07.262Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('.coding-tools/task-contexts/20a0dd3550d76f0d996bb26d.json','.coding-tools/task-contexts/20a0dd3550d76f0d996bb26d-history.json'); foreach($f in $files){ Write-Output ('===== '+$f+' ====='); Get-Content $f -TotalCount 260 }\"",
+        "session_id": "up0mHgDMp2eMwgR3CFLFCWZ3"
+      }
+    },
+    {
+      "time": "2026-09-15T05:13:08.385Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('.coding-tools/task-contexts/20a0dd3550d76f0d996bb26d.json','.coding-tools/task-contexts/20a0dd3550d76f0d996bb26d-history.json'); foreach($f in $files){ Write-Output ('===== '+$f+' ====='); Get-Content $f -TotalCount 260 }\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

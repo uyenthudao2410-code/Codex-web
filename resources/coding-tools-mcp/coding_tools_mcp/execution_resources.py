@@ -982,13 +982,21 @@ class ExecutionResourceGovernor:
             lifecycle_state="running",
         )
 
-    def complete(self, job_id: str, *, lifecycle_state: str, exit_code: int | None = None) -> None:
+    def complete(
+        self,
+        job_id: str,
+        *,
+        lifecycle_state: str,
+        exit_code: int | None = None,
+        process_tree_cleaned: bool = False,
+    ) -> None:
         terminal = str(lifecycle_state or "exited")[:64]
         now = utc_now()
         with self._lock:
             owned_process = self._owned_processes.pop(str(job_id), None)
         if owned_process is not None:
-            terminate_process_group(owned_process, signal.SIGTERM)
+            if not process_tree_cleaned:
+                terminate_process_group(owned_process, signal.SIGTERM)
             if exit_code is None:
                 exit_code = owned_process.poll()
         with self.ledger._lock, self.ledger._connect() as connection:

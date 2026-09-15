@@ -70,6 +70,7 @@ class ProblemLineageControlMixin:
         run_id: str = "",
         *,
         controller: dict[str, Any] | None = None,
+        allow_released_terminal_lease: bool = False,
     ) -> dict[str, Any]:
         identity = self._current_hub_client()
         if (
@@ -110,6 +111,31 @@ class ProblemLineageControlMixin:
             "runtime_instance_id": self.process_instance_id,
         }
         if run_id:
+            if allow_released_terminal_lease:
+                run = self.orchestration_ledger.get_run(run_id)
+                exact = self.orchestration_ledger.peek_controller_lease(run_id)
+                if (
+                    not isinstance(run, dict)
+                    or str(run.get("status") or "") != "accepted"
+                    or not isinstance(exact, dict)
+                    or str(exact.get("status") or "") != "released"
+                    or str(exact.get("owner_client_id") or "") != client_id
+                    or not str(exact.get("lease_id") or "")
+                    or int(exact.get("fencing_token") or 0) <= 0
+                ):
+                    raise ToolFailure(
+                        "CONTROLLER_LEASE_REQUIRED",
+                        "Accepted-checkpoint reconciliation requires the exact released ChatWeb controller lease.",
+                        category="security",
+                        retryable=True,
+                        details={"run_id": run_id},
+                    )
+                authority.update({
+                    "lease_id": str(exact["lease_id"]),
+                    "fencing_token": int(exact["fencing_token"]),
+                    "lease_status": "released",
+                })
+                return authority
             exact = controller if isinstance(controller, dict) else self._require_hub_controller(run_id)
             if not isinstance(exact, dict):
                 raise ToolFailure(
@@ -238,7 +264,10 @@ class ProblemLineageControlMixin:
                     category="validation",
                 )
             self._problem_validate_exact_references(event)
-            self._problem_chatweb_controller_authority(str(event["run_id"]))
+            self._problem_chatweb_controller_authority(
+                str(event["run_id"]),
+                allow_released_terminal_lease=True,
+            )
             identity = self._problem_source_identity_for_run(str(event["run_id"]))
             result = self._problem_reconcile_after_checkpoint(
                 run_id=str(event["run_id"]),

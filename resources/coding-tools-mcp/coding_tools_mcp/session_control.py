@@ -181,6 +181,7 @@ class SessionControlMixin:
                 session.managed_job_id,
                 lifecycle_state=lifecycle,
                 exit_code=session.exit_code,
+                process_tree_cleaned=True,
             )
             session.resource_terminal_recorded = True
         with self.sessions_lock:

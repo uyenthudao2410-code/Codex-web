@@ -1,0 +1,220 @@
+[
+  {
+    "version": 2,
+    "task_id": "4de7219654684629a3ff1e3b75ddbffe",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Yrm7yDLhKC-Dn2fS48EM_RMC",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 1058,
+      "finished_at": "2026-09-15T02:43:46.828Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T02:41:22.079Z",
+    "updated_at": "2026-09-15T02:43:46.828Z",
+    "events": [
+      {
+        "time": "2026-09-15T02:41:22.079Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:22.517Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -F \"electron/services/fullCleanActivation.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"electron/services/recoveryBootstrap.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"tests/runtime-lifecycle.test.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports",
+          "session_id": "INg_uSA4w1uKIg5UB867NVmr"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:27.493Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -F \"electron/services/fullCleanActivation.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"electron/services/recoveryBootstrap.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py\" .coding-tools/task-contexts .coding-tools/orchestration/reports && rg -n -F \"tests/runtime-lifecycle.test.js\" .coding-tools/task-contexts .coding-tools/orchestration/reports",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:39.839Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "session_id": "SuBJ2WEuwwFj-apKVD3SIqct"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:41.011Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:52.365Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "session_id": "7Kz0C82aIUynPQFkuyC0oflZ"
+        }
+      },
+      {
+        "time": "2026-09-15T02:41:55.625Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:10.229Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ids=@('19dbd8bd9b9a499996c04a185036969e','1b348ff16e73434cb28d370ca207016c','43504b96e3a04d3f8216d8aae5fac421','48e655dfbdf44d859e23a5f8c703a9e5','53ac6845facd4cbc94154f712b6bbf27','62d474e8e0524e04959424536ae8660d','72e196913f77424e95768f83016d9df1','87f4559ee6bc41ce9bb15384b7180aee','d9fd804ad72d499fa299636fba50a5cb','f3bb940b34ff4294bfbd1468fae90b11','0a6a24c50fa4416985fed834f02fddb0','4426173625d44baca8f7f9ac903ff820','d68f3273b087447ab108ac159a35e14f','03d7d",
+          "session_id": "NCdZJplNK06jLZfoBKUyZJNp"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:11.114Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$ids=@('19dbd8bd9b9a499996c04a185036969e','1b348ff16e73434cb28d370ca207016c','43504b96e3a04d3f8216d8aae5fac421','48e655dfbdf44d859e23a5f8c703a9e5','53ac6845facd4cbc94154f712b6bbf27','62d474e8e0524e04959424536ae8660d','72e196913f77424e95768f83016d9df1','87f4559ee6bc41ce9bb15384b7180aee','d9fd804ad72d499fa299636fba50a5cb','f3bb940b34ff4294bfbd1468fae90b11','0a6a24c50fa4416985fed834f02fddb0','4426173625d44baca8f7f9ac903ff820','d68f3273b087447ab108ac159a35e14f','03d7d",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:35.368Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "session_id": "kaI0sX-SVM03PeR6GJ0dh6xc"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:36.931Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$targets=@('electron/services/fullCleanActivation.js','electron/services/recoveryBootstrap.js','electron/services/recoveryHost.js','electron/services/commandRunner.js','electron/services/environmentService.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_contract.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py','resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py','resources/coding-tools-mcp/coding_tools_mcp/tool_contrac",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:51.329Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=& rg -l -F 'electron/services/recoveryBootstrap.js' .coding-tools/task-contexts 2>$null; $rows=@(); foreach($f in $files){$i=Get-Item $f; if($i.LastWriteTimeUtc -ge [datetime]'2026-09-15T01:30:00Z'){ $rows += [pscustomobject]@{file=$i.Name;mtime=$i.LastWriteTimeUtc.ToString('o')} }}; $files2=& rg -l -F 'tests/recovery-bootstrap.test.js' .coding-tools/task-contexts 2>$null; foreach($f in $files2){$i=Get-Item $f; if($i.LastWriteTimeUtc -ge [datetime]'2026-09-",
+          "session_id": "7L5LXBUX-2bDoo3P9FvHGbuG"
+        }
+      },
+      {
+        "time": "2026-09-15T02:42:52.671Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files=& rg -l -F 'electron/services/recoveryBootstrap.js' .coding-tools/task-contexts 2>$null; $rows=@(); foreach($f in $files){$i=Get-Item $f; if($i.LastWriteTimeUtc -ge [datetime]'2026-09-15T01:30:00Z'){ $rows += [pscustomobject]@{file=$i.Name;mtime=$i.LastWriteTimeUtc.ToString('o')} }}; $files2=& rg -l -F 'tests/recovery-bootstrap.test.js' .coding-tools/task-contexts 2>$null; foreach($f in $files2){$i=Get-Item $f; if($i.LastWriteTimeUtc -ge [datetime]'2026-09-",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:02.096Z",
+        "event": "command_started",
+        "details": {
+          "command": "git diff -- electron/services/recoveryBootstrap.js tests/recovery-bootstrap.test.js",
+          "session_id": "ga6SgTUsiQumhzNqtCxk9bOA"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:02.490Z",
+        "event": "command_finished",
+        "details": {
+          "command": "git diff -- electron/services/recoveryBootstrap.js tests/recovery-bootstrap.test.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:15.473Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$patterns=@('allowIdlePackagedHandoff','RECOVERY_HOST_IDLE_HANDOFF_REFUSED','idle packaged host'); foreach($pat in $patterns){$files=& rg -l -F -- $pat .coding-tools/task-contexts .coding-tools/orchestration/reports 2>$null; foreach($f in $files){$i=Get-Item $f; [pscustomobject]@{pattern=$pat;file=$f;mtime=$i.LastWriteTimeUtc.ToString('o')}|ConvertTo-Json -Compress}}\"",
+          "session_id": "WrYV5lXwbSvHFCKADIiYmuBH"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:16.794Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$patterns=@('allowIdlePackagedHandoff','RECOVERY_HOST_IDLE_HANDOFF_REFUSED','idle packaged host'); foreach($pat in $patterns){$files=& rg -l -F -- $pat .coding-tools/task-contexts .coding-tools/orchestration/reports 2>$null; foreach($f in $files){$i=Get-Item $f; [pscustomobject]@{pattern=$pat;file=$f;mtime=$i.LastWriteTimeUtc.ToString('o')}|ConvertTo-Json -Compress}}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:25.465Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j=Get-Content .coding-tools/task-contexts/1f634ed44d180f0818523c12.json -Raw|ConvertFrom-Json -Depth 100; [pscustomobject]@{task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;orch=$j.orchestration.orchestration_state;modified_files=(@($j.modified_files)-join ',');report_id=$j.completion_report_id;accepted=$j.completion_report.accepted_or_not;checkpoint=$j.completion_report.source_run_wave.che",
+          "session_id": "3wGPo5pKCxlPOL7QiruHy-6Z"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:25.983Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j=Get-Content .coding-tools/task-contexts/1f634ed44d180f0818523c12.json -Raw|ConvertFrom-Json -Depth 100; [pscustomobject]@{task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;orch=$j.orchestration.orchestration_state;modified_files=(@($j.modified_files)-join ',');report_id=$j.completion_report_id;accepted=$j.completion_report.accepted_or_not;checkpoint=$j.completion_report.source_run_wave.che",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:34.887Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j=Get-Content .coding-tools/task-contexts/1f634ed44d180f0818523c12.json -Raw|ConvertFrom-Json; [pscustomobject]@{task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;orch=$j.orchestration.orchestration_state;modified_files=(@($j.modified_files)-join ',');report_id=$j.completion_report_id;accepted=$j.completion_report.accepted_or_not;checkpoint=$j.completion_report.source_run_wave.checkpoint_id;",
+          "session_id": "5qztStn4b0RIO3eNYgXYUDJl"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:35.661Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j=Get-Content .coding-tools/task-contexts/1f634ed44d180f0818523c12.json -Raw|ConvertFrom-Json; [pscustomobject]@{task_id=$j.task_id;status=$j.status;objective=$j.objective;run_id=$j.orchestration.run_id;wave_id=$j.orchestration.wave_id;orch=$j.orchestration.orchestration_state;modified_files=(@($j.modified_files)-join ',');report_id=$j.completion_report_id;accepted=$j.completion_report.accepted_or_not;checkpoint=$j.completion_report.source_run_wave.checkpoint_id;",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:45.989Z",
+        "event": "command_started",
+        "details": {
+          "command": "sqlite3 .coding-tools/orchestration/ledger.sqlite3 \".tables\"",
+          "session_id": "Yrm7yDLhKC-Dn2fS48EM_RMC"
+        }
+      },
+      {
+        "time": "2026-09-15T02:43:46.828Z",
+        "event": "command_finished",
+        "details": {
+          "command": "sqlite3 .coding-tools/orchestration/ledger.sqlite3 \".tables\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T02:43:58.459Z",
+    "archive_reason": "finished"
+  }
+]

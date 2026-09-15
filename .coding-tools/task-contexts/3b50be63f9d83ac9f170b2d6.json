@@ -1,0 +1,356 @@
+{
+  "version": 2,
+  "task_id": "29306a3945c64164925f35452e4308c3",
+  "orchestration": {
+    "run_id": "d24346d2665847c2abe9d95238474af3",
+    "wave_id": "c7f9c6e4925940548258e86e342a9c9c",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+    "contract_fp": ""
+  },
+  "objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, test the exact Task Scheduler replacement-race hypothesis without source changes. From development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a, run the exact packaged Supervisor Install once. If it times out as currently observed, keep the packaged manifest active, capture the first-start task/status state, wait a bounded 1 second, invoke Start-ScheduledTask on the same WebMCP Recovery Supervisor task a second time, then wait up to 6 seconds for a fresh status whose manifest_sha256 equals the current packaged manifest SHA, state is healthy, supervisor PID is live, existing Recovery Host identity is unchanged, last_spawned_pid is null, and task is Running. Capture whether second start succeeded or failed; the diagnostic itself should pass if evidence is safely captured and rollback succeeds. Always reinstall development Supervisor in finally and verify development/healthy plus unchanged Recovery Host identity. Never expose recovery descriptor token. Do not reboot yet, edit source, commit, push, release, publish, or deploy.",
+  "status": "waiting",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "failed",
+      "updated_at": "2026-09-15T09:43:23.251Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "pending",
+      "updated_at": "2026-09-15T09:43:23.251Z"
+    }
+  ],
+  "current_step": "Replan report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "7l0LZMX4toCbjiKquNoramId",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-15T09:43:22.456Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "unavailable",
+        "criteria_total": 12,
+        "criteria_proven": null,
+        "criteria_unresolved": null,
+        "coverage_status": "UNAVAILABLE",
+        "missing_reason": "attempt_pair_window_truncated",
+        "next_critical_gap_id": null,
+        "next_critical_gap": null,
+        "next_action": "UNAVAILABLE",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 50,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 0,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": true,
+          "missing_reason": "attempt_pair_window_truncated"
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "d24346d2665847c2abe9d95238474af3",
+        "wave_id": "c7f9c6e4925940548258e86e342a9c9c",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+      "event_count": 57,
+      "latest_event": {
+        "seq": 303,
+        "event_id": "prl-bind-7172a43c3a0b7824c8cc23682c811666b2e2d482fedec52f5f5397dd94f297bc",
+        "event_hash": "5c4e7c118098d8dba7eb3028f8bda872a83d76f9432b27f26f2c31046ed7c43d",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T09:42:43.780Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 162,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 108,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 17,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 37,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 24,
+        "head_hash": "e708a86e9a976935508d3ee202dc6a639aff090284ba5f03f51e3948721d9619"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d24346d2665847c2abe9d95238474af3\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d24346d2665847c2abe9d95238474af3\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "d24346d2665847c2abe9d95238474af3",
+      "wave_id": "c7f9c6e4925940548258e86e342a9c9c",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "0a67c9f11d3619d4449f50f6f4c548dad41cab5dab6e68071cefa8baca9239fa",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, test the exact Task Scheduler replacement-race hypothesis without source changes. From development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a, run the exact packaged Supervisor Install once. If it times out as currently observed, keep the packaged manifest active, capture the first-start task/status state, wait a bounded 1 second, invoke Start-ScheduledTask on the same WebMCP Recovery Supervisor task a second time, then wait up to 6 seconds for a fresh status whose manifest_sha256 equals the current packaged manifest SHA, state is healthy, supervisor PID is live, existing Recovery Host identity is unchanged, last_spawned_pid is null, and task is Running. Capture whether second start succeeded or failed; the diagnostic itself should pass if evidence is safely captured and rollback succeeds. Always reinstall development Supervisor in finally and verify development/healthy plus unchanged Recovery Host identity. Never expose recovery descriptor token. Do not reboot yet, edit source, commit, push, release, publish, or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "4a39e7dc3420c260596d04f401d3d8fe2b6199fac1441ae3248a709e316c5a99",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": false,
+      "proofs": [
+        {
+          "proof_id": "d9e8638d61ad4778976304cf7a3e5ffd",
+          "stage_id": "check:2242aad393453155",
+          "status": "failed",
+          "duration_ms": 30559,
+          "exit_code": 1,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "CHECK_FAILED",
+      "reason": null,
+      "event_seq": 58994
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "7d9ab0cdd71f8e850a3b0e9c03ad6703ad82f4fe622a11790aaf0406b4199e61",
+  "completion_report_acknowledged_id": "7d9ab0cdd71f8e850a3b0e9c03ad6703ad82f4fe622a11790aaf0406b4199e61",
+  "completion_report_acknowledged_at": "2026-09-15T09:44:01.983Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-15T09:42:41.281Z",
+  "updated_at": "2026-09-15T09:44:02.483Z",
+  "events": [
+    {
+      "time": "2026-09-15T09:42:41.281Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "For C01/M02 in Problem prl-22e670302757c9b7663170e226ed7c26 rev1, test the exact Task Scheduler replacement-race hypothesis without source changes. From development/healthy state and unchanged Recovery Host PID 19280 instance 5d13d8ac21067c251d8179f880629b1a, run the exact packaged Supervisor Install once. If it times out as currently observed, keep the packaged manifest active, capture the first-start task/status state, wait a bounded 1 second, invoke Start-ScheduledTask on the same WebMCP Recovery Supervisor task a second time, then wait up to 6 seconds for a fresh status whose manifest_sha256 equals the current packaged manifest SHA, state is healthy, supervisor PID is live, existing Recovery Host identity is unchanged, last_spawned_pid is null, and task is Running. Capture whether second start succeeded or failed; the diagnostic itself should pass if evidence is safely captured and rollback succeeds. Always reinstall development Supervisor in finally and verify development/healthy plus unchanged Recovery Host identity. Never expose recovery descriptor token. Do not reboot yet, edit source, commit, push, release, publish, or deploy."
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:44.372Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:47.365Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:48.822Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:48.828Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:50.630Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:51.146Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:42:54.313Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $acc 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.",
+        "session_id": "7l0LZMX4toCbjiKquNoramId"
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:22.456Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$ps=Join-Path ([Environment]::GetFolderPath('System')) 'WindowsPowerShell\\v1.0\\powershell.exe';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$pkg=Join-Path $acc 'resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$exe=Join-Path $acc 'Coding Tools MCP.exe';$dev='E:\\DEV\\Codex-web\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$devExe='E:\\DEV\\Codex-web\\node_modules\\electron\\dist\\electron.",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:23.251Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:25.205Z",
+      "event": "orchestration_failure_projected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:25.207Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:25.218Z",
+      "event": "execution_failed",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:25.453Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "7d9ab0cdd71f8e850a3b0e9c03ad6703ad82f4fe622a11790aaf0406b4199e61"
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:25.783Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T09:43:37.664Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:44:01.983Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "7d9ab0cdd71f8e850a3b0e9c03ad6703ad82f4fe622a11790aaf0406b4199e61"
+      }
+    }
+  ]
+}

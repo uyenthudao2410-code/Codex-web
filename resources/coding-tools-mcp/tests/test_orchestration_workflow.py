@@ -331,8 +331,23 @@ class OrchestrationWorkflowIntegrationTests(unittest.TestCase):
                 self.assertTrue(accepted["accepted"])
                 final_spans = runtime.orchestration_ledger.list_observation_spans(run_id)
                 acceptance = [item for item in final_spans if item.get("stage") == "acceptance"]
-                self.assertEqual(len(acceptance), 1)
-                self.assertEqual(acceptance[0]["span_id"], f"a2-runtime-stage-v1:{wave_id}:acceptance")
+                by_measurement = {str(item.get("measurement")): item for item in acceptance}
+                self.assertEqual(
+                    set(by_measurement),
+                    {"observed_stage_duration", "controller_processing", "acceptance_wait"},
+                )
+                self.assertEqual(
+                    by_measurement["observed_stage_duration"]["span_id"],
+                    f"a2-runtime-stage-v1:{wave_id}:acceptance",
+                )
+                self.assertEqual(
+                    by_measurement["controller_processing"]["span_id"],
+                    f"a2-controller-processing-v1:{wave_id}",
+                )
+                self.assertEqual(
+                    by_measurement["acceptance_wait"]["span_id"],
+                    f"a2-acceptance-wait-v1:{wave_id}",
+                )
             finally:
                 runtime.close()
 

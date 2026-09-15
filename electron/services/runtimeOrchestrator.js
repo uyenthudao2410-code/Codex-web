@@ -21,6 +21,13 @@ const { ActivationEpochStore } = require('./activationEpoch');
 const { run } = require('./commandRunner');
 const { runtimeDeviceIdentity, classifyStoredDeviceOwner } = require('./deviceIdentity');
 const { CONNECTOR_ATTESTATION_HEADER, connectorAttestationHeader } = require('./connectorAttestation');
+const {
+  BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE,
+  READ_ONLY_TOOL_NAME,
+  READ_ONLY_ARGUMENTS,
+  digest: controlPlaneBridgeDigest
+} = require('./controlPlaneReadOnlyBridge');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -43,6 +50,7 @@ const SUPERVISOR_RESTART_REASON_MAX_CHARS = 1024;
 const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
 const EXACT_STALE_RUN_ID_PATTERN = /^[a-f0-9]{32}$/;
 const EXACT_STALE_RUN_MAX_IDS = 64;
+const CONTROL_PLANE_READ_ONLY_TIMEOUT_MS = 15_000;
 
 function exactStaleRunMaintenanceReason(value) {
   if (typeof value !== 'string' || !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return false;
@@ -1176,6 +1184,176 @@ class RuntimeOrchestrator {
       : { health: null, failure: mcpHealthFailure('auth_token_missing') };
     this.lastMcpHealthFailure = observation.failure;
     return observation.health;
+  }
+
+  async controlPlaneReadOnlyWorkspaceContext(admission = {}) {
+    // This method intentionally owns the local MCP token and attestation.  A
+    // central node never receives either credential and cannot select a client
+    // identity, tool name, or workspace path.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(actionId)
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(attemptId)
+      || !/^[a-f0-9]{64}$/.test(policySha256)
+      || admission.tool_name !== READ_ONLY_TOOL_NAME
+      || !facadeContract
+      || typeof facadeContract !== 'object'
+      || Array.isArray(facadeContract)
+      || Object.keys(facadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || !Number.isSafeInteger(facadeContract.schema_version)
+      || facadeContract.schema_version < 1
+      || typeof facadeContract.profile !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      || typeof facadeContract.sha256 !== 'string'
+      || !/^[a-f0-9]{64}$/.test(facadeContract.sha256)) {
+      throw Object.assign(new Error('Control-plane read-only bridge admission is invalid.'), {
+        code: 'CONTROL_PLANE_BRIDGE_ADMISSION_INVALID'
+      });
+    }
+    const settings = this.settingsStore.load();
+    if (!normalizeWorkspacePath(settings.workspace)) {
+      throw Object.assign(new Error('Control-plane bridge has no exact local workspace.'), {
+        code: 'CONTROL_PLANE_BRIDGE_WORKSPACE_UNAVAILABLE'
+      });
+    }
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_READ_ONLY_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane read-only bridge.'), {
+        code: 'CONTROL_PLANE_BRIDGE_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: BRIDGE_CLIENT_ID,
+      clientType: BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      facade_contract: facadeContract
+    });
+    const body = JSON.stringify({
+      jsonrpc: '2.0',
+      id: `control-plane-read-only-${requestFingerprint.slice(0, 24)}`,
+      method: 'tools/call',
+      params: {
+        name: READ_ONLY_TOOL_NAME,
+        arguments: { ...READ_ONLY_ARGUMENTS },
+        _meta: {
+          'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+          'io.modelcontextprotocol/clientCapabilities': {},
+          'io.modelcontextprotocol/clientInfo': {
+            name: 'coding-tools-control-plane-read-only-bridge',
+            version: '1'
+          }
+        }
+      }
+    });
+    return new Promise((resolve, reject) => {
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': READ_ONLY_TOOL_NAME,
+          'X-Coding-Tools-Client-Id': BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_READ_ONLY_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          if (responseBody.length <= 1024 * 1024) responseBody += chunk;
+        });
+        response.on('end', () => {
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the control-plane bridge.'), {
+              code: 'CONTROL_PLANE_BRIDGE_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage) {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the control-plane bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_BRIDGE_MCP_REJECTED'
+            }));
+            return;
+          }
+          const workspace = normalizeWorkspacePath(structured?.workspace);
+          if (!workspace || workspaceKey(workspace) !== workspaceKey(settings.workspace)) {
+            reject(Object.assign(new Error('Coding Tools MCP returned a workspace outside the local bridge policy target.'), {
+              code: 'CONTROL_PLANE_BRIDGE_WORKSPACE_MISMATCH'
+            }));
+            return;
+          }
+          const localHandle = `cp_ro_${controlPlaneBridgeDigest({
+            policy_sha256: policySha256,
+            action_id: actionId,
+            attempt_id: attemptId,
+            process_instance_id: attestation.processInstanceId,
+            server_instance_id: attestation.serverInstanceId,
+            contract_sha256: attestation.contractSha256,
+            facade_contract: facadeContract
+          }).slice(0, 48)}`;
+          resolve({
+            schema_version: 1,
+            operation_kind: 'control_plane_read_only_workspace_context',
+            local_handle: localHandle,
+            action_id: actionId,
+            attempt_id: attemptId,
+            workspace_accessed: true,
+            actor: { client_id: BRIDGE_CLIENT_ID, client_type: BRIDGE_CLIENT_TYPE },
+            policy_sha256: policySha256,
+            facade_contract: {
+              schema_version: facadeContract.schema_version,
+              profile: facadeContract.profile,
+              sha256: facadeContract.sha256
+            },
+            runtime_identity: {
+              mcp_process_instance_id: attestation.processInstanceId,
+              mcp_server_instance_id: attestation.serverInstanceId,
+              activation_epoch_id: attestation.activationEpochId,
+              tool_contract_sha256: attestation.contractSha256
+            },
+            response_sha256: controlPlaneBridgeDigest(structured)
+          });
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane read-only bridge timed out.'),
+        { code: 'CONTROL_PLANE_BRIDGE_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_BRIDGE_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
   }
 
   async recordExecutionControlCenterProgress(observation = {}) {
@@ -2817,7 +2995,20 @@ class RuntimeOrchestrator {
       this.nextRecoveryAt = 0;
       this.deferredRecoveryCount = 0;
     } catch (error) {
-      this.log.error(error.message, { stage: 'automatic-recovery', retryAfterMs: delay });
+      const fullCleanRequired = error?.code === 'UPDATE_INCOMPLETE'
+        && error?.details?.full_clean_activation_required === true;
+      if (fullCleanRequired) {
+        this.autoRecoveryBlocked = true;
+        this.lastStartFailure = error.message;
+        this.nextRecoveryAt = 0;
+        this.deferredRecoveryCount = 0;
+      }
+      this.log.error(error.message, {
+        stage: 'automatic-recovery',
+        retryAfterMs: fullCleanRequired ? 0 : delay,
+        recoveryBlocked: fullCleanRequired,
+        errorCode: String(error?.code || '') || null
+      });
     } finally {
       this.recovering = false;
     }

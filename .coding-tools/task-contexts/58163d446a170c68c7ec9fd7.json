@@ -1,0 +1,365 @@
+{
+  "version": 2,
+  "task_id": "71aabc1953af4b53bba261b16e9c9577",
+  "orchestration": {
+    "run_id": "25a50d6433934c4e816b801f9782b6aa",
+    "wave_id": "74f1003a16884f348f8c3953dd699138",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "bfa8ee8e5c6f4cc8705bd7be5ae1f9f306f0d5cef04a56a2286d1a43f6f26555",
+    "contract_fp": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f"
+  },
+  "objective": "Run the exact natural Goal-continuation witness for Problem prl-e918c7d33e70c2d304d0797e11b05fcb revision 2 after controller reattach generation 4. The bounded continuation may only read/write resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py, must run the exact focused continuity regression as mandatory proof, must preserve controller-gated acceptance, and must not restart/release/publish or widen authority. This prepare step only validates the immutable policy and stages one user-visible consent challenge.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Nj4OvmFz8BgJyCxysv7Ct6xD",
+    "kind": "test",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 4746,
+    "finished_at": "2026-09-15T08:17:59.712Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-e918c7d33e70c2d304d0797e11b05fcb",
+      "problem_revision": 2,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 18,
+        "criteria_proven": 0,
+        "criteria_unresolved": 18,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "continuity.auto_resume",
+        "next_critical_gap": "Eligible long-running work resumes automatically across ordinary REPLAN, report-gate, reconnect, and accepted controlled-restart boundaries without requiring a manual 'continue' message.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 33,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 4,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "25a50d6433934c4e816b801f9782b6aa",
+        "wave_id": "74f1003a16884f348f8c3953dd699138",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 34,
+      "latest_event": {
+        "seq": 295,
+        "event_id": "prl-bind-d7a9d431198748ba137a83e46f01d0cc839928c3b4986504477d9505ff80d035",
+        "event_hash": "4d575ea1b6f804bc4b3db366d9e1e2cc2c68408cd66e6eca2581dfac5ae6694a",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T08:14:31.094Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 88,
+        "manual_nudge_count": 1,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 59,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 14,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 14,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 13,
+        "head_hash": "7482cf43e065a94e944f6b38a8948e7779924909ccba82c9b724609de8663934"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-25a50d6433934c4e816b801f9782b6aa\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-25a50d6433934c4e816b801f9782b6aa\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "25a50d6433934c4e816b801f9782b6aa",
+      "wave_id": "74f1003a16884f348f8c3953dd699138",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "bfa8ee8e5c6f4cc8705bd7be5ae1f9f306f0d5cef04a56a2286d1a43f6f26555",
+      "contract_fp": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f",
+      "objective_provenance": {
+        "effective_objective": "Run the exact natural Goal-continuation witness for Problem prl-e918c7d33e70c2d304d0797e11b05fcb revision 2 after same-role controller reattach generation 5. The bounded continuation may only read/write resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py, must run the exact focused continuity regression as mandatory proof, must preserve controller-gated acceptance, and must not restart/release/publish or widen authority. This prepare step only validates the immutable policy and stages one user-visible consent challenge.",
+        "objective_revision": 1,
+        "objective_sha256": "07b0bea1529ca26f8bbc401e1aa06a07e4f47aaa2786326cd91a09527f00fc82",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": {
+      "failure_class": null,
+      "reason": "Controlled restart preflight refused: projection_drift.",
+      "event_seq": null
+    },
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "66c1b30b5b7d1c5a2a98eddc0567fecb76bad2310449981a22b3bb51073851a6",
+  "completion_report_acknowledged_id": "66c1b30b5b7d1c5a2a98eddc0567fecb76bad2310449981a22b3bb51073851a6",
+  "completion_report_acknowledged_at": "2026-09-15T08:19:10.554Z",
+  "test_results": [
+    {
+      "command": "python -m pytest -q tests/test_continuation_consent_http.py",
+      "status": "passed",
+      "exit_code": 0,
+      "duration_ms": 4746,
+      "summary": "exit 0 | 4.7s | 3 lines | tail: '6 passed in 2.68s'",
+      "finished_at": "2026-09-15T08:17:59.712Z",
+      "artifact_ref": {
+        "schema_version": 1,
+        "kind": "command_output",
+        "scope": "runtime_retained",
+        "source": "command",
+        "locator": {
+          "command_id": "Nj4OvmFz8BgJyCxysv7Ct6xD"
+        },
+        "durability": "process_runtime",
+        "restart_safe": false,
+        "content_addressed": false,
+        "retrieval": {
+          "tool": "command_control",
+          "action": "read"
+        },
+        "owner_run": "25a50d6433934c4e816b801f9782b6aa",
+        "owner_wave": "74f1003a16884f348f8c3953dd699138",
+        "size_bytes": 100,
+        "command_id": "Nj4OvmFz8BgJyCxysv7Ct6xD",
+        "streams": {
+          "stdout": {
+            "output_ref": "command:Nj4OvmFz8BgJyCxysv7Ct6xD:stdout",
+            "total_stream_bytes": 100,
+            "total_retained_bytes": 100,
+            "head_retained_bytes": 100,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          },
+          "stderr": {
+            "output_ref": "command:Nj4OvmFz8BgJyCxysv7Ct6xD:stderr",
+            "total_stream_bytes": 0,
+            "total_retained_bytes": 0,
+            "head_retained_bytes": 0,
+            "tail_retained_bytes": 0,
+            "evicted_gap_bytes": 0,
+            "evicted_bytes_total": 0
+          }
+        }
+      }
+    }
+  ],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-15T08:12:38.988Z",
+  "updated_at": "2026-09-15T08:20:40.094Z",
+  "events": [
+    {
+      "time": "2026-09-15T08:12:38.988Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run the exact natural Goal-continuation witness for Problem prl-e918c7d33e70c2d304d0797e11b05fcb revision 2 after controller reattach generation 4. The bounded continuation may only read/write resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py, must run the exact focused continuity regression as mandatory proof, must preserve controller-gated acceptance, and must not restart/release/publish or widen authority. This prepare step only validates the immutable policy and stages one user-visible consent challenge."
+      }
+    },
+    {
+      "time": "2026-09-15T08:12:39.975Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T08:14:31.334Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:14:32.174Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "RUN_CONTINUATION_CONSENT_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:08.790Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 35 \"_run_continuation_approve_http_challenge|GOAL_CONTROLLER_FENCE_STALE|controller_goal_run_precondition\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "pk59XITdYUOS6PK2o0zDnNjO"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:09.250Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 35 \"_run_continuation_approve_http_challenge|GOAL_CONTROLLER_FENCE_STALE|controller_goal_run_precondition\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:24.943Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 30 \"run_continuation_policy|_loaded_behavior_identity\" resources/coding-tools-mcp/coding_tools_mcp",
+        "session_id": "OtS2_RMpcVAe5eLCnagFkqEX"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:25.419Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 30 \"run_continuation_policy|_loaded_behavior_identity\" resources/coding-tools-mcp/coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:55.377Z",
+      "event": "command_started",
+      "details": {
+        "command": "python -m pytest -q tests/test_continuation_consent_http.py",
+        "session_id": "Nj4OvmFz8BgJyCxysv7Ct6xD"
+      }
+    },
+    {
+      "time": "2026-09-15T08:17:59.712Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python -m pytest -q tests/test_continuation_consent_http.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T08:18:21.060Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "ORCHESTRATION_STATE_UNCERTAIN"
+      }
+    },
+    {
+      "time": "2026-09-15T08:18:37.753Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "66c1b30b5b7d1c5a2a98eddc0567fecb76bad2310449981a22b3bb51073851a6"
+      }
+    },
+    {
+      "time": "2026-09-15T08:18:53.055Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T08:19:10.554Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "66c1b30b5b7d1c5a2a98eddc0567fecb76bad2310449981a22b3bb51073851a6"
+      }
+    },
+    {
+      "time": "2026-09-15T08:19:20.545Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

@@ -211,6 +211,10 @@ class ContinuationConsentFinalizationTests(unittest.TestCase):
         }
         controller = {"owner_client_id": "chatweb:test", "lease_id": "client:chatweb:test", "fencing_token": 4}
         ledger = Mock()
+        ledger.controller_goal_run_precondition.return_value = {
+            "workspace_id": "workspace-test", "problem_id": "problem-test", "problem_revision": 1,
+            "expected_generation": 7, "owner_client_id": "chatweb:test", "controller_endpoint_id": "endpoint-test",
+        }
         ledger.peek_controller_lease.return_value = {**controller, "status": "active"}
         ledger.issue_goal_continuation.return_value = {
             "status": "GRANTED", "idempotent": False,
@@ -224,10 +228,6 @@ class ContinuationConsentFinalizationTests(unittest.TestCase):
             tool_contract={"sha256": "b" * 64}, orchestration_ledger=ledger,
             orchestration_control=Mock(snapshot=Mock(return_value=SimpleNamespace(wave_id="wave-test"))),
             _run_continuation_assert_runtime=Mock(),
-            _continuity_goal_controller_precondition=Mock(return_value={
-                "workspace_id": "workspace-test", "problem_id": "problem-test", "problem_revision": 1,
-                "expected_generation": 7, "owner_client_id": "chatweb:test", "controller_endpoint_id": "endpoint-test",
-            }),
             _project_orchestration=Mock(),
             _run_continuation_start_driver=Mock(return_value={"run_id": "run-test", "status": "PROPOSING"}),
             _run_continuation_tool_failure=RunContinuationMixin._run_continuation_tool_failure,
@@ -241,7 +241,21 @@ class ContinuationConsentFinalizationTests(unittest.TestCase):
         ledger.materialize_goal_continuation.assert_called_once_with(
             run_id="run-test", episode_id=current_policy["episode_id"], grant_wave_id="wave-test"
         )
+        ledger.controller_goal_run_precondition.assert_called_once_with(
+            workspace_id="workspace-test",
+            problem_id="problem-test",
+            problem_revision=1,
+            owner_client_id="chatweb:test",
+            controller_endpoint_id="endpoint-test",
+        )
         runtime._run_continuation_start_driver.assert_called_once_with({"run_id": "run-test"})
+
+        ledger.controller_goal_run_precondition.return_value = {
+            "workspace_id": "workspace-test", "problem_id": "problem-test", "problem_revision": 1,
+            "expected_generation": 8, "owner_client_id": "chatweb:test", "controller_endpoint_id": "endpoint-test",
+        }
+        with self.assertRaisesRegex(Exception, "Goal controller authority changed"):
+            RunContinuationMixin._run_continuation_approve_http_challenge(runtime, approved)
 
 
 if __name__ == "__main__":

@@ -2492,6 +2492,57 @@ test('supervisor recovers only the tunnel when MCP remains healthy', async () =>
   assert.equal(calls.restart, 0);
 });
 
+test('automatic recovery latches a full-clean-required source refusal after one attempt', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false
+  });
+  const refusal = Object.assign(
+    new Error('Coding MCP source changed; soft recovery requires full-clean activation.'),
+    { code: 'UPDATE_INCOMPLETE', details: { full_clean_activation_required: true } }
+  );
+  orchestrator.recoverTunnelOnly = async () => {
+    calls.tunnel += 1;
+    throw refusal;
+  };
+
+  await orchestrator.supervise();
+  assert.equal(calls.tunnel, 1);
+  assert.equal(orchestrator.autoRecoveryBlocked, true);
+  assert.equal(orchestrator.lastStartFailure, refusal.message);
+  assert.equal(orchestrator.recoveryAttempts, 1);
+  assert.equal(orchestrator.nextRecoveryAt, 0);
+
+  const blocked = await orchestrator.supervise();
+  assert.equal(calls.tunnel, 1, 'later watchdog ticks must not replay the same deterministic soft recovery');
+  assert.equal(blocked.recoveryBlocked, true);
+  assert.equal(blocked.lastStartFailure, refusal.message);
+});
+
+test('automatic recovery keeps transient failures eligible for bounded retry', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    fullyReady: false,
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false
+  });
+  orchestrator.recoverTunnelOnly = async () => {
+    calls.tunnel += 1;
+    throw Object.assign(new Error('temporary tunnel transport failure'), { code: 'ECONNRESET' });
+  };
+
+  await orchestrator.supervise();
+  assert.equal(calls.tunnel, 1);
+  assert.equal(orchestrator.autoRecoveryBlocked, false);
+
+  orchestrator.nextRecoveryAt = 0;
+  await orchestrator.supervise();
+  assert.equal(calls.tunnel, 2, 'a transient failure remains governed by the existing retry/backoff path');
+  assert.equal(orchestrator.autoRecoveryBlocked, false);
+});
+
 test('supervisor trusts MCP health over a stale owned-process record', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,

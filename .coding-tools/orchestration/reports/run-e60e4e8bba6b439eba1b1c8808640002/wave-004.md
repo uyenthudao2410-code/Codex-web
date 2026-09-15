@@ -10,7 +10,7 @@
 - Base HEAD: `228b91e6128479d4b3699e622d4f51dd431acb24`
 - Worktree fingerprint: `00697acc77f9b41ec1be4e83a56a6d0fb4962e27baf8ef02662a5bd8b4ea7aaf`
 - Contract fingerprint: ``
-- Status: **active**
+- Status: **aborted**
 
 ## Delegations
 
@@ -26,6 +26,8 @@
 | 52032 | 2026-09-12T13:02:12.792Z | observation_span_recorded |  |  |  |
 | 52033 | 2026-09-12T13:02:19.344Z | observation_span_recorded |  |  |  |
 | 52034 | 2026-09-12T13:02:19.957Z | context_prepared | PREFLIGHT | PREFLIGHT |  |
+| 58659 | 2026-09-15T08:59:41.620Z | state_transition | PREFLIGHT | ABORTED | reason=Reconcile stale historical auxiliary orchestration residue blocking controlled restart. No active command or claim and no pending acceptance; preserve durable proofs/history without accepting the stale attempt. |
+| 58660 | 2026-09-15T08:59:42.461Z | wave_processes_quiesced |  |  | reason=orchestration_state:aborted |
 
 ## Proof
 
@@ -42,5 +44,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `84`
-- Chain head: `96c99b72d509dce97ccfce567abdcce926d6ca0df42045b460494c8eceb1784f`
+- Events checked: `86`
+- Chain head: `a1e9e62bc135fd80ee11a45cf4424c2e0199556dfe3485dc430eb14b108768c3`

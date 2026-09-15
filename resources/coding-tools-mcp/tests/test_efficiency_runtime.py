@@ -943,6 +943,8 @@ class EfficiencyRuntimeTests(unittest.TestCase):
                     "external_review_policy",
                     "committed_review",
                     "run_continuation_policy",
+                    "run_continuation_driver",
+                    "run_continuation_autoresume",
                 },
             )
             self.assertEqual(ledger.reconcile_stale_runs(stale_after_seconds=3600, now=future), [run_id])

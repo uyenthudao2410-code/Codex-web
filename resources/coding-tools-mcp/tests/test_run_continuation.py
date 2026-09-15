@@ -1460,6 +1460,7 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 self.assertTrue(recorded["created"])
                 self.assertEqual(recorded["event"]["problem_id"], "")
                 self.assertEqual(recorded["event"]["problem_revision"], 0)
+                self.assertEqual(recorded["event"]["provenance"], "natural")
                 by_run = runtime.orchestration_ledger.continuity_telemetry_summary(run_id=run_id)
                 self.assertEqual(by_run["report_gate_count"], 1)
                 by_problem = runtime.orchestration_ledger.continuity_telemetry_summary(
@@ -2427,6 +2428,14 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
                 self.assertIn("resume", {item["event_type"] for item in events})
                 self.assertIn("continuation_success", {item["event_type"] for item in events})
+                emitted = {
+                    item["event_type"]: item for item in events
+                    if item["event_type"] in {"replan", "continuation_attempt", "continuation_success", "resume"}
+                }
+                self.assertEqual(
+                    set(emitted), {"replan", "continuation_attempt", "continuation_success", "resume"}
+                )
+                self.assertTrue(all(item["provenance"] == "natural" for item in emitted.values()))
             finally:
                 runtime.close()
 
@@ -2456,6 +2465,15 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 self.assertTrue(result["auto_resumed"])
                 materialized.assert_called_once()
                 started.assert_called_once()
+                events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
+                emitted = {
+                    item["event_type"]: item for item in events
+                    if item["event_type"] in {"continuation_attempt", "continuation_success", "resume", "reconnect"}
+                }
+                self.assertEqual(
+                    set(emitted), {"continuation_attempt", "continuation_success", "resume", "reconnect"}
+                )
+                self.assertTrue(all(item["provenance"] == "natural" for item in emitted.values()))
             finally:
                 runtime.close()
 
@@ -2467,12 +2485,44 @@ class RunContinuationSurfaceTests(unittest.TestCase):
                 runtime.orchestration_ledger.set_run_continuation_state(run_id=ctx.run_id, action="pause", reason="simulated reconnect")
                 with patch.object(runtime, "_run_continuation_start_driver") as started:
                     result = runtime._run_continuation_try_auto_resume(run_id=ctx.run_id, trigger="reconnect", marker="session-2")
+                    repeated = runtime._run_continuation_try_auto_resume(run_id=ctx.run_id, trigger="reconnect", marker="session-2")
                 self.assertEqual(result["status"], "RECOVERY_RECONCILE_REQUIRED")
+                self.assertEqual(repeated["status"], "RECOVERY_RECONCILE_REQUIRED")
                 started.assert_not_called()
                 events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
-                self.assertEqual(
-                    [item["event_type"] for item in events].count("duplicate_effect_prevented"), 1
-                )
+                duplicate_events = [item for item in events if item["event_type"] == "duplicate_effect_prevented"]
+                self.assertEqual(len(duplicate_events), 1)
+                self.assertEqual(duplicate_events[0]["provenance"], "natural")
+            finally:
+                runtime.close()
+
+    def test_auto_resume_failure_telemetry_is_natural_and_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory, patch.dict("os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}):
+            runtime = Runtime(Path(directory))
+            try:
+                ctx, _policy = self._prepare_recoverable_persistent_lane(runtime, with_consent=True)
+                runtime.orchestration_ledger.set_run_continuation_state(run_id=ctx.run_id, action="pause", reason="test failure")
+                with patch.object(
+                    runtime,
+                    "_run_continuation_validate_execution_rebind",
+                    side_effect=ToolFailure(
+                        "RUN_CONTINUATION_TEST_FAILURE",
+                        "Synthetic test-only execution rebind failure.",
+                        category="runtime",
+                    ),
+                ):
+                    first = runtime._run_continuation_try_auto_resume(
+                        run_id=ctx.run_id, trigger="reconnect", marker="failure-one"
+                    )
+                    replay = runtime._run_continuation_try_auto_resume(
+                        run_id=ctx.run_id, trigger="reconnect", marker="failure-one"
+                    )
+                self.assertEqual(first["status"], "BLOCKED")
+                self.assertEqual(replay["status"], "BLOCKED")
+                events = runtime.orchestration_ledger.list_continuity_telemetry(run_id=ctx.run_id)["events"]
+                failures = [item for item in events if item["event_type"] == "continuation_failure"]
+                self.assertEqual(len(failures), 1)
+                self.assertEqual(failures[0]["provenance"], "natural")
             finally:
                 runtime.close()
 

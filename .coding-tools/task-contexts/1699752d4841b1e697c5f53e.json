@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "5f8e045fbace40e5970618d7a059cc92",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "-Qa_2CevxVbDAP4WAdZyHOw8",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 777,
+    "finished_at": "2026-09-15T08:25:18.969Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T08:25:17.917Z",
+  "updated_at": "2026-09-15T08:25:18.969Z",
+  "events": [
+    {
+      "time": "2026-09-15T08:25:17.917Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T08:25:18.177Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"git grep -n -E 'reboot|post-reboot|restart[_ -]ticket|restart_ticket|AtLogOn|logon|Startup|boot matrix|reboot matrix|continuation.*restart|restart.*continuation' -- docs scripts tests resources package.json electron | Select-Object -First 500\"",
+        "session_id": "-Qa_2CevxVbDAP4WAdZyHOw8"
+      }
+    },
+    {
+      "time": "2026-09-15T08:25:18.969Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"git grep -n -E 'reboot|post-reboot|restart[_ -]ticket|restart_ticket|AtLogOn|logon|Startup|boot matrix|reboot matrix|continuation.*restart|restart.*continuation' -- docs scripts tests resources package.json electron | Select-Object -First 500\"",
+        "status": "passed"
+      }
+    }
+  ]
+}

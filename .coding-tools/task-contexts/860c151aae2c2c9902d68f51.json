@@ -1,0 +1,544 @@
+{
+  "version": 2,
+  "task_id": "b719cb4919e94fc398667a28175da76f",
+  "orchestration": {
+    "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+    "wave_id": "bea1d886804c4196b35f8621d4905aff",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "27f1fdd67c4c59c72a270eecee067ed67668caaa8728e65db29b91e27d9cbe07",
+    "contract_fp": ""
+  },
+  "objective": "Non-problem pre-package safety checkpoint only. Exact-byte adopt the current Electron runtime path/revision/read-only-control-plane files without changing their contents, solely to prove that a fresh C01 installer candidate built from the current dirty worktree will not contain unverified runtime bytes. Do not claim ownership of any other Problem, do not alter source, and do not modify unrelated dirty files. Prove path/revision identity and control-plane read-only bridge behavior with focused tests. No restart, reboot, install, package, commit, push, release, or deploy in this wave.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "apply",
+      "text": "Adopt existing or apply workspace changes",
+      "status": "completed",
+      "updated_at": "2026-09-15T05:59:40.339Z"
+    },
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-15T05:59:40.339Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-15T05:59:40.339Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "RjZlbjYlh8LIvXCxMu2rE99c",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 864,
+    "finished_at": "2026-09-15T06:00:54.183Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "what_changed": {
+      "files": [
+        {
+          "path": "electron/paths.js",
+          "state": "file",
+          "sha256": "c9c0d80a463f4a59bdec7cc9775bfb9cb8358dffd6ae760cd07dd1d762481605",
+          "size_bytes": 1614,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+          "wave_id": "bea1d886804c4196b35f8621d4905aff"
+        },
+        {
+          "path": "electron/services/componentRevision.js",
+          "state": "file",
+          "sha256": "7d5792ed45de1f1dc69ec09afb272dadadf3cc16568d5c770b15cd49d206d9a6",
+          "size_bytes": 13106,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+          "wave_id": "bea1d886804c4196b35f8621d4905aff"
+        },
+        {
+          "path": "electron/services/runtimePaths.js",
+          "state": "file",
+          "sha256": "58200ec67cc93d4032d5b143e177966b034b1c200737cc23879204ed27b5ab62",
+          "size_bytes": 6908,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+          "wave_id": "bea1d886804c4196b35f8621d4905aff"
+        },
+        {
+          "path": "electron/services/controlPlaneReadOnlyBridge.js",
+          "state": "file",
+          "sha256": "eaa858f5705b605c6a6cab946e101bbc47d426eb02f60ab8d04ab3d71a66d2fe",
+          "size_bytes": 8138,
+          "receipt_kind": "explicit_existing_file",
+          "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+          "wave_id": "bea1d886804c4196b35f8621d4905aff"
+        }
+      ],
+      "source": "accepted_checkpoint_file_attestations",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 41,
+        "head_hash": "1de3cf702775ddfcc90fe3b71376a6551ff542f4073d4329a91419fd8fdf153a"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a03a0707c2954f18b78a3d3d3410e7d3\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-a03a0707c2954f18b78a3d3d3410e7d3\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "a03a0707c2954f18b78a3d3d3410e7d3",
+      "wave_id": "bea1d886804c4196b35f8621d4905aff",
+      "checkpoint_id": "34a4f3fa4f2a4b4fa80f707fe43aeb09",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "27f1fdd67c4c59c72a270eecee067ed67668caaa8728e65db29b91e27d9cbe07",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Non-problem pre-package safety checkpoint only. Exact-byte adopt the current Electron runtime path/revision/read-only-control-plane files without changing their contents, solely to prove that a fresh C01 installer candidate built from the current dirty worktree will not contain unverified runtime bytes. Do not claim ownership of any other Problem, do not alter source, and do not modify unrelated dirty files. Prove path/revision identity and control-plane read-only bridge behavior with focused tests. No restart, reboot, install, package, commit, push, release, or deploy in this wave.",
+        "objective_revision": 1,
+        "objective_sha256": "e14e8abf0168a0bcc008772d12e712e147a0ff68662ddcb1e0ff43816b3609f3",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 2,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "7e0ebb71a8ae493e9a5dda5e84100db4",
+          "stage_id": "check:dde3bbe7d0fb454f",
+          "status": "passed",
+          "duration_ms": 78795,
+          "exit_code": 0,
+          "cache_hit": false
+        },
+        {
+          "proof_id": "e7a0a7e4eee24534b0e3786582ec26b8",
+          "stage_id": "check:3a3db75384583c5c",
+          "status": "passed",
+          "duration_ms": 1833,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "1e60979500e6bfcff41c757753e4e4c99f5141118fa24a77638afb7b1ad10d73",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-15T05:56:14.988Z",
+  "updated_at": "2026-09-15T06:01:38.583Z",
+  "events": [
+    {
+      "time": "2026-09-15T05:56:14.988Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:15.512Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- electron scripts renderer package.json package-lock.json resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests && echo ---HASHES--- && for %f in (electron\\paths.js electron\\services\\componentRevision.js electron\\services\\recoveryBootstrap.js electron\\services\\recoveryHost.js electron\\services\\recoveryIpc.js electron\\services\\runtimeOrchestrator.js electron\\services\\runtimePaths.js scripts\\dev-ui-lifecycle.js resources\\coding-tools-mcp\\coding_tools_mcp",
+        "session_id": "E0Bqg311MsP8TPFjwCnDsFJk"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:16.540Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- electron scripts renderer package.json package-lock.json resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests && echo ---HASHES--- && for %f in (electron\\paths.js electron\\services\\componentRevision.js electron\\services\\recoveryBootstrap.js electron\\services\\recoveryHost.js electron\\services\\recoveryIpc.js electron\\services\\runtimeOrchestrator.js electron\\services\\runtimePaths.js scripts\\dev-ui-lifecycle.js resources\\coding-tools-mcp\\coding_tools_mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:30.581Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('electron/paths.js','electron/services/componentRevision.js','electron/services/runtimePaths.js','electron/services/controlPlaneReadOnlyBridge.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py'); foreach($f in $files){ if(Test-Path $f){ $h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ('FILE='+$f+' HASH='+$h); rg -l --fixed-strings $h .coding-tools/o",
+        "session_id": "NNK9jtkyk2QiGwIZdkRJsiFR"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:35.110Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$files=@('electron/paths.js','electron/services/componentRevision.js','electron/services/runtimePaths.js','electron/services/controlPlaneReadOnlyBridge.js','resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py','resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py'); foreach($f in $files){ if(Test-Path $f){ $h=(Get-FileHash -Algorithm SHA256 $f).Hash.ToLower(); Write-Output ('FILE='+$f+' HASH='+$h); rg -l --fixed-strings $h .coding-tools/o",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:47.374Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-Content -Raw '.coding-tools/task-contexts/1df45606d26922c43eaa3854-history.json'|ConvertFrom-Json; foreach($x in $a){ if(($x|ConvertTo-Json -Depth 6 -Compress) -match 'f4a8cdff98244843427348218c15f14b6cbc6cad07fdcb2ce5e789a799d8cc67|43925b2e67f0c84dd31cffcbcea427476a57fb189d9eb0f24ca8520182e0ee62'){ [pscustomobject]@{task_id=$x.task_id;run_id=$x.orchestration.run_id;wave_id=$x.orchestration.wave_id;state=$x.orchestration.orchestration_state;status=$x.status",
+        "session_id": "SAAw23zc_n0udYIQI1MSK_f-"
+      }
+    },
+    {
+      "time": "2026-09-15T05:56:48.966Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-Content -Raw '.coding-tools/task-contexts/1df45606d26922c43eaa3854-history.json'|ConvertFrom-Json; foreach($x in $a){ if(($x|ConvertTo-Json -Depth 6 -Compress) -match 'f4a8cdff98244843427348218c15f14b6cbc6cad07fdcb2ce5e789a799d8cc67|43925b2e67f0c84dd31cffcbcea427476a57fb189d9eb0f24ca8520182e0ee62'){ [pscustomobject]@{task_id=$x.task_id;run_id=$x.orchestration.run_id;wave_id=$x.orchestration.wave_id;state=$x.orchestration.orchestration_state;status=$x.status",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:04.909Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$terms=@('electron/paths.js','electron/services/componentRevision.js','electron/services/runtimePaths.js','electron/services/controlPlaneReadOnlyBridge.js'); foreach($t in $terms){ Write-Output ('PATH='+$t); rg -l --fixed-strings $t .coding-tools/task-contexts .coding-tools/orchestration/reports | Select-Object -First 12 }\"",
+        "session_id": "xMl78tQh6u8rmu5OQaC55tst"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:06.167Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$terms=@('electron/paths.js','electron/services/componentRevision.js','electron/services/runtimePaths.js','electron/services/controlPlaneReadOnlyBridge.js'); foreach($t in $terms){ Write-Output ('PATH='+$t); rg -l --fixed-strings $t .coding-tools/task-contexts .coding-tools/orchestration/reports | Select-Object -First 12 }\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:16.717Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-Content -Raw '.coding-tools/task-contexts/1df45606d26922c43eaa3854-history.json'|ConvertFrom-Json; foreach($x in $a){ $s=$x|ConvertTo-Json -Depth 8 -Compress; if($s -match 'electron/paths.js|electron/services/componentRevision.js|electron/services/runtimePaths.js|electron/services/controlPlaneReadOnlyBridge.js'){ [pscustomobject]@{task_id=$x.task_id;run_id=$x.orchestration.run_id;wave_id=$x.orchestration.wave_id;state=$x.orchestration.orchestration_state;st",
+        "session_id": "S9byFT-acg_qat9awxlACX1C"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:18.176Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -Command \"$a=Get-Content -Raw '.coding-tools/task-contexts/1df45606d26922c43eaa3854-history.json'|ConvertFrom-Json; foreach($x in $a){ $s=$x|ConvertTo-Json -Depth 8 -Compress; if($s -match 'electron/paths.js|electron/services/componentRevision.js|electron/services/runtimePaths.js|electron/services/controlPlaneReadOnlyBridge.js'){ [pscustomobject]@{task_id=$x.task_id;run_id=$x.orchestration.run_id;wave_id=$x.orchestration.wave_id;state=$x.orchestration.orchestration_state;st",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:34.455Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"controlPlaneReadOnlyBridge|componentRevision|runtimePaths|paths.js\" tests electron -g \"*.test.js\" -g \"*.js\"",
+        "session_id": "hUOmFJ48rtOA0CZ0S4f_zxrn"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:34.764Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"controlPlaneReadOnlyBridge|componentRevision|runtimePaths|paths.js\" tests electron -g \"*.test.js\" -g \"*.js\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:51.839Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"controlPlaneReadOnlyBridge|control plane read-only|read-only control plane|controlPlane\" tests -g \"*.test.js\"",
+        "session_id": "rzSd8hDdx6joFJWWfjtPUzNi"
+      }
+    },
+    {
+      "time": "2026-09-15T05:57:52.272Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"controlPlaneReadOnlyBridge|control plane read-only|read-only control plane|controlPlane\" tests -g \"*.test.js\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:12.013Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:14.334Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:15.475Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:15.484Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:17.996Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:18.274Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T05:58:19.499Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/runtime-installation-identity.test.js tests/runtime-user-data-path.test.js",
+        "session_id": "XE_GSBTKlOAEeIZ0NTrE0ZG8"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:37.325Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/accepted-code-activation.test.js tests/runtime-installation-identity.test.js tests/runtime-user-data-path.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:39.190Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test tests/control-plane-bridge-runtime.test.js tests/control-plane-read-only-bridge.test.js",
+        "session_id": "fa41Ujaj_Xe7R6pbks8GZ5qM"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:39.904Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test tests/control-plane-bridge-runtime.test.js tests/control-plane-read-only-bridge.test.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:40.330Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:40.339Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:41.335Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:41.340Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:42.484Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "c46c47b33568e2da585d0c63936a19f17dd55891b43e0dca46041c1983f8f1b4"
+      }
+    },
+    {
+      "time": "2026-09-15T05:59:42.493Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T06:00:52.383Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T06:00:53.624Z",
+      "event": "command_started",
+      "details": {
+        "command": "certutil -hashfile electron\\paths.js SHA256 && certutil -hashfile electron\\services\\componentRevision.js SHA256 && certutil -hashfile electron\\services\\runtimePaths.js SHA256 && certutil -hashfile electron\\services\\controlPlaneReadOnlyBridge.js SHA256",
+        "session_id": "RjZlbjYlh8LIvXCxMu2rE99c"
+      }
+    },
+    {
+      "time": "2026-09-15T06:00:54.183Z",
+      "event": "command_finished",
+      "details": {
+        "command": "certutil -hashfile electron\\paths.js SHA256 && certutil -hashfile electron\\services\\componentRevision.js SHA256 && certutil -hashfile electron\\services\\runtimePaths.js SHA256 && certutil -hashfile electron\\services\\controlPlaneReadOnlyBridge.js SHA256",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:08.159Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:11.403Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "c46c47b33568e2da585d0c63936a19f17dd55891b43e0dca46041c1983f8f1b4"
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:21.700Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:24.839Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:24.841Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:24.948Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "1e60979500e6bfcff41c757753e4e4c99f5141118fa24a77638afb7b1ad10d73"
+      }
+    },
+    {
+      "time": "2026-09-15T06:01:38.583Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

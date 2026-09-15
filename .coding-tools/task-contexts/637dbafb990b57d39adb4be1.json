@@ -53,7 +53,7 @@
   "failure": "Abort the pre-reboot persistent-install wave because its first execute attempt failed in command parsing before any installer execution, leaving the wave in PROVING without compatible prepare binding. Only read-only baseline hashes were collected afterward; modified_files remains empty and no persistent install/autostart/reboot occurred. Recreate the same bounded objective in a fresh RUN with split commands.",
   "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
   "created_at": "2026-09-14T14:03:27.575Z",
-  "updated_at": "2026-09-14T14:06:44.634Z",
+  "updated_at": "2026-09-15T02:37:28.785Z",
   "events": [
     {
       "time": "2026-09-14T14:03:27.576Z",

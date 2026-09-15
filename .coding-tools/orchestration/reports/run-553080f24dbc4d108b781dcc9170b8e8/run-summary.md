@@ -9,11 +9,11 @@
 
 ## Outcome metrics
 
-- Waves: **3**
-- Route decisions: **3**
-- Failures observed: **2**
-- REPLAN transitions: **2**
-- Proof stages: **1**
+- Waves: **7**
+- Route decisions: **4**
+- Failures observed: **6**
+- REPLAN transitions: **6**
+- Proof stages: **3**
 - Proof cache hits: **0**
 - Acceptance checkpoints: **0**
 
@@ -23,7 +23,11 @@
 |---:|---|---:|---|---|---|---|
 | 1 | `60402911cc1943e6bb8ef14aab9086bd` | 1 | `run_initial_objective` | `deep_single_lane` | `ae04947d5969e9ee92bf1fe7532bf30e186f8280` | replanned |
 | 2 | `360aba006ccc4234b45b10751a19165b` | 2 | `replan_request` | `deep_single_lane` | `ae04947d5969e9ee92bf1fe7532bf30e186f8280` | replanned |
-| 3 | `b2d75942e21f44288e6b3aa4686c59d7` | 3 | `replan_request` | `mcp_only` | `ae04947d5969e9ee92bf1fe7532bf30e186f8280` | active |
+| 3 | `b2d75942e21f44288e6b3aa4686c59d7` | 3 | `replan_request` | `mcp_only` | `ae04947d5969e9ee92bf1fe7532bf30e186f8280` | replanned |
+| 4 | `aae7bcab86a34f4c91e09b35752bc19c` | 4 | `replan_request` | `mcp_only` | `a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6` | replanned |
+| 5 | `abfeccc20b254dd29e2f1d081a73e0c8` | 5 | `replan_request` | `mcp_only` | `a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6` | replanned |
+| 6 | `47e8fae0e43f4a4382aa36201371c5a2` | 6 | `replan_request` | `mcp_only` | `a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6` | replanned |
+| 7 | `c0853df36a174e049aacb4088a21aa87` | 7 | `replan_request` | `mcp_only` | `a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6` | active |
 
 ## Acceptance checkpoints
 
@@ -38,6 +42,7 @@
 | 55154 | `sol_xhigh` | `sol_xhigh` | explicit_request |
 | 55221 | `sol_xhigh` | `sol_xhigh` | explicit_request |
 | 55365 | `deterministic` | `deterministic` | caller_supplied_change_set |
+| 55562 | `deterministic` | `deterministic` | caller_supplied_change_set |
 
 ## Failures / replans
 
@@ -45,11 +50,15 @@
 |---:|---|---|---|
 | 55161 | `PROMPT_TOO_LARGE` | `ROUTED` |  |
 | 55240 | `CANDIDATE_MODEL_NOT_COMPLETED` | `ROUTED` |  |
+| 55528 | `SOL_REJECTED` | `ACCEPTING` | Wave A no-progress semantics are technically proven: source invariants inspected and python -m pytest tests/test_run_continuation.py -q passed 49 tests + 2 subtests. Reject only because the current RUN objective and canonical Problem revision 2 are not yet complete: Gap B privacy-safe natural/synthetic/legacy_unknown telemetry provenance and later integrated/live acceptance gates remain. Preserve the proven Wave A bytes and proof; do not rollback. |
+| 55548 | `BASE_DRIFT` | `PREFLIGHT` |  |
+| 55555 | `BASE_DRIFT` | `PREFLIGHT` |  |
+| 55624 | `SOL_REJECTED` | `ACCEPTING` | Wave B source schema/projection is proven and should be retained: exact diff/hash inspected and focused telemetry/operator proof is 9 passed. Full RUN/Problem acceptance is not yet justified because the production continuation telemetry producer still defaults to legacy_unknown, natural provenance is not yet bound to real report/reconnect/auto-resume lifecycle events, and live continuity.auto_resume remains MISSING. Replan on the same canonical RUN/Problem to bind production natural provenance, run integrated/fault/reconnect acceptance, then perform the natural Goal-consent auto-resume soak before any full Problem acceptance. |
 
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `94`
-- Chain head: `db3d751be79d5d288267673e14a2cabad9916d5d69505452729fe1d6649f27f9`
+- Events checked: `173`
+- Chain head: `261209329a985f9fff66d9dcb7859f4d6edf27472b5b2e13cc1f1661cf05486e`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

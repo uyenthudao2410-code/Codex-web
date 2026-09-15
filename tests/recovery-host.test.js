@@ -1289,6 +1289,163 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
   assert.equal(unavailable.tunnelRunning, null);
 });
 
+test('Recovery Host identity observation is a read-only exact MCP projection', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  host.orchestrator.currentMcpHealth = async () => ({
+    ready: true,
+    process_instance_id: 'coding-mcp-process-observed-0001',
+    instance_id: 'coding-mcp-server-observed-0001',
+    activation_epoch_id: 'activation-ready-adoption-0001',
+    tool_contract: { sha256: 'f'.repeat(64) }
+  });
+
+  const observation = await host.handlers()['runtime.identity_observation']();
+  assert.equal(observation.observation_kind, 'mcp_identity_read_only');
+  assert.equal(observation.recovery_host_instance_id, host.instanceId);
+  assert.equal(observation.mcp_process_instance_id, 'coding-mcp-process-observed-0001');
+  assert.equal(observation.mcp_server_instance_id, 'coding-mcp-server-observed-0001');
+  assert.equal(observation.activation_epoch_id, 'activation-ready-adoption-0001');
+  assert.equal(observation.current_activation_epoch_id, 'activation-ready-adoption-0001');
+  assert.equal(observation.tool_contract_sha256, 'f'.repeat(64));
+  assert.equal(observation.identity_current, true);
+});
+
+test('Recovery Host admits a control-plane read-only context only from explicit local policy and strict runtime evidence', async (t) => {
+  const { host } = readyAdoptionHost(t);
+  const expiresAtMs = Date.now() + 60_000;
+  const policy = {
+    schema_version: 2,
+    enabled: true,
+    server_origin: 'https://control.example.test',
+    owner_id: 'owner-control-plane-0001',
+    device_id: host.deviceIdentity.device_id,
+    endpoint_id: 'endpoint-control-plane-0001',
+    workspace_id: 'workspace-control-plane-0001',
+    workspace_generation: 'generation-control-plane-0001',
+    expires_at_ms: expiresAtMs,
+    facade_contract: {
+      schema_version: 3,
+      profile: 'control-plane-read-only-queue-v2',
+      sha256: 'f'.repeat(64)
+    }
+  };
+  fs.writeFileSync(host.paths.controlPlaneReadOnlyPolicyFile(), `${JSON.stringify(policy)}\n`, 'utf8');
+  const request = {
+    server_origin: policy.server_origin,
+    owner_id: policy.owner_id,
+    device_id: policy.device_id,
+    endpoint_id: policy.endpoint_id,
+    workspace_id: policy.workspace_id,
+    workspace_generation: policy.workspace_generation,
+    context_id: 'context-control-plane-0001',
+    binding_id: 'binding-control-plane-0001',
+    action_id: 'action-control-plane-0001',
+    attempt_id: 'attempt-control-plane-0001',
+    tool_name: 'workspace_context',
+    arguments: { detail: 'compact', max_entries: 1 },
+    expires_at_ms: expiresAtMs - 1,
+    facade_contract: { ...policy.facade_contract }
+  };
+  host.orchestrator.lightweightSnapshot = async () => ({
+    componentsReady: true,
+    connectorReady: true,
+    fullyReady: true,
+    updateIncomplete: false,
+    connectorContractState: 'CURRENT_ACKNOWLEDGED',
+    connectorFreshnessMode: 'current_process_discovery',
+    connectorRediscovered: true,
+    connectorRediscoveredAt: new Date().toISOString(),
+    connectorRefreshRequired: false,
+    connectorAcknowledgementPending: false
+  });
+  host.orchestrator.currentMcpHealth = async () => ({
+    ready: true,
+    process_instance_id: 'mcp-process-control-plane-0001',
+    instance_id: 'mcp-server-control-plane-0001',
+    activation_epoch_id: 'activation-ready-adoption-0001',
+    tool_contract: { sha256: 'a'.repeat(64) }
+  });
+  let calls = 0;
+  host.orchestrator.controlPlaneReadOnlyWorkspaceContext = async (admission) => {
+    calls += 1;
+    assert.equal(admission.tool_name, 'workspace_context');
+    assert.deepEqual(admission.arguments, { detail: 'compact', max_entries: 1 });
+    assert.equal(admission.actor.client_id, 'electron-control-plane-bridge');
+    assert.deepEqual(admission.facade_contract, policy.facade_contract);
+    return {
+      schema_version: 1,
+      operation_kind: 'control_plane_read_only_workspace_context',
+      action_id: admission.action_id,
+      attempt_id: admission.attempt_id,
+      local_handle: `cp_ro_${'b'.repeat(48)}`,
+      workspace_accessed: true,
+      policy_sha256: admission.policy_sha256,
+      actor: admission.actor,
+      runtime_identity: {
+        activation_epoch_id: 'activation-ready-adoption-0001',
+        process_instance_id: 'mcp-process-control-plane-0001',
+        server_instance_id: 'mcp-server-control-plane-0001',
+        tool_contract_sha256: 'a'.repeat(64)
+      },
+      facade_contract: { ...admission.facade_contract },
+      response_sha256: 'c'.repeat(64)
+    };
+  };
+
+  const result = await host.handlers()['runtime.control_plane_read_only_workspace_context'](request);
+  assert.equal(result.workspace_accessed, true);
+  assert.equal(calls, 1);
+
+  host.orchestrator.controlPlaneReadOnlyWorkspaceContext = async (admission) => ({
+    schema_version: 1,
+    operation_kind: 'control_plane_read_only_workspace_context',
+    action_id: admission.action_id,
+    attempt_id: admission.attempt_id,
+    local_handle: `cp_ro_${'b'.repeat(48)}`,
+    workspace_accessed: true,
+    policy_sha256: admission.policy_sha256,
+    actor: admission.actor,
+    runtime_identity: {
+      activation_epoch_id: 'activation-ready-adoption-0001',
+      process_instance_id: 'mcp-process-control-plane-0001',
+      server_instance_id: 'mcp-server-control-plane-0001',
+      tool_contract_sha256: 'a'.repeat(64)
+    },
+    facade_contract: { ...admission.facade_contract, sha256: 'e'.repeat(64) },
+    response_sha256: 'c'.repeat(64)
+  });
+  await assert.rejects(
+    host.handlers()['runtime.control_plane_read_only_workspace_context']({ ...request, attempt_id: 'attempt-control-plane-contract-drift-0001' }),
+    { code: 'CONTROL_PLANE_BRIDGE_CONTRACT_CHANGED' }
+  );
+
+  const foreignPolicy = { ...policy, device_id: 'device-control-plane-foreign-0001' };
+  fs.writeFileSync(host.paths.controlPlaneReadOnlyPolicyFile(), `${JSON.stringify(foreignPolicy)}\n`, 'utf8');
+  await assert.rejects(
+    host.handlers()['runtime.control_plane_read_only_workspace_context']({ ...request, device_id: foreignPolicy.device_id, attempt_id: 'attempt-control-plane-foreign-0001' }),
+    { code: 'CONTROL_PLANE_BRIDGE_DEVICE_MISMATCH' }
+  );
+  assert.equal(calls, 1, 'a policy copied to another device must block before local MCP admission');
+  fs.writeFileSync(host.paths.controlPlaneReadOnlyPolicyFile(), `${JSON.stringify(policy)}\n`, 'utf8');
+
+  host.orchestrator.lightweightSnapshot = async () => ({
+    componentsReady: true,
+    connectorReady: true,
+    fullyReady: true,
+    updateIncomplete: false,
+    connectorContractState: 'CURRENT_COMPATIBLE_ACKNOWLEDGED',
+    connectorFreshnessMode: 'compatible_activation_bootstrap',
+    connectorRediscovered: false,
+    connectorRefreshRequired: false,
+    connectorAcknowledgementPending: false
+  });
+  await assert.rejects(
+    host.handlers()['runtime.control_plane_read_only_workspace_context']({ ...request, attempt_id: 'attempt-control-plane-0002' }),
+    { code: 'CONTROL_PLANE_BRIDGE_RUNTIME_UNREADY' }
+  );
+  assert.equal(calls, 1, 'compatible bootstrap must block before the local MCP action');
+});
+
 test('new unsuppressed Recovery Host relaunches UI after initial registration grace expires', async (t) => {
   let launches = 0;
   const { host } = uiRecoveryFixture(t, {

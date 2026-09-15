@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "5d813e54057642909d17d69e34d6a36d",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "HL8a1JxftO_FO7ysJTK8TmOD",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 3397,
+    "finished_at": "2026-09-15T06:58:34.876Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:58:31.116Z",
+  "updated_at": "2026-09-15T06:58:34.877Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:58:31.116Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:58:31.397Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$installRoot=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor'; $manifestPath=Join-Path $installRoot 'manifest.json'; $stopPath=Join-Path $installRoot 'stop.request'; $statusPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json'; $descPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; $mf=$null;$st=$null;$d=$null; if(Test-Path $manifestPath){try{$mf=Get-Content $manifestPath -Raw|ConvertFrom-Json}catch",
+        "session_id": "HL8a1JxftO_FO7ysJTK8TmOD"
+      }
+    },
+    {
+      "time": "2026-09-15T06:58:34.877Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$installRoot=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor'; $manifestPath=Join-Path $installRoot 'manifest.json'; $stopPath=Join-Path $installRoot 'stop.request'; $statusPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json'; $descPath=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; $mf=$null;$st=$null;$d=$null; if(Test-Path $manifestPath){try{$mf=Get-Content $manifestPath -Raw|ConvertFrom-Json}catch",
+        "status": "passed"
+      }
+    }
+  ]
+}

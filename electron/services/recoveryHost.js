@@ -6,6 +6,7 @@ const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
 const { HubProxyGateway } = require('./hubProxyGateway');
 const { RecoveryIpcServer } = require('./recoveryIpc');
+const { loadReadOnlyBridgePolicy, admitReadOnlyBridgeRequest } = require('./controlPlaneReadOnlyBridge');
 const { ensureParent, readJson } = require('./jsonStore');
 const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
@@ -61,6 +62,31 @@ function connectorTimestampValid(value, nowUnixMs = Date.now()) {
     && Number.isFinite(timestampUnixMs)
     && (!Number.isFinite(Number(nowUnixMs))
       || timestampUnixMs <= Number(nowUnixMs) + READY_CONNECTOR_FUTURE_SKEW_MS));
+}
+
+function controlPlaneBridgeError(code, message) {
+  return Object.assign(new Error(message), { code });
+}
+
+// The bridge is intentionally stricter than the persisted READY-adoption
+// predicate. A compatibility-bootstrap connector is useful evidence during
+// controlled activation, but it must never admit a central action. The local
+// action path requires a current-process rediscovery plus a fresh runtime
+// snapshot on the exact Recovery Host that owns the IPC descriptor.
+function strictControlPlaneBridgeRuntime(runtime) {
+  return Boolean(
+    runtime
+    && runtime.componentsReady === true
+    && runtime.connectorReady === true
+    && runtime.fullyReady === true
+    && runtime.updateIncomplete !== true
+    && runtime.connectorContractState === 'CURRENT_ACKNOWLEDGED'
+    && runtime.connectorFreshnessMode === 'current_process_discovery'
+    && runtime.connectorRediscovered === true
+    && runtime.connectorRefreshRequired === false
+    && runtime.connectorAcknowledgementPending === false
+    && connectorTimestampValid(runtime.connectorRediscoveredAt)
+  );
 }
 
 function activationCensus(record) {
@@ -146,6 +172,44 @@ function exactConnectorEvidenceObserved(health, census) {
     && String(bootstrap.activation_epoch_id || '').trim() === activationEpochId
     && connectorTimestampValid(bootstrapObservedAt));
   return exactDiscovery || exactCompatibilityBootstrap;
+}
+
+function buildMcpIdentityObservation({
+  recoveryHostInstanceId = '',
+  health = null,
+  activationEpoch = null,
+  observedAt = new Date().toISOString(),
+  errorCode = null
+} = {}) {
+  const processInstanceId = String(health?.process_instance_id || '').trim();
+  const serverInstanceId = String(health?.instance_id || health?.server_instance_id || '').trim();
+  const healthEpochId = String(health?.activation_epoch_id || '').trim();
+  const currentEpochId = String(activationEpoch?.activation_epoch_id || '').trim();
+  const contractSha256 = String(health?.tool_contract?.sha256 || '').trim().toLowerCase();
+  const exactIdentity = Boolean(
+    health?.ready === true
+    && processInstanceId
+    && serverInstanceId
+    && READY_CONNECTOR_SHA_PATTERN.test(contractSha256)
+    && healthEpochId
+    && healthEpochId === currentEpochId
+    && activationEpoch?.admission_open === true
+    && activationEpoch?.update_incomplete !== true
+  );
+  return {
+    observation_schema_version: 1,
+    observation_kind: 'mcp_identity_read_only',
+    observed_at: String(observedAt || '').trim() || null,
+    recovery_host_instance_id: String(recoveryHostInstanceId || '').trim() || null,
+    mcp_process_instance_id: processInstanceId || null,
+    mcp_server_instance_id: serverInstanceId || null,
+    activation_epoch_id: healthEpochId || null,
+    current_activation_epoch_id: currentEpochId || null,
+    tool_contract_sha256: READY_CONNECTOR_SHA_PATTERN.test(contractSha256) ? contractSha256 : null,
+    mcp_ready: health?.ready === true,
+    identity_current: exactIdentity,
+    ...(errorCode ? { error_code: String(errorCode).slice(0, 80) } : {})
+  };
 }
 
 /**
@@ -1698,6 +1762,93 @@ class RecoveryHost {
     };
   }
 
+  async mcpIdentityObservation() {
+    let activationEpoch = null;
+    try { activationEpoch = this.orchestrator.activationEpochStatus?.() || null; }
+    catch { activationEpoch = null; }
+    if (typeof this.orchestrator.currentMcpHealth !== 'function') {
+      return buildMcpIdentityObservation({
+        recoveryHostInstanceId: this.instanceId,
+        activationEpoch,
+        errorCode: 'MCP_IDENTITY_OBSERVATION_UNAVAILABLE'
+      });
+    }
+    try {
+      const health = await this.orchestrator.currentMcpHealth();
+      return buildMcpIdentityObservation({
+        recoveryHostInstanceId: this.instanceId,
+        health,
+        activationEpoch
+      });
+    } catch (error) {
+      return buildMcpIdentityObservation({
+        recoveryHostInstanceId: this.instanceId,
+        activationEpoch,
+        errorCode: String(error?.code || 'MCP_IDENTITY_OBSERVATION_UNAVAILABLE')
+      });
+    }
+  }
+
+  async controlPlaneReadOnlyWorkspaceContext(request = {}) {
+    const policy = loadReadOnlyBridgePolicy(this.paths);
+    const admission = admitReadOnlyBridgeRequest(policy, request);
+    if (admission.device_id !== this.deviceIdentity.device_id) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_DEVICE_MISMATCH',
+        'control-plane read-only bridge action targets another local device.'
+      );
+    }
+
+    const runtime = await this.orchestrator.lightweightSnapshot();
+    if (!strictControlPlaneBridgeRuntime(runtime)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_RUNTIME_UNREADY',
+        'control-plane read-only bridge requires strict current-process runtime evidence.'
+      );
+    }
+
+    const identity = await this.mcpIdentityObservation();
+    if (identity.mcp_ready !== true || identity.identity_current !== true) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_IDENTITY_UNPROVEN',
+        'control-plane read-only bridge requires an exact current MCP identity.'
+      );
+    }
+    if (typeof this.orchestrator.controlPlaneReadOnlyWorkspaceContext !== 'function') {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_UNAVAILABLE',
+        'control-plane read-only bridge is unavailable in this runtime.'
+      );
+    }
+
+    const result = await this.orchestrator.controlPlaneReadOnlyWorkspaceContext(admission);
+    const runtimeIdentity = result?.runtime_identity;
+    if (!runtimeIdentity
+      || runtimeIdentity.activation_epoch_id !== identity.activation_epoch_id
+      || runtimeIdentity.process_instance_id !== identity.mcp_process_instance_id
+      || runtimeIdentity.server_instance_id !== identity.mcp_server_instance_id
+      || runtimeIdentity.tool_contract_sha256 !== identity.tool_contract_sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_IDENTITY_CHANGED',
+        'control-plane read-only bridge identity changed while the action was in flight.'
+      );
+    }
+    const resultFacadeContract = result?.facade_contract;
+    if (!resultFacadeContract
+      || typeof resultFacadeContract !== 'object'
+      || Array.isArray(resultFacadeContract)
+      || Object.keys(resultFacadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || resultFacadeContract.schema_version !== admission.facade_contract.schema_version
+      || resultFacadeContract.profile !== admission.facade_contract.profile
+      || resultFacadeContract.sha256 !== admission.facade_contract.sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_CONTRACT_CHANGED',
+        'control-plane read-only bridge facade contract changed while the action was in flight.'
+      );
+    }
+    return result;
+  }
+
   handlers() {
     return {
       // Liveness must stay responsive while an unrelated authenticated read is
@@ -1743,6 +1894,8 @@ class RecoveryHost {
       },
       'runtime.snapshot': async (options = {}) => this.decorate(await this.orchestrator.snapshot(options)),
       'runtime.lightweight_snapshot': async () => this.cachedRuntimeSnapshot(),
+      'runtime.identity_observation': async () => this.mcpIdentityObservation(),
+      'runtime.control_plane_read_only_workspace_context': async (request = {}) => this.controlPlaneReadOnlyWorkspaceContext(request),
       'runtime.record_execution_control_center_progress': async (observation = {}) => {
         this.assertBootstrapMutationAllowed();
         this.assertReadyAdoptionMutationAllowed();
@@ -2636,5 +2789,7 @@ module.exports = {
   UI_RECOVERY_ATTEMPT_LIMIT,
   waitForReplacementLockRelease,
   activationClosureProjection,
-  validatePersistedReadyConnectorProof
+  buildMcpIdentityObservation,
+  validatePersistedReadyConnectorProof,
+  strictControlPlaneBridgeRuntime
 };

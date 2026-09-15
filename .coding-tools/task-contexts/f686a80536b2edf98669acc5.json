@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "task_id": "68096ee737ba45e5a8efd6d201f9e713",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "PrxvwB90Rg9x3YUfCBaJJDZ5",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 513,
+    "finished_at": "2026-09-15T09:45:33.165Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "An exact prepared RUN/WAVE binding is valid only with agent_workflow phase=execute.",
+  "next_step": "",
+  "created_at": "2026-09-15T09:45:32.270Z",
+  "updated_at": "2026-09-15T09:46:24.292Z",
+  "events": [
+    {
+      "time": "2026-09-15T09:45:32.270Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T09:45:32.633Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 8 -e CONTINUITY_IDENTITY_REQUIRED -e reattach_id -e ack_id resources/coding-tools-mcp",
+        "session_id": "PrxvwB90Rg9x3YUfCBaJJDZ5"
+      }
+    },
+    {
+      "time": "2026-09-15T09:45:33.165Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 8 -e CONTINUITY_IDENTITY_REQUIRED -e reattach_id -e ack_id resources/coding-tools-mcp",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:46:11.409Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_INCOMPLETE"
+      }
+    },
+    {
+      "time": "2026-09-15T09:46:24.292Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_PHASE_INVALID"
+      }
+    }
+  ]
+}

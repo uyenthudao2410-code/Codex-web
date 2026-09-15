@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "7381870aece7431e915d87e894669040",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "ArzBnm7P417j5dWJWpS6LZ6D",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1164,
+    "finished_at": "2026-09-15T06:56:33.990Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:56:32.544Z",
+  "updated_at": "2026-09-15T06:56:33.990Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:56:32.544Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:56:32.844Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKCU:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); $hits=@(); foreach($r in $roots){ foreach($e in @(Get-ItemProperty $r -ErrorAction SilentlyContinue)){ $il=[string]$e.InstallLocation; $us=[string]$e.UninstallString; $match=$false; if($il){try{$match=[string]::Equals([IO.Path]::GetFullPath($il),",
+        "session_id": "ArzBnm7P417j5dWJWpS6LZ6D"
+      }
+    },
+    {
+      "time": "2026-09-15T06:56:33.990Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKCU:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); $hits=@(); foreach($r in $roots){ foreach($e in @(Get-ItemProperty $r -ErrorAction SilentlyContinue)){ $il=[string]$e.InstallLocation; $us=[string]$e.UninstallString; $match=$false; if($il){try{$match=[string]::Equals([IO.Path]::GetFullPath($il),",
+        "status": "passed"
+      }
+    }
+  ]
+}

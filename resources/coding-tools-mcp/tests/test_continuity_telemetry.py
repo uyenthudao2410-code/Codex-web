@@ -46,6 +46,7 @@ def test_continuity_telemetry_persists_across_ledger_reopen(tmp_path: Path) -> N
     assert event["problem_id"] == "prl-telemetry-test"
     assert event["task_context_id"] == "ctx_telemetry_test"
     assert event["duration_ms"] == 1250
+    assert event["provenance"] == "legacy_unknown"
 
 
 def test_continuity_telemetry_replay_is_idempotent_and_conflicts_fail_closed(tmp_path: Path) -> None:
@@ -61,6 +62,81 @@ def test_continuity_telemetry_replay_is_idempotent_and_conflicts_fail_closed(tmp
     assert len(ledger.list_continuity_telemetry(run_id=run_id)["events"]) == 1
 
 
+def test_continuity_telemetry_provenance_is_typed_and_not_part_of_dedupe_identity(tmp_path: Path) -> None:
+    ledger = OrchestrationLedger(tmp_path)
+    run_id, wave_id = _run(ledger)
+    first = _record(
+        ledger, run_id, wave_id, "provenance:1", "continuation_attempt",
+        outcome="attempted", provenance="natural",
+    )
+    replay = _record(
+        ledger, run_id, wave_id, "provenance:1", "continuation_attempt",
+        outcome="attempted", provenance="synthetic",
+    )
+    assert first["created"] is True
+    assert first["event"]["provenance"] == "natural"
+    assert replay["created"] is False
+    assert replay["idempotent"] is True
+    assert replay["event"]["provenance"] == "natural"
+    assert len(ledger.list_continuity_telemetry(run_id=run_id)["events"]) == 1
+
+    with pytest.raises(ValueError, match="CONTINUITY_TELEMETRY_PROVENANCE_INVALID"):
+        _record(
+            ledger, run_id, wave_id, "provenance:bad", "continuation_attempt",
+            outcome="attempted", provenance="natural user said keep going",
+        )
+
+
+def test_continuity_telemetry_migrates_legacy_rows_to_unknown_provenance(tmp_path: Path) -> None:
+    ledger = OrchestrationLedger(tmp_path)
+    run_id, wave_id = _run(ledger)
+    with sqlite3.connect(ledger.path) as connection:
+        connection.execute("DROP TABLE IF EXISTS continuity_telemetry")
+        connection.executescript(
+            """
+            CREATE TABLE continuity_telemetry (
+                logical_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
+                wave_id TEXT NOT NULL DEFAULT '',
+                event_type TEXT NOT NULL,
+                problem_id TEXT NOT NULL DEFAULT '',
+                problem_revision INTEGER NOT NULL DEFAULT 0 CHECK(problem_revision>=0),
+                task_context_id TEXT NOT NULL DEFAULT '',
+                activation_epoch_id TEXT NOT NULL DEFAULT '',
+                process_instance_id TEXT NOT NULL DEFAULT '',
+                server_instance_id TEXT NOT NULL DEFAULT '',
+                restart_ticket_id TEXT NOT NULL DEFAULT '',
+                outcome TEXT NOT NULL DEFAULT '',
+                code TEXT NOT NULL DEFAULT '',
+                duration_ms INTEGER,
+                event_time TEXT NOT NULL,
+                record_sha256 TEXT NOT NULL
+            );
+            """
+        )
+        connection.execute(
+            """INSERT INTO continuity_telemetry(
+                logical_id,run_id,wave_id,event_type,problem_id,problem_revision,task_context_id,
+                activation_epoch_id,process_instance_id,server_instance_id,restart_ticket_id,outcome,
+                code,duration_ms,event_time,record_sha256
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                "legacy:1", run_id, wave_id, "resume", "prl-telemetry-test", 1,
+                "ctx_telemetry_test", "activation-test-1", "process-test-1", "server-test-1", "",
+                "succeeded", "", 10, "2026-09-15T00:00:00.000Z", "a" * 64,
+            ),
+        )
+        connection.commit()
+
+    reopened = OrchestrationLedger(tmp_path)
+    listed = reopened.list_continuity_telemetry(run_id=run_id)
+    assert listed["events"][0]["provenance"] == "legacy_unknown"
+    summary = reopened.continuity_telemetry_summary(run_id=run_id)
+    assert summary["legacy_unknown_event_count"] == 1
+    assert summary["natural_event_count"] == 0
+    assert summary["synthetic_event_count"] == 0
+
+
 def test_continuity_telemetry_summary_is_correlated_and_aggregatable(tmp_path: Path) -> None:
     ledger = OrchestrationLedger(tmp_path)
     run_id, wave_id = _run(ledger)
@@ -69,10 +145,16 @@ def test_continuity_telemetry_summary_is_correlated_and_aggregatable(tmp_path: P
     _record(ledger, run_id, wave_id, "replan:1", "replan", outcome="succeeded", duration_ms=400)
     _record(ledger, run_id, wave_id, "gate:1", "report_gate", outcome="succeeded", duration_ms=600)
     _record(ledger, run_id, wave_id, "attempt:1", "continuation_attempt", outcome="attempted")
-    _record(ledger, run_id, wave_id, "success:1", "continuation_success", outcome="succeeded")
+    _record(
+        ledger, run_id, wave_id, "success:1", "continuation_success",
+        outcome="succeeded", provenance="natural",
+    )
     _record(ledger, run_id, wave_id, "resume:1", "resume", outcome="succeeded", duration_ms=900)
     _record(ledger, run_id, wave_id, "dedupe:1", "duplicate_effect_prevented", outcome="prevented")
-    _record(ledger, run_id, wave_id, "accept:1", "accepted_checkpoint", outcome="succeeded")
+    _record(
+        ledger, run_id, wave_id, "accept:1", "accepted_checkpoint",
+        outcome="succeeded", provenance="synthetic",
+    )
 
     summary = ledger.continuity_telemetry_summary(problem_id="prl-telemetry-test", problem_revision=1)
     assert summary["complete"] is True
@@ -84,6 +166,14 @@ def test_continuity_telemetry_summary_is_correlated_and_aggregatable(tmp_path: P
     assert summary["continuation_success_count"] == 1
     assert summary["duplicate_effect_prevented_count"] == 1
     assert summary["accepted_checkpoint_count"] == 1
+    assert summary["natural_event_count"] == 1
+    assert summary["synthetic_event_count"] == 1
+    assert summary["legacy_unknown_event_count"] == 7
+    assert summary["counts_by_provenance"] == {
+        "legacy_unknown": 7,
+        "natural": 1,
+        "synthetic": 1,
+    }
     assert summary["counts_by_code"] == {"REPORT_GATE": 1}
     assert summary["time_to_resume_ms"] == {"count": 1, "total_ms": 900, "max_ms": 900, "avg_ms": 900.0}
     assert summary["replan_duration_ms"]["total_ms"] == 400

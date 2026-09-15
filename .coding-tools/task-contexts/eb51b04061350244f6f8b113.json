@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "fa6139ab9f5643b1bdb20c8df7ae29fa",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "FPUUSEx88U8v2oBhW9v1i-ST",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 5988,
+    "finished_at": "2026-09-15T09:10:48.458Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T09:10:42.024Z",
+  "updated_at": "2026-09-15T09:10:48.458Z",
+  "events": [
+    {
+      "time": "2026-09-15T09:10:42.024Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:46.270Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$data=Join-Path $env:APPDATA 'web-mcp-assistant';$mPath=Join-Path $data 'recovery-supervisor\\manifest.json';$sPath=Join-Path $data 'recovery-supervisor-status.json';$dPath=Join-Path $data 'recovery-host.json';$m=Get-Content -LiteralPath $mPath -Raw|ConvertFrom-Json;$s=Get-Content -LiteralPath $sPath -Raw|ConvertFrom-Json;$d=Get-Content -LiteralPath $dPath -Raw|ConvertFrom-Json;$task=$null;try{$task=Get-ScheduledTask -T",
+        "session_id": "FPUUSEx88U8v2oBhW9v1i-ST"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:48.458Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$data=Join-Path $env:APPDATA 'web-mcp-assistant';$mPath=Join-Path $data 'recovery-supervisor\\manifest.json';$sPath=Join-Path $data 'recovery-supervisor-status.json';$dPath=Join-Path $data 'recovery-host.json';$m=Get-Content -LiteralPath $mPath -Raw|ConvertFrom-Json;$s=Get-Content -LiteralPath $sPath -Raw|ConvertFrom-Json;$d=Get-Content -LiteralPath $dPath -Raw|ConvertFrom-Json;$task=$null;try{$task=Get-ScheduledTask -T",
+        "status": "passed"
+      }
+    }
+  ]
+}

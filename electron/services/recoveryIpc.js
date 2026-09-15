@@ -27,6 +27,8 @@ const RPC_ACTIONS = Object.freeze([
   'client.suppress_ui_recovery',
   'runtime.snapshot',
   'runtime.lightweight_snapshot',
+  'runtime.identity_observation',
+  'runtime.control_plane_read_only_workspace_context',
   'runtime.record_execution_control_center_progress',
   'runtime.start',
   'runtime.stop',
@@ -435,6 +437,10 @@ class RecoveryIpcClient {
   suppressUiRecovery(intent) { return this.call('client.suppress_ui_recovery', [intent]); }
   snapshot(options = {}) { return this.call('runtime.snapshot', [options]); }
   lightweightSnapshot() { return this.call('runtime.lightweight_snapshot'); }
+  identityObservation(options = {}) { return this.call('runtime.identity_observation', [], options); }
+  controlPlaneReadOnlyWorkspaceContext(request, options = {}) {
+    return this.call('runtime.control_plane_read_only_workspace_context', [request], options);
+  }
   recordExecutionControlCenterProgress(observation) { return this.call('runtime.record_execution_control_center_progress', [observation]); }
   supervise() { return this.lightweightSnapshot(); }
   start(options = {}, callOptions = {}) { return this.call('runtime.start', [options], callOptions); }

@@ -1,0 +1,333 @@
+[
+  {
+    "version": 2,
+    "task_id": "24b9b0138feb4c5485cf14de8870e614",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T09:56:21.095Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "workdir and cwd refer to different directories.",
+    "next_step": "",
+    "created_at": "2026-09-15T09:56:21.092Z",
+    "updated_at": "2026-09-15T09:56:21.095Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:56:21.093Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:21.095Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:21.095Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:56:28.940Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "0f66d6e56cc8428d9cf1ce07ef62e801",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "EfhhVAqhvuDhqV8ZTY439Jd1",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 292,
+      "finished_at": "2026-09-15T09:56:37.954Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T09:56:28.940Z",
+    "updated_at": "2026-09-15T09:56:37.954Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:56:28.940Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:29.271Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "session_id": "xZMn3E3K8sNAWdoqPADrMoBU"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:29.581Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"CONTINUITY_IDENTITY_REQUIRED|reattach_id|continuity_action\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:37.628Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 '\"continuity_action\": \"(checkpoint|get|ack|reattach)\"' resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "session_id": "EfhhVAqhvuDhqV8ZTY439Jd1"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:37.954Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 '\"continuity_action\": \"(checkpoint|get|ack|reattach)\"' resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:56:43.771Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "5583e42ce5fc4640b48a0ab872fdf0a6",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T09:59:28.200Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "The current task was stopped. Start or resume a task before continuing.",
+    "next_step": "Resume or start a new task.",
+    "created_at": "2026-09-15T09:56:43.776Z",
+    "updated_at": "2026-09-15T09:59:28.200Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:56:43.776Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:44.115Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 continuity_action resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "session_id": "-jFqg6shRvbF7XVVdMTpL7Zy"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:44.432Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 continuity_action resources/coding-tools-mcp/tests/test_controller_continuity.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:52.356Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 35 \"fresh-reattach|active-reattach|source-drift-reattach|runtime-drift-reattach\" resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "session_id": "2dD_IrhmTs-s37q0P_WTxm3r"
+        }
+      },
+      {
+        "time": "2026-09-15T09:56:52.690Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 35 \"fresh-reattach|active-reattach|source-drift-reattach|runtime-drift-reattach\" resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:57:01.423Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 70 \"if action == \\\"reattach\\\"|reattach_id = _opaque|knowledge_revision\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "uQbvAXGbXt_Y-BiHzTkgqiBy"
+        }
+      },
+      {
+        "time": "2026-09-15T09:57:01.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 70 \"if action == \\\"reattach\\\"|reattach_id = _opaque|knowledge_revision\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:57:32.238Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:28.200Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 40 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:28.200Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "TASK_STOPPED"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:59:35.440Z",
+    "archive_reason": "superseded"
+  },
+  {
+    "version": 2,
+    "task_id": "ea13b8c7195c490b8d8ed53a004b7f0e",
+    "orchestration": {},
+    "objective": "Read-only inspect the exact-run archived-history recovery protocol for RUN d44f52e1b8504d8682c3771229414d3f. Do not edit source, do not create or replace an orchestration RUN/WAVE, do not accept proof, and do not restart runtime.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T09:59:52.443Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-15T09:59:35.440Z",
+    "updated_at": "2026-09-15T09:59:52.446Z",
+    "events": [
+      {
+        "time": "2026-09-15T09:59:35.440Z",
+        "event": "task_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "new_task",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:41.824Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 50 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "session_id": "qliXNTlRg5omEiPVsMT6UTsj"
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:42.317Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 50 \"EXACT_RUN_RECOVERY_REFUSED|acknowledged archived history|archived history\" resources/coding-tools-mcp electron tests -g \"*.py\" -g \"*.js\" -g \"*.cjs\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:52.446Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 45 \"stateless_exact_run_recovery_id|acknowledged.*history|history.*acknow|canonical_task_id\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests -g \"*.py\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T09:59:52.446Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T09:59:59.116Z",
+    "archive_reason": "finished"
+  }
+]

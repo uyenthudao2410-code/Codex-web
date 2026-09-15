@@ -1,0 +1,93 @@
+{
+  "version": 2,
+  "task_id": "99b1a0730f334dd5acd36e79a1e33234",
+  "orchestration": {
+    "run_id": "2709b0f85e6b45f58299878c14b1c6d4",
+    "wave_id": "882fa0a96e32411d933d3315049881dd",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "1560f6fe626625e5fda90e2445819d9a542d8eb47e6354e218e936799d2703a0",
+    "contract_fp": ""
+  },
+  "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix only the newly observed automatic-recovery retry storm in RuntimeOrchestrator. Preserve assertActivationRevisionContinuity and all fail-closed source/epoch guards. When automatic recovery encounters deterministic source-authority/revision mismatch UPDATE_INCOMPLETE with full_clean_activation_required, latch autoRecoveryBlocked and retain a typed lastStartFailure/recovery projection so later supervise ticks do not invoke another automatic recovery until an explicit authorized start/full-clean path clears the block. Add a discriminating regression proving one automatic recovery attempt then zero repeats across later supervise ticks; transient failures must retain bounded retry behavior. Preserve unrelated dirty work. No restart, reboot, install, package, commit, push, release, or deploy in this wave.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "Duplicate retry-storm PREPARE RUN 2709b0f85e6b45f58299878c14b1c6d4 is superseded by canonical Parent RUN 4f166a943c6c4b148b09dc6963ef679d WAVE 61a48f71fc634793ad1d8cd5e741e417, which already owns the exact two-file fix and has 4/4 passing proofs. No write lease/proof/mutation on duplicate; stop it to preserve one-writer invariant.",
+  "next_step": "Resume or start a new task.",
+  "created_at": "2026-09-15T05:47:03.244Z",
+  "updated_at": "2026-09-15T05:50:49.251Z",
+  "events": [
+    {
+      "time": "2026-09-15T05:47:03.244Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix only the newly observed automatic-recovery retry storm in RuntimeOrchestrator. Preserve assertActivationRevisionContinuity and all fail-closed source/epoch guards. When automatic recovery encounters deterministic source-authority/revision mismatch UPDATE_INCOMPLETE with full_clean_activation_required, latch autoRecoveryBlocked and retain a typed lastStartFailure/recovery projection so later supervise ticks do not invoke another automatic recovery until an explicit authorized start/full-clean path clears the block. Add a discriminating regression proving one automatic recovery attempt then zero repeats across later supervise ticks; transient failures must retain bounded retry behavior. Preserve unrelated dirty work. No restart, reboot, install, package, commit, push, release, or deploy in this wave."
+      }
+    },
+    {
+      "time": "2026-09-15T05:47:03.756Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T05:47:47.401Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T05:47:53.485Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T05:47:53.491Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T05:50:49.247Z",
+      "event": "task_orchestration_aborted",
+      "details": {
+        "state": "ABORTED"
+      }
+    },
+    {
+      "time": "2026-09-15T05:50:49.249Z",
+      "event": "task_stopped",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

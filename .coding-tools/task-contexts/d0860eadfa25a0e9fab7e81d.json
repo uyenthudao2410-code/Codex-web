@@ -1,0 +1,134 @@
+{
+  "version": 2,
+  "task_id": "821c71c6e5c349e7bfb0ab83180bbb10",
+  "orchestration": {
+    "run_id": "b65f16b4359d459cb5c8c7fab563735b",
+    "wave_id": "e30332cf0b5b40c08bc22603a8612154",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "e548b43d9d334d4b6b8710e81f1daaa9333ade6628cdade5c8974e81c3e5a707",
+    "contract_fp": ""
+  },
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan required - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "QVMg22957VJLcQe6Aki6_SLD",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1669,
+    "finished_at": "2026-09-15T02:38:07.823Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "The requested RUN/WAVE is not the caller's current compatible prepare lineage.",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-15T02:38:05.900Z",
+  "updated_at": "2026-09-15T02:41:06.150Z",
+  "events": [
+    {
+      "time": "2026-09-15T02:38:05.900Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T02:38:06.264Z",
+      "event": "command_started",
+      "details": {
+        "command": "git log --oneline --decorate ae04947d5969e9ee92bf1fe7532bf30e186f8280..a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6 && git diff --stat ae04947d5969e9ee92bf1fe7532bf30e186f8280..a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "session_id": "QVMg22957VJLcQe6Aki6_SLD"
+      }
+    },
+    {
+      "time": "2026-09-15T02:38:07.823Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git log --oneline --decorate ae04947d5969e9ee92bf1fe7532bf30e186f8280..a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6 && git diff --stat ae04947d5969e9ee92bf1fe7532bf30e186f8280..a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T02:39:27.328Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:39:45.672Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T02:39:45.677Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:44.670Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:44.853Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:54.871Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T02:40:55.864Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_PHASE_INVALID"
+      }
+    },
+    {
+      "time": "2026-09-15T02:41:06.150Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "PREPARED_RUN_BINDING_MISMATCH"
+      }
+    }
+  ]
+}

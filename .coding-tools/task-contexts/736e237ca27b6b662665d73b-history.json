@@ -1,0 +1,838 @@
+[
+  {
+    "version": 2,
+    "task_id": "0226c93d561d49b08801b6de67385633",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Operator report acknowledged",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T04:34:52.669Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "command_id": "EdVmNolxhqzHE9pvRbfDXjln",
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "task_status": "waiting",
+        "command": {
+          "command_id": "EdVmNolxhqzHE9pvRbfDXjln",
+          "kind": "command",
+          "status": "exited",
+          "result_status": "passed",
+          "exit_code": 0,
+          "duration_ms": null
+        },
+        "git": {
+          "head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+          "branch": "main",
+          "worktree_fp": "defefc517d5d0c5ed65815fb4716ef9bfd40fe3e2606c74ce26e08a26b4727ba",
+          "dirty_paths": [
+            ".github/workflows/ci.yml",
+            "control-plane/README.md",
+            "control-plane/control_plane/http_api.py",
+            "control-plane/control_plane/node_agent.py",
+            "control-plane/control_plane/store.py",
+            "control-plane/tests/test_http_api.py",
+            "control-plane/tests/test_store.py",
+            "deploy/codex-control-plane.service.example",
+            "docs/CONTROL_PLANE_IMPLEMENTATION_STATUS.md",
+            "docs/CURRENT_STATE.md",
+            "electron/paths.js",
+            "electron/services/componentRevision.js",
+            "electron/services/recoveryBootstrap.js",
+            "electron/services/recoveryHost.js",
+            "electron/services/recoveryIpc.js",
+            "electron/services/runtimeOrchestrator.js",
+            "electron/services/runtimePaths.js",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py",
+            "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+            "resources/coding-tools-mcp/tests/test_continuity_telemetry.py",
+            "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+            "resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py",
+            "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+            "resources/coding-tools-mcp/tests/test_run_continuation.py",
+            "scripts/dev-ui-lifecycle.js",
+            "tests/dev-ui-lifecycle.test.js",
+            "tests/recovery-bootstrap.test.js",
+            "tests/recovery-host.test.js",
+            "control-plane/control_plane/mcp_facade.py",
+            "control-plane/control_plane/recovery_identity_observer.cjs",
+            "control-plane/tests/recovery_identity_observer.test.cjs",
+            "docs/UBUNTU_24X7_COMPLETION_PLAN.md",
+            "electron/services/controlPlaneReadOnlyBridge.js",
+            "tests/control-plane-read-only-bridge.test.js",
+            "tmp/c01-controller-suite.exit",
+            "tmp/c01-controller-suite.txt"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "task_id": "0226c93d561d49b08801b6de67385633",
+        "run_id": "",
+        "wave_id": "",
+        "orchestration_state": ""
+      },
+      "proof_actually_run": {
+        "count": 0,
+        "all_recorded_proofs_passed": false,
+        "proofs": []
+      },
+      "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+      "blocker_or_failure": null,
+      "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "cf908db61bbd4b2c64a4b19763ed61c26f2643b073fff248c575e9c77e3c4ffe",
+    "completion_report_acknowledged_id": "cf908db61bbd4b2c64a4b19763ed61c26f2643b073fff248c575e9c77e3c4ffe",
+    "completion_report_acknowledged_at": "2026-09-15T04:35:07.312Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present this completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T04:30:04.974Z",
+    "updated_at": "2026-09-15T04:35:07.315Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:30:04.974Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:30:05.231Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('scripts/packaged-recovery-smoke.js','scripts/installed-recovery-smoke.js','resources/recovery-supervisor/recovery-supervisor.ps1'); foreach($f in $files){ Write-Output ('===== '+$f+' ====='); Select-String -Path $f -Pattern 'process\\.env|installer|uninstall|install|Start-Process|schtasks|TaskName|login|watchdog|manifest|status|restart|reboot|win-unpacked|app\\.asar|CODING_' -Context 2,3 | ForEach-Object { $_.ToString() } }\"",
+          "session_id": "kCFAInxz72rSFuXpXEt7FYuX"
+        }
+      },
+      {
+        "time": "2026-09-15T04:30:05.816Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$files=@('scripts/packaged-recovery-smoke.js','scripts/installed-recovery-smoke.js','resources/recovery-supervisor/recovery-supervisor.ps1'); foreach($f in $files){ Write-Output ('===== '+$f+' ====='); Select-String -Path $f -Pattern 'process\\.env|installer|uninstall|install|Start-Process|schtasks|TaskName|login|watchdog|manifest|status|restart|reboot|win-unpacked|app\\.asar|CODING_' -Context 2,3 | ForEach-Object { $_.ToString() } }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:30:21.623Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$installer='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe'; $count=@(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -in @('Coding Tools MCP','coding-tools-mcp') }).Count; $task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction SilentlyContinue; $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash; [pscu",
+          "session_id": "099RdlsQAsy4C7_0HZ1Eud0F"
+        }
+      },
+      {
+        "time": "2026-09-15T04:30:25.582Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$installer='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe'; $count=@(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -in @('Coding Tools MCP','coding-tools-mcp') }).Count; $task=Get-ScheduledTask -TaskName 'WebMCP Recovery Supervisor' -ErrorAction SilentlyContinue; $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash; [pscu",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:30:41.980Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T04:31:02.987Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CONTINUITY_IDENTITY_REQUIRED"
+        }
+      },
+      {
+        "time": "2026-09-15T04:31:25.326Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+        }
+      },
+      {
+        "time": "2026-09-15T04:31:34.340Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_EVENT_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-15T04:32:18.006Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "session_id": "NdPy2tfXmuWZvXjGCltq4SaS"
+        }
+      },
+      {
+        "time": "2026-09-15T04:32:27.706Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:32:37.126Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/installed-recovery-smoke.js",
+          "session_id": "EdVmNolxhqzHE9pvRbfDXjln"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:28.974Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/installed-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:29.219Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "EdVmNolxhqzHE9pvRbfDXjln",
+          "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+          "report_id": "cf908db61bbd4b2c64a4b19763ed61c26f2643b073fff248c575e9c77e3c4ffe"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:43.267Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' --glob 'electron/**' --glob 'scripts/**' --glob 'resources/recovery-supervisor/**' 'recovery-supervisor\\.ps1|Action.?Install|Install-Supervisor|startWithWindows|AtLogOn|WebMCP Recovery Supervisor|Packaged' .\"",
+          "session_id": "iVAhwJ7ywobYNw2Pbo9O41HG"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:44.384Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' --glob 'electron/**' --glob 'scripts/**' --glob 'resources/recovery-supervisor/**' 'recovery-supervisor\\.ps1|Action.?Install|Install-Supervisor|startWithWindows|AtLogOn|WebMCP Recovery Supervisor|Packaged' .\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:56.859Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' 'Install-Supervisor|recovery supervisor|recoverySupervisor|startWithWindows|setLoginItemSettings|ensure.*Supervisor|Action.?Install' electron scripts resources | Select-Object -First 160\"",
+          "session_id": "ejxw_Dm8fTvfTCjCktJvIEua"
+        }
+      },
+      {
+        "time": "2026-09-15T04:33:57.626Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' 'Install-Supervisor|recovery supervisor|recoverySupervisor|startWithWindows|setLoginItemSettings|ensure.*Supervisor|Action.?Install' electron scripts resources | Select-Object -First 160\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:18.490Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '.coding-tools/**' 'persistent install|persistent-install|setup-1\\.0\\.0\\.exe.*\\/S|recovery-supervisor\\.ps1.*Action.*Install|startWithWindows|pre-reboot|post-reboot|shutdown\\.exe|Restart-Computer' .coding-tools | Select-Object -First 240\"",
+          "session_id": "_Pbb-vz96i21Y2TOaNy4-yuL"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:19.266Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '.coding-tools/**' 'persistent install|persistent-install|setup-1\\.0\\.0\\.exe.*\\/S|recovery-supervisor\\.ps1.*Action.*Install|startWithWindows|pre-reboot|post-reboot|shutdown\\.exe|Restart-Computer' .coding-tools | Select-Object -First 240\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:40.374Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $installer='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe'; $expected='09CC8F9D4B7CCE341FC03AE7FE849BBC3E3A1FC163A5734084CD35080A447917'; $actual=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash; if($actual -ne $expected){throw 'INSTALLER_SHA_MISMATCH'}; $beforeCount=@(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Ob",
+          "session_id": "poalVLibfICfGtXKunGj2Rr7"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:40.726Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $installer='E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe'; $expected='09CC8F9D4B7CCE341FC03AE7FE849BBC3E3A1FC163A5734084CD35080A447917'; $actual=(Get-FileHash -Algorithm SHA256 -LiteralPath $installer).Hash; if($actual -ne $expected){throw 'INSTALLER_SHA_MISMATCH'}; $beforeCount=@(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Ob",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:52.669Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$c=@(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue | Where-Object DisplayName -in @('Coding Tools MCP','coding-tools-mcp')).Count; Write-Output $c\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:34:52.669Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INTERNAL_ERROR"
+        }
+      },
+      {
+        "time": "2026-09-15T04:35:07.312Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "cf908db61bbd4b2c64a4b19763ed61c26f2643b073fff248c575e9c77e3c4ffe"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:35:20.060Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "20e1b0a6e8c54afd9eb2c60ece5feefe",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "I8nWSlPnwhUaCw5dtbKTXZ5j",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 500,
+      "finished_at": "2026-09-15T04:36:45.090Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:35:20.062Z",
+    "updated_at": "2026-09-15T04:36:45.090Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:35:20.062Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:35:20.371Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$items=Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue; $c=0; foreach($i in $items){if($i.DisplayName -eq 'Coding Tools MCP' -or $i.DisplayName -eq 'coding-tools-mcp'){$c++}}; Write-Output $c\"",
+          "session_id": "p5RsmTOeO0uLwKLRec8nyUW7"
+        }
+      },
+      {
+        "time": "2026-09-15T04:35:21.082Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$items=Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue; $c=0; foreach($i in $items){if($i.DisplayName -eq 'Coding Tools MCP' -or $i.DisplayName -eq 'coding-tools-mcp'){$c++}}; Write-Output $c\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:35:33.247Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $d){(Get-FileHash -Algorithm SHA256 -LiteralPath $d).Hash}else{'ABSENT'}\"",
+          "session_id": "-EqEU0VvQjEr7RcVLlb9SyMT"
+        }
+      },
+      {
+        "time": "2026-09-15T04:35:34.176Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(Test-Path -LiteralPath $d){(Get-FileHash -Algorithm SHA256 -LiteralPath $d).Hash}else{'ABSENT'}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:36:44.556Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b))\"",
+          "session_id": "I8nWSlPnwhUaCw5dtbKTXZ5j"
+        }
+      },
+      {
+        "time": "2026-09-15T04:36:45.090Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b))\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:36:56.202Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "36d460995c034af98b2d1309fffaa849",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "Z3inV7IpfR3R2ZblYGsZW4vQ",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 646,
+      "finished_at": "2026-09-15T04:37:42.552Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:36:56.204Z",
+    "updated_at": "2026-09-15T04:37:42.552Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:36:56.204Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:36:56.498Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); $s=[Security.Cryptography.SHA256]::Create(); try{$h=$s.ComputeHash($b); [BitConverter]::ToString($h).Replace('-','')} finally{$s.Dispose()}\"",
+          "session_id": "RjlgxGJmRJ3ao6Db06wF39XY"
+        }
+      },
+      {
+        "time": "2026-09-15T04:36:56.965Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); $s=[Security.Cryptography.SHA256]::Create(); try{$h=$s.ComputeHash($b); [BitConverter]::ToString($h).Replace('-','')} finally{$s.Dispose()}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:07.672Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 -LiteralPath 'E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe').Hash; if($h -ne '09CC8F9D4B7CCE341FC03AE7FE849BBC3E3A1FC163A5734084CD35080A447917'){throw 'INSTALLER_SHA_MISMATCH'}; Write-Output $h\"",
+          "session_id": "1PQhbSHrOjotzXFlK2y6-pTo"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:08.532Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$h=(Get-FileHash -Algorithm SHA256 -LiteralPath 'E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe').Hash; if($h -ne '09CC8F9D4B7CCE341FC03AE7FE849BBC3E3A1FC163A5734084CD35080A447917'){throw 'INSTALLER_SHA_MISMATCH'}; Write-Output $h\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:19.101Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Start-Process -FilePath 'E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe' -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden; exit $p.ExitCode\"",
+          "session_id": "MDEvLzTC7F6PjUbQDOwT0Cz1"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:32.786Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$p=Start-Process -FilePath 'E:\\DEV\\Codex-web\\dist\\coding-tools-mcp-setup-1.0.0.exe' -ArgumentList '/S' -PassThru -Wait -WindowStyle Hidden; exit $p.ExitCode\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:41.895Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$items=Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue; $r=@(); foreach($i in $items){if($i.DisplayName -eq 'Coding Tools MCP' -or $i.DisplayName -eq 'coding-tools-mcp'){$r += $i}}; if($r.Count -ne 1){throw ('INSTALL_ENTRY_COUNT_'+$r.Count)}; [pscustomobject]@{count=$r.Count;display_name=[string]$r[0].DisplayName;install_location=[string]$r[0].InstallLocation;uninstall_string=[s",
+          "session_id": "Z3inV7IpfR3R2ZblYGsZW4vQ"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:42.552Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$items=Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*' -ErrorAction SilentlyContinue; $r=@(); foreach($i in $items){if($i.DisplayName -eq 'Coding Tools MCP' -or $i.DisplayName -eq 'coding-tools-mcp'){$r += $i}}; if($r.Count -ne 1){throw ('INSTALL_ENTRY_COUNT_'+$r.Count)}; [pscustomobject]@{count=$r.Count;display_name=[string]$r[0].DisplayName;install_location=[string]$r[0].InstallLocation;uninstall_string=[s",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:37:57.608Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "fef67a4b023a49c18ed7be5864898bdf",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "bn_ztYKkFyFcIeZeXwySaqeG",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 458,
+      "finished_at": "2026-09-15T04:37:58.261Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:37:57.609Z",
+    "updated_at": "2026-09-15T04:37:58.261Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:37:57.609Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:57.860Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); foreach($root in $roots){$items=Get-ItemProperty -Path $root -ErrorAction SilentlyContinue; foreach($i in $items){$n=[string]$i.DisplayName;$l=[string]$i.InstallLocation;$u=[string]$i.UninstallString; if($n -match 'Coding|Codex|MCP' -or $l",
+          "session_id": "bn_ztYKkFyFcIeZeXwySaqeG"
+        }
+      },
+      {
+        "time": "2026-09-15T04:37:58.261Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); foreach($root in $roots){$items=Get-ItemProperty -Path $root -ErrorAction SilentlyContinue; foreach($i in $items){$n=[string]$i.DisplayName;$l=[string]$i.InstallLocation;$u=[string]$i.UninstallString; if($n -match 'Coding|Codex|MCP' -or $l",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:38:07.341Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "bc29944e672441f58cb5a396ae4ca0c9",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "khovCIte2BZt7ZUNrVetKKcF",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 632,
+      "finished_at": "2026-09-15T04:39:36.343Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:38:07.343Z",
+    "updated_at": "2026-09-15T04:39:36.343Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:38:07.343Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:07.628Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); foreach($root in $roots){$items=Get-ItemProperty -Path $root -ErrorAction SilentlyContinue; foreach($i in $items){$n=[string]$i.DisplayName; $l=[string]$i.InstallLocation; $u=[string]$i.UninstallString; if($n -match 'Coding|Codex|MCP' -or ",
+          "session_id": "jXPil-EGSD0WL6l-y9TSJJQ5"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:10.069Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$roots=@('HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*','HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'); foreach($root in $roots){$items=Get-ItemProperty -Path $root -ErrorAction SilentlyContinue; foreach($i in $items){$n=[string]$i.DisplayName; $l=[string]$i.InstallLocation; $u=[string]$i.UninstallString; if($n -match 'Coding|Codex|MCP' -or ",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:26.207Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$root=Join-Path $env:LOCALAPPDATA 'Programs\\Coding Tools MCP'; $exe=Join-Path $root 'Coding Tools MCP.exe'; if(-not(Test-Path -LiteralPath $exe)){throw 'INSTALLED_EXE_MISSING'}; $p=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue; $c=0; foreach($x in $p){if($x.ExecutablePath){try{if([IO.Path]::GetFullPath([string]$x.ExecutablePath) -eq [IO.Path]::GetFullPath($exe)){$c++}}catch{}}}; Write-Output ('EXE='+$exe); Write-Output ('EXISTS='+",
+          "session_id": "b0hvxWH3EZBeXK6YfwRp2zgJ"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:27.282Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$root=Join-Path $env:LOCALAPPDATA 'Programs\\Coding Tools MCP'; $exe=Join-Path $root 'Coding Tools MCP.exe'; if(-not(Test-Path -LiteralPath $exe)){throw 'INSTALLED_EXE_MISSING'}; $p=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue; $c=0; foreach($x in $p){if($x.ExecutablePath){try{if([IO.Path]::GetFullPath([string]$x.ExecutablePath) -eq [IO.Path]::GetFullPath($exe)){$c++}}catch{}}}; Write-Output ('EXE='+$exe); Write-Output ('EXISTS='+",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:38.249Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$run='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'; $m=0; if(Test-Path $run){$o=Get-ItemProperty $run; foreach($p in $o.PSObject.Properties){$v=[string]$p.Value; if($v -match 'Coding Tools MCP|coding-tools-mcp'){$m++; Write-Output ('MATCH='+$p.Name+'|'+$v)}}}; Write-Output ('MATCH_COUNT='+$m)\"",
+          "session_id": "oooVHYioxxQhI8xe5B2ITcnH"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:38.882Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$run='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'; $m=0; if(Test-Path $run){$o=Get-ItemProperty $run; foreach($p in $o.PSObject.Properties){$v=[string]$p.Value; if($v -match 'Coding Tools MCP|coding-tools-mcp'){$m++; Write-Output ('MATCH='+$p.Name+'|'+$v)}}}; Write-Output ('MATCH_COUNT='+$m)\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:49.690Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(-not(Test-Path -LiteralPath $d)){throw 'DESCRIPTOR_MISSING'}; $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $d).Hash; Write-Output $h; if($h -ne '2814D7B093748281F9BEABB9CEFC975DB40D9AE3526A3CA53C3BD1329538EA2B'){throw 'PRODUCTION_DESCRIPTOR_CHANGED'}\"",
+          "session_id": "rbYJ4R4BWxnhTRxxNx2bG1f2"
+        }
+      },
+      {
+        "time": "2026-09-15T04:38:50.423Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$d=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json'; if(-not(Test-Path -LiteralPath $d)){throw 'DESCRIPTOR_MISSING'}; $h=(Get-FileHash -Algorithm SHA256 -LiteralPath $d).Hash; Write-Output $h; if($h -ne '2814D7B093748281F9BEABB9CEFC975DB40D9AE3526A3CA53C3BD1329538EA2B'){throw 'PRODUCTION_DESCRIPTOR_CHANGED'}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:00.548Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); $s=[Security.Cryptography.SHA256]::Create(); try{$h=[BitConverter]::ToString($s.ComputeHash($b)).Replace('-',''); Write-Output $h; if($h -ne 'FF3EF2C9FE9B108BB9A9DF334E9FC65A72B11F1281E5AC956031FB8C951E5122'){throw 'RECOVERY_TASK_CHANGED'}} finally{$s.Disp",
+          "session_id": "jW3y-Y33ni_QMu43GTcuZkKN"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:01.133Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"$x=& schtasks.exe /Query /TN 'WebMCP Recovery Supervisor' /XML 2>$null; if($LASTEXITCODE -ne 0){throw 'TASK_MISSING'}; $b=[Text.Encoding]::Unicode.GetBytes(($x -join [Environment]::NewLine)); $s=[Security.Cryptography.SHA256]::Create(); try{$h=[BitConverter]::ToString($s.ComputeHash($b)).Replace('-',''); Write-Output $h; if($h -ne 'FF3EF2C9FE9B108BB9A9DF334E9FC65A72B11F1281E5AC956031FB8C951E5122'){throw 'RECOVERY_TASK_CHANGED'}} finally{$s.Disp",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:14.244Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'docs\\BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' -Pattern 'M02|reboot|logon|startWithWindows|Recovery Supervisor|pre-reboot|post-reboot|Machine A|M05|M12|48' -Context 3,7 | ForEach-Object { $_.ToString() }\"",
+          "session_id": "xqUbgEG9H6T6ABXIdge3Mq9i"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:14.826Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path 'docs\\BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' -Pattern 'M02|reboot|logon|startWithWindows|Recovery Supervisor|pre-reboot|post-reboot|Machine A|M05|M12|48' -Context 3,7 | ForEach-Object { $_.ToString() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:35.710Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '.coding-tools/task-contexts/*' 'pre-reboot|startWithWindows|setLoginItemSettings|Recovery Supervisor|continuation|handoff|Restart-Computer|shutdown /r|shutdown.exe /r|installed direct launch|M02' .coding-tools/task-contexts | Select-Object -First 320\"",
+          "session_id": "khovCIte2BZt7ZUNrVetKKcF"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:36.343Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '.coding-tools/task-contexts/*' 'pre-reboot|startWithWindows|setLoginItemSettings|Recovery Supervisor|continuation|handoff|Restart-Computer|shutdown /r|shutdown.exe /r|installed direct launch|M02' .coding-tools/task-contexts | Select-Object -First 320\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:39:48.923Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "2d3c2e93dd0a484fbfaceee95a4fee07",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "U12FyQ9WvfRGLFeYVHRRUO0j",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 1,
+      "duration_ms": 604,
+      "finished_at": "2026-09-15T04:40:59.974Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:39:48.925Z",
+    "updated_at": "2026-09-15T04:40:59.974Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:39:48.925Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:49.177Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path '.coding-tools\\task-contexts\\5662b1ccc029fb1a13d6f5e3-history.json' -Pattern 'startWithWindows|setLoginItemSettings|Recovery Supervisor|pre-reboot|post-reboot|shutdown|Restart-Computer|handoff|continuation|installed direct' -Context 2,5 | Select-Object -First 120 | ForEach-Object { $_.ToString() }\"",
+          "session_id": "Zm9F1EhjcigDVhwckq-XCF63"
+        }
+      },
+      {
+        "time": "2026-09-15T04:39:49.744Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Select-String -Path '.coding-tools\\task-contexts\\5662b1ccc029fb1a13d6f5e3-history.json' -Pattern 'startWithWindows|setLoginItemSettings|Recovery Supervisor|pre-reboot|post-reboot|shutdown|Restart-Computer|handoff|continuation|installed direct' -Context 2,5 | Select-Object -First 120 | ForEach-Object { $_.ToString() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:05.576Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' 'startWithWindows|setLoginItemSettings|getLoginItemSettings|settings:save|settings-save|settings.update|ipcMain.handle.*settings|--start|autostart|openAtLogin' electron scripts tests docs | Select-Object -First 260\"",
+          "session_id": "0L8zJEI5Wr1GXQOaKUXt5NNo"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:06.269Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n --hidden --glob '!node_modules/**' --glob '!dist/**' 'startWithWindows|setLoginItemSettings|getLoginItemSettings|settings:save|settings-save|settings.update|ipcMain.handle.*settings|--start|autostart|openAtLogin' electron scripts tests docs | Select-Object -First 260\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:16.641Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'docs\\RECOVERY_HOST.md' | Select-Object -Skip 292 -First 48\"",
+          "session_id": "NV4IiueGlsPMsCnE8EFH87C4"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:17.283Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'docs\\RECOVERY_HOST.md' | Select-Object -Skip 292 -First 48\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:59.507Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n -C 10 'startWithWindows|saveSettings\\(|Windows|khởi động|startup|autostart' renderer electron/preload.js | Select-Object -First 220\"",
+          "session_id": "U12FyQ9WvfRGLFeYVHRRUO0j"
+        }
+      },
+      {
+        "time": "2026-09-15T04:40:59.974Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"rg -n -C 10 'startWithWindows|saveSettings\\(|Windows|khởi động|startup|autostart' renderer electron/preload.js | Select-Object -First 220\"",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:41:13.507Z",
+    "archive_reason": "finished"
+  }
+]

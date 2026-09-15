@@ -1,0 +1,124 @@
+[
+  {
+    "version": 2,
+    "task_id": "b1a1b2dc6dd54e1482522692cf355090",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "jeD-9pooyHSZD2vji-nLSUq0",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 496,
+      "finished_at": "2026-09-15T05:53:22.468Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T05:52:30.479Z",
+    "updated_at": "2026-09-15T05:53:22.468Z",
+    "events": [
+      {
+        "time": "2026-09-15T05:52:30.479Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:30.792Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -l \"4f166a943c6c4b148b09dc6963ef679d\" .coding-tools/task-contexts",
+          "session_id": "z626y0ruhHsKqrapBYmK3WiT"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:31.209Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -l \"4f166a943c6c4b148b09dc6963ef679d\" .coding-tools/task-contexts",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:40.834Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files = @(rg -l '4f166a943c6c4b148b09dc6963ef679d' .coding-tools/task-contexts); foreach ($f in $files) { $j = Get-Content -Raw $f | ConvertFrom-Json; [pscustomobject]@{file=$f; task_context_id=$j.task_context_id; task_id=$j.task.task_id; run_id=$j.task.run_id; wave_id=$j.task.wave_id; status=$j.task.status; completion_report_id=$j.task.completion_report_id; completion_report_acknowledged=$j.task.completion_report_acknowledged} | ConvertTo-Json -Compress }\"",
+          "session_id": "bZCuZvtETGlS_Yew93Xxuv67"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:42.044Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files = @(rg -l '4f166a943c6c4b148b09dc6963ef679d' .coding-tools/task-contexts); foreach ($f in $files) { $j = Get-Content -Raw $f | ConvertFrom-Json; [pscustomobject]@{file=$f; task_context_id=$j.task_context_id; task_id=$j.task.task_id; run_id=$j.task.run_id; wave_id=$j.task.wave_id; status=$j.task.status; completion_report_id=$j.task.completion_report_id; completion_report_acknowledged=$j.task.completion_report_acknowledged} | ConvertTo-Json -Compress }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:53.765Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = Get-Content -Raw '.coding-tools/task-contexts/6e838facdcccc780b1dd1325.json' | ConvertFrom-Json; $j | Select-Object * | ConvertTo-Json -Depth 4 -Compress\"",
+          "session_id": "YYjpXHKBbPOPsbRV4ZafotFW"
+        }
+      },
+      {
+        "time": "2026-09-15T05:52:54.948Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$j = Get-Content -Raw '.coding-tools/task-contexts/6e838facdcccc780b1dd1325.json' | ConvertFrom-Json; $j | Select-Object * | ConvertTo-Json -Depth 4 -Compress\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T05:53:04.931Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files = @('.coding-tools/task-contexts/19198de59f6884c806797148.json','.coding-tools/task-contexts/1cdf434c2ebc07d637b71c5c.json'); foreach ($f in $files) { $j = Get-Content -Raw $f | ConvertFrom-Json; [pscustomobject]@{file=$f; task_id=$j.task_id; run_id=$j.orchestration.run_id; wave_id=$j.orchestration.wave_id; orchestration_state=$j.orchestration.orchestration_state; status=$j.status; completion_report_id=$j.completion_report_id; ack_id=$j.completion_report_ac",
+          "session_id": "Q0HDueA9RwONxgMn9Y436RXq"
+        }
+      },
+      {
+        "time": "2026-09-15T05:53:05.898Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$files = @('.coding-tools/task-contexts/19198de59f6884c806797148.json','.coding-tools/task-contexts/1cdf434c2ebc07d637b71c5c.json'); foreach ($f in $files) { $j = Get-Content -Raw $f | ConvertFrom-Json; [pscustomobject]@{file=$f; task_id=$j.task_id; run_id=$j.orchestration.run_id; wave_id=$j.orchestration.wave_id; orchestration_state=$j.orchestration.orchestration_state; status=$j.status; completion_report_id=$j.completion_report_id; ack_id=$j.completion_report_ac",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T05:53:22.010Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"1cdf434c2ebc07d637b71c5c|bf2336bcc70d4eee9f24c71eeea1366c\" .coding-tools/task-context-workspaces.json .coding-tools/task-contexts",
+          "session_id": "jeD-9pooyHSZD2vji-nLSUq0"
+        }
+      },
+      {
+        "time": "2026-09-15T05:53:22.468Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"1cdf434c2ebc07d637b71c5c|bf2336bcc70d4eee9f24c71eeea1366c\" .coding-tools/task-context-workspaces.json .coding-tools/task-contexts",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T05:53:38.223Z",
+    "archive_reason": "finished"
+  }
+]

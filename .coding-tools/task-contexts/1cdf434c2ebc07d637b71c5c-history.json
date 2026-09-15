@@ -1,0 +1,262 @@
+[
+  {
+    "version": 2,
+    "task_id": "5af251fb51624257921763edb5855fd7",
+    "orchestration": {},
+    "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix only the observed automatic-recovery retry storm. Preserve assertActivationRevisionContinuity and fail-closed source/epoch guards. When soft recovery encounters typed UPDATE_INCOMPLETE/full_clean_activation_required caused by source revision drift, latch autoRecoveryBlocked with typed failure state so later supervise ticks do not call automatic recovery again until an explicit authorized start/full-clean path clears it. Add focused regression proving one failed recovery attempt then zero repeat attempts on later supervise ticks, while transient failures retain existing bounded backoff/retry semantics. Preserve unrelated dirty bytes. No restart, reboot, commit, push, release, install, or packaging in this wave.",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T04:54:25.332Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": "Command path could not be inspected safely.",
+    "next_step": "",
+    "created_at": "2026-09-15T04:53:25.495Z",
+    "updated_at": "2026-09-15T04:54:25.332Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:53:25.495Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Continue canonical Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Fix only the observed automatic-recovery retry storm. Preserve assertActivationRevisionContinuity and fail-closed source/epoch guards. When soft recovery encounters typed UPDATE_INCOMPLETE/full_clean_activation_required caused by source revision drift, latch autoRecoveryBlocked with typed failure state so later supervise ticks do not call automatic recovery again until an explicit authorized start/full-clean path clears it. Add focused regression proving one failed recovery attempt then zero repeat attempts on later supervise ticks, while transient failures retain existing bounded backoff/retry semantics. Preserve unrelated dirty bytes. No restart, reboot, commit, push, release, install, or packaging in this wave."
+        }
+      },
+      {
+        "time": "2026-09-15T04:53:26.282Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T04:53:37.840Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_CALLER_AUTHORITY_FORBIDDEN"
+        }
+      },
+      {
+        "time": "2026-09-15T04:53:48.690Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "PRL_EVENT_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:14.158Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:25.332Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 24 \"GOAL_CONTROLLER_FENCE_STALE|reattach_id|continuity_action.*reattach|controller.*generation|durable Goal\" resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:25.332Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "exec_command",
+          "code": "INVALID_ARGUMENT"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:54:36.011Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "69eaba0e0115417297b0a6bfae39511a",
+    "orchestration": {},
+    "objective": "Run a workspace command",
+    "status": "failed",
+    "steps": [],
+    "current_step": "Command failed",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "a9oZeEr7Ov4ABO87Z2sVTgQN",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "failed",
+      "exit_code": 2,
+      "duration_ms": 331,
+      "finished_at": "2026-09-15T04:57:27.530Z"
+    },
+    "completion_report": null,
+    "completion_report_id": "",
+    "completion_report_acknowledged_id": "",
+    "completion_report_acknowledged_at": null,
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "",
+    "created_at": "2026-09-15T04:54:36.011Z",
+    "updated_at": "2026-09-15T04:57:27.530Z",
+    "events": [
+      {
+        "time": "2026-09-15T04:54:36.012Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:36.318Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 20 GOAL_CONTROLLER_FENCE_STALE resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "session_id": "8RrKVEXGikni6scOPsfxuK6w"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:36.626Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 20 GOAL_CONTROLLER_FENCE_STALE resources/coding-tools-mcp/coding_tools_mcp resources/coding-tools-mcp/tests",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:49.102Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 250 -First 140\"",
+          "session_id": "WWK3sZXtt6DKBCyE-UXi0Iu0"
+        }
+      },
+      {
+        "time": "2026-09-15T04:54:49.761Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 250 -First 140\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:01.851Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 18 \"controller_reattach|reattach_id\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "session_id": "ZxYpzIjuw95hUzHgt9QOqL1j"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:02.257Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 18 \"controller_reattach|reattach_id\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/coding_tools_mcp/server.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:13.161Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1420 -First 210\"",
+          "session_id": "pN5Q3C6ffXY2FTNWWag3DV0H"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:14.568Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1420 -First 210\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:25.731Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n \"reattach_id =|action == \\\"reattach\\\"|CONTINUITY_REATTACH|knowledge_ack\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "session_id": "QJi0qu0vWwNaTsOxnPttvnI8"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:26.022Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n \"reattach_id =|action == \\\"reattach\\\"|CONTINUITY_REATTACH|knowledge_ack\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:35.398Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1490 -First 90\"",
+          "session_id": "Xab1LzHqEgMN7PtlmGfO-6Uo"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:36.564Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell.exe -NoProfile -NonInteractive -Command \"Get-Content 'resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py' | Select-Object -Skip 1490 -First 90\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:55:58.903Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CAPSULE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T04:57:12.122Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "task_control",
+          "code": "CAPSULE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T04:57:27.230Z",
+        "event": "command_started",
+        "details": {
+          "command": "rg -n -C 12 \"source_fingerprint|worktree_fp|continuity_core_fingerprint|CAPSULE_STALE\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workspace.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "session_id": "a9oZeEr7Ov4ABO87Z2sVTgQN"
+        }
+      },
+      {
+        "time": "2026-09-15T04:57:27.530Z",
+        "event": "command_finished",
+        "details": {
+          "command": "rg -n -C 12 \"source_fingerprint|worktree_fp|continuity_core_fingerprint|CAPSULE_STALE\" resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/coding_tools_mcp/workspace.py resources/coding-tools-mcp/coding_tools_mcp/workflow_tools.py resources/coding-tools-mcp/tests/test_controller_reattach.py",
+          "status": "failed"
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:57:35.786Z",
+    "archive_reason": "finished"
+  }
+]

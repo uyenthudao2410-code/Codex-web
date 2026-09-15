@@ -1,0 +1,475 @@
+{
+  "version": 2,
+  "task_id": "c576edd649cb45979d96fe8a19e7d614",
+  "orchestration": {
+    "run_id": "401a4284fabd47cdbb542e2bd79681f6",
+    "wave_id": "cc6d939a32f94c28a6f9bdc811c1eb05",
+    "orchestration_state": "CHECKPOINTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+    "contract_fp": ""
+  },
+  "objective": "C01/M02 machine-A candidate replacement step for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Replace only the stale persistent acceptance installation at %LOCALAPPDATA%\\WebMcpAcceptance-1.0.0 with the already-checkpointed fresh NSIS artifact dist\\coding-tools-mcp-setup-1.0.0.exe whose exact SHA256 is a2b6fe2d168af983e5a21c461453593f71be3b5609d14172b770fb5d3155d887 and size is 121749108. Before mutation, prove the installer identity and prove the existing acceptance installation is stale. Perform a bounded silent uninstall/reinstall only for that acceptance root, then verify installed Coding Tools MCP.exe SHA256 exactly cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c, installed recovery-supervisor.ps1 SHA256 exactly 9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab, launcher SHA256 exactly 082d4b2a8c5cc40a76b778c8503f29c6985edc3e8b3f6d688a205416e9b23a90, and exactly one matching uninstall registration. Prove the currently running production Recovery Host identity and Recovery Supervisor manifest/task are unchanged across this candidate replacement. Do not change production Recovery Supervisor mode yet. Do not reboot/logoff/restart runtime, edit repository source, commit, push, release, publish, or deploy. If any postcondition fails, rollback to a clean acceptance installation state without touching the production Recovery Supervisor.",
+  "status": "completed",
+  "steps": [
+    {
+      "id": "checks",
+      "text": "Run requested checks",
+      "status": "completed",
+      "updated_at": "2026-09-15T09:01:18.954Z"
+    },
+    {
+      "id": "finalize",
+      "text": "Finalize verified result",
+      "status": "completed",
+      "updated_at": "2026-09-15T09:01:18.954Z"
+    }
+  ],
+  "current_step": "Completed - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "BsUK-7rPqEi3VwdFPKMOrrz1",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": null,
+    "finished_at": "2026-09-15T09:01:18.131Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 50,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 17,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "401a4284fabd47cdbb542e2bd79681f6",
+        "wave_id": "cc6d939a32f94c28a6f9bdc811c1eb05",
+        "checkpoint_id": "ba25cde4ba744c0bb7595aab65ae4bec"
+      },
+      "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+      "event_count": 54,
+      "latest_event": {
+        "seq": 298,
+        "event_id": "prl-bind-359346a2e3655b861be45547e2e312acdd3144469f069fc9336565d8382a0b65",
+        "event_hash": "b45e6d1b2523f4802af90cfbc13cbf0979e1ddf55ec240242f64f197af349e11",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T08:58:19.540Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 153,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 103,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 15,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 35,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "CHECKPOINTED",
+      "run_status": "accepted",
+      "wave_status": "accepted",
+      "task_status": "completed",
+      "integrity": {
+        "ok": true,
+        "checked": 31,
+        "head_hash": "bf0ee871cc2bb1b160c7a20aceb54bd1184fa5150024b301810992da4912b808"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-401a4284fabd47cdbb542e2bd79681f6\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-401a4284fabd47cdbb542e2bd79681f6\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "401a4284fabd47cdbb542e2bd79681f6",
+      "wave_id": "cc6d939a32f94c28a6f9bdc811c1eb05",
+      "checkpoint_id": "ba25cde4ba744c0bb7595aab65ae4bec",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "C01/M02 machine-A candidate replacement step for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Replace only the stale persistent acceptance installation at %LOCALAPPDATA%\\WebMcpAcceptance-1.0.0 with the already-checkpointed fresh NSIS artifact dist\\coding-tools-mcp-setup-1.0.0.exe whose exact SHA256 is a2b6fe2d168af983e5a21c461453593f71be3b5609d14172b770fb5d3155d887 and size is 121749108. Before mutation, prove the installer identity and prove the existing acceptance installation is stale. Perform a bounded silent uninstall/reinstall only for that acceptance root, then verify installed Coding Tools MCP.exe SHA256 exactly cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c, installed recovery-supervisor.ps1 SHA256 exactly 9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab, launcher SHA256 exactly 082d4b2a8c5cc40a76b778c8503f29c6985edc3e8b3f6d688a205416e9b23a90, and exactly one matching uninstall registration. Prove the currently running production Recovery Host identity and Recovery Supervisor manifest/task are unchanged across this candidate replacement. Do not change production Recovery Supervisor mode yet. Do not reboot/logoff/restart runtime, edit repository source, commit, push, release, publish, or deploy. If any postcondition fails, rollback to a clean acceptance installation state without touching the production Recovery Supervisor.",
+        "objective_revision": 1,
+        "objective_sha256": "071763ba6d369f94b1bd16a534131fa60794bc3f94634ebce8a02f4eba4531bd",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 1,
+      "all_recorded_proofs_passed": true,
+      "proofs": [
+        {
+          "proof_id": "71d1d475bd244aca8beeb0c8b9643631",
+          "stage_id": "check:e75942ac9c1ea8a3",
+          "status": "passed",
+          "duration_ms": 31390,
+          "exit_code": 0,
+          "cache_hit": false
+        }
+      ]
+    },
+    "accepted_or_not": "ACCEPTED",
+    "blocker_or_failure": null,
+    "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "94c25598789fd72ffab2de096f100fa6682baad06be1dbf80466f6b9c191a280",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-15T08:56:37.568Z",
+  "updated_at": "2026-09-15T09:02:10.326Z",
+  "events": [
+    {
+      "time": "2026-09-15T08:56:37.568Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T08:56:38.165Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function F([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){$i=Get-Item -LiteralPath $p;return [ordered]@{path=$p;size=[long]$i.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}};return $null}; $repo='E:\\DEV\\Codex-web'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $out=[ordered]@{installer=(F (Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'));unpacked",
+        "session_id": "0dxyaCzVsDVR_VgdLfh5hE1S"
+      }
+    },
+    {
+      "time": "2026-09-15T08:56:39.890Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function F([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){$i=Get-Item -LiteralPath $p;return [ordered]@{path=$p;size=[long]$i.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}};return $null}; $repo='E:\\DEV\\Codex-web'; $acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $out=[ordered]@{installer=(F (Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'));unpacked",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T08:57:19.504Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T08:57:40.680Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T08:58:19.797Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:58:26.969Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T08:58:26.982Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:41.116Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:42.648Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:44.290Z",
+      "event": "mcp_write_lease_active",
+      "details": {
+        "state": "EXECUTING"
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:44.296Z",
+      "event": "continuous_workflow_started",
+      "details": {
+        "fields": [
+          "current_step",
+          "next_step",
+          "objective",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:46.119Z",
+      "event": "orchestration_proving",
+      "details": {
+        "state": "PROVING"
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:46.380Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:00:47.948Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $repo='E:\\DEV\\Codex-web'; $installer=Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $expectedInstaller='a2b6fe2d168af983e5a21c461453593f71be3b5609d14172b770fb5d3155d887'; $expectedInstallerSize=121749108; $appRoot=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $expectedOldExe='ec61c35ac2d4af95470c56f595bbd9726f1823fede7c646ee2483fe5d69f21cc'; $expectedExe='cf9235c1398d009762e9de5b25588e7fa85347a075ff6",
+        "session_id": "BsUK-7rPqEi3VwdFPKMOrrz1"
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:18.131Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; $repo='E:\\DEV\\Codex-web'; $installer=Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'; $expectedInstaller='a2b6fe2d168af983e5a21c461453593f71be3b5609d14172b770fb5d3155d887'; $expectedInstallerSize=121749108; $appRoot=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0'; $expectedOldExe='ec61c35ac2d4af95470c56f595bbd9726f1823fede7c646ee2483fe5d69f21cc'; $expectedExe='cf9235c1398d009762e9de5b25588e7fa85347a075ff6",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:18.947Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "current_step",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:18.954Z",
+      "event": "continuous_workflow_completed",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "status",
+          "steps"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:21.162Z",
+      "event": "awaiting_final_acceptance",
+      "details": {
+        "state": "ACCEPTING"
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:21.162Z",
+      "event": "final_acceptance_required",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:21.319Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+        "report_id": "29896c623b93c73d32d309bac3f682f77585344a680409cdc538962de0cc429d"
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:21.549Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:32.376Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:32.842Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "command_control",
+        "code": "INVALID_ARGUMENT"
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:42.179Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:01:56.187Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "29896c623b93c73d32d309bac3f682f77585344a680409cdc538962de0cc429d"
+      }
+    },
+    {
+      "time": "2026-09-15T09:02:06.989Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:02:10.191Z",
+      "event": "final_acceptance_recorded",
+      "details": {
+        "state": "CHECKPOINTED"
+      }
+    },
+    {
+      "time": "2026-09-15T09:02:10.194Z",
+      "event": "task_accepted",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T09:02:10.321Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "ACCEPTED",
+        "report_id": "94c25598789fd72ffab2de096f100fa6682baad06be1dbf80466f6b9c191a280"
+      }
+    }
+  ]
+}

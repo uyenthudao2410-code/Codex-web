@@ -48,6 +48,12 @@ jobs:
         run: python resources/coding-tools-mcp/scripts/check_module_size.py
       - name: Test Coding Tools MCP
         run: python -m unittest discover -s resources/coding-tools-mcp/tests -p 'test_*.py'
+      - name: Test Ubuntu control plane source
+        working-directory: control-plane
+        run: python -W error -B -m unittest discover -s tests -v
+      - name: Test control-plane Recovery IPC observer
+        working-directory: control-plane
+        run: node --test tests/recovery_identity_observer.test.cjs
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
       - name: Build frontend assets
@@ -128,6 +134,12 @@ jobs:
           cache-dependency-path: resources/coding-tools-mcp/pyproject.toml
       - name: Install Coding Tools MCP runtime
         run: python -m pip install -e resources/coding-tools-mcp
+      - name: Test Ubuntu control plane source
+        working-directory: control-plane
+        run: python -W error -B -m unittest discover -s tests -v
+      - name: Test control-plane Recovery IPC observer
+        working-directory: control-plane
+        run: node --test tests/recovery_identity_observer.test.cjs
       - name: Install desktop dependencies
         run: npm ci
       - name: Verify production desktop dependencies

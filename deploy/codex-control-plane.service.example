@@ -7,6 +7,12 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/home/svhome/DEV/Codex-web
 EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+# Put CONTROL_PLANE_DECLARED_SOURCE_REVISION=<exact deployed Git SHA> in the
+# protected EnvironmentFile for health observation. To fail closed if the
+# installed package source differs from the selected artifact, also put
+# CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256=sha256:<64-lowercase-hex> there.
+# Neither setting is an artifact signature or an independent service-owner
+# attestation.
 Environment=PYTHONPATH=/home/svhome/DEV/Codex-web/control-plane
 ExecStart=/usr/bin/python3 -m control_plane
 Restart=on-failure

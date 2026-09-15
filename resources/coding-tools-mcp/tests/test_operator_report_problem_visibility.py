@@ -109,6 +109,9 @@ class _ProblemLedger:
             "terminal_count": 0,
             "blocker_count": 1,
             "accepted_checkpoint_count": 1,
+            "natural_event_count": 4,
+            "synthetic_event_count": 2,
+            "legacy_unknown_event_count": 3,
             "time_to_resume_ms": {"count": 1, "total_ms": 80, "max_ms": 80, "avg_ms": 80.0},
             "replan_duration_ms": None,
             "report_gate_wait_ms": {"count": 1, "total_ms": 120, "max_ms": 120, "avg_ms": 120.0},
@@ -162,6 +165,9 @@ class OperatorReportProblemVisibilityTests(unittest.TestCase):
         self.assertEqual(telemetry["report_gate_count"], 3)
         self.assertEqual(telemetry["continuation_failure_count"], 1)
         self.assertEqual(telemetry["duplicate_effect_prevented_count"], 1)
+        self.assertEqual(telemetry["natural_event_count"], 4)
+        self.assertEqual(telemetry["synthetic_event_count"], 2)
+        self.assertEqual(telemetry["legacy_unknown_event_count"], 3)
         self.assertNotIn("counts_by_code", telemetry)
         self.assertTrue(problem["content_free"])
         self.assertTrue(problem["derived_projection_only"])

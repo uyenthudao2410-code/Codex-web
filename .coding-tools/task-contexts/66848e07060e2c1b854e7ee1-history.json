@@ -1,0 +1,644 @@
+[
+  {
+    "version": 2,
+    "task_id": "06311512e4764799abf80034885e7b67",
+    "orchestration": {
+      "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+      "wave_id": "896072548495452e8df65fb2a4690e70",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "dbec605c02f308fac80c47e9e32ba02a7bb2d839868311c95ab24e6030c3ea29",
+      "contract_fp": ""
+    },
+    "objective": "Pre-package safety provenance only; do not claim or alter any Problem semantics. Exact-byte adopt the current packaged Coding Tools MCP telemetry/report files and their focused regression tests without modifying bytes: resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py SHA256 613b8a9243c87fc6e8e687e5121449272ccdfc25e874e043155e9fee9c32d1ce; resources/coding-tools-mcp/coding_tools_mcp/operator_report.py SHA256 f7ed54ef5d0aacee9e9091165ddc110071e33995faa33cc32228e0d12d15f5cd; resources/coding-tools-mcp/tests/test_continuity_telemetry.py SHA256 6ff079d1700996e6d343719116fad413519a5b1f7216b0e855ba9806bb52703f; resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py SHA256 1cd0d973bc13664c4e56a9b42eac12309aa443476bf1d225fde367b97621a0d0. Run only the two focused test files. This wave exists solely to prove exact current bytes are internally consistent before packaging; it must not resolve, revise, or take authority over the separate continuity Problem. No unrelated files, no package/install/reboot/runtime restart/commit/push/publish/release/deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "apply",
+        "text": "Adopt existing or apply workspace changes",
+        "status": "completed",
+        "updated_at": "2026-09-15T04:03:56.602Z"
+      },
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T04:03:56.602Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T04:03:56.602Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T04:04:42.591Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "what_changed": {
+        "files": [
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py",
+            "state": "file",
+            "sha256": "613b8a9243c87fc6e8e687e5121449272ccdfc25e874e043155e9fee9c32d1ce",
+            "size_bytes": 16387,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+            "wave_id": "896072548495452e8df65fb2a4690e70"
+          },
+          {
+            "path": "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+            "state": "file",
+            "sha256": "f7ed54ef5d0aacee9e9091165ddc110071e33995faa33cc32228e0d12d15f5cd",
+            "size_bytes": 31048,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+            "wave_id": "896072548495452e8df65fb2a4690e70"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_continuity_telemetry.py",
+            "state": "file",
+            "sha256": "6ff079d1700996e6d343719116fad413519a5b1f7216b0e855ba9806bb52703f",
+            "size_bytes": 9695,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+            "wave_id": "896072548495452e8df65fb2a4690e70"
+          },
+          {
+            "path": "resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py",
+            "state": "file",
+            "sha256": "1cd0d973bc13664c4e56a9b42eac12309aa443476bf1d225fde367b97621a0d0",
+            "size_bytes": 9414,
+            "receipt_kind": "explicit_existing_file",
+            "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+            "wave_id": "896072548495452e8df65fb2a4690e70"
+          }
+        ],
+        "source": "accepted_checkpoint_file_attestations",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 37,
+          "head_hash": "1f63625e11b85a4b790ba8b2eae97b8dd31551359d61015d60f086f127678d92"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f46385a3eb4b41a59fad74ef18404e19\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-f46385a3eb4b41a59fad74ef18404e19\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "f46385a3eb4b41a59fad74ef18404e19",
+        "wave_id": "896072548495452e8df65fb2a4690e70",
+        "checkpoint_id": "943484c19a2a48ba9a4a4b60d1f42575",
+        "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "worktree_fp": "dbec605c02f308fac80c47e9e32ba02a7bb2d839868311c95ab24e6030c3ea29",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Pre-package safety provenance only; do not claim or alter any Problem semantics. Exact-byte adopt the current packaged Coding Tools MCP telemetry/report files and their focused regression tests without modifying bytes: resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py SHA256 613b8a9243c87fc6e8e687e5121449272ccdfc25e874e043155e9fee9c32d1ce; resources/coding-tools-mcp/coding_tools_mcp/operator_report.py SHA256 f7ed54ef5d0aacee9e9091165ddc110071e33995faa33cc32228e0d12d15f5cd; resources/coding-tools-mcp/tests/test_continuity_telemetry.py SHA256 6ff079d1700996e6d343719116fad413519a5b1f7216b0e855ba9806bb52703f; resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py SHA256 1cd0d973bc13664c4e56a9b42eac12309aa443476bf1d225fde367b97621a0d0. Run only the two focused test files. This wave exists solely to prove exact current bytes are internally consistent before packaging; it must not resolve, revise, or take authority over the separate continuity Problem. No unrelated files, no package/install/reboot/runtime restart/commit/push/publish/release/deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "1c7eb2b412ee98e60a6676b82e1655670c5805eefa334954daba3b61cc4e56fe",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "a3c08a680de54c9596ba03be93bbb4ee",
+            "stage_id": "check:ae10b926117b94ee",
+            "status": "passed",
+            "duration_ms": 8081,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "3fb58a36a14b4669a3edf38d16fd9b54",
+            "stage_id": "check:0fd3fdeb10c00594",
+            "status": "passed",
+            "duration_ms": 1959,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "52dfb0b09a7b6a364a40a59278b3aa7f927d19c783e8ad7300913eea6314bf70",
+    "completion_report_acknowledged_id": "52dfb0b09a7b6a364a40a59278b3aa7f927d19c783e8ad7300913eea6314bf70",
+    "completion_report_acknowledged_at": "2026-09-15T04:04:53.803Z",
+    "test_results": [
+      {
+        "command": "python -m pytest tests/test_continuity_telemetry.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '6 passed in 6.03s'",
+        "finished_at": "2026-09-15T04:03:53.568Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "uhHC_jixAsV2VUX2BvZJRpS6"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "f46385a3eb4b41a59fad74ef18404e19",
+          "owner_wave": "896072548495452e8df65fb2a4690e70",
+          "size_bytes": 100,
+          "command_id": "uhHC_jixAsV2VUX2BvZJRpS6",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:uhHC_jixAsV2VUX2BvZJRpS6:stdout",
+              "total_stream_bytes": 100,
+              "total_retained_bytes": 100,
+              "head_retained_bytes": 100,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:uhHC_jixAsV2VUX2BvZJRpS6:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "python -m pytest tests/test_operator_report_problem_visibility.py -q",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 3 lines | tail: '3 passed in 0.06s'",
+        "finished_at": "2026-09-15T04:03:56.244Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "Vgg9W1sgtMw1aRy6xbshwDRH"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "f46385a3eb4b41a59fad74ef18404e19",
+          "owner_wave": "896072548495452e8df65fb2a4690e70",
+          "size_bytes": 100,
+          "command_id": "Vgg9W1sgtMw1aRy6xbshwDRH",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:Vgg9W1sgtMw1aRy6xbshwDRH:stdout",
+              "total_stream_bytes": 100,
+              "total_retained_bytes": 100,
+              "head_retained_bytes": 100,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:Vgg9W1sgtMw1aRy6xbshwDRH:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T03:58:47.246Z",
+    "updated_at": "2026-09-15T04:12:47.279Z",
+    "events": [
+      {
+        "time": "2026-09-15T03:58:47.246Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T03:58:47.670Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/services/recoveryHost.js','electron/services/recoveryIpc.js','scripts/dev-ui-lifecycle.js','tests/dev-ui-lifecycle.test.js','tests/recovery-host.test.js'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "session_id": "Odoq2NHGPh1w8oCDvebKYkVC"
+        }
+      },
+      {
+        "time": "2026-09-15T03:58:48.469Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/services/recoveryHost.js','electron/services/recoveryIpc.js','scripts/dev-ui-lifecycle.js','tests/dev-ui-lifecycle.test.js','tests/recovery-host.test.js'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:01:29.132Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/services/recoveryHost.js','electron/services/recoveryIpc.js','scripts/dev-ui-lifecycle.js','tests/dev-ui-lifecycle.test.js','tests/recovery-host.test.js'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "session_id": "fEQDl2PBQDR5f8Bi3EWnLCCm"
+        }
+      },
+      {
+        "time": "2026-09-15T04:01:29.781Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('electron/services/recoveryHost.js','electron/services/recoveryIpc.js','scripts/dev-ui-lifecycle.js','tests/dev-ui-lifecycle.test.js','tests/recovery-host.test.js'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:33.440Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$names = git diff --name-only; $names | Where-Object { $_ -match '^(electron/|scripts/|renderer/|resources/coding-tools-mcp/coding_tools_mcp/|package\\.json$|package-lock\\.json$)' } | Sort-Object\"",
+          "session_id": "-yn1CAFezAYn8A-2SWI0QtoI"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:34.255Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$names = git diff --name-only; $names | Where-Object { $_ -match '^(electron/|scripts/|renderer/|resources/coding-tools-mcp/coding_tools_mcp/|package\\.json$|package-lock\\.json$)' } | Sort-Object\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:43.715Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py','resources/coding-tools-mcp/coding_tools_mcp/operator_report.py'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }; git diff --numstat -- $p\"",
+          "session_id": "kGmsl8Lp5Ksa3tvURRbjGQR0"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:44.622Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py','resources/coding-tools-mcp/coding_tools_mcp/operator_report.py'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }; git diff --numstat -- $p\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:56.781Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n -F 'resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py' .coding-tools/orchestration/reports .coding-tools/task-contexts | Select-Object -Last 40; Write-Output '---OPERATOR---'; rg -n -F 'resources/coding-tools-mcp/coding_tools_mcp/operator_report.py' .coding-tools/orchestration/reports .coding-tools/task-contexts | Select-Object -Last 40\"",
+          "session_id": "unvK7U2RLjyK_W1QXBBJayEm"
+        }
+      },
+      {
+        "time": "2026-09-15T04:02:57.803Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n -F 'resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py' .coding-tools/orchestration/reports .coding-tools/task-contexts | Select-Object -Last 40; Write-Output '---OPERATOR---'; rg -n -F 'resources/coding-tools-mcp/coding_tools_mcp/operator_report.py' .coding-tools/orchestration/reports .coding-tools/task-contexts | Select-Object -Last 40\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:07.796Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n -F '613b8a9243c87fc6e8e687e5121449272ccdfc25e874e043155e9fee9c32d1ce' .coding-tools/task-contexts .coding-tools/orchestration/reports; Write-Output '---'; rg -n -F 'f7ed54ef5d0aacee9e9091165ddc110071e33995faa33cc32228e0d12d15f5cd' .coding-tools/task-contexts .coding-tools/orchestration/reports\"",
+          "session_id": "mpi1HhydauQWtIpF6JmlTNJZ"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:08.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"rg -n -F '613b8a9243c87fc6e8e687e5121449272ccdfc25e874e043155e9fee9c32d1ce' .coding-tools/task-contexts .coding-tools/orchestration/reports; Write-Output '---'; rg -n -F 'f7ed54ef5d0aacee9e9091165ddc110071e33995faa33cc32228e0d12d15f5cd' .coding-tools/task-contexts .coding-tools/orchestration/reports\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:25.288Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py','resources/coding-tools-mcp/coding_tools_mcp/operator_report.py','resources/coding-tools-mcp/tests/test_continuity_telemetry.py','resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "session_id": "N0AjfZ7XE5ppSixYqz-MtycH"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:25.984Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$p=@('resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py','resources/coding-tools-mcp/coding_tools_mcp/operator_report.py','resources/coding-tools-mcp/tests/test_continuity_telemetry.py','resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py'); Get-FileHash $p -Algorithm SHA256 | ForEach-Object { $_.Path + '=' + $_.Hash.ToLowerInvariant() }\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:40.828Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:42.789Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:43.850Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:43.863Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:45.060Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:45.306Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:46.264Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_continuity_telemetry.py -q",
+          "session_id": "uhHC_jixAsV2VUX2BvZJRpS6"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:53.568Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_continuity_telemetry.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:54.937Z",
+        "event": "command_started",
+        "details": {
+          "command": "python -m pytest tests/test_operator_report_problem_visibility.py -q",
+          "session_id": "Vgg9W1sgtMw1aRy6xbshwDRH"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:56.244Z",
+        "event": "command_finished",
+        "details": {
+          "command": "python -m pytest tests/test_operator_report_problem_visibility.py -q",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:56.597Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:56.602Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:57.350Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:57.354Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:57.456Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "7593f8e6d30cf5497de2aaffab388498f3ef018602646371b5070e6ca7dbe632"
+        }
+      },
+      {
+        "time": "2026-09-15T04:03:57.456Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:10.366Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:13.350Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "7593f8e6d30cf5497de2aaffab388498f3ef018602646371b5070e6ca7dbe632"
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:23.948Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:26.535Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:26.539Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:26.659Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "52dfb0b09a7b6a364a40a59278b3aa7f927d19c783e8ad7300913eea6314bf70"
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:42.431Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:42.591Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -Command \"$rows = git status --porcelain=v1 --untracked-files=all; $rows | Where-Object { $_ -match ' (electron/|scripts/|renderer/|resources/coding-tools-mcp/coding_tools_mcp/|package\\.json$|package-lock\\.json$)' }\"",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T04:04:53.803Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "52dfb0b09a7b6a364a40a59278b3aa7f927d19c783e8ad7300913eea6314bf70"
+        }
+      },
+      {
+        "time": "2026-09-15T04:12:47.279Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T04:12:47.394Z",
+    "archive_reason": "finished"
+  }
+]

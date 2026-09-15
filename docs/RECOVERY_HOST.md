@@ -36,12 +36,14 @@ user nhưng nằm ngoài process Recovery Host. `recovery:supervisor:install` co
 script + fixed manifest sang `%LOCALAPPDATA%\\WebMcpRecoverySupervisor` và đăng ký
 Scheduled Task `WebMCP Recovery Supervisor` ở logon. Supervisor xác minh bounded
 descriptor, exact owner PID và authenticated `recovery.ping` trên `127.0.0.1`.
-Scheduled Task gọi `wscript.exe //B //NoLogo` với GUI launcher cố định; launcher
-chạy Windows PowerShell bằng window style `0` và chờ supervisor thoát. PowerShell
-vẫn nhận `-NonInteractive -WindowStyle Hidden`, còn Recovery Host con tiếp tục
-dùng `CreateNoWindow` và `SW_HIDE`. Vì vậy watchdog nền không tạo console window
-trong user session. Electron UI là ngoại lệ duy nhất và vẫn được launch không có
-`SW_HIDE` để `BrowserWindow` hiện ổn định.
+Scheduled Task gọi trực tiếp Windows PowerShell hệ thống với argv cố định
+`-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File
+<installed recovery-supervisor.ps1> -Action Run`. Đường trực tiếp này tránh phụ
+thuộc Windows Script Host trong Task Scheduler nhưng vẫn giữ supervisor ẩn. VBS
+launcher cố định được giữ cho compatibility/standalone smoke; Recovery Host con
+tiếp tục dùng `CreateNoWindow` và `SW_HIDE`. Vì vậy watchdog nền không tạo console
+window trong user session. Electron UI là ngoại lệ duy nhất và vẫn được launch
+không có `SW_HIDE` để `BrowserWindow` hiện ổn định.
 
 Hai tunnel daemon cũng dùng background launch. `tunnel-client` tự khởi động cầu
 nối Codex Admin UI qua `codex app-server`; trên Windows, gọi trực tiếp shim

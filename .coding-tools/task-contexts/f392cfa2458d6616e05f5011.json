@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "ecc368dd8e14442285c66ffd55159904",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "VeFdV3j7k0pMlKcVF6GfOjN3",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 1370,
+    "finished_at": "2026-09-15T06:59:09.567Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:59:07.879Z",
+  "updated_at": "2026-09-15T06:59:09.567Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:59:07.879Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:59:08.155Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$mp=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\manifest.json'; $m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json; $script=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor.ps1'; $launcher=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor-launcher.vbs'; $eh=$null; if(Test-Path -LiteralPath ([string]$m.executable)){$eh=(Get-FileHash -Algorithm SHA256 -LiteralPath ([string]$m.executable)).",
+        "session_id": "VeFdV3j7k0pMlKcVF6GfOjN3"
+      }
+    },
+    {
+      "time": "2026-09-15T06:59:09.567Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$mp=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\manifest.json'; $m=Get-Content -LiteralPath $mp -Raw|ConvertFrom-Json; $script=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor.ps1'; $launcher=Join-Path $env:LOCALAPPDATA 'WebMcpRecoverySupervisor\\recovery-supervisor-launcher.vbs'; $eh=$null; if(Test-Path -LiteralPath ([string]$m.executable)){$eh=(Get-FileHash -Algorithm SHA256 -LiteralPath ([string]$m.executable)).",
+        "status": "passed"
+      }
+    }
+  ]
+}

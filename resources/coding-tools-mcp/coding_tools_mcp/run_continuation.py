@@ -1861,9 +1861,16 @@ class RunContinuationMixin:
             raise ToolFailure("RUN_CONTINUATION_WAVE_STALE", "The RUN/WAVE changed before local approval.", category="security")
         if goal_scope:
             try:
-                goal_precondition = self._continuity_goal_controller_precondition(
+                # The approval POST is loopback HTTP, not an attested ChatWeb
+                # transport turn. Revalidate the exact controller identity that
+                # was already frozen into the attested challenge instead of
+                # re-deriving controller identity from this HTTP request.
+                goal_precondition = self.orchestration_ledger.controller_goal_run_precondition(
+                    workspace_id=str(bound_policy.get("workspace_id") or ""),
                     problem_id=str(bound_policy.get("problem_id") or ""),
                     problem_revision=int(bound_policy.get("problem_revision") or 0),
+                    owner_client_id=str(bound_policy.get("controller_owner_client_id") or ""),
+                    controller_endpoint_id=str(bound_policy.get("controller_endpoint_id") or ""),
                 )
             except ControllerContinuityError as exc:
                 raise self._continuity_tool_failure(exc) from exc

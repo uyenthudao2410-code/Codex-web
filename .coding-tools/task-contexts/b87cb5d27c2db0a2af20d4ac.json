@@ -1,0 +1,72 @@
+{
+  "version": 2,
+  "task_id": "a6baa6c7018e43879c53bca46b5a6c8a",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "m10YVZ9iiYAp3iLfpQV_8iwQ",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 622,
+    "finished_at": "2026-09-15T07:55:30.283Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T07:55:10.008Z",
+  "updated_at": "2026-09-15T07:55:30.283Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:55:10.008Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T07:55:10.324Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('resources/recovery-supervisor/recovery-supervisor.ps1','tests/recovery-supervisor.test.js'); $files | ForEach-Object { $i=Get-Item -LiteralPath $_; $h=Get-FileHash -Algorithm SHA256 -LiteralPath $_; [pscustomobject]@{path=$_.Replace('\\\\','/');sha256=$h.Hash.ToLowerInvariant();length=$i.Length;mtime=$i.LastWriteTimeUtc.ToString('o')} } | ConvertTo-Json -Compress\"",
+        "session_id": "zTtREEjJBRSTAT9aZRqlzZQM"
+      }
+    },
+    {
+      "time": "2026-09-15T07:55:11.844Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('resources/recovery-supervisor/recovery-supervisor.ps1','tests/recovery-supervisor.test.js'); $files | ForEach-Object { $i=Get-Item -LiteralPath $_; $h=Get-FileHash -Algorithm SHA256 -LiteralPath $_; [pscustomobject]@{path=$_.Replace('\\\\','/');sha256=$h.Hash.ToLowerInvariant();length=$i.Length;mtime=$i.LastWriteTimeUtc.ToString('o')} } | ConvertTo-Json -Compress\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:55:29.624Z",
+      "event": "command_started",
+      "details": {
+        "command": "node --test --test-name-pattern \"Recovery Supervisor installs into the Task Scheduler-visible roaming data boundary\" tests/recovery-supervisor.test.js",
+        "session_id": "m10YVZ9iiYAp3iLfpQV_8iwQ"
+      }
+    },
+    {
+      "time": "2026-09-15T07:55:30.283Z",
+      "event": "command_finished",
+      "details": {
+        "command": "node --test --test-name-pattern \"Recovery Supervisor installs into the Task Scheduler-visible roaming data boundary\" tests/recovery-supervisor.test.js",
+        "status": "passed"
+      }
+    }
+  ]
+}

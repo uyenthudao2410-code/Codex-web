@@ -1,0 +1,255 @@
+{
+  "version": 2,
+  "task_id": "b2ecd720dce54c3cb46d39b02b747df3",
+  "orchestration": {
+    "run_id": "5ebcdc38577c4e01b2c8ec46c8776874",
+    "wave_id": "305433499d51411781078e077dca653b",
+    "orchestration_state": "REPLAN",
+    "execution_mode": "mcp_only",
+    "route_requested": "deterministic",
+    "route_resolved": "deterministic",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "8dae8665c5bb447c2caa8a4fda9c72a8262cd1f8bc361000c8e2ec3c5c90176d",
+    "contract_fp": ""
+  },
+  "objective": "Build a fresh Windows NSIS installer containing the accepted Recovery Supervisor Scheduled Task fix from checkpoint be119b0356a24f6d9509194388f2b8c8 for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Do not modify source, commit, push, publish, release, deploy, restart runtime, install the candidate, or reboot. Run the current source-root cleanliness guard, repository secret guard, and electron-builder Windows NSIS build. Then prove the resulting dist/coding-tools-mcp-setup-1.0.0.exe exists and report its exact byte size and SHA-256. The build must not mutate source files; only build artifacts and runtime evidence may change.",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Replan report acknowledged",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+      "problem_revision": 1,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 12,
+        "criteria_proven": 0,
+        "criteria_unresolved": 12,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "C01",
+        "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 44,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 15,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "5ebcdc38577c4e01b2c8ec46c8776874",
+        "wave_id": "305433499d51411781078e077dca653b",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+      "event_count": 48,
+      "latest_event": {
+        "seq": 279,
+        "event_id": "prl-bind-dc1024d5ca539a7ad277e0039804ef7e6bab426d567469fb8530fd13c029090b",
+        "event_hash": "ce9f093887665e5840766e717c77393dda15aecbc4272df0d307e31b19d938c5",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T07:11:58.823Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 120,
+        "manual_nudge_count": 0,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 81,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 10,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 29,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 13,
+        "head_hash": "6c8c86b141b4b106f1cc244b66b8afa1e29af1c801c075ea590f4217c1f42ed5"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5ebcdc38577c4e01b2c8ec46c8776874\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5ebcdc38577c4e01b2c8ec46c8776874\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "5ebcdc38577c4e01b2c8ec46c8776874",
+      "wave_id": "305433499d51411781078e077dca653b",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "8dae8665c5bb447c2caa8a4fda9c72a8262cd1f8bc361000c8e2ec3c5c90176d",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Build a fresh Windows NSIS installer containing the accepted Recovery Supervisor Scheduled Task fix from checkpoint be119b0356a24f6d9509194388f2b8c8 for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Do not modify source, commit, push, publish, release, deploy, restart runtime, install the candidate, or reboot. Run the current source-root cleanliness guard, repository secret guard, and electron-builder Windows NSIS build. Then prove the resulting dist/coding-tools-mcp-setup-1.0.0.exe exists and report its exact byte size and SHA-256. The build must not mutate source files; only build artifacts and runtime evidence may change.",
+        "objective_revision": 1,
+        "objective_sha256": "8d85ec7544c51933369c7d07803da53eda099691d7f1cdf49a77cd13de2f0d42",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "BASE_DRIFT",
+      "reason": null,
+      "event_seq": 57508
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "df16a78d73ad16ad47abba62e345d4e5fc1cb09270a79f4882ed07d51233dd56",
+  "completion_report_acknowledged_id": "df16a78d73ad16ad47abba62e345d4e5fc1cb09270a79f4882ed07d51233dd56",
+  "completion_report_acknowledged_at": "2026-09-15T07:12:31.567Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-15T07:11:56.473Z",
+  "updated_at": "2026-09-15T07:12:31.938Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:11:56.473Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Build a fresh Windows NSIS installer containing the accepted Recovery Supervisor Scheduled Task fix from checkpoint be119b0356a24f6d9509194388f2b8c8 for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Do not modify source, commit, push, publish, release, deploy, restart runtime, install the candidate, or reboot. Run the current source-root cleanliness guard, repository secret guard, and electron-builder Windows NSIS build. Then prove the resulting dist/coding-tools-mcp-setup-1.0.0.exe exists and report its exact byte size and SHA-256. The build must not mutate source files; only build artifacts and runtime evidence may change."
+      }
+    },
+    {
+      "time": "2026-09-15T07:11:59.229Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:02.368Z",
+      "event": "orchestration_routed",
+      "details": {
+        "state": "ROUTED"
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:03.617Z",
+      "event": "base_drift_before_write",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:03.619Z",
+      "event": "task_updated",
+      "details": {
+        "fields": [
+          "failure",
+          "next_step",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:03.734Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "df16a78d73ad16ad47abba62e345d4e5fc1cb09270a79f4882ed07d51233dd56"
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:03.919Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:27.135Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:31.567Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "df16a78d73ad16ad47abba62e345d4e5fc1cb09270a79f4882ed07d51233dd56"
+      }
+    }
+  ]
+}

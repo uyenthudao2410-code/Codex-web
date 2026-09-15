@@ -55,5 +55,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `84`
-- Chain head: `96c99b72d509dce97ccfce567abdcce926d6ca0df42045b460494c8eceb1784f`
+- Events checked: `86`
+- Chain head: `a1e9e62bc135fd80ee11a45cf4424c2e0199556dfe3485dc430eb14b108768c3`

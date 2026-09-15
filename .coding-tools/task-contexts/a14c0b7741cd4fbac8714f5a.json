@@ -1,0 +1,175 @@
+{
+  "version": 2,
+  "task_id": "74d8cc1455664ce78463ccaf0e58100e",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Operator report acknowledged",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "NtE55j60kXPSDcsOSM8aLEQn",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": null,
+    "finished_at": "2026-09-15T07:13:42.662Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "NtE55j60kXPSDcsOSM8aLEQn",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "failed",
+      "command": {
+        "command_id": "NtE55j60kXPSDcsOSM8aLEQn",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "failed",
+        "exit_code": 1,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "branch": "main",
+        "worktree_fp": "dbc27b695550cf0f15f0badbc22cf8b323cad44ea05b8d6aee53dfaa6926cd20",
+        "dirty_paths": [
+          ".github/workflows/ci.yml",
+          "control-plane/README.md",
+          "control-plane/control_plane/http_api.py",
+          "control-plane/control_plane/node_agent.py",
+          "control-plane/control_plane/store.py",
+          "control-plane/tests/test_http_api.py",
+          "control-plane/tests/test_store.py",
+          "deploy/codex-control-plane.service.example",
+          "docs/CONTROL_PLANE_IMPLEMENTATION_STATUS.md",
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/paths.js",
+          "electron/services/componentRevision.js",
+          "electron/services/recoveryBootstrap.js",
+          "electron/services/recoveryHost.js",
+          "electron/services/recoveryIpc.js",
+          "electron/services/runtimeOrchestrator.js",
+          "electron/services/runtimePaths.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+          "resources/coding-tools-mcp/tests/test_continuity_telemetry.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "scripts/dev-ui-lifecycle.js",
+          "tests/dev-ui-lifecycle.test.js",
+          "tests/recovery-bootstrap.test.js",
+          "tests/recovery-host.test.js",
+          "tests/recovery-supervisor.test.js",
+          "tests/runtime-lifecycle.test.js",
+          "control-plane/control_plane/maintenance.py",
+          "control-plane/control_plane/mcp_facade.py",
+          "control-plane/control_plane/recovery_identity_observer.cjs",
+          "control-plane/control_plane/recovery_read_only_bridge.cjs",
+          "control-plane/tests/recovery_identity_observer.test.cjs",
+          "control-plane/tests/recovery_read_only_bridge.test.cjs",
+          "docs/CONTROL_PLANE_RECOVERY_RUNBOOK.md",
+          "docs/UBUNTU_24X7_COMPLETION_PLAN.md",
+          "electron/services/controlPlaneReadOnlyBridge.js",
+          "tests/control-plane-bridge-runtime.test.js",
+          "tests/control-plane-read-only-bridge.test.js",
+          "tmp/c01-controller-suite.exit",
+          "tmp/c01-controller-suite.txt"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "74d8cc1455664ce78463ccaf0e58100e",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_FAILED",
+    "blocker_or_failure": {
+      "failure_class": "EXECUTION_COMMAND_FAILED",
+      "reason": "The command reached a terminal non-success state.",
+      "exit_code": 1
+    },
+    "what_remains": "The terminal command failure must be reported and reconciled before another material wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing."
+  },
+  "completion_report_id": "49058d6e68356192aa779be7119e70063a188af7a095989b5ae2618b2845976e",
+  "completion_report_acknowledged_id": "49058d6e68356192aa779be7119e70063a188af7a095989b5ae2618b2845976e",
+  "completion_report_acknowledged_at": "2026-09-15T07:14:16.712Z",
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present this completion_report to the operator, then replan or repair the recorded command failure before continuing.",
+  "created_at": "2026-09-15T07:12:52.403Z",
+  "updated_at": "2026-09-15T07:14:16.720Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:12:52.403Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T07:12:52.711Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$script=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';$expected='a2a562108b6ec4c12229bbd7c845d1790b334d7bb53f1d73f620eab432ad3418';$actual=(Get-FileHash -Algorithm SHA256 -LiteralPath $script).Hash.ToLowerInvariant();if($actual-ne$expected){throw 'ACCEPTED_SUPERVISOR_BYTES_CHANGED'};$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$exe=Join-Path $acc 'Coding T",
+        "session_id": "NtE55j60kXPSDcsOSM8aLEQn"
+      }
+    },
+    {
+      "time": "2026-09-15T07:13:42.662Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$repo='E:\\DEV\\Codex-web';$script=Join-Path $repo 'resources\\recovery-supervisor\\recovery-supervisor.ps1';$expected='a2a562108b6ec4c12229bbd7c845d1790b334d7bb53f1d73f620eab432ad3418';$actual=(Get-FileHash -Algorithm SHA256 -LiteralPath $script).Hash.ToLowerInvariant();if($actual-ne$expected){throw 'ACCEPTED_SUPERVISOR_BYTES_CHANGED'};$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';$exe=Join-Path $acc 'Coding T",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:13:43.183Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "NtE55j60kXPSDcsOSM8aLEQn",
+        "accepted_or_not": "COMMAND_FAILED",
+        "report_id": "49058d6e68356192aa779be7119e70063a188af7a095989b5ae2618b2845976e"
+      }
+    },
+    {
+      "time": "2026-09-15T07:14:16.712Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "49058d6e68356192aa779be7119e70063a188af7a095989b5ae2618b2845976e"
+      }
+    }
+  ]
+}

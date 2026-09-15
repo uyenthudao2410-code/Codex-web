@@ -31,6 +31,7 @@ module.exports = {
   supervisorRequestFile: () => current().supervisorRequestFile(),
   recoveryHostDescriptorFile: () => current().recoveryHostDescriptorFile(),
   recoveryHostLockFile: () => current().recoveryHostLockFile(),
+  controlPlaneReadOnlyPolicyFile: () => current().controlPlaneReadOnlyPolicyFile(),
   recoveryActionsFile: () => current().recoveryActionsFile(),
   logFile: () => current().logFile(),
   mcpLogFile: () => current().mcpLogFile(),

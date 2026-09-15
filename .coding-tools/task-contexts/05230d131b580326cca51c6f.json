@@ -1,0 +1,56 @@
+{
+  "version": 2,
+  "task_id": "26c5b75a1f594b81babb1b4c60ccfb07",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "NBtBNgIF1fR2wLsskYchh3Hk",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 1,
+    "duration_ms": 670,
+    "finished_at": "2026-09-15T06:51:28.015Z"
+  },
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T06:51:26.982Z",
+  "updated_at": "2026-09-15T06:51:28.015Z",
+  "events": [
+    {
+      "time": "2026-09-15T06:51:26.982Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T06:51:27.331Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root='E:\\DEV\\Codex-web'; Set-Location -LiteralPath $root; $paths=@(git diff --name-only; git ls-files --others --exclude-standard) | Where-Object { $_ -and $_ -notlike '.coding-tools/*' } | Sort-Object -Unique; function Snap($ps){ $m=@{}; foreach($p in $ps){ if(Test-Path -LiteralPath $p -PathType Leaf){ try{$m[$p]=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash}catch{} } }; return $m }; $a=Snap $paths; Start-Sleep -Seconds 3; $b=Snap $paths;",
+        "session_id": "NBtBNgIF1fR2wLsskYchh3Hk"
+      }
+    },
+    {
+      "time": "2026-09-15T06:51:28.015Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root='E:\\DEV\\Codex-web'; Set-Location -LiteralPath $root; $paths=@(git diff --name-only; git ls-files --others --exclude-standard) | Where-Object { $_ -and $_ -notlike '.coding-tools/*' } | Sort-Object -Unique; function Snap($ps){ $m=@{}; foreach($p in $ps){ if(Test-Path -LiteralPath $p -PathType Leaf){ try{$m[$p]=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash}catch{} } }; return $m }; $a=Snap $paths; Start-Sleep -Seconds 3; $b=Snap $paths;",
+        "status": "failed"
+      }
+    }
+  ]
+}

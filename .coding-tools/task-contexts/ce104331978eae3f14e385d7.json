@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "task_id": "fa80e36cb3244519b006b237a696cc01",
+  "orchestration": {},
+  "objective": "Complete a workspace task",
+  "status": "waiting",
+  "steps": [],
+  "current_step": "Waiting for model",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Generate the result from the inspected content, then save it once.",
+  "created_at": "2026-09-15T08:20:56.081Z",
+  "updated_at": "2026-09-15T08:23:59.495Z",
+  "events": [
+    {
+      "time": "2026-09-15T08:20:56.081Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Complete a workspace task"
+      }
+    },
+    {
+      "time": "2026-09-15T08:20:56.087Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T08:21:15.975Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    }
+  ]
+}

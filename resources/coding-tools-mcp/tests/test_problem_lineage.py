@@ -846,6 +846,19 @@ class ProblemLineageTests(unittest.TestCase):
                 self.assertEqual(accepted["problem_outcome_bridge"]["status"], "RECONCILIATION_REQUIRED")
                 self.assertEqual(runtime.orchestration_ledger.get_run(run_id)["status"], "accepted")
                 checkpoint_id = runtime.orchestration_ledger.list_checkpoints(run_id, wave_id=wave_id)[-1]["checkpoint_id"]
+                original_controller = dict(runtime.request_context.hub_client)
+                runtime.request_context.hub_client = {
+                    **original_controller,
+                    "client_id": "chatweb-other-controller",
+                }
+                runtime._touch_hub_client(runtime.request_context.hub_client)
+                with self.assertRaises(ToolFailure) as other_controller:
+                    runtime.task_control({"action": "problem", "problem_event": {
+                        "operation": "reconcile_provisional", "run_id": run_id,
+                        "wave_id": wave_id, "checkpoint_id": checkpoint_id,
+                    }})
+                self.assertEqual(other_controller.exception.code, "CONTROLLER_LEASE_REQUIRED")
+                runtime.request_context.hub_client = original_controller
                 reconciled = runtime.task_control({"action": "problem", "problem_event": {
                     "operation": "reconcile_provisional", "run_id": run_id,
                     "wave_id": wave_id, "checkpoint_id": checkpoint_id,

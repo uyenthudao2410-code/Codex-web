@@ -1,0 +1,1231 @@
+[
+  {
+    "version": 2,
+    "task_id": "68a560db3ffc47618acce24951c0f752",
+    "orchestration": {
+      "run_id": "01f230560ad1404c9ebc9b500deaaab5",
+      "wave_id": "c5754eb770c84b82a43c8a90726cc779",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+      "contract_fp": ""
+    },
+    "objective": "C01/M02 machine-A pre-reboot artifact step for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Produce a fresh exact-current NSIS installer without re-running the already-proven broad suites that exceeded the 600s wrapper. Reuse the accepted Recovery source/package proofs on the unchanged worktree, run only the canonical packaging sub-steps that follow test:all, then run the packaged Recovery smoke against the newly produced win-unpacked tree and record exact installer/executable/resource hashes. Do not install/uninstall applications, alter the production Recovery Supervisor/Scheduled Task/runtime state, reboot/logoff, edit repository source, commit, push, publish, release, or deploy. Preserve concurrent dirty work.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T08:52:18.857Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T08:52:18.857Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "3XhS3aTCn31kC_fR9ghYuH_9",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T08:52:18.016Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "observed",
+          "criteria_total": 12,
+          "criteria_proven": 0,
+          "criteria_unresolved": 12,
+          "coverage_status": "NONE",
+          "missing_reason": null,
+          "next_critical_gap_id": "C01",
+          "next_critical_gap": "Đúng entry point của mode đã chọn cold-start được khi process cũ đã mất; có unit/integration và reboot thực theo matrix.",
+          "next_action": "SATISFY_UNRESOLVED_CRITERION",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 49,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 16,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": false,
+            "missing_reason": null
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "01f230560ad1404c9ebc9b500deaaab5",
+          "wave_id": "c5754eb770c84b82a43c8a90726cc779",
+          "checkpoint_id": "daaa58b32e4b4efd9a1dd0a94c7240fd"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 53,
+        "latest_event": {
+          "seq": 297,
+          "event_id": "prl-bind-8e8bd27aec4191c4b7bc7a66988083c4b27504cd72c30f7c5b8603958aaec032",
+          "event_hash": "abaf782197222559099ea4254bb8f6bde8f15a07c8468332d941ddb45e35b46e",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T08:30:23.159Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 149,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 101,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 14,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 34,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 142,
+          "head_hash": "33c011f247fd1d59305f4a3ad8b84ebe736125f1c4d4326e808bac36e9725dd1"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01f230560ad1404c9ebc9b500deaaab5\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01f230560ad1404c9ebc9b500deaaab5\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01f230560ad1404c9ebc9b500deaaab5\\wave-002.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01f230560ad1404c9ebc9b500deaaab5\\wave-003.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-01f230560ad1404c9ebc9b500deaaab5\\wave-004.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "01f230560ad1404c9ebc9b500deaaab5",
+        "wave_id": "c5754eb770c84b82a43c8a90726cc779",
+        "checkpoint_id": "daaa58b32e4b4efd9a1dd0a94c7240fd",
+        "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "C01/M02 machine-A pre-reboot artifact step for Problem prl-22e670302757c9b7663170e226ed7c26 rev1. Produce a fresh exact-current NSIS installer without re-running the already-proven broad suites that exceeded the 600s wrapper. Reuse the accepted Recovery source/package proofs on the unchanged worktree, run only the canonical packaging sub-steps that follow test:all, then run the packaged Recovery smoke against the newly produced win-unpacked tree and record exact installer/executable/resource hashes. Do not install/uninstall applications, alter the production Recovery Supervisor/Scheduled Task/runtime state, reboot/logoff, edit repository source, commit, push, publish, release, or deploy. Preserve concurrent dirty work.",
+          "objective_revision": 4,
+          "objective_sha256": "bea136d2a27a82f8c7425aeb2acff4af370819c75f9c20ed7bdaa51f3bc27111",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 4,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "3cc0d407c57e4678b0fd249a76b9f974",
+            "stage_id": "check:5f6f4ef4ef9b5c63",
+            "status": "passed",
+            "duration_ms": 2814,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "df1f7fa95187406aaac9279aa54b9725",
+            "stage_id": "check:3f6cd4f99a57ca57",
+            "status": "passed",
+            "duration_ms": 74420,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "bb2fa959ad4844f39cf377576b03264d",
+            "stage_id": "check:470e7e0d382448b5",
+            "status": "passed",
+            "duration_ms": 12820,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "50ce2c97c346448c9ff261676729ae12",
+            "stage_id": "check:0457f5555654ef62",
+            "status": "passed",
+            "duration_ms": 3691,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "8879a526214291b97e904e2270dea86f08a9270f644e1ac10c17676837c186f5",
+    "completion_report_acknowledged_id": "8879a526214291b97e904e2270dea86f08a9270f644e1ac10c17676837c186f5",
+    "completion_report_acknowledged_at": "2026-09-15T08:55:55.863Z",
+    "test_results": [],
+    "build_results": [
+      {
+        "command": "npm run dist",
+        "status": "failed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 2922 lines | tail: 'tests\\\\test_activation_preflight.py ........................'",
+        "finished_at": "2026-09-15T08:49:30.126Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "MaMA12kkl9lSgdUknfCNk5q5"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "01f230560ad1404c9ebc9b500deaaab5",
+          "owner_wave": "75232bd7fb3f4a5398630f40a6c46459",
+          "size_bytes": 325016,
+          "command_id": "MaMA12kkl9lSgdUknfCNk5q5",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:MaMA12kkl9lSgdUknfCNk5q5:stdout",
+              "total_stream_bytes": 325016,
+              "total_retained_bytes": 325016,
+              "head_retained_bytes": 65536,
+              "tail_retained_bytes": 259480,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:MaMA12kkl9lSgdUknfCNk5q5:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      },
+      {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; npm run icon:build; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; node scripts/clean-dist.js; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; npx electron-builder --win nsis; exit $LASTEXITCODE\"",
+        "status": "passed",
+        "exit_code": 0,
+        "duration_ms": null,
+        "summary": "exit 0 | 0.0s | 27 lines | tail: '• building block map  blockMapFile=dist\\\\coding-tools-mcp-setup-1.0.0.exe.blockmap'",
+        "finished_at": "2026-09-15T08:51:58.034Z",
+        "artifact_ref": {
+          "schema_version": 1,
+          "kind": "command_output",
+          "scope": "runtime_retained",
+          "source": "command",
+          "locator": {
+            "command_id": "ZA77h2KONdZZ9V3LjBPSML0z"
+          },
+          "durability": "process_runtime",
+          "restart_safe": false,
+          "content_addressed": false,
+          "retrieval": {
+            "tool": "command_control",
+            "action": "read"
+          },
+          "owner_run": "01f230560ad1404c9ebc9b500deaaab5",
+          "owner_wave": "c5754eb770c84b82a43c8a90726cc779",
+          "size_bytes": 1974,
+          "command_id": "ZA77h2KONdZZ9V3LjBPSML0z",
+          "streams": {
+            "stdout": {
+              "output_ref": "command:ZA77h2KONdZZ9V3LjBPSML0z:stdout",
+              "total_stream_bytes": 1974,
+              "total_retained_bytes": 1974,
+              "head_retained_bytes": 1974,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            },
+            "stderr": {
+              "output_ref": "command:ZA77h2KONdZZ9V3LjBPSML0z:stderr",
+              "total_stream_bytes": 0,
+              "total_retained_bytes": 0,
+              "head_retained_bytes": 0,
+              "tail_retained_bytes": 0,
+              "evicted_gap_bytes": 0,
+              "evicted_bytes_total": 0
+            }
+          }
+        }
+      }
+    ],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T08:28:02.581Z",
+    "updated_at": "2026-09-15T08:55:59.404Z",
+    "events": [
+      {
+        "time": "2026-09-15T08:32:16.284Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function ReadJ([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){try{return Get-Content -LiteralPath $p -Raw|ConvertFrom-Json}catch{return $null}};return $null}; function HashFile([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){return (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()};return $null}; $data=Join-Path $env:APPDATA 'web-mcp-assistant';$supRoot=Join-Path $data 'recove",
+          "session_id": "pcD-WdLJ6rY2zgbTkPc57eHn"
+        }
+      },
+      {
+        "time": "2026-09-15T08:32:19.760Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; function ReadJ([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){try{return Get-Content -LiteralPath $p -Raw|ConvertFrom-Json}catch{return $null}};return $null}; function HashFile([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){return (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()};return $null}; $data=Join-Path $env:APPDATA 'web-mcp-assistant';$supRoot=Join-Path $data 'recove",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:32:34.308Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$patterns=@('53f2b9a5e4494769b5b93e8f4f72f028','ec61c35ac2d4af95470c56f595bbd9726f1823fede7c646ee2483fe5d69f21cc','WebMcpAcceptance-1.0.0'); foreach($pat in $patterns){Write-Output ('--- '+$pat+' ---'); rg -n -F --glob '*.md' --glob '*.json' --glob '*.jsonl' $pat .coding-tools | Select-Object -First 120}\"",
+          "session_id": "syWjGOJREgTQje4nK9kV1k6O"
+        }
+      },
+      {
+        "time": "2026-09-15T08:32:36.530Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$patterns=@('53f2b9a5e4494769b5b93e8f4f72f028','ec61c35ac2d4af95470c56f595bbd9726f1823fede7c646ee2483fe5d69f21cc','WebMcpAcceptance-1.0.0'); foreach($pat in $patterns){Write-Output ('--- '+$pat+' ---'); rg -n -F --glob '*.md' --glob '*.json' --glob '*.jsonl' $pat .coding-tools | Select-Object -First 120}\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:18.496Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';function HF([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){$i=Get-Item -LiteralPath $p;[ordered]@{path=$p;size=[long]$i.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}}else{$null}};$items=[ordered]@{current_installer=(HF (Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'));current_unpacked_exe=(HF (Join-Path $re",
+          "session_id": "7YCXcQrZvNjc_fy-h1tUFCGB"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:20.666Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$repo='E:\\DEV\\Codex-web';$acc=Join-Path $env:LOCALAPPDATA 'WebMcpAcceptance-1.0.0';function HF([string]$p){if(Test-Path -LiteralPath $p -PathType Leaf){$i=Get-Item -LiteralPath $p;[ordered]@{path=$p;size=[long]$i.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()}}else{$null}};$items=[ordered]@{current_installer=(HF (Join-Path $repo 'dist\\coding-tools-mcp-setup-1.0.0.exe'));current_unpacked_exe=(HF (Join-Path $re",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:38.656Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"Write-Output '---M02 CONTRACT---'; Get-Content 'docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' | Select-Object -Skip 225 -First 38; Write-Output '---PACKAGE SCRIPTS---'; (Get-Content 'package.json' -Raw|ConvertFrom-Json).scripts | ConvertTo-Json -Depth 4; Write-Output '---CURRENT RELEASE COMMANDS---'; rg -n \\\"dist:|electron-builder|setup|installer|build:win|package\\\" package.json docs/RELEASE_CHECKLIST.md docs/PRODUCTION_CLOSURE_ROLLOUT.md | Select-Obj",
+          "session_id": "I4qU2QgkhLZwQIrkiZJY-9sV"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:39.452Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"Write-Output '---M02 CONTRACT---'; Get-Content 'docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' | Select-Object -Skip 225 -First 38; Write-Output '---PACKAGE SCRIPTS---'; (Get-Content 'package.json' -Raw|ConvertFrom-Json).scripts | ConvertTo-Json -Depth 4; Write-Output '---CURRENT RELEASE COMMANDS---'; rg -n \\\"dist:|electron-builder|setup|installer|build:win|package\\\" package.json docs/RELEASE_CHECKLIST.md docs/PRODUCTION_CLOSURE_ROLLOUT.md | Select-Obj",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:56.721Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p=Get-Content -LiteralPath 'package.json' -Raw|ConvertFrom-Json; $p.scripts|ConvertTo-Json -Depth 4\"",
+          "session_id": "0R-jN_weEs05GMt7CHuVHi7I"
+        }
+      },
+      {
+        "time": "2026-09-15T08:33:57.504Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p=Get-Content -LiteralPath 'package.json' -Raw|ConvertFrom-Json; $p.scripts|ConvertTo-Json -Depth 4\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:14.005Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"Get-Content -LiteralPath 'docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' | Select-Object -Skip 226 -First 36\"",
+          "session_id": "qaFw76d2pNHG_l32xRe0WJAK"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:14.746Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"Get-Content -LiteralPath 'docs/BOOT_HOST_TRANSITION_CLOSURE_PLAN.md' | Select-Object -Skip 226 -First 36\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:40.363Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:41.624Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:43.134Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:45.363Z",
+        "event": "execution_exception",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:45.367Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:34:45.531Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:00.575Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:02.258Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:31.622Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:32.057Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "SOLUTION_SHADOW_INVALID"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:43.666Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:49.732Z",
+        "event": "orchestration_prepared",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:35:49.742Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T08:36:50.915Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "PREPARED_RUN_BINDING_MISMATCH"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:08.812Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:10.292Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:11.980Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:11.980Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:13.466Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:13.734Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:15.422Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();$e=(Get-FileHash -Algorithm SHA256 -LiteralPath 'dist\\win-unpacked\\Coding Tools MCP.exe').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};if($e-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'){throw 'CURRENT_PACKAGED",
+          "session_id": "EU1asl4qXbJRINO1bbX2-dJi"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:16.446Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();$e=(Get-FileHash -Algorithm SHA256 -LiteralPath 'dist\\win-unpacked\\Coding Tools MCP.exe').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};if($e-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'){throw 'CURRENT_PACKAGED",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:16.996Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:17.004Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:18.189Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:18.189Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:18.411Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "08cdccb90eb2a0d42c43de503e561ac5df46a10c282af44c3b1b1d39aa380b36"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:18.617Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:37.010Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:40.322Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "08cdccb90eb2a0d42c43de503e561ac5df46a10c282af44c3b1b1d39aa380b36"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:51.803Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:55.173Z",
+        "event": "final_acceptance_rejected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:55.173Z",
+        "event": "task_rejected",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:37:55.355Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "b96da9d86c11861c29deb2a1ffb5c1dd330845f2e76d601f80600fcc11aff017"
+        }
+      },
+      {
+        "time": "2026-09-15T08:38:45.744Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:06.967Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "b96da9d86c11861c29deb2a1ffb5c1dd330845f2e76d601f80600fcc11aff017"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:33.540Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:36.657Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:39.959Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "orchestration"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:40.808Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:42.447Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:42.457Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:44.150Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:44.521Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:46.203Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();$e=(Get-FileHash -Algorithm SHA256 -LiteralPath 'dist\\win-unpacked\\Coding Tools MCP.exe').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};if($e-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'){throw 'PREVIOUS_ACCEPTE",
+          "session_id": "KtwrLKZ0GSFX7JLd50nmUC2L"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:47.124Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();$e=(Get-FileHash -Algorithm SHA256 -LiteralPath 'dist\\win-unpacked\\Coding Tools MCP.exe').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};if($e-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'){throw 'PREVIOUS_ACCEPTE",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:39:50.116Z",
+        "event": "command_started",
+        "details": {
+          "command": "npm run dist",
+          "session_id": "MaMA12kkl9lSgdUknfCNk5q5"
+        }
+      },
+      {
+        "time": "2026-09-15T08:41:26.988Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "command_control",
+          "code": "INVALID_ARGUMENT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:30.126Z",
+        "event": "command_finished",
+        "details": {
+          "command": "npm run dist",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:31.912Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:34.528Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:34.528Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:34.546Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:34.778Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "e8ae2e7fadf24c23659ca3b2dff0a1b71a591e86401c3617a358c732da2116a9"
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:35.365Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T08:49:38.710Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:03.346Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "e8ae2e7fadf24c23659ca3b2dff0a1b71a591e86401c3617a358c732da2116a9"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:26.158Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:29.589Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:33.796Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:36.119Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:36.130Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:38.246Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:38.510Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:40.782Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};Write-Output 'C01_PACKAGE_PREFLIGHT_OK'\"",
+          "session_id": "RqSHx8F2Xofu4kXw43j-E7e-"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:41.878Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$s=(Get-FileHash -Algorithm SHA256 -LiteralPath 'resources\\recovery-supervisor\\recovery-supervisor.ps1').Hash.ToLowerInvariant();if($s-ne'9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab'){throw 'CURRENT_SUPERVISOR_DRIFT'};Write-Output 'C01_PACKAGE_PREFLIGHT_OK'\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:50:45.848Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; npm run icon:build; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; node scripts/clean-dist.js; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; npx electron-builder --win nsis; exit $LASTEXITCODE\"",
+          "session_id": "ZA77h2KONdZZ9V3LjBPSML0z"
+        }
+      },
+      {
+        "time": "2026-09-15T08:51:58.034Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop'; npm run icon:build; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; node scripts/clean-dist.js; if($LASTEXITCODE-ne0){exit $LASTEXITCODE}; npx electron-builder --win nsis; exit $LASTEXITCODE\"",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:04.866Z",
+        "event": "command_started",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "session_id": "Sppibt9E4Vv_ODGxZwsL4X5G"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:12.604Z",
+        "event": "command_finished",
+        "details": {
+          "command": "node scripts/packaged-recovery-smoke.js",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:16.162Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$i='dist\\coding-tools-mcp-setup-1.0.0.exe';$e='dist\\win-unpacked\\Coding Tools MCP.exe';$s='dist\\win-unpacked\\resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$l='dist\\win-unpacked\\resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';foreach($p in @($i,$e,$s,$l)){if(-not(Test-Path -LiteralPath $p -PathType Leaf)){throw ('MISSING_ARTIFACT '+$p)}};$sh=(Get-FileHash -Algorithm SHA256 -L",
+          "session_id": "3XhS3aTCn31kC_fR9ghYuH_9"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:18.016Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$i='dist\\coding-tools-mcp-setup-1.0.0.exe';$e='dist\\win-unpacked\\Coding Tools MCP.exe';$s='dist\\win-unpacked\\resources\\resources\\recovery-supervisor\\recovery-supervisor.ps1';$l='dist\\win-unpacked\\resources\\resources\\recovery-supervisor\\recovery-supervisor-launcher.vbs';foreach($p in @($i,$e,$s,$l)){if(-not(Test-Path -LiteralPath $p -PathType Leaf)){throw ('MISSING_ARTIFACT '+$p)}};$sh=(Get-FileHash -Algorithm SHA256 -L",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:18.849Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:18.858Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:20.975Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:20.995Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:21.002Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:22.209Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "313a9dc59e51286e0dcada8e75419a383c545831174ea9ef6b254f473a4b321a"
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:22.591Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T08:52:30.374Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:10.315Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "313a9dc59e51286e0dcada8e75419a383c545831174ea9ef6b254f473a4b321a"
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:22.756Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:28.665Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:28.681Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:28.982Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "8879a526214291b97e904e2270dea86f08a9270f644e1ac10c17676837c186f5"
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:42.791Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:55.863Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "8879a526214291b97e904e2270dea86f08a9270f644e1ac10c17676837c186f5"
+        }
+      },
+      {
+        "time": "2026-09-15T08:55:59.404Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T08:56:05.483Z",
+    "archive_reason": "finished"
+  }
+]

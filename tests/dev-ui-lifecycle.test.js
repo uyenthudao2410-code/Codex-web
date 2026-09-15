@@ -1242,8 +1242,45 @@ test('dev stop and replace refuse a non-development UI even when revisions match
 
 test('all mutating lifecycle actions fail closed for another installation', async () => {
   const foreign = { ...observation('CURRENT'), installationMatches: false };
-  for (const action of ['start', 'stop', 'replace', 'refresh']) {
+  for (const action of ['stop', 'replace']) {
     const fixture = harness(foreign);
+    await assert.rejects(runLifecycle(action, fixture.deps), { code: 'DEV_UI_INSTALLATION_MISMATCH' });
+    assert.deepEqual(fixture.calls, []);
+  }
+});
+
+test('start routes a packaged host through the guarded refresh handoff', async () => {
+  const base = observation('MISSING');
+  const packaged = {
+    ...base,
+    installationMatches: false,
+    descriptor: {
+      ...base.descriptor,
+      runtime_mode: 'packaged',
+      installation_id: 'd'.repeat(64)
+    }
+  };
+  const fixture = harness(packaged);
+  fixture.deps.inspectRefreshTarget = async () => ({ ...packaged, client: {} });
+  fixture.deps.refresh = async () => {
+    fixture.calls.push('guarded-packaged-handoff');
+    throw Object.assign(new Error('idle proof refused'), { code: 'RECOVERY_HOST_IDLE_HANDOFF_REFUSED' });
+  };
+  await assert.rejects(runLifecycle('start', fixture.deps), { code: 'RECOVERY_HOST_IDLE_HANDOFF_REFUSED' });
+  assert.deepEqual(fixture.calls, ['guarded-packaged-handoff']);
+  assert.match(fixture.lines[0], /reason=idle_packaged_handoff/);
+});
+
+test('start and refresh still refuse another development checkout', async () => {
+  const base = observation('CURRENT');
+  const foreignDevelopment = {
+    ...base,
+    installationMatches: false,
+    descriptor: { ...base.descriptor, runtime_mode: 'development' }
+  };
+  for (const action of ['start', 'refresh']) {
+    const fixture = harness(foreignDevelopment);
+    fixture.deps.inspectRefreshTarget = async () => foreignDevelopment;
     await assert.rejects(runLifecycle(action, fixture.deps), { code: 'DEV_UI_INSTALLATION_MISMATCH' });
     assert.deepEqual(fixture.calls, []);
   }

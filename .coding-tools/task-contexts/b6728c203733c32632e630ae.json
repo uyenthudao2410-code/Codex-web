@@ -1,0 +1,634 @@
+{
+  "version": 2,
+  "task_id": "0dbffa7b669f487cbbbd4400154302fb",
+  "orchestration": {
+    "run_id": "5fa9565664c8496ba69f64585383a54c",
+    "wave_id": "40d4c5bdc65e40a1be38ca335d06262e",
+    "orchestration_state": "ABORTED",
+    "execution_mode": "mcp_only",
+    "route_requested": "",
+    "route_resolved": "",
+    "write_owner": "",
+    "write_lease_id": "",
+    "delegation_id": "",
+    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+    "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+    "contract_fp": ""
+  },
+  "objective": "Read-only diagnose why the explicitly accepted controlled restart ticket restart-vUipuqfM0aIdvu1o was not consumed before expiry: process_instance_id aiH9Kyigz45aDihj and server_instance_id dEld38_Om9Zrj_AZ remained unchanged after the ticket window. Inspect only the narrow restart-ticket producer/consumer, Electron supervisor polling/consumption path, expiry/admission semantics, and any durable evidence for this exact ticket. Determine the smallest safe next action. Do not restart, mutate source, accept/reject C01, stop active non-stale work, reset/clean, commit, push, package, release, or deploy.",
+  "status": "stopped",
+  "steps": [],
+  "current_step": "Aborted - operator report required",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "RYWCcGj3kNyGtL4OYOtNtJUL",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 768,
+    "finished_at": "2026-09-15T09:16:47.133Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-e918c7d33e70c2d304d0797e11b05fcb",
+      "problem_revision": 2,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 18,
+        "criteria_proven": 0,
+        "criteria_unresolved": 18,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "continuity.auto_resume",
+        "next_critical_gap": "Eligible long-running work resumes automatically across ordinary REPLAN, report-gate, reconnect, and accepted controlled-restart boundaries without requiring a manual 'continue' message.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 34,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 4,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "5fa9565664c8496ba69f64585383a54c",
+        "wave_id": "40d4c5bdc65e40a1be38ca335d06262e",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 35,
+      "latest_event": {
+        "seq": 300,
+        "event_id": "prl-bind-9567d8577de7ae3bee72284f1c9ddb27843555edd2138f691a362be63a3352c7",
+        "event_hash": "1ee6d9c96b38a94f7d3a02b3bc3152421d38739525721885e93b5843ef56a4dc",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T09:05:21.718Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 92,
+        "manual_nudge_count": 1,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 61,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 16,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 14,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "ABORTED",
+      "run_status": "aborted",
+      "wave_status": "aborted",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 79,
+        "head_hash": "c94099cf894ee18fd9d58dc2c51b3eb6147deffac060efd10b4ab01fd98d5c87"
+      },
+      "reports": {
+        "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5fa9565664c8496ba69f64585383a54c\\run-summary.md",
+        "wave_reports": [
+          "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-5fa9565664c8496ba69f64585383a54c\\wave-001.md"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "run_id": "5fa9565664c8496ba69f64585383a54c",
+      "wave_id": "40d4c5bdc65e40a1be38ca335d06262e",
+      "checkpoint_id": "",
+      "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+      "worktree_fp": "a55a7afa723be43c5e6420521747de0d635c2b399cadceca78e139639dc35ff9",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Read-only diagnose why the explicitly accepted controlled restart ticket restart-vUipuqfM0aIdvu1o was not consumed before expiry: process_instance_id aiH9Kyigz45aDihj and server_instance_id dEld38_Om9Zrj_AZ remained unchanged after the ticket window. Inspect only the narrow restart-ticket producer/consumer, Electron supervisor polling/consumption path, expiry/admission semantics, and any durable evidence for this exact ticket. Determine the smallest safe next action. Do not restart, mutate source, accept/reject C01, stop active non-stale work, reset/clean, commit, push, package, release, or deploy.",
+        "objective_revision": 1,
+        "objective_sha256": "b29cad54f84394b6b046359d3642cc586117c824719ba616d984bf0c85b0bd2b",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+    "blocker_or_failure": null,
+    "what_remains": "Resume only from current source state with fresh or replanned proof; stale proof must not be reused.",
+    "next_critical_action": "Present this completion_report to the operator before any resume or replacement wave."
+  },
+  "completion_report_id": "e46910e32d3ca3aff1615d170681edcd59ff1e5e329ff95e21bbafebed227ff9",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "Present orchestration.completion_report to the operator before any resume; use current source state and do not reuse stale proof.",
+  "created_at": "2026-09-15T09:04:11.564Z",
+  "updated_at": "2026-09-15T09:17:28.768Z",
+  "events": [
+    {
+      "time": "2026-09-15T09:04:11.564Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Read-only diagnose why the explicitly accepted controlled restart ticket restart-vUipuqfM0aIdvu1o was not consumed before expiry: process_instance_id aiH9Kyigz45aDihj and server_instance_id dEld38_Om9Zrj_AZ remained unchanged after the ticket window. Inspect only the narrow restart-ticket producer/consumer, Electron supervisor polling/consumption path, expiry/admission semantics, and any durable evidence for this exact ticket. Determine the smallest safe next action. Do not restart, mutate source, accept/reject C01, stop active non-stale work, reset/clean, commit, push, package, release, or deploy."
+      }
+    },
+    {
+      "time": "2026-09-15T09:04:12.534Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "GOAL_CONTROLLER_FENCE_STALE"
+      }
+    },
+    {
+      "time": "2026-09-15T09:04:37.615Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "CONTINUITY_IDENTITY_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T09:05:22.008Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T09:05:29.002Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T09:05:29.012Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T09:06:55.812Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"supervisorRequestFile|activation.*File|action.*File|log.*File|stateFile\" electron/paths.js",
+        "session_id": "pQwxcGtp_-d4QgRVW6j8tzY9"
+      }
+    },
+    {
+      "time": "2026-09-15T09:06:56.349Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"supervisorRequestFile|activation.*File|action.*File|log.*File|stateFile\" electron/paths.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:12.257Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"function current|supervisorRequestFile|logFile|stateFile\" electron/paths.js electron/services/runtimePaths.js",
+        "session_id": "-laEml9GZ-t7OTp1LRkf0yrU"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:13.034Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"function current|supervisorRequestFile|logFile|stateFile\" electron/paths.js electron/services/runtimePaths.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:27.222Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n \"dataRootPath|APPDATA|LOCALAPPDATA|web-mcp-assistant|RuntimePaths\" electron/services/runtimePaths.js electron/paths.js",
+        "session_id": "Ah191Akp8lUMQtoBrQmfkDPX"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:28.141Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n \"dataRootPath|APPDATA|LOCALAPPDATA|web-mcp-assistant|RuntimePaths\" electron/services/runtimePaths.js electron/paths.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:49.115Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant'; $base=Join-Path $root 'runtime-supervisor-request.json'; $files=@($base,($base+'.processing'),($base+'.bak'),($base+'.processing.bak')); foreach($f in $files){ if(Test-Path -LiteralPath $f -PathType Leaf){ try{$j=Get-Content -LiteralPath $f -Raw | ConvertFrom-Json; [pscustomobject]@{path=$f;exists=$true;ticket_id=$j.ticket_id;operation_id=$j.operation_id;requested_at_unix_ms=$j.requested_at_unix_ms;",
+        "session_id": "w37wNfbTyxi4unJydicdUcgm"
+      }
+    },
+    {
+      "time": "2026-09-15T09:07:50.210Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant'; $base=Join-Path $root 'runtime-supervisor-request.json'; $files=@($base,($base+'.processing'),($base+'.bak'),($base+'.processing.bak')); foreach($f in $files){ if(Test-Path -LiteralPath $f -PathType Leaf){ try{$j=Get-Content -LiteralPath $f -Raw | ConvertFrom-Json; [pscustomobject]@{path=$f;exists=$true;ticket_id=$j.ticket_id;operation_id=$j.operation_id;requested_at_unix_ms=$j.requested_at_unix_ms;",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:04.739Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F \"The accepted-code closure checkpoint is not eligible for the requested component\" electron resources tests",
+        "session_id": "KvwRYvnj3nCp5V7Wy_sW6W_2"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:05.716Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F \"The accepted-code closure checkpoint is not eligible for the requested component\" electron resources tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:32.674Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 90 -F \"The accepted-code closure checkpoint is not eligible for the requested component.\" electron/services/activationClosure.js",
+        "session_id": "OErzataoIOJKaVgZk6T1n08G"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:33.591Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 90 -F \"The accepted-code closure checkpoint is not eligible for the requested component.\" electron/services/activationClosure.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:47.346Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 50 -F \"activationSourceCheckpoint(\" electron tests",
+        "session_id": "y4g3uzVP3p6aipt1UTkYZ-Ly"
+      }
+    },
+    {
+      "time": "2026-09-15T09:08:48.480Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 50 -F \"activationSourceCheckpoint(\" electron tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:10.946Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant'; $p=Join-Path $root 'accepted-code-activation.json'; if(Test-Path -LiteralPath $p -PathType Leaf){$j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; [pscustomobject]@{path=$p;schema_version=$j.schema_version;source_checkpoint_id=$j.source_checkpoint_id;run_id=$j.run_id;wave_id=$j.wave_id;proof_fingerprint=$j.proof_fingerprint;accepted_head=$j.accepted_head;source_accepted=$j.source_accepted;accept",
+        "session_id": "e0dGZ1cAdYR_OpF02F6ILoyK"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:12.159Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant'; $p=Join-Path $root 'accepted-code-activation.json'; if(Test-Path -LiteralPath $p -PathType Leaf){$j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; [pscustomobject]@{path=$p;schema_version=$j.schema_version;source_checkpoint_id=$j.source_checkpoint_id;run_id=$j.run_id;wave_id=$j.wave_id;proof_fingerprint=$j.proof_fingerprint;accepted_head=$j.accepted_head;source_accepted=$j.source_accepted;accept",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:27.490Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; if(Test-Path -LiteralPath $p -PathType Leaf){$j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $j.PSObject.Properties.Name -join ','}\"",
+        "session_id": "tgC8VCiGMeajjUlNLbm3tKaB"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:28.867Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; if(Test-Path -LiteralPath $p -PathType Leaf){$j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $j.PSObject.Properties.Name -join ','}\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:44.887Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $c=$j.closure_input; [pscustomobject]@{version=$j.version;active_checkpoint_id=$j.active_checkpoint_id;processed_checkpoint_count=@($j.processed_checkpoint_ids).Count;updated_at=$j.updated_at;schema_version=$c.schema_version;source_checkpoint_id=$c.source_checkpoint_id;run_id=$c.run_id;wave_id=$c.wave_id;p",
+        "session_id": "oBfm2ldNMSL6DsDczSSnlDXe"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:46.595Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $c=$j.closure_input; [pscustomobject]@{version=$j.version;active_checkpoint_id=$j.active_checkpoint_id;processed_checkpoint_count=@($j.processed_checkpoint_ids).Count;updated_at=$j.updated_at;schema_version=$c.schema_version;source_checkpoint_id=$c.source_checkpoint_id;run_id=$c.run_id;wave_id=$c.wave_id;p",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:09:59.305Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 60 -F \"activation_eligible\" electron/services/activationClosure.js tests/activation-closure.test.js electron/services/recoveryHost.js",
+        "session_id": "yqSv9OCWPVbjbNzJcs4Sc75r"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:00.250Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 60 -F \"activation_eligible\" electron/services/activationClosure.js tests/activation-closure.test.js electron/services/recoveryHost.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:15.375Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F \"activation_eligible\" electron/services resources/coding-tools-mcp/coding_tools_mcp tests | rg -v \"activationClosure.js|activation-closure.test.js\"",
+        "session_id": "eN1apiSBne521P2vNEAaogrY"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:16.025Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F \"activation_eligible\" electron/services resources/coding-tools-mcp/coding_tools_mcp tests | rg -v \"activationClosure.js|activation-closure.test.js\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:28.898Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 45 -F \"state.closure_input.activation_eligible = false\" electron/services/recoveryActionStore.js",
+        "session_id": "UNtA_CQeiaPFDmv40iFdYDpl"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:29.554Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 45 -F \"state.closure_input.activation_eligible = false\" electron/services/recoveryActionStore.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:42.165Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 70 -F \"refreshClosureInput(state)\" electron/services/recoveryActionStore.js",
+        "session_id": "rZPlUBrLf1P5KeeOOHPQUnu9"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:44.616Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 70 -F \"refreshClosureInput(state)\" electron/services/recoveryActionStore.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:57.959Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $id=$j.closure_input.source_checkpoint_id; @($j.intents|Where-Object {$_.checkpoint_id -eq $id}|ForEach-Object {[pscustomobject]@{checkpoint_id=$_.checkpoint_id;component=$_.component;state=$_.state;attempt=$_.attempt;current_operation_id=$_.current_operation_id;error_code=$_.error.code;error_message=$_.er",
+        "session_id": "PXLOkeO4FoY2xAjrJvZAwVDK"
+      }
+    },
+    {
+      "time": "2026-09-15T09:10:59.049Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $id=$j.closure_input.source_checkpoint_id; @($j.intents|Where-Object {$_.checkpoint_id -eq $id}|ForEach-Object {[pscustomobject]@{checkpoint_id=$_.checkpoint_id;component=$_.component;state=$_.state;attempt=$_.attempt;current_operation_id=$_.current_operation_id;error_code=$_.error.code;error_message=$_.er",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:11:10.493Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $id=$j.closure_input.source_checkpoint_id; $i=@($j.intents|Where-Object {$_.checkpoint_id -eq $id})[0]; [pscustomobject]@{component=$i.component;state=$i.state;error_code=$i.error.code;files=@($i.error.files)}|ConvertTo-Json -Compress -Depth 5\"",
+        "session_id": "aXdf45U0m6Z3FIErR3_tyKk4"
+      }
+    },
+    {
+      "time": "2026-09-15T09:11:11.366Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$p=Join-Path (Join-Path $env:APPDATA 'web-mcp-assistant') 'accepted-code-activation.json'; $j=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json; $id=$j.closure_input.source_checkpoint_id; $i=@($j.intents|Where-Object {$_.checkpoint_id -eq $id})[0]; [pscustomobject]@{component=$i.component;state=$i.state;error_code=$i.error.code;files=@($i.error.files)}|ConvertTo-Json -Compress -Depth 5\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:12:38.468Z",
+      "event": "command_started",
+      "details": {
+        "command": "git diff --stat -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js electron/services/controlPlaneReadOnlyBridge.js electron/services/commandRunner.js electron/services/environmentService.js electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/processIdentity.js electron/services/recoveryActionStore.js electron/services/recoveryActivation.js electron/services/recoveryHostLauncher.js electron/services/recoveryPlaneService.js elect",
+        "session_id": "K-wVj8vgdPaj3hV3WRTj992w"
+      }
+    },
+    {
+      "time": "2026-09-15T09:12:39.040Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git diff --stat -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js electron/services/controlPlaneReadOnlyBridge.js electron/services/commandRunner.js electron/services/environmentService.js electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/processIdentity.js electron/services/recoveryActionStore.js electron/services/recoveryActivation.js electron/services/recoveryHostLauncher.js electron/services/recoveryPlaneService.js elect",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:12:57.724Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 80 -F \"UNACCEPTED_COMPONENT_DIRTY\" electron/services/recoveryActionStore.js tests",
+        "session_id": "ZIfIhOu3y3Jk_57uM0nnMAge"
+      }
+    },
+    {
+      "time": "2026-09-15T09:12:58.568Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 80 -F \"UNACCEPTED_COMPONENT_DIRTY\" electron/services/recoveryActionStore.js tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:14:02.158Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -C 110 -F \"componentGate(\" electron/services/recoveryActionStore.js",
+        "session_id": "mNIXQMjr6aoSky5HV3X-8xaE"
+      }
+    },
+    {
+      "time": "2026-09-15T09:14:03.023Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -C 110 -F \"componentGate(\" electron/services/recoveryActionStore.js",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:14:19.166Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --porcelain=v1 -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js electron/services/controlPlaneReadOnlyBridge.js electron/services/commandRunner.js electron/services/environmentService.js electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/processIdentity.js electron/services/recoveryActionStore.js electron/services/recoveryActivation.js electron/services/recoveryHostLauncher.js electron/services/recoveryPlaneServic",
+        "session_id": "kwseiWeNLEIfdocOtoaQpoKH"
+      }
+    },
+    {
+      "time": "2026-09-15T09:14:19.983Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --porcelain=v1 -- electron/services/recoveryHost.js electron/services/runtimeOrchestrator.js electron/services/controlPlaneReadOnlyBridge.js electron/services/commandRunner.js electron/services/environmentService.js electron/services/fullCleanActivation.js electron/services/nativeService.js electron/services/processIdentity.js electron/services/recoveryActionStore.js electron/services/recoveryActivation.js electron/services/recoveryHostLauncher.js electron/services/recoveryPlaneServic",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:05.646Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant';$m=Get-Content -LiteralPath (Join-Path $root 'recovery-supervisor\\manifest.json') -Raw|ConvertFrom-Json;$s=Get-Content -LiteralPath (Join-Path $root 'recovery-supervisor-status.json') -Raw|ConvertFrom-Json;$d=Get-Content -LiteralPath (Join-Path $root 'recovery-host.json') -Raw|ConvertFrom-Json;[pscustomobject]@{mode=$m.mode;supervisor_state=$s.state;supervisor_pid=$s.supervisor_pid;host_owner_pid=$d.",
+        "session_id": "pAma35h9fvO2cAsS2eOXne06"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:06.557Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$root=Join-Path $env:APPDATA 'web-mcp-assistant';$m=Get-Content -LiteralPath (Join-Path $root 'recovery-supervisor\\manifest.json') -Raw|ConvertFrom-Json;$s=Get-Content -LiteralPath (Join-Path $root 'recovery-supervisor-status.json') -Raw|ConvertFrom-Json;$d=Get-Content -LiteralPath (Join-Path $root 'recovery-host.json') -Raw|ConvertFrom-Json;[pscustomobject]@{mode=$m.mode;supervisor_state=$s.state;supervisor_pid=$s.supervisor_pid;host_owner_pid=$d.",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:18.992Z",
+      "event": "command_started",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('electron/services/recoveryHost.js','electron/services/runtimeOrchestrator.js','electron/services/controlPlaneReadOnlyBridge.js');$files|ForEach-Object{$i=Get-Item -LiteralPath $_;[pscustomobject]@{path=$_;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant();size=[long]$i.Length}}|ConvertTo-Json -Compress\"",
+        "session_id": "3tCWZwBx2FmR1u0iGfO-6Axf"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:19.940Z",
+      "event": "command_finished",
+      "details": {
+        "command": "powershell -NoProfile -NonInteractive -Command \"$files=@('electron/services/recoveryHost.js','electron/services/runtimeOrchestrator.js','electron/services/controlPlaneReadOnlyBridge.js');$files|ForEach-Object{$i=Get-Item -LiteralPath $_;[pscustomobject]@{path=$_;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_).Hash.ToLowerInvariant();size=[long]$i.Length}}|ConvertTo-Json -Compress\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:33.335Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -F -e \"0463df0ecdcd87c1ac7ac0c1a1abe160376552c668104ed343a5b32ebe77fd6e\" -e \"3ae9416c7fd823108b961dee086b6de1b7488e4fd681146449946324be60acbd\" -e \"ef324cd8e3880e72834eac0e1a0adefb64833b2e8b6169ef0917e3b346ea8cc0\" .coding-tools | Select-Object -First 200",
+        "session_id": "0UjVhGdg1hyGI1h9N-fOfX6r"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:33.947Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -F -e \"0463df0ecdcd87c1ac7ac0c1a1abe160376552c668104ed343a5b32ebe77fd6e\" -e \"3ae9416c7fd823108b961dee086b6de1b7488e4fd681146449946324be60acbd\" -e \"ef324cd8e3880e72834eac0e1a0adefb64833b2e8b6169ef0917e3b346ea8cc0\" .coding-tools | Select-Object -First 200",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:46.462Z",
+      "event": "command_started",
+      "details": {
+        "command": "rg -n -m 200 -F -e \"0463df0ecdcd87c1ac7ac0c1a1abe160376552c668104ed343a5b32ebe77fd6e\" -e \"3ae9416c7fd823108b961dee086b6de1b7488e4fd681146449946324be60acbd\" -e \"ef324cd8e3880e72834eac0e1a0adefb64833b2e8b6169ef0917e3b346ea8cc0\" .coding-tools",
+        "session_id": "RYWCcGj3kNyGtL4OYOtNtJUL"
+      }
+    },
+    {
+      "time": "2026-09-15T09:16:47.133Z",
+      "event": "command_finished",
+      "details": {
+        "command": "rg -n -m 200 -F -e \"0463df0ecdcd87c1ac7ac0c1a1abe160376552c668104ed343a5b32ebe77fd6e\" -e \"3ae9416c7fd823108b961dee086b6de1b7488e4fd681146449946324be60acbd\" -e \"ef324cd8e3880e72834eac0e1a0adefb64833b2e8b6169ef0917e3b346ea8cc0\" .coding-tools",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T09:17:06.806Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_ABORTED",
+        "report_id": "e46910e32d3ca3aff1615d170681edcd59ff1e5e329ff95e21bbafebed227ff9"
+      }
+    },
+    {
+      "time": "2026-09-15T09:17:28.622Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    }
+  ]
+}

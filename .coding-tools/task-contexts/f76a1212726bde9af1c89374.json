@@ -1,0 +1,278 @@
+{
+  "version": 2,
+  "task_id": "9cd01402557e458c83da7edb51debac7",
+  "orchestration": {},
+  "objective": "Run a workspace command",
+  "status": "failed",
+  "steps": [],
+  "current_step": "Command failed",
+  "current_command": null,
+  "last_command_result": {
+    "command_id": "Vdhnai8N4apSMVU6_QbOKmhT",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "failed",
+    "exit_code": 2,
+    "duration_ms": 796,
+    "finished_at": "2026-09-15T07:38:45.159Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "command_id": "53Ak61Te7ug77YeZsCadeGy-",
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "task_status": "waiting",
+      "command": {
+        "command_id": "53Ak61Te7ug77YeZsCadeGy-",
+        "kind": "command",
+        "status": "exited",
+        "result_status": "passed",
+        "exit_code": 0,
+        "duration_ms": null
+      },
+      "git": {
+        "head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
+        "branch": "main",
+        "worktree_fp": "b7325226698fe70dc2b1460c2078bed2f064bdb513d1c77b938e0f5983bcb4b4",
+        "dirty_paths": [
+          ".github/workflows/ci.yml",
+          "control-plane/README.md",
+          "control-plane/control_plane/http_api.py",
+          "control-plane/control_plane/node_agent.py",
+          "control-plane/control_plane/store.py",
+          "control-plane/tests/test_http_api.py",
+          "control-plane/tests/test_store.py",
+          "deploy/codex-control-plane.service.example",
+          "docs/CONTROL_PLANE_IMPLEMENTATION_STATUS.md",
+          "docs/CURRENT_STATE.md",
+          "docs/RECOVERY_HOST.md",
+          "electron/paths.js",
+          "electron/services/componentRevision.js",
+          "electron/services/recoveryBootstrap.js",
+          "electron/services/recoveryHost.js",
+          "electron/services/recoveryIpc.js",
+          "electron/services/runtimeOrchestrator.js",
+          "electron/services/runtimePaths.js",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuation_driver.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/continuity_telemetry.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/operator_report.py",
+          "resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py",
+          "resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+          "resources/coding-tools-mcp/tests/test_continuity_telemetry.py",
+          "resources/coding-tools-mcp/tests/test_efficiency_runtime.py",
+          "resources/coding-tools-mcp/tests/test_operator_report_problem_visibility.py",
+          "resources/coding-tools-mcp/tests/test_orchestration_workflow.py",
+          "resources/coding-tools-mcp/tests/test_run_continuation.py",
+          "resources/recovery-supervisor/recovery-supervisor.ps1",
+          "scripts/dev-ui-lifecycle.js",
+          "tests/dev-ui-lifecycle.test.js",
+          "tests/recovery-bootstrap.test.js",
+          "tests/recovery-host.test.js",
+          "tests/recovery-supervisor.test.js",
+          "tests/runtime-lifecycle.test.js",
+          "control-plane/control_plane/deployment_verifier.py",
+          "control-plane/control_plane/maintenance.py",
+          "control-plane/control_plane/mcp_facade.py",
+          "control-plane/control_plane/recovery_identity_observer.cjs",
+          "control-plane/control_plane/recovery_read_only_bridge.cjs",
+          "control-plane/tests/recovery_identity_observer.test.cjs",
+          "control-plane/tests/recovery_read_only_bridge.test.cjs",
+          "control-plane/tests/test_deployment_verifier.py",
+          "docs/CONTROL_PLANE_RECOVERY_RUNBOOK.md",
+          "docs/UBUNTU_24X7_COMPLETION_PLAN.md",
+          "electron/services/controlPlaneReadOnlyBridge.js",
+          "tests/control-plane-bridge-runtime.test.js",
+          "tests/control-plane-read-only-bridge.test.js",
+          "tmp/c01-controller-suite.exit",
+          "tmp/c01-controller-suite.txt"
+        ]
+      }
+    },
+    "source_run_wave": {
+      "task_id": "9cd01402557e458c83da7edb51debac7",
+      "run_id": "",
+      "wave_id": "",
+      "orchestration_state": ""
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+    "blocker_or_failure": null,
+    "what_remains": "No further command action is inferred from this terminal command. Report the result before continuing.",
+    "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+  },
+  "completion_report_id": "202a08061484e6d2035d03c48aeb91163f7516b4c2a1e7652a4da72ed08017ad",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": "operator completion report 202a08061484e6d2035d03c48aeb91163f7516b4c2a1e7652a4da72ed08017ad must be acknowledged before starting a replacement task",
+  "next_step": "Present this completion_report to the operator before starting another material wave.",
+  "created_at": "2026-09-15T07:36:27.653Z",
+  "updated_at": "2026-09-15T07:39:19.765Z",
+  "events": [
+    {
+      "time": "2026-09-15T07:36:27.653Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Run a workspace command"
+      }
+    },
+    {
+      "time": "2026-09-15T07:36:28.460Z",
+      "event": "command_started",
+      "details": {
+        "command": "npm run report:p5-baseline",
+        "session_id": "53Ak61Te7ug77YeZsCadeGy-"
+      }
+    },
+    {
+      "time": "2026-09-15T07:36:46.837Z",
+      "event": "command_finished",
+      "details": {
+        "command": "npm run report:p5-baseline",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:36:47.194Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "53Ak61Te7ug77YeZsCadeGy-",
+        "accepted_or_not": "COMMAND_COMPLETED_AWAITING_OPERATOR_REPORT",
+        "report_id": "202a08061484e6d2035d03c48aeb91163f7516b4c2a1e7652a4da72ed08017ad"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:14.804Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+        "session_id": "fqXLW5PWXwvW2H4yaMJD4p3b"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:24.412Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_p4_readiness.py --workspace .",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:39.836Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c findstr /I \"efficien performance tool_calls invocation localization lsp proof cache\" package.json",
+        "session_id": "5IdaN_0WQ6F4RhepKzJbxQnh"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:40.269Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c findstr /I \"efficien performance tool_calls invocation localization lsp proof cache\" package.json",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:44.936Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace .",
+        "session_id": "8TKIFesTo4jbzS0_w7EBKpju"
+      }
+    },
+    {
+      "time": "2026-09-15T07:37:52.703Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_lifecycle_census.py --workspace .",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:00.387Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c \"python resources\\coding-tools-mcp\\scripts\\report_lifecycle_census.py --workspace . | findstr /C:\\\"AWAITING_ACCEPTANCE\\\" /C:\\\"LIVE_OWNED\\\" /C:\\\"run_id\\\" /C:\\\"latest_state_after\\\" /C:\\\"meets_current_stale_threshold\\\"\"",
+        "session_id": "R0_jy8GSUzBNcK7E-ZtFtvNp"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:06.137Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c \"python resources\\coding-tools-mcp\\scripts\\report_lifecycle_census.py --workspace . | findstr /C:\\\"AWAITING_ACCEPTANCE\\\" /C:\\\"LIVE_OWNED\\\" /C:\\\"run_id\\\" /C:\\\"latest_state_after\\\" /C:\\\"meets_current_stale_threshold\\\"\"",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:14.087Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "task_control",
+        "code": "GOAL_IDENTITY_AMBIGUOUS"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:36.338Z",
+      "event": "command_started",
+      "details": {
+        "command": "cmd /c findstr /S /I /M \"performance.json semantic_localization proof_cache tool_calls\" resources\\coding-tools-mcp\\scripts\\*.py",
+        "session_id": "NjL9lx2DU92QYbwsFbrQ1A2w"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:36.864Z",
+      "event": "command_finished",
+      "details": {
+        "command": "cmd /c findstr /S /I /M \"performance.json semantic_localization proof_cache tool_calls\" resources\\coding-tools-mcp\\scripts\\*.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:44.291Z",
+      "event": "command_started",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_egri_p5_continuity_readiness.py --workspace .",
+        "session_id": "Vdhnai8N4apSMVU6_QbOKmhT"
+      }
+    },
+    {
+      "time": "2026-09-15T07:38:45.159Z",
+      "event": "command_finished",
+      "details": {
+        "command": "python resources/coding-tools-mcp/scripts/report_egri_p5_continuity_readiness.py --workspace .",
+        "status": "failed"
+      }
+    },
+    {
+      "time": "2026-09-15T07:39:19.765Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "document_workflow",
+        "code": "INTERNAL_ERROR"
+      }
+    }
+  ]
+}
