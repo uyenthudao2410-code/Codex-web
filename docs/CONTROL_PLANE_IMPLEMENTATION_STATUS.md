@@ -1,12 +1,34 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:22 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:26 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
 
 ## Checkpoint hiện hành sau delivery local/GitHub
+
+### Controlled production crash-restart and rebased soak — 15-09-2026, 20:24–20:26 +07:00
+
+Đây là một crash-recovery proof của central service, không phải node effect,
+remote reconnect hoặc quyền execution.
+
+- Preflight xác nhận `Restart=on-failure` với delay 5 giây, no systemd jobs,
+  node degraded và zero binding/context/work request/action/receipt/intent.
+  Chỉ sau đó mới gửi `SIGKILL` tới **MainPID duy nhất** của
+  `codex-control-plane.service`; không có admission change hoặc manual restart.
+- Systemd ghi process exit `status=9/KILL`, scheduling restart và khởi động PID
+  mới sau 5 giây; `NRestarts` tăng từ `0` lên `1`, listener Tailnet trở lại.
+  Health của service instance mới PASS exact package fingerprint, schema `7`,
+  SQLite `ok`, admission `open` và tất cả core action counts vẫn `0`.
+- Healthcheck scheduled tiếp theo lúc 20:26 +07 PASS trên instance mới và
+  snapshot automatic vẫn fresh. Không contact node, tạo policy/binding/action,
+  chuyển backup hoặc restart component khác.
+
+**Soak rebase:** window 20:02 bị gián đoạn có chủ đích bởi crash proof này, nên
+không được gọi uninterrupted. Observation 24 giờ mới bắt đầu từ healthcheck
+PASS 20:26 +07; criteria giữ nguyên: service instance/restart history, timer
+cadence, fresh backup và health verifier phải được đối chiếu tại cuối window.
 
 ### Checkpoint isolated tmpfs full-filesystem fault drill — 15-09-2026, 20:18–20:22 +07:00
 
@@ -36,9 +58,11 @@ và không thay thế P3/soak còn lại.
 qua HTTP, không false-ack durable intake. **P3 còn lại:** off-host/encrypted
 backup, production restore/reconciliation, node reconnect/fault proof và soak.
 
-### Baseline 24-hour operational soak — bắt đầu 15-09-2026, 20:02 +07:00
+### Baseline operational soak bị thay thế — 15-09-2026, 20:02 +07:00
 
-Đây là mốc bắt đầu observation window, không phải claim soak đã hoàn tất.
+Đây là mốc observation đầu tiên, không phải claim soak đã hoàn tất. Window này
+đã bị gián đoạn có chủ đích bởi crash proof 20:24; checkpoint mới hơn định nghĩa
+baseline uninterrupted thay thế.
 
 - User service production đã active từ 19:01:53 +07, giữ cùng process instance,
   PID và `NRestarts=0` qua deployment, restore drill và SQLite-busy drill.
