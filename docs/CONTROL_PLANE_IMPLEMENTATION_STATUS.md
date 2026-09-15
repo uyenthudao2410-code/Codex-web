@@ -1,10 +1,21 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–14:41 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–18:00 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
+
+## Checkpoint hiện hành sau delivery local/GitHub
+
+Checkpoint này là trạng thái vận hành mới nhất và **ghi đè các mô tả “uncommitted”, MCP revision mismatch hoặc P0 degraded trong phần chronology bên dưới**. Các đoạn cũ vẫn được giữ nguyên để bảo toàn bằng chứng thời điểm quan sát.
+
+- **Git/source delivery:** payload control-plane/Electron/MCP/recovery/test và delivery snapshot được commit qua `745d839`, `cb788b9`, `50993da` rồi fetch lại từ `origin/main` với divergence `0 0`. Đây chứng minh payload bytes đã được delivery lên GitHub, không chứng minh Ubuntu đã pull/load chúng; checkpoint này có thể thuộc một follow-up documentation delivery riêng.
+- **Windows Desktop technical activation:** sau authenticated `runtime.stop`, snapshot-consistent delivery và explicit full-clean refresh, `npm run dev:status` quan sát `state=CURRENT`, development installation current, UI running/disk revision khớp, MCP running/disk revision khớp, `components_ready=true`, `fully_ready=true`, `runtime_update_incomplete=false`, telemetry fresh. Đây là proof kỹ thuật local hiện hành, không phải proof remote effect hay release acceptance.
+- **Connector boundary:** connector đang `CURRENT_COMPATIBLE_ACKNOWLEDGED` với contract SHA hiện hành khớp và không yêu cầu refresh/ACK thêm, nhưng `connector_rediscovered=false`. Chưa quan sát exact ChatWeb client thực hiện `server/discover`/`tools/list` trên MCP mới; không gọi đó là client E2E canary.
+- **Ubuntu remote boundary:** chưa có deploy/restart/systemd/DB mutation trong checkpoint này. Lần thử SSH non-interactive vào target đã biết `svhome@100.116.112.22` bị từ chối `Permission denied (publickey,password)`, nên không có quyền hợp lệ để kiểm tra owner/checkout/unit hoặc đưa revision `50993da` lên Ubuntu. Preflight chỉ đọc tiếp theo cho thấy SSH agent không chạy, không có default identity trong `.ssh`, và một PEM còn lại không có binding đã chứng minh với target; không thử key/account suy đoán. Một verifier GET-only mới, dùng fingerprint `sha256:b8881db477fafa29ac79f0ef44a7b1bb040a151f04b118516c875c31fed7565f` của selected package hiện tại và expected admission `open`, tiếp tục trả `CONTROL_PLANE_DEPLOYMENT_HEALTH_INCOMPLETE` (exit 2). Vì vậy endpoint chưa cung cấp receipt exact deployed-package; không được suy từ health cũ thành remote state hiện tại.
+- **Runtime evidence:** sau khi local runtime chạy lại, `.coding-tools/**` tiếp tục tạo evidence live. Chúng được giữ nguyên cho delivery transaction sau; không có source/document unstaged ngoài runtime evidence và các artifact tạm đã tồn tại trong `tmp/`.
+- **Nghiệm thu còn thiếu:** Ubuntu exact-deployment receipt, authenticated service/backup/reboot/restore evidence, strict client rediscovery, central read-only canary rồi mutation canary theo policy, và natural workload có outcome độc lập. Không có mục nào trong số này được suy ra từ local tests, Git push hoặc `fully_ready=true`.
 
 ## Kiểm tra hiện hành từ E:/DEV/Codex-web
 

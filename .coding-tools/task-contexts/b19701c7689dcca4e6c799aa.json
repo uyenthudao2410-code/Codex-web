@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "task_id": "b615e53ed83241008c8c3f7adda6a2d8",
+  "task_id": "7056fabe28bb43d8abca59e64e411d2b",
   "orchestration": {
-    "run_id": "ca939345575948449e97c8d85705bd0d",
-    "wave_id": "6772d1f48a43452282877319e271dd82",
+    "run_id": "076dbebd4f1a464092905c388398709f",
+    "wave_id": "6b4021b6bf4b445480257788f2143ab7",
     "orchestration_state": "PREFLIGHT",
     "execution_mode": "mcp_only",
     "route_requested": "",
@@ -11,31 +11,179 @@
     "write_owner": "",
     "write_lease_id": "",
     "delegation_id": "",
-    "base_head": "a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6",
-    "worktree_fp": "c6196f257d78c5227226197e2fe498a6e65c61f4928cfeb80cc92145fbc5289f",
+    "base_head": "50993da4aaaf75219274db5f7d577b30281b165b",
+    "worktree_fp": "18a72397cdb257c44d7725e61f2f39351a4d79e56a2bbf69bfa3bfebbcd8b4f2",
     "contract_fp": ""
   },
-  "objective": "Resolve the exact consent failure shown by the user: local continuation approval page returns 'This controller endpoint is fenced from the durable Goal'. Keep Problem prl-e918c7d33e70c2d304d0797e11b05fcb revision 2 and fail-closed authority semantics. Determine why an approval challenge generated from an attested current ChatWeb turn can become fenced before POST, then implement the smallest safe fix so a stale/fenced challenge cannot grant authority, while the user can obtain/approve a fresh challenge bound to the current durable controller without manual ledger edits or fake receipts. Preserve controller-gated acceptance and one-shot consent. Do not restart, commit, push, package, release, or modify unrelated dirty files in this wave.",
+  "objective": "Resolve the exact consent failure: a bounded continuation challenge can be displayed, then POST fails with 'This controller endpoint is fenced from the durable Goal'. Preserve fail-closed authority, one-shot consent, exact Problem rev2, and controller-gated acceptance. Identify the challenge creation/render/POST path and implement the smallest safe behavior: stale/fenced challenge must never grant authority; the approval UI must terminalize/invalidate stale challenge and obtain or present a fresh challenge bound to the current durable Goal controller after official continuity reattach. No restart/commit/push/package/release and no unrelated source changes.",
   "status": "waiting",
   "steps": [],
   "current_step": "Waiting for model",
   "current_command": null,
-  "last_command_result": null,
-  "completion_report": null,
-  "completion_report_id": "",
-  "completion_report_acknowledged_id": "",
-  "completion_report_acknowledged_at": null,
+  "last_command_result": {
+    "command_id": "lZyADv1b5we3qW9AIGb9e-nS",
+    "kind": "command",
+    "status": "exited",
+    "result_status": "passed",
+    "exit_code": 0,
+    "duration_ms": 965,
+    "finished_at": "2026-09-15T11:01:58.312Z"
+  },
+  "completion_report": {
+    "schema_version": 1,
+    "operator_visible_required": true,
+    "report_contract": [
+      "WHAT CHANGED",
+      "CURRENT STATE",
+      "PROBLEM RESOLUTION",
+      "SOURCE / RUN / WAVE ID",
+      "PROOF ACTUALLY RUN",
+      "ACCEPTED OR NOT",
+      "WHAT REMAINS",
+      "NEXT CRITICAL ACTION"
+    ],
+    "problem_resolution": {
+      "status": "AVAILABLE",
+      "problem_id": "prl-e918c7d33e70c2d304d0797e11b05fcb",
+      "problem_revision": 2,
+      "problem_state": "OPEN",
+      "resolution_status": "IN_PROGRESS",
+      "contract_fingerprint": "270e9a76c407a40e3a8d7c9151f355841314d54e778559402beef4517ffe282f",
+      "objective_summary": null,
+      "contract_capsule_included": false,
+      "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+      "criteria": [],
+      "criteria_truncated": false,
+      "progress": {
+        "status": "observed",
+        "criteria_total": 18,
+        "criteria_proven": 0,
+        "criteria_unresolved": 18,
+        "coverage_status": "NONE",
+        "missing_reason": null,
+        "next_critical_gap_id": "continuity.auto_resume",
+        "next_critical_gap": "Eligible long-running work resumes automatically across ordinary REPLAN, report-gate, reconnect, and accepted controlled-restart boundaries without requiring a manual 'continue' message.",
+        "next_action": "SATISFY_UNRESOLVED_CRITERION",
+        "fact_window": {
+          "attempt_pair_limit": 50,
+          "attempt_pair_count": 39,
+          "accepted_checkpoint_limit": 1000,
+          "accepted_checkpoint_count": 4,
+          "proof_reference_limit": 300,
+          "proof_reference_count": 0,
+          "truncated": false,
+          "missing_reason": null
+        }
+      },
+      "unresolved_conditions": [],
+      "unresolved_conditions_truncated": false,
+      "current_attempt": {
+        "run_id": "076dbebd4f1a464092905c388398709f",
+        "wave_id": "d07e88a4a5af4d7699f2d07e5d14f070",
+        "checkpoint_id": ""
+      },
+      "latest_feedback_relation": "UNKNOWN",
+      "event_count": 40,
+      "latest_event": {
+        "seq": 316,
+        "event_id": "prl-bind-cbb7f09aaeb0a8639c734d09f8d41a5a51407518201fdcc249d92f6f1baf7805",
+        "event_hash": "7511c73bf314eb7a240191927cf2a3a1213aadafed1227a5fdf660dcf8e40e68",
+        "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+        "state_after": "OPEN",
+        "reason_code": "engineering_attempt_bound",
+        "recorded_at": "2026-09-15T10:59:06.117Z"
+      },
+      "optimization_telemetry": {
+        "status": "AVAILABLE",
+        "complete": true,
+        "event_count": 96,
+        "manual_nudge_count": 1,
+        "interruption_count": 0,
+        "replan_count": 0,
+        "report_gate_count": 63,
+        "continuation_attempt_count": 0,
+        "continuation_success_count": 0,
+        "continuation_failure_count": 17,
+        "reconnect_count": 0,
+        "restart_count": 0,
+        "resume_count": 0,
+        "duplicate_effect_prevented_count": 0,
+        "terminal_count": 0,
+        "blocker_count": 0,
+        "accepted_checkpoint_count": 15,
+        "natural_event_count": 0,
+        "synthetic_event_count": 0,
+        "legacy_unknown_event_count": 96,
+        "time_to_resume_ms": null,
+        "replan_duration_ms": null,
+        "report_gate_wait_ms": null
+      },
+      "content_free": true,
+      "derived_projection_only": true,
+      "authority_granted": false
+    },
+    "what_changed": {
+      "files": [],
+      "source": "no_durable_file_receipts",
+      "raw_source_or_command_output_included": false
+    },
+    "current_state": {
+      "orchestration_state": "REPLAN",
+      "run_status": "active",
+      "wave_status": "active",
+      "task_status": "waiting",
+      "integrity": {
+        "ok": true,
+        "checked": 16,
+        "head_hash": "2d3bd253a0c6d0129042654e38911709927b4e8f6349e462cbb9e28d6cc738f2"
+      },
+      "reports": {}
+    },
+    "source_run_wave": {
+      "run_id": "076dbebd4f1a464092905c388398709f",
+      "wave_id": "d07e88a4a5af4d7699f2d07e5d14f070",
+      "checkpoint_id": "",
+      "base_head": "50993da4aaaf75219274db5f7d577b30281b165b",
+      "worktree_fp": "df27017621c33e5f6d922a962dab9fe6c7321be5adfd882c7fa7f1aa7430bad3",
+      "contract_fp": "",
+      "objective_provenance": {
+        "effective_objective": "Resolve the exact consent failure: a bounded continuation challenge can be displayed, then POST fails with 'This controller endpoint is fenced from the durable Goal'. Preserve fail-closed authority, one-shot consent, exact Problem rev2, and controller-gated acceptance. Identify the challenge creation/render/POST path and implement the smallest safe behavior: stale/fenced challenge must never grant authority; the approval UI must terminalize/invalidate stale challenge and obtain or present a fresh challenge bound to the current durable Goal controller after official continuity reattach. No restart/commit/push/package/release and no unrelated source changes.",
+        "objective_revision": 1,
+        "objective_sha256": "c3e6d6cc008752a6e7d931cc9800d7da10df8e143f890f5e142a2f687c1b67cc",
+        "objective_source": "run_initial_objective",
+        "objective_changed_from_previous": false,
+        "objective_hash_valid": true,
+        "legacy_fallback": false
+      }
+    },
+    "proof_actually_run": {
+      "count": 0,
+      "all_recorded_proofs_passed": false,
+      "proofs": []
+    },
+    "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+    "blocker_or_failure": {
+      "failure_class": "BASE_DRIFT",
+      "reason": null,
+      "event_seq": 59609
+    },
+    "what_remains": "A changed evidence, scope, or strategy is required before another execution wave.",
+    "next_critical_action": "Present this completion_report to the operator, then replan with changed evidence, scope, or strategy."
+  },
+  "completion_report_id": "da847f0990281d54e479d66d00840fcee36c29a03768878180c15b368bde3157",
+  "completion_report_acknowledged_id": "da847f0990281d54e479d66d00840fcee36c29a03768878180c15b368bde3157",
+  "completion_report_acknowledged_at": "2026-09-15T11:03:32.971Z",
   "test_results": [],
   "build_results": [],
   "last_build_report": null,
   "modified_files": [],
   "failure": null,
-  "next_step": "",
-  "created_at": "2026-09-15T10:40:49.593Z",
-  "updated_at": "2026-09-15T10:42:36.665Z",
+  "next_step": "Present orchestration.completion_report to the operator, then replan from the durable failure; do not retry an unchanged wave.",
+  "created_at": "2026-09-15T10:59:04.326Z",
+  "updated_at": "2026-09-15T11:04:25.686Z",
   "events": [
     {
-      "time": "2026-09-15T10:40:49.593Z",
+      "time": "2026-09-15T10:59:04.326Z",
       "event": "task_started",
       "details": {
         "fields": [
@@ -49,21 +197,167 @@
       }
     },
     {
-      "time": "2026-09-15T10:40:51.641Z",
+      "time": "2026-09-15T10:59:06.294Z",
       "event": "orchestration_context_ready",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-09-15T10:40:59.047Z",
+      "time": "2026-09-15T11:00:11.264Z",
       "event": "orchestration_prepared",
       "details": {
         "state": "PREFLIGHT"
       }
     },
     {
-      "time": "2026-09-15T10:40:59.057Z",
+      "time": "2026-09-15T11:00:11.391Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:23.526Z",
+      "event": "files_modified",
+      "details": {
+        "count": 0
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:34.776Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 90 -E \"class .*Consent|approve_http_challenge|_send_consent_json|do_POST|do_GET|RUN_CONTINUATION_APPROVAL_FAILED|challenge\" -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests",
+        "session_id": "-sVm7akrc5rLhhfbDaPM5-On"
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:35.243Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 90 -E \"class .*Consent|approve_http_challenge|_send_consent_json|do_POST|do_GET|RUN_CONTINUATION_APPROVAL_FAILED|challenge\" -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:47.128Z",
+      "event": "command_started",
+      "details": {
+        "command": "git grep -n -C 55 -E \"def _run_continuation_approve_http_challenge|GOAL_CONTROLLER_FENCE_STALE|GOAL_CONTROLLER_.*STALE|Goal controller authority changed|Controller authority changed\" -- resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "session_id": "002Lgnytwhbfl4qOKfkOo3Na"
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:47.511Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git grep -n -C 55 -E \"def _run_continuation_approve_http_challenge|GOAL_CONTROLLER_FENCE_STALE|GOAL_CONTROLLER_.*STALE|Goal controller authority changed|Controller authority changed\" -- resources/coding-tools-mcp/coding_tools_mcp/run_continuation.py resources/coding-tools-mcp/coding_tools_mcp/controller_continuity.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:57.912Z",
+      "event": "command_started",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "session_id": "lZyADv1b5we3qW9AIGb9e-nS"
+      }
+    },
+    {
+      "time": "2026-09-15T11:01:58.312Z",
+      "event": "command_finished",
+      "details": {
+        "command": "git status --short -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py && git diff -- resources/coding-tools-mcp/coding_tools_mcp/continuation_consent_http.py resources/coding-tools-mcp/tests/test_continuation_consent_http.py",
+        "status": "passed"
+      }
+    },
+    {
+      "time": "2026-09-15T11:02:54.422Z",
+      "event": "orchestration_drift_detected",
+      "details": {
+        "state": "REPLAN"
+      }
+    },
+    {
+      "time": "2026-09-15T11:02:54.575Z",
+      "event": "tool_failed",
+      "details": {
+        "tool": "agent_workflow",
+        "code": "REPLAN_REASON_REQUIRED"
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:04.904Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:07.804Z",
+      "event": "command_completion_report_required",
+      "details": {
+        "command_id": "",
+        "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+        "report_id": "da847f0990281d54e479d66d00840fcee36c29a03768878180c15b368bde3157"
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:17.087Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:32.971Z",
+      "event": "operator_completion_report_acknowledged",
+      "details": {
+        "report_id": "da847f0990281d54e479d66d00840fcee36c29a03768878180c15b368bde3157"
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:44.530Z",
+      "event": "orchestration_projection_reconciled",
+      "details": {
+        "fields": [
+          "current_step",
+          "failure",
+          "next_step",
+          "orchestration",
+          "status"
+        ]
+      }
+    },
+    {
+      "time": "2026-09-15T11:03:47.007Z",
+      "event": "orchestration_context_ready",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T11:04:25.678Z",
+      "event": "orchestration_prepared",
+      "details": {
+        "state": "PREFLIGHT"
+      }
+    },
+    {
+      "time": "2026-09-15T11:04:25.686Z",
       "event": "files_modified",
       "details": {
         "count": 0
