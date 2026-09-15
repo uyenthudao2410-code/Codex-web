@@ -1,12 +1,40 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:02 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:22 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
 
 ## Checkpoint hiện hành sau delivery local/GitHub
+
+### Checkpoint isolated tmpfs full-filesystem fault drill — 15-09-2026, 20:18–20:22 +07:00
+
+Checkpoint này hoàn tất proof T14 cho một filesystem `ENOSPC` **cô lập**. Nó
+không làm đầy filesystem production, không chạy node, không tạo quyền execution
+và không thay thế P3/soak còn lại.
+
+- Probe đầu tiên dùng SQLite `max_page_count` bị loại: giới hạn đó chỉ áp vào
+  connection filler, nên service connection vẫn tạo một intent/action synthetic.
+  Artifact của probe được giữ, durable-quarantine với admission `recovery`,
+  integrity `ok`; nó không được tính là proof T14 hoặc action production.
+- Drill được chấp nhận chạy trực tiếp trong user+mount namespace rprivate với
+  tmpfs `/tmp` 1 MiB; service fixture, database, filler và token scope đều chỉ
+  tồn tại trong namespace. Filler chỉ tiếp tục khi nhận `ENOSPC`, sau đó fixed
+  operator-authenticated `workspace_context(request_read_only)` nhận đúng HTTP
+  `503` / `DURABLE_STORAGE_UNAVAILABLE` qua đường HTTP/SQLite thật.
+- Filler được giải phóng bên trong private tmpfs để kiểm tra hậu quả: fixture
+  giữ SQLite integrity `ok`, admission `open` và zero
+  `work_requests`/`actions`/`mcp_read_only_intents`. Vì vậy failed intake không
+  để partial durable state. Private mount tự unmount; host `/tmp` không có
+  artifact drill và port loopback không còn listener.
+- Verifier production sau drill tiếp tục PASS exact package/schema/integrity/
+  admission, cùng PID và `NRestarts=0`. Không restart production, không contact
+  node, không tạo binding/policy hay gửi snapshot qua mạng.
+
+**T14 đạt trong phạm vi cô lập:** SQLite-busy và tmpfs-ENOSPC đều fail closed
+qua HTTP, không false-ack durable intake. **P3 còn lại:** off-host/encrypted
+backup, production restore/reconciliation, node reconnect/fault proof và soak.
 
 ### Baseline 24-hour operational soak — bắt đầu 15-09-2026, 20:02 +07:00
 
@@ -59,8 +87,9 @@ quyền mở execution.
   monotonic-clock check bình thường; không ghi thời lượng fault từ timestamp
   wall-clock định dạng sai.
 
-**T14/P3 còn lại:** chưa có full-disk test cô lập, off-host/encrypted backup,
-production restore/reconciliation, node reconnect/fault proof hoặc soak. Hiện
+**P3 còn lại:** T14 full-filesystem proof được ghi riêng ở checkpoint mới hơn;
+chưa có off-host/encrypted backup, production restore/reconciliation, node
+reconnect/fault proof hoặc soak. Hiện
 `/home` và state storage cùng một ext4 local; không quan sát được backup client
 hay cấu hình remote đã sẵn sàng, nên không tự chọn đích/off-host key scheme.
 Tailnet hiện có một Windows peer online và CLI hỗ trợ Taildrop, nhưng đây chỉ là
