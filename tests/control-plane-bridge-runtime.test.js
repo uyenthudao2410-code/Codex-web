@@ -78,6 +78,10 @@ test('control-plane read-only bridge owns an attested actor and never accepts ce
   assert.equal(result.workspace_accessed, true);
   assert.equal(result.actor.client_id, BRIDGE_CLIENT_ID);
   assert.equal(result.runtime_identity.activation_epoch_id, activationEpochId);
+  assert.equal(result.runtime_identity.process_instance_id, processInstanceId);
+  assert.equal(result.runtime_identity.server_instance_id, serverInstanceId);
+  assert.equal(Object.hasOwn(result.runtime_identity, 'mcp_process_instance_id'), false);
+  assert.equal(Object.hasOwn(result.runtime_identity, 'mcp_server_instance_id'), false);
   assert.match(result.local_handle, /^cp_ro_[a-f0-9]{48}$/);
   assert.match(result.response_sha256, /^[a-f0-9]{64}$/);
   assert.deepEqual(result.facade_contract, facadeContract);

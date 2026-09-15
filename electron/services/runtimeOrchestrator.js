@@ -1336,8 +1336,12 @@ class RuntimeOrchestrator {
               sha256: facadeContract.sha256
             },
             runtime_identity: {
-              mcp_process_instance_id: attestation.processInstanceId,
-              mcp_server_instance_id: attestation.serverInstanceId,
+              // This is the result contract consumed by Recovery Host and the
+              // descriptor-hiding node bridge.  Keep the field names aligned
+              // with that per-action contract; ``mcp_*`` names belong to the
+              // separate identity-observation projection.
+              process_instance_id: attestation.processInstanceId,
+              server_instance_id: attestation.serverInstanceId,
               activation_epoch_id: attestation.activationEpochId,
               tool_contract_sha256: attestation.contractSha256
             },
