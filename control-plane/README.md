@@ -205,6 +205,14 @@ not encrypt files by itself, prove off-host durability, perform restore, or
 authorize admission reopening; retain the operational encryption and restore
 requirements in the recovery runbook.
 
+The companion `codex-control-plane-healthcheck` service/timer checks the
+exact deployed package, schema, process instance, `open` admission and backup
+freshness every 15 minutes. It writes a content-free `last-healthcheck.json`
+only when every condition passes. A control plane intentionally held in
+`recovery`, a bad/missing package gate, or a backup older than 2 hours 15
+minutes exits non-zero for the user-unit journal; it does not restart anything
+or reopen admission.
+
 Before an operator considers a separately authorized restore, inspect the
 completed snapshot by its receipt fingerprint:
 

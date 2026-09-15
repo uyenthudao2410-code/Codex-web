@@ -42,7 +42,10 @@ client hoặc outcome bên dưới.
   `codex-control-plane-backup.timer` enabled; service không restart và không
   contact node. Đây là backup local có ACL, **không** phải encrypted/off-host
   backup hoặc restore drill. Root filesystem quan sát là ext4 trực tiếp;
-  at-rest encryption không được suy ra.
+  at-rest encryption không được suy ra. Companion healthcheck 15 phút cũng
+  enabled; first check PASS exact package/schema/instance/admission và tuổi
+  backup 759 giây. Nó chỉ ghi receipt content-free; recovery, backup stale
+  hoặc package gate sai sẽ fail journal thay vì tự restart/reopen.
 - **Deployment hygiene:** timer `codex-autopull.timer` đã disable. Nó từng
   `git pull` mỗi phút, va Git index trong delivery và có thể làm checkout mới
   nhưng service chưa reload. Không còn automatic source drift; future update

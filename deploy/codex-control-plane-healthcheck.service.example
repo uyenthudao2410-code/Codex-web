@@ -1,0 +1,13 @@
+[Unit]
+Description=Verify Coding Tools control-plane health and backup freshness
+After=codex-control-plane.service codex-control-plane-backup.service
+Wants=codex-control-plane.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/svhome/DEV/Codex-web
+ExecStart=/usr/bin/bash /home/svhome/DEV/Codex-web/scripts/control-plane-healthcheck.sh
+TimeoutStartSec=2min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
