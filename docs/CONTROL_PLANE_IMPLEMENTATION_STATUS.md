@@ -63,6 +63,9 @@ quyền mở execution.
 production restore/reconciliation, node reconnect/fault proof hoặc soak. Hiện
 `/home` và state storage cùng một ext4 local; không quan sát được backup client
 hay cấu hình remote đã sẵn sàng, nên không tự chọn đích/off-host key scheme.
+Tailnet hiện có một Windows peer online và CLI hỗ trợ Taildrop, nhưng đây chỉ là
+transport: chưa có evidence receiver retention/ACL, at-rest encryption hoặc
+recovery key. Không snapshot nào được chuyển qua đường này.
 Fault drill này chứng minh fail-closed durable intake dưới SQLite contention,
 không đóng toàn bộ P3.
 
