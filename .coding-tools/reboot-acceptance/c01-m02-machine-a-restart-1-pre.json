@@ -1,0 +1,51 @@
+﻿{
+    "schema_version":  1,
+    "sample_id":  "c01-m02-machine-a-restart-1",
+    "problem_id":  "prl-22e670302757c9b7663170e226ed7c26",
+    "problem_revision":  1,
+    "coldstart_checkpoint":  "6fb3de41a26349f5995a6a2bd92d82f2",
+    "captured_at_utc":  "2026-09-15T11:34:59.0957623Z",
+    "pre_boot_time_utc":  "2026-09-15T01:29:13.5000000Z",
+    "manifest":  {
+                     "mode":  "packaged",
+                     "executable":  "E:\\WebMcpAcceptanceHost-1.0.0\\Coding Tools MCP.exe",
+                     "app_root":  "E:\\WebMcpAcceptanceHost-1.0.0",
+                     "executable_sha256":  "cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c",
+                     "supervisor_script_sha256":  "9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab"
+                 },
+    "supervisor":  {
+                       "pid":  45592,
+                       "state":  "healthy",
+                       "last_spawned_pid":  39920,
+                       "consecutive_failures":  0
+                   },
+    "recovery":  {
+                     "pid":  39920,
+                     "instance_id":  "0ba9f516835a4d0a6118ee70b8c27f71",
+                     "runtime_mode":  "packaged"
+                 },
+    "scheduled_task":  {
+                           "name":  "WebMCP Recovery Supervisor",
+                           "state":  "Running",
+                           "execute":  "C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                           "arguments":  "-NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File \"C:\\Users\\Admin\\AppData\\Roaming\\web-mcp-assistant\\recovery-supervisor\\recovery-supervisor.ps1\" -Action Run",
+                           "principal_matches_current_user":  true,
+                           "logon_type":  "Interactive",
+                           "run_level":  "Limited",
+                           "trigger_classes":  [
+                                                   "MSFT_TaskLogonTrigger",
+                                                   "MSFT_TaskTimeTrigger"
+                                               ]
+                       },
+    "expected_post_reboot":  {
+                                 "last_boot_time_must_advance":  true,
+                                 "manifest_mode":  "packaged",
+                                 "executable_sha256":  "cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c",
+                                 "supervisor_script_sha256":  "9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab",
+                                 "recovery_pid_must_change":  true,
+                                 "recovery_instance_must_change":  true,
+                                 "recovery_runtime_mode":  "packaged",
+                                 "supervisor_state":  "healthy",
+                                 "consecutive_failures":  0
+                             }
+}

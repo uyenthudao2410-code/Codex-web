@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "task_id": "243e85384a3b43aaa51e4150fbe0cd0a",
+  "orchestration": {},
+  "objective": "Arm the explicitly authorized real Windows Restart for C01/M02 machine-A sample 1 under Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. Consume the accepted pre-reboot receipt checkpoint c8f32a66c7714204bcdd64162dc20ee1 and exact receipt SHA-256 4b942217eb948bcf6b9ab3cc71aefc256db8785e5a089887c69db838371706f6. Revalidate that Windows has not rebooted since the pre-receipt, packaged manifest/executable/status are still exact and healthy, then register one same-user Interactive/Limited one-shot Scheduled Task named 'WebMCP C01 M02 Restart Sample1' to run system shutdown.exe with /r /t 0 (no forced-close flag) as a real planned Restart after a short future trigger. Write a privacy-safe armed receipt .coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-armed.json containing only pre-receipt hash/checkpoint, task name, armed/scheduled UTC times, and planned restart mode. Verify task action/arguments, normalized same-user SID equality without storing identity, and NextRunTime. This wave proves only that real reboot sample 1 is safely armed; it must not claim reboot occurred. No source edit, reinstall, commit, push, release, publish, or deploy.",
+  "status": "active",
+  "steps": [],
+  "current_step": "Run complete agent workflow",
+  "current_command": null,
+  "last_command_result": null,
+  "completion_report": null,
+  "completion_report_id": "",
+  "completion_report_acknowledged_id": "",
+  "completion_report_acknowledged_at": null,
+  "test_results": [],
+  "build_results": [],
+  "last_build_report": null,
+  "modified_files": [],
+  "failure": null,
+  "next_step": "",
+  "created_at": "2026-09-15T11:37:30.269Z",
+  "updated_at": "2026-09-15T11:37:30.270Z",
+  "events": [
+    {
+      "time": "2026-09-15T11:37:30.269Z",
+      "event": "task_auto_started",
+      "details": {
+        "objective": "Arm the explicitly authorized real Windows Restart for C01/M02 machine-A sample 1 under Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. Consume the accepted pre-reboot receipt checkpoint c8f32a66c7714204bcdd64162dc20ee1 and exact receipt SHA-256 4b942217eb948bcf6b9ab3cc71aefc256db8785e5a089887c69db838371706f6. Revalidate that Windows has not rebooted since the pre-receipt, packaged manifest/executable/status are still exact and healthy, then register one same-user Interactive/Limited one-shot Scheduled Task named 'WebMCP C01 M02 Restart Sample1' to run system shutdown.exe with /r /t 0 (no forced-close flag) as a real planned Restart after a short future trigger. Write a privacy-safe armed receipt .coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-armed.json containing only pre-receipt hash/checkpoint, task name, armed/scheduled UTC times, and planned restart mode. Verify task action/arguments, normalized same-user SID equality without storing identity, and NextRunTime. This wave proves only that real reboot sample 1 is safely armed; it must not claim reboot occurred. No source edit, reinstall, commit, push, release, publish, or deploy."
+      }
+    }
+  ]
+}

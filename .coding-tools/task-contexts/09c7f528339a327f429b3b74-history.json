@@ -1,0 +1,1503 @@
+[
+  {
+    "version": 2,
+    "task_id": "86178b551c8c4b8997a24bdd6010683e",
+    "orchestration": {
+      "run_id": "dcb539e0e1694bc1bb29eed2b2e07f8b",
+      "wave_id": "b35ed64b24dc4fa093cbe241df38719a",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+      "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+      "contract_fp": ""
+    },
+    "objective": "C01/M02 packaged cold-start canary on the current base for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. The Recovery Supervisor is already installed in packaged mode at E:\\WebMcpAcceptanceHost-1.0.0 and healthy, while a development Recovery Host created by the manually reopened development app is currently being adopted. Arm one fail-closed current-user Interactive/Limited Scheduled Task that waits 15 seconds, revalidates the exact then-current Recovery Host PID, instance_id, runtime_mode=development and exact development Electron executable, and only then kills that exact Recovery Host. Do nothing if identity drifts. Do not edit source, reinstall, change supervisor manifest, reboot Windows, commit, push, release, publish or deploy. This wave proves only safe canary arming; packaged cold-start and tunnel return are evaluated after reconnect.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:29:39.084Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:29:39.084Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "",
+      "kind": "command",
+      "status": "failed",
+      "result_status": "failed",
+      "exit_code": null,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T11:30:18.349Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "unavailable",
+          "criteria_total": 12,
+          "criteria_proven": null,
+          "criteria_unresolved": null,
+          "coverage_status": "UNAVAILABLE",
+          "missing_reason": "attempt_pair_window_truncated",
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "UNAVAILABLE",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 50,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": true,
+            "missing_reason": "attempt_pair_window_truncated"
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "dcb539e0e1694bc1bb29eed2b2e07f8b",
+          "wave_id": "b35ed64b24dc4fa093cbe241df38719a",
+          "checkpoint_id": "8d10f27638e2498cba80edf0bcbe77ce"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 68,
+        "latest_event": {
+          "seq": 318,
+          "event_id": "prl-bind-ca5ca0312982f73f13c112c8ebbb28c281bd4222f4c62baa2d477b1340d7a62d",
+          "event_hash": "a5d20a71373a6be562f94d0c32d26295d1ed68dca1fd8c6bf06478dba13fbfb3",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T11:29:29.353Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 193,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 124,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 24,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 45,
+          "natural_event_count": 2,
+          "synthetic_event_count": 0,
+          "legacy_unknown_event_count": 191,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "9358353ebb48966d8e2bcf735e31e4674096f618ed0226c51b557b8c7596de78"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dcb539e0e1694bc1bb29eed2b2e07f8b\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-dcb539e0e1694bc1bb29eed2b2e07f8b\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "dcb539e0e1694bc1bb29eed2b2e07f8b",
+        "wave_id": "b35ed64b24dc4fa093cbe241df38719a",
+        "checkpoint_id": "8d10f27638e2498cba80edf0bcbe77ce",
+        "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+        "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "C01/M02 packaged cold-start canary on the current base for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. The Recovery Supervisor is already installed in packaged mode at E:\\WebMcpAcceptanceHost-1.0.0 and healthy, while a development Recovery Host created by the manually reopened development app is currently being adopted. Arm one fail-closed current-user Interactive/Limited Scheduled Task that waits 15 seconds, revalidates the exact then-current Recovery Host PID, instance_id, runtime_mode=development and exact development Electron executable, and only then kills that exact Recovery Host. Do nothing if identity drifts. Do not edit source, reinstall, change supervisor manifest, reboot Windows, commit, push, release, publish or deploy. This wave proves only safe canary arming; packaged cold-start and tunnel return are evaluated after reconnect.",
+          "objective_revision": 1,
+          "objective_sha256": "5e09da9d8da1e163de7c3faa288e97b7231de2e3d8f211840b5b00faec7b16e8",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "3c728febb05643f88d73ab1c529f88b3",
+            "stage_id": "check:474e0ba8cc415288",
+            "status": "passed",
+            "duration_ms": 2981,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "a62297aa834eef1e306423b024f171129036f06f9eef186fa3aaf4e475420570",
+    "completion_report_acknowledged_id": "a62297aa834eef1e306423b024f171129036f06f9eef186fa3aaf4e475420570",
+    "completion_report_acknowledged_at": "2026-09-15T11:30:35.065Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T11:26:30.628Z",
+    "updated_at": "2026-09-15T11:30:50.717Z",
+    "events": [
+      {
+        "time": "2026-09-15T11:26:30.628Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T11:26:30.990Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Content $st -Raw|ConvertFrom-Json;$r=Get-Content $rh -Raw|ConvertFrom-Json;$rp=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$r.owner_pid) -ErrorAction SilentlyContinu",
+          "session_id": "f2ZI9LprwAcNFqxX6mmjgSl-"
+        }
+      },
+      {
+        "time": "2026-09-15T11:26:33.264Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Content $st -Raw|ConvertFrom-Json;$r=Get-Content $rh -Raw|ConvertFrom-Json;$rp=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$r.owner_pid) -ErrorAction SilentlyContinu",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:27:49.814Z",
+        "event": "tool_failed",
+        "details": {
+          "tool": "agent_workflow",
+          "code": "GOAL_CONTROLLER_FENCE_STALE"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:29.658Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:32.063Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:33.397Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:33.404Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:34.704Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:35.451Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:36.532Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$root='E:\\WebMcpAcceptanceHost-1.0.0';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Content $st -Raw|ConvertFrom-Json;$r=Get-Content $rh -Raw|ConvertFrom-Json;if([string]$m.mode-ne'packaged'-or[",
+          "session_id": "W4bFlvXCV8dlN7NPGwDg3TeX"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:38.639Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$root='E:\\WebMcpAcceptanceHost-1.0.0';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Content $st -Raw|ConvertFrom-Json;$r=Get-Content $rh -Raw|ConvertFrom-Json;if([string]$m.mode-ne'packaged'-or[",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.078Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.085Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.677Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.677Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.811Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "b446eadcf6bb80ef3f7182723d8bf769b628bc47c2355c1c8ba132bbbb6b3d42"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:39.953Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:51.749Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:55.037Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:55.039Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:29:55.158Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "a62297aa834eef1e306423b024f171129036f06f9eef186fa3aaf4e475420570"
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:03.840Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:18.349Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$n='WebMCP C01 Packaged ColdStart Canary';$ti=Get-ScheduledTaskInfo -TaskName $n -ErrorAction SilentlyContinue;$t=Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue;$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Con",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:35.065Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "a62297aa834eef1e306423b024f171129036f06f9eef186fa3aaf4e475420570"
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:50.717Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T11:30:50.901Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "ef4b241d0f2b470cab708fdf0896907d",
+    "orchestration": {
+      "run_id": "d01a5dce50c846fc8e13673cdfc8b3b3",
+      "wave_id": "2f7fed7000b0427ba2a4ab6d08f062ac",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+      "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+      "contract_fp": ""
+    },
+    "objective": "C01 packaged cold-start post-canary proof for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. Prove that the accepted canary targeting development Recovery Host PID 47904 / instance 7fbed2a56114c6fa173915c12b6e2b5a completed successfully, and that the already-installed packaged Recovery Supervisor cold-started a new healthy packaged Recovery Host without manual reopen. Require canary LastTaskResult=0; manifest mode=packaged with exact host root/executable and installed supervisor SHA 9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab; supervisor healthy/live with zero consecutive failures and no error; Recovery Host PID/instance differ from the killed target; runtime_mode=packaged; process executable is E:\\WebMcpAcceptanceHost-1.0.0\\Coding Tools MCP.exe with SHA cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c; supervisor last_spawned_pid equals the new Recovery Host PID; canonical supervisor task is Ready or Running. No source edit, process kill, reinstall, restart, reboot, commit, push, release, publish or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:31:57.335Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:31:57.335Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "eVwjIYKMVk58IxxMroJ3__iG",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T11:31:56.897Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "unavailable",
+          "criteria_total": 12,
+          "criteria_proven": null,
+          "criteria_unresolved": null,
+          "coverage_status": "UNAVAILABLE",
+          "missing_reason": "attempt_pair_window_truncated",
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "UNAVAILABLE",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 50,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": true,
+            "missing_reason": "attempt_pair_window_truncated"
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "d01a5dce50c846fc8e13673cdfc8b3b3",
+          "wave_id": "2f7fed7000b0427ba2a4ab6d08f062ac",
+          "checkpoint_id": "6fb3de41a26349f5995a6a2bd92d82f2"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 69,
+        "latest_event": {
+          "seq": 319,
+          "event_id": "prl-bind-6cd8db30273eaef871f32ec0c6fb49a89052dd99eae1712454cea16ac48741fb",
+          "event_hash": "95a4163df3f772cc964e218eb81286d3a8cde8e99b245c7de1d8c222c064abbf",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T11:31:45.976Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 196,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 125,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 25,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 46,
+          "natural_event_count": 5,
+          "synthetic_event_count": 0,
+          "legacy_unknown_event_count": 191,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 30,
+          "head_hash": "37d9c21464627a9c96d4e8986e92b7ab917c28277a6be5995fdc227998e2fc8d"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d01a5dce50c846fc8e13673cdfc8b3b3\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-d01a5dce50c846fc8e13673cdfc8b3b3\\wave-001.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "d01a5dce50c846fc8e13673cdfc8b3b3",
+        "wave_id": "2f7fed7000b0427ba2a4ab6d08f062ac",
+        "checkpoint_id": "6fb3de41a26349f5995a6a2bd92d82f2",
+        "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+        "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "C01 packaged cold-start post-canary proof for Problem prl-22e670302757c9b7663170e226ed7c26 revision 1. Prove that the accepted canary targeting development Recovery Host PID 47904 / instance 7fbed2a56114c6fa173915c12b6e2b5a completed successfully, and that the already-installed packaged Recovery Supervisor cold-started a new healthy packaged Recovery Host without manual reopen. Require canary LastTaskResult=0; manifest mode=packaged with exact host root/executable and installed supervisor SHA 9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab; supervisor healthy/live with zero consecutive failures and no error; Recovery Host PID/instance differ from the killed target; runtime_mode=packaged; process executable is E:\\WebMcpAcceptanceHost-1.0.0\\Coding Tools MCP.exe with SHA cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c; supervisor last_spawned_pid equals the new Recovery Host PID; canonical supervisor task is Ready or Running. No source edit, process kill, reinstall, restart, reboot, commit, push, release, publish or deploy.",
+          "objective_revision": 1,
+          "objective_sha256": "681c03c3b73567b323ff332337cc677ec65b60331e7beb76364daafc8d786ad2",
+          "objective_source": "run_initial_objective",
+          "objective_changed_from_previous": false,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 1,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "34f20970420d4235bdf18f206382539f",
+            "stage_id": "check:7c54c322ac247050",
+            "status": "passed",
+            "duration_ms": 4070,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "3364c8f8555de444fe427c050c13a9ac8276522c376376ee41afefe5d5cfb57d",
+    "completion_report_acknowledged_id": "3364c8f8555de444fe427c050c13a9ac8276522c376376ee41afefe5d5cfb57d",
+    "completion_report_acknowledged_at": "2026-09-15T11:33:04.983Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T11:30:50.903Z",
+    "updated_at": "2026-09-15T11:33:40.422Z",
+    "events": [
+      {
+        "time": "2026-09-15T11:30:50.903Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Run a workspace command"
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:51.209Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$n='WebMCP C01 Packaged ColdStart Canary';$ti=Get-ScheduledTaskInfo -TaskName $n -ErrorAction SilentlyContinue;$t=Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue;$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Con",
+          "session_id": "JYo-EHRQNyu8F-s_l89KSKsz"
+        }
+      },
+      {
+        "time": "2026-09-15T11:30:54.630Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$n='WebMCP C01 Packaged ColdStart Canary';$ti=Get-ScheduledTaskInfo -TaskName $n -ErrorAction SilentlyContinue;$t=Get-ScheduledTask -TaskName $n -ErrorAction SilentlyContinue;$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$m=Get-Content $mf -Raw|ConvertFrom-Json;$s=Get-Con",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:13.134Z",
+        "event": "task_stopped",
+        "details": {
+          "fields": [
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:23.419Z",
+        "event": "task_resumed",
+        "details": {
+          "next_step": "Resume or start a new task."
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:46.421Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:48.928Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:50.506Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:50.511Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:51.938Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:52.622Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:53.654Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$n='WebMCP C01 Packaged ColdStart Canary';$ti=Get-ScheduledTaskInfo -TaskName $n -ErrorAction Stop;if([uint32]$ti.LastTaskResult-ne0){exit 20};$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$",
+          "session_id": "eVwjIYKMVk58IxxMroJ3__iG"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:56.897Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$n='WebMCP C01 Packaged ColdStart Canary';$ti=Get-ScheduledTaskInfo -TaskName $n -ErrorAction Stop;if([uint32]$ti.LastTaskResult-ne0){exit 20};$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor-status.json';$rh=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-host.json';$",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:57.329Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:57.335Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:58.112Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:58.115Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:58.259Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "e7cacb067d1bca379802ea1746d88f8983e8bbd87664580f7bfb85e3518cb06b"
+        }
+      },
+      {
+        "time": "2026-09-15T11:31:58.489Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T11:32:13.858Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:32:17.371Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:32:17.374Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:32:17.485Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "3364c8f8555de444fe427c050c13a9ac8276522c376376ee41afefe5d5cfb57d"
+        }
+      },
+      {
+        "time": "2026-09-15T11:32:35.675Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:04.983Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "3364c8f8555de444fe427c050c13a9ac8276522c376376ee41afefe5d5cfb57d"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:40.422Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "pause_reason": "",
+    "archived_at": "2026-09-15T11:33:41.672Z",
+    "archive_reason": "finished"
+  },
+  {
+    "version": 2,
+    "task_id": "24b5dae59fd649e6978bc86960184154",
+    "orchestration": {
+      "run_id": "b194ab1e311e42efa1dd0614ca245037",
+      "wave_id": "09a6713523104d3b8057cf36b23e6fdf",
+      "orchestration_state": "CHECKPOINTED",
+      "execution_mode": "mcp_only",
+      "route_requested": "deterministic",
+      "route_resolved": "deterministic",
+      "write_owner": "",
+      "write_lease_id": "",
+      "delegation_id": "",
+      "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+      "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+      "contract_fp": ""
+    },
+    "objective": "Arm durable pre-reboot evidence for C01/M02 machine-A Restart sample 1 under Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, using accepted packaged cold-start checkpoint 6fb3de41a26349f5995a6a2bd92d82f2. Record a privacy-safe receipt at .coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-pre.json with UTC capture time, Windows LastBootUpTime, exact packaged manifest/root/executable identities, installed executable and supervisor script SHA-256, live supervisor and packaged Recovery Host PID/instance, zero-failure status, Scheduled Task action/state plus boolean same-user principal match computed by normalized SID equality and trigger class names, and expected post-reboot assertions. Store no username, SID, token, credential, raw descriptor, or PII. Verify receipt parsing and exact identities, then unregister only the completed one-shot canary task when its LastTaskResult=0. Do not reboot yet, edit source, reinstall, commit, push, release, publish or deploy.",
+    "status": "completed",
+    "steps": [
+      {
+        "id": "checks",
+        "text": "Run requested checks",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:35:03.432Z"
+      },
+      {
+        "id": "finalize",
+        "text": "Finalize verified result",
+        "status": "completed",
+        "updated_at": "2026-09-15T11:35:03.432Z"
+      }
+    ],
+    "current_step": "Completed - operator report required",
+    "current_command": null,
+    "last_command_result": {
+      "command_id": "ssVZr_90g9OoqFt9kE1a9gbc",
+      "kind": "command",
+      "status": "exited",
+      "result_status": "passed",
+      "exit_code": 0,
+      "duration_ms": null,
+      "finished_at": "2026-09-15T11:35:03.034Z"
+    },
+    "completion_report": {
+      "schema_version": 1,
+      "operator_visible_required": true,
+      "report_contract": [
+        "WHAT CHANGED",
+        "CURRENT STATE",
+        "PROBLEM RESOLUTION",
+        "SOURCE / RUN / WAVE ID",
+        "PROOF ACTUALLY RUN",
+        "ACCEPTED OR NOT",
+        "WHAT REMAINS",
+        "NEXT CRITICAL ACTION"
+      ],
+      "problem_resolution": {
+        "status": "AVAILABLE",
+        "problem_id": "prl-22e670302757c9b7663170e226ed7c26",
+        "problem_revision": 1,
+        "problem_state": "OPEN",
+        "resolution_status": "IN_PROGRESS",
+        "contract_fingerprint": "64adc198e7bde4c96465dc6929f6402e4c55ea8179f1a307417f03fc4568e7ea",
+        "objective_summary": null,
+        "contract_capsule_included": false,
+        "contract_capsule_omission_reason": "EXCEEDS_HANDOFF_EMBED_BUDGET",
+        "criteria": [],
+        "criteria_truncated": false,
+        "progress": {
+          "status": "unavailable",
+          "criteria_total": 12,
+          "criteria_proven": null,
+          "criteria_unresolved": null,
+          "coverage_status": "UNAVAILABLE",
+          "missing_reason": "attempt_pair_window_truncated",
+          "next_critical_gap_id": null,
+          "next_critical_gap": null,
+          "next_action": "UNAVAILABLE",
+          "fact_window": {
+            "attempt_pair_limit": 50,
+            "attempt_pair_count": 50,
+            "accepted_checkpoint_limit": 1000,
+            "accepted_checkpoint_count": 0,
+            "proof_reference_limit": 300,
+            "proof_reference_count": 0,
+            "truncated": true,
+            "missing_reason": "attempt_pair_window_truncated"
+          }
+        },
+        "unresolved_conditions": [],
+        "unresolved_conditions_truncated": false,
+        "current_attempt": {
+          "run_id": "b194ab1e311e42efa1dd0614ca245037",
+          "wave_id": "09a6713523104d3b8057cf36b23e6fdf",
+          "checkpoint_id": "c8f32a66c7714204bcdd64162dc20ee1"
+        },
+        "latest_feedback_relation": "SAME_PROBLEM_STILL_FAILING",
+        "event_count": 70,
+        "latest_event": {
+          "seq": 320,
+          "event_id": "prl-bind-f860e411606c86610d42a13dc4bb1cebf996818e765c705203a4f358f43614fe",
+          "event_hash": "1ee18f728dafc4a9df5f137b699fb28bf4045dfe7a2b75f4ccd969dc52dd25ec",
+          "relation_type": "ENGINEERING_ATTEMPT_BOUND",
+          "state_after": "OPEN",
+          "reason_code": "engineering_attempt_bound",
+          "recorded_at": "2026-09-15T11:33:43.953Z"
+        },
+        "optimization_telemetry": {
+          "status": "AVAILABLE",
+          "complete": true,
+          "event_count": 200,
+          "manual_nudge_count": 0,
+          "interruption_count": 0,
+          "replan_count": 0,
+          "report_gate_count": 127,
+          "continuation_attempt_count": 0,
+          "continuation_success_count": 0,
+          "continuation_failure_count": 26,
+          "reconnect_count": 0,
+          "restart_count": 0,
+          "resume_count": 0,
+          "duplicate_effect_prevented_count": 0,
+          "terminal_count": 0,
+          "blocker_count": 0,
+          "accepted_checkpoint_count": 47,
+          "natural_event_count": 9,
+          "synthetic_event_count": 0,
+          "legacy_unknown_event_count": 191,
+          "time_to_resume_ms": null,
+          "replan_duration_ms": null,
+          "report_gate_wait_ms": null
+        },
+        "content_free": true,
+        "derived_projection_only": true,
+        "authority_granted": false
+      },
+      "what_changed": {
+        "files": [],
+        "source": "no_durable_file_receipts",
+        "raw_source_or_command_output_included": false
+      },
+      "current_state": {
+        "orchestration_state": "CHECKPOINTED",
+        "run_status": "accepted",
+        "wave_status": "accepted",
+        "task_status": "completed",
+        "integrity": {
+          "ok": true,
+          "checked": 60,
+          "head_hash": "ebaf7354400066ee3ea7815d2f1ccb51a16da0f36c69239a967c75fd4f1b6011"
+        },
+        "reports": {
+          "run_report": "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b194ab1e311e42efa1dd0614ca245037\\run-summary.md",
+          "wave_reports": [
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b194ab1e311e42efa1dd0614ca245037\\wave-001.md",
+            "E:\\DEV\\Codex-web\\.coding-tools\\orchestration\\reports\\run-b194ab1e311e42efa1dd0614ca245037\\wave-002.md"
+          ]
+        }
+      },
+      "source_run_wave": {
+        "run_id": "b194ab1e311e42efa1dd0614ca245037",
+        "wave_id": "09a6713523104d3b8057cf36b23e6fdf",
+        "checkpoint_id": "c8f32a66c7714204bcdd64162dc20ee1",
+        "base_head": "cffd2acee24a4f38f4a83ddfea4c40f766de7a63",
+        "worktree_fp": "bb9e677899ab7d59711383e7d9f85de6923e6636949b4daae3aaa2fbcdd51f52",
+        "contract_fp": "",
+        "objective_provenance": {
+          "effective_objective": "Arm durable pre-reboot evidence for C01/M02 machine-A Restart sample 1 under Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, using accepted packaged cold-start checkpoint 6fb3de41a26349f5995a6a2bd92d82f2. Record a privacy-safe receipt at .coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-pre.json with UTC capture time, Windows LastBootUpTime, exact packaged manifest/root/executable identities, installed executable and supervisor script SHA-256, live supervisor and packaged Recovery Host PID/instance, zero-failure status, Scheduled Task action/state plus boolean same-user principal match computed by normalized SID equality and trigger class names, and expected post-reboot assertions. Store no username, SID, token, credential, raw descriptor, or PII. Verify receipt parsing and exact identities, then unregister only the completed one-shot canary task when its LastTaskResult=0. Do not reboot yet, edit source, reinstall, commit, push, release, publish or deploy.",
+          "objective_revision": 2,
+          "objective_sha256": "c9212d9102974c84f8c36bca5c93ca62c27a2657cd320a725a3f3e24802eeaae",
+          "objective_source": "replan_request",
+          "objective_changed_from_previous": true,
+          "objective_hash_valid": true,
+          "legacy_fallback": false
+        }
+      },
+      "proof_actually_run": {
+        "count": 2,
+        "all_recorded_proofs_passed": true,
+        "proofs": [
+          {
+            "proof_id": "49b9928cf10a4b0286c08c492f5f246b",
+            "stage_id": "check:639ea42203168afb",
+            "status": "passed",
+            "duration_ms": 3555,
+            "exit_code": 0,
+            "cache_hit": false
+          },
+          {
+            "proof_id": "a8878d6b18af4c5eaeb6430bf06dc3af",
+            "stage_id": "check:eefef2d0f6511903",
+            "status": "passed",
+            "duration_ms": 2665,
+            "exit_code": 0,
+            "cache_hit": false
+          }
+        ]
+      },
+      "accepted_or_not": "ACCEPTED",
+      "blocker_or_failure": null,
+      "what_remains": "No additional semantic work is inferred for this run. Continue from the explicit project plan only after this report is shown to the operator.",
+      "next_critical_action": "Present this completion_report to the operator before starting another material wave."
+    },
+    "completion_report_id": "2767b004d5b1c34c51e8ac96e1fbc2c13ddee0daca3693eab1b4432c06ab5d94",
+    "completion_report_acknowledged_id": "2767b004d5b1c34c51e8ac96e1fbc2c13ddee0daca3693eab1b4432c06ab5d94",
+    "completion_report_acknowledged_at": "2026-09-15T11:37:00.186Z",
+    "test_results": [],
+    "build_results": [],
+    "last_build_report": null,
+    "modified_files": [],
+    "failure": null,
+    "next_step": "Present orchestration.completion_report to the operator before starting another material wave.",
+    "created_at": "2026-09-15T11:33:41.675Z",
+    "updated_at": "2026-09-15T11:37:29.784Z",
+    "events": [
+      {
+        "time": "2026-09-15T11:33:41.675Z",
+        "event": "task_auto_started",
+        "details": {
+          "objective": "Arm durable pre-reboot evidence for C01/M02 machine-A Restart sample 1 under Problem prl-22e670302757c9b7663170e226ed7c26 revision 1, using accepted packaged cold-start checkpoint 6fb3de41a26349f5995a6a2bd92d82f2. Record a privacy-safe receipt at .coding-tools/reboot-acceptance/c01-m02-machine-a-restart-1-pre.json with UTC capture time, Windows LastBootUpTime, exact packaged manifest/root/executable identities, installed executable and supervisor script SHA-256, live supervisor and packaged Recovery Host PID/instance, zero-failure status, Scheduled Task action/state plus boolean same-user principal match and trigger class names, and the expected post-reboot assertions. Do not store tokens, raw descriptor content, username/SID, credentials, or PII. Require exact executable SHA cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c and supervisor script SHA 9f6cd06422484cb4911ea47c822dd6e4c5040dc6647ce283bb024b7b861a0dab; manifest/status must be packaged/healthy with live processes and zero failures. Verify the receipt parses and matches live state, then unregister only the completed one-shot canary task if its LastTaskResult is 0. Do not reboot yet, edit source, reinstall, commit, push, release, publish or deploy."
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:44.331Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:47.108Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:48.667Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:48.674Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:50.288Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:51.108Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:52.262Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$out='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$dir=Split-Path -Parent $out;New-Item -ItemType Directory -Force -Path $dir|Out-Null;$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$sup=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\recovery-supervisor.ps1';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Jo",
+          "session_id": "OWddKrad2iVZzW4z86FOxiCh"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:54.833Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$out='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$dir=Split-Path -Parent $out;New-Item -ItemType Directory -Force -Path $dir|Out-Null;$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$sup=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\recovery-supervisor.ps1';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Jo",
+          "status": "failed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:55.372Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:56.429Z",
+        "event": "orchestration_failure_projected",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:56.431Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:56.439Z",
+        "event": "execution_failed",
+        "details": {
+          "state": "REPLAN"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:56.564Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "NOT_ACCEPTED_REPLAN_REQUIRED",
+          "report_id": "52b73538c58a2fe5ca15fd6b503fe3baacaa937db3a2a4024373379081f9740a"
+        }
+      },
+      {
+        "time": "2026-09-15T11:33:56.701Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:14.908Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:18.191Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "52b73538c58a2fe5ca15fd6b503fe3baacaa937db3a2a4024373379081f9740a"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:46.831Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:49.230Z",
+        "event": "orchestration_context_ready",
+        "details": {
+          "state": "PREFLIGHT"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:51.980Z",
+        "event": "orchestration_routed",
+        "details": {
+          "state": "ROUTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:53.608Z",
+        "event": "mcp_write_lease_active",
+        "details": {
+          "state": "EXECUTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:53.615Z",
+        "event": "continuous_workflow_started",
+        "details": {
+          "fields": [
+            "current_step",
+            "next_step",
+            "objective",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:55.196Z",
+        "event": "orchestration_proving",
+        "details": {
+          "state": "PROVING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:55.872Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:56.922Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$out='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$dir=Split-Path -Parent $out;New-Item -ItemType Directory -Force -Path $dir|Out-Null;$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$sup=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\recovery-supervisor.ps1';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Jo",
+          "session_id": "b0VZE-YM77Ydl2acg8cSpsC0"
+        }
+      },
+      {
+        "time": "2026-09-15T11:34:59.675Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$ErrorActionPreference='Stop';$out='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$dir=Split-Path -Parent $out;New-Item -ItemType Directory -Force -Path $dir|Out-Null;$root='E:\\WebMcpAcceptanceHost-1.0.0';$exe=Join-Path $root 'Coding Tools MCP.exe';$sup=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\recovery-supervisor.ps1';$mf=Join-Path $env:APPDATA 'web-mcp-assistant\\recovery-supervisor\\manifest.json';$st=Jo",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:01.202Z",
+        "event": "command_started",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$x=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json;if($x.schema_version-ne1-or$x.sample_id-ne'c01-m02-machine-a-restart-1'-or$x.problem_id-ne'prl-22e670302757c9b7663170e226ed7c26'-or$x.coldstart_checkpoint-ne'6fb3de41a26349f5995a6a2bd92d82f2'-or$x.manifest.mode-ne'packaged'-or$x.manifest.executable_sha256-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'-",
+          "session_id": "ssVZr_90g9OoqFt9kE1a9gbc"
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:03.034Z",
+        "event": "command_finished",
+        "details": {
+          "command": "powershell -NoProfile -NonInteractive -Command \"$p='.coding-tools\\reboot-acceptance\\c01-m02-machine-a-restart-1-pre.json';$x=Get-Content -LiteralPath $p -Raw|ConvertFrom-Json;if($x.schema_version-ne1-or$x.sample_id-ne'c01-m02-machine-a-restart-1'-or$x.problem_id-ne'prl-22e670302757c9b7663170e226ed7c26'-or$x.coldstart_checkpoint-ne'6fb3de41a26349f5995a6a2bd92d82f2'-or$x.manifest.mode-ne'packaged'-or$x.manifest.executable_sha256-ne'cf9235c1398d009762e9de5b25588e7fa85347a075ff6f18f2c4a5712558827c'-",
+          "status": "passed"
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:03.425Z",
+        "event": "task_updated",
+        "details": {
+          "fields": [
+            "current_step",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:03.432Z",
+        "event": "continuous_workflow_completed",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "status",
+            "steps"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:04.291Z",
+        "event": "awaiting_final_acceptance",
+        "details": {
+          "state": "ACCEPTING"
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:04.295Z",
+        "event": "final_acceptance_required",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:04.487Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "PENDING_FINAL_ACCEPTANCE",
+          "report_id": "a0443438e959a92f6bcb79a4b8ad1086de4928d7542dc5e38eae289a24ab2029"
+        }
+      },
+      {
+        "time": "2026-09-15T11:35:04.629Z",
+        "event": "files_modified",
+        "details": {
+          "count": 0
+        }
+      },
+      {
+        "time": "2026-09-15T11:36:05.142Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:36:08.363Z",
+        "event": "final_acceptance_recorded",
+        "details": {
+          "state": "CHECKPOINTED"
+        }
+      },
+      {
+        "time": "2026-09-15T11:36:08.366Z",
+        "event": "task_accepted",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:36:08.550Z",
+        "event": "command_completion_report_required",
+        "details": {
+          "command_id": "",
+          "accepted_or_not": "ACCEPTED",
+          "report_id": "2767b004d5b1c34c51e8ac96e1fbc2c13ddee0daca3693eab1b4432c06ab5d94"
+        }
+      },
+      {
+        "time": "2026-09-15T11:36:20.257Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      },
+      {
+        "time": "2026-09-15T11:37:00.186Z",
+        "event": "operator_completion_report_acknowledged",
+        "details": {
+          "report_id": "2767b004d5b1c34c51e8ac96e1fbc2c13ddee0daca3693eab1b4432c06ab5d94"
+        }
+      },
+      {
+        "time": "2026-09-15T11:37:29.784Z",
+        "event": "orchestration_projection_reconciled",
+        "details": {
+          "fields": [
+            "current_step",
+            "failure",
+            "next_step",
+            "orchestration",
+            "status"
+          ]
+        }
+      }
+    ],
+    "archived_at": "2026-09-15T11:37:30.243Z",
+    "archive_reason": "finished"
+  }
+]
