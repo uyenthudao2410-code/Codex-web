@@ -1,0 +1,13 @@
+[Unit]
+Description=Create a verified Coding Tools control-plane SQLite backup
+After=codex-control-plane.service
+Wants=codex-control-plane.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/svhome/DEV/Codex-web
+ExecStart=/usr/bin/bash /home/svhome/DEV/Codex-web/scripts/control-plane-backup.sh
+TimeoutStartSec=5min
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true

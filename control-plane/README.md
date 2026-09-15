@@ -186,6 +186,25 @@ The detailed recovery/retention/drill contract is
 It deliberately distinguishes an isolated drill, a production restore, node
 reconciliation, and admission reopen; the runbook does not grant any of them.
 
+### Ubuntu automatic backup profile
+
+For the single-owner Ubuntu pilot, the supplied
+`deploy/codex-control-plane-backup.service.example` and `.timer.example` run a
+verified SQLite Backup API snapshot **hourly**, with a randomized delay of up
+to five minutes. `Persistent=true` makes a missed timer eligible on the next
+user-manager start. The job refuses to run below **5 GiB** free space, writes
+only owner-readable artifacts under the control-plane state directory, and
+retains only its own automatic snapshots for **30 days**. It never prunes a
+manual/pre-migration/recovery snapshot or any repository evidence.
+
+Install the two user units only after confirming the deployment's selected
+paths, then run one job explicitly and inspect its content-free receipt before
+enabling the timer. The job's `last-automatic-backup.json` records the snapshot
+and immutable-inspection receipts plus free space at capture. This backup does
+not encrypt files by itself, prove off-host durability, perform restore, or
+authorize admission reopening; retain the operational encryption and restore
+requirements in the recovery runbook.
+
 Before an operator considers a separately authorized restore, inspect the
 completed snapshot by its receipt fingerprint:
 

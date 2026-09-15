@@ -8,6 +8,59 @@ Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển kha
 
 ## Checkpoint hiện hành sau delivery local/GitHub
 
+### Checkpoint triển khai Ubuntu trực tiếp — 15-09-2026, 19:01–19:10 +07:00
+
+Checkpoint này thay thế riêng các quan sát cũ nói rằng endpoint Ubuntu không
+thể chứng minh package/schema hiện hành. Nó không thay thế các gate Windows,
+client hoặc outcome bên dưới.
+
+- **Source/delivery:** `main` đã delivery/push ở
+  `000938f401b6d6605b0b94474cbc87b5171c2909`; patch
+  `3f1bd8a` sửa contract identity của bridge: result action hiện dùng
+  `process_instance_id` / `server_instance_id` thống nhất từ Runtime
+  Orchestrator qua Recovery Host tới node wrapper. Focused bridge `5/5` và
+  Recovery Host `37/37` PASS trước delivery. GitHub nhận ledger evidence theo
+  retention invariant và cảnh báo size khoảng 93 MB; không chuyển LFS hoặc bỏ
+  evidence khỏi Git.
+- **Ubuntu service:** user unit `codex-control-plane.service` enabled, với
+  `Linger=yes`, đang chạy sau restart có kiểm soát lúc 19:01 +07, bind riêng
+  `100.116.112.22:8765` trong Tailnet, `Restart=on-failure`,
+  `NoNewPrivileges=yes`, `PrivateTmp=yes`. Environment owner-only đã pin
+  declared source revision và exact expected package fingerprint. GET-only
+  deployment verifier PASS: SQLite integrity `ok`, schema `7`, durable
+  admission `open`, process instance hợp lệ, fingerprint actual/expected cùng
+  `sha256:3f247e44c1b25658eb3bad2af313d13c7ec73ac250569e93a77463ba8aef64a9`.
+  Một curl ngay sau restart đã thấy socket chưa bind; verifier ngay sau đó và
+  readback socket/health PASS, nên được phân loại startup transient đã giải
+  quyết, không phải success giả.
+- **Backup/retention:** đã tạo snapshot pre-migration schema-0, verified và
+  immutable-inspected (SHA-256 `dae6fec1…d25e885`), trước migration. Profile
+  automatic backup giờ chạy hourly với `Persistent=true`, jitter tối đa 5 phút,
+  ngưỡng 5 GiB, owner-only storage và retention 30 ngày chỉ cho snapshot do
+  job tạo. First live backup schema-7 đã PASS integrity/inspection, artifact
+  hash `5fe01654…ad4ee0d`, admission `open`, unresolved actions `0`. Timer
+  `codex-control-plane-backup.timer` enabled; service không restart và không
+  contact node. Đây là backup local có ACL, **không** phải encrypted/off-host
+  backup hoặc restore drill. Root filesystem quan sát là ext4 trực tiếp;
+  at-rest encryption không được suy ra.
+- **Deployment hygiene:** timer `codex-autopull.timer` đã disable. Nó từng
+  `git pull` mỗi phút, va Git index trong delivery và có thể làm checkout mới
+  nhưng service chưa reload. Không còn automatic source drift; future update
+  phải đi qua snapshot → delivery → fingerprint pin → controlled restart.
+- **Node/canary boundary:** Tailnet thấy node Windows `DaoChienThang` online
+  (direct), nhưng central record hiện stale/degraded hơn 16 giờ, mcp server
+  identity absent và chưa có binding/context/request/action/receipt. WinRM
+  có mở nhưng yêu cầu Negotiate; Ubuntu không có credential/Kerberos session
+  hay SSH listener hợp lệ. Không đoán password, không tạo binding từ identity
+  cũ, không provision policy, không gọi bridge/canary hoặc mutation.
+
+**Gate còn lại:** cần một kênh quản trị Windows được xác thực để lấy strict
+current-process discovery/identity, chạy runtime-heartbeat, rồi tạo binding và
+policy v2 có expiry trên exact target trước một `poll-read-only-once` canary.
+Sau P1d mới xét mutation P2. P3 vẫn cần encryption/off-host backup arrangement,
+isolated restore/full-disk drill, reconnect/fault proof và soak; P4/C/W/U/O
+không tự được mở.
+
 Checkpoint này là trạng thái vận hành mới nhất và **ghi đè các mô tả “uncommitted”, MCP revision mismatch hoặc P0 degraded trong phần chronology bên dưới**. Các đoạn cũ vẫn được giữ nguyên để bảo toàn bằng chứng thời điểm quan sát.
 
 - **Git/source delivery:** payload control-plane/Electron/MCP/recovery/test và delivery snapshot được commit qua `745d839`, `cb788b9`, `50993da` rồi fetch lại từ `origin/main` với divergence `0 0`. Đây chứng minh payload bytes đã được delivery lên GitHub, không chứng minh Ubuntu đã pull/load chúng; checkpoint này có thể thuộc một follow-up documentation delivery riêng.
