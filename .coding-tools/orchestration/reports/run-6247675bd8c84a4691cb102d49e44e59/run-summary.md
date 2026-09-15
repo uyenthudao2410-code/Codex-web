@@ -44,7 +44,7 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `44`
-- Chain head: `4cdbba054250fff1fe2e6ba37ff22f7f45f6fac22c9bc06eb68a8667d9955959`
+- Events checked: `45`
+- Chain head: `c38e61b8770d847f78fee27b590b03abae062083822e0334edac680170151c03`
 
 > This file is generated from the append-only orchestration ledger. Do not hand-maintain it as a second source of truth.

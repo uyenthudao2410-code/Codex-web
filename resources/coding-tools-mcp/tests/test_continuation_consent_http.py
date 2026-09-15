@@ -22,6 +22,13 @@ from coding_tools_mcp.run_continuation import RunContinuationMixin
 from coding_tools_mcp.server import Runtime
 
 
+class ApprovalFailure(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
 def policy(*, run_id: str = "run-test", wave_id: str = "wave-test") -> dict[str, object]:
     return {
         "schema_version": 1,
@@ -162,6 +169,40 @@ class ContinuationConsentHTTPTests(unittest.TestCase):
         )
         self.assertEqual(status, 403)
         self.assertEqual(body["code"], "LOCAL_APPROVAL_REQUIRED")
+
+    def test_terminal_controller_drift_consumes_reviewed_challenge(self) -> None:
+        self.runtime._run_continuation_approve_http_challenge = Mock(
+            side_effect=ApprovalFailure("GOAL_CONTROLLER_FENCE_STALE", "This controller endpoint is fenced from the durable Goal")
+        )
+        issued = issue(self.runtime.run_continuation_consent_challenges, now_ms=int(time.time() * 1000))
+        token = str(issued["token"])
+        status, body = self._post({"action": "approve", "token": token})
+        self.assertEqual(status, 409)
+        self.assertEqual(body["code"], "GOAL_CONTROLLER_FENCE_STALE")
+        self.assertTrue(body["terminal"])
+        self.assertFalse(body["retryable"])
+        replay_status, replay = self._post({"action": "approve", "token": token})
+        self.assertEqual(replay_status, 409)
+        self.assertEqual(replay["code"], "CHALLENGE_MISSING_EXPIRED_OR_CONSUMED")
+        with urllib.request.urlopen(self.base + CONTINUATION_CONSENT_HTTP_PATH, timeout=5) as response:
+            self.assertIn("request a fresh authorization challenge", response.read().decode("utf-8").lower())
+
+    def test_transient_finalization_failure_keeps_challenge_retryable(self) -> None:
+        self.runtime._run_continuation_approve_http_challenge = Mock(
+            side_effect=[
+                ApprovalFailure("RUN_CONTINUATION_APPROVAL_FAILED", "Temporary finalization failure"),
+                {"run_id": "run-test", "status": "PROPOSING", "grant_status": "GRANTED"},
+            ]
+        )
+        issued = issue(self.runtime.run_continuation_consent_challenges, now_ms=int(time.time() * 1000))
+        token = str(issued["token"])
+        first_status, first = self._post({"action": "approve", "token": token})
+        self.assertEqual(first_status, 409)
+        self.assertFalse(first["terminal"])
+        self.assertTrue(first["retryable"])
+        retry_status, retry = self._post({"action": "approve", "token": token})
+        self.assertEqual(retry_status, 200)
+        self.assertEqual(retry["status"], "PROPOSING")
 
 
 class ContinuationConsentFinalizationTests(unittest.TestCase):

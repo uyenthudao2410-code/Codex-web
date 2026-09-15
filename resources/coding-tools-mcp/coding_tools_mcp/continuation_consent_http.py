@@ -24,6 +24,15 @@ CONTINUATION_CONSENT_HTTP_PATH = "/__control/continuation-consent"
 CONTINUATION_CONSENT_CHALLENGE_TTL_MS = 120_000
 MAX_CONTINUATION_CONSENT_CHALLENGES = 32
 _MAX_HTTP_BODY_BYTES = 4096
+_TERMINAL_APPROVAL_FAILURE_CODES = frozenset(
+    {
+        "GOAL_CONTROLLER_FENCE_STALE",
+        "GOAL_CONTROLLER_GENERATION_STALE",
+        "GOAL_CONTROLLER_REVISION_REATTACH_REQUIRED",
+        "RUN_CONTINUATION_CONTROLLER_CHANGED",
+        "RUN_CONTINUATION_WAVE_STALE",
+    }
+)
 
 
 def _canonical_json(value: Any) -> str:
@@ -268,10 +277,17 @@ class ContinuationConsentHTTPMixin:
         try:
             result = runtime._run_continuation_approve_http_challenge(approved)
         except Exception as exc:  # Runtime converts known failures below; never expose internals.
-            store.release(approved)
             code = str(getattr(exc, "code", "RUN_CONTINUATION_APPROVAL_FAILED"))
             message = str(getattr(exc, "message", "The continuation approval could not be finalized."))
-            self._send_consent_json({"ok": False, "code": code, "message": message}, status=409)
+            terminal = code in _TERMINAL_APPROVAL_FAILURE_CODES
+            if terminal:
+                store.consume(approved)
+            else:
+                store.release(approved)
+            self._send_consent_json(
+                {"ok": False, "code": code, "message": message, "terminal": terminal, "retryable": not terminal},
+                status=409,
+            )
             return
         store.consume(approved)
         self._send_consent_json({"ok": True, **result})
@@ -290,7 +306,7 @@ button{font:inherit;font-weight:650;padding:10px 16px;border:0;border-radius:8px
 <pre id="terms">Loading exact terms…</pre><button id="approve" disabled>Authorize and start</button><p id="status"></p>
 </main><script>
 let token=location.hash.slice(1);history.replaceState(null,'',location.pathname);const terms=document.getElementById('terms');const button=document.getElementById('approve');const status=document.getElementById('status');
-async function call(action){const response=await fetch(location.pathname,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token}),cache:'no-store'});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.message||data.code||'Approval failed');return data}
+async function call(action){const response=await fetch(location.pathname,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,token}),cache:'no-store'});const data=await response.json();if(!response.ok||!data.ok){const error=new Error(data.message||data.code||'Approval failed');error.terminal=!!data.terminal;throw error}return data}
 (async()=>{try{if(!token)throw new Error('Missing one-shot approval token');const data=await call('preview');terms.textContent=JSON.stringify(data.descriptor,null,2);button.disabled=false}catch(error){terms.textContent='';status.className='error';status.textContent=error.message}})();
-button.addEventListener('click',async()=>{button.disabled=true;status.textContent='Finalizing exact grant and starting the MCP-owned driver…';try{const data=await call('approve');token='';status.className='success';status.textContent=data.status==='PROPOSING'?'Authorized and started. You may close this page and the chat; final acceptance will still require the controller.':'Authorized. '+(data.message||data.status||'');}catch(error){button.disabled=false;status.className='error';status.textContent=error.message}});
+button.addEventListener('click',async()=>{button.disabled=true;status.textContent='Finalizing exact grant and starting the MCP-owned driver…';try{const data=await call('approve');token='';status.className='success';status.textContent=data.status==='PROPOSING'?'Authorized and started. You may close this page and the chat; final acceptance will still require the controller.':'Authorized. '+(data.message||data.status||'');}catch(error){status.className='error';if(error.terminal){token='';status.textContent=error.message+' This approval is stale; request a fresh authorization challenge.'}else{button.disabled=false;status.textContent=error.message}}});
 </script></body></html>"""

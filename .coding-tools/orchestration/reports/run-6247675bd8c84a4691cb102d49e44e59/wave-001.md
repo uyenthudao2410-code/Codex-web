@@ -66,6 +66,7 @@
 | 59631 | 2026-09-15T11:03:43.584Z | failure_observed | PROVING | PROVING | failure_class=CHECK_FAILED |
 | 59632 | 2026-09-15T11:03:43.914Z | state_transition | PROVING | REPLAN | reason=CHECK_FAILED; failure_class=CHECK_FAILED |
 | 59633 | 2026-09-15T11:03:44.228Z | wave_processes_quiesced |  |  | reason=orchestration_state:replan |
+| 59636 | 2026-09-15T11:04:15.835Z | continuity_telemetry_recorded |  |  |  |
 
 ## Proof
 
@@ -86,5 +87,5 @@
 ## Audit integrity
 
 - Hash chain valid: **True**
-- Events checked: `44`
-- Chain head: `4cdbba054250fff1fe2e6ba37ff22f7f45f6fac22c9bc06eb68a8667d9955959`
+- Events checked: `45`
+- Chain head: `c38e61b8770d847f78fee27b590b03abae062083822e0334edac680170151c03`
