@@ -22,8 +22,11 @@ Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển kha
   `ok` và zero unresolved action. Đây là scheduled run, không phải manual
   invocation, restart service hoặc node contact.
 - Persistent journal còn giữ các healthcheck scheduled PASS lúc 19:38 và
-  19:54 +07; backup directory mode `0700`, artifact/receipt mode `0600`.
-  Timer backup tiếp theo được systemd lên lịch sau một giờ.
+  19:54 +07. Healthcheck scheduled tiếp theo lúc 20:10 +07 cũng PASS sau
+  automatic snapshot mới, xác nhận cycle backup → freshness check → exact
+  deployment verifier không restart service hoặc contact node. Backup directory
+  mode `0700`, artifact/receipt mode `0600`; timer backup tiếp theo được
+  systemd lên lịch sau một giờ.
 
 **Acceptance đang chạy:** sau tối thiểu 24 giờ từ baseline, đối chiếu journal
 và receipts với service instance/restart count, timer cadence, fresh verified
