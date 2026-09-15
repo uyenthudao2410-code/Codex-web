@@ -1,12 +1,35 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–19:53 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:02 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
 
 ## Checkpoint hiện hành sau delivery local/GitHub
+
+### Baseline 24-hour operational soak — bắt đầu 15-09-2026, 20:02 +07:00
+
+Đây là mốc bắt đầu observation window, không phải claim soak đã hoàn tất.
+
+- User service production đã active từ 19:01:53 +07, giữ cùng process instance,
+  PID và `NRestarts=0` qua deployment, restore drill và SQLite-busy drill.
+  Verifier production tại baseline tiếp tục PASS exact package fingerprint,
+  schema `7`, SQLite `ok` và admission `open`.
+- Hourly timer đã tự kích hoạt backup lúc 20:01:59 +07. Job kết thúc success
+  lúc 20:02, tạo snapshot/inspection receipt owner-only mới; snapshot hash
+  giữ `5fe01654…ad4ee0d` vì durable state không đổi, với schema `7`, integrity
+  `ok` và zero unresolved action. Đây là scheduled run, không phải manual
+  invocation, restart service hoặc node contact.
+- Persistent journal còn giữ các healthcheck scheduled PASS lúc 19:38 và
+  19:54 +07; backup directory mode `0700`, artifact/receipt mode `0600`.
+  Timer backup tiếp theo được systemd lên lịch sau một giờ.
+
+**Acceptance đang chạy:** sau tối thiểu 24 giờ từ baseline, đối chiếu journal
+và receipts với service instance/restart count, timer cadence, fresh verified
+backup và health verifier. Bất kỳ restart, missing timer run, stale backup,
+recovery admission hoặc package mismatch nào sẽ dừng claim soak và được
+phân loại trước khi tiếp tục.
 
 ### Checkpoint isolated SQLite-busy fault drill — 15-09-2026, 19:45–19:53 +07:00
 
