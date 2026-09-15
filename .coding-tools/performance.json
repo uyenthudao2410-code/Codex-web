@@ -1,6 +1,6 @@
 {
   "version": 6,
-  "tool_calls": 2,
+  "tool_calls": 3,
   "errors": 0,
   "cache_hits": 0,
   "deduplicated_calls": 0,
@@ -24,7 +24,7 @@
   "proof_cache_misses": 0,
   "proof_cache_miss_reasons": {},
   "proof_cache_saved_ms": 0,
-  "local_execution_ms": 734,
+  "local_execution_ms": 1094,
   "estimated_wait_ms": 118796,
   "request_bytes": 78,
   "response_bytes": 4304,
@@ -47,11 +47,66 @@
   "result_continuation_reads": 0,
   "result_continuation_rereads": 0,
   "result_continuation_stale": 0,
-  "execution_mode_counts": {},
-  "route_resolved_counts": {},
-  "orchestration_state_counts": {},
-  "run_metrics": {},
-  "last_finished_at": "2026-09-14T14:38:34.894Z",
+  "execution_mode_counts": {
+    "deep_single_lane": 1
+  },
+  "route_resolved_counts": {
+    "sol_xhigh": 1
+  },
+  "orchestration_state_counts": {
+    "CHECKPOINTED": 1
+  },
+  "run_metrics": {
+    "234713daf77f427ca486a7044fefd204": {
+      "tool_calls": 1,
+      "errors": 0,
+      "local_execution_ms": 360,
+      "estimated_wait_ms": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "idempotency_eligible_calls": 0,
+      "idempotency_eligible_key_calls": 0,
+      "idempotency_required_calls": 0,
+      "idempotency_required_key_calls": 0,
+      "idempotency_optional_calls": 0,
+      "idempotency_optional_key_calls": 0,
+      "idempotency_auto_key_calls": 0,
+      "error_class_counts": {},
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "phase_timing_samples": 0,
+      "phase_timing_ms": {},
+      "localization_samples": 0,
+      "localization_queries": 0,
+      "lsp_available_samples": 0,
+      "lsp_attempted_queries": 0,
+      "lsp_handled_queries": 0,
+      "fallback_search_queries": 0,
+      "result_tail_samples": 0,
+      "result_tail_source_bytes": 0,
+      "result_tail_page_bytes": 0,
+      "result_tail_remaining_bytes": 0,
+      "result_truncated_calls": 0,
+      "result_continuation_offered": 0,
+      "result_continuation_reads": 0,
+      "result_continuation_rereads": 0,
+      "result_continuation_stale": 0,
+      "execution_mode_counts": {
+        "deep_single_lane": 1
+      },
+      "route_resolved_counts": {
+        "sol_xhigh": 1
+      },
+      "first_started_at": "2026-09-14T19:48:58.745Z",
+      "last_finished_at": "2026-09-14T19:48:59.097Z"
+    }
+  },
+  "last_finished_at": "2026-09-14T19:48:59.097Z",
   "recent": [
     {
       "tool": "workspace_context",
@@ -156,6 +211,48 @@
       "phase_timing": {},
       "localization": {},
       "result_tail": {}
+    },
+    {
+      "tool": "workspace_preheat",
+      "started_at": "2026-09-14T19:48:58.745Z",
+      "finished_at": "2026-09-14T19:48:59.097Z",
+      "wall_time_source": "operation_boundary",
+      "duration_ms": 360,
+      "wait_before_ms": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "invocation": {},
+      "outcome": {
+        "status": "ok"
+      },
+      "truncated": false,
+      "cache_hit": false,
+      "deduplicated": false,
+      "idempotency_eligible": false,
+      "idempotency_key_present": false,
+      "idempotency_policy": "none",
+      "idempotency_key_source": "none",
+      "idempotency_operation": "workspace_preheat",
+      "idempotency_missing_reason": "",
+      "error_class": "",
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "ok": true,
+      "run_id": "234713daf77f427ca486a7044fefd204",
+      "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d",
+      "delegation_id": "1835a28961e94b9b975e26ba3133ebb2",
+      "execution_mode": "deep_single_lane",
+      "route_requested": "sol_xhigh",
+      "route_resolved": "sol_xhigh",
+      "orchestration_state": "CHECKPOINTED",
+      "phase_timing": {},
+      "localization": {},
+      "result_tail": {}
     }
   ],
   "hourly_metrics": {
@@ -171,6 +268,19 @@
       "local_execution_ms": 734,
       "estimated_wait_ms": 118796,
       "last_finished_at": "2026-09-14T14:38:34.894Z"
+    },
+    "497059": {
+      "hour": 497059,
+      "tool_calls": 1,
+      "errors": 0,
+      "cache_hits": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "local_execution_ms": 360,
+      "estimated_wait_ms": 0,
+      "last_finished_at": "2026-09-14T19:48:59.097Z"
     }
   }
 }
