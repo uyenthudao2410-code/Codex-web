@@ -1,12 +1,48 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–18:00 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–19:38 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
 
 ## Checkpoint hiện hành sau delivery local/GitHub
+
+### Checkpoint isolated restore drill — 15-09-2026, 19:32–19:37 +07:00
+
+Checkpoint này bổ sung bằng chứng P3 hẹp cho một **isolated drill**; nó không
+phải production restore, quyền reopen admission, proof node effect hay
+nghiệm thu 24/7.
+
+- Snapshot automatic schema-7 được immutable-inspect trước khi dùng: integrity
+  `ok`, SHA-256 `5fe01654…ad4ee0d`, admission nguồn `open`, không có delivery
+  state hoặc unresolved action. Từ đó tạo một SQLite candidate mới, không đè
+  production, với durable admission `recovery`, integrity `ok`, schema `7` và
+  zero unresolved action. Artifact drill và thư mục chứa nó là owner-only
+  (lần lượt mode `0600`/`0700`).
+- Một transient user service riêng khởi động candidate trên đúng loopback
+  `127.0.0.1:18765`, với token ngẫu nhiên chỉ cho scope drill, package
+  fingerprint được pin. GET-only verifier PASS: schema `7`, SQLite `ok`,
+  admission `recovery`, fingerprint actual/expected cùng
+  `sha256:3f247e44c1b25658eb3bad2af313d13c7ec73ac250569e93a77463ba8aef64a9`.
+  Health chỉ quan sát node/enrollment đã có và các nhóm
+  binding/context/request/action/receipt/intent đều `0`; không gọi node,
+  không tạo binding/policy/action và không dùng credential production.
+- Candidate được inspect lại sau khi service dừng: schema/integrity/admission
+  và delivery counts vẫn đúng (`recovery`, zero unresolved). Byte hash của
+  candidate sau lifecycle khác receipt lúc tạo candidate, nên không được suy
+  là byte-identical restore artifact. Khác biệt byte này được ghi nhận thay vì
+  che giấu; bằng chứng drill được giới hạn ở semantic state và source snapshot
+  hash.
+- Unit drill đã được stop có chủ đích (`inactive/dead`, PID `0`), port `18765`
+  không còn listener. Production không restart: `codex-control-plane.service`
+  vẫn active cùng PID, `NRestarts=0`; verifier production sau drill vẫn PASS
+  với admission `open`, schema `7`, integrity `ok` và exact fingerprint.
+
+**P3 còn lại:** chưa có storage encryption hay bản sao off-host; chưa có
+full-disk/SQLite-busy fault injection cô lập, production restore/reconciliation,
+node reconnect/fault proof hoặc soak. Do đó chỉ đánh dấu isolated restore
+drill là PASS, không đánh dấu P3 hoàn tất.
 
 ### Checkpoint triển khai Ubuntu trực tiếp — 15-09-2026, 19:01–19:10 +07:00
 
@@ -41,11 +77,12 @@ client hoặc outcome bên dưới.
   hash `5fe01654…ad4ee0d`, admission `open`, unresolved actions `0`. Timer
   `codex-control-plane-backup.timer` enabled; service không restart và không
   contact node. Đây là backup local có ACL, **không** phải encrypted/off-host
-  backup hoặc restore drill. Root filesystem quan sát là ext4 trực tiếp;
-  at-rest encryption không được suy ra. Companion healthcheck 15 phút cũng
-  enabled; first check PASS exact package/schema/instance/admission và tuổi
-  backup 759 giây. Nó chỉ ghi receipt content-free; recovery, backup stale
-  hoặc package gate sai sẽ fail journal thay vì tự restart/reopen.
+  backup; isolated restore drill được ghi riêng ở checkpoint mới hơn. Root
+  filesystem quan sát là ext4 trực tiếp; at-rest encryption không được suy ra.
+  Companion healthcheck 15 phút cũng enabled; first check PASS exact
+  package/schema/instance/admission và tuổi backup 759 giây. Lần scheduled
+  sau drill lúc 19:38 cũng PASS. Nó chỉ ghi receipt content-free; recovery,
+  backup stale hoặc package gate sai sẽ fail journal thay vì tự restart/reopen.
 - **Deployment hygiene:** timer `codex-autopull.timer` đã disable. Nó từng
   `git pull` mỗi phút, va Git index trong delivery và có thể làm checkout mới
   nhưng service chưa reload. Không còn automatic source drift; future update
@@ -61,7 +98,7 @@ client hoặc outcome bên dưới.
 current-process discovery/identity, chạy runtime-heartbeat, rồi tạo binding và
 policy v2 có expiry trên exact target trước một `poll-read-only-once` canary.
 Sau P1d mới xét mutation P2. P3 vẫn cần encryption/off-host backup arrangement,
-isolated restore/full-disk drill, reconnect/fault proof và soak; P4/C/W/U/O
+full-disk drill, reconnect/fault proof và soak; P4/C/W/U/O
 không tự được mở.
 
 Checkpoint này là trạng thái vận hành mới nhất và **ghi đè các mô tả “uncommitted”, MCP revision mismatch hoặc P0 degraded trong phần chronology bên dưới**. Các đoạn cũ vẫn được giữ nguyên để bảo toàn bằng chứng thời điểm quan sát.
