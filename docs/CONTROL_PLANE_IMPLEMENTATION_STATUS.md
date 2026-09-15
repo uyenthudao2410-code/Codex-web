@@ -1,12 +1,44 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–19:38 +07:00 (Asia/Ho_Chi_Minh)
+**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–19:53 +07:00 (Asia/Ho_Chi_Minh)
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
 Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
 
 ## Checkpoint hiện hành sau delivery local/GitHub
+
+### Checkpoint isolated SQLite-busy fault drill — 15-09-2026, 19:45–19:53 +07:00
+
+Checkpoint này là evidence T14/P3 giới hạn cho contention SQLite thật trên
+fixture cô lập; nó không phải full-disk test, production fault, node effect hay
+quyền mở execution.
+
+- Fixture database owner-only riêng có một node/binding/context synthetic, ba
+  event bootstrap và zero `work_requests`, `actions`, `mcp_read_only_intents`.
+  Nó không dùng DB, token hay node policy production. Service fixture chỉ bind
+  loopback và pin exact package fingerprint.
+- Một transient lock-holder riêng đã lấy SQLite `BEGIN EXCLUSIVE`. Trong khi
+  lock còn giữ, request operator-authenticated `/mcp` hợp lệ cho fixed
+  `workspace_context(request_read_only)` nhận đúng HTTP `503`, error code
+  `DURABLE_STORAGE_UNAVAILABLE` với response content-free. Đây là failure ở
+  đường HTTP/SQLite thật, không phải mock.
+- Sau release lock, verifier của service fixture PASS: schema `7`, SQLite `ok`,
+  admission `open`, instance hợp lệ và fingerprint actual/expected khớp.
+  Readback fixture giữ event count `3` và vẫn zero work request/action/read-only
+  intent; vì vậy failed intake không có durable partial state để dispatch.
+- Lock-holder và service fixture đều đã stop (`inactive/dead`, PID `0`); port
+  loopback drill không còn listener. Production không restart và vẫn verifier
+  PASS, active cùng PID, `NRestarts=0`. Clock host có NTP synchronization và
+  monotonic-clock check bình thường; không ghi thời lượng fault từ timestamp
+  wall-clock định dạng sai.
+
+**T14/P3 còn lại:** chưa có full-disk test cô lập, off-host/encrypted backup,
+production restore/reconciliation, node reconnect/fault proof hoặc soak. Hiện
+`/home` và state storage cùng một ext4 local; không quan sát được backup client
+hay cấu hình remote đã sẵn sàng, nên không tự chọn đích/off-host key scheme.
+Fault drill này chứng minh fail-closed durable intake dưới SQLite contention,
+không đóng toàn bộ P3.
 
 ### Checkpoint isolated restore drill — 15-09-2026, 19:32–19:37 +07:00
 
@@ -39,10 +71,10 @@ nghiệm thu 24/7.
   vẫn active cùng PID, `NRestarts=0`; verifier production sau drill vẫn PASS
   với admission `open`, schema `7`, integrity `ok` và exact fingerprint.
 
-**P3 còn lại:** chưa có storage encryption hay bản sao off-host; chưa có
-full-disk/SQLite-busy fault injection cô lập, production restore/reconciliation,
-node reconnect/fault proof hoặc soak. Do đó chỉ đánh dấu isolated restore
-drill là PASS, không đánh dấu P3 hoàn tất.
+**P3 còn lại:** chưa có storage encryption hay bản sao off-host; fault drill
+SQLite-busy được ghi riêng ở checkpoint mới hơn, nhưng full-disk test cô lập,
+production restore/reconciliation, node reconnect/fault proof hoặc soak vẫn
+chưa có. Do đó isolated restore drill không đánh dấu P3 hoàn tất.
 
 ### Checkpoint triển khai Ubuntu trực tiếp — 15-09-2026, 19:01–19:10 +07:00
 
