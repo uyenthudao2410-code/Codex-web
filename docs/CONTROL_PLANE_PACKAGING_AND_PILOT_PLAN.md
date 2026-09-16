@@ -16,9 +16,10 @@ transfer Git bundle có kiểm tra hash, Windows candidate `main@e0b5bbd…` đ�
 focused package verifier `8/8`, Electron Builder NSIS thành công và packaged
 Recovery smoke thành công. Installer có SHA-256 được ghi bên dưới nhưng trạng
 thái Authenticode là `NotSigned`, nên không được cài lên office node. Ubuntu
-vẫn chạy revision/schema cũ; SSH deploy bị từ chối public-key, vì thế chưa
-restart Ubuntu/Windows, chưa mở ingress, chưa gửi dữ liệu ra ngoài hay publish
-release. W4–W8 và RC-A/RC-B vẫn chưa đạt; W3 chỉ được đóng sau evidence
+artifact versioned source đã build có manifest/hash, nhưng service vẫn chạy
+revision/schema cũ; SSH deploy bị từ chối public-key, vì thế chưa restart
+Ubuntu/Windows, chưa mở ingress, chưa gửi dữ liệu ra ngoài hay publish release.
+W4–W8 và RC-A/RC-B vẫn chưa đạt; W3 chỉ được đóng sau evidence
 HTTPS/browser thật và telemetry/local-observation contract. Phải xác nhận lại
 target, quyền thao tác và trạng thái đang chạy trước effect thật.
 
@@ -499,6 +500,19 @@ effect thật.
   policy/client cần được cập nhật đồng bộ, không giả tương thích.
 
 ### W5 — Đóng gói hai artifact và triển khai có kiểm soát
+
+**Source/package proof hiện có (chưa deploy):** `npm run dist:control-plane`
+tại `main@635d582…` tạo versioned release directory và archive Ubuntu,
+schema `8`, package fingerprint
+`sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`,
+archive SHA-256 `f368662f4d03588f14f5aa09bd4dabb1a018053cb04bdbfff1a1c9e63b6b270f`.
+Artifact chỉ gồm allowlist backend/UI embedded, deployment templates/launchers,
+environment example, migration/backup/rollback guide và manifest file/component
+hashes. Nó không có DB, `.coding-tools`, token, node credential, session hoặc
+environment thật; templates chạy qua symlink `current` tới release immutable,
+không qua Git checkout. Đây là package preparation proof, không phải health,
+systemd ownership, activation, rollback, HTTPS/browser, node, canary hay
+production proof.
 
 **Gói Ubuntu:** backend + Web UI assets + systemd/unit/timer templates +
 manifest phiên bản/hash + migration/backup/rollback hướng dẫn. DB/secrets ở
