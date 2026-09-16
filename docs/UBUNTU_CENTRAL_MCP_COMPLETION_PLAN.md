@@ -1026,7 +1026,7 @@ identity rõ ràng. Public release/signing certificate là quyết định riên
 
 | Tiêu chí | Bằng chứng mạnh nhất hiện có | Kết luận / gate kế tiếp |
 | --- | --- | --- |
-| Root Tunnel/MCP Ubuntu | `codex-control-plane.service` active: root MCP chỉ bind loopback `127.0.0.1:8766` (anonymous POST `403`), Tailnet Console `:8765/mcp` trả `404`; `tunnel-client v0.0.14` Linux đã verify checksum và cài private, nhưng profile/Tunnel ID chưa có | **Chưa đạt primary Tunnel**; cần Tunnel OpenAI mới/được chuyển chính thức, runtime credential local, profile HTTP tới `127.0.0.1:8766/mcp`, `doctor`, rồi client thật |
+| Root Tunnel/MCP Ubuntu | Release `6398ec1` đã live; unit Tunnel active/enabled, health+ready 200, official client bắt tay MCP gốc và polling OpenAI thành công; `/mcp` vẫn loopback/grant-scoped | **Đạt phía server/Tunnel**, chưa có discovery/tool call từ ChatGPT hoặc Responses được nghiệm thu |
 | Windows không cần key/Tunnel | Office đã handoff live sang `central_executor`; candidate source `74056b8`, `READY`, local MCP hoạt động, primary/recovery Tunnel PID null và không có tunnel-client của app | **Đạt lát cắt onboarding office**; không chứng minh controller AI, dispatch hoặc root tool parity |
 | Executor central không cloud Tunnel | Supervisor healthy, một agent PID ổn định, heartbeat authenticated liên tục; Windows `fullyReady/centralConnected/authorityReady=true`, Ubuntu báo node ready | **Live có policy metadata read-only 24h**; chưa có 24h soak hoặc fault/logon matrix |
 | Server-owned AI/controller | Chỉ có plan/contract; chưa có provider/model/budget/lease adapter | **Chưa bắt đầu**; cần quyết định provider, consent dữ liệu và budget |
@@ -1090,6 +1090,49 @@ nó chỉ probe HTTP GET/OAuth metadata, không thay thế initialize/list thậ
 
 Validation và receipt live của candidate mới được ghi sau rollout; chưa coi
 metadata lookup hoặc doctor PASS là client OpenAI đã dùng được root MCP.
+
+#### Receipt live Tunnel Ubuntu — 17-09-2026 06:31 +07
+
+- Source `main@6398ec12e4bf3db8ca7dce3329238ae8e0f1b2a7` đã push;
+  immutable release cùng revision được build/verify/copy/verify, backup trước
+  rollout thành công; schema vẫn **9**, không migrate hoặc restore DB.
+  Package fingerprint
+  `sha256:210b909303aad2f1c3f36fb8f5055939a085c9bbed9731a081d8221844cca4fc`;
+  archive SHA-256
+  `ee19ea5259eaa677133846a69a8d1012c01f7f0da76a0e49b706a34ed243a041`.
+- Control Plane restart vào release mới; healthcheck/manual backup đều success.
+  Unit `codex-control-plane-mcp-tunnel.service` được cài **enabled/active**,
+  dùng config riêng `mcp-tunnel.env`. PID ban đầu **782572**, `NRestarts=0`.
+  Runtime API key không có trong argv; worker không nhận operator token.
+- `tunnel-client health --port 8768 --pid 782572
+  --require-control-plane-poll --json` trả **ok**: process running,
+  `/healthz=200 live`, `/readyz=200 ready`, polling OpenAI có timestamp thành
+  công và tăng qua các chu kỳ. Log official client có `mcp session initialized`
+  với server `coding-tools-control-plane` và protocol `2025-11-25`.
+- Authenticated local initialize offer `2025-06-18` trả đúng version;
+  initialized notification trả **202, zero bytes**; tools/list trả đúng tám
+  tên; workspace_context/status trả metadata đúng context (không truy cập file
+  Windows). Anonymous và operator bearer đều **403** tại root MCP;
+  Tailnet listener `/mcp` vẫn **404**. Health/UI Tunnel chỉ bind loopback
+  `127.0.0.1:8768`; private Console vẫn ở Tailnet `:8765`.
+- Có một startup WARN OAuth metadata vì façade này không triển khai OAuth;
+  probe các `.well-known` trả 404. Không bỏ auth để giấu warning; liveness,
+  readiness và authenticated MCP handshake/poll đều đã kiểm riêng.
+- POST thử vào Tunnel base URL trong log trả 404: URL đó không phải đường
+  JSON-RPC cloud đã được tài liệu xác nhận. Không đoán route tiếp hoặc gọi model
+  tính phí; đây **không phải** cloud-client E2E PASS. Bước nghiệm thu kế tiếp
+  là chọn `Ubuntu-Central-MCP` trong kết nối Tunnel của ChatGPT và discovery.
+- Node office tiếp tục heartbeat `ready` (age khoảng 12 giây), policy enabled;
+  không SSH/restart/cài lại Windows trong wave này. Global admission Ubuntu
+  vẫn `recovery`; work request/action/receipt mới không được tạo.
+- Full Python lane **100/100**, launcher lane **9/9**, release-artifact lane
+  **3/3**, Bash syntax/diff/secret-delivery guards pass. Lần artifact đầu bị
+  ngưỡng backup 5 GiB chặn do `/tmp` tmpfs chỉ còn 4.78 GiB; rerun trên
+  `/home/svhome/.cache` với ổ dữ liệu đủ chỗ pass, không nới guard.
+- Grant và policy hiện cùng hết hạn **17-09-2026 22:02:44 +07**; không tự
+  gia hạn. Hết hạn làm MCP auth/Windows action admission bị chặn ngay cả khi
+  Tunnel process vẫn live. Hoàn tất các capability/controller/soak vẫn là gate
+  riêng; không gộp trạng thái `ready` của transport thành hoàn thành sản phẩm.
 
 ### Sửa lỗi handoff được người dùng tái hiện — 16-09-2026
 
