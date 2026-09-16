@@ -81,6 +81,18 @@ action, receipt và read-only intent; Tailscale chưa có Serve/Funnel config.
 Như vậy UI/package source mới **chưa** được triển khai hoặc chạy live. Không
 restart service, không đổi ingress và không thao tác Windows trong recheck này.
 
+**Cập nhật deployment thật (16-09-2026, 15:14–15:25 +07):** đoạn recheck ngay
+trước là baseline trước deploy, không còn là live state. Artifact versioned
+`codex-control-plane-2e64e9485f37cf6f94e8144797ea800a6e050545` đã được verify
+và nạp qua symlink `current`; service live qua HTTPS có schema `8`, SQLite
+`ok`, admission `recovery`, exact revision/fingerprint như manifest. Tailscale
+Serve chỉ tailnet proxy `https://svhome.tail0e4032.ts.net/` tới service; Funnel
+không được bật. UI session/CSRF/overview/logout đã có browser-path proof qua
+HTTPS, backup release PASS. Không binding/context/work/action hay contact node;
+Windows RC-A vẫn chưa được phép. Chi tiết proof và sự cố fail-closed khi
+EnvironmentFile cũ ghi đè fingerprint được ghi ở
+`CONTROL_PLANE_IMPLEMENTATION_STATUS.md`.
+
 Kế hoạch này cụ thể hóa phần đóng gói/UI/pilot của
 [kế hoạch hoàn thiện](UBUNTU_24X7_COMPLETION_PLAN.md), dùng
 [trạng thái triển khai](CONTROL_PLANE_IMPLEMENTATION_STATUS.md),

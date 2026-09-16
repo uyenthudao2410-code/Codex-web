@@ -8,6 +8,48 @@ Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển kha
 
 ## Checkpoint hiện hành sau delivery local/GitHub
 
+### Checkpoint immutable release + private HTTPS UI — 16-09-2026, 15:14–15:25 +07:00
+
+Đây là deployment thật của central service và private operator UI; nó **không**
+phải canary Windows, quyền execution hay production/autonomous acceptance.
+
+- Ubuntu `svhome` / Tailnet `100.116.112.22` chạy chính service user hiện có.
+  Candidate được extract vào release directory versioned, verifier artifact PASS
+  với `25` file, schema `8`, revision
+  `2e64e9485f37cf6f94e8144797ea800a6e050545` và package fingerprint
+  `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`.
+  `current` trỏ release bất biến; main, backup và healthcheck unit đều nạp
+  launcher/script từ release, không nạp Python/shell từ checkout.
+- Trước switch, admission được operator đóng về `recovery` và snapshot legacy
+  đã hoàn tất `Result=success`; inventory vẫn có 1 node/1 enrollment request
+  và 0 binding/context/work request/action/receipt/intent. Không contact node,
+  tạo binding hay dispatch công việc trong maintenance.
+- Tailscale Serve được owner bật và proxy **tailnet-only** HTTPS
+  `https://svhome.tail0e4032.ts.net/` tới upstream exact
+  `http://100.116.112.22:8765`; không bật Funnel/public Internet. Lần start đầu
+  fail-closed vì `EnvironmentFile` schema-7 ghi đè giá trị drop-in, tạo 502 ngắn
+  hạn. Service được dừng, nguyên nhân được xác minh, chỉ các biến không bí mật
+  (revision/fingerprint/backup/health/UI origin) được cập nhật rồi start lại;
+  không che failure và không mở admission để lấy health xanh.
+- Proof sau activation qua HTTPS: service `active/running`, SQLite integrity
+  `ok`, schema `8`, actual/protected fingerprint khớp exact và admission vẫn
+  `recovery`; GET-only deployment verifier với gate `recovery` PASS. Manual
+  invocation của backup script release PASS. Timer backup/healthcheck vẫn
+  enabled; healthcheck production cố ý yêu cầu admission `open`, nên nó không
+  được dùng làm PASS trong khi maintenance recovery còn giữ.
+- Browser-path proof thực qua HTTPS PASS: root UI, login session, overview và
+  logout; cookie có `Secure`, `HttpOnly`, `SameSite=Strict`, CSRF được yêu cầu
+  cho thao tác browser. Overview chỉ hiện central read model (1 node/1
+  enrollment, 0 binding/context/work/action); session test đã logout. Không có
+  token, DB path, receipt hoặc payload nhạy cảm trong checkpoint này.
+
+**Gate còn lại:** release/UI central đã live nhưng RC-A chưa đạt. Windows
+candidate vẫn unsigned/chưa cài production, không có strict-ready discovery,
+binding/context/policy hoặc read-only end-to-end canary. Admission phải giữ
+`recovery` cho đến khi owner cho phép pilot scope và kiểm tra node Windows mới.
+Off-host encrypted backup/key-management, restore reconciliation và 24-hour
+soak của exact deployed build cũng chưa đạt.
+
 ### Controlled production crash-restart and rebased soak — 15-09-2026, 20:24–20:26 +07:00
 
 Đây là một crash-recovery proof của central service, không phải node effect,
