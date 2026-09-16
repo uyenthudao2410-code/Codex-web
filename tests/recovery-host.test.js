@@ -1289,6 +1289,42 @@ test('Recovery Host lightweight IPC serves one fresh supervision projection with
   assert.equal(unavailable.tunnelRunning, null);
 });
 
+test('Recovery Host publishes the completed UI observation into its cached IPC projection', async (t) => {
+  const { host } = uiRecoveryFixture(t);
+  host.running = true;
+  host.orchestrator.supervise = async () => ({
+    mcpRunning: false,
+    nativeAlive: false,
+    tunnelRunning: false,
+    componentsReady: false,
+    connectorReady: false,
+    fullyReady: false
+  });
+  host.ensureRecoveryPlane = async () => null;
+  host.activation.observeUiPresence = async () => ({
+    tracked: false,
+    alive: false,
+    pid: null,
+    instance_id: null
+  });
+  host.activation.uiPresence = ({ preferCached = false } = {}) => ({
+    tracked: false,
+    alive: preferCached ? null : false,
+    pid: null,
+    instance_id: null
+  });
+  host.uiRecoveryInitialGraceUntil = 0;
+
+  await host.superviseOnce();
+
+  const status = await host.handlers()['recovery.status']();
+  const snapshot = await host.handlers()['runtime.lightweight_snapshot']();
+  assert.equal(status.electron_ui_recovery.alive, false,
+    'status must retain the exact completed UI absence observation');
+  assert.equal(snapshot.recoveryHost.electron_ui_recovery.alive, false,
+    'the lightweight cached projection must carry the same exact observation');
+});
+
 test('Recovery Host identity observation is a read-only exact MCP projection', async (t) => {
   const { host } = readyAdoptionHost(t);
   host.orchestrator.currentMcpHealth = async () => ({

@@ -1730,6 +1730,26 @@ class RecoveryHost {
     return value;
   }
 
+  recordSupervisionUiRecoveryStatus(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const projection = this.lastSupervisionProjection;
+    const recoveryHost = projection?.recoveryHost;
+    if (!projection || !recoveryHost || typeof recoveryHost !== 'object' || Array.isArray(recoveryHost)) return false;
+    // UI identity is observed after the runtime projection above.  Preserve
+    // that completed observation in the cached IPC read model so an idle
+    // handoff can require an explicit false rather than guessing from an
+    // omitted field.  This remains a supervisor-owned update: IPC reads do
+    // not perform a fresh process probe.
+    this.lastSupervisionProjection = {
+      ...projection,
+      recoveryHost: {
+        ...recoveryHost,
+        electron_ui_recovery: { ...value }
+      }
+    };
+    return true;
+  }
+
   cachedRuntimeSnapshot() {
     const observedAtUnixMs = Number(this.lastSupervisionObservedAtUnixMs || 0);
     const ageMs = observedAtUnixMs > 0 ? Math.max(0, Date.now() - observedAtUnixMs) : null;
@@ -2163,7 +2183,8 @@ class RecoveryHost {
       // coordinator performs the one required start/observation sequence.
       if (!admissionBlocked) {
         await this.ensureRecoveryPlane();
-        await this.superviseElectronUi();
+        const uiRecovery = await this.superviseElectronUi();
+        this.recordSupervisionUiRecoveryStatus(uiRecovery);
       }
       this.ensureAutoActivationStarted(epoch);
       return runtime;
