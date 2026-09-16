@@ -172,6 +172,17 @@ scripts, a secret-free environment example, `DEPLOYMENT.md`, and a manifest
 with source revision, package fingerprint and per-file/component hashes. It
 refuses to overwrite an existing release output or build from source drift.
 
+Before making an extracted release the `current` target, run its own
+content-free verifier and compare the receipt to the selected manifest:
+
+```bash
+python3 <release-dir>/deploy/control-plane-verify-release.py --release-dir <release-dir>
+```
+
+The verifier rejects a changed, missing, extra, symlinked, or malformed release
+file before any service action. It is an artifact-integrity check only; it does
+not prove that the selected release is loaded by systemd or authorize activation.
+
 Neither artifact contains the SQLite database, operator token, node credential,
 session, backup, or real environment file. Creating it does not change the
 `current` release symlink, systemd units, service, admission, or a Windows node.

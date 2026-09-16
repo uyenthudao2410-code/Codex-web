@@ -41,6 +41,7 @@ DEPLOY_FILES = (
     "control-plane-launcher.sh",
     "control-plane-backup.sh",
     "control-plane-healthcheck.sh",
+    "control-plane-verify-release.py",
     "control-plane.env.example",
 )
 CONTROL_PLANE_RUNTIME_SUFFIXES = frozenset({".py", ".cjs", ".cmd"})
@@ -59,6 +60,7 @@ REQUIRED_RELEASE_FILES = frozenset(
         "deploy/control-plane-launcher.sh",
         "deploy/control-plane-backup.sh",
         "deploy/control-plane-healthcheck.sh",
+        "deploy/control-plane-verify-release.py",
         "deploy/control-plane.env.example",
         "DEPLOYMENT.md",
     }
@@ -215,7 +217,9 @@ credential, session, backup, or private environment file.
    `~/.config/codex-control-plane/control-plane.env`, replace every placeholder,
    and set mode `0600`. Keep the database and backups in an owner-only state
    directory outside `releases/`.
-3. Install the five unit/timer examples from `deploy/` as user units. They only
+3. Run `python3 deploy/control-plane-verify-release.py --release-dir <release>`
+   and compare its content-free receipt to this manifest. Install the five
+   unit/timer examples from `deploy/` as user units. They only
    execute `~/.local/lib/codex-control-plane/current/deploy/...`; `current` must
    be an operator-controlled symlink to exactly one verified release directory.
 

@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tarfile
 import tempfile
 import time
@@ -108,6 +109,30 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 self.assertIn(f"current/deploy/{launcher}", content)
                 self.assertNotIn("/DEV/Codex-web", content)
 
+            verifier = release / "deploy" / "control-plane-verify-release.py"
+            verification = subprocess.run(
+                [sys.executable, str(verifier), "--release-dir", str(release)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(verification.returncode, 0)
+            verified_receipt = json.loads(verification.stdout)
+            self.assertEqual(verified_receipt["file_count"], len(files))
+            self.assertEqual(verified_receipt["source_revision"], revision)
+
+            with (release / "control-plane" / "control_plane" / "web_ui.py").open("ab") as tampered:
+                tampered.write(b"\n")
+            tampered_result = subprocess.run(
+                [sys.executable, str(verifier), "--release-dir", str(release)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(tampered_result.returncode, 2)
+
             with tarfile.open(archive, "r:gz") as bundle:
                 names = set(bundle.getnames())
             prefix = f"{receipt['release_name']}/"
@@ -162,6 +187,14 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 stderr=subprocess.DEVNULL,
             )
             try:
+                verification = subprocess.run(
+                    [sys.executable, str(release_root / "deploy" / "control-plane-verify-release.py"), "--release-dir", str(release_root)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(verification.returncode, 0)
                 health = wait_health(f"http://127.0.0.1:{port}/healthz", receipt["package_source_sha256"])
                 self.assertEqual(health["schema_version"], receipt["control_plane_schema_version"])
                 self.assertEqual(health["declared_source_revision"], revision)
