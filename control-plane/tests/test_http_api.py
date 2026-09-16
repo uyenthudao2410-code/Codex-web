@@ -1093,6 +1093,131 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
                 "sha256:" + "0" * 64,
             )
 
+    def _mcp_wire_grant(self) -> dict:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-mcp-wire-001",
+            endpoint_id="endpoint-mcp-wire-001",
+            display_name="MCP wire fixture",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-mcp-wire-001",
+            workspace_generation="generation-mcp-wire-001",
+            display_name="MCP wire workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        return self.server.store.create_mcp_access_grant(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            principal_id="mcp-wire-fixture",
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+
+    def test_mcp_initialize_negotiates_only_supported_tool_protocol_versions(self) -> None:
+        grant = self._mcp_wire_grant()
+        self.server.store.set_admission_mode(mode="recovery")
+        for offered, negotiated in (
+            ("2025-11-25", "2025-11-25"),
+            ("2025-06-18", "2025-06-18"),
+            ("2025-03-26", "2025-11-25"),
+            ("2024-11-05", "2025-11-25"),
+            ("2099-01-01", "2025-11-25"),
+        ):
+            with self.subTest(offered=offered):
+                status, response = self._post(
+                    "/mcp",
+                    {"jsonrpc": "2.0", "id": "wire-init", "method": "initialize", "params": {"protocolVersion": offered}},
+                    f"Bearer {grant['access_token']}",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(response["result"]["protocolVersion"], negotiated)
+                self.assertEqual(response["result"]["capabilities"], {"tools": {"listChanged": False}})
+        for invalid in (None, True, 1, [], ""):
+            with self.subTest(invalid=invalid):
+                status, response = self._post(
+                    "/mcp",
+                    {"jsonrpc": "2.0", "id": "wire-invalid-init", "method": "initialize", "params": {"protocolVersion": invalid}},
+                    f"Bearer {grant['access_token']}",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(response["error"]["code"], -32602)
+        self.assertEqual(self.server.store.admission_status()["admission_mode"], "recovery")
+
+    def test_mcp_notifications_are_authenticated_empty_responses_without_tool_effects(self) -> None:
+        grant = self._mcp_wire_grant()
+        authorization = f"Bearer {grant['access_token']}"
+        initialized = {"jsonrpc": "2.0", "method": "notifications/initialized"}
+        for denied_authorization in (None, f"Bearer {self.operator_token}"):
+            with self.subTest(denied_authorization=bool(denied_authorization)):
+                status, rejected = self._post("/mcp", initialized, denied_authorization)
+                self.assertEqual(status, 403)
+                self.assertEqual(rejected["error"]["code"], "FORBIDDEN")
+
+        for notification in (
+            initialized,
+            {**initialized, "params": {"_meta": {"fixture": True}}},
+            {"jsonrpc": "2.0", "method": "notifications/cancelled", "params": {"requestId": "unrelated-request"}},
+            {"jsonrpc": "2.0", "method": "notifications/unknown", "params": {}},
+        ):
+            with self.subTest(method=notification["method"]):
+                request = Request(
+                    f"{self.base_url}/mcp",
+                    data=json.dumps(notification).encode("utf-8"),
+                    headers={
+                        "Content-Type": "application/json",
+                        "Accept": "application/json, text/event-stream",
+                        "MCP-Protocol-Version": "2025-11-25",
+                        "Authorization": authorization,
+                    },
+                    method="POST",
+                )
+                with urlopen(request, timeout=2) as response:
+                    self.assertEqual(response.status, 202)
+                    self.assertEqual(response.read(), b"")
+                    self.assertEqual(response.headers["Content-Length"], "0")
+                    self.assertNotIn("Mcp-Session-Id", response.headers)
+
+        missing_id_call = {
+            "jsonrpc": "2.0",
+            "method": "tools/call",
+            "params": {
+                "name": "workspace_context",
+                "arguments": {
+                    "context_id": grant["context_id"],
+                    "operation": "request_read_only",
+                    "idempotency_key": "wire-notification-must-not-enqueue",
+                    "expires_at_ms": self.server.store.clock() + 20_000,
+                    "expected_facade_contract": {
+                        key: self.server.mcp_facade.contract[key]
+                        for key in ("schema_version", "profile", "sha256")
+                    },
+                },
+            },
+        }
+        for invalid in (
+            missing_id_call,
+            {**initialized, "jsonrpc": "invalid"},
+            {**initialized, "params": []},
+            {**initialized, "params": None},
+            {**initialized, "method": "notifications/"},
+        ):
+            with self.subTest(invalid=invalid.get("method")):
+                status, rejected = self._post("/mcp", invalid, authorization)
+                self.assertEqual(status, 400)
+                self.assertEqual(rejected["error"]["code"], "VALIDATION_ERROR")
+        status, rejected = self._post("/mcp", {**missing_id_call, "id": None}, authorization)
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["error"]["code"], -32600)
+        counts = self.server.store.health()["counts"]
+        for collection in ("mcp_read_only_intents", "work_requests", "actions"):
+            self.assertEqual(counts[collection], 0, "notifications must never queue a tool action")
+
     def test_mcp_facade_authenticates_and_queues_only_the_fixed_read_only_intent(self) -> None:
         node = self.server.store.enroll_node(
             owner_id="owner_default",

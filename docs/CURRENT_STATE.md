@@ -25,6 +25,22 @@ Recovery supervision also strips legacy Tunnel inputs and never reads the Window
 Runtime API key. These are focused source/test claims until the deployment receipt
 in the completion plan records the exact candidate and observed live result.
 
+### Ubuntu root MCP Tunnel provisioning — 2026-09-17
+
+The root facade negotiates `2025-11-25` and `2025-06-18` instead of rejecting a
+compatible client's offered protocol. Authenticated MCP notifications return
+HTTP 202 without a body; missing/null request IDs cannot dispatch tool work.
+The eight-tool schema, context-scoped grant and admission boundaries are unchanged.
+
+The Tunnel unit loads a dedicated nonsecret `mcp-tunnel.env`, never the operator
+environment. Its launcher pins the selected Tunnel ID and main loopback MCP URL,
+and passes an owner-private file reference for the scoped MCP Authorization
+header. The OpenAI Runtime key is a separate file reference in the protected
+profile. A shared Tunnel grant represents one pilot principal/context, not
+per-user identity; it stops authenticating when that context/grant expires or
+is revoked. Configuration/doctor success is not a cloud-client execution proof.
+See the completion plan for the exact deployment receipt and remaining gates.
+
 ## 0. Current convergence guidance — 2026-09-04
 
 The current engineering strategy is **convergence, not architecture expansion**. Do not build more system merely because a historical plan contains another layer or because an evidence gate is still open. Existing implementation should be closed by exact provenance, a real end-to-end Problem continuity observation, natural evidence, and accepted-result economics before another framework or control plane is authorized.

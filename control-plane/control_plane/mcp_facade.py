@@ -20,6 +20,10 @@ from .store import ControlPlaneError, ControlPlaneStore, PermissionError, Valida
 
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
+# Both revisions support this facade's JSON-only tools and structured results.
+# Do not advertise 2025-03-26: its batching and older result contract are not
+# implemented here. Unsupported offers negotiate our latest supported revision.
+SUPPORTED_MCP_PROTOCOL_VERSIONS = (MCP_PROTOCOL_VERSION, "2025-06-18")
 FACADE_SCHEMA_VERSION = 5
 FACADE_PROFILE = "control-plane-scoped-read-only-relay-v4"
 PUBLIC_TOOL_NAMES = (
@@ -258,10 +262,11 @@ class ControlPlaneMcpFacade:
 
     def _initialize(self, params: dict[str, Any]) -> dict[str, Any]:
         requested = params.get("protocolVersion", MCP_PROTOCOL_VERSION)
-        if requested != MCP_PROTOCOL_VERSION:
-            raise ValidationError("MCP protocol version is unsupported by this control-plane facade.")
+        if not isinstance(requested, str) or not requested.strip():
+            raise ValidationError("MCP protocol version must be a non-empty string.")
+        negotiated = requested if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS else MCP_PROTOCOL_VERSION
         return {
-            "protocolVersion": MCP_PROTOCOL_VERSION,
+            "protocolVersion": negotiated,
             "serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
             "capabilities": {"tools": {"listChanged": False}},
             "instructions": (
@@ -530,12 +535,26 @@ class ControlPlaneMcpFacade:
     ) -> dict[str, Any] | None:
         """Handle one authenticated JSON-RPC request without persistent session state."""
         request_id = _response_id(request)
+        if "id" not in request:
+            # This stateless facade has no client notifications to persist or
+            # dispatch. Accept initialized (and ignore unknown notifications)
+            # without a JSON-RPC response. Invalid notifications are rejected
+            # by the HTTP boundary, never interpreted as tool requests.
+            if (
+                request.get("jsonrpc") != "2.0"
+                or not isinstance(request.get("method"), str)
+                or not request["method"].startswith("notifications/")
+                or not request["method"][len("notifications/"):]
+                or not isinstance(request.get("params", {}), dict)
+            ):
+                raise ValidationError("MCP notification is invalid or a request id is missing.")
+            return None
         try:
             if (
                 request.get("jsonrpc") != "2.0"
                 or not isinstance(request.get("method"), str)
                 or not request["method"]
-                or ("id" in request and request.get("id") is not None and request_id is None)
+                or request_id is None
             ):
                 return _rpc_error(request_id, -32600, "Invalid Request")
             params = request.get("params", {})

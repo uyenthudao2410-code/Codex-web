@@ -45,6 +45,7 @@ DEPLOY_FILES = (
     "control-plane-healthcheck.sh",
     "control-plane-verify-release.py",
     "control-plane.env.example",
+    "control-plane-mcp-tunnel.env.example",
 )
 CONTROL_PLANE_RUNTIME_SUFFIXES = frozenset({".py", ".cjs", ".cmd"})
 REQUIRED_RELEASE_FILES = frozenset(
@@ -66,6 +67,7 @@ REQUIRED_RELEASE_FILES = frozenset(
         "deploy/control-plane-healthcheck.sh",
         "deploy/control-plane-verify-release.py",
         "deploy/control-plane.env.example",
+        "deploy/control-plane-mcp-tunnel.env.example",
         "DEPLOYMENT.md",
     }
 )
@@ -221,6 +223,12 @@ credential, session, backup, or private environment file.
    `~/.config/codex-control-plane/control-plane.env`, replace every placeholder,
    and set mode `0600`. Keep the database and backups in an owner-only state
    directory outside `releases/`.
+   For the optional root MCP Tunnel, copy
+   `deploy/control-plane-mcp-tunnel.env.example` separately to
+   `~/.config/codex-control-plane/mcp-tunnel.env` with mode `0600`. Its unit must
+   not load `control-plane.env`. Keep the scoped MCP Authorization header in
+   its own owner-private regular file, and store the OpenAI Runtime API Key as
+   a file reference in the protected tunnel-client profile.
 3. Run `python3 deploy/control-plane-verify-release.py --release-dir <release>`
    and compare its content-free receipt to this manifest. Install the six
    unit/timer examples from `deploy/` as user units. They only

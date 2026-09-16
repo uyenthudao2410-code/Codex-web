@@ -1065,6 +1065,32 @@ Tunnel unit hay OpenAI-hosted Tunnel đang chạy. Không mở admission `recove
 
 ## 9. Việc cần từ người dùng — đúng lúc, không xin lại điều đã chốt
 
+### Provision Tunnel chính Ubuntu — 17-09-2026
+
+Người dùng xác nhận đã thu hồi khóa bị lộ và lưu khóa thay thế trong file riêng
+trên Ubuntu. Chỉ metadata quyền file được in (`0600`, user `svhome`); không đưa
+credential vào repository, log hay argv. Metadata lookup bằng runtime key mới
+xác nhận đúng Tunnel do user cung cấp: `Ubuntu-Central-MCP`. Không tạo Tunnel
+khác hoặc đổi association của tài khoản.
+
+Profile `ubuntu-root-mcp` dùng key file reference, main upstream
+`http://127.0.0.1:8766/mcp`, health/UI loopback `127.0.0.1:8768`. Quyền upstream
+là MCP grant riêng gắn context office đang có, không phải operator token hay
+Runtime API key. Grant không sống lâu hơn context/policy (22:02:44 +07 ngày
+17-09-2026), không tự gia hạn, không cấp write/exec và không phải per-user auth
+cho mọi client dùng chung Tunnel. Ubuntu admission giữ `recovery`.
+
+Live protocol probe phát hiện initialize offer `2025-06-18` trả -32602 và
+`notifications/initialized` trả -32601. Source sửa thương lượng phiên bản và
+notification HTTP 202; no-ID/null-ID tool calls không còn được thực thi trước
+khi bỏ response. Không đổi tool contract hash hoặc policy scope. Deployment
+launcher bổ sung pin ID/loopback URL và owner-private Authorization file ref;
+unit tách khỏi env chứa operator token. `doctor` đã PASS trước rollout nhưng
+nó chỉ probe HTTP GET/OAuth metadata, không thay thế initialize/list thật.
+
+Validation và receipt live của candidate mới được ghi sau rollout; chưa coi
+metadata lookup hoặc doctor PASS là client OpenAI đã dùng được root MCP.
+
 ### Sửa lỗi handoff được người dùng tái hiện — 16-09-2026
 
 Baseline sửa lỗi `main@8b7a82d`: ảnh Windows và RPC read-only xác nhận

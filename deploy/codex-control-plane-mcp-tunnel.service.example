@@ -5,7 +5,9 @@ Wants=network-online.target codex-control-plane.service
 
 [Service]
 Type=simple
-EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+EnvironmentFile=%h/.config/codex-control-plane/mcp-tunnel.env
+# Never load control-plane.env here: its operator token must not enter the
+# Tunnel worker. MCP uses a separate scoped Authorization header file.
 # This unit can only connect to the dedicated loopback /mcp listener.  It does
 # not proxy the Tailnet operator UI, enrollment, admin, or node API routes.
 ExecStart=%h/.local/lib/codex-control-plane/current/deploy/control-plane-mcp-tunnel-launcher.sh
