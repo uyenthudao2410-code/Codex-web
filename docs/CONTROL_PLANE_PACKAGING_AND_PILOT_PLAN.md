@@ -502,10 +502,10 @@ effect thật.
 ### W5 — Đóng gói hai artifact và triển khai có kiểm soát
 
 **Source/package proof hiện có (chưa deploy):** `npm run dist:control-plane`
-tại `main@52d6d37…` tạo versioned release directory và archive Ubuntu,
+tại `main@484e4f0…` tạo versioned release directory và archive Ubuntu,
 schema `8`, package fingerprint
 `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`,
-archive SHA-256 `521c67001ff5d5204fa3e0b4e99683b59ff35e109faab1af447bb591143b4922`.
+archive SHA-256 `d31dc93cfa8825de7d1b923867c65b58840a6093bcc333344ae66ae1d1456475`.
 Artifact chỉ gồm allowlist backend/UI embedded, deployment templates/launchers,
 environment example, migration/backup/rollback guide và manifest file/component
 hashes. Nó không có DB, `.coding-tools`, token, node credential, session hoặc
@@ -513,9 +513,10 @@ environment thật; explicit runtime suffix allowlist loại `__pycache__`, `.py
 và `.pyo`; templates chạy qua symlink `current` tới release immutable, không
 qua Git checkout. Focused artifact integration giải nén archive, chạy
 launcher với state/DB tạm ở ngoài release, nhận `/healthz` đúng
-schema/fingerprint/revision rồi dừng process. Đây là package preparation proof,
-không phải health của Ubuntu, systemd ownership, activation, rollback,
-HTTPS/browser, node, canary hay production proof.
+schema/fingerprint/revision, tạo verified backup (`integrity=ok`, zero
+unresolved action), chạy healthcheck đúng fingerprint rồi dừng process. Đây là
+package preparation proof, không phải health của Ubuntu, systemd ownership,
+activation, rollback, HTTPS/browser, node, canary hay production proof.
 
 **Gói Ubuntu:** backend + Web UI assets + systemd/unit/timer templates +
 manifest phiên bản/hash + migration/backup/rollback hướng dẫn. DB/secrets ở
