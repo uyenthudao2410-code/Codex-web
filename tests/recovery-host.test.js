@@ -185,7 +185,81 @@ function seedReadyEpoch(host, {
   return store.current();
 }
 
-function readyAdoptionHost(t) {
+function seedCentralReadyEpoch(host) {
+  const store = host.activationEpochStore;
+  const activationEpochId = 'activation-ready-adoption-0001';
+  const revision = 'a'.repeat(64);
+  store.create({
+    activation_epoch_id: activationEpochId,
+    operation_id: 'ready-adoption-operation-0001',
+    components: ['recovery_host', 'coding_mcp', 'electron_ui'],
+    metadata: { execution_role: 'central_executor', component_profile: 'central_executor_v1' },
+    component_revisions: {
+      recovery_host: { disk_revision: revision },
+      coding_mcp: { disk_revision: revision },
+      electron_ui: { disk_revision: revision }
+    }
+  });
+  store.update(activationEpochId, { state: 'STOPPING' });
+  store.update(activationEpochId, { state: 'VERIFYING' });
+  const finalCensus = {
+    verified: true,
+    pass: true,
+    activation_epoch_id: activationEpochId,
+    execution_role: 'central_executor',
+    component_profile: 'central_executor_v1',
+    host_instance_id: 'central-recovery-host-ready-0001',
+    host_pid: process.pid,
+    process_instance_id: 'central-coding-mcp-process-ready-0001',
+    server_instance_id: 'central-coding-mcp-server-ready-0001',
+    supervisor_instance_id: 'central-supervisor-ready-0001',
+    ui_instance_id: 'central-ui-ready-0001',
+    recovery_mcp_instance_id: 'central-recovery-mcp-ready-0001',
+    recovery_mcp_pid: process.pid,
+    running_revision: revision,
+    disk_revision: revision,
+    ui_running_revision: revision,
+    recovery_host_running_revision: revision,
+    all_components_same_epoch: true,
+    process_identity_verified: true,
+    process_identity_changed: true,
+    recovery_host_revision_matches: true,
+    recovery_host_epoch_matches: true,
+    ui_verified: true,
+    recovery_mcp_health_verified: true,
+    recovery_plane_identity_changed: true,
+    recovery_plane_epoch_matches: true,
+    recovery_plane_verified: true,
+    projection_rebuild_verified: true,
+    workspace_matches: true,
+    device_matches: true,
+    revision_matches: true,
+    epoch_matches: true,
+    central_connected: true,
+    authority_ready: true,
+    central_route_verified: true,
+    central_status_reason: null,
+    tunnel_required: false,
+    tunnel_identity_changed: null,
+    runtime: {
+      executionRole: 'central_executor',
+      activationEpoch: { activation_epoch_id: activationEpochId },
+      tunnelRunning: false,
+      // The census occurs before commit/open, and must not itself authorize a
+      // later action after a restart or turn historical route proof into live proof.
+      fullyReady: false
+    }
+  };
+  const committed = store.commitReady(activationEpochId, {
+    verified: true,
+    activation_epoch_id: activationEpochId,
+    final_census: finalCensus
+  });
+  store.ready(activationEpochId, committed.ready_commit_digest);
+  return store.current();
+}
+
+function readyAdoptionHost(t, { executionRole = 'direct_legacy' } = {}) {
   const paths = fixture(t);
   const calls = { orchestratorEpochs: [], recoveryPlaneEpochs: [], gatewayStart: 0, ipcStart: 0 };
   const revision = 'a'.repeat(64);
@@ -220,7 +294,7 @@ function readyAdoptionHost(t) {
   };
   const host = new RecoveryHost({
     paths,
-    settings: { load: () => ({ autoStartServices: false, workspace: paths.appRoot() }) },
+    settings: { load: () => ({ autoStartServices: false, workspace: paths.appRoot(), executionRole }) },
     secrets: { get: () => 'runtime-key' },
     environment: {},
     log: { info() {}, warn() {}, error() {}, read: () => [], clear() {} },
@@ -485,6 +559,56 @@ test('persisted READY connector proof accepts either exact freshness mode and re
   }
 });
 
+test('persisted central READY proof uses the immutable profile and complete census, never a Windows connector receipt', (t) => {
+  const { host } = readyAdoptionHost(t, { executionRole: 'central_executor' });
+  const ready = seedCentralReadyEpoch(host);
+  const result = validatePersistedReadyConnectorProof(ready, { expectedExecutionRole: 'central_executor' });
+  assert.equal(result.valid, true);
+  assert.equal(result.execution_role, 'central_executor');
+  assert.equal(result.component_profile, 'central_executor_v1');
+  assert.equal(result.freshness_mode, null, 'central mode must not fabricate direct connector discovery');
+  assert.equal(result.current_sha256, null);
+  assert.equal(strictControlPlaneBridgeRuntime(ready.verification.final_census.runtime), false,
+    'persisted READY proof never substitutes for fresh per-action route/policy evidence');
+
+  const cases = [
+    ['metadata absent', (r) => { r.metadata = {}; }, 'CONNECTOR_VALIDATION_MISSING'],
+    ['profile missing', (r) => { delete r.metadata.component_profile; }, 'ACTIVATION_EXECUTION_PROFILE_INVALID'],
+    ['profile mismatch', (r) => { r.metadata.component_profile = 'direct_legacy_v1'; }, 'ACTIVATION_EXECUTION_PROFILE_INVALID'],
+    ['metadata role mismatch', (r) => { r.metadata.execution_role = 'direct_legacy'; }, 'ACTIVATION_EXECUTION_PROFILE_INVALID'],
+    ['census role mismatch', (r) => { r.verification.final_census.execution_role = 'direct_legacy'; }, 'FINAL_CENSUS_EXECUTION_ROLE_MISMATCH'],
+    ['census profile mismatch', (r) => { r.verification.final_census.component_profile = 'direct_legacy_v1'; }, 'FINAL_CENSUS_COMPONENT_PROFILE_MISMATCH'],
+    ['census epoch mismatch', (r) => { r.verification.final_census.activation_epoch_id = 'different-epoch'; }, 'FINAL_CENSUS_ACTIVATION_EPOCH_ID_MISMATCH'],
+    ['no same-epoch proof', (r) => { delete r.verification.final_census.all_components_same_epoch; }, 'CENTRAL_ALL_COMPONENTS_SAME_EPOCH_INVALID'],
+    ['local process identity unverified', (r) => { r.verification.final_census.process_identity_verified = false; }, 'CENTRAL_PROCESS_IDENTITY_VERIFIED_INVALID'],
+    ['route missing', (r) => { delete r.verification.final_census.central_route_verified; }, 'CENTRAL_CENTRAL_ROUTE_VERIFIED_INVALID'],
+    ['authority not ready', (r) => { r.verification.final_census.authority_ready = false; }, 'CENTRAL_AUTHORITY_READY_INVALID'],
+    ['central reason missing', (r) => { delete r.verification.final_census.central_status_reason; }, 'CENTRAL_STATUS_REASON_INVALID'],
+    ['connector receipt present', (r) => { r.verification.final_census.connector_validation = { valid: true }; }, 'CENTRAL_DIRECT_CONNECTOR_PROOF_PRESENT'],
+    ['tunnel required', (r) => { r.verification.final_census.tunnel_required = true; }, 'CENTRAL_TUNNEL_PROFILE_INVALID'],
+    ['MCP identity missing', (r) => { r.verification.final_census.process_instance_id = ''; }, 'CENTRAL_PROCESS_INSTANCE_ID_MISSING'],
+    ['recovery process missing', (r) => { r.verification.final_census.recovery_mcp_pid = 0; }, 'CENTRAL_RECOVERY_MCP_PID_INVALID'],
+    ['revision mismatch', (r) => { r.verification.final_census.running_revision = 'b'.repeat(64); }, 'CENTRAL_CODING_MCP_REVISION_MISMATCH'],
+    ['runtime role mismatch', (r) => { r.verification.final_census.runtime.executionRole = 'direct_legacy'; }, 'CENTRAL_RUNTIME_EXECUTION_ROLE_INVALID'],
+    ['runtime tunnel running', (r) => { r.verification.final_census.runtime.tunnelRunning = true; }, 'CENTRAL_RUNTIME_TUNNEL_STATE_INVALID'],
+    ['runtime epoch mismatch', (r) => { r.verification.final_census.runtime.activationEpoch.activation_epoch_id = 'other'; }, 'RUNTIME_ACTIVATION_EPOCH_ID_MISMATCH']
+  ];
+  for (const [label, mutate, expected] of cases) {
+    const candidate = structuredClone(ready);
+    mutate(candidate);
+    const invalid = validatePersistedReadyConnectorProof(candidate, { expectedExecutionRole: 'central_executor' });
+    assert.equal(invalid.valid, false, label);
+    assert.ok(invalid.reasons.includes(expected), `${label}: ${invalid.reasons.join(', ')}`);
+  }
+
+  const { host: directHost } = readyAdoptionHost(t);
+  const direct = seedReadyEpoch(directHost);
+  const mixed = validatePersistedReadyConnectorProof(direct, { expectedExecutionRole: 'central_executor' });
+  assert.equal(mixed.valid, false);
+  assert.ok(mixed.reasons.includes('READY_EXECUTION_ROLE_MISMATCH'),
+    'legacy direct receipts never authorize adoption under central settings');
+});
+
 test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch without rewriting history', async (t) => {
   const { host, calls } = readyAdoptionHost(t);
   const before = seedReadyEpoch(host, {
@@ -515,6 +639,14 @@ test('Recovery Host keeps control-plane IPC alive for an invalid READY epoch wit
   assert.equal(refreshCalls.length, 1, 'explicit full-clean refresh must remain callable');
   assert.equal(refreshCalls[0].refresh, true);
   assert.equal(refreshCalls[0].mode, 'full_clean_refresh');
+  await host.handlers()['runtime.restart']({
+    mode: 'full_clean_execution_role_handoff', executionRole: 'central_executor'
+  });
+  assert.equal(refreshCalls.length, 2, 'explicit role migration must remain callable under a blocked READY receipt');
+  assert.equal(refreshCalls[1].mode, 'full_clean_execution_role_handoff');
+  assert.equal(refreshCalls[1].executionRole, 'central_executor');
+  assert.equal(refreshCalls[1].sourceCheckpoint, undefined);
+  assert.equal(refreshCalls[1].refresh, undefined, 'only the coordinator normalizes the validated migration');
   const after = host.activationEpochStore.current();
   assert.deepEqual(after, before, 'startup guard must not rewrite immutable READY history');
 });
@@ -792,6 +924,64 @@ test('Recovery Host adopts a durable READY epoch only after strict proof validat
   assert.deepEqual(calls.recoveryPlaneEpochs, [ready.activation_epoch_id]);
   assert.equal(calls.gatewayStart, 1);
   assert.equal(calls.ipcStart, 1);
+});
+
+test('Recovery Host adopts a complete central READY census after an ordinary host restart', async (t) => {
+  const { host, calls } = readyAdoptionHost(t, { executionRole: 'central_executor' });
+  const ready = seedCentralReadyEpoch(host);
+
+  await host.start();
+  assert.equal(host.readyAdoptionBlocksAdmission(), false);
+  assert.deepEqual(calls.orchestratorEpochs, [ready.activation_epoch_id]);
+  assert.deepEqual(calls.recoveryPlaneEpochs, [ready.activation_epoch_id]);
+  assert.equal(calls.gatewayStart, 1);
+  assert.equal(calls.ipcStart, 1);
+  assert.deepEqual(host.activationEpochStore.current(), ready, 'adoption preserves immutable history');
+});
+
+test('Recovery Host rejects central settings with only a legacy direct READY receipt', async (t) => {
+  const { host, calls } = readyAdoptionHost(t, { executionRole: 'central_executor' });
+  const ready = seedReadyEpoch(host);
+
+  const status = await host.start();
+  assert.equal(host.readyAdoptionBlocksAdmission(), true);
+  assert.ok(status.ready_adoption.reasons.includes('READY_EXECUTION_ROLE_MISMATCH'));
+  assert.equal(status.activation_epoch.admission_open, false);
+  assert.deepEqual(calls.orchestratorEpochs, []);
+  assert.equal(calls.gatewayStart, 0);
+  assert.equal(calls.ipcStart, 1);
+  assert.deepEqual(host.activationEpochStore.current(), ready);
+});
+
+test('ordinary central recovery supervision never reads a cloud key or restarts retained direct Tunnel settings', async (t) => {
+  const { host } = readyAdoptionHost(t, { executionRole: 'central_executor' });
+  const current = {
+    executionRole: 'central_executor',
+    tunnelId: 'retained-primary-tunnel',
+    recoveryTunnelId: 'retained-recovery-tunnel',
+    workspace: host.paths.appRoot()
+  };
+  const calls = [];
+  host.settings.load = () => current;
+  host.secrets.get = () => { throw new Error('Central supervision must not access cloud credentials'); };
+  host.orchestrator.ensureToken = async () => 'local-auth-fixture';
+  host.orchestrator.activationEpochId = 'activation-central-ready-fixture';
+  host.recoveryPlane.ensure = async (settings, options) => {
+    calls.push({ settings, options });
+    return { state: 'healthy', tunnel: { state: 'not_configured' } };
+  };
+
+  const status = await host.ensureRecoveryPlane();
+  assert.equal(status.state, 'healthy');
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].settings.tunnelId, '');
+  assert.equal(calls[0].settings.recoveryTunnelId, '');
+  assert.equal(calls[0].settings.executionRole, 'central_executor');
+  assert.deepEqual(calls[0].options, {
+    authToken: 'local-auth-fixture', runtimeApiKey: '', activationEpochId: 'activation-central-ready-fixture'
+  });
+  assert.equal(current.tunnelId, 'retained-primary-tunnel', 'legacy rollback configuration stays intact');
+  assert.equal(current.recoveryTunnelId, 'retained-recovery-tunnel');
 });
 
 test('Recovery Host owns supervision and IPC without stopping the runtime when UI exits', async (t) => {
@@ -2259,6 +2449,7 @@ test('Recovery Host restart resolves the current accepted checkpoint and rejects
     }
   });
   host.assertBootstrapMutationAllowed = () => true;
+  const coordinateRestart = host.fullCleanActivation.restart.bind(host.fullCleanActivation);
   host.fullCleanActivation.restart = async (options) => {
     calls.push(options);
     return { full_clean_activation: true, state: 'HANDOFF', admission_open: false, fully_ready: false };
@@ -2279,4 +2470,41 @@ test('Recovery Host restart resolves the current accepted checkpoint and rejects
   assert.equal(calls[1].refresh, true);
   assert.equal(calls[1].mode, 'full_clean_refresh');
   assert.equal(calls[1].sourceCheckpoint, null);
+
+  closureInput.affected_components = [];
+  await assert.rejects(handler({ reason: 'operator_restart' }), {
+    code: 'ACTIVATION_SOURCE_CHECKPOINT_NOT_ELIGIBLE'
+  });
+  await handler({ mode: 'full_clean_execution_role_handoff', executionRole: 'central_executor' });
+  assert.equal(calls.length, 3, 'operator role migration does not require an accepted code component change');
+  assert.equal(calls[2].mode, 'full_clean_execution_role_handoff');
+  assert.equal(calls[2].sourceCheckpoint, undefined);
+  assert.equal(calls[2].refresh, undefined);
+  assert.equal(calls[2].reason, 'operator_central_executor_handoff');
+
+  host.autoActivation.status = () => ({});
+  await assert.rejects(handler({ reason: 'operator_restart' }), {
+    code: 'ACTIVATION_SOURCE_CHECKPOINT_UNAVAILABLE'
+  });
+  await handler({ mode: 'full_clean_execution_role_handoff', executionRole: 'central_executor' });
+  assert.equal(calls.length, 4, 'role migration also supports installations with no accepted-code closure');
+
+  // Use the real coordinator admission for ambiguous requests: the Recovery
+  // Host must neither hide supplied source authority nor route automatic=true
+  // around the handoff validator through a soft restart.
+  host.fullCleanActivation.restart = coordinateRestart;
+  for (const mixed of [
+    { sourceCheckpoint: SOURCE_CHECKPOINT },
+    { source_checkpoint: SOURCE_CHECKPOINT },
+    { component: 'recovery_host' },
+    { expectedDiskRevision: 'a'.repeat(64) },
+    { automatic: true },
+    { soft: true },
+    { allowAcceptancePending: true }
+  ]) {
+    await assert.rejects(handler({
+      mode: 'full_clean_execution_role_handoff', executionRole: 'central_executor', ...mixed
+    }), { code: 'ACTIVATION_EXECUTION_ROLE_HANDOFF_INVALID' });
+  }
+  assert.equal(host.activationEpochStore.current(), null, 'invalid mixed handoff must not create a durable transaction');
 });

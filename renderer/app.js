@@ -86,7 +86,7 @@ function toast(title, message = '', type = 'success') {
 function setBusy(value, overlay = false) {
   state.busy = value;
   $('#busyOverlay').classList.toggle('visible', value && overlay);
-  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair', '#handoffCentralExecutor', '#requestControlPlaneEnrollment', '#installControlPlaneReadOnlyPolicy'].forEach((selector) => {
+  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair', '#handoffCentralExecutor', '#retryCentralExecutorHandoff', '#requestControlPlaneEnrollment', '#installControlPlaneReadOnlyPolicy'].forEach((selector) => {
     const element = $(selector);
     if (element) element.disabled = value;
   });
@@ -115,7 +115,7 @@ function centralRoutePresentation(status = {}) {
     return {
       state: 'waiting',
       label: 'MCP nội bộ chưa sẵn sàng',
-      detail: 'Executor cần MCP loopback/activation cục bộ trước khi có thể pair với Ubuntu.'
+      detail: 'Có thể gửi pairing và cài policy Ubuntu ngay; thực thi vẫn bị khóa cho tới khi MCP và kiểm tra chuyển đổi hoàn tất.'
     };
   }
   if (status.centralConnected !== true) {
@@ -152,8 +152,26 @@ function renderCentralExecutorMode(snapshot) {
   const policyReplace = $('#replaceControlPlanePolicy');
   const policyButton = $('#installControlPlaneReadOnlyPolicy');
   const policyStatus = $('#controlPlanePolicyStatus');
+  const activationStatus = $('#centralExecutorActivationStatus');
+  const retryHandoff = $('#retryCentralExecutorHandoff');
+  const epoch = snapshot?.recoveryHost?.activation_epoch || snapshot?.status?.activationEpoch || {};
+  const epochState = epoch.epoch_state || epoch.state;
+  const expired = epoch.stale === true || (!['READY', 'FAILED'].includes(epochState)
+    && Number(epoch.expires_at_unix_ms) > 0 && Number(epoch.expires_at_unix_ms) <= Date.now());
+  const retryable = expired || ['FAILED', 'UPDATE_INCOMPLETE', 'NONE'].includes(epochState);
   if (notice) notice.hidden = !central;
   if (guide) guide.hidden = !central;
+  if (retryHandoff) {
+    retryHandoff.hidden = !central || !retryable;
+    retryHandoff.disabled = state.busy;
+  }
+  if (activationStatus && central) {
+    activationStatus.textContent = retryable
+      ? 'Chuyển vai trò đã được lưu nhưng activation chưa hoàn tất hoặc đã hết hạn. Hoàn thành pairing/policy bên dưới, rồi bấm thử lại. Quyền thực thi vẫn đóng.'
+      : snapshot?.status?.fullyReady === true
+        ? 'Kiểm tra activation và kết nối Ubuntu đã hoàn tất.'
+        : 'Đang xác minh executor; hãy hoàn thành pairing/policy bên dưới. Đã chuyển vai trò không đồng nghĩa đã có kết nối hoặc quyền chạy.';
+  }
   if (noticeText && central) {
     noticeText.textContent = `Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. ${route.label}: ${route.detail}`;
   }
@@ -937,17 +955,14 @@ async function installControlPlaneReadOnlyPolicy() {
 }
 
 async function handoffCentralExecutor() {
-  if (isCentralExecutor(state.snapshot?.settings)) {
-    toast('Máy này đã là executor Ubuntu', 'Không khởi chạy lại handoff vai trò. Hãy kiểm tra pairing và policy Ubuntu.', 'success');
-    return state.snapshot;
-  }
   setBusy(true, true);
   try {
-    // Main captures the Recovery Host checkpoint and owns the full-clean
-    // activation. No Windows Tunnel/key/profile input crosses this IPC.
+    // This requests an operator migration, not a code acceptance checkpoint.
+    // No Windows Tunnel/key/profile input crosses this IPC. A HANDOFF receipt
+    // is not a runtime snapshot or proof of a completed/connected executor.
     const result = unwrap(await api.handoffCentralExecutor());
-    renderSnapshot(result, { forceForms: true });
-    toast('Đã chuyển sang executor Ubuntu', 'Windows không còn dùng OpenAI Tunnel cục bộ. Tiếp theo gửi pairing tới Ubuntu và cài policy được cấp.', 'success');
+    if (result?.settings && result?.status) renderSnapshot(result, { forceForms: true });
+    toast('Đã nhận yêu cầu chuyển sang executor Ubuntu', 'Ứng dụng có thể khởi động lại. Chờ vai trò central xuất hiện rồi hoàn thành pairing/policy; chưa xác nhận kết nối Ubuntu.', 'success');
     return result;
   } catch (error) {
     toast('Không thể chuyển sang executor Ubuntu', error.message, 'error');
@@ -1247,6 +1262,10 @@ function bindEvents() {
   $('#overviewStop').addEventListener('click', () => runRuntime('stop'));
   $('#deployNow').addEventListener('click', deployNow);
   $('#handoffCentralExecutor')?.addEventListener('click', async () => {
+    try { await handoffCentralExecutor(); }
+    catch (_) { /* The handoff function has already shown a redacted error. */ }
+  });
+  $('#retryCentralExecutorHandoff')?.addEventListener('click', async () => {
     try { await handoffCentralExecutor(); }
     catch (_) { /* The handoff function has already shown a redacted error. */ }
   });

@@ -1218,16 +1218,22 @@ function registerIpc() {
   secureHandle('runtime:handoff-central-executor', (event) => invokeSafely(async () => {
     // The renderer may request this one-way role change only from the local
     // Manager. It never supplies a role, credential, Tunnel, or workspace:
-    // FullCleanActivation owns the durable transition after the canonical
-    // Recovery Host source checkpoint has been captured.
+    // this is an operator configuration migration, not accepted-code activation.
+    // FullCleanActivation still owns the ledger census, fence and role commit.
     assertManagerIpc(event);
     const current = settings.load();
     if (current.executionRole === 'central_executor') {
-      return orchestrator.snapshot({ force: true, reason: 'central-executor-handoff-already-active' });
+      const snapshot = await orchestrator.snapshot({ force: true, reason: 'central-executor-handoff-state' });
+      const epoch = snapshot?.recoveryHost?.activation_epoch || snapshot?.status?.activationEpoch || {};
+      const epochState = epoch.epoch_state || epoch.state;
+      const expired = epoch.stale === true || (!['READY', 'FAILED'].includes(epochState)
+        && Number(epoch.expires_at_unix_ms) > 0 && Number(epoch.expires_at_unix_ms) <= Date.now());
+      // Pairing is available while VERIFYING. Do not replace that active
+      // operation on repeated clicks; a failed/expired migration can be retried
+      // explicitly after the operator has finished pairing and local policy.
+      if (!expired && !['FAILED', 'UPDATE_INCOMPLETE', 'NONE'].includes(epochState)) return snapshot;
     }
-    const restart = await fullCleanRestartOptions();
     return orchestrator.restart({
-      ...restart,
       reason: 'operator_central_executor_handoff',
       executionRole: 'central_executor',
       mode: 'full_clean_execution_role_handoff'

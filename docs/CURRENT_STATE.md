@@ -4,6 +4,27 @@
 > **Desktop package:** `coding-tools-mcp 1.0.0`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
+### Ubuntu central-executor migration repair — 2026-09-16
+
+The owner-authorized Ubuntu-primary architecture is tracked in
+[`UBUNTU_CENTRAL_MCP_COMPLETION_PLAN.md`](UBUNTU_CENTRAL_MCP_COMPLETION_PLAN.md).
+The installed Windows candidate exposed a real onboarding defect: its role-change
+button required an accepted **code** checkpoint, although the live checkpoint had
+no affected code components. Operator role migration now has its own exact
+`full_clean_execution_role_handoff` path. It still requires canonical ledger
+quiescence, process ownership, fencing, a new durable epoch and profile-specific
+verification; it does not fabricate source acceptance or bypass code activation.
+Pairing/policy can proceed after the role is persisted while admission remains
+closed; FAILED/expired onboarding has an explicit retry. Pending handoff is not
+reported as successful central connectivity.
+
+Central final verification reads fresh independent route/policy evidence instead
+of requiring its own READY bit. Persisted central READY adoption uses its exact
+central census, never a Windows Tunnel connector receipt. Ordinary central
+Recovery supervision also strips legacy Tunnel inputs and never reads the Windows
+Runtime API key. These are focused source/test claims until the deployment receipt
+in the completion plan records the exact candidate and observed live result.
+
 ## 0. Current convergence guidance — 2026-09-04
 
 The current engineering strategy is **convergence, not architecture expansion**. Do not build more system merely because a historical plan contains another layer or because an evidence gate is still open. Existing implementation should be closed by exact provenance, a real end-to-end Problem continuity observation, natural evidence, and accepted-result economics before another framework or control plane is authorized.

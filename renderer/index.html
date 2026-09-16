@@ -268,6 +268,8 @@
               <div id="centralExecutorNotice" class="notice blue-notice" hidden>
                 <b>Máy thực thi được Ubuntu quản lý</b>
                 <p id="centralExecutorNoticeText">Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. Máy này chỉ giữ MCP nội bộ, workspace và policy/action được cấp.</p>
+                <p id="centralExecutorActivationStatus"></p>
+                <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
                 <label class="field"><span>Địa chỉ HTTPS của Ubuntu Control Plane</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu pairing</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
                 <label class="field"><span>Context read-only do Ubuntu cấp</span><input id="controlPlaneContextId" type="text" autocomplete="off" spellcheck="false" placeholder="ctx_…"><small>Trong Ubuntu Console: duyệt node → tạo binding opaque → cấp context. Máy này chỉ lấy template cho đúng context còn hiệu lực; không nhận đường dẫn workspace, OpenAI key hay operator token.</small></label>
                 <label class="choice"><input id="replaceControlPlanePolicy" type="checkbox"><span><b>Thay policy read-only cục bộ đang có</b><small>Chỉ chọn khi gia hạn hoặc đổi context; mỗi lần cài vẫn cần context Ubuntu còn hiệu lực.</small></span></label>
@@ -275,7 +277,7 @@
               </div>
               <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
                 <b>Chuyển vai trò máy này sang executor Ubuntu</b>
-                <p>Thao tác này chạy một full-clean handoff có checkpoint: dừng dịch vụ Windows cũ trước, rồi chuyển máy sang chỉ chạy MCP/workspace cục bộ. Runtime API Key và OpenAI Tunnel đang lưu tại Windows không được gửi sang Ubuntu và sẽ không còn được dùng. Sau đó vẫn phải pairing và cài policy do Ubuntu cấp.</p>
+                <p>Thao tác này kiểm tra công việc đang chạy, đóng quyền thực thi, dừng dịch vụ Windows cũ rồi chuyển máy sang chỉ chạy MCP/workspace cục bộ. Đây là chuyển cấu hình, không yêu cầu checkpoint nghiệm thu code. Runtime API Key và OpenAI Tunnel Windows không được gửi sang Ubuntu và sẽ không còn được dùng. Tiếp theo cần pairing và policy do Ubuntu cấp.</p>
                 <div class="inline-actions"><button class="primary-button" id="handoffCentralExecutor" type="button">Chuyển sang executor Ubuntu</button></div>
               </div>
               <div data-direct-only>

@@ -18,7 +18,7 @@ const { ComponentRevisionTracker } = require('./componentRevision');
 const { RecoveryActivation } = require('./recoveryActivation');
 const { AcceptedCodeActivationController } = require('./recoveryActionStore');
 const { computeActivationClosure, activationSourceCheckpoint } = require('./activationClosure');
-const { FullCleanActivation, canonicalLedgerCensus } = require('./fullCleanActivation');
+const { FullCleanActivation, canonicalLedgerCensus, executionProfileForRecord } = require('./fullCleanActivation');
 const { ActivationEpochStore, ACTIVE_STATES } = require('./activationEpoch');
 const { writeBootstrapResult, readBootstrapResult, removeBootstrapEnvelope } = require('./recoveryBootstrap');
 const { revalidateTrustedRecoveryHostSource } = require('./trustedRecoveryBootstrap');
@@ -221,25 +221,37 @@ function buildMcpIdentityObservation({
 }
 
 /**
- * Validate the connector portion of a persisted terminal READY census before
+ * Validate the role-specific portion of a persisted terminal READY census before
  * an ordinary Recovery Host restart adopts that epoch.  ActivationEpochStore
  * intentionally validates only the generic two-phase READY proof so it can be
  * shared by components; this boundary adds the product-specific invariant
- * that READY is admissible only after one of the exact attested current-process
- * receipt modes accepted by the full-clean connector validator.
+ * that direct READY requires an exact attested connector receipt and central
+ * READY requires the immutable central profile and its complete local/route
+ * census. Neither receipt grants a future action: the bridge still checks live
+ * runtime, route and local-policy evidence for every request.
  *
  * This is deliberately read-only.  A malformed/legacy READY record is not
  * rewritten or silently downgraded here because terminal history is immutable;
  * the caller must keep startup fail-closed and require an explicit new
  * full-clean activation to establish a replacement proof.
  */
-function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() } = {}) {
+function validatePersistedReadyConnectorProof(record, {
+  nowUnixMs = Date.now(),
+  expectedExecutionRole = null
+} = {}) {
   const reasons = [];
   const add = (reason) => { if (!reasons.includes(reason)) reasons.push(reason); };
   const epochId = String(record?.activation_epoch_id || '').trim();
   const verification = record?.verification;
   const census = verification?.final_census;
   const connector = census?.connector_validation;
+  let profile = null;
+  try { profile = executionProfileForRecord(record); }
+  catch (error) { add(error?.code || 'ACTIVATION_EXECUTION_PROFILE_INVALID'); }
+  const centralExecutor = profile?.executionRole === 'central_executor';
+  if (expectedExecutionRole !== null && profile?.executionRole !== expectedExecutionRole) {
+    add('READY_EXECUTION_ROLE_MISMATCH');
+  }
 
   if (!record || record.state !== 'READY' || record.admission_state !== 'OPEN') {
     add('READY_ADMISSION_STATE_INVALID');
@@ -258,8 +270,69 @@ function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() }
     if (String(census.activation_epoch_id || '').trim() !== epochId) {
       add('FINAL_CENSUS_ACTIVATION_EPOCH_ID_MISMATCH');
     }
+    if ((centralExecutor || census.execution_role != null)
+      && census.execution_role !== profile?.executionRole) add('FINAL_CENSUS_EXECUTION_ROLE_MISMATCH');
+    if ((centralExecutor || census.component_profile != null)
+      && census.component_profile !== profile?.componentProfile) add('FINAL_CENSUS_COMPONENT_PROFILE_MISMATCH');
   }
-  if (!connector || typeof connector !== 'object' || Array.isArray(connector)) {
+  if (centralExecutor) {
+    // These are the independent facts used by the full-clean central census,
+    // not a Windows connector acknowledgement manufactured for compatibility.
+    for (const field of [
+      'verified', 'all_components_same_epoch', 'process_identity_verified',
+      'process_identity_changed', 'recovery_host_revision_matches',
+      'recovery_host_epoch_matches', 'ui_verified', 'recovery_mcp_health_verified',
+      'recovery_plane_identity_changed', 'recovery_plane_epoch_matches',
+      'recovery_plane_verified', 'projection_rebuild_verified', 'workspace_matches',
+      'device_matches', 'revision_matches', 'epoch_matches',
+      'central_connected', 'authority_ready', 'central_route_verified'
+    ]) {
+      if (census?.[field] !== true) add(`CENTRAL_${field.toUpperCase()}_INVALID`);
+    }
+    if (census?.central_status_reason !== null) add('CENTRAL_STATUS_REASON_INVALID');
+    if (census?.tunnel_required !== false || census?.tunnel_identity_changed !== null) {
+      add('CENTRAL_TUNNEL_PROFILE_INVALID');
+    }
+    if (['connector_validation', 'connector_acknowledged', 'connector_acknowledgement']
+      .some((field) => Object.prototype.hasOwnProperty.call(census || {}, field))) {
+      add('CENTRAL_DIRECT_CONNECTOR_PROOF_PRESENT');
+    }
+    for (const field of [
+      'host_instance_id', 'process_instance_id', 'server_instance_id',
+      'supervisor_instance_id', 'ui_instance_id', 'recovery_mcp_instance_id'
+    ]) {
+      if (!String(census?.[field] || '').trim()) add(`CENTRAL_${field.toUpperCase()}_MISSING`);
+    }
+    for (const field of ['host_pid', 'recovery_mcp_pid']) {
+      if (!Number.isInteger(census?.[field]) || census[field] <= 0) {
+        add(`CENTRAL_${field.toUpperCase()}_INVALID`);
+      }
+    }
+    for (const field of ['running_revision', 'disk_revision', 'ui_running_revision', 'recovery_host_running_revision']) {
+      if (!READY_CONNECTOR_SHA_PATTERN.test(String(census?.[field] || ''))) {
+        add(`CENTRAL_${field.toUpperCase()}_INVALID`);
+      }
+    }
+    if (census?.running_revision !== census?.disk_revision) add('CENTRAL_MCP_REVISION_MISMATCH');
+    for (const [component, field] of [
+      ['coding_mcp', 'running_revision'],
+      ['electron_ui', 'ui_running_revision'],
+      ['recovery_host', 'recovery_host_running_revision']
+    ]) {
+      const expectedRevision = String(record?.component_revisions?.[component]?.disk_revision || '').trim();
+      if (expectedRevision && census?.[field] !== expectedRevision) {
+        add(`CENTRAL_${component.toUpperCase()}_REVISION_MISMATCH`);
+      }
+    }
+    if (census?.runtime?.executionRole !== 'central_executor') add('CENTRAL_RUNTIME_EXECUTION_ROLE_INVALID');
+    if (census?.runtime?.tunnelRunning !== false) add('CENTRAL_RUNTIME_TUNNEL_STATE_INVALID');
+    const runtimeEpoch = String(
+      census?.runtime?.activationEpoch?.activation_epoch_id
+      || census?.runtime?.activation_epoch_id
+      || ''
+    ).trim();
+    if (runtimeEpoch && runtimeEpoch !== epochId) add('RUNTIME_ACTIVATION_EPOCH_ID_MISMATCH');
+  } else if (!connector || typeof connector !== 'object' || Array.isArray(connector)) {
     add('CONNECTOR_VALIDATION_MISSING');
   } else {
     if (connector.valid !== true) add('CONNECTOR_VALIDATION_NOT_VALID');
@@ -337,6 +410,8 @@ function validatePersistedReadyConnectorProof(record, { nowUnixMs = Date.now() }
     valid: reasons.length === 0,
     code: reasons.length === 0 ? 'READY' : 'UPDATE_INCOMPLETE',
     reasons,
+    execution_role: profile?.executionRole || null,
+    component_profile: profile?.componentProfile || null,
     activation_epoch_id: epochId || null,
     process_instance_id: String(census?.process_instance_id || '').trim() || null,
     server_instance_id: String(census?.server_instance_id || '').trim() || null,
@@ -661,10 +736,10 @@ class RecoveryHost {
     });
     this.activation.fullCleanActivation = this.fullCleanActivation;
     this.orchestrator.setFullCleanActivation?.(this.fullCleanActivation);
-    // All non-soft restart callers (including deferred task_control tickets)
-    // must obtain their source authority from this Recovery Host's current
-    // accepted-code closure.  Never infer a checkpoint from a ticket or a
-    // stale component projection.
+    // Code-activation callers (including deferred task_control tickets) must
+    // obtain source authority from this Recovery Host's current accepted-code
+    // closure. Explicit installation refresh/role handoff has no such source
+    // authority. Never infer a checkpoint from a ticket or stale projection.
     this.orchestrator.setFullCleanSourceCheckpointResolver?.(
       () => this.resolveFullCleanSourceCheckpoint()
     );
@@ -854,7 +929,7 @@ class RecoveryHost {
     return {
       ...this.readyAdoptionBlocked,
       code: 'UPDATE_INCOMPLETE',
-      message: 'Durable READY activation lacks strict current-process connector discovery proof.'
+      message: 'Durable READY activation lacks strict proof for its execution role.'
     };
   }
 
@@ -1985,19 +2060,24 @@ class RecoveryHost {
       },
       'runtime.restart': async (options = {}) => {
         this.assertBootstrapMutationAllowed();
-        const soft = options?.automatic === true || options?.mode === 'soft_recovery';
+        const executionRoleHandoff = options?.mode === 'full_clean_execution_role_handoff';
+        // The explicit operator role migration is checkpoint-free, but it is
+        // still a full-clean transaction. Send its exact options to the
+        // coordinator so mixed source/code/automatic authority is rejected
+        // before any mutation, rather than turning it into a soft restart.
+        const soft = !executionRoleHandoff && (options?.automatic === true || options?.mode === 'soft_recovery');
         const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
-        this.assertReadyAdoptionMutationAllowed({ allowFullCleanRefresh: refresh });
+        this.assertReadyAdoptionMutationAllowed({ allowFullCleanRefresh: refresh || executionRoleHandoff });
         const result = soft
           ? await this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' })
           : (this.fullCleanActivation?.restart && typeof this.orchestrator?.completeActivationEpoch === 'function'
             ? await this.fullCleanActivation.restart({
               ...options,
               // Code/revision activation is bound to the live accepted
-              // closure.  The explicit npm-start process refresh is the only
-              // exception: it carries no source authority and therefore must
-              // be marked as a refresh all the way through the durable epoch.
-              ...(refresh
+              // closure. Process refresh and explicit operator role migration
+              // carry no source authority. Preserve the handoff mode and
+              // arguments for the coordinator's stricter migration contract.
+              ...(executionRoleHandoff ? {} : refresh
                 ? { refresh: true, mode: 'full_clean_refresh', sourceCheckpoint: null }
                 : {
                   // Resolve and validate against the live closure even when a
@@ -2005,7 +2085,9 @@ class RecoveryHost {
                   // trusted unless it is byte-for-byte the current authority.
                   sourceCheckpoint: this._resolveRequestedFullCleanCheckpoint(options?.sourceCheckpoint)
                 }),
-              reason: options.reason || (refresh ? 'npm_start_refresh' : 'operator_restart')
+              reason: options.reason || (executionRoleHandoff
+                ? 'operator_central_executor_handoff'
+                : refresh ? 'npm_start_refresh' : 'operator_restart')
             })
             : (() => {
               throw Object.assign(new Error('Operator restart requires the Recovery Host full-clean activation coordinator.'), {
@@ -2252,12 +2334,19 @@ class RecoveryHost {
   async ensureRecoveryPlane(options = {}) {
     try {
       const current = this.settings.load();
+      const centralExecutor = current.executionRole === 'central_executor';
+      const recoverySettings = centralExecutor
+        ? { ...current, tunnelId: '', recoveryTunnelId: '' }
+        : current;
       const authToken = await this.orchestrator.ensureToken();
-      const runtimeApiKey = this.secrets.get('runtimeApiKey');
+      // The ordinary host restart/watchdog must preserve the same role profile
+      // used during full-clean assembly, including retained legacy settings.
+      // A central executor never reads or reactivates its old cloud key/Tunnel.
+      const runtimeApiKey = centralExecutor ? '' : this.secrets.get('runtimeApiKey');
       if (options.legacyMigrationPlan?.required && typeof this.recoveryPlane.applyLegacyOwnershipMigration === 'function') {
         await this.recoveryPlane.applyLegacyOwnershipMigration(options.legacyMigrationPlan);
       }
-      this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(current, {
+      this.lastRecoveryPlaneStatus = await this.recoveryPlane.ensure(recoverySettings, {
         authToken,
         runtimeApiKey,
         activationEpochId: this.orchestrator.activationEpochId || undefined
@@ -2378,17 +2467,19 @@ class RecoveryHost {
       }
     } else if (!fullCleanReplacement && durableEpoch && durableEpoch.state === 'READY') {
       // A READY epoch remains the current activation identity across an
-      // ordinary host process restart only when its persisted census contains
-      // a valid exact current-process discovery or guarded compatibility
-      // bootstrap receipt. Keep malformed terminal records untouched, but
+      // ordinary host process restart only when its persisted census proves
+      // the immutable execution profile: an exact connector receipt for direct
+      // mode or the complete central local/route census. Keep malformed records untouched, but
       // retain the authenticated Recovery control plane so an explicit
       // full-clean refresh can replace them. No component/gateway admission is
       // opened while this process-local guard is active.
-      const readyConnectorProof = validatePersistedReadyConnectorProof(durableEpoch);
+      const readyConnectorProof = validatePersistedReadyConnectorProof(durableEpoch, {
+        expectedExecutionRole: this.settings.load()?.executionRole || 'direct_legacy'
+      });
       if (!readyConnectorProof.valid) {
         readyEpochBlocked = true;
         this.readyAdoptionBlocked = readyConnectorProof;
-        this.log?.warn?.('Durable READY activation lacks strict current-process connector discovery proof; keeping only the authenticated control plane available for an explicit full-clean refresh.', {
+        this.log?.warn?.('Durable READY activation lacks strict proof for its execution role; keeping only the authenticated control plane available for an explicit full-clean refresh or role handoff.', {
           stage: 'recovery-host-ready-epoch-adoption',
           activationEpochId: durableEpoch.activation_epoch_id,
           reasons: readyConnectorProof.reasons

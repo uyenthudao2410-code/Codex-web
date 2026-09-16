@@ -42,7 +42,8 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(html, /id="centralExecutorNotice"/);
   assert.match(html, /id="centralExecutorHandoff"/);
   assert.match(html, /id="handoffCentralExecutor"/);
-  assert.match(html, /full-clean handoff có checkpoint/);
+  assert.match(html, /không yêu cầu checkpoint nghiệm thu code/);
+  assert.match(html, /id="retryCentralExecutorHandoff"/);
   assert.match(html, /id="centralExecutorGuide"/);
   assert.match(html, /id="controlPlaneServerUrl"/);
   assert.match(html, /id="requestControlPlaneEnrollment"/);
@@ -65,7 +66,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.match(app, /function installControlPlaneReadOnlyPolicy\(/);
   assert.match(app, /async function handoffCentralExecutor\(/);
   assert.match(app, /api\.handoffCentralExecutor\(\)/);
-  assert.match(app, /Windows không còn dùng OpenAI Tunnel cục bộ/);
+  assert.match(app, /chưa xác nhận kết nối Ubuntu/);
   assert.match(app, /installControlPlaneReadOnlyPolicy\(\{[\s\S]*contextId/);
   assert.match(app, /identity, binding, context và policy riêng/);
   assert.match(preload, /requestControlPlaneEnrollment:\s*\(serverUrl\)\s*=>\s*ipcRenderer\.invoke\('control-plane:enroll', serverUrl\)/);
@@ -78,7 +79,7 @@ test('central executor UI does not require or erase a Windows OpenAI Tunnel prof
   assert.ok(handoffStart >= 0 && handoffEnd > handoffStart, 'missing bounded central-executor handoff IPC');
   const handoff = main.slice(handoffStart, handoffEnd);
   assert.match(handoff, /assertManagerIpc\(event\)/);
-  assert.match(handoff, /await fullCleanRestartOptions\(\)/);
+  assert.doesNotMatch(handoff, /fullCleanRestartOptions|activationSourceCheckpoint/);
   assert.match(handoff, /executionRole:\s*'central_executor'/);
   assert.match(handoff, /mode:\s*'full_clean_execution_role_handoff'/);
   assert.doesNotMatch(handoff, /settings\.save|runtimeApiKey|tunnelId/);

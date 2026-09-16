@@ -23,6 +23,7 @@ const DIRECT_EXECUTION_ROLE = 'direct_legacy';
 const CENTRAL_EXECUTION_ROLE = 'central_executor';
 const DIRECT_COMPONENT_PROFILE = 'direct_legacy_v1';
 const CENTRAL_COMPONENT_PROFILE = 'central_executor_v1';
+const EXECUTION_ROLE_HANDOFF_MODE = 'full_clean_execution_role_handoff';
 // Full-clean activation includes Recovery Host handoff, cold Electron
 // startup, MCP/Tunnel readiness and an exact postflight census.  This deadline
 // is intentionally bounded but must exceed the cold-start path; otherwise the
@@ -133,13 +134,34 @@ function requestedExecutionProfile(options, settings) {
   if (!requested) return executionProfileForRole(current);
   const profile = executionProfileForRole(requested);
   if (profile.executionRole !== current
-    && options?.mode !== 'full_clean_execution_role_handoff') {
+    && options?.mode !== EXECUTION_ROLE_HANDOFF_MODE) {
     throw epochError(
       'ACTIVATION_EXECUTION_ROLE_HANDOFF_REQUIRED',
       'Changing execution role requires a dedicated full-clean handoff.'
     );
   }
   return profile;
+}
+
+function executionRoleHandoffRequest(options) {
+  if (options?.mode !== EXECUTION_ROLE_HANDOFF_MODE) return false;
+  // This is a local operator installation migration, not an accepted-code
+  // activation. Never turn supplied source/revision authority into a refresh
+  // by silently dropping it, and never use this surface for a soft restart or
+  // an acceptance-pending/stale-run exception.
+  if (options.executionRole !== CENTRAL_EXECUTION_ROLE
+    || options.automatic === true || options.soft === true
+    || options.allowAcceptancePending === true
+    || ['sourceCheckpoint', 'source_checkpoint', 'component', 'expectedDiskRevision',
+      'expected_disk_revision'].some((field) => options[field] != null)
+    || text(options.maintenanceWorkspace)
+    || String(options.reason || '').startsWith(EXACT_STALE_RUN_REASON_PREFIX)) {
+    throw epochError(
+      'ACTIVATION_EXECUTION_ROLE_HANDOFF_INVALID',
+      'Central executor handoff must be an explicit checkpoint-free installation migration.'
+    );
+  }
+  return true;
 }
 
 function canonicalLedgerCensusFailure(error) {
@@ -1284,7 +1306,7 @@ class FullCleanActivation {
   _actionResult(epoch, overrides = {}) {
     return {
       full_clean_activation: true,
-      activation_mode: 'full_clean_activation',
+      activation_mode: epoch?.metadata?.activation_mode || 'full_clean_activation',
       activation_epoch_id: epoch?.activation_epoch_id || null,
       operation_id: epoch?.operation_id || null,
       state: epoch?.state || 'UPDATE_INCOMPLETE',
@@ -1801,6 +1823,7 @@ class FullCleanActivation {
   }
 
   async restart(options = {}) {
+    const roleHandoff = executionRoleHandoffRequest(options);
     if (options.automatic === true || options.mode === 'soft_recovery' || options.soft === true) {
       if (typeof this.orchestrator?.restart !== 'function') throw epochError('SOFT_RESTART_UNAVAILABLE', 'Soft restart is unavailable.');
       return this.orchestrator.restart({ ...options, automatic: true, mode: 'soft_recovery' });
@@ -1810,7 +1833,11 @@ class FullCleanActivation {
     // `npm start`: it still gets the same durable epoch, census, handoff and
     // final admission gates, but it is not allowed to invent a RUN/WAVE
     // checkpoint for an operation that is only refreshing the installation.
-    const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+    // The explicit central-role handoff is another installation operation;
+    // retain its distinct mode through the durable epoch and replacement.
+    const refresh = roleHandoff || options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const activationMode = roleHandoff ? EXECUTION_ROLE_HANDOFF_MODE
+      : refresh ? 'full_clean_refresh' : 'full_clean_activation';
     const profile = requestedExecutionProfile(options, this._settings());
     const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
     const maintenanceWorkspace = refresh
@@ -1821,6 +1848,7 @@ class FullCleanActivation {
       operation_id: requestedOperationId,
       source_checkpoint: sourceCheckpoint,
       refresh,
+      activation_mode: activationMode,
       maintenance_workspace: maintenanceWorkspace || null,
       component: text(options.component) || 'coding_mcp',
       expected_disk_revision: text(options.expectedDiskRevision) || null,
@@ -1856,7 +1884,10 @@ class FullCleanActivation {
   }
 
   async _restart(options = {}) {
-    const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const roleHandoff = executionRoleHandoffRequest(options);
+    const refresh = roleHandoff || options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const activationMode = roleHandoff ? EXECUTION_ROLE_HANDOFF_MODE
+      : refresh ? 'full_clean_refresh' : 'full_clean_activation';
     const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
     const maintenanceWorkspace = refresh
       ? exactStaleRunMaintenanceWorkspace(this._settings(), options?.reason, options?.maintenanceWorkspace)
@@ -1871,6 +1902,9 @@ class FullCleanActivation {
     // the existing transaction and never create a second epoch.
     const existing = this.store.current();
     if (existing && existing.operation_id === operation_id) {
+      if ((existing.metadata?.activation_mode === EXECUTION_ROLE_HANDOFF_MODE) !== roleHandoff) {
+        throw epochError('ACTIVATION_EXECUTION_ROLE_HANDOFF_MISMATCH', 'Activation replay mode does not match the durable role handoff.');
+      }
       const existingProfile = executionProfileForRecord(existing);
       if (existingProfile.executionRole !== profile.executionRole
         || existingProfile.componentProfile !== profile.componentProfile) {
@@ -2005,6 +2039,7 @@ class FullCleanActivation {
           reason: options.reason || 'operator_restart',
           allow_acceptance_pending: options.allowAcceptancePending === true,
           refresh: options.refresh === true,
+          activation_mode: activationMode,
           execution_role: profile.executionRole,
           component_profile: profile.componentProfile,
           ...(options.maintenanceWorkspace ? { maintenance_workspace: options.maintenanceWorkspace } : {}),
@@ -2569,13 +2604,24 @@ class FullCleanActivation {
         && recoveryTunnelIdentityChanged
         && recoveryTunnelHealthVerified)
       : Boolean(!plane.tunnel || plane.tunnel.state === 'not_configured' || plane.tunnel.configured !== true);
+    // The runtime's aggregate centralStatusReason includes this epoch's
+    // admission bit, which is necessarily CLOSED before commitReady. Read the
+    // independent authenticated heartbeat/policy evidence afresh instead of
+    // requiring READY in order to prove that READY may be committed.
+    const centralRoute = centralExecutor
+      ? this.orchestrator?.centralRouteEvidence?.(settings, this.now()) || null
+      : null;
     const centralRouteVerified = Boolean(centralExecutor
-      && runtime.centralConnected === true
-      && runtime.authorityReady === true
-      && runtime.centralStatusReason == null);
+      && centralRoute?.connected === true
+      && centralRoute?.authorityReady === true
+      && centralRoute?.reason === 'CENTRAL_ROUTE_READY');
+    const allComponentsSameEpoch = epochMatches && (centralExecutor || tunnelEpochMatches)
+      && recoveryHostEpochMatches && recoveryMcpEpochMatches
+      && String(ui.activation_epoch_id || '') === epochId
+      && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches);
     const componentsReadyForAdmission = Boolean(runtime.mcpRunning === true && health?.ready === true
       && processIdentity && epochMatches && workspaceMatches && deviceMatches && revisionMatches
-      && (centralExecutor || (tunnelStatusVerified && tunnelEpochMatches))
+      && (centralExecutor ? runtime.tunnelRunning !== true : (tunnelStatusVerified && tunnelEpochMatches))
       && hostChanged && recoveryHostRevisionMatches
       && recoveryHostEpochMatches
       && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid
@@ -2651,13 +2697,13 @@ class FullCleanActivation {
       tunnel_identity_changed: centralExecutor ? null : tunnelEpochMatches,
       recovery_plane_identity_changed: recoveryMcpIdentityChanged && (!recoveryTunnelConfigured || recoveryTunnelIdentityChanged),
       recovery_plane_epoch_matches: recoveryMcpEpochMatches && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
-      epoch_matches: epochMatches && (centralExecutor || tunnelEpochMatches) && recoveryHostEpochMatches && recoveryMcpEpochMatches
-        && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
+      epoch_matches: allComponentsSameEpoch,
+      all_components_same_epoch: allComponentsSameEpoch,
       ...(centralExecutor ? {
-        central_connected: runtime.centralConnected === true,
-        authority_ready: runtime.authorityReady === true,
+        central_connected: centralRoute?.connected === true,
+        authority_ready: centralRoute?.authorityReady === true,
         central_route_verified: centralRouteVerified,
-        central_status_reason: text(runtime.centralStatusReason) || null
+        central_status_reason: centralRouteVerified ? null : text(centralRoute?.reason) || 'CENTRAL_ROUTE_EVIDENCE_UNAVAILABLE'
       } : {
         connector_acknowledged: connectorReady.valid,
         connector_validation: connectorReady,
@@ -2967,6 +3013,7 @@ class FullCleanActivation {
 
 module.exports = {
   FullCleanActivation,
+  executionProfileForRecord,
   COMPONENTS,
   DEFAULT_TTL_MS,
   CANONICAL_LEDGER_CENSUS_TIMEOUT_MS,

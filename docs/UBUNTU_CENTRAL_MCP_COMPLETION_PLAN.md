@@ -1065,6 +1065,30 @@ Tunnel unit hay OpenAI-hosted Tunnel đang chạy. Không mở admission `recove
 
 ## 9. Việc cần từ người dùng — đúng lúc, không xin lại điều đã chốt
 
+### Sửa lỗi handoff được người dùng tái hiện — 16-09-2026
+
+Baseline sửa lỗi `main@8b7a82d`: ảnh Windows và RPC read-only xác nhận
+`direct_legacy`, MCP/Tunnel chính OFF, Supervisor healthy. Closure có
+`ACTIVATABLE` nhưng `affected_components=[]`: nó không phải checkpoint kích
+hoạt code. Nút mới ở `9cc2d96` đã nối nhầm tới accepted-code restart; test tĩnh
+UI trước đó chỉ chứng minh wiring, chưa chứng minh thao tác thật.
+
+Source repair tách riêng migration do operator yêu cầu, vẫn giữ hai census
+ledger, exclusive gate, fence/owned stop, epoch/profile bất biến và kiểm chứng
+trước admission. Code activation thường vẫn đòi đúng checkpoint; trộn tham số
+code/soft restart/acceptance override vào migration bị từ chối. UI không đưa
+receipt HANDOFF vào renderer snapshot hay báo đã kết nối, và có retry cho
+epoch thất bại/hết hạn sau khi pairing.
+
+Đã sửa thêm ba lỗi trong cùng đường đi: final census central phụ thuộc ngược
+vào READY của chính nó; proof thiếu `all_components_same_epoch`; adoption/
+supervision Recovery vẫn áp hợp đồng Tunnel trực tiếp cho central. Test mới
+đi qua census thật → READY_COMMITTED → revalidate → READY, đồng thời giữ CLOSED
+khi route thiếu/cũ/sai device, policy hết hạn hoặc Tunnel local còn chạy.
+
+Rollout exact candidate và kết quả live sẽ được ghi riêng sau kiểm thử Windows;
+không dùng source tests làm bằng chứng đã pair hay đã có Tunnel Ubuntu.
+
 Đã chốt: Ubuntu `svhome` là server; Tunnel/MCP gốc ở server; Windows office
 là node đầu; có UI; không bắt node tự cấu hình OpenAI; installer unsigned cũ
 đã được cho phép cài. Không hỏi lại các quyết định này.

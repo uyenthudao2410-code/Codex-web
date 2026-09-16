@@ -25,6 +25,7 @@ const { RecoveryHost } = require('../electron/services/recoveryHost');
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
 const { observeProcessIdentity } = require('../electron/services/processIdentity');
 const { tunnelFingerprint } = require('../electron/services/tunnelService');
+const { readControlPlaneRouteEvidence } = require('../electron/services/controlPlaneRouteEvidence');
 
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-full-clean-'));
@@ -1612,6 +1613,141 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   assert.equal(mixedObservation.connector_acknowledged, false);
   assert.ok(mixedObservation.connector_validation.reasons.includes('DISCOVERY_PROCESS_INSTANCE_ID_MISMATCH'));
   assert.equal(mixedObservation.pass, false);
+
+  await t.test('central activation requires fresh route and policy while its epoch remains closed, then finalizes without a connector', async () => {
+    // Reuse the exact live-process/projection fixture, but give the central
+    // profile its own durable store. A mocked passing census would miss both
+    // the pre-READY circular gate and the store's mandatory epoch proof.
+    const directRecord = store.current();
+    const centralStore = new ActivationEpochStore({
+      file: path.join(root, 'central-activation-epoch.json'),
+      now: () => nowUnixMs
+    });
+    centralStore.create({
+      activation_epoch_id: activationEpochId,
+      operation_id: operationId,
+      components: directRecord.components,
+      component_revisions: directRecord.component_revisions,
+      component_evidence: directRecord.component_evidence,
+      expires_at_unix_ms: nowUnixMs + 600_000,
+      metadata: {
+        refresh: true,
+        activation_mode: 'full_clean_execution_role_handoff',
+        execution_role: 'central_executor',
+        component_profile: 'central_executor_v1'
+      }
+    });
+    for (const state of ['ADMISSION_CLOSED', 'FROZEN', 'STOPPING', 'HANDOFF', 'STARTING']) {
+      centralStore.update(activationEpochId, { state });
+    }
+    coordinator.store = centralStore;
+    settings.executionRole = 'central_executor';
+    settings.tunnelId = '';
+    orchestrator.currentMcpHealth = originalHealth;
+    connectorEvidenceMode = 'none';
+    let primaryTunnelRunning = false;
+    orchestrator.lightweightSnapshot = async () => ({
+      executionRole: 'central_executor',
+      mcpRunning: true,
+      nativeAlive: true,
+      tunnelRunning: primaryTunnelRunning,
+      localReady: false,
+      fullyReady: false,
+      centralConnected: false,
+      authorityReady: false,
+      centralStatusReason: 'LOCAL_EXECUTOR_NOT_READY',
+      activationEpoch: { activation_epoch_id: activationEpochId, admission_open: false },
+      codeRevision: { codingMcp: { disk_revision: revision, running_revision: revision } }
+    });
+    orchestrator.centralRouteEvidence = (_settings, now) => readControlPlaneRouteEvidence(paths, {
+      expectedDeviceId: deviceId,
+      now
+    });
+    let admissionCalls = 0;
+    orchestrator.completeActivationEpoch = async (epochId, digest) => {
+      admissionCalls += 1;
+      const committed = centralStore.current();
+      assert.equal(committed.state, 'READY_COMMITTED');
+      assert.equal(committed.admission_state, 'CLOSED');
+      await coordinator.revalidateBeforeAdmission({
+        activationEpochId: epochId,
+        readyCommitDigest: digest,
+        expiresAtUnixMs: committed.expires_at_unix_ms
+      });
+      return {
+        activation_epoch_id: epochId,
+        ready_commit_digest: digest,
+        expires_at_unix_ms: committed.expires_at_unix_ms,
+        admission_open: true
+      };
+    };
+    const missingRoute = await coordinator.finalCensus(activationEpochId);
+    assert.equal(missingRoute.pass, false);
+    assert.equal(missingRoute.central_route_verified, false);
+    assert.equal(missingRoute.central_status_reason, 'CENTRAL_ROUTE_EVIDENCE_MISSING');
+    coordinator.recordPendingCensus(activationEpochId, missingRoute);
+    assert.equal(centralStore.current().state, 'VERIFYING');
+    assert.equal(centralStore.current().admission_state, 'CLOSED');
+    assert.equal(admissionCalls, 0);
+
+    const route = {
+      schema_version: 1,
+      kind: 'control_plane_authenticated_heartbeat',
+      server_origin: 'https://central.example',
+      device_id: deviceId,
+      endpoint_id: id('endpoint', '1001'),
+      credential_generation: 1,
+      server_last_seen_at_ms: nowUnixMs,
+      observed_at_ms: nowUnixMs,
+      runtime_readiness: 'degraded',
+      policy_state: 'enabled',
+      policy_expires_at_ms: nowUnixMs + 600_000,
+      policy_sha256: 'e'.repeat(64)
+    };
+    const writeRoute = (patch = {}) => {
+      fs.mkdirSync(path.dirname(paths.controlPlaneRouteEvidenceFile()), { recursive: true });
+      fs.writeFileSync(paths.controlPlaneRouteEvidenceFile(), JSON.stringify({ ...route, ...patch }));
+    };
+    for (const [patch, expectedReason] of [
+      [{ observed_at_ms: nowUnixMs - 60_001 }, 'CENTRAL_ROUTE_EVIDENCE_STALE'],
+      [{ device_id: id('other-device', '1001') }, 'CENTRAL_ROUTE_EVIDENCE_DEVICE_MISMATCH'],
+      [{ policy_state: 'expired_or_disabled', policy_expires_at_ms: nowUnixMs - 1 }, 'CENTRAL_LOCAL_POLICY_NOT_READY']
+    ]) {
+      writeRoute(patch);
+      const invalid = await coordinator.finalCensus(activationEpochId);
+      assert.equal(invalid.pass, false);
+      assert.equal(invalid.central_route_verified, false);
+      assert.equal(invalid.central_status_reason, expectedReason);
+      assert.equal(centralStore.current().admission_state, 'CLOSED');
+      assert.equal(admissionCalls, 0);
+    }
+    writeRoute();
+    primaryTunnelRunning = true;
+    assert.equal((await coordinator.finalCensus(activationEpochId)).pass, false,
+      'a still-running direct Windows Tunnel cannot be accepted as central executor');
+    primaryTunnelRunning = false;
+    const centralReady = await coordinator.finalCensus(activationEpochId);
+    assert.equal(centralReady.pass, true);
+    assert.equal(centralReady.all_components_same_epoch, true);
+    assert.equal(centralReady.central_route_verified, true);
+    assert.equal(centralReady.central_status_reason, null);
+    assert.equal(centralReady.runtime.fullyReady, false,
+      'admission is closed while the independent central route is proven');
+    assert.equal(Object.hasOwn(centralReady, 'connector_validation'), false);
+    coordinator.recordPendingCensus(activationEpochId, centralReady);
+    const completed = await coordinator.finalize(activationEpochId);
+    assert.equal(completed.state, 'READY');
+    assert.equal(completed.activation_mode, 'full_clean_execution_role_handoff');
+    assert.equal(admissionCalls, 1);
+    assert.equal(centralStore.current().admission_state, 'OPEN');
+    const { validatePersistedReadyConnectorProof } = require('../electron/services/recoveryHost');
+    const adoption = validatePersistedReadyConnectorProof(centralStore.current(), {
+      nowUnixMs,
+      expectedExecutionRole: 'central_executor'
+    });
+    assert.equal(adoption.valid, true, adoption.reasons.join(', '));
+    assert.deepEqual(adoption.reasons, []);
+  });
 });
 
 test('central full-clean replacement persists its epoch role and never supplies node Tunnel credentials', async (t) => {
@@ -1698,6 +1834,156 @@ test('execution role changes are refused outside an explicit full-clean handoff'
     coordinator.restart({ executionRole: 'central_executor' }),
     { code: 'ACTIVATION_EXECUTION_ROLE_HANDOFF_REQUIRED' }
   );
+});
+
+test('operator central handoff is checkpoint-free and preserves its distinct mode for direct migration or central retry', async (t) => {
+  for (const executionRole of ['direct_legacy', 'central_executor']) {
+    const { root, paths } = fixture(t);
+    const coordinator = new FullCleanActivation({
+      paths,
+      epochStore: epochStore(paths),
+      settings: { load: () => ({ workspace: root, executionRole }) }
+    });
+    let observed = null;
+    coordinator._restart = async (options) => {
+      observed = options;
+      return { state: 'HANDOFF' };
+    };
+    await coordinator.restart({
+      mode: 'full_clean_execution_role_handoff',
+      executionRole: 'central_executor',
+      reason: 'operator_central_executor_handoff'
+    });
+    assert.equal(observed.mode, 'full_clean_execution_role_handoff');
+    assert.equal(observed.refresh, true);
+    assert.equal(observed.sourceCheckpoint, null);
+    assert.equal(observed.executionRole, 'central_executor');
+    assert.equal(observed.componentProfile, 'central_executor_v1');
+  }
+});
+
+test('operator central handoff refuses source, revision, soft-restart and acceptance authority before mutation', async (t) => {
+  const { root, paths } = fixture(t);
+  const store = epochStore(paths);
+  const calls = [];
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: { load: () => ({ workspace: root, executionRole: 'direct_legacy' }) },
+    orchestrator: { restart: async () => { calls.push('soft'); } }
+  });
+  coordinator._restart = async () => { calls.push('restart'); };
+  for (const patch of [
+    { sourceCheckpoint: acceptedSourceCheckpoint() },
+    { source_checkpoint: acceptedSourceCheckpoint() },
+    { sourceCheckpoint: '' },
+    { component: 'coding_mcp' },
+    { expectedDiskRevision: 'a'.repeat(64) },
+    { expected_disk_revision: 'a'.repeat(64) },
+    { automatic: true },
+    { soft: true },
+    { allowAcceptancePending: true },
+    { maintenanceWorkspace: root },
+    { reason: `exact_stale_runs:${'a'.repeat(32)}` },
+    { executionRole: 'direct_legacy' },
+    { executionRole: undefined }
+  ]) {
+    await assert.rejects(coordinator.restart({
+      mode: 'full_clean_execution_role_handoff',
+      executionRole: 'central_executor',
+      ...patch
+    }), { code: 'ACTIVATION_EXECUTION_ROLE_HANDOFF_INVALID' });
+  }
+  assert.equal(store.current(), null);
+  assert.deepEqual(calls, []);
+});
+
+test('operator central handoff preserves live-runtime fences and binds checkpointless migration mode durably', async (t) => {
+  const { root, paths } = fixture(t);
+  const store = epochStore(paths);
+  const calls = [];
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    settings: {
+      load: () => ({ workspace: root, executionRole: 'direct_legacy' }),
+      save: () => { calls.push('settings.save'); }
+    },
+    orchestrator: {
+      inspectCodeActivation: async () => ({ safe: true, code: 'READY', workspace: root }),
+      prepareCodeActivation: async (options) => {
+        calls.push('fence');
+        assert.equal(Object.hasOwn(options, 'sourceCheckpoint'), false);
+        assert.equal(options.allowAcceptancePending, false);
+        return {
+          safe: true,
+          fenced: true,
+          fence_operation_id: options.operationId,
+          expires_at_unix_ms: options.expiresAtUnixMs
+        };
+      },
+      currentMcpHealth: async () => null,
+      stop: async () => { calls.push('runtime.stop'); }
+    },
+    recoveryPlane: { stop: async () => { calls.push('recovery.stop'); } },
+    spawnRecoveryReplacement: async () => { calls.push('replacement.spawn'); },
+    now: () => 1_700_000_000_030
+  });
+  const request = {
+    operationId: id('operation-role-handoff', '1002'),
+    mode: 'full_clean_execution_role_handoff',
+    executionRole: 'central_executor',
+    reason: 'operator_central_executor_handoff'
+  };
+  const result = await coordinator.restart(request);
+  assert.equal(result.state, 'HANDOFF');
+  assert.deepEqual(calls, ['fence', 'fence', 'runtime.stop', 'recovery.stop', 'replacement.spawn']);
+  assert.equal(store.current().source_checkpoint, null);
+  assert.equal(store.current().metadata.activation_mode, request.mode);
+  assert.equal(store.current().metadata.refresh, true);
+  assert.equal(store.current().metadata.execution_role, 'central_executor');
+  assert.equal(store.current().metadata.component_profile, 'central_executor_v1');
+  assert.equal(store.current().admission_state, 'CLOSED');
+  assert.equal((await coordinator.restart(request)).state, 'HANDOFF');
+  assert.equal(calls.length, 5, 'idempotent retry must not stop or spawn another replacement');
+  await assert.rejects(coordinator.restart({
+    operationId: request.operationId,
+    refresh: true,
+    mode: 'full_clean_refresh'
+  }), { code: 'ACTIVATION_EXECUTION_ROLE_HANDOFF_MISMATCH' });
+  assert.equal(calls.length, 5);
+});
+
+test('operator central handoff cannot override busy runtime or stopped canonical-ledger acceptance blockers', async (t) => {
+  for (const stopped of [false, true]) {
+    const { root, paths } = fixture(t);
+    const store = epochStore(paths);
+    const calls = [];
+    const coordinator = new FullCleanActivation({
+      paths,
+      epochStore: store,
+      settings: { load: () => ({ workspace: root, executionRole: 'direct_legacy' }) },
+      orchestrator: {
+        inspectCodeActivation: async () => stopped
+          ? { safe: true, code: 'COMPONENT_STOPPED' }
+          : { safe: false, code: 'RUNTIME_BUSY' },
+        stop: async () => { calls.push('stop'); }
+      },
+      canonicalLedgerCensus: async (options) => {
+        calls.push('census');
+        assert.equal(options.sourceCheckpoint, null);
+        assert.equal(options.allowAcceptancePending, false);
+        return { safe: false, code: 'ACCEPTANCE_PENDING', reason: 'acceptance_pending' };
+      },
+      spawnRecoveryReplacement: async () => { calls.push('spawn'); }
+    });
+    await assert.rejects(coordinator.restart({
+      mode: 'full_clean_execution_role_handoff',
+      executionRole: 'central_executor'
+    }), { code: stopped ? 'ACCEPTANCE_PENDING' : 'RUNTIME_BUSY' });
+    assert.equal(store.current(), null);
+    assert.deepEqual(calls, stopped ? ['census'] : []);
+  }
 });
 
 test('full-clean restart refuses a missing accepted source checkpoint before any epoch or process mutation', async (t) => {

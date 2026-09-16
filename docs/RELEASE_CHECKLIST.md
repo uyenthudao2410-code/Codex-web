@@ -60,6 +60,16 @@ behavior outside the tests it actually ran.
 
 Runtime-affecting source tests do not prove the current process loaded new code. Use supported controlled activation and verify expected reconnect, new process/server instance identity, unchanged workspace identity, intended revision/contract, and preserved fail-closed authority state. Do not substitute `taskkill` of the serving MCP for supervised restart.
 
+Explicit central-executor role migration is an operator installation change,
+not accepted-code activation. Its fixed `full_clean_execution_role_handoff`
+request carries no source/revision/acceptance override and must still pass the
+canonical ledger census, exact process stop/fence, durable epoch and local
+identity checks. The role can be central while pairing/policy remains pending;
+do not call this READY or invent a Windows Tunnel. Central READY requires fresh
+independent authenticated route/local policy evidence and the complete central
+component census. Verify an expired migration can be explicitly retried and
+ordinary Recovery supervision does not restart legacy Windows Tunnels.
+
 Operator `restart` and accepted code/revision activation use the durable
 `full_clean_activation` path. It creates a new `activation_epoch_id`, closes
 admission, checkpoints durable state, stops Electron UI/Coding MCP/Tunnel and
