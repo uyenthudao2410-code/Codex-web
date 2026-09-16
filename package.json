@@ -17,6 +17,7 @@
     "test": "node --test --test-concurrency=4 tests/*.test.js && node scripts/check-source-root-clean.js && node scripts/check-sensitive-tracked.js",
     "test:recovery:e2e": "node --test tests/integration/recovery-host-process.test.js",
     "test:recovery:packaged": "npm run dist:dir && node scripts/packaged-recovery-smoke.js",
+    "dist:control-plane": "node scripts/run-python.js scripts/build-control-plane-release.py --output-dir dist",
     "recovery:supervisor:install": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Install",
     "recovery:supervisor:status": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Status",
     "recovery:supervisor:once": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Once",

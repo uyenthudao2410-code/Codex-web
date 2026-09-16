@@ -154,6 +154,27 @@ SQLite, change admission, inspect a systemd unit, or issue any execution
 request. Its pass result is a single health-response comparison at that time,
 not an artifact signature, trusted service-owner/configuration/checkout proof,
 write-admission proof, binding proof, or canary.
+
+## Versioned Ubuntu release artifact
+
+Build the Ubuntu artifact from a clean selected checkout (runtime-only
+`.coding-tools` evidence is excluded from the artifact and may continue to
+change):
+
+```bash
+npm run dist:control-plane
+```
+
+The command writes a new `dist/codex-control-plane-<revision>/` directory and
+matching `.tar.gz` archive. Each contains the Python backend and embedded Web
+UI, versioned systemd service/timer templates, release-local backup and health
+scripts, a secret-free environment example, `DEPLOYMENT.md`, and a manifest
+with source revision, package fingerprint and per-file/component hashes. It
+refuses to overwrite an existing release output or build from source drift.
+
+Neither artifact contains the SQLite database, operator token, node credential,
+session, backup, or real environment file. Creating it does not change the
+`current` release symlink, systemd units, service, admission, or a Windows node.
 - A node can post `/v1/enrollment-requests` with a hash of its locally-generated
   secret. The operator lists and approves that exact request; the secret never
   crosses the network or enters Git.

@@ -71,6 +71,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
+  assert.match(packageJson.scripts?.['dist:control-plane'] || '', /build-control-plane-release\.py --output-dir dist/);
   const packagedSmoke = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'packaged-recovery-smoke.js'), 'utf8');
   assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
   assert.match(packagedSmoke, /reconcile_exact_stale_run\.py/);

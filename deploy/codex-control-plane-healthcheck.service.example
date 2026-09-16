@@ -5,8 +5,8 @@ Wants=codex-control-plane.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/home/svhome/DEV/Codex-web
-ExecStart=/usr/bin/bash /home/svhome/DEV/Codex-web/scripts/control-plane-healthcheck.sh
+EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+ExecStart=%h/.local/lib/codex-control-plane/current/deploy/control-plane-healthcheck.sh
 TimeoutStartSec=2min
 UMask=0077
 NoNewPrivileges=true
