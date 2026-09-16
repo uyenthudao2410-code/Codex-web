@@ -64,9 +64,8 @@ const RESULT_LOCK_TIMEOUT_MS = 2_000;
 // The Recovery Host serves lightweight snapshots from a cached supervisor
 // projection.  A request can land during its short single-flight refresh and
 // truthfully report `snapshotBusy`.  Do not mistake that observation-only race
-// for a live workload, but keep the retry tightly bounded so a stuck
-// supervisor still fails closed.
-const IDLE_HANDOFF_SNAPSHOT_ATTEMPTS = 4;
+// for a live workload, but keep the retry inside the caller's bounded timeout
+// so a stuck supervisor still fails closed.
 const IDLE_HANDOFF_SNAPSHOT_RETRY_MS = 250;
 
 function bootstrapError(code, message, details = {}) {
@@ -357,9 +356,14 @@ async function proveIdlePackagedHandoff({
     ...descriptorRequestOptions(descriptor),
     timeout: Math.min(8_000, Math.max(1_500, Number(timeoutMs) || 8_000))
   };
+  const snapshotRetryWindowMs = Math.min(15_000, Math.max(1_000, Number(timeoutMs) || 15_000));
+  const snapshotRetryDeadline = Date.now() + snapshotRetryWindowMs;
+  // Keep a deterministic cap too: injected/unit-test sleeps may resolve
+  // immediately and must not turn a time-based retry into an unbounded loop.
+  const snapshotAttempts = Math.max(1, Math.floor(snapshotRetryWindowMs / IDLE_HANDOFF_SNAPSHOT_RETRY_MS));
   let status = null;
   let runtime = null;
-  for (let attempt = 0; attempt < IDLE_HANDOFF_SNAPSHOT_ATTEMPTS; attempt += 1) {
+  for (let attempt = 0; attempt < snapshotAttempts; attempt += 1) {
     try {
       status = await client.status(request);
       runtime = await client.call('runtime.lightweight_snapshot', [], request);
@@ -370,8 +374,8 @@ async function proveIdlePackagedHandoff({
         { cause_code: String(error?.code || '') || null }
       );
     }
-    if (runtime?.snapshotBusy !== true || attempt === IDLE_HANDOFF_SNAPSHOT_ATTEMPTS - 1) break;
-    await sleep(IDLE_HANDOFF_SNAPSHOT_RETRY_MS);
+    if (runtime?.snapshotBusy !== true || attempt === snapshotAttempts - 1 || Date.now() >= snapshotRetryDeadline) break;
+    await sleep(Math.min(IDLE_HANDOFF_SNAPSHOT_RETRY_MS, Math.max(1, snapshotRetryDeadline - Date.now())));
   }
   const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
   const statusToken = normalizeProcessStartToken(status?.process_start_token);
