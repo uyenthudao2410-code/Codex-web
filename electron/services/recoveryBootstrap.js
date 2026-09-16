@@ -61,6 +61,13 @@ const DEFAULT_TTL_MS = 600_000;
 const RESULT_STATE_ORDER = Object.freeze({ pending: 0, started: 1, completed: 2, failed: 2, expired: 2 });
 const TERMINAL_RESULT_STATES = new Set(['completed', 'failed', 'expired']);
 const RESULT_LOCK_TIMEOUT_MS = 2_000;
+// The Recovery Host serves lightweight snapshots from a cached supervisor
+// projection.  A request can land during its short single-flight refresh and
+// truthfully report `snapshotBusy`.  Do not mistake that observation-only race
+// for a live workload, but keep the retry tightly bounded so a stuck
+// supervisor still fails closed.
+const IDLE_HANDOFF_SNAPSHOT_ATTEMPTS = 4;
+const IDLE_HANDOFF_SNAPSHOT_RETRY_MS = 250;
 
 function bootstrapError(code, message, details = {}) {
   return Object.assign(new Error(message), { code, details });
@@ -325,7 +332,13 @@ function sameWorkspace(left, right) {
   }
 }
 
-async function proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs = 15_000 } = {}) {
+async function proveIdlePackagedHandoff({
+  client,
+  paths,
+  descriptor,
+  timeoutMs = 15_000,
+  sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+} = {}) {
   const expected = expectedIdentity(paths);
   const observed = normalizeDescriptorIdentity(descriptor);
   if (expected.mode !== 'development' || observed.runtime_mode !== 'packaged') {
@@ -344,17 +357,21 @@ async function proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs =
     ...descriptorRequestOptions(descriptor),
     timeout: Math.min(8_000, Math.max(1_500, Number(timeoutMs) || 8_000))
   };
-  let status;
-  let runtime;
-  try {
-    status = await client.status(request);
-    runtime = await client.call('runtime.lightweight_snapshot', [], request);
-  } catch (error) {
-    throw bootstrapError(
-      'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED',
-      'The packaged Recovery Host idle state could not be verified.',
-      { cause_code: String(error?.code || '') || null }
-    );
+  let status = null;
+  let runtime = null;
+  for (let attempt = 0; attempt < IDLE_HANDOFF_SNAPSHOT_ATTEMPTS; attempt += 1) {
+    try {
+      status = await client.status(request);
+      runtime = await client.call('runtime.lightweight_snapshot', [], request);
+    } catch (error) {
+      throw bootstrapError(
+        'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED',
+        'The packaged Recovery Host idle state could not be verified.',
+        { cause_code: String(error?.code || '') || null }
+      );
+    }
+    if (runtime?.snapshotBusy !== true || attempt === IDLE_HANDOFF_SNAPSHOT_ATTEMPTS - 1) break;
+    await sleep(IDLE_HANDOFF_SNAPSHOT_RETRY_MS);
   }
   const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
   const statusToken = normalizeProcessStartToken(status?.process_start_token);
@@ -387,6 +404,7 @@ async function proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs =
         telemetry_available: runtime?.telemetryAvailable === true,
         signal_stale: runtime?.signalStale !== false,
         snapshot_busy: runtime?.snapshotBusy !== false,
+        busy: runtime?.busy === true,
         recovering: runtime?.recovering === true,
         mcp_running: runtime?.mcpRunning === true,
         native_alive: runtime?.nativeAlive === true,
@@ -730,7 +748,7 @@ async function bootstrapCurrentRecoveryHost({
     if (!eligible) {
       throw bootstrapError('RECOVERY_HOST_INSTALLATION_MISMATCH', 'Refused to terminate a Recovery Host from another installation.', freshness);
     }
-    idlePackagedHandoff = await proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs });
+    idlePackagedHandoff = await proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs, sleep });
   }
   if (freshness.current && forceRefresh !== true) {
     return { required: false, stale: false, descriptor, status, freshness };

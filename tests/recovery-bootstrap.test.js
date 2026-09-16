@@ -328,6 +328,120 @@ test('explicit refresh may hand off an exact idle packaged host to development',
   assert.equal(result.idle_packaged_handoff.workspace, paths.appRoot());
 });
 
+test('explicit refresh waits through a bounded in-flight supervision snapshot before idle handoff', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  fs.writeFileSync(paths.recoveryHostDescriptorFile(), JSON.stringify(staleDescriptor), 'utf8');
+  let snapshotCalls = 0;
+  let sleepCalls = 0;
+  let stopCalls = 0;
+  const client = {
+    status: async () => ({
+      pid: staleDescriptor.owner_pid,
+      instance_id: staleDescriptor.instance_id,
+      process_start_token: OLD_PROCESS_START_TOKEN,
+      electron_ui_recovery: { alive: false }
+    }),
+    call: async () => ({
+      telemetryAvailable: true,
+      signalStale: false,
+      snapshotBusy: snapshotCalls++ === 0,
+      busy: false,
+      recovering: false,
+      mcpRunning: false,
+      nativeAlive: false,
+      tunnelRunning: false,
+      activationEpoch: { state: 'READY', admission_open: true },
+      device: { workspace: paths.appRoot() }
+    }),
+    stop: async () => { stopCalls += 1; }
+  };
+  let alive = true;
+  const result = await bootstrapCurrentRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => paths.appRoot() },
+    paths,
+    client,
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: null,
+    expectedDiskRevision: REVISION,
+    refresh: true,
+    forceRefresh: true,
+    allowIdlePackagedHandoff: true,
+    spawnProcess: () => ({ pid: 45003, once(event, listener) { if (event === 'spawn') queueMicrotask(listener); return this; }, unref() {} }),
+    processIdentityObserver: async (pid) => alive
+      ? { state: 'live', pid, process_start_token: OLD_PROCESS_START_TOKEN }
+      : { state: 'absent', pid, process_start_token: null },
+    terminateProcess: async () => { alive = false; },
+    sleep: async (ms) => {
+      assert.equal(ms, 250);
+      sleepCalls += 1;
+    }
+  });
+  assert.equal(snapshotCalls, 2);
+  assert.equal(sleepCalls, 1);
+  assert.equal(stopCalls, 1);
+  assert.equal(result.idle_packaged_handoff.exact_host, true);
+});
+
+test('explicit refresh still refuses a persistently busy supervision snapshot', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  let snapshotCalls = 0;
+  let sleepCalls = 0;
+  let stopCalls = 0;
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => paths.appRoot() },
+    paths,
+    client: {
+      status: async () => ({
+        pid: staleDescriptor.owner_pid,
+        instance_id: staleDescriptor.instance_id,
+        process_start_token: OLD_PROCESS_START_TOKEN,
+        electron_ui_recovery: { alive: false }
+      }),
+      call: async () => {
+        snapshotCalls += 1;
+        return {
+          telemetryAvailable: true,
+          signalStale: false,
+          snapshotBusy: true,
+          busy: false,
+          recovering: false,
+          mcpRunning: false,
+          nativeAlive: false,
+          tunnelRunning: false,
+          activationEpoch: { state: 'READY', admission_open: true },
+          device: { workspace: paths.appRoot() }
+        };
+      },
+      stop: async () => { stopCalls += 1; }
+    },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: null,
+    expectedDiskRevision: REVISION,
+    refresh: true,
+    forceRefresh: true,
+    allowIdlePackagedHandoff: true,
+    sleep: async (ms) => {
+      assert.equal(ms, 250);
+      sleepCalls += 1;
+    }
+  }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_REFUSED' });
+  assert.equal(snapshotCalls, 4);
+  assert.equal(sleepCalls, 3);
+  assert.equal(stopCalls, 0);
+});
+
 test('packaged handoff remains fail closed when any runtime component is live', async (t) => {
   const paths = fixture(t);
   const staleDescriptor = descriptor(paths, {
