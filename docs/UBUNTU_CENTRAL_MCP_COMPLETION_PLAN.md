@@ -1026,22 +1026,42 @@ identity rõ ràng. Public release/signing certificate là quyết định riên
 
 | Tiêu chí | Bằng chứng mạnh nhất hiện có | Kết luận / gate kế tiếp |
 | --- | --- | --- |
-| Root Tunnel/MCP Ubuntu | Tailscale UI `:8765` active; `tunnel-client`, profile, unit Tunnel và listener `:8766` chưa có | **Chưa đạt**; build candidate sạch, provision profile Linux, doctor và MCP client thật |
-| Windows không cần key/Tunnel | Source central role, pairing UI và policy-context UI; tests Python 98 + focused Electron pass | **Source/test**, chưa upgrade/pair Windows thật |
-| Executor central không cloud Tunnel | Runtime/lifecycle/supervisor source tests pass | **Source/test**, chưa full-clean handoff packaged trên office |
+| Root Tunnel/MCP Ubuntu | `codex-control-plane.service` active: root MCP chỉ bind loopback `127.0.0.1:8766` (anonymous POST `403`), Tailnet Console `:8765/mcp` trả `404`; `tunnel-client v0.0.14` Linux đã verify checksum và cài private, nhưng profile/Tunnel ID chưa có | **Chưa đạt primary Tunnel**; cần Tunnel OpenAI mới/được chuyển chính thức, runtime credential local, profile HTTP tới `127.0.0.1:8766/mcp`, `doctor`, rồi client thật |
+| Windows không cần key/Tunnel | Candidate `9cc2d96` đã build/cài trên `DESKTOP-63643J4`; focused Windows Electron/recovery suite 113/113 pass, `app.asar` installed khớp candidate, Supervisor packaged healthy | **Chưa central live**; phải chạy nút full-clean handoff, sau đó pair/bind/context/policy Ubuntu thật |
+| Executor central không cloud Tunnel | Runtime/lifecycle/supervisor source + packaged agent đã có; Supervisor office báo `waiting_for_pairing`, không spawn agent | **Chưa đạt**; role Windows vẫn chưa handoff nên chưa có bằng chứng central startup không Tunnel trên office |
 | Server-owned AI/controller | Chỉ có plan/contract; chưa có provider/model/budget/lease adapter | **Chưa bắt đầu**; cần quyết định provider, consent dữ liệu và budget |
 | Read/write/process/stop | Một relay `workspace_context` read-only có source proof | **Chưa đạt**; bảy tool và Job lifecycle thực chưa có |
-| UI vận hành | Ubuntu private Console và Windows Command Center source; UI browser walkthrough chưa thực hiện | **Một phần source**, chưa có live E2E |
+| UI vận hành | Ubuntu private Console active; Windows Command Center candidate đã cài và có nút handoff được manager-IPC fence | **Một phần packaged**, chưa click handoff/pair/E2E đúng UI interactive |
 | Eight-tool parity | Tám tên công khai, chỉ một lane relay read-only | **Chưa đạt**; không xem discovery là capability parity |
 | Fault/offline/rollback | Một số source fixtures, SQLite backup/health source proof | **Chưa nghiệm thu** trên package/node thật |
 | Multi-node đúng đích | Registry live chỉ có node cũ + enrollment pending; office chưa onboarding thật | **Chưa đạt** |
-| Upgrade/backup/soak | Release fixture source pass; package candidate/upgrade/24h evidence không có | **Chưa đạt** |
+| Upgrade/backup/soak | Ubuntu verified release/SQLite snapshot trước deployment; Windows upgrade cài cùng user và Supervisor được reinstall, heartbeat healthy | **Chưa đạt**; không có rollback exercise hay 24h soak |
 | Tác vụ người dùng thật | Không có action/receipt live | **Chưa đạt** |
-| Delivery/runbook | Plan/runbook được cập nhật, history/secret guard pass | **Chưa delivery**; cần snapshot, artifact và runbook walkthrough |
+| Delivery/runbook | `main@9cc2d96` đã push GitHub; delivery/secret guard pass trước push; candidate installer SHA-256 và unsigned state đã xác minh | **Một phần delivery**; chưa có tagged/public release, tunnel/agent E2E hay walkthrough vận hành |
 
 G4 chỉ là mốc đọc thử; G5 chỉ là technical execution; **không đóng mục tiêu
 tổng thể trước G6–G9 và checklist này**. Nếu external credential/hardware chưa
 sẵn sàng, ghi rõ gate chưa đạt thay vì đổi mục tiêu thành phần dễ làm hơn.
+
+### 8.2 Receipt rollout hiện tại — chưa phải nghiệm thu kiến trúc (16-09-2026)
+
+Wave này đã push `main@9cc2d96025a40bc2f2b49f52626ed8170281d169`, xây và cài
+candidate Windows từ source archive đã verify. Installer SHA-256 là
+`f32bbdc23455b41860f31dd317506694318c0289f52842b2ae7d8b8042ce7a9c` và vẫn
+`NotSigned`, đúng như installer 1.0.0 trước đó; `node-agent.cmd` bundled và
+`app.asar` đã cài khớp bytes candidate. Không đọc/đổi Runtime API Key hoặc
+Tunnel ID Windows.
+
+Supervisor trên office đã được reinstall đúng executable candidate vì manifest
+cũ chủ động từ chối executable identity đổi. Sau replacement, scheduled task
+`WebMCP Recovery Supervisor` `Running`/`healthy`, còn control-plane agent ở
+`waiting_for_pairing`; đó là trạng thái mong đợi trước handoff, không phải route
+Ubuntu đã sẵn sàng.
+
+Ubuntu có OpenAI `tunnel-client v0.0.14` lấy từ release chính thức, archive
+SHA-256 `15bd17e805cad39d412199115bb9e10a978dd35258a114cdf25dd2ae6681c7d3`.
+Binary mới chỉ được cài private; không có profile, Runtime credential, systemd
+Tunnel unit hay OpenAI-hosted Tunnel đang chạy. Không mở admission `recovery`.
 
 ## 9. Việc cần từ người dùng — đúng lúc, không xin lại điều đã chốt
 
