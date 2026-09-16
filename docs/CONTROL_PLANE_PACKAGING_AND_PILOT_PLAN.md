@@ -502,10 +502,10 @@ effect thật.
 ### W5 — Đóng gói hai artifact và triển khai có kiểm soát
 
 **Source/package proof hiện có (chưa deploy):** `npm run dist:control-plane`
-tại `main@484e4f0…` tạo versioned release directory và archive Ubuntu,
+tại `main@2e64e94…` tạo versioned release directory và archive Ubuntu,
 schema `8`, package fingerprint
 `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`,
-archive SHA-256 `d31dc93cfa8825de7d1b923867c65b58840a6093bcc333344ae66ae1d1456475`.
+archive SHA-256 `cfd311adf8087410714fe12e79575690fbaca68647c0eb71f3ba396eb9a33778`.
 Artifact chỉ gồm allowlist backend/UI embedded, deployment templates/launchers,
 environment example, migration/backup/rollback guide và manifest file/component
 hashes. Nó không có DB, `.coding-tools`, token, node credential, session hoặc
@@ -517,6 +517,9 @@ schema/fingerprint/revision, tạo verified backup (`integrity=ok`, zero
 unresolved action), chạy healthcheck đúng fingerprint rồi dừng process. Đây là
 package preparation proof, không phải health của Ubuntu, systemd ownership,
 activation, rollback, HTTPS/browser, node, canary hay production proof.
+Verifier release self-contained trên artifact cuối xác nhận đúng `25` file,
+source revision/schema/fingerprint và component/file hashes; test cũng chứng
+minh byte thay đổi bị từ chối fail-closed trước activation.
 
 **Gói Ubuntu:** backend + Web UI assets + systemd/unit/timer templates +
 manifest phiên bản/hash + migration/backup/rollback hướng dẫn. DB/secrets ở
