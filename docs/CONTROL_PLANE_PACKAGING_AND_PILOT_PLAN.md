@@ -502,17 +502,19 @@ effect thật.
 ### W5 — Đóng gói hai artifact và triển khai có kiểm soát
 
 **Source/package proof hiện có (chưa deploy):** `npm run dist:control-plane`
-tại `main@635d582…` tạo versioned release directory và archive Ubuntu,
+tại `main@e12d131…` tạo versioned release directory và archive Ubuntu,
 schema `8`, package fingerprint
 `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`,
-archive SHA-256 `f368662f4d03588f14f5aa09bd4dabb1a018053cb04bdbfff1a1c9e63b6b270f`.
+archive SHA-256 `2090e173cbd73ab054a3a0eb459cf9bbffb6950a9d3ebd0f93bfcf1192430522`.
 Artifact chỉ gồm allowlist backend/UI embedded, deployment templates/launchers,
 environment example, migration/backup/rollback guide và manifest file/component
 hashes. Nó không có DB, `.coding-tools`, token, node credential, session hoặc
 environment thật; templates chạy qua symlink `current` tới release immutable,
-không qua Git checkout. Đây là package preparation proof, không phải health,
-systemd ownership, activation, rollback, HTTPS/browser, node, canary hay
-production proof.
+không qua Git checkout. Focused artifact integration giải nén archive, chạy
+launcher với state/DB tạm ở ngoài release, nhận `/healthz` đúng
+schema/fingerprint/revision rồi dừng process. Đây là package preparation proof,
+không phải health của Ubuntu, systemd ownership, activation, rollback,
+HTTPS/browser, node, canary hay production proof.
 
 **Gói Ubuntu:** backend + Web UI assets + systemd/unit/timer templates +
 manifest phiên bản/hash + migration/backup/rollback hướng dẫn. DB/secrets ở
