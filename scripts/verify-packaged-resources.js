@@ -17,6 +17,13 @@ const DEV_ONLY_CODING_MCP_DIRECTORIES = new Set([
 const SANCTIONED_CODING_MCP_RUNTIME_FILES = new Set([
   "coding-tools-mcp/scripts/reconcile_exact_stale_run.py",
 ]);
+const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
+  "node_agent.py",
+  "node-agent.cmd",
+  "recovery_identity_observer.cjs",
+  "recovery_read_only_bridge.cjs",
+  "recovery_runtime_adapter.cjs",
+]);
 
 function forbiddenReason(relativePath, isDirectory) {
   const normalized = relativePath.split(path.sep).join("/");
@@ -117,6 +124,31 @@ function assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot
   return { exact_source: true, file_count: sourceFiles.size };
 }
 
+function assertExactControlPlaneAdapter(sourceRoot, packagedRoot) {
+  if (!sourceRoot || !fs.existsSync(sourceRoot)) {
+    throw new Error(`control-plane adapter source root is missing: ${sourceRoot || "<empty>"}`);
+  }
+  if (!packagedRoot || !fs.existsSync(packagedRoot)) {
+    throw new Error(`packaged control-plane adapter root is missing: ${packagedRoot || "<empty>"}`);
+  }
+  const packagedNames = fs.readdirSync(packagedRoot).sort();
+  const expectedNames = [...CONTROL_PLANE_ADAPTER_FILES].sort();
+  if (JSON.stringify(packagedNames) !== JSON.stringify(expectedNames)) {
+    throw new Error("packaged control-plane adapter has an unexpected file set");
+  }
+  for (const file of CONTROL_PLANE_ADAPTER_FILES) {
+    const source = path.join(sourceRoot, file);
+    const packaged = path.join(packagedRoot, file);
+    if (!fs.statSync(source).isFile() || !fs.statSync(packaged).isFile()) {
+      throw new Error(`control-plane adapter file is missing or not regular: ${file}`);
+    }
+    if (sha256File(source) !== sha256File(packaged)) {
+      throw new Error(`packaged control-plane adapter source mismatch: ${file}`);
+    }
+  }
+  return { exact_source: true, file_count: CONTROL_PLANE_ADAPTER_FILES.length };
+}
+
 async function afterPack(context) {
   if (context?.electronPlatformName !== "win32") {
     return;
@@ -124,10 +156,16 @@ async function afterPack(context) {
   const sourceResourcesRoot = path.resolve(__dirname, "..", "resources");
   const packagedResourcesRoot = path.join(context.appOutDir, "resources", "resources");
   assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot);
+  assertExactControlPlaneAdapter(
+    path.resolve(__dirname, "..", "control-plane", "control_plane"),
+    path.join(context.appOutDir, "resources", "resources", "control-plane")
+  );
 }
 
 exports.default = afterPack;
 exports.assertSanitizedPackagedResources = assertSanitizedPackagedResources;
 exports.assertExactPackagedResources = assertExactPackagedResources;
+exports.assertExactControlPlaneAdapter = assertExactControlPlaneAdapter;
 exports.forbiddenReason = forbiddenReason;
 exports.SANCTIONED_CODING_MCP_RUNTIME_FILES = SANCTIONED_CODING_MCP_RUNTIME_FILES;
+exports.CONTROL_PLANE_ADAPTER_FILES = CONTROL_PLANE_ADAPTER_FILES;

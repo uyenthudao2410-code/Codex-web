@@ -1,19 +1,30 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
+import io
 import hashlib
 import json
 import sqlite3
+import subprocess
 import tempfile
 import threading
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest import mock
 
-from control_plane.http_api import ControlPlaneHttpServer, _package_source_sha256
+from control_plane.http_api import (
+    CSRF_HEADER_NAME,
+    SESSION_COOKIE_NAME,
+    ControlPlaneHttpServer,
+    _package_source_sha256,
+    _web_origin,
+)
+from control_plane.web_ui import WEB_UI_JAVASCRIPT
 from control_plane.mcp_facade import _central_lifecycle_state
+from control_plane.node_agent import poll_read_only_once
 from control_plane.store import ControlPlaneStore
 
 
@@ -37,11 +48,13 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.operator_token = "o" * 40
+        self.web_origin = "https://operator.tailnet.example"
         self.server = ControlPlaneHttpServer(
             ("127.0.0.1", 0),
             ControlPlaneStore(Path(self.tempdir.name) / "control.sqlite3"),
             self.operator_token,
             "a" * 40,
+            web_origin=self.web_origin,
         )
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -83,6 +96,45 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
                 return error.code, json.loads(error.read())
             finally:
                 error.close()
+
+    def _request_with_headers(
+        self,
+        path: str,
+        *,
+        method: str,
+        payload: dict | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> tuple[int, dict, dict[str, str]]:
+        request_headers = dict(headers or {})
+        data = None
+        if payload is not None:
+            request_headers.setdefault("Content-Type", "application/json")
+            data = json.dumps(payload).encode("utf-8")
+        request = Request(f"{self.base_url}{path}", data=data, headers=request_headers, method=method)
+        try:
+            with urlopen(request, timeout=2) as response:
+                return response.status, json.loads(response.read()), dict(response.headers.items())
+        except HTTPError as error:
+            try:
+                return error.code, json.loads(error.read()), dict(error.headers.items())
+            finally:
+                error.close()
+
+    def _ui_login(self) -> tuple[str, str]:
+        status, response, headers = self._request_with_headers(
+            "/v1/ui/login",
+            method="POST",
+            payload={"operator_token": self.operator_token},
+            headers={"Origin": self.web_origin},
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(response["authenticated"])
+        self.assertIn("HttpOnly", headers["Set-Cookie"])
+        self.assertIn("Secure", headers["Set-Cookie"])
+        self.assertIn("SameSite=Strict", headers["Set-Cookie"])
+        cookie = headers["Set-Cookie"].split(";", 1)[0]
+        self.assertTrue(cookie.startswith(f"{SESSION_COOKIE_NAME}="))
+        return cookie, response["csrf_token"]
 
     def test_two_step_enrollment_never_exposes_node_secret_to_operator(self) -> None:
         node_secret = "n" * 40
@@ -133,6 +185,58 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(heartbeat["readiness"], "unknown")
         self.assertEqual(heartbeat["mcp_server_instance_id"], "mcp-server-http-0001")
 
+    def test_browser_ui_approves_only_selected_pending_enrollment_with_csrf(self) -> None:
+        node_secret = "b" * 40
+        credential_hash = hashlib.sha256(
+            json.dumps({"node_secret": node_secret}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        status, enrollment = self._post(
+            "/v1/enrollment-requests",
+            {
+                "device_id": "device-browser-enrollment-0001",
+                "endpoint_id": "endpoint-browser-enrollment-0001",
+                "display_name": "Browser enrollment node",
+                "credential_hash": credential_hash,
+            },
+        )
+        self.assertEqual(status, 201)
+        cookie, csrf_token = self._ui_login()
+
+        status, forbidden, _headers = self._request_with_headers(
+            f"/v1/ui/enrollment-requests/{enrollment['enrollment_id']}/approve",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        self.assertFalse(self.server.store.list_enrollment_requests()[0]["approved_at_ms"])
+        self.assertEqual(self.server.store.health()["counts"]["nodes"], 0)
+
+        status, invalid, _headers = self._request_with_headers(
+            f"/v1/ui/enrollment-requests/{enrollment['enrollment_id']}/approve",
+            method="POST",
+            payload={"device_id": "another-node"},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(invalid["error"]["code"], "VALIDATION_ERROR")
+        self.assertEqual(self.server.store.health()["counts"]["nodes"], 0)
+
+        status, approved, _headers = self._request_with_headers(
+            f"/v1/ui/enrollment-requests/{enrollment['enrollment_id']}/approve",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(approved["device_id"], "device-browser-enrollment-0001")
+        self.assertNotIn("node_secret", json.dumps(approved))
+        self.assertEqual(self.server.store.health()["counts"]["nodes"], 1)
+        self.assertEqual(self.server.store.health()["counts"]["bindings"], 0)
+        self.assertEqual(self.server.store.health()["counts"]["contexts"], 0)
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
+
     def test_action_observation_route_requires_operator_authority(self) -> None:
         status, forbidden = self._get("/v1/actions/action-does-not-exist")
         self.assertEqual(status, 403)
@@ -146,7 +250,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(health["ok"])
         self.assertEqual(health["sqlite_integrity"], "ok")
-        self.assertEqual(health["schema_version"], 7)
+        self.assertEqual(health["schema_version"], 8)
         self.assertEqual(health["admission_mode"], "open")
         self.assertEqual(health["declared_source_revision"], "a" * 40)
         self.assertEqual(health["service_instance_id"], self.server.service_instance_id)
@@ -158,6 +262,445 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(repeat_status, 200)
         self.assertEqual(repeated_health["service_instance_id"], health["service_instance_id"])
         self.assertEqual(repeated_health["package_source_sha256"], health["package_source_sha256"])
+
+    def test_private_web_ui_requires_explicit_https_origin_and_serves_only_allowlisted_assets(self) -> None:
+        request = Request(f"{self.base_url}/", method="GET")
+        with urlopen(request, timeout=2) as response:
+            document = response.read().decode("utf-8")
+            self.assertIn("PRIVATE TAILNET OPERATOR CONSOLE", document)
+            self.assertEqual(response.headers["Cache-Control"], "no-store")
+            self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
+
+        request = Request(f"{self.base_url}/assets/control-plane-ui.js", method="GET")
+        with urlopen(request, timeout=2) as response:
+            javascript = response.read().decode("utf-8")
+            self.assertEqual(response.headers["Content-Type"], "application/javascript; charset=utf-8")
+            self.assertIn("credentials: 'same-origin'", javascript)
+            self.assertIn("textContent", javascript)
+            self.assertNotIn("localStorage", javascript)
+            self.assertNotIn("sessionStorage", javascript)
+        self.assertNotIn(self.operator_token, WEB_UI_JAVASCRIPT.decode("utf-8"))
+        status, missing_asset = self._get("/assets/not-allowed.js")
+        self.assertEqual(status, 404)
+        self.assertEqual(missing_asset["error"]["code"], "NOT_FOUND")
+
+        no_origin_status, no_origin, _headers = self._request_with_headers(
+            "/v1/ui/login",
+            method="POST",
+            payload={"operator_token": self.operator_token},
+        )
+        self.assertEqual(no_origin_status, 403)
+        self.assertEqual(no_origin["error"]["code"], "FORBIDDEN")
+        wrong_origin_status, wrong_origin, _headers = self._request_with_headers(
+            "/v1/ui/login",
+            method="POST",
+            payload={"operator_token": self.operator_token},
+            headers={"Origin": "https://wrong.tailnet.example"},
+        )
+        self.assertEqual(wrong_origin_status, 403)
+        self.assertEqual(wrong_origin["error"]["code"], "FORBIDDEN")
+
+    def test_embedded_operator_ui_javascript_parses_before_it_is_served(self) -> None:
+        completed = subprocess.run(
+            ["node", "--check", "-"],
+            input=WEB_UI_JAVASCRIPT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr.decode("utf-8", errors="replace"))
+
+    def test_web_ui_session_read_model_and_admission_control_are_scoped_and_csrf_protected(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-web-ui-0001",
+            endpoint_id="endpoint-web-ui-0001",
+            display_name="Web UI Windows node",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-web-ui-0001",
+            workspace_generation="generation-web-ui-0001",
+            display_name="Web UI workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        request = self.server.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="private operator objective must not be in overview",
+            criteria={"private": "criteria must not be in overview"},
+            scope={"private": "scope must not be in overview"},
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+        action = self.server.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"private": "raw action arguments must not be in overview"},
+            idempotency_key="web-ui-overview-action-0001",
+            admission_reference="private-admission-reference-0001",
+            expires_at_ms=self.server.store.clock() + 20_000,
+        )
+        self.server.store.heartbeat(
+            device_id=node["device_id"],
+            endpoint_id="endpoint-web-ui-0001",
+            runtime_instance_id="web-ui-runtime-0001",
+            mcp_server_instance_id="web-ui-mcp-0001",
+            activation_epoch="web-ui-epoch-0001",
+            contract_version="sha256:" + "b" * 64,
+            readiness="ready",
+        )
+        attempt = self.server.store.poll_actions(device_id=node["device_id"])[0]
+        self.server.store.record_receipt(
+            device_id=node["device_id"],
+            action_id=action["action_id"],
+            attempt_id=attempt["attempt_id"],
+            receipt_state="completed",
+            local_handle="private local handle must not be in overview",
+            payload={"private": "receipt payload must not be in overview"},
+        )
+        cookie, csrf_token = self._ui_login()
+
+        session_status, session, _headers = self._request_with_headers(
+            "/v1/ui/session",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(session_status, 200)
+        self.assertEqual(session["csrf_token"], csrf_token)
+
+        status, overview, headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        self.assertEqual(overview["observation_kind"], "central_control_plane_read_model")
+        self.assertEqual([item["device_id"] for item in overview["nodes"]], [node["device_id"]])
+        self.assertEqual(overview["work_requests"][0]["context_id"], context["context_id"])
+        self.assertEqual([item["action_id"] for item in overview["actions"]], [action["action_id"]])
+        self.assertEqual(overview["actions"][0]["delivery_state"], "settled")
+        self.assertEqual(overview["actions"][0]["latest_receipt_state"], "completed")
+        self.assertEqual(overview["actions"][0]["receipt_count"], 1)
+        overview_text = json.dumps(overview)
+        self.assertNotIn("private operator objective", overview_text)
+        self.assertNotIn("criteria must not", overview_text)
+        self.assertNotIn("scope must not", overview_text)
+        self.assertNotIn("raw action arguments", overview_text)
+        self.assertNotIn("private-admission-reference-0001", overview_text)
+        self.assertNotIn("private local handle", overview_text)
+        self.assertNotIn("receipt payload", overview_text)
+        self.assertNotIn(self.operator_token, overview_text)
+
+        status, rejected, _headers = self._request_with_headers(
+            "/v1/maintenance/admission",
+            method="POST",
+            payload={"mode": "recovery"},
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(rejected["error"]["code"], "FORBIDDEN")
+        self.assertEqual(self.server.store.admission_status()["admission_mode"], "open")
+
+        status, changed, _headers = self._request_with_headers(
+            "/v1/maintenance/admission",
+            method="POST",
+            payload={"mode": "recovery"},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(changed["admission_mode"], "recovery")
+
+        status, reopen_rejected, _headers = self._request_with_headers(
+            "/v1/maintenance/admission",
+            method="POST",
+            payload={"mode": "open"},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(reopen_rejected["error"]["code"], "FORBIDDEN")
+        self.assertEqual(self.server.store.admission_status()["admission_mode"], "recovery")
+
+        # Existing non-browser bearer automation retains its explicit owner
+        # path; the browser session cannot use that route to reopen admission.
+        status, reopened = self._post(
+            "/v1/maintenance/admission",
+            {"mode": "open"},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(reopened["admission_mode"], "open")
+
+        status, logged_out, headers = self._request_with_headers(
+            "/v1/ui/logout",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(logged_out["authenticated"])
+        self.assertIn("Max-Age=0", headers["Set-Cookie"])
+        status, unauthorized, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(unauthorized["error"]["code"], "FORBIDDEN")
+
+    def test_browser_overview_shows_redacted_node_policy_state_without_digest(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-browser-policy-0001",
+            endpoint_id="endpoint-browser-policy-0001",
+            display_name="Browser policy node",
+        )
+        policy_sha256 = "c" * 64
+        self.server.store.heartbeat(
+            device_id=node["device_id"],
+            endpoint_id="endpoint-browser-policy-0001",
+            runtime_instance_id="runtime-browser-policy-0001",
+            mcp_server_instance_id="server-browser-policy-0001",
+            activation_epoch="epoch-browser-policy-0001",
+            contract_version="sha256:" + "d" * 64,
+            readiness="ready",
+            policy_observation={
+                "state": "enabled",
+                "expires_at_ms": self.server.store.clock() + 60_000,
+                "policy_sha256": policy_sha256,
+                "reason": "",
+            },
+        )
+        cookie, _csrf_token = self._ui_login()
+        status, overview, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        displayed = overview["nodes"][0]
+        self.assertEqual(displayed["policy_state"], "enabled")
+        self.assertIsNone(displayed["policy_reason"])
+        self.assertNotIn("policy_sha256", displayed)
+        self.assertNotIn(policy_sha256, json.dumps(overview))
+        self.assertNotIn(node["node_secret"], json.dumps(overview))
+
+    def test_browser_ui_queues_only_one_fixed_read_only_canary_per_live_session_context(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-browser-canary-0001",
+            endpoint_id="endpoint-browser-canary-0001",
+            display_name="Browser canary node",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-browser-canary-0001",
+            workspace_generation="generation-browser-canary-0001",
+            display_name="Browser canary workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        cookie, csrf_token = self._ui_login()
+
+        status, forbidden, _headers = self._request_with_headers(
+            "/v1/ui/read-only-requests",
+            method="POST",
+            payload={"context_id": context["context_id"]},
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
+
+        status, invalid, _headers = self._request_with_headers(
+            "/v1/ui/read-only-requests",
+            method="POST",
+            payload={"context_id": context["context_id"], "tool_name": "exec_command"},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(invalid["error"]["code"], "VALIDATION_ERROR")
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
+
+        headers = {"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token}
+        status, queued, _headers = self._request_with_headers(
+            "/v1/ui/read-only-requests",
+            method="POST",
+            payload={"context_id": context["context_id"]},
+            headers=headers,
+        )
+        self.assertEqual(status, 201, queued)
+        self.assertFalse(queued["replayed"])
+        self.assertGreater(queued["expires_at_ms"], self.server.store.clock())
+        self.assertLessEqual(queued["expires_at_ms"], self.server.store.clock() + 10 * 60 * 1000)
+        action = self.server.store.action(owner_id="owner_default", action_id=queued["action_id"])
+        self.assertEqual(action["context_id"], context["context_id"])
+        self.assertEqual(action["tool_name"], "workspace_context")
+        self.assertEqual(json.loads(action["arguments_json"]), {"detail": "compact", "max_entries": 1})
+        self.assertEqual(action["delivery_state"], "queued")
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 1)
+        self.assertNotIn(self.operator_token, json.dumps(queued))
+
+        status, replayed, _headers = self._request_with_headers(
+            "/v1/ui/read-only-requests",
+            method="POST",
+            payload={"context_id": context["context_id"]},
+            headers=headers,
+        )
+        self.assertEqual(status, 201)
+        self.assertTrue(replayed["replayed"])
+        self.assertEqual(replayed["action_id"], queued["action_id"])
+        self.assertEqual(replayed["request_id"], queued["request_id"])
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 1)
+
+    def test_browser_fixed_canary_flows_through_central_poll_and_receipt_to_redacted_overview(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-browser-flow-0001",
+            endpoint_id="endpoint-browser-flow-0001",
+            display_name="Browser flow node",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-browser-flow-0001",
+            workspace_generation="generation-browser-flow-0001",
+            display_name="Browser flow workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        cookie, csrf_token = self._ui_login()
+        headers = {"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token}
+        status, queued, _headers = self._request_with_headers(
+            "/v1/ui/read-only-requests",
+            method="POST",
+            payload={"context_id": context["context_id"]},
+            headers=headers,
+        )
+        self.assertEqual(status, 201, queued)
+
+        runtime_identity = {
+            "observation_schema_version": 1,
+            "observation_kind": "mcp_identity_read_only",
+            "mcp_ready": True,
+            "identity_current": True,
+            "mcp_process_instance_id": "mcp-process-browser-flow-0001",
+            "mcp_server_instance_id": "mcp-server-browser-flow-0001",
+            "activation_epoch_id": "activation-browser-flow-0001",
+            "current_activation_epoch_id": "activation-browser-flow-0001",
+            "tool_contract_sha256": "a" * 64,
+        }
+        self.server.store.heartbeat(
+            device_id=node["device_id"],
+            endpoint_id="endpoint-browser-flow-0001",
+            runtime_instance_id=runtime_identity["mcp_process_instance_id"],
+            mcp_server_instance_id=runtime_identity["mcp_server_instance_id"],
+            activation_epoch=runtime_identity["activation_epoch_id"],
+            contract_version="sha256:" + "a" * 64,
+            readiness="ready",
+        )
+        config_path = Path(self.tempdir.name) / "browser-flow-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": self.base_url,
+            "device_id": node["device_id"],
+            "endpoint_id": "endpoint-browser-flow-0001",
+            "node_secret": node["node_secret"],
+        }), encoding="utf-8")
+        runtime_status = {
+            "state": "CURRENT", "host": "available", "installation": "current",
+            "mcp_update_pending": "false", "mcp_running_revision": "sha-current", "mcp_disk_revision": "sha-current",
+            "components_ready": "true", "fully_ready": "true", "runtime_update_incomplete": "false",
+            "runtime_telemetry_available": "true", "runtime_signal_stale": "false",
+            "connector_state": "CURRENT_ACKNOWLEDGED", "connector_rediscovered": "true",
+            "connector_rediscovered_at": "2026-09-16T00:00:00Z", "connector_freshness_mode": "current_process_discovery",
+            "connector_refresh_required": "false", "connector_ack_pending": "false",
+            "connector_current_sha": "sha-current", "connector_ack_sha": "sha-current", "error_code": "none",
+        }
+
+        def bridge(_args: object, _root: Path, request: dict) -> tuple[dict, None]:
+            return ({
+                "schema_version": 1,
+                "operation_kind": "control_plane_read_only_workspace_context",
+                "action_id": request["action_id"],
+                "attempt_id": request["attempt_id"],
+                "local_handle": "cp_ro_" + "b" * 48,
+                "workspace_accessed": True,
+                "policy_sha256": "c" * 64,
+                "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+                "runtime_identity": {
+                    "activation_epoch_id": runtime_identity["activation_epoch_id"],
+                    "process_instance_id": runtime_identity["mcp_process_instance_id"],
+                    "server_instance_id": runtime_identity["mcp_server_instance_id"],
+                    "tool_contract_sha256": "a" * 64,
+                },
+                "facade_contract": request["facade_contract"],
+                "response_sha256": "d" * 64,
+                "workspace": "E:/must-not-reach-central-or-browser",
+            }, None)
+
+        args = SimpleNamespace(
+            config=str(config_path), project_root=str(Path(self.tempdir.name)), node="node",
+            runtime_mode="development", timeout_seconds=20, limit=1,
+        )
+        with mock.patch("control_plane.node_agent._runtime_status", return_value=runtime_status), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=runtime_identity), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge", side_effect=bridge), \
+             redirect_stdout(io.StringIO()):
+            self.assertEqual(poll_read_only_once(args), 0)
+
+        action = self.server.store.action_observation(owner_id="owner_default", action_id=queued["action_id"])
+        self.assertEqual(action["delivery_state"], "settled")
+        self.assertEqual(action["receipts"][0]["receipt_state"], "completed")
+        status, overview, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(overview["actions"][0]["action_id"], queued["action_id"])
+        self.assertEqual(overview["actions"][0]["delivery_state"], "settled")
+        self.assertEqual(overview["actions"][0]["latest_receipt_state"], "completed")
+        overview_text = json.dumps(overview)
+        self.assertNotIn("must-not-reach-central-or-browser", overview_text)
+        self.assertNotIn("cp_ro_", overview_text)
+        self.assertNotIn(node["node_secret"], overview_text)
+
+    def test_web_origin_validation_and_login_rate_limit_fail_closed(self) -> None:
+        self.assertEqual(_web_origin("https://Operator.Tailnet.Example/"), self.web_origin)
+        for invalid in ("http://operator.tailnet.example", "https://operator.tailnet.example/path", "https://user@operator.tailnet.example"):
+            with self.assertRaises(ValueError):
+                _web_origin(invalid)
+
+        for _attempt in range(5):
+            status, response, _headers = self._request_with_headers(
+                "/v1/ui/login",
+                method="POST",
+                payload={"operator_token": "wrong"},
+                headers={"Origin": self.web_origin},
+            )
+            self.assertEqual(status, 403)
+            self.assertEqual(response["error"]["code"], "FORBIDDEN")
+        status, response, _headers = self._request_with_headers(
+            "/v1/ui/login",
+            method="POST",
+            payload={"operator_token": self.operator_token},
+            headers={"Origin": self.web_origin},
+        )
+        self.assertEqual(status, 429)
+        self.assertEqual(response["error"]["code"], "RATE_LIMITED")
 
     def test_package_source_fingerprint_binds_names_and_file_bytes_without_paths(self) -> None:
         package_root = Path(self.tempdir.name) / "fingerprint-package"

@@ -85,7 +85,14 @@ def _read_health(health_url: str, timeout_seconds: float) -> dict[str, Any]:
             body = response.read(MAX_HEALTH_BYTES + 1)
     except DeploymentVerificationError:
         raise
-    except (OSError, urllib.error.URLError, urllib.error.HTTPError):
+    except urllib.error.HTTPError as error:
+        # ``HTTPError`` owns a response stream even for a refused redirect.
+        # Close it before returning the content-free failure receipt; otherwise
+        # current Python may emit a second ResourceWarning on stderr and corrupt
+        # the single-line JSON contract consumed by deployment automation.
+        error.close()
+        raise DeploymentVerificationError("CONTROL_PLANE_DEPLOYMENT_HEALTH_UNAVAILABLE") from None
+    except (OSError, urllib.error.URLError):
         raise DeploymentVerificationError("CONTROL_PLANE_DEPLOYMENT_HEALTH_UNAVAILABLE") from None
 
     if len(body) > MAX_HEALTH_BYTES:

@@ -5,7 +5,7 @@ const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
-const { assertExactPackagedResources } = require('./verify-packaged-resources');
+const { assertExactPackagedResources, assertExactControlPlaneAdapter } = require('./verify-packaged-resources');
 
 const root = path.resolve(__dirname, '..');
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -18,6 +18,7 @@ const packagedResources = path.join(unpackedRoot, 'resources', 'resources');
 const packagedPython = path.join(packagedResources, 'native-python', 'python.exe');
 const packagedMcpRoot = path.join(packagedResources, 'coding-tools-mcp');
 const supervisorScript = path.join(packagedResources, 'recovery-supervisor', 'recovery-supervisor.ps1');
+const packagedControlPlaneRoot = path.join(packagedResources, 'control-plane');
 const sourceSupervisorScript = path.join(root, 'resources', 'recovery-supervisor', 'recovery-supervisor.ps1');
 const productionDescriptor = path.join(process.env.APPDATA || '', 'web-mcp-assistant', 'recovery-host.json');
 const EXPECTED_SMART_TOOLS = [
@@ -156,10 +157,16 @@ async function main() {
     packagedPython,
     path.join(packagedResources, 'tools', 'tunnel-client.exe'),
     path.join(packagedResources, 'coding-tools-mcp', 'coding_tools_mcp', 'server.py'),
-    path.join(packagedResources, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py')
+    path.join(packagedResources, 'coding-tools-mcp', 'scripts', 'reconcile_exact_stale_run.py'),
+    path.join(packagedControlPlaneRoot, 'node_agent.py'),
+    path.join(packagedControlPlaneRoot, 'node-agent.cmd'),
+    path.join(packagedControlPlaneRoot, 'recovery_identity_observer.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_read_only_bridge.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_runtime_adapter.cjs')
   ];
   for (const file of required) assert(fs.existsSync(file), `PACKAGED_RESOURCE_MISSING:${path.basename(file)}`);
   assertExactPackagedResources(path.join(root, 'resources'), packagedResources);
+  assertExactControlPlaneAdapter(path.join(root, 'control-plane', 'control_plane'), packagedControlPlaneRoot);
   assert(sha256File(supervisorScript) === sha256File(sourceSupervisorScript), 'PACKAGED_RECOVERY_SUPERVISOR_SOURCE_MISMATCH');
   const packagedContract = inspectPackagedToolContract();
 

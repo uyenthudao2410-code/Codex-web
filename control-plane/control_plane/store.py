@@ -23,12 +23,14 @@ from typing import Any, Iterator
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
 UNVERIFIED_RUNTIME_IDENTITIES = {"", "none", "unknown", "unreported", "unverified"}
+POLICY_OBSERVATION_STATES = {"unobserved", "enabled", "expired_or_disabled", "unavailable"}
+POLICY_REASON_PATTERN = re.compile(r"^[A-Z0-9_]{3,96}$")
 ALLOWED_TOOL_NAMES = {
     "workspace_context",
     "agent_workflow",
@@ -114,6 +116,45 @@ def _now() -> int:
 
 def _reported_runtime_identity(value: Any) -> bool:
     return str(value or "").strip().lower() not in UNVERIFIED_RUNTIME_IDENTITIES
+
+
+def _node_policy_observation(value: Any) -> dict[str, Any] | None:
+    """Validate a compact, credential-free local policy observation.
+
+    This is intentionally node-reported telemetry, never central execution
+    authority.  The central service stores enough to show why the fixed
+    read-only lane is unavailable without receiving a local policy file,
+    workspace path, credential, or arbitrary diagnostic text.
+    """
+
+    if value is None:
+        # Older nodes may still heartbeat.  Preserve their last observation
+        # rather than rewriting it to a misleading synthetic state.
+        return None
+    if not isinstance(value, dict) or set(value) != {"state", "expires_at_ms", "policy_sha256", "reason"}:
+        raise ValidationError("policy_observation is invalid.")
+    state = str(value.get("state") or "").strip().lower()
+    if state not in POLICY_OBSERVATION_STATES - {"unobserved"}:
+        raise ValidationError("policy_observation state is invalid.")
+    expires_at_ms = value.get("expires_at_ms")
+    policy_sha256 = value.get("policy_sha256")
+    reason = str(value.get("reason") or "").strip()
+    if state in {"enabled", "expired_or_disabled"}:
+        if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool) or expires_at_ms <= 0:
+            raise ValidationError("policy_observation expiry is invalid.")
+        if not isinstance(policy_sha256, str) or SHA256_PATTERN.fullmatch(policy_sha256.strip().lower()) is None:
+            raise ValidationError("policy_observation digest is invalid.")
+        if reason:
+            raise ValidationError("policy_observation reason is invalid.")
+        return {
+            "state": state,
+            "expires_at_ms": expires_at_ms,
+            "policy_sha256": policy_sha256.strip().lower(),
+            "reason": None,
+        }
+    if expires_at_ms is not None or policy_sha256 is not None or POLICY_REASON_PATTERN.fullmatch(reason) is None:
+        raise ValidationError("policy_observation unavailable state is invalid.")
+    return {"state": state, "expires_at_ms": None, "policy_sha256": None, "reason": reason}
 
 
 def _row(row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -413,7 +454,12 @@ class ControlPlaneStore:
                     mcp_server_instance_id TEXT,
                     activation_epoch TEXT,
                     contract_version TEXT,
-                    readiness TEXT NOT NULL DEFAULT 'unknown'
+                    readiness TEXT NOT NULL DEFAULT 'unknown',
+                    policy_state TEXT NOT NULL DEFAULT 'unobserved',
+                    policy_expires_at_ms INTEGER,
+                    policy_sha256 TEXT,
+                    policy_observed_at_ms INTEGER,
+                    policy_reason TEXT
                 );
                 CREATE TABLE IF NOT EXISTS enrollment_requests (
                     enrollment_id TEXT PRIMARY KEY,
@@ -541,6 +587,16 @@ class ControlPlaneStore:
                     connection.execute("ALTER TABLE nodes ADD COLUMN credential_generation INTEGER NOT NULL DEFAULT 1")
                 if "mcp_server_instance_id" not in node_columns:
                     connection.execute("ALTER TABLE nodes ADD COLUMN mcp_server_instance_id TEXT")
+                if "policy_state" not in node_columns:
+                    connection.execute("ALTER TABLE nodes ADD COLUMN policy_state TEXT NOT NULL DEFAULT 'unobserved'")
+                if "policy_expires_at_ms" not in node_columns:
+                    connection.execute("ALTER TABLE nodes ADD COLUMN policy_expires_at_ms INTEGER")
+                if "policy_sha256" not in node_columns:
+                    connection.execute("ALTER TABLE nodes ADD COLUMN policy_sha256 TEXT")
+                if "policy_observed_at_ms" not in node_columns:
+                    connection.execute("ALTER TABLE nodes ADD COLUMN policy_observed_at_ms INTEGER")
+                if "policy_reason" not in node_columns:
+                    connection.execute("ALTER TABLE nodes ADD COLUMN policy_reason TEXT")
                 receipt_columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(receipts)").fetchall()}
                 if "receipt_digest" not in receipt_columns:
                     connection.execute("ALTER TABLE receipts ADD COLUMN receipt_digest TEXT")
@@ -737,12 +793,13 @@ class ControlPlaneStore:
             raise PermissionError("node authentication failed.")
         return _row(row) or {}
 
-    def heartbeat(self, *, device_id: str, endpoint_id: str, runtime_instance_id: str, activation_epoch: str, contract_version: str, readiness: str, mcp_server_instance_id: str = "") -> dict[str, Any]:
+    def heartbeat(self, *, device_id: str, endpoint_id: str, runtime_instance_id: str, activation_epoch: str, contract_version: str, readiness: str, mcp_server_instance_id: str = "", policy_observation: Any = None) -> dict[str, Any]:
         device_id = _text(device_id, "device_id")
         endpoint_id = _text(endpoint_id, "endpoint_id")
         readiness = str(readiness or "unknown").strip().lower()
         if readiness not in {"ready", "degraded", "blocked", "unknown"}:
             raise ValidationError("readiness is invalid.")
+        policy = _node_policy_observation(policy_observation)
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute("SELECT endpoint_id FROM nodes WHERE device_id = ?", (device_id,)).fetchone()
@@ -753,11 +810,28 @@ class ControlPlaneStore:
                 connection.execute("ROLLBACK")
                 raise ConflictError("endpoint identity does not match enrollment.")
             now = self.clock()
-            connection.execute(
-                "UPDATE nodes SET last_seen_at_ms = ?, runtime_instance_id = ?, mcp_server_instance_id = ?, activation_epoch = ?, contract_version = ?, readiness = ? WHERE device_id = ?",
-                (now, str(runtime_instance_id or "")[:128], str(mcp_server_instance_id or "")[:128], str(activation_epoch or "")[:128], str(contract_version or "")[:128], readiness, device_id),
-            )
-            self._event(connection, "node", device_id, "node_heartbeat", {"readiness": readiness})
+            assignments = [
+                "last_seen_at_ms = ?", "runtime_instance_id = ?", "mcp_server_instance_id = ?",
+                "activation_epoch = ?", "contract_version = ?", "readiness = ?",
+            ]
+            values: list[Any] = [
+                now, str(runtime_instance_id or "")[:128], str(mcp_server_instance_id or "")[:128],
+                str(activation_epoch or "")[:128], str(contract_version or "")[:128], readiness,
+            ]
+            if policy is not None:
+                assignments.extend([
+                    "policy_state = ?", "policy_expires_at_ms = ?", "policy_sha256 = ?",
+                    "policy_observed_at_ms = ?", "policy_reason = ?",
+                ])
+                values.extend([
+                    policy["state"], policy["expires_at_ms"], policy["policy_sha256"], now, policy["reason"],
+                ])
+            values.append(device_id)
+            connection.execute(f"UPDATE nodes SET {', '.join(assignments)} WHERE device_id = ?", values)
+            event = {"readiness": readiness}
+            if policy is not None:
+                event["policy_state"] = policy["state"]
+            self._event(connection, "node", device_id, "node_heartbeat", event)
             connection.execute("COMMIT")
         return self.node(device_id=device_id)
 
@@ -765,7 +839,7 @@ class ControlPlaneStore:
         device_id = _text(device_id, "device_id")
         with self._connection() as connection:
             row = connection.execute(
-                "SELECT device_id, endpoint_id, owner_id, display_name, credential_created_at_ms, credential_generation, revoked_at_ms, last_seen_at_ms, runtime_instance_id, mcp_server_instance_id, activation_epoch, contract_version, readiness FROM nodes WHERE device_id = ?",
+                "SELECT device_id, endpoint_id, owner_id, display_name, credential_created_at_ms, credential_generation, revoked_at_ms, last_seen_at_ms, runtime_instance_id, mcp_server_instance_id, activation_epoch, contract_version, readiness, policy_state, policy_expires_at_ms, policy_sha256, policy_observed_at_ms, policy_reason FROM nodes WHERE device_id = ?",
                 (device_id,),
             ).fetchone()
         if row is None:
@@ -785,7 +859,7 @@ class ControlPlaneStore:
         owner_id = _text(owner_id, "owner_id")
         with self._connection() as connection:
             rows = connection.execute(
-                "SELECT device_id, endpoint_id, owner_id, display_name, credential_created_at_ms, credential_generation, revoked_at_ms, last_seen_at_ms, runtime_instance_id, mcp_server_instance_id, activation_epoch, contract_version, readiness FROM nodes WHERE owner_id = ? ORDER BY device_id",
+                "SELECT device_id, endpoint_id, owner_id, display_name, credential_created_at_ms, credential_generation, revoked_at_ms, last_seen_at_ms, runtime_instance_id, mcp_server_instance_id, activation_epoch, contract_version, readiness, policy_state, policy_expires_at_ms, policy_sha256, policy_observed_at_ms, policy_reason FROM nodes WHERE owner_id = ? ORDER BY device_id",
                 (owner_id,),
             ).fetchall()
         return [dict(row) for row in rows]
@@ -1713,6 +1787,57 @@ class ControlPlaneStore:
         action["attempts"] = [dict(item) for item in attempts]
         action["receipts"] = [dict(item) for item in receipts]
         return action
+
+    def list_action_lifecycle(self, *, owner_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        """List bounded, credential-free action lifecycle projections for an owner.
+
+        This is deliberately narrower than :meth:`action_observation`: the
+        browser dashboard needs to distinguish queued, uncertain, accepted and
+        terminal work, but must not receive immutable arguments, admission
+        references, local handles, raw receipt payloads or receipt digests.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        try:
+            bounded_limit = max(1, min(int(limit), 100))
+        except (TypeError, ValueError) as error:
+            raise ValidationError("action lifecycle limit is invalid.") from error
+        with self._connection() as connection:
+            actions = connection.execute(
+                """
+                SELECT action_id, request_id, context_id, device_id, tool_name,
+                       created_at_ms, expires_at_ms, delivery_state, settled_at_ms
+                FROM actions
+                WHERE owner_id = ?
+                ORDER BY created_at_ms DESC, action_id DESC
+                LIMIT ?
+                """,
+                (owner_id, bounded_limit),
+            ).fetchall()
+            action_ids = [str(action["action_id"]) for action in actions]
+            receipt_rows: list[sqlite3.Row] = []
+            if action_ids:
+                placeholders = ", ".join("?" for _ in action_ids)
+                receipt_rows = connection.execute(
+                    f"""
+                    SELECT action_id, receipt_state, received_at_ms
+                    FROM receipts
+                    WHERE action_id IN ({placeholders})
+                    ORDER BY action_id, received_at_ms DESC, receipt_id DESC
+                    """,
+                    action_ids,
+                ).fetchall()
+        receipts_by_action: dict[str, list[sqlite3.Row]] = {}
+        for receipt in receipt_rows:
+            receipts_by_action.setdefault(str(receipt["action_id"]), []).append(receipt)
+        result: list[dict[str, Any]] = []
+        for action in actions:
+            projection = dict(action)
+            receipts = receipts_by_action.get(str(action["action_id"]), [])
+            projection["receipt_count"] = len(receipts)
+            projection["latest_receipt_state"] = receipts[0]["receipt_state"] if receipts else None
+            projection["latest_receipt_at_ms"] = receipts[0]["received_at_ms"] if receipts else None
+            result.append(projection)
+        return result
 
     def health(self) -> dict[str, Any]:
         with self._connection() as connection:

@@ -13,6 +13,7 @@ const {
   writeBootstrapResult,
   readBootstrapResult,
   removeBootstrapEnvelope,
+  proveIdlePackagedHandoff,
   bootstrapCurrentRecoveryHost
 } = require('../electron/services/recoveryBootstrap');
 const { trustedAttestation } = require('../electron/services/trustedRecoveryBootstrap');
@@ -286,7 +287,7 @@ test('explicit refresh may hand off an exact idle packaged host to development',
       pid: staleDescriptor.owner_pid,
       instance_id: staleDescriptor.instance_id,
       process_start_token: OLD_PROCESS_START_TOKEN,
-      electron_ui_recovery: { alive: false }
+      electron_ui_recovery: { alive: false, state: 'missing' }
     }),
     call: async (action) => {
       assert.equal(action, 'runtime.lightweight_snapshot');
@@ -328,6 +329,113 @@ test('explicit refresh may hand off an exact idle packaged host to development',
   assert.equal(result.idle_packaged_handoff.workspace, paths.appRoot());
 });
 
+test('explicit refresh refuses a cached UI absence while replacement registration is pending', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  let stopCalls = 0;
+  await assert.rejects(bootstrapCurrentRecoveryHost({
+    app: { isPackaged: false, getAppPath: () => paths.appRoot() },
+    paths,
+    client: {
+      status: async () => ({
+        pid: staleDescriptor.owner_pid,
+        instance_id: staleDescriptor.instance_id,
+        process_start_token: OLD_PROCESS_START_TOKEN,
+        electron_ui_recovery: {
+          alive: false,
+          state: 'waiting_for_registration',
+          pending_registration_until_unix_ms: Date.now() + 30_000
+        }
+      }),
+      call: async () => ({
+        telemetryAvailable: true,
+        signalStale: false,
+        snapshotBusy: false,
+        busy: false,
+        recovering: false,
+        mcpRunning: false,
+        nativeAlive: false,
+        tunnelRunning: false,
+        activationEpoch: { state: 'READY', admission_open: true },
+        device: { workspace: paths.appRoot() }
+      }),
+      stop: async () => { stopCalls += 1; }
+    },
+    descriptor: staleDescriptor,
+    status: { full_clean_activation: { available: false } },
+    operationId: OPERATION_ONE,
+    sourceCheckpoint: null,
+    expectedDiskRevision: REVISION,
+    refresh: true,
+    forceRefresh: true,
+    allowIdlePackagedHandoff: true
+  }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_REFUSED' });
+  assert.equal(stopCalls, 0, 'a pending replacement UI must block the handoff before child stop');
+});
+
+test('idle handoff shares its deadline with a slow status IPC call', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  const requestedTimeouts = [];
+  const startedAt = Date.now();
+  await assert.rejects(proveIdlePackagedHandoff({
+    paths,
+    descriptor: staleDescriptor,
+    timeoutMs: 25,
+    client: {
+      status: async (options) => {
+        requestedTimeouts.push(options.timeout);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        return {};
+      },
+      call: async () => assert.fail('a status call beyond the deadline must not start the snapshot call')
+    }
+  }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED' });
+  assert.ok(Date.now() - startedAt < 110, 'the shared deadline must bound an uncooperative status client');
+  assert.equal(requestedTimeouts.length, 1);
+  assert.ok(requestedTimeouts[0] > 0 && requestedTimeouts[0] <= 25);
+});
+
+test('idle handoff shares its deadline with a slow snapshot IPC call', async (t) => {
+  const paths = fixture(t);
+  const staleDescriptor = descriptor(paths, {
+    installation_id: 'f'.repeat(64),
+    runtime_mode: 'packaged'
+  });
+  const requestedTimeouts = [];
+  const startedAt = Date.now();
+  await assert.rejects(proveIdlePackagedHandoff({
+    paths,
+    descriptor: staleDescriptor,
+    timeoutMs: 25,
+    client: {
+      status: async (options) => {
+        requestedTimeouts.push(options.timeout);
+        return {
+          pid: staleDescriptor.owner_pid,
+          instance_id: staleDescriptor.instance_id,
+          process_start_token: OLD_PROCESS_START_TOKEN,
+          electron_ui_recovery: { alive: false, state: 'missing' }
+        };
+      },
+      call: async (_action, _arguments, options) => {
+        requestedTimeouts.push(options.timeout);
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        return {};
+      }
+    }
+  }), { code: 'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED' });
+  assert.ok(Date.now() - startedAt < 110, 'the shared deadline must bound an uncooperative snapshot client');
+  assert.equal(requestedTimeouts.length, 2);
+  assert.ok(requestedTimeouts.every((value) => value > 0 && value <= 25));
+});
+
 test('explicit refresh waits through a bounded in-flight supervision snapshot before idle handoff', async (t) => {
   const paths = fixture(t);
   const staleDescriptor = descriptor(paths, {
@@ -343,7 +451,7 @@ test('explicit refresh waits through a bounded in-flight supervision snapshot be
       pid: staleDescriptor.owner_pid,
       instance_id: staleDescriptor.instance_id,
       process_start_token: OLD_PROCESS_START_TOKEN,
-      electron_ui_recovery: { alive: false }
+      electron_ui_recovery: { alive: false, state: 'missing' }
     }),
     call: async () => ({
       telemetryAvailable: true,
@@ -382,7 +490,8 @@ test('explicit refresh waits through a bounded in-flight supervision snapshot be
       sleepCalls += 1;
     }
   });
-  assert.equal(snapshotCalls, 2);
+  assert.equal(snapshotCalls, 3,
+    'the idle proof must be revalidated at the child-stop boundary');
   assert.equal(sleepCalls, 1);
   assert.equal(stopCalls, 1);
   assert.equal(result.idle_packaged_handoff.exact_host, true);
@@ -405,7 +514,7 @@ test('explicit refresh still refuses a persistently busy supervision snapshot', 
         pid: staleDescriptor.owner_pid,
         instance_id: staleDescriptor.instance_id,
         process_start_token: OLD_PROCESS_START_TOKEN,
-        electron_ui_recovery: { alive: false }
+        electron_ui_recovery: { alive: false, state: 'missing' }
       }),
       call: async () => {
         snapshotCalls += 1;
@@ -458,7 +567,7 @@ test('packaged handoff remains fail closed when any runtime component is live', 
         pid: staleDescriptor.owner_pid,
         instance_id: staleDescriptor.instance_id,
         process_start_token: OLD_PROCESS_START_TOKEN,
-        electron_ui_recovery: { alive: false }
+        electron_ui_recovery: { alive: false, state: 'missing' }
       }),
       call: async () => ({
         telemetryAvailable: true,

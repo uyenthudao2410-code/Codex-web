@@ -7,9 +7,7 @@
 // projection returned by Recovery Host.
 
 const path = require('node:path');
-const { createDevelopmentPaths } = require('../../scripts/dev-ui-lifecycle');
-const { RecoveryIpcClient, loadRecoveryDescriptor } = require('../../electron/services/recoveryIpc');
-const { descriptorMatchesInstallation, descriptorRequestOptions } = require('../../electron/services/recoveryHostLauncher');
+const { parseRuntimeInvocation, resolveRuntime } = require('./recovery_runtime_adapter.cjs');
 
 const MAX_REQUEST_BYTES = 64 * 1024;
 const LOCAL_HANDLE_PATTERN = /^cp_ro_[a-f0-9]{48}$/;
@@ -110,16 +108,22 @@ function normalisedResult(descriptor, result) {
   };
 }
 
-async function runDevelopmentReadOnlyBridge(request, { appRoot = path.resolve(__dirname, '..', '..'), dependencies = {} } = {}) {
-  const makePaths = dependencies.createDevelopmentPaths || createDevelopmentPaths;
+async function runReadOnlyBridge(request, { runtimeMode = 'development', appRoot = path.resolve(__dirname, '..', '..'), adapterDirectory, dependencies = {} } = {}) {
+  const runtime = resolveRuntime({ runtimeMode, appRoot, adapterDirectory, dependencies });
+  const {
+    paths,
+    RecoveryIpcClient,
+    loadRecoveryDescriptor,
+    descriptorMatchesInstallation,
+    descriptorRequestOptions
+  } = runtime;
   const readDescriptor = dependencies.loadRecoveryDescriptor || loadRecoveryDescriptor;
   const matchesInstallation = dependencies.descriptorMatchesInstallation || descriptorMatchesInstallation;
   const requestOptions = dependencies.descriptorRequestOptions || descriptorRequestOptions;
   const clientFactory = dependencies.clientFactory || ((options) => new RecoveryIpcClient(options));
-  const paths = makePaths({ appRoot });
   const expectedIdentity = paths.runtimeIdentity();
   const descriptor = readDescriptor(paths);
-  if (text(descriptor.runtime_mode) !== 'development' || !matchesInstallation(descriptor, expectedIdentity)) {
+  if (text(descriptor.runtime_mode) !== runtime.mode || !matchesInstallation(descriptor, expectedIdentity)) {
     throw bridgeError('RECOVERY_HOST_INSTALLATION_MISMATCH');
   }
   const client = clientFactory({ paths });
@@ -131,12 +135,17 @@ async function runDevelopmentReadOnlyBridge(request, { appRoot = path.resolve(__
   return normalisedResult(descriptor, result);
 }
 
+async function runDevelopmentReadOnlyBridge(request, options = {}) {
+  return runReadOnlyBridge(request, { ...options, runtimeMode: 'development' });
+}
+
 async function main(argv = process.argv.slice(2)) {
-  const index = argv.indexOf('--project-root');
-  const appRoot = index >= 0 ? String(argv[index + 1] || '').trim() : path.resolve(__dirname, '..', '..');
-  if (!appRoot || !path.isAbsolute(appRoot)) throw bridgeError('PROJECT_ROOT_INVALID');
+  const invocation = parseRuntimeInvocation(argv);
   const request = await readRequest();
-  const result = await runDevelopmentReadOnlyBridge(request, { appRoot });
+  const result = await runReadOnlyBridge(request, {
+    runtimeMode: invocation.runtimeMode,
+    appRoot: invocation.appRoot || undefined
+  });
   process.stdout.write(`${JSON.stringify({ ok: true, result })}\n`);
 }
 
@@ -152,5 +161,6 @@ module.exports = {
   readRequest,
   facadeContract,
   normalisedResult,
+  runReadOnlyBridge,
   runDevelopmentReadOnlyBridge
 };

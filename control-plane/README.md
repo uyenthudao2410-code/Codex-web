@@ -16,11 +16,82 @@ $env:CONTROL_PLANE_DB = "$PWD/var/control-plane.sqlite3"
 # Optional deployment metadata: the exact Git revision selected by the
 # operator's deployment procedure, not a substitute for process/byte proof.
 $env:CONTROL_PLANE_DECLARED_SOURCE_REVISION = '<40-or-64-hex-git-revision>'
+# Leave unset unless the private HTTPS Tailnet origin and reverse proxy have
+# been selected and verified. Setting this enables the browser operator UI.
+$env:CONTROL_PLANE_WEB_ORIGIN = 'https://<private-tailnet-control-plane>'
 python -m control_plane
 ```
 
 The default listener is `127.0.0.1:8765`. Do not bind a public address until a
 network and TLS/authentication boundary has been explicitly configured.
+
+## Private browser operator UI (source capability, not a live deployment claim)
+
+The browser UI is **disabled by default**. It becomes available only when
+`CONTROL_PLANE_WEB_ORIGIN` is one canonical HTTPS origin with no path, query,
+or credentials. This value must name a private Tailnet HTTPS reverse-proxy
+origin chosen by the operator; the Python server itself remains the HTTP
+upstream. Do not set it to `http://100.116.112.22:8765`, a public/Funnel URL,
+or a guessed hostname.
+
+Before enabling it on a named host, the change record must identify the exact
+private HTTPS URL, certificate/proxy owner, listener, service environment file,
+and rollback action. Verify that the proxy forwards only to the intended local
+control-plane listener, that it is unreachable from the public Internet, and
+that a browser receives the expected certificate before entering an operator
+token. This source change neither provisions a proxy nor restarts a service.
+
+With the explicit origin configured, `GET /` and the two fixed assets serve a
+small Vietnamese operator console. Login exchanges the operator token for a
+process-local 30-minute cookie (`HttpOnly; Secure; SameSite=Strict; Path=/`);
+sessions disappear on service restart and logout invalidates the session. The
+token is never stored in URL, localStorage, sessionStorage, asset bundle, node
+configuration, or service log. Login attempts are rate-limited in memory per
+direct peer address. A proxy that hides all clients behind one address will
+therefore share that small single-owner rate limit unless an approved trusted
+proxy design adds a separately validated client identity.
+
+The UI requires the configured exact `Origin` and session-bound
+`X-Control-Plane-CSRF` value for writes. It can approve exactly one existing,
+pending enrollment request (identity only; no policy, binding, context or
+execution), close central admission to `recovery`, and queue only the fixed
+`workspace_context` read-only canary for one already-live context; it cannot
+create an enrollment, choose a tool, arguments, path, target, expiry, policy,
+or node credential. The server owns a 10-minute maximum expiry and one
+idempotency key per session/context, so a refresh or response loss replays the
+same central action. Queue acceptance is not local execution or a completed
+effect. Reopening remains an explicit operator-runbook action through the
+existing Bearer surface after independent readiness/inflight review.
+Closing admission blocks new central intake/dispatch; it does not stop a
+Windows job or prove an existing effect has not happened.
+The overview is an authenticated, no-store central read model. It exposes a
+bounded action/receipt lifecycle (delivery state, latest receipt state/time and
+count) so an operator can distinguish queued, uncertain, accepted and terminal
+states; it intentionally omits raw work objectives, criteria, scopes, action
+arguments, receipt payloads, credentials, and local handles. It does not create
+a shell route, select a Windows path, issue a node command, or infer local
+execution from a heartbeat.
+
+Each node can additionally report one compact **local policy observation** with
+its heartbeat: `enabled`, `expired_or_disabled`, or `unavailable`, plus a safe
+expiry or reason code. It is node telemetry only—not a browser-granted right or
+proof that central policy validation succeeded. The browser overview omits the
+policy digest, policy file, local workspace path, and every credential; old
+nodes that omit this field retain their last observation rather than being
+shown as a fabricated new state.
+
+Static routes are an exact allowlist with CSP, no-referrer, no-frame, nosniff,
+and no-store headers. The dashboard uses `textContent` for observations and
+polls a single central overview about every five seconds only while visible; it
+does not invoke SSH, `systemctl`, or process census during a browser refresh.
+The following proof must still be collected after an authorized deployment:
+
+1. private HTTPS URL/certificate and non-public reachability;
+2. configured origin and expected package fingerprint in the protected service
+   environment, followed by a controlled restart and health receipt;
+3. browser login/logout/session expiry and CSRF rejection over the real HTTPS
+   origin; and
+4. fresh central/node observations and the packaged Windows RC-A canary.
 
 ## Current API boundary
 
@@ -315,9 +386,78 @@ admits exactly `workspace_context` with `{ "detail": "compact", "max_entries":
 the Python node agent or central service. The bridge receipt must return the
 same façade pin before it can be accepted. A local journal is written before the
 subprocess call; an interrupted prepared entry becomes an `unknown` receipt
-instead of being retried. The command does not create the policy, binding,
-context, action, or any central façade relay, and it is not a scheduler,
-logged-out Windows service, mutation lane, or live-canary result.
+instead of being retried. The poll command itself does not create a policy,
+binding, context, action, or any central façade relay, and it is not a
+scheduler, logged-out Windows service, mutation lane, or live-canary result.
+
+After the explicit policy has been installed and its local ACL reviewed, an
+operator may run a **bounded, logged-in** loop locally. It first verifies that
+the enabled, unexpired policy still matches this node configuration's central
+origin/device/endpoint; on failure it does not heartbeat or dequeue. Each
+iteration then publishes a fresh strict runtime heartbeat before the one
+read-only poll. The process has no scheduler installer, cannot run longer than
+24 hours, and must be started deliberately again after logout/reboot.
+
+```powershell
+# One hour at a 60-second cadence; do not run this before the explicit policy
+# installation and Windows ACL gate above have been completed.
+& '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-loop `
+  --config "$env:APPDATA\coding-tools-control-plane\node.json" `
+  --interval-seconds 60 `
+  --max-iterations 60
+```
+
+The loop prints only bounded lifecycle summaries. A degraded runtime or
+transport error is recorded for that iteration and never authorizes a retry of
+a possible local effect; an interrupted prepared bridge entry remains an
+`unknown` receipt as with the one-shot lane.
+
+### Explicit packaged read-only policy installation
+
+An installed Windows node can now create or disable **only** this one local
+read-only policy through its packaged `node-agent.cmd`. This is a deliberate
+local operator action, not a browser/Ubuntu command and not an auto-enrollment
+side effect. The launcher fixes bundled Python, the installed Electron tree,
+the packaged runtime mode, and `%APPDATA%\web-mcp-assistant`; it does not use a
+source checkout or global Node. The launcher accepts its fixed runtime arguments
+for enrollment, heartbeat and the safe non-dequeuing poll as well.
+
+Before installation, record the exact office device/endpoint, one non-sensitive
+workspace ID/generation, a façade contract from the selected central artifact,
+and an exact expiry time. The policy accepts a maximum of 24 hours and binds
+the node configuration's central origin/device/endpoint to all of those values.
+It contains no operator bearer or node credential. Do not copy a policy between
+nodes or replace an active policy merely to change target/workspace.
+
+```powershell
+# Run on the logged-in Windows pilot node. The installed launcher supplies
+# --runtime-mode packaged, --project-root and --node itself.
+& '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy `
+  --config "$env:APPDATA\coding-tools-control-plane\node.json" `
+  --owner-id 'owner_default' `
+  --workspace-id '<approved-canary-workspace-id>' `
+  --workspace-generation '<approved-canary-generation>' `
+  --facade-schema-version <exact-schema-version> `
+  --facade-profile '<exact-profile>' `
+  --facade-sha256 '<exact-64-hex>' `
+  --expires-at-ms <exact-unix-milliseconds> `
+  --confirm-install
+
+# Credential-free local observation, then an explicit local fail-closed stop.
+& '<installed>\resources\resources\control-plane\node-agent.cmd' inspect-read-only-policy
+& '<installed>\resources\resources\control-plane\node-agent.cmd' disable-read-only-policy --confirm-disable
+```
+
+The install command refuses a missing confirmation, an expired/over-24-hour
+policy, malformed owner/workspace/contract values, an already existing policy
+without `--replace`, or a caller-supplied packaged data root. It returns only a
+policy contract SHA, expiry, runtime mode and `windows_acl_verified=false`;
+that last field is intentional. Windows ACL ownership must be inspected during
+the install gate and cannot be inferred from Python `chmod`. Disabling writes a
+disabled policy instead of deleting it, preserving local evidence while making
+Recovery Host reject the bridge. The command never starts a scheduler, invokes
+the bridge, dequeues central work, changes a binding/context/action, or grants
+mutation authority.
 
 ```powershell
 $env:PYTHONPATH = "$PWD/control-plane"

@@ -331,6 +331,57 @@ function sameWorkspace(left, right) {
   }
 }
 
+function idleHandoffUiIsQuiescent(status, now = Date.now()) {
+  const ui = status?.electron_ui_recovery;
+  if (!ui || typeof ui !== 'object' || Array.isArray(ui)) return false;
+  // A negative process probe alone is not an idle proof. The supervisor can
+  // have just launched a replacement UI whose registration has not reached
+  // the cached IPC projection yet. Require its terminal, no-launch-pending
+  // state rather than interpreting every `alive: false` as absence.
+  if (ui.alive !== false || text(ui.state).toLowerCase() !== 'missing') return false;
+  for (const field of [
+    'initial_registration_grace_until_unix_ms',
+    'pending_registration_until_unix_ms',
+    'next_attempt_at_unix_ms',
+    'circuit_suppressed_until_unix_ms'
+  ]) {
+    const raw = ui[field];
+    if (raw === null || raw === undefined || raw === '') continue;
+    const until = Number(raw);
+    if (!Number.isSafeInteger(until) || until > now) return false;
+  }
+  return true;
+}
+
+function boundedIdleHandoffTimeout(timeoutMs) {
+  const requested = Number(timeoutMs);
+  return Number.isFinite(requested) && requested > 0
+    ? Math.min(15_000, requested)
+    : 15_000;
+}
+
+function deadlineError() {
+  return bootstrapError(
+    'RECOVERY_HOST_IDLE_HANDOFF_DEADLINE_EXCEEDED',
+    'The packaged Recovery Host idle-handoff observation exceeded its shared deadline.'
+  );
+}
+
+async function withinIdleHandoffDeadline(operation, deadline) {
+  const remaining = Math.floor(deadline - Date.now());
+  if (remaining <= 0) throw deadlineError();
+  let timer = null;
+  const expired = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(deadlineError()), remaining);
+    timer.unref?.();
+  });
+  try {
+    return await Promise.race([Promise.resolve().then(() => operation(remaining)), expired]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function proveIdlePackagedHandoff({
   client,
   paths,
@@ -352,11 +403,8 @@ async function proveIdlePackagedHandoff({
       'The packaged Recovery Host cannot provide an authenticated idle-handoff proof.'
     );
   }
-  const request = {
-    ...descriptorRequestOptions(descriptor),
-    timeout: Math.min(8_000, Math.max(1_500, Number(timeoutMs) || 8_000))
-  };
-  const snapshotRetryWindowMs = Math.min(15_000, Math.max(1_000, Number(timeoutMs) || 15_000));
+  const requestOptions = descriptorRequestOptions(descriptor);
+  const snapshotRetryWindowMs = boundedIdleHandoffTimeout(timeoutMs);
   const snapshotRetryDeadline = Date.now() + snapshotRetryWindowMs;
   // Keep a deterministic cap too: injected/unit-test sleeps may resolve
   // immediately and must not turn a time-based retry into an unbounded loop.
@@ -365,8 +413,14 @@ async function proveIdlePackagedHandoff({
   let runtime = null;
   for (let attempt = 0; attempt < snapshotAttempts; attempt += 1) {
     try {
-      status = await client.status(request);
-      runtime = await client.call('runtime.lightweight_snapshot', [], request);
+      status = await withinIdleHandoffDeadline(
+        (remaining) => client.status({ ...requestOptions, timeout: remaining }),
+        snapshotRetryDeadline
+      );
+      runtime = await withinIdleHandoffDeadline(
+        (remaining) => client.call('runtime.lightweight_snapshot', [], { ...requestOptions, timeout: remaining }),
+        snapshotRetryDeadline
+      );
     } catch (error) {
       throw bootstrapError(
         'RECOVERY_HOST_IDLE_HANDOFF_UNVERIFIED',
@@ -374,8 +428,13 @@ async function proveIdlePackagedHandoff({
         { cause_code: String(error?.code || '') || null }
       );
     }
-    if (runtime?.snapshotBusy !== true || attempt === snapshotAttempts - 1 || Date.now() >= snapshotRetryDeadline) break;
-    await sleep(Math.min(IDLE_HANDOFF_SNAPSHOT_RETRY_MS, Math.max(1, snapshotRetryDeadline - Date.now())));
+    if (runtime?.snapshotBusy !== true || attempt === snapshotAttempts - 1) break;
+    const remaining = snapshotRetryDeadline - Date.now();
+    if (remaining <= 0) throw deadlineError();
+    await withinIdleHandoffDeadline(
+      (budget) => sleep(Math.min(IDLE_HANDOFF_SNAPSHOT_RETRY_MS, budget)),
+      snapshotRetryDeadline
+    );
   }
   const descriptorToken = normalizeProcessStartToken(descriptor?.owner_process_start_token);
   const statusToken = normalizeProcessStartToken(status?.process_start_token);
@@ -387,7 +446,7 @@ async function proveIdlePackagedHandoff({
   const terminalEpoch = ['NONE', 'READY', 'FAILED'].includes(epochState);
   const workspaceMatches = sameWorkspace(workspace, paths.appRoot());
   const safe = exactHost
-    && status?.electron_ui_recovery?.alive === false
+    && idleHandoffUiIsQuiescent(status)
     && runtime?.telemetryAvailable === true
     && runtime?.signalStale === false
     && runtime?.snapshotBusy === false
@@ -404,6 +463,7 @@ async function proveIdlePackagedHandoff({
       'The packaged Recovery Host is not provably idle for a development-checkout handoff.',
       {
         exact_host: exactHost,
+        ui_quiescent: idleHandoffUiIsQuiescent(status),
         ui_alive: status?.electron_ui_recovery?.alive === true,
         telemetry_available: runtime?.telemetryAvailable === true,
         signal_stale: runtime?.signalStale !== false,
@@ -836,6 +896,13 @@ async function bootstrapCurrentRecoveryHost({
     // Ask the authenticated host to stop only its children first.  Transport
     // response loss is not proof that the stop did not happen; the exact
     // descriptor/PID checks below remain the mutation authority.
+    // A packaged-to-development handoff has no durable idle lease. The proof
+    // above only authorized reaching this boundary; repeat the exact
+    // authenticated UI/runtime observation immediately before stopping any
+    // child so a just-started UI cannot inherit a stale `alive: false` cache.
+    if (idlePackagedHandoff) {
+      idlePackagedHandoff = await proveIdlePackagedHandoff({ client, paths, descriptor, timeoutMs, sleep });
+    }
     childStopMayHaveOccurred = true;
     try {
       await client.stop(

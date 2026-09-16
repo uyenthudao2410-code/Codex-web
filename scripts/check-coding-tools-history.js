@@ -77,7 +77,8 @@ function fail(lines) {
 
 function verifyStagedCanonicalLedger(root) {
   const script = path.join(root, 'scripts', 'stage-coding-tools-delivery.py');
-  return spawnSync('python', [script, '--verify-index'], {
+  const launcher = path.join(root, 'scripts', 'run-python.js');
+  return spawnSync(process.execPath, [launcher, script, '--verify-index'], {
     cwd: root,
     encoding: 'utf8',
     windowsHide: true,

@@ -41,11 +41,13 @@ npm run canary:opencode-flash:preflight
 
 `npm run canary:opencode-flash` performs real provider dispatch and may incur external cost; run only with explicit authorization. Rust/LSP changes use the smallest affected Rust tests required by `AGENTS.md`.
 
-`npm run dist` runs the Node test lane before Electron Builder; it does not run
-the Python MCP tests. When the candidate changes Python MCP behavior, record the
-relevant MCP proof explicitly. An installer build alone does not cover that
-behavior. Choose focused MCP tests during implementation and the required
-affected-boundary tests for the release candidate.
+`npm run dist` currently runs `icon:build`, then `test:all` (both `npm test`
+and `npm run test:mcp`), then `clean-dist` before Electron Builder creates the
+NSIS candidate. It is therefore a release-boundary test lane, not a substitute
+for focused proof while implementing. `npm run dist:dir` builds the unpacked
+directory after `icon:build`/`clean-dist` but does not run either test suite.
+An installer build alone still does not prove installation, activation, or any
+behavior outside the tests it actually ran.
 
 ## 4. EOCL and proof integrity
 

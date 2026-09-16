@@ -2,7 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const {
+  runReadOnlyBridge,
   runDevelopmentReadOnlyBridge,
   normalisedResult
 } = require('../control_plane/recovery_read_only_bridge.cjs');
@@ -106,4 +110,36 @@ test('read-only bridge rejects an installation mismatch before it opens Recovery
     { code: 'RECOVERY_HOST_INSTALLATION_MISMATCH' }
   );
   assert.equal(called, false);
+});
+
+test('read-only bridge can use the fixed packaged adapter without a checkout or global Node', async (t) => {
+  const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-packaged-bridge-'));
+  t.after(() => fs.rmSync(installRoot, { recursive: true, force: true }));
+  const adapterDirectory = path.join(installRoot, 'resources', 'resources', 'control-plane');
+  const appRoot = path.join(installRoot, 'resources', 'app.asar');
+  const appData = path.join(installRoot, 'appdata');
+  const executablePath = path.join(installRoot, 'Coding Tools MCP.exe');
+  fs.mkdirSync(adapterDirectory, { recursive: true });
+  fs.mkdirSync(appRoot, { recursive: true });
+  fs.mkdirSync(appData, { recursive: true });
+  fs.writeFileSync(executablePath, 'fixture');
+  const packagedDescriptor = { ...descriptor, runtime_mode: 'packaged' };
+  const paths = { runtimeIdentity: () => ({ mode: 'packaged', installation_id: 'a'.repeat(64) }) };
+  const result = await runReadOnlyBridge(request, {
+    runtimeMode: 'packaged',
+    adapterDirectory,
+    dependencies: {
+      appData,
+      executablePath,
+      createRuntimePaths: () => paths,
+      RecoveryIpcClient: class RecoveryIpcClient {},
+      loadRecoveryDescriptor: () => packagedDescriptor,
+      descriptorMatchesInstallation: () => true,
+      descriptorRequestOptions: (value) => ({ expectedInstanceId: value.instance_id }),
+      clientFactory: () => ({ call: async () => safeResult() })
+    }
+  });
+  assert.equal(result.runtime_mode, 'packaged');
+  assert.equal(result.workspace_accessed, true);
+  assert.equal(JSON.stringify(result).includes('must-not-be-returned'), false);
 });

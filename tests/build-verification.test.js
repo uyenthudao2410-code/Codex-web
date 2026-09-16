@@ -4,7 +4,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { detectProject, collectArtifacts, requireWorkspace } = require('../electron/services/buildVerificationService');
-const { assertSanitizedPackagedResources, assertExactPackagedResources } = require('../scripts/verify-packaged-resources');
+const {
+  assertSanitizedPackagedResources,
+  assertExactPackagedResources,
+  assertExactControlPlaneAdapter,
+  CONTROL_PLANE_ADAPTER_FILES
+} = require('../scripts/verify-packaged-resources');
 const { cleanDistRoot } = require('../scripts/clean-dist');
 
 test('build verification detects Electron package scripts', () => {
@@ -59,6 +64,9 @@ test('electron packaging excludes volatile resource evidence and validates the p
     from: 'resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py',
     to: 'resources/coding-tools-mcp/scripts/reconcile_exact_stale_run.py'
   }, 'the exact stale-run helper must be packaged independently of the excluded scripts tree');
+  const controlPlaneAdapter = resources.find((entry) => entry.from === 'control-plane/control_plane' && entry.to === 'resources/control-plane');
+  assert.deepEqual(controlPlaneAdapter?.filter?.slice().sort(), [...CONTROL_PLANE_ADAPTER_FILES].sort(),
+    'the installed node adapter must have one explicit packaged file set');
   assert.deepEqual(packageJson.build?.electronLanguages, ['en-US', 'vi']);
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
@@ -66,6 +74,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
   const packagedSmoke = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'packaged-recovery-smoke.js'), 'utf8');
   assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
   assert.match(packagedSmoke, /reconcile_exact_stale_run\.py/);
+  assert.match(packagedSmoke, /assertExactControlPlaneAdapter/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
 });
 
@@ -108,6 +117,28 @@ test('packaged resources must be byte-identical to the current allowed source pr
     fs.writeFileSync(path.join(packaged, 'stale-resource.txt'), 'unexpected');
     assert.throws(() => assertExactPackagedResources(source, packaged), /not present in current source/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('packaged control-plane adapter has the exact allowlisted installed file set', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'web-mcp-packaged-adapter-'));
+  const source = path.join(root, 'source');
+  const packaged = path.join(root, 'packaged');
+  try {
+    fs.mkdirSync(source, { recursive: true });
+    fs.mkdirSync(packaged, { recursive: true });
+    for (const file of CONTROL_PLANE_ADAPTER_FILES) {
+      fs.writeFileSync(path.join(source, file), `source:${file}`);
+      fs.writeFileSync(path.join(packaged, file), `source:${file}`);
+    }
+    assert.equal(assertExactControlPlaneAdapter(source, packaged).exact_source, true);
+    fs.writeFileSync(path.join(packaged, 'node_agent.py'), 'drift');
+    assert.throws(() => assertExactControlPlaneAdapter(source, packaged), /source mismatch/);
+    fs.writeFileSync(path.join(packaged, 'node_agent.py'), 'source:node_agent.py');
+    fs.writeFileSync(path.join(packaged, 'unexpected.py'), 'unexpected');
+    assert.throws(() => assertExactControlPlaneAdapter(source, packaged), /unexpected file set/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('packaged resource sanitation rejects raw reports and Python cache metadata', () => {

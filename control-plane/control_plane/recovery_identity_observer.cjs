@@ -7,9 +7,7 @@
 // Recovery IPC action.
 
 const path = require('node:path');
-const { createDevelopmentPaths } = require('../../scripts/dev-ui-lifecycle');
-const { RecoveryIpcClient, loadRecoveryDescriptor } = require('../../electron/services/recoveryIpc');
-const { descriptorMatchesInstallation, descriptorRequestOptions } = require('../../electron/services/recoveryHostLauncher');
+const { parseRuntimeInvocation, resolveRuntime } = require('./recovery_runtime_adapter.cjs');
 
 function observerError(code) {
   return Object.assign(new Error(code), { code });
@@ -30,6 +28,7 @@ function normalizedObservation(descriptor, observation) {
   }
   return {
     observation_schema_version: 1,
+    observation_kind: 'mcp_identity_read_only',
     installation_id: text(descriptor.installation_id) || null,
     runtime_mode: text(descriptor.runtime_mode) || null,
     recovery_host_instance_id: text(descriptor.instance_id) || null,
@@ -45,16 +44,52 @@ function normalizedObservation(descriptor, observation) {
   };
 }
 
-async function observeDevelopmentRuntime({ appRoot = path.resolve(__dirname, '..', '..'), dependencies = {} } = {}) {
-  const makePaths = dependencies.createDevelopmentPaths || createDevelopmentPaths;
+function exactRecoveryHost(descriptor, status) {
+  return Number(status?.pid || 0) === Number(descriptor?.owner_pid || 0)
+    && text(status?.instance_id) === text(descriptor?.instance_id)
+    && text(status?.process_start_token) === text(descriptor?.owner_process_start_token);
+}
+
+function normalizedRuntimeStatus(descriptor, status) {
+  const runtime = status?.runtime;
+  const epoch = status?.activation_epoch;
+  const strictReady = exactRecoveryHost(descriptor, status)
+    && text(descriptor?.runtime_mode) === 'packaged'
+    && text(status?.state) === 'healthy'
+    && status?.full_clean_activation?.available === true
+    && epoch?.admission_open === true
+    && epoch?.update_incomplete === false
+    && runtime?.fully_ready === true
+    && runtime?.update_incomplete === false
+    && runtime?.connector_ready === true
+    && runtime?.connector_ack_sha_matches === true;
+  return {
+    observation_schema_version: 1,
+    observation_kind: 'recovery_runtime_read_only',
+    installation_id: text(descriptor?.installation_id) || null,
+    runtime_mode: text(descriptor?.runtime_mode) || null,
+    recovery_host_instance_id: text(descriptor?.instance_id) || null,
+    strict_ready: strictReady,
+    ...(strictReady ? {} : { error_code: 'PACKAGED_RUNTIME_UNREADY' })
+  };
+}
+
+async function observeRuntime({ runtimeMode = 'development', appRoot = path.resolve(__dirname, '..', '..'), adapterDirectory, dependencies = {} } = {}) {
+  const runtime = resolveRuntime({ runtimeMode, appRoot, adapterDirectory, dependencies });
+  const {
+    paths,
+    RecoveryIpcClient,
+    loadRecoveryDescriptor,
+    descriptorMatchesInstallation,
+    descriptorRequestOptions
+  } = runtime;
   const readDescriptor = dependencies.loadRecoveryDescriptor || loadRecoveryDescriptor;
   const matchesInstallation = dependencies.descriptorMatchesInstallation || descriptorMatchesInstallation;
   const requestOptions = dependencies.descriptorRequestOptions || descriptorRequestOptions;
   const clientFactory = dependencies.clientFactory || ((options) => new RecoveryIpcClient(options));
-  const paths = makePaths({ appRoot });
   const expectedIdentity = paths.runtimeIdentity();
   const descriptor = readDescriptor(paths);
-  if (text(descriptor.runtime_mode) !== 'development' || !matchesInstallation(descriptor, expectedIdentity)) {
+  if (text(descriptor.runtime_mode) !== runtime.mode || !matchesInstallation(descriptor, expectedIdentity)) {
     throw observerError('RECOVERY_HOST_INSTALLATION_MISMATCH');
   }
   const client = clientFactory({ paths });
@@ -62,11 +97,38 @@ async function observeDevelopmentRuntime({ appRoot = path.resolve(__dirname, '..
   return normalizedObservation(descriptor, observation);
 }
 
+async function observeDevelopmentRuntime(options = {}) {
+  return observeRuntime({ ...options, runtimeMode: 'development' });
+}
+
+async function observePackagedRuntimeStatus({ adapterDirectory, dependencies = {} } = {}) {
+  const runtime = resolveRuntime({ runtimeMode: 'packaged', adapterDirectory, dependencies });
+  const {
+    paths,
+    RecoveryIpcClient,
+    loadRecoveryDescriptor,
+    descriptorMatchesInstallation,
+    descriptorRequestOptions
+  } = runtime;
+  const descriptor = (dependencies.loadRecoveryDescriptor || loadRecoveryDescriptor)(paths);
+  if (text(descriptor.runtime_mode) !== 'packaged'
+    || !(dependencies.descriptorMatchesInstallation || descriptorMatchesInstallation)(descriptor, paths.runtimeIdentity())) {
+    throw observerError('RECOVERY_HOST_INSTALLATION_MISMATCH');
+  }
+  const client = (dependencies.clientFactory || ((options) => new RecoveryIpcClient(options)))({ paths });
+  const status = await client.status((dependencies.descriptorRequestOptions || descriptorRequestOptions)(descriptor));
+  return normalizedRuntimeStatus(descriptor, status);
+}
+
 async function main(argv = process.argv.slice(2)) {
-  const index = argv.indexOf('--project-root');
-  const appRoot = index >= 0 ? String(argv[index + 1] || '').trim() : path.resolve(__dirname, '..', '..');
-  if (!appRoot || !path.isAbsolute(appRoot)) throw observerError('PROJECT_ROOT_INVALID');
-  const observation = await observeDevelopmentRuntime({ appRoot });
+  const invocation = parseRuntimeInvocation(argv);
+  if (argv.includes('--runtime-status')) {
+    if (invocation.runtimeMode !== 'packaged') throw observerError('RUNTIME_ADAPTER_MODE_INVALID');
+    const status = await observePackagedRuntimeStatus();
+    process.stdout.write(`${JSON.stringify({ ok: true, status })}\n`);
+    return;
+  }
+  const observation = await observeRuntime({ runtimeMode: invocation.runtimeMode, appRoot: invocation.appRoot || undefined });
   process.stdout.write(`${JSON.stringify({ ok: true, observation })}\n`);
 }
 
@@ -79,6 +141,10 @@ if (require.main === module) {
 
 module.exports = {
   normalizedObservation,
+  normalizedRuntimeStatus,
+  exactRecoveryHost,
+  observeRuntime,
   observeDevelopmentRuntime,
+  observePackagedRuntimeStatus,
   observerError
 };

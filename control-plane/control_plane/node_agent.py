@@ -18,6 +18,7 @@ import re
 import secrets
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 import urllib.parse
@@ -29,6 +30,14 @@ SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 READ_ONLY_TOOL_NAME = "workspace_context"
 READ_ONLY_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 READ_ONLY_JOURNAL_SCHEMA_VERSION = 1
+READ_ONLY_POLICY_SCHEMA_VERSION = 2
+READ_ONLY_POLICY_MAX_BYTES = 16 * 1024
+READ_ONLY_POLICY_MAX_TTL_MS = 24 * 60 * 60 * 1000
+READ_ONLY_POLICY_FILE_NAME = "control-plane-read-only-policy.json"
+READ_ONLY_LOOP_MIN_INTERVAL_SECONDS = 15
+READ_ONLY_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
+READ_ONLY_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
+POLICY_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
 PRE_EFFECT_REJECTION_CODES = frozenset({
     "CONTROL_PLANE_BRIDGE_ACTION_DENIED",
     "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
@@ -147,6 +156,12 @@ def runtime_readiness(status: dict[str, str]) -> tuple[str, str]:
     an attested current-process rediscovery before even a future read-only
     action may be admitted.
     """
+    if status.get("adapter_mode") == "packaged":
+        if status.get("strict_ready") == "true":
+            return "ready", "strict_packaged_recovery_observation"
+        if status.get("strict_ready") == "false":
+            return "degraded", "packaged_runtime_unready"
+        return "unknown", "packaged_runtime_observation_invalid"
     if status.get("state") == "MISSING" or status.get("host") != "available":
         return "blocked", "runtime_unavailable"
     if status.get("state") != "CURRENT" or status.get("installation") != "current":
@@ -247,15 +262,307 @@ def runtime_heartbeat_projection(status: dict[str, str], identity_observation: A
     }
 
 
+def _runtime_mode(args: argparse.Namespace) -> str:
+    mode = str(getattr(args, "runtime_mode", "development") or "development").strip().lower()
+    if mode not in {"development", "packaged"}:
+        raise RuntimeError("runtime_mode_invalid")
+    return mode
+
+
+def _adapter_command(args: argparse.Namespace, script: Path, project_root: Path, *, runtime_status: bool = False) -> tuple[list[str], dict[str, str]]:
+    """Build the only supported local adapter invocation.
+
+    Installed mode runs the product Electron executable as Node. The wrapper is
+    supplied by the installer, so no global Node.js or source checkout is a
+    dependency of the Windows node lane.
+    """
+    mode = _runtime_mode(args)
+    command = [str(args.node), str(script), "--runtime-mode", mode]
+    if runtime_status:
+        command.append("--runtime-status")
+    if mode == "development":
+        command.extend(["--project-root", str(project_root)])
+    environment = dict(os.environ)
+    if mode == "packaged":
+        environment["ELECTRON_RUN_AS_NODE"] = "1"
+    return command, environment
+
+
+def _policy_data_root(args: argparse.Namespace) -> Path:
+    """Resolve the one profile that Recovery Host will read for this mode.
+
+    Packaged mode intentionally derives the fixed product data root; allowing a
+    user-supplied path there could install a convincing policy that the active
+    installed Recovery Host never reads. Development mode requires a separately
+    named data root so it cannot accidentally alter a packaged profile.
+    """
+
+    mode = _runtime_mode(args)
+    requested = str(getattr(args, "data_root", "") or "").strip()
+    if mode == "packaged":
+        if requested:
+            raise RuntimeError("CONTROL_PLANE_POLICY_PACKAGED_DATA_ROOT_FORBIDDEN")
+        appdata = str(os.environ.get("APPDATA", "") or "").strip()
+        if not appdata or not Path(appdata).is_absolute():
+            raise RuntimeError("CONTROL_PLANE_POLICY_APPDATA_UNAVAILABLE")
+        return Path(appdata).resolve() / "web-mcp-assistant"
+    if not requested or not Path(requested).is_absolute():
+        raise RuntimeError("CONTROL_PLANE_POLICY_DATA_ROOT_REQUIRED")
+    return Path(requested).resolve()
+
+
+def _read_only_policy_path(args: argparse.Namespace) -> Path:
+    return _policy_data_root(args) / READ_ONLY_POLICY_FILE_NAME
+
+
+def _policy_identifier(value: Any, field: str) -> str:
+    candidate = str(value or "").strip()
+    if not POLICY_IDENTIFIER_PATTERN.fullmatch(candidate):
+        raise RuntimeError(f"CONTROL_PLANE_POLICY_{field.upper()}_INVALID")
+    return candidate
+
+
+def _policy_facade_contract(schema_version: Any, profile: Any, sha256: Any) -> dict[str, int | str]:
+    if not isinstance(schema_version, int) or isinstance(schema_version, bool) or not 1 <= schema_version <= 1_000_000:
+        raise RuntimeError("CONTROL_PLANE_POLICY_FACADE_CONTRACT_INVALID")
+    normalized_sha256 = str(sha256 or "").strip().lower()
+    if not SHA256_PATTERN.fullmatch(normalized_sha256):
+        raise RuntimeError("CONTROL_PLANE_POLICY_FACADE_CONTRACT_INVALID")
+    return {
+        "schema_version": schema_version,
+        "profile": _policy_identifier(profile, "facade_profile"),
+        "sha256": normalized_sha256,
+    }
+
+
+def _policy_digest(policy: dict[str, Any]) -> str:
+    # Recovery Host fingerprints the admitted v2 policy projection. ``enabled``
+    # is a gate checked before that projection is built, so it is intentionally
+    # not part of the cross-language policy SHA. A disabled file therefore has
+    # no admitted authority even though its future-enabled contract is stable.
+    admitted_projection = {key: value for key, value in policy.items() if key != "enabled"}
+    return hashlib.sha256(
+        json.dumps(admitted_projection, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
+
+
+def _normalise_read_only_policy(policy: Any, *, now_ms: int | None = None, require_enabled: bool = False) -> dict[str, Any]:
+    """Validate the exact v2 policy shape without reading a secret or IPC descriptor."""
+
+    expected_fields = {
+        "schema_version", "enabled", "server_origin", "owner_id", "device_id",
+        "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms", "facade_contract",
+    }
+    if not isinstance(policy, dict) or set(policy) != expected_fields:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
+    if policy.get("schema_version") != READ_ONLY_POLICY_SCHEMA_VERSION or not isinstance(policy.get("enabled"), bool):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
+    if require_enabled and policy["enabled"] is not True:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_DISABLED")
+    expires_at_ms = policy.get("expires_at_ms")
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
+    if now_ms is not None and expires_at_ms <= now_ms:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_EXPIRED")
+    facade = policy.get("facade_contract")
+    if not isinstance(facade, dict) or set(facade) != {"schema_version", "profile", "sha256"}:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
+    try:
+        server_origin = _server_origin(policy.get("server_origin"))
+    except RuntimeError as error:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID") from error
+    return {
+        "schema_version": READ_ONLY_POLICY_SCHEMA_VERSION,
+        "enabled": policy["enabled"],
+        "server_origin": server_origin,
+        "owner_id": _policy_identifier(policy.get("owner_id"), "owner_id"),
+        "device_id": _policy_identifier(policy.get("device_id"), "device_id"),
+        "endpoint_id": _policy_identifier(policy.get("endpoint_id"), "endpoint_id"),
+        "workspace_id": _policy_identifier(policy.get("workspace_id"), "workspace_id"),
+        "workspace_generation": _policy_identifier(policy.get("workspace_generation"), "workspace_generation"),
+        "expires_at_ms": expires_at_ms,
+        "facade_contract": _policy_facade_contract(
+            facade.get("schema_version"), facade.get("profile"), facade.get("sha256")
+        ),
+    }
+
+
+def _read_local_policy(policy_path: Path) -> dict[str, Any]:
+    try:
+        stat = policy_path.stat()
+        if not policy_path.is_file() or stat.st_size > READ_ONLY_POLICY_MAX_BYTES:
+            raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID")
+        value = json.loads(policy_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_MISSING") from error
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_INVALID") from error
+    return _normalise_read_only_policy(value)
+
+
+def _read_only_loop_policy_admission(args: argparse.Namespace) -> None:
+    """Reject a loop before it can allocate central delivery work.
+
+    ``poll-read-only-once`` retains its per-action bridge checks so an explicit
+    one-shot always records a typed pre-effect receipt when appropriate.  A
+    repeating loop must be stricter: an absent, disabled, expired or
+    wrong-target policy is a local stop condition, not a reason to dequeue and
+    reject new central actions repeatedly.
+    """
+    config = _config(Path(args.config).expanduser().resolve())
+    policy = _read_local_policy(_read_only_policy_path(args))
+    policy = _normalise_read_only_policy(
+        policy,
+        now_ms=int(time.time() * 1000),
+        require_enabled=True,
+    )
+    if (
+        policy["server_origin"] != _server_origin(config.get("server_url"))
+        or policy["device_id"] != config["device_id"]
+        or policy["endpoint_id"] != config["endpoint_id"]
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH")
+
+
+def read_only_policy_observation(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
+    """Project local policy state without exposing its content or granting work.
+
+    The policy remains entirely local authority.  This projection is merely a
+    small, typed operator diagnostic that lets the central UI distinguish a
+    missing/expired/mismatched policy from an otherwise-ready runtime.
+    """
+
+    try:
+        policy = _read_local_policy(_read_only_policy_path(args))
+        if (
+            policy["server_origin"] != _server_origin(config.get("server_url"))
+            or policy["device_id"] != config["device_id"]
+            or policy["endpoint_id"] != config["endpoint_id"]
+        ):
+            raise RuntimeError("CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH")
+        state = "enabled" if policy["enabled"] is True and policy["expires_at_ms"] > int(time.time() * 1000) else "expired_or_disabled"
+        return {
+            "state": state,
+            "expires_at_ms": policy["expires_at_ms"],
+            "policy_sha256": _policy_digest(policy),
+            "reason": "",
+        }
+    except RuntimeError as error:
+        return {
+            "state": "unavailable",
+            "expires_at_ms": None,
+            "policy_sha256": None,
+            "reason": _safe_error_code(error, default="CONTROL_PLANE_POLICY_OBSERVATION_UNAVAILABLE"),
+        }
+
+
+def _write_local_policy(policy_path: Path, policy: dict[str, Any], *, replace: bool) -> None:
+    if policy_path.exists() and not replace:
+        raise RuntimeError("CONTROL_PLANE_POLICY_ALREADY_EXISTS")
+    policy_path.parent.mkdir(parents=True, exist_ok=True)
+    _write_json_atomic(policy_path, policy)
+
+
+def install_read_only_policy(args: argparse.Namespace) -> int:
+    """Install one explicit, bounded local policy; this never contacts Ubuntu."""
+
+    if getattr(args, "confirm_install", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_POLICY_CONFIRMATION_REQUIRED")
+    config = _config(Path(args.config).expanduser().resolve())
+    now_ms = int(time.time() * 1000)
+    expires_at_ms = args.expires_at_ms
+    if (
+        not isinstance(expires_at_ms, int)
+        or isinstance(expires_at_ms, bool)
+        or expires_at_ms <= now_ms
+        or expires_at_ms > now_ms + READ_ONLY_POLICY_MAX_TTL_MS
+    ):
+        raise RuntimeError("CONTROL_PLANE_POLICY_EXPIRY_INVALID")
+    policy = {
+        "schema_version": READ_ONLY_POLICY_SCHEMA_VERSION,
+        "enabled": True,
+        "server_origin": _server_origin(config.get("server_url")),
+        "owner_id": _policy_identifier(args.owner_id, "owner_id"),
+        "device_id": _policy_identifier(config.get("device_id"), "device_id"),
+        "endpoint_id": _policy_identifier(config.get("endpoint_id"), "endpoint_id"),
+        "workspace_id": _policy_identifier(args.workspace_id, "workspace_id"),
+        "workspace_generation": _policy_identifier(args.workspace_generation, "workspace_generation"),
+        "expires_at_ms": expires_at_ms,
+        "facade_contract": _policy_facade_contract(args.facade_schema_version, args.facade_profile, args.facade_sha256),
+    }
+    policy = _normalise_read_only_policy(policy, now_ms=now_ms, require_enabled=True)
+    policy_path = _read_only_policy_path(args)
+    _write_local_policy(policy_path, policy, replace=getattr(args, "replace", False) is True)
+    print(json.dumps({
+        "operation": "control_plane_read_only_policy_installed",
+        "enabled": True,
+        "expires_at_ms": policy["expires_at_ms"],
+        "policy_sha256": _policy_digest(policy),
+        "runtime_mode": _runtime_mode(args),
+        # chmod is not Windows ACL evidence; this receipt must remain truthful.
+        "windows_acl_verified": False,
+    }, separators=(",", ":")))
+    return 0
+
+
+def inspect_read_only_policy(args: argparse.Namespace) -> int:
+    """Print a credential-free policy state; absence/invalidity is not readiness."""
+
+    try:
+        policy = _read_local_policy(_read_only_policy_path(args))
+        now_ms = int(time.time() * 1000)
+        state = "enabled" if policy["enabled"] and policy["expires_at_ms"] > now_ms else "expired_or_disabled"
+        result: dict[str, Any] = {
+            "operation": "control_plane_read_only_policy_observation",
+            "state": state,
+            "enabled": policy["enabled"],
+            "expires_at_ms": policy["expires_at_ms"],
+            "policy_sha256": _policy_digest(policy),
+            "runtime_mode": _runtime_mode(args),
+            "windows_acl_verified": False,
+        }
+    except RuntimeError as error:
+        result = {
+            "operation": "control_plane_read_only_policy_observation",
+            "state": "unavailable",
+            "reason": str(error),
+            "runtime_mode": _runtime_mode(args),
+            "windows_acl_verified": False,
+        }
+    print(json.dumps(result, separators=(",", ":")))
+    return 0
+
+
+def disable_read_only_policy(args: argparse.Namespace) -> int:
+    """Fail locally closed without deleting the policy evidence."""
+
+    if getattr(args, "confirm_disable", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_POLICY_DISABLE_CONFIRMATION_REQUIRED")
+    policy_path = _read_only_policy_path(args)
+    policy = _read_local_policy(policy_path)
+    policy["enabled"] = False
+    _write_local_policy(policy_path, policy, replace=True)
+    print(json.dumps({
+        "operation": "control_plane_read_only_policy_disabled",
+        "enabled": False,
+        "policy_sha256": _policy_digest(policy),
+        "runtime_mode": _runtime_mode(args),
+        "windows_acl_verified": False,
+    }, separators=(",", ":")))
+    return 0
+
+
 def recovery_identity_observation(args: argparse.Namespace, project_root: Path) -> dict[str, Any] | None:
     """Read the one allowlisted identity action without exposing IPC secrets."""
     observer = Path(__file__).with_name("recovery_identity_observer.cjs")
     if not observer.is_file():
         return None
     try:
+        command, environment = _adapter_command(args, observer, project_root)
         completed = subprocess.run(
-            [args.node, str(observer), "--project-root", str(project_root)],
+            command,
             cwd=project_root,
+            env=environment,
             capture_output=True,
             text=True,
             timeout=args.timeout_seconds,
@@ -273,7 +580,47 @@ def recovery_identity_observation(args: argparse.Namespace, project_root: Path) 
     return observation if isinstance(observation, dict) else None
 
 
+def recovery_runtime_status(args: argparse.Namespace, project_root: Path) -> dict[str, str]:
+    """Return only the packaged adapter's strict/read-only readiness bit."""
+    observer = Path(__file__).with_name("recovery_identity_observer.cjs")
+    if not observer.is_file():
+        raise RuntimeError("runtime_lifecycle_missing")
+    try:
+        command, environment = _adapter_command(args, observer, project_root, runtime_status=True)
+        completed = subprocess.run(
+            command,
+            cwd=project_root,
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=args.timeout_seconds,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RuntimeError("runtime_status_unavailable") from error
+    if completed.returncode != 0:
+        raise RuntimeError("runtime_status_unavailable")
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("runtime_status_invalid") from error
+    observation = payload.get("status") if isinstance(payload, dict) and payload.get("ok") is True else None
+    if not isinstance(observation, dict) or (
+        observation.get("observation_schema_version") != 1
+        or observation.get("observation_kind") != "recovery_runtime_read_only"
+        or observation.get("runtime_mode") != "packaged"
+        or not isinstance(observation.get("strict_ready"), bool)
+    ):
+        raise RuntimeError("runtime_status_invalid")
+    return {
+        "adapter_mode": "packaged",
+        "strict_ready": "true" if observation["strict_ready"] else "false",
+    }
+
+
 def _runtime_status(args: argparse.Namespace, project_root: Path) -> dict[str, str]:
+    if _runtime_mode(args) == "packaged":
+        return recovery_runtime_status(args, project_root)
     lifecycle = project_root / "scripts" / "dev-ui-lifecycle.js"
     if not lifecycle.is_file():
         raise RuntimeError("runtime_lifecycle_missing")
@@ -456,9 +803,11 @@ def recovery_read_only_bridge(args: argparse.Namespace, project_root: Path, requ
     if not bridge.is_file():
         return None, "CONTROL_PLANE_BRIDGE_UNAVAILABLE"
     try:
+        command, environment = _adapter_command(args, bridge, project_root)
         completed = subprocess.run(
-            [args.node, str(bridge), "--project-root", str(project_root)],
+            command,
             cwd=project_root,
+            env=environment,
             input=json.dumps(request, separators=(",", ":")),
             capture_output=True,
             text=True,
@@ -603,6 +952,7 @@ def runtime_heartbeat(args: argparse.Namespace) -> int:
     observation = recovery_identity_observation(args, project_root) if runtime_readiness(status)[0] == "ready" else None
     projection = runtime_heartbeat_projection(status, observation)
     config = _config(Path(args.config).expanduser().resolve())
+    policy_observation = read_only_policy_observation(args, config)
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/heartbeat", {
         "endpoint_id": config["endpoint_id"],
         "runtime_instance_id": projection["runtime_instance_id"],
@@ -610,6 +960,7 @@ def runtime_heartbeat(args: argparse.Namespace) -> int:
         "activation_epoch": projection["activation_epoch"],
         "contract_version": projection["contract_version"],
         "readiness": projection["readiness"],
+        "policy_observation": policy_observation,
     }, f"Node {config['node_secret']}")
     print(json.dumps({
         "device_id": response.get("device_id"),
@@ -618,6 +969,7 @@ def runtime_heartbeat(args: argparse.Namespace) -> int:
         "runtime_identity": "reported" if projection["runtime_instance_id"] != "unreported" else "unreported",
         "runtime_state": status.get("state", "unknown"),
         "fully_ready": status.get("fully_ready", "unknown"),
+        "policy_state": policy_observation["state"],
     }, separators=(",", ":")))
     return 0
 
@@ -803,6 +1155,68 @@ def poll_read_only_once(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_read_only_loop(args: argparse.Namespace) -> int:
+    """Run a deliberately bounded, logged-in read-only polling loop.
+
+    This is an explicit local operator process, not a Windows service or a
+    task-scheduler installer.  It never runs beyond one day, publishes a fresh
+    strict heartbeat before every potential dequeue, and stops before any
+    central poll when the local policy cannot still admit this node.
+    """
+    interval_seconds = args.interval_seconds
+    max_iterations = args.max_iterations
+    if (
+        not isinstance(interval_seconds, int)
+        or isinstance(interval_seconds, bool)
+        or not READ_ONLY_LOOP_MIN_INTERVAL_SECONDS <= interval_seconds <= READ_ONLY_LOOP_MAX_INTERVAL_SECONDS
+    ):
+        raise RuntimeError("CONTROL_PLANE_READ_ONLY_LOOP_INTERVAL_INVALID")
+    if not isinstance(max_iterations, int) or isinstance(max_iterations, bool) or max_iterations < 1:
+        raise RuntimeError("CONTROL_PLANE_READ_ONLY_LOOP_ITERATIONS_INVALID")
+    if interval_seconds * max_iterations > READ_ONLY_LOOP_MAX_DURATION_SECONDS:
+        raise RuntimeError("CONTROL_PLANE_READ_ONLY_LOOP_DURATION_EXCEEDED")
+
+    try:
+        _read_only_loop_policy_admission(args)
+    except RuntimeError as error:
+        print(json.dumps({
+            "execution": "read_only_loop_not_started",
+            "reason": _safe_error_code(error),
+            "completed_iterations": 0,
+        }, separators=(",", ":")))
+        return 0
+
+    completed_iterations = 0
+    try:
+        for iteration in range(1, max_iterations + 1):
+            # A loop never polls based on an earlier readiness proof.  A local
+            # runtime may have been replaced or closed between iterations.
+            try:
+                runtime_heartbeat(args)
+                poll_read_only_once(args)
+                state = "completed"
+                reason = None
+            except RuntimeError as error:
+                state = "degraded"
+                reason = _safe_error_code(error)
+            completed_iterations = iteration
+            print(json.dumps({
+                "execution": "read_only_loop_iteration",
+                "iteration": iteration,
+                "state": state,
+                "reason": reason,
+            }, separators=(",", ":")))
+            if iteration < max_iterations:
+                time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        print(json.dumps({
+            "execution": "read_only_loop_interrupted",
+            "completed_iterations": completed_iterations,
+        }, separators=(",", ":")))
+        return 130
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -812,6 +1226,13 @@ def main(argv: list[str] | None = None) -> int:
     enroll.add_argument("--device-id", required=True)
     enroll.add_argument("--endpoint-id", required=True)
     enroll.add_argument("--display-name", required=True)
+    # ``node-agent.cmd`` always pins these values to the installed packaged
+    # tree. Enrollment does not use the runtime yet, but it must accept the
+    # fixed launcher contract so an installed node can bootstrap without a
+    # source checkout or a second launcher.
+    enroll.add_argument("--project-root", default="")
+    enroll.add_argument("--node", default="node")
+    enroll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     heart = subcommands.add_parser("heartbeat")
     heart.add_argument("--config", required=True)
     heart.add_argument("--runtime-instance-id", default="unverified")
@@ -819,20 +1240,63 @@ def main(argv: list[str] | None = None) -> int:
     heart.add_argument("--activation-epoch", default="unverified")
     heart.add_argument("--contract-version", default="smart-v3-unverified")
     heart.add_argument("--readiness", choices=("ready", "degraded", "blocked", "unknown"), default="unknown")
+    heart.add_argument("--project-root", default="")
+    heart.add_argument("--node", default="node")
+    heart.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     runtime_heart = subcommands.add_parser("runtime-heartbeat")
     runtime_heart.add_argument("--config", required=True)
     runtime_heart.add_argument("--project-root", required=True)
     runtime_heart.add_argument("--node", default="node")
+    runtime_heart.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     runtime_heart.add_argument("--timeout-seconds", type=int, default=20)
     polling = subcommands.add_parser("poll")
     polling.add_argument("--config", required=True)
     polling.add_argument("--limit", type=int, default=10)
+    polling.add_argument("--project-root", default="")
+    polling.add_argument("--node", default="node")
+    polling.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     read_only_poll = subcommands.add_parser("poll-read-only-once")
     read_only_poll.add_argument("--config", required=True)
     read_only_poll.add_argument("--project-root", required=True)
     read_only_poll.add_argument("--node", default="node")
+    read_only_poll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     read_only_poll.add_argument("--timeout-seconds", type=int, default=20)
     read_only_poll.add_argument("--limit", type=int, default=1)
+    read_only_loop = subcommands.add_parser("run-read-only-loop")
+    read_only_loop.add_argument("--config", required=True)
+    read_only_loop.add_argument("--project-root", required=True)
+    read_only_loop.add_argument("--node", default="node")
+    read_only_loop.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    read_only_loop.add_argument("--timeout-seconds", type=int, default=20)
+    read_only_loop.add_argument("--limit", type=int, default=1)
+    read_only_loop.add_argument("--interval-seconds", type=int, default=60)
+    read_only_loop.add_argument("--max-iterations", type=int, default=1)
+    install_policy = subcommands.add_parser("install-read-only-policy")
+    install_policy.add_argument("--config", required=True)
+    install_policy.add_argument("--owner-id", required=True)
+    install_policy.add_argument("--workspace-id", required=True)
+    install_policy.add_argument("--workspace-generation", required=True)
+    install_policy.add_argument("--facade-schema-version", type=int, required=True)
+    install_policy.add_argument("--facade-profile", required=True)
+    install_policy.add_argument("--facade-sha256", required=True)
+    install_policy.add_argument("--expires-at-ms", type=int, required=True)
+    install_policy.add_argument("--confirm-install", action="store_true")
+    install_policy.add_argument("--replace", action="store_true")
+    install_policy.add_argument("--data-root", default="")
+    install_policy.add_argument("--project-root", default="")
+    install_policy.add_argument("--node", default="node")
+    install_policy.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    inspect_policy = subcommands.add_parser("inspect-read-only-policy")
+    inspect_policy.add_argument("--data-root", default="")
+    inspect_policy.add_argument("--project-root", default="")
+    inspect_policy.add_argument("--node", default="node")
+    inspect_policy.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    disable_policy = subcommands.add_parser("disable-read-only-policy")
+    disable_policy.add_argument("--confirm-disable", action="store_true")
+    disable_policy.add_argument("--data-root", default="")
+    disable_policy.add_argument("--project-root", default="")
+    disable_policy.add_argument("--node", default="node")
+    disable_policy.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     args = parser.parse_args(argv)
     try:
         return {
@@ -841,6 +1305,10 @@ def main(argv: list[str] | None = None) -> int:
             "runtime-heartbeat": runtime_heartbeat,
             "poll": poll,
             "poll-read-only-once": poll_read_only_once,
+            "run-read-only-loop": run_read_only_loop,
+            "install-read-only-policy": install_read_only_policy,
+            "inspect-read-only-policy": inspect_read_only_policy,
+            "disable-read-only-policy": disable_read_only_policy,
         }[args.command](args)
     except RuntimeError as error:
         print(json.dumps({"error": str(error)}, separators=(",", ":")), file=sys.stderr)

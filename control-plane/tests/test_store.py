@@ -4,9 +4,11 @@ import io
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import sqlite3
 import threading
@@ -27,9 +29,15 @@ from control_plane.node_agent import (
     parse_dev_ui_status,
     poll,
     poll_read_only_once,
+    read_only_policy_observation,
+    run_read_only_loop,
     recovery_identity_observation,
+    recovery_runtime_status,
+    runtime_heartbeat,
+    observed_runtime_identity,
     runtime_heartbeat_projection,
     runtime_readiness,
+    main as node_agent_main,
 )
 from control_plane.store import (
     ConflictError,
@@ -93,6 +101,81 @@ class ControlPlaneStoreTests(unittest.TestCase):
             contract_version=contract_version,
             readiness="ready",
         )
+
+    def test_node_policy_observation_is_compact_and_does_not_replace_on_legacy_heartbeat(self) -> None:
+        policy = {
+            "state": "enabled",
+            "expires_at_ms": self.now + 60_000,
+            "policy_sha256": "a" * 64,
+            "reason": "",
+        }
+        self.store.heartbeat(
+            device_id="device-alpha",
+            endpoint_id="endpoint-alpha",
+            runtime_instance_id="runtime-policy-0001",
+            mcp_server_instance_id="server-policy-0001",
+            activation_epoch="epoch-policy-0001",
+            contract_version="sha256:" + "b" * 64,
+            readiness="ready",
+            policy_observation=policy,
+        )
+        observed = self.store.node_observation(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(observed["policy_state"], "enabled")
+        self.assertEqual(observed["policy_expires_at_ms"], self.now + 60_000)
+        self.assertEqual(observed["policy_sha256"], "a" * 64)
+        self.assertIsNone(observed["policy_reason"])
+
+        # An older node sends no policy projection.  Its runtime heartbeat must
+        # not erase the last truthful local observation with a synthetic value.
+        self.store.heartbeat(
+            device_id="device-alpha",
+            endpoint_id="endpoint-alpha",
+            runtime_instance_id="runtime-policy-0002",
+            mcp_server_instance_id="server-policy-0002",
+            activation_epoch="epoch-policy-0002",
+            contract_version="sha256:" + "c" * 64,
+            readiness="degraded",
+        )
+        preserved = self.store.node_observation(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(preserved["policy_state"], "enabled")
+        self.assertEqual(preserved["policy_sha256"], "a" * 64)
+
+        self.store.heartbeat(
+            device_id="device-alpha",
+            endpoint_id="endpoint-alpha",
+            runtime_instance_id="runtime-policy-0003",
+            mcp_server_instance_id="server-policy-0003",
+            activation_epoch="epoch-policy-0003",
+            contract_version="sha256:" + "d" * 64,
+            readiness="degraded",
+            policy_observation={
+                "state": "unavailable",
+                "expires_at_ms": None,
+                "policy_sha256": None,
+                "reason": "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
+            },
+        )
+        unavailable = self.store.node_observation(owner_id="owner_default", device_id="device-alpha")
+        self.assertEqual(unavailable["policy_state"], "unavailable")
+        self.assertEqual(unavailable["policy_reason"], "CONTROL_PLANE_BRIDGE_POLICY_MISSING")
+        self.assertIsNone(unavailable["policy_sha256"])
+
+        with self.assertRaises(ValidationError):
+            self.store.heartbeat(
+                device_id="device-alpha",
+                endpoint_id="endpoint-alpha",
+                runtime_instance_id="runtime-policy-invalid",
+                mcp_server_instance_id="server-policy-invalid",
+                activation_epoch="epoch-policy-invalid",
+                contract_version="sha256:" + "e" * 64,
+                readiness="ready",
+                policy_observation={
+                    "state": "enabled",
+                    "expires_at_ms": self.now + 60_000,
+                    "policy_sha256": "not-a-digest",
+                    "reason": "",
+                },
+            )
 
     def test_context_is_owner_and_binding_scoped(self) -> None:
         context, _ = self._request()
@@ -211,6 +294,15 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual([item["action_id"] for item in observed_request["actions"]], [action["action_id"]])
         self.assertNotIn("arguments_json", observed_request["actions"][0])
         self.assertNotIn("admission_reference", observed_request["actions"][0])
+        lifecycle = self.store.list_action_lifecycle(owner_id="owner_default")
+        self.assertEqual([item["action_id"] for item in lifecycle], [action["action_id"]])
+        self.assertEqual(lifecycle[0]["delivery_state"], "queued")
+        self.assertEqual(lifecycle[0]["receipt_count"], 0)
+        self.assertIsNone(lifecycle[0]["latest_receipt_state"])
+        self.assertNotIn("arguments_json", lifecycle[0])
+        self.assertNotIn("admission_reference", lifecycle[0])
+        self.assertNotIn("local_handle", lifecycle[0])
+        self.assertEqual(self.store.list_action_lifecycle(owner_id="another_owner"), [])
         with self.assertRaises(PermissionError):
             self.store.node_observation(owner_id="another_owner", device_id="device-alpha")
         with self.assertRaises(PermissionError):
@@ -545,7 +637,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         try:
             columns = {row[1] for row in connection.execute("PRAGMA table_info(receipts)")}
             self.assertIn("receipt_digest", columns)
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 8)
             self.assertIn("mcp_server_instance_id", {row[1] for row in connection.execute("PRAGMA table_info(nodes)")})
             self.assertEqual(
                 connection.execute("SELECT receipt_digest FROM receipts WHERE receipt_id = 'rcpt-legacy-001'").fetchone()[0],
@@ -568,8 +660,9 @@ class ControlPlaneStoreTests(unittest.TestCase):
         ControlPlaneStore(legacy_path, clock=lambda: self.now)
         connection = sqlite3.connect(legacy_path)
         try:
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 8)
             self.assertIn("mcp_server_instance_id", {row[1] for row in connection.execute("PRAGMA table_info(nodes)")})
+            self.assertIn("policy_state", {row[1] for row in connection.execute("PRAGMA table_info(nodes)")})
         finally:
             connection.close()
 
@@ -605,7 +698,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
                 row[1]: row[4]
                 for row in connection.execute("PRAGMA table_info(mcp_read_only_intents)")
             }
-            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 7)
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 8)
             self.assertEqual(columns["facade_schema_version"], "0")
             self.assertEqual(columns["facade_profile"], "''")
             self.assertEqual(columns["facade_contract_sha256"], "''")
@@ -634,7 +727,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         backup_path = Path(self.tempdir.name) / "control.backup.sqlite3"
         snapshot = self.store.backup_to(backup_path)
         self.assertEqual(snapshot["sqlite_integrity"], "ok")
-        self.assertEqual(snapshot["schema_version"], 7)
+        self.assertEqual(snapshot["schema_version"], 8)
         self.assertGreater(snapshot["bytes"], 0)
         self.assertEqual(snapshot["snapshot_sha256"], hashlib.sha256(backup_path.read_bytes()).hexdigest())
         connection = sqlite3.connect(backup_path)
@@ -1014,6 +1107,314 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_node(device_id="device-beta", node_secret="not-the-requested-secret")
 
+    def test_installed_launcher_arguments_are_accepted_for_enrollment_heartbeat_and_safe_poll(self) -> None:
+        """All commands must accept the fixed packaged ``node-agent.cmd`` tail."""
+
+        config_path = Path(self.tempdir.name) / "installed-node.json"
+        fixed_runtime_args = [
+            "--project-root", "C:/Program Files/Coding Tools MCP",
+            "--node", "C:/Program Files/Coding Tools MCP/Coding Tools MCP.exe",
+            "--runtime-mode", "packaged",
+        ]
+        calls: list[tuple[str, str]] = []
+
+        def request(server_url: str, path: str, _payload: dict, _authorization: str | None = None) -> dict:
+            calls.append((server_url, path))
+            if path == "/v1/enrollment-requests":
+                return {"enrollment_id": "enroll-installed-launcher-0001"}
+            if path.endswith("/heartbeat"):
+                return {"device_id": "device-installer", "readiness": "unknown", "last_seen_at_ms": 1}
+            raise AssertionError(path)
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch.dict(os.environ, {"APPDATA": str(Path(self.tempdir.name) / "appdata")}, clear=False), \
+             redirect_stdout(output):
+            self.assertEqual(node_agent_main([
+                "request-enrollment", "--config", str(config_path), "--server-url", "https://control.example.test",
+                "--device-id", "device-installer", "--endpoint-id", "endpoint-installer", "--display-name", "Installed node",
+                *fixed_runtime_args,
+            ]), 0)
+            self.assertEqual(node_agent_main([
+                "heartbeat", "--config", str(config_path), *fixed_runtime_args,
+            ]), 0)
+            self.assertEqual(node_agent_main([
+                "poll", "--config", str(config_path), *fixed_runtime_args,
+            ]), 0)
+            self.assertEqual(node_agent_main([
+                "run-read-only-loop", "--config", str(config_path), "--interval-seconds", "15", "--max-iterations", "1",
+                *fixed_runtime_args,
+            ]), 0)
+        self.assertEqual(calls, [
+            ("https://control.example.test", "/v1/enrollment-requests"),
+            ("https://control.example.test", "/v1/nodes/device-installer/heartbeat"),
+        ])
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(records[-2]["code"], "POLL_EXECUTION_DISABLED")
+        self.assertEqual(records[-1]["reason"], "CONTROL_PLANE_BRIDGE_POLICY_MISSING")
+
+    def test_bounded_read_only_loop_rechecks_heartbeat_before_each_poll(self) -> None:
+        args = SimpleNamespace(interval_seconds=15, max_iterations=2)
+        calls: list[str] = []
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._read_only_loop_policy_admission"), \
+             mock.patch("control_plane.node_agent.runtime_heartbeat", side_effect=lambda _args: calls.append("heartbeat")), \
+             mock.patch("control_plane.node_agent.poll_read_only_once", side_effect=lambda _args: calls.append("poll")), \
+             mock.patch("control_plane.node_agent.time.sleep") as sleep, \
+             redirect_stdout(output):
+            self.assertEqual(run_read_only_loop(args), 0)
+        self.assertEqual(calls, ["heartbeat", "poll", "heartbeat", "poll"])
+        sleep.assert_called_once_with(15)
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([(record["iteration"], record["state"]) for record in records], [(1, "completed"), (2, "completed")])
+
+    def test_read_only_loop_refuses_missing_policy_without_heartbeat_or_dequeue(self) -> None:
+        config_path = Path(self.tempdir.name) / "loop-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-loop-policy-0001",
+            "endpoint_id": "endpoint-loop-policy-0001",
+            "node_secret": "loop-policy-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path),
+            data_root=self.tempdir.name,
+            runtime_mode="development",
+            interval_seconds=15,
+            max_iterations=1,
+        )
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent.poll_read_only_once") as poll_call, \
+             redirect_stdout(output):
+            self.assertEqual(run_read_only_loop(args), 0)
+        heartbeat_call.assert_not_called()
+        poll_call.assert_not_called()
+        record = json.loads(output.getvalue())
+        self.assertEqual(record, {
+            "execution": "read_only_loop_not_started",
+            "reason": "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
+            "completed_iterations": 0,
+        })
+
+    def test_read_only_loop_refuses_policy_bound_to_another_endpoint_before_dequeue(self) -> None:
+        config_path = Path(self.tempdir.name) / "loop-mismatch-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-loop-policy-0002",
+            "endpoint_id": "endpoint-loop-policy-0002",
+            "node_secret": "loop-policy-secret-not-reported",
+        }), encoding="utf-8")
+        data_root = Path(self.tempdir.name) / "loop-policy-data"
+        data_root.mkdir()
+        (data_root / "control-plane-read-only-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": "device-loop-policy-0002",
+            "endpoint_id": "endpoint-some-other-node",
+            "workspace_id": "workspace-loop-policy-0002",
+            "workspace_generation": "generation-loop-policy-0002",
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": FACADE_CONTRACT,
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path),
+            data_root=str(data_root),
+            runtime_mode="development",
+            interval_seconds=15,
+            max_iterations=1,
+        )
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent.poll_read_only_once") as poll_call, \
+             redirect_stdout(output):
+            self.assertEqual(run_read_only_loop(args), 0)
+        heartbeat_call.assert_not_called()
+        poll_call.assert_not_called()
+        self.assertEqual(json.loads(output.getvalue())["reason"], "CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH")
+
+    def test_packaged_read_only_policy_is_explicit_cross_language_and_locally_disableable(self) -> None:
+        config_path = Path(self.tempdir.name) / "packaged-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-packaged-policy-0001",
+            "endpoint_id": "endpoint-packaged-policy-0001",
+            "display_name": "Packaged policy node",
+            "node_secret": "node-secret-must-not-enter-policy-0001",
+        }), encoding="utf-8")
+        appdata = Path(self.tempdir.name) / "appdata"
+        expiry = int(time.time() * 1000) + 60_000
+        installed_args = [
+            "--project-root", "C:/Program Files/Coding Tools MCP",
+            "--node", "C:/Program Files/Coding Tools MCP/Coding Tools MCP.exe",
+            "--runtime-mode", "packaged",
+        ]
+        output = io.StringIO()
+        with mock.patch.dict(os.environ, {"APPDATA": str(appdata)}, clear=False), redirect_stdout(output):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy", "--config", str(config_path), "--owner-id", "owner_default",
+                "--workspace-id", "workspace-policy-canary", "--workspace-generation", "generation-policy-0001",
+                "--facade-schema-version", str(FACADE_CONTRACT["schema_version"]),
+                "--facade-profile", str(FACADE_CONTRACT["profile"]),
+                "--facade-sha256", str(FACADE_CONTRACT["sha256"]), "--expires-at-ms", str(expiry),
+                "--confirm-install", *installed_args,
+            ]), 0)
+            self.assertEqual(node_agent_main(["inspect-read-only-policy", *installed_args]), 0)
+            self.assertEqual(node_agent_main(["disable-read-only-policy", "--confirm-disable", *installed_args]), 0)
+            self.assertEqual(node_agent_main(["inspect-read-only-policy", *installed_args]), 0)
+
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(records[0]["operation"], "control_plane_read_only_policy_installed")
+        self.assertTrue(records[0]["enabled"])
+        self.assertFalse(records[0]["windows_acl_verified"])
+        self.assertEqual(records[1]["state"], "enabled")
+        self.assertEqual(records[2]["operation"], "control_plane_read_only_policy_disabled")
+        self.assertEqual(records[3]["state"], "expired_or_disabled")
+
+        policy_path = appdata / "web-mcp-assistant" / "control-plane-read-only-policy.json"
+        policy = json.loads(policy_path.read_text(encoding="utf-8"))
+        self.assertFalse(policy["enabled"])
+        self.assertNotIn("node_secret", json.dumps(policy))
+        self.assertNotIn("node-secret-must-not-enter-policy", json.dumps(policy))
+
+        # The enabled policy shape emitted by Python must be accepted and
+        # fingerprinted identically by the actual Recovery Host CJS policy gate.
+        policy["enabled"] = True
+        bridge = Path(__file__).resolve().parents[2] / "electron" / "services" / "controlPlaneReadOnlyBridge.js"
+        program = (
+            "const fs=require('node:fs');"
+            "const bridge=require(process.argv[1]);"
+            "const policy=bridge.normalisePolicy(JSON.parse(fs.readFileSync(process.argv[2],'utf8')),{now:Date.now()-1});"
+            "process.stdout.write(JSON.stringify({sha256:bridge.digest(policy)}));"
+        )
+        enabled_path = Path(self.tempdir.name) / "enabled-policy.json"
+        enabled_path.write_text(json.dumps(policy), encoding="utf-8")
+        checked = subprocess.run(
+            ["node", "-e", program, str(bridge), str(enabled_path)],
+            cwd=bridge.parents[2],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+        self.assertEqual(json.loads(checked.stdout)["sha256"], records[0]["policy_sha256"])
+
+    def test_packaged_policy_writer_fails_closed_without_confirmation_or_with_a_redirected_data_root(self) -> None:
+        config_path = Path(self.tempdir.name) / "policy-fail-closed-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-policy-fail-closed",
+            "endpoint_id": "endpoint-policy-fail-closed",
+            "node_secret": "never-printed-policy-secret",
+        }), encoding="utf-8")
+        appdata = Path(self.tempdir.name) / "appdata"
+        shared = [
+            "install-read-only-policy", "--config", str(config_path), "--owner-id", "owner_default",
+            "--workspace-id", "workspace-policy-fail-closed", "--workspace-generation", "generation-policy-fail-closed",
+            "--facade-schema-version", str(FACADE_CONTRACT["schema_version"]),
+            "--facade-profile", str(FACADE_CONTRACT["profile"]),
+            "--facade-sha256", str(FACADE_CONTRACT["sha256"]),
+            "--expires-at-ms", str(int(time.time() * 1000) + 60_000),
+            "--runtime-mode", "packaged",
+        ]
+        errors = io.StringIO()
+        with mock.patch.dict(os.environ, {"APPDATA": str(appdata)}, clear=False), redirect_stderr(errors):
+            self.assertEqual(node_agent_main(shared), 1)
+        self.assertEqual(json.loads(errors.getvalue())["error"], "CONTROL_PLANE_POLICY_CONFIRMATION_REQUIRED")
+        self.assertFalse((appdata / "web-mcp-assistant" / "control-plane-read-only-policy.json").exists())
+
+        errors = io.StringIO()
+        with mock.patch.dict(os.environ, {"APPDATA": str(appdata)}, clear=False), redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                *shared, "--confirm-install", "--data-root", str(Path(self.tempdir.name) / "wrong-profile"),
+            ]), 1)
+        self.assertEqual(json.loads(errors.getvalue())["error"], "CONTROL_PLANE_POLICY_PACKAGED_DATA_ROOT_FORBIDDEN")
+        self.assertFalse((appdata / "web-mcp-assistant" / "control-plane-read-only-policy.json").exists())
+
+    def test_runtime_policy_observation_is_redacted_and_rejects_wrong_local_target(self) -> None:
+        data_root = Path(self.tempdir.name) / "policy-observation-data"
+        data_root.mkdir()
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-policy-observation-0001",
+            "endpoint_id": "endpoint-policy-observation-0001",
+            "node_secret": "not-part-of-observation",
+        }
+        args = SimpleNamespace(data_root=str(data_root), runtime_mode="development")
+        missing = read_only_policy_observation(args, config)
+        self.assertEqual(missing, {
+            "state": "unavailable",
+            "expires_at_ms": None,
+            "policy_sha256": None,
+            "reason": "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
+        })
+        (data_root / "control-plane-read-only-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": config["device_id"],
+            "endpoint_id": config["endpoint_id"],
+            "workspace_id": "workspace-policy-observation-0001",
+            "workspace_generation": "generation-policy-observation-0001",
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": FACADE_CONTRACT,
+        }), encoding="utf-8")
+        enabled = read_only_policy_observation(args, config)
+        self.assertEqual(enabled["state"], "enabled")
+        self.assertRegex(enabled["policy_sha256"], r"^[a-f0-9]{64}$")
+        self.assertEqual(enabled["reason"], "")
+        self.assertNotIn("workspace-policy-observation", json.dumps({
+            "state": enabled["state"], "expires_at_ms": enabled["expires_at_ms"],
+            "policy_sha256": enabled["policy_sha256"], "reason": enabled["reason"],
+        }))
+
+        config["endpoint_id"] = "endpoint-policy-observation-other"
+        mismatch = read_only_policy_observation(args, config)
+        self.assertEqual(mismatch, {
+            "state": "unavailable",
+            "expires_at_ms": None,
+            "policy_sha256": None,
+            "reason": "CONTROL_PLANE_BRIDGE_POLICY_CONFIG_MISMATCH",
+        })
+
+    def test_runtime_heartbeat_submits_only_compact_policy_observation(self) -> None:
+        config_path = Path(self.tempdir.name) / "runtime-policy-heartbeat.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-runtime-policy-0001",
+            "endpoint_id": "endpoint-runtime-policy-0001",
+            "node_secret": "node-secret-never-in-policy-observation",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), project_root=self.tempdir.name, data_root=self.tempdir.name,
+            runtime_mode="development", node="node", timeout_seconds=20,
+        )
+        submitted: list[dict] = []
+
+        def request(_server_url: str, path: str, payload: dict, authorization: str | None = None) -> dict:
+            self.assertEqual(path, "/v1/nodes/device-runtime-policy-0001/heartbeat")
+            self.assertEqual(authorization, "Node node-secret-never-in-policy-observation")
+            submitted.append(payload)
+            return {"device_id": "device-runtime-policy-0001", "readiness": "degraded"}
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._runtime_status", return_value={"state": "MISSING", "host": "unavailable"}), \
+             mock.patch("control_plane.node_agent._request", side_effect=request), \
+             redirect_stdout(output):
+            self.assertEqual(runtime_heartbeat(args), 0)
+        self.assertEqual(submitted[0]["policy_observation"], {
+            "state": "unavailable",
+            "expires_at_ms": None,
+            "policy_sha256": None,
+            "reason": "CONTROL_PLANE_BRIDGE_POLICY_MISSING",
+        })
+        self.assertNotIn("node-secret-never-in-policy-observation", json.dumps(submitted[0]["policy_observation"]))
+        self.assertEqual(json.loads(output.getvalue())["policy_state"], "unavailable")
+
     def test_runtime_heartbeat_is_fail_closed_for_incomplete_hub(self) -> None:
         pending = parse_dev_ui_status(
             "DEV_UI STATUS state=CURRENT host=available instance=runtime-1 components_ready=false fully_ready=false "
@@ -1107,6 +1508,76 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(command[-2:], ["--project-root", str(Path.cwd())])
         with mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=json.dumps({"ok": False, "error": {"code": "MCP_IDENTITY_OBSERVATION_UNBOUND"}}))):
             self.assertIsNone(recovery_identity_observation(args, Path.cwd()))
+
+    def test_packaged_runtime_status_uses_installed_electron_adapter_only(self) -> None:
+        args = SimpleNamespace(
+            node=r"C:\\Program Files\\Coding Tools MCP\\Coding Tools MCP.exe",
+            timeout_seconds=20,
+            runtime_mode="packaged",
+        )
+        payload = {
+            "ok": True,
+            "status": {
+                "observation_schema_version": 1,
+                "observation_kind": "recovery_runtime_read_only",
+                "runtime_mode": "packaged",
+                "strict_ready": True,
+            },
+        }
+        with mock.patch("control_plane.node_agent.subprocess.run", return_value=SimpleNamespace(returncode=0, stdout=json.dumps(payload))) as run:
+            status = recovery_runtime_status(args, Path(r"C:\\Program Files\\Coding Tools MCP"))
+        self.assertEqual(status, {"adapter_mode": "packaged", "strict_ready": "true"})
+        self.assertEqual(runtime_readiness(status), ("ready", "strict_packaged_recovery_observation"))
+        command = run.call_args.args[0]
+        self.assertEqual(command[0], args.node)
+        self.assertEqual(command[-3:], ["--runtime-mode", "packaged", "--runtime-status"])
+        self.assertNotIn("--project-root", command)
+        self.assertEqual(run.call_args.kwargs["env"]["ELECTRON_RUN_AS_NODE"], "1")
+
+    def test_serialized_cjs_identity_observation_is_accepted_by_python_parser(self) -> None:
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("Node.js is required for the Electron identity contract")
+        observer = Path(__file__).resolve().parents[1] / "control_plane" / "recovery_identity_observer.cjs"
+        program = """
+const { normalizedObservation } = require(process.argv[1]);
+const descriptor = {
+  installation_id: 'a'.repeat(64),
+  runtime_mode: 'development',
+  instance_id: 'recovery-host-contract-0001'
+};
+const observation = normalizedObservation(descriptor, {
+  observation_schema_version: 1,
+  observation_kind: 'mcp_identity_read_only',
+  recovery_host_instance_id: descriptor.instance_id,
+  observed_at: '2026-09-16T00:00:00.000Z',
+  mcp_process_instance_id: 'mcp-process-contract-0001',
+  mcp_server_instance_id: 'mcp-server-contract-0001',
+  activation_epoch_id: 'activation-contract-0001',
+  current_activation_epoch_id: 'activation-contract-0001',
+  tool_contract_sha256: 'b'.repeat(64),
+  mcp_ready: true,
+  identity_current: true
+});
+process.stdout.write(JSON.stringify(observation));
+"""
+        completed = subprocess.run(
+            [node, "-e", program, str(observer)],
+            cwd=Path(__file__).resolve().parents[2],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        serialized = json.loads(completed.stdout)
+        self.assertEqual(serialized["observation_kind"], "mcp_identity_read_only")
+        self.assertEqual(observed_runtime_identity(serialized), {
+            "runtime_instance_id": "mcp-process-contract-0001",
+            "mcp_server_instance_id": "mcp-server-contract-0001",
+            "activation_epoch": "activation-contract-0001",
+            "contract_version": "sha256:" + "b" * 64,
+        })
 
     @staticmethod
     def _strict_runtime_status() -> dict[str, str]:
