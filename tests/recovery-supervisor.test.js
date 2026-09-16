@@ -41,6 +41,100 @@ function recoveryPing(port,token) { return new Promise((resolve,reject)=>{const 
 function manifest(temp) { const executable=path.join(process.env.SystemRoot||'C:\\Windows','System32','where.exe'); return {schema_version:1,mode:'packaged',executable,executable_sha256:hash(executable),app_root:temp,arguments:['--recovery-host'],data_root:temp,installed_script_sha256:hash(script),installed_at:new Date().toISOString()}; }
 function prior(extra={}) { return {version:1,supervisor_pid:1,supervisor_started_at:new Date().toISOString(),state:'degraded',last_check_at:null,last_healthy_at:null,last_host_pid:null,last_host_instance_id:null,consecutive_failures:0,restart_attempts:[],next_attempt_after:null,suppressed_until:null,last_error_code:null,last_error_message:null,last_spawned_pid:null,manifest_sha256:'0'.repeat(64),task_name:'WebMCP Recovery Supervisor',...extra}; }
 
+test('Recovery Supervisor central eligibility helpers evaluate real PowerShell without installed tasks or process launch', (t) => {
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'webmcp-rs-agent-spec-'));
+  t.after(() => removeTemp(temp));
+  const appRoot = path.join(temp, 'app');
+  const python = path.join(appRoot, 'resources', 'resources', 'native-python', 'python.exe');
+  const agent = path.join(appRoot, 'resources', 'resources', 'control-plane', 'node_agent.py');
+  fs.mkdirSync(path.dirname(python), { recursive: true });
+  fs.mkdirSync(path.dirname(agent), { recursive: true });
+  // These fixture files are hashed only. No test branch executes an agent,
+  // installs a Scheduled Task, or loads the supervisor's top-level switch.
+  fs.writeFileSync(python, 'inert-python-fixture');
+  fs.writeFileSync(agent, '# inert-agent-fixture');
+  const cases = [
+    ['valid', {}, {}, 'eligible'],
+    ['minimum-secret', { node_secret: 'x'.repeat(16) }, {}, 'eligible'],
+    ['long-secret', { node_secret: 'x'.repeat(100) }, {}, 'eligible'],
+    ['short-secret', { node_secret: 'x'.repeat(15) }, {}, 'policy_config_mismatch'],
+    ['two-character-secret', { node_secret: 'xx' }, {}, 'policy_config_mismatch'],
+    ['null-secret', { node_secret: null }, {}, 'policy_config_mismatch'],
+    ['device-mismatch', {}, { device_id: 'other-device' }, 'policy_config_mismatch'],
+    ['endpoint-mismatch', {}, { endpoint_id: 'other-endpoint' }, 'policy_config_mismatch'],
+    ['origin-mismatch', {}, { server_origin: 'https://other.example.test' }, 'policy_config_mismatch'],
+    ['expired-policy', {}, { expires_at_ms: Date.now() - 1000 }, 'policy_expired'],
+    ['disabled-policy', {}, { enabled: false }, 'policy_disabled_or_invalid']
+  ];
+  const fixtures = cases.map(([name, configPatch, policyPatch]) => {
+    const dataRoot = path.join(temp, name);
+    writeJson(path.join(dataRoot, 'control-plane-node.json'), {
+      server_url: 'http://100.116.112.22:8765', device_id: 'fixture-device',
+      endpoint_id: 'fixture-endpoint', node_secret: 'x'.repeat(64), ...configPatch
+    });
+    writeJson(path.join(dataRoot, 'control-plane-read-only-policy.json'), {
+      schema_version: 2, enabled: true, server_origin: 'http://100.116.112.22:8765',
+      owner_id: 'fixture-owner', device_id: 'fixture-device', endpoint_id: 'fixture-endpoint',
+      workspace_id: 'fixture-workspace', workspace_generation: 1,
+      expires_at_ms: Date.now() + 600_000, facade_contract: 'fixture-contract', ...policyPatch
+    });
+    return {
+      name,
+      manifest: {
+        mode: 'packaged', app_root: appRoot, data_root: dataRoot,
+        control_plane_python_path: python, control_plane_python_sha256: hash(python),
+        control_plane_node_agent_path: agent, control_plane_node_agent_sha256: hash(agent)
+      }
+    };
+  });
+  const origins = [
+    ['https://EXAMPLE.test:443/', 'https://example.test'],
+    ['http://100.116.112.22:8765/', 'http://100.116.112.22:8765'],
+    ['http://[fd7a:115c:a1e0::1]:8765/', 'http://[fd7a:115c:a1e0::1]:8765'],
+    ['https://user:pass@example.test/', null],
+    ['https://example.test/path', null],
+    ['https://example.test/?query=1', null],
+    ['https://example.test/#fragment', null],
+    ['not-an-origin', null]
+  ];
+  const inputFile = path.join(temp, 'fixture-input.json');
+  writeJson(inputFile, { fixtures, origins: origins.map(([value]) => value) });
+  const command = `
+Set-StrictMode -Version 2.0
+$ErrorActionPreference='Stop'
+$MaxJsonBytes=65536
+$parseTokens=$null;$parseErrors=$null
+$parsed=[Management.Automation.Language.Parser]::ParseFile($env:WEBCODEX_TEST_SUPERVISOR_SCRIPT,[ref]$parseTokens,[ref]$parseErrors)
+if($parseErrors.Count-ne0){throw 'Supervisor PowerShell parser rejected the source.'}
+foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Get-OptionalProperty','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec')){
+  $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
+  if($null-eq$definition){throw 'Required pure supervisor helper missing.'}
+  . ([scriptblock]::Create($definition.Extent.Text))
+}
+$inputFixture=[IO.File]::ReadAllText($env:WEBCODEX_TEST_SUPERVISOR_FIXTURE)|ConvertFrom-Json
+$results=@(foreach($fixture in $inputFixture.fixtures){$spec=Get-ControlPlaneAgentSpec $fixture.manifest;[pscustomobject]@{name=$fixture.name;eligible=$spec.eligible;state=$spec.state}})
+$originResults=@(foreach($value in $inputFixture.origins){[pscustomobject]@{value=$value;origin=(Get-ControlPlaneOrigin $value)}})
+[pscustomobject]@{cases=$results;origins=$originResults}|ConvertTo-Json -Depth 5 -Compress
+`;
+  const result = spawnSync(process.platform === 'win32' ? 'powershell.exe' : 'pwsh', [
+    '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')
+  ], {
+    cwd: root, windowsHide: true, encoding: 'utf8', timeout: 30_000,
+    env: {
+      ...process.env, WEBCODEX_TEST_SUPERVISOR_SCRIPT: script,
+      WEBCODEX_TEST_SUPERVISOR_FIXTURE: inputFile
+    }
+  });
+  if (process.platform !== 'win32' && result.error?.code === 'ENOENT') {
+    t.skip('PowerShell is unavailable; this helper test is mandatory on Windows');
+    return;
+  }
+  assert.equal(result.status, 0, result.error?.message || result.stderr || result.stdout);
+  const observed = JSON.parse(result.stdout.trim());
+  assert.deepEqual(observed.cases, cases.map(([name, , , state]) => ({ name, eligible: state === 'eligible', state })));
+  assert.deepEqual(observed.origins, origins.map(([value, origin]) => ({ value, origin })));
+});
+
 if (process.platform !== 'win32') test('Recovery Supervisor runtime tests require Windows', { skip: true }, () => {});
 else {
   test('Recovery Supervisor test cleanup retries only bounded transient Windows teardown failures', () => {

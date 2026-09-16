@@ -130,8 +130,9 @@ function Get-ControlPlaneAgentPolicyPath($M) { Join-Path ([string]$M.data_root) 
 function Get-ControlPlaneOrigin([string]$Value) {
   try { $uri=[Uri]$Value } catch { return $null }
   if(-not$uri.IsAbsoluteUri-or$uri.Scheme-notin@('http','https')-or[string]::IsNullOrWhiteSpace($uri.Host)-or$uri.UserInfo-or$uri.Query-or$uri.Fragment-or$uri.AbsolutePath-notin@('','/')){return $null}
-  $host=$uri.Host.ToLowerInvariant();if($host.Contains(':')){$host="[$host]"};$port=[int]$uri.Port
-  "$($uri.Scheme.ToLowerInvariant())://$host$(if(($uri.Scheme-eq'http'-and$port-ne80)-or($uri.Scheme-eq'https'-and$port-ne443)){":$port"})"
+  # $Host is a read-only PowerShell automatic variable (case-insensitive).
+  $originHost=$uri.Host.ToLowerInvariant();if($originHost.Contains(':')-and-not$originHost.StartsWith('[')){$originHost="[$originHost]"};$originPort=[int]$uri.Port
+  "$($uri.Scheme.ToLowerInvariant())://$originHost$(if(($uri.Scheme-eq'http'-and$originPort-ne80)-or($uri.Scheme-eq'https'-and$originPort-ne443)){":$originPort"})"
 }
 function Get-ControlPlaneAgentSpec($M) {
   $fields=@('control_plane_python_path','control_plane_python_sha256','control_plane_node_agent_path','control_plane_node_agent_sha256')
@@ -145,7 +146,9 @@ function Get-ControlPlaneAgentSpec($M) {
   if($config -isnot [PSCustomObject]-or$policy -isnot [PSCustomObject]-or@($requiredPolicy|Where-Object{$null-eq$policy.PSObject.Properties[$_]}).Count-ne0-or[int]$policy.schema_version-ne2-or$policy.enabled-ne$true){return [pscustomobject]@{eligible=$false;state='policy_disabled_or_invalid';pid=$null}}
   try{$expires=[long]$policy.expires_at_ms}catch{return [pscustomobject]@{eligible=$false;state='policy_disabled_or_invalid';pid=$null}}
   if($expires-le[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()){return [pscustomobject]@{eligible=$false;state='policy_expired';pid=$null}}
-  $origin=Get-ControlPlaneOrigin ([string](Get-OptionalProperty $config 'server_url' ''));if($null-eq$origin-or[string]$policy.server_origin-ne$origin-or[string]$policy.device_id-ne[string](Get-OptionalProperty $config 'device_id' '')-or[string]$policy.endpoint_id-ne[string](Get-OptionalProperty $config 'endpoint_id' '')-or[string](Get-OptionalProperty $config 'node_secret' '').Length-lt16){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
+  $origin=Get-ControlPlaneOrigin ([string](Get-OptionalProperty $config 'server_url' ''))
+  $nodeSecret=[string](Get-OptionalProperty $config 'node_secret' '')
+  if($null-eq$origin-or[string]$policy.server_origin-ne$origin-or[string]$policy.device_id-ne[string](Get-OptionalProperty $config 'device_id' '')-or[string]$policy.endpoint_id-ne[string](Get-OptionalProperty $config 'endpoint_id' '')-or$nodeSecret.Length-lt16){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
   [pscustomobject]@{eligible=$true;state='eligible';pid=$null;python_path=$python;agent_path=$agent;config_path=$configPath}
 }
 function Start-ControlPlaneReadOnlyAgent($M,$Spec) {

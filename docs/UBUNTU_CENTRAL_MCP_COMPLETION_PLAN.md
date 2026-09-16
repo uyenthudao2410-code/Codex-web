@@ -1089,6 +1089,35 @@ khi route thiếu/cũ/sai device, policy hết hạn hoặc Tunnel local còn ch
 Rollout exact candidate và kết quả live sẽ được ghi riêng sau kiểm thử Windows;
 không dùng source tests làm bằng chứng đã pair hay đã có Tunnel Ubuntu.
 
+Checkpoint live sau sửa lỗi (16-09-2026, khoảng 22:05 +07): candidate
+`d9b71c3` đã push/build/cài trên office; installer SHA-256
+`5ad53eb4c343000c487da678242056dae70aa8643bde2460f3b4dd4b113d0b83`, unsigned.
+Kho secret mã hóa được kiểm digest trước/sau và giữ nguyên, snapshot các file
+cấu hình/identity/epoch trước upgrade nằm trong profile riêng ngoài repository.
+Không sửa checkout `E:\DEV\Codex-web` hoặc xóa ledger.
+
+Kiểm chứng Windows: 864/865 Node tests pass ở lần chạy đồng thời; một fixture
+expiry dùng thời gian thật hết hạn ngay khi dựng dữ liệu, retry riêng pass 1/1.
+Recovery real-process 3/3 và packaged smoke pass; smoke không đổi production
+descriptor/Scheduled Task. Test mới của nút handoff chạy handler thật với closure
+absent/non-code và kiểm không báo thành công khi mới nhận HANDOFF.
+
+Handoff live qua Recovery IPC đã tạo epoch mới, persist `central_executor`,
+spawn local MCP và không spawn primary Tunnel. Đã enroll đúng device office
+`ac251d4f-304a-4f06-885c-a9aea1f2a13a`, duyệt identity, tạo binding
+`office_codex_web` cho workspace hiện tại và context/policy metadata read-only
+24 giờ (không cấp ghi/exec). Sau heartbeat thật, Windows đạt
+`READY/OPEN`, `fullyReady/localReady/centralConnected/authorityReady=true`,
+central census pass. Ubuntu global admission vẫn `recovery`.
+
+Kiểm tra bền vững phát hiện lỗi tiếp theo: Supervisor PowerShell dùng `$host`
+(trùng biến hệ thống `$Host` read-only) khi đọc origin của policy, nên báo
+`cycle_error` sau pairing. Đã tái hiện qua chính helper cài trên Windows với
+`VariableNotWritable`; kết nối một-shot ở trên chưa phải heartbeat bền vững.
+Hotfix và postflight dài hơn TTL heartbeat phải đóng điểm này trước handoff cuối.
+`npm audit --omit=dev` còn advisory high cho `js-yaml` có sẵn; không trộn upgrade
+dependency ngoài phạm vi vào bản sửa migration này.
+
 Đã chốt: Ubuntu `svhome` là server; Tunnel/MCP gốc ở server; Windows office
 là node đầu; có UI; không bắt node tự cấu hình OpenAI; installer unsigned cũ
 đã được cho phép cài. Không hỏi lại các quyết định này.
