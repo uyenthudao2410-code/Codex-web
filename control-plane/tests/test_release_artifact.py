@@ -141,15 +141,18 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             release_root = extracted / receipt["release_name"]
             database = temporary_root / "state" / "control-plane.sqlite3"
             database.parent.mkdir()
+            backup_directory = temporary_root / "state" / "backups"
             port = free_port()
             environment = {
                 **os.environ,
                 "CONTROL_PLANE_DB": str(database),
+                "CONTROL_PLANE_BACKUP_DIR": str(backup_directory),
                 "CONTROL_PLANE_BIND": "127.0.0.1",
                 "CONTROL_PLANE_PORT": str(port),
                 "CONTROL_PLANE_OPERATOR_TOKEN": "x" * 32,
                 "CONTROL_PLANE_DECLARED_SOURCE_REVISION": revision,
                 "CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256": receipt["package_source_sha256"],
+                "CONTROL_PLANE_HEALTH_URL": f"http://127.0.0.1:{port}/healthz",
             }
             process = subprocess.Popen(
                 [str(release_root / "deploy" / "control-plane-launcher.sh")],
@@ -164,6 +167,31 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 self.assertEqual(health["declared_source_revision"], revision)
                 self.assertTrue(database.is_file())
                 self.assertFalse(str(database).startswith(str(release_root)))
+
+                backup = subprocess.run(
+                    [str(release_root / "deploy" / "control-plane-backup.sh")],
+                    env=environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(backup.returncode, 0)
+                backup_status = json.loads((backup_directory / "last-automatic-backup.json").read_text(encoding="utf-8"))
+                self.assertEqual(backup_status["inspection"]["sqlite_integrity"], "ok")
+                self.assertEqual(backup_status["inspection"]["unresolved_action_count"], 0)
+
+                healthcheck = subprocess.run(
+                    [str(release_root / "deploy" / "control-plane-healthcheck.sh")],
+                    env=environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(healthcheck.returncode, 0)
+                health_status = json.loads((backup_directory / "last-healthcheck.json").read_text(encoding="utf-8"))
+                self.assertEqual(health_status["deployment"]["package_source_sha256"], receipt["package_source_sha256"])
             finally:
                 process.terminate()
                 try:
