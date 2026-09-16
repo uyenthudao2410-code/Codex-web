@@ -165,7 +165,9 @@ async function main() {
     path.join(packagedControlPlaneRoot, 'recovery_runtime_adapter.cjs')
   ];
   for (const file of required) assert(fs.existsSync(file), `PACKAGED_RESOURCE_MISSING:${path.basename(file)}`);
-  assertExactPackagedResources(path.join(root, 'resources'), packagedResources);
+  assertExactPackagedResources(path.join(root, 'resources'), packagedResources, {
+    separatelyVerifiedTopLevelDirectories: ['control-plane']
+  });
   assertExactControlPlaneAdapter(path.join(root, 'control-plane', 'control_plane'), packagedControlPlaneRoot);
   assert(sha256File(supervisorScript) === sha256File(sourceSupervisorScript), 'PACKAGED_RECOVERY_SUPERVISOR_SOURCE_MISMATCH');
   const packagedContract = inspectPackagedToolContract();

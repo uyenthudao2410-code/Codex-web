@@ -77,7 +77,7 @@ function sha256File(file) {
   return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 }
 
-function collectAllowedFiles(root, { source = false } = {}) {
+function collectAllowedFiles(root, { source = false, separatelyVerifiedTopLevelDirectories = new Set() } = {}) {
   const resolvedRoot = path.resolve(root);
   const files = new Map();
   const stack = [resolvedRoot];
@@ -86,6 +86,11 @@ function collectAllowedFiles(root, { source = false } = {}) {
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
       const absolute = path.join(current, entry.name);
       const relative = path.relative(resolvedRoot, absolute);
+      const normalized = relative.split(path.sep).join("/");
+      const [topLevelDirectory] = normalized.split("/", 1);
+      if (separatelyVerifiedTopLevelDirectories.has(topLevelDirectory)) {
+        continue;
+      }
       const reason = forbiddenReason(relative, entry.isDirectory());
       if (reason) {
         if (source) continue;
@@ -96,7 +101,6 @@ function collectAllowedFiles(root, { source = false } = {}) {
         continue;
       }
       if (!entry.isFile()) throw new Error(`packaged resources contain unsupported entry: ${relative}`);
-      const normalized = relative.split(path.sep).join("/");
       const stat = fs.statSync(absolute);
       files.set(normalized, { size: stat.size, sha256: sha256File(absolute) });
     }
@@ -104,13 +108,23 @@ function collectAllowedFiles(root, { source = false } = {}) {
   return files;
 }
 
-function assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot) {
+function assertExactPackagedResources(
+  sourceResourcesRoot,
+  packagedResourcesRoot,
+  { separatelyVerifiedTopLevelDirectories = [] } = {}
+) {
   if (!sourceResourcesRoot || !fs.existsSync(sourceResourcesRoot)) {
     throw new Error(`source resources root is missing: ${sourceResourcesRoot || "<empty>"}`);
   }
   assertSanitizedPackagedResources(packagedResourcesRoot);
-  const sourceFiles = collectAllowedFiles(sourceResourcesRoot, { source: true });
-  const packagedFiles = collectAllowedFiles(packagedResourcesRoot);
+  const separatelyVerified = new Set(separatelyVerifiedTopLevelDirectories);
+  const sourceFiles = collectAllowedFiles(sourceResourcesRoot, {
+    source: true,
+    separatelyVerifiedTopLevelDirectories: separatelyVerified,
+  });
+  const packagedFiles = collectAllowedFiles(packagedResourcesRoot, {
+    separatelyVerifiedTopLevelDirectories: separatelyVerified,
+  });
   const allPaths = new Set([...sourceFiles.keys(), ...packagedFiles.keys()]);
   for (const relative of [...allPaths].sort()) {
     const expected = sourceFiles.get(relative);
@@ -155,7 +169,9 @@ async function afterPack(context) {
   }
   const sourceResourcesRoot = path.resolve(__dirname, "..", "resources");
   const packagedResourcesRoot = path.join(context.appOutDir, "resources", "resources");
-  assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot);
+  assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot, {
+    separatelyVerifiedTopLevelDirectories: ["control-plane"],
+  });
   assertExactControlPlaneAdapter(
     path.resolve(__dirname, "..", "control-plane", "control_plane"),
     path.join(context.appOutDir, "resources", "resources", "control-plane")

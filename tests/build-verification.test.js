@@ -116,6 +116,18 @@ test('packaged resources must be byte-identical to the current allowed source pr
     fs.writeFileSync(path.join(packaged, 'recovery-supervisor', 'recovery-supervisor.ps1'), 'current');
     fs.writeFileSync(path.join(packaged, 'stale-resource.txt'), 'unexpected');
     assert.throws(() => assertExactPackagedResources(source, packaged), /not present in current source/);
+    fs.rmSync(path.join(packaged, 'stale-resource.txt'));
+
+    fs.mkdirSync(path.join(packaged, 'control-plane'), { recursive: true });
+    fs.writeFileSync(path.join(packaged, 'control-plane', 'node-agent.cmd'), 'verified separately');
+    assert.throws(() => assertExactPackagedResources(source, packaged), /not present in current source/);
+    assert.equal(assertExactPackagedResources(source, packaged, {
+      separatelyVerifiedTopLevelDirectories: ['control-plane']
+    }).exact_source, true);
+    fs.writeFileSync(path.join(packaged, 'unrelated-extra.txt'), 'unexpected');
+    assert.throws(() => assertExactPackagedResources(source, packaged, {
+      separatelyVerifiedTopLevelDirectories: ['control-plane']
+    }), /not present in current source/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
