@@ -43,6 +43,7 @@ DEPLOY_FILES = (
     "control-plane-healthcheck.sh",
     "control-plane.env.example",
 )
+CONTROL_PLANE_RUNTIME_SUFFIXES = frozenset({".py", ".cjs", ".cmd"})
 REQUIRED_RELEASE_FILES = frozenset(
     {
         "control-plane/README.md",
@@ -88,9 +89,11 @@ def _regular_files(root: Path) -> list[Path]:
     return files
 
 
-def _copy_tree(source: Path, destination: Path) -> None:
+def _copy_tree(source: Path, destination: Path, *, allowed_suffixes: frozenset[str] | None = None) -> None:
     for path in _regular_files(source):
         relative = path.relative_to(source)
+        if allowed_suffixes is not None and path.suffix.lower() not in allowed_suffixes:
+            continue
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(path, target)
@@ -269,7 +272,11 @@ def build_release(
     staging_release = staging_root / release_name
     temporary_archive = staging_root / f"{release_name}.tar.gz"
     try:
-        _copy_tree(source_root / "control-plane" / "control_plane", staging_release / "control-plane" / "control_plane")
+        _copy_tree(
+            source_root / "control-plane" / "control_plane",
+            staging_release / "control-plane" / "control_plane",
+            allowed_suffixes=CONTROL_PLANE_RUNTIME_SUFFIXES,
+        )
         for relative in CONTROL_PLANE_FILES:
             _copy_file(source_root / "control-plane" / relative, staging_release / "control-plane" / relative)
         for relative in DEPLOY_FILES:

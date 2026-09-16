@@ -81,6 +81,8 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             files = {entry["path"]: entry for entry in manifest["files"]}
             self.assertTrue(BUILDER.REQUIRED_RELEASE_FILES.issubset(files))
             self.assertFalse(any(path.startswith(".coding-tools/") for path in files))
+            self.assertFalse(any("/__pycache__/" in f"/{path}" for path in files))
+            self.assertFalse(any(path.endswith((".pyc", ".pyo")) for path in files))
             self.assertFalse(any(path.endswith(".sqlite3") for path in files))
             self.assertFalse(any(path.endswith("control-plane.env") for path in files))
             for relative, entry in files.items():
@@ -111,7 +113,12 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             prefix = f"{receipt['release_name']}/"
             self.assertIn(f"{prefix}release-manifest.json", names)
             self.assertIn(f"{prefix}control-plane/control_plane/http_api.py", names)
-            self.assertFalse(any(".coding-tools" in name or name.endswith(".sqlite3") for name in names))
+            self.assertFalse(any(
+                ".coding-tools" in name
+                or "/__pycache__/" in name
+                or name.endswith((".pyc", ".pyo", ".sqlite3"))
+                for name in names
+            ))
 
     def test_refuses_to_overwrite_a_previously_built_release(self) -> None:
         revision = "b" * 40
