@@ -34,11 +34,13 @@ CONTROL_PLANE_FILES = (
 )
 DEPLOY_FILES = (
     "codex-control-plane.service.example",
+    "codex-control-plane-mcp-tunnel.service.example",
     "codex-control-plane-backup.service.example",
     "codex-control-plane-backup.timer.example",
     "codex-control-plane-healthcheck.service.example",
     "codex-control-plane-healthcheck.timer.example",
     "control-plane-launcher.sh",
+    "control-plane-mcp-tunnel-launcher.sh",
     "control-plane-backup.sh",
     "control-plane-healthcheck.sh",
     "control-plane-verify-release.py",
@@ -53,11 +55,13 @@ REQUIRED_RELEASE_FILES = frozenset(
         "control-plane/control_plane/maintenance.py",
         "control-plane/control_plane/store.py",
         "deploy/codex-control-plane.service.example",
+        "deploy/codex-control-plane-mcp-tunnel.service.example",
         "deploy/codex-control-plane-backup.service.example",
         "deploy/codex-control-plane-backup.timer.example",
         "deploy/codex-control-plane-healthcheck.service.example",
         "deploy/codex-control-plane-healthcheck.timer.example",
         "deploy/control-plane-launcher.sh",
+        "deploy/control-plane-mcp-tunnel-launcher.sh",
         "deploy/control-plane-backup.sh",
         "deploy/control-plane-healthcheck.sh",
         "deploy/control-plane-verify-release.py",
@@ -218,7 +222,7 @@ credential, session, backup, or private environment file.
    and set mode `0600`. Keep the database and backups in an owner-only state
    directory outside `releases/`.
 3. Run `python3 deploy/control-plane-verify-release.py --release-dir <release>`
-   and compare its content-free receipt to this manifest. Install the five
+   and compare its content-free receipt to this manifest. Install the six
    unit/timer examples from `deploy/` as user units. They only
    execute `~/.local/lib/codex-control-plane/current/deploy/...`; `current` must
    be an operator-controlled symlink to exactly one verified release directory.

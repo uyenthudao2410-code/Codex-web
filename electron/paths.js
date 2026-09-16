@@ -32,6 +32,7 @@ module.exports = {
   recoveryHostDescriptorFile: () => current().recoveryHostDescriptorFile(),
   recoveryHostLockFile: () => current().recoveryHostLockFile(),
   controlPlaneReadOnlyPolicyFile: () => current().controlPlaneReadOnlyPolicyFile(),
+  controlPlaneNodeConfigFile: () => current().controlPlaneNodeConfigFile(),
   recoveryActionsFile: () => current().recoveryActionsFile(),
   logFile: () => current().logFile(),
   mcpLogFile: () => current().mcpLogFile(),

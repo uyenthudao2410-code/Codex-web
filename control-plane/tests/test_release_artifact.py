@@ -13,6 +13,7 @@ import tempfile
 import time
 import unittest
 import urllib.request
+from urllib.error import HTTPError
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +51,26 @@ def wait_health(url: str, expected_fingerprint: str, timeout_seconds: float = 10
             last_error = error
         time.sleep(0.05)
     raise AssertionError(f"release launcher did not publish expected health: {last_error}")
+
+
+def post_json(url: str, payload: dict, *, authorization: str = "") -> tuple[int, dict]:
+    headers = {"Content-Type": "application/json"}
+    if authorization:
+        headers["Authorization"] = authorization
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=2) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        try:
+            return error.code, json.loads(error.read().decode("utf-8"))
+        finally:
+            error.close()
 
 
 class ControlPlaneReleaseArtifactTests(unittest.TestCase):
@@ -94,6 +115,7 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
 
             for launcher in (
                 "deploy/control-plane-launcher.sh",
+                "deploy/control-plane-mcp-tunnel-launcher.sh",
                 "deploy/control-plane-backup.sh",
                 "deploy/control-plane-healthcheck.sh",
             ):
@@ -101,6 +123,7 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
 
             service_templates = {
                 "codex-control-plane.service.example": "control-plane-launcher.sh",
+                "codex-control-plane-mcp-tunnel.service.example": "control-plane-mcp-tunnel-launcher.sh",
                 "codex-control-plane-backup.service.example": "control-plane-backup.sh",
                 "codex-control-plane-healthcheck.service.example": "control-plane-healthcheck.sh",
             }
@@ -168,16 +191,20 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
             database.parent.mkdir()
             backup_directory = temporary_root / "state" / "backups"
             port = free_port()
+            mcp_port = free_port()
             environment = {
                 **os.environ,
                 "CONTROL_PLANE_DB": str(database),
                 "CONTROL_PLANE_BACKUP_DIR": str(backup_directory),
                 "CONTROL_PLANE_BIND": "127.0.0.1",
                 "CONTROL_PLANE_PORT": str(port),
+                "CONTROL_PLANE_MCP_BIND": "127.0.0.1",
+                "CONTROL_PLANE_MCP_PORT": str(mcp_port),
                 "CONTROL_PLANE_OPERATOR_TOKEN": "x" * 32,
                 "CONTROL_PLANE_DECLARED_SOURCE_REVISION": revision,
                 "CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256": receipt["package_source_sha256"],
                 "CONTROL_PLANE_HEALTH_URL": f"http://127.0.0.1:{port}/healthz",
+                "CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION": "open",
             }
             process = subprocess.Popen(
                 [str(release_root / "deploy" / "control-plane-launcher.sh")],
@@ -200,6 +227,62 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 self.assertEqual(health["declared_source_revision"], revision)
                 self.assertTrue(database.is_file())
                 self.assertFalse(str(database).startswith(str(release_root)))
+
+                primary_url = f"http://127.0.0.1:{port}"
+                mcp_url = f"http://127.0.0.1:{mcp_port}/mcp"
+                operator = "x" * 32
+                status, node = post_json(
+                    f"{primary_url}/v1/nodes/enroll",
+                    {
+                        "device_id": "device-release-ingress-001",
+                        "endpoint_id": "endpoint-release-ingress-001",
+                        "display_name": "Release ingress fixture",
+                    },
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                status, binding = post_json(
+                    f"{primary_url}/v1/bindings",
+                    {
+                        "device_id": node["device_id"],
+                        "workspace_id": "workspace-release-ingress-001",
+                        "workspace_generation": "generation-release-ingress-001",
+                        "display_name": "Release ingress workspace",
+                    },
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                status, context = post_json(
+                    f"{primary_url}/v1/contexts",
+                    {"binding_id": binding["binding_id"], "expires_at_ms": int(time.time() * 1000) + 60_000},
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                status, grant = post_json(
+                    f"{primary_url}/v1/mcp-access-grants",
+                    {
+                        "context_id": context["context_id"],
+                        "principal_id": "openai-ubuntu-root-release-fixture",
+                        "expires_at_ms": int(time.time() * 1000) + 30_000,
+                    },
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 201)
+                initialize = {"jsonrpc": "2.0", "id": "release-ingress-001", "method": "initialize", "params": {}}
+                status, primary_rejected = post_json(
+                    f"{primary_url}/mcp",
+                    initialize,
+                    authorization=f"Bearer {grant['access_token']}",
+                )
+                self.assertEqual(status, 404)
+                self.assertEqual(primary_rejected["error"]["code"], "NOT_FOUND")
+                status, initialized = post_json(
+                    mcp_url,
+                    initialize,
+                    authorization=f"Bearer {grant['access_token']}",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(initialized["result"]["_meta"]["control_plane"]["access_scope"], "server_issued_context_grant")
 
                 backup = subprocess.run(
                     [str(release_root / "deploy" / "control-plane-backup.sh")],
@@ -225,6 +308,26 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                 self.assertEqual(healthcheck.returncode, 0)
                 health_status = json.loads((backup_directory / "last-healthcheck.json").read_text(encoding="utf-8"))
                 self.assertEqual(health_status["deployment"]["package_source_sha256"], receipt["package_source_sha256"])
+
+                status, recovery = post_json(
+                    f"{primary_url}/v1/maintenance/admission",
+                    {"mode": "recovery"},
+                    authorization=f"Bearer {operator}",
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(recovery["admission_mode"], "recovery")
+                recovery_environment = {**environment, "CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION": "recovery"}
+                recovery_healthcheck = subprocess.run(
+                    [str(release_root / "deploy" / "control-plane-healthcheck.sh")],
+                    env=recovery_environment,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(recovery_healthcheck.returncode, 0)
+                recovery_status = json.loads((backup_directory / "last-healthcheck.json").read_text(encoding="utf-8"))
+                self.assertEqual(recovery_status["deployment"]["admission_mode"], "recovery")
             finally:
                 process.terminate()
                 try:

@@ -1,7 +1,11 @@
 const path = require('node:path');
 
 const DEFAULTS = Object.freeze({
-  configVersion: 6,
+  configVersion: 7,
+  // This is intentionally separate from runtimeIdentity().mode
+  // (development/packaged). Existing installations stay on the direct path
+  // until a supported full-clean handoff explicitly selects central_executor.
+  executionRole: 'direct_legacy',
   workspace: '',
   permissionMode: 'safe',
   toolMode: 'smart',
@@ -34,22 +38,34 @@ const DEFAULTS = Object.freeze({
   costLaneRates: '{"deepseek":{"in":0.28,"out":0.42},"fast":{"in":0.15,"out":0.6},"terra":{"in":2.5,"out":10},"sol":{"in":10,"out":40}}'
 });
 
+function isWindowsAbsolutePath(value) {
+  const text = String(value || '').trim();
+  return /^[A-Za-z]:[\\/]/.test(text) || /^\\\\[^\\/]+[\\/][^\\/]+(?:[\\/]|$)/.test(text);
+}
+
 function normalizeWorkspacePath(value) {
   const text = String(value || '').trim();
   if (!text) return '';
-  const normalized = path.normalize(text);
+  // Health and activation payloads may carry the executor's Windows path
+  // while this check is running in a non-Windows test or control process.
+  // Use the path grammar declared by the value, rather than the host OS, so
+  // an identity mismatch cannot become a false health success.
+  const pathApi = isWindowsAbsolutePath(text) ? path.win32 : path;
+  const normalized = pathApi.normalize(text);
   // A drive-relative value such as `E:.` or `C:` depends on the process' per-
   // drive current directory and can therefore bind a different workspace
   // after reboot. Workspace authority must always be a fully-qualified path.
-  if (!path.isAbsolute(normalized)) return '';
-  const root = path.parse(normalized).root;
+  if (!pathApi.isAbsolute(normalized)) return '';
+  const root = pathApi.parse(normalized).root;
   if (normalized === root) return root;
   return normalized.replace(/[\\/]+$/, '') || root;
 }
 
 function workspaceKey(value) {
   const normalized = normalizeWorkspacePath(value);
-  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+  return process.platform === 'win32' || isWindowsAbsolutePath(normalized)
+    ? normalized.toLowerCase()
+    : normalized;
 }
 
 function mergeRecentWorkspaces(existing, workspace, limit = 50) {
@@ -75,7 +91,10 @@ function normalize(input = {}) {
   for (const key of Object.keys(DEFAULTS)) {
     if (Object.hasOwn(input, key)) merged[key] = input[key];
   }
-  merged.configVersion = 6;
+  merged.configVersion = 7;
+  merged.executionRole = ['direct_legacy', 'central_executor'].includes(merged.executionRole)
+    ? merged.executionRole
+    : 'direct_legacy';
   merged.permissionMode = ['safe', 'trusted'].includes(merged.permissionMode) ? merged.permissionMode : 'safe';
   merged.toolMode = 'smart';
   merged.proxyMode = ['auto', 'system', 'manual', 'direct'].includes(merged.proxyMode) ? merged.proxyMode : 'auto';
@@ -143,11 +162,15 @@ function validateRuntimeSettings(settings) {
     if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error(`${label} phải nằm trong khoảng 1024-65535.`);
   }
   if (new Set(ports.map(([, port]) => port)).size !== ports.length) throw new Error('Primary và Recovery ports không được giống nhau để giữ failure domain độc lập.');
-  if (settings.tunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.tunnelId)) {
+  const centralExecutor = settings?.executionRole === 'central_executor';
+  // A central executor does not use any local OpenAI Tunnel setting.  A stale
+  // direct-profile value therefore cannot prevent local bootstrap; the
+  // full-clean handoff owns retiring it rather than this validator.
+  if (!centralExecutor && settings.tunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.tunnelId)) {
     throw new Error('Định dạng Tunnel ID không hợp lệ, phải bắt đầu bằng tunnel_.');
   }
-  if (settings.recoveryTunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.recoveryTunnelId)) throw new Error('Recovery Tunnel ID phải bắt đầu bằng tunnel_.');
-  if (settings.recoveryTunnelId && settings.recoveryTunnelId === settings.tunnelId) throw new Error('Recovery Tunnel ID phải independent và khác Coding Tunnel ID.');
+  if (!centralExecutor && settings.recoveryTunnelId && !/^tunnel_[A-Za-z0-9_-]{4,}$/.test(settings.recoveryTunnelId)) throw new Error('Recovery Tunnel ID phải bắt đầu bằng tunnel_.');
+  if (!centralExecutor && settings.recoveryTunnelId && settings.recoveryTunnelId === settings.tunnelId) throw new Error('Recovery Tunnel ID phải independent và khác Coding Tunnel ID.');
   if (settings.proxyMode === 'manual' && !settings.proxyUrl) {
     throw new Error('Chế độ proxy thủ công cần điền địa chỉ proxy.');
   }

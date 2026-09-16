@@ -24,6 +24,8 @@ function createPreviewApi() {
     snapshot: () => ok(snapshot), chooseWorkspace: () => ok(snapshot.settings.workspace), switchWorkspace: (workspace) => { snapshot.settings.workspace=workspace; return ok(snapshot); }, updateAuthorizedRoots: (roots) => { snapshot.settings.authorizedRoots=roots; return ok(snapshot); }, closeManager: () => ok(true),
     saveSettings: (patch) => { Object.assign(snapshot.settings, patch); return ok(snapshot.settings); },
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
+    requestControlPlaneEnrollment: () => ok({ enrollment_id: 'enroll_preview_0001', device_id: snapshot.device.device_id, state: 'pending_operator_approval' }),
+    installControlPlaneReadOnlyPolicy: () => ok({ enabled: true, expires_at_ms: Date.now() + 60 * 60 * 1000, policy_sha256: 'a'.repeat(64), runtime_mode: 'packaged', windows_acl_verified: false }),
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
     logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
     taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true), recordUiPerformance: () => ok({ accepted: false }), uiPerformance: () => ok(null),
@@ -53,6 +55,10 @@ const state = {
   logFilter: 'all',
   logs: [],
   busy: false,
+  centralEnrollmentBusy: false,
+  centralEnrollmentReceipt: null,
+  centralPolicyBusy: false,
+  centralPolicyReceipt: null,
   initializedForms: false
 };
 
@@ -79,7 +85,7 @@ function toast(title, message = '', type = 'success') {
 function setBusy(value, overlay = false) {
   state.busy = value;
   $('#busyOverlay').classList.toggle('visible', value && overlay);
-  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair'].forEach((selector) => {
+  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair', '#requestControlPlaneEnrollment', '#installControlPlaneReadOnlyPolicy'].forEach((selector) => {
     const element = $(selector);
     if (element) element.disabled = value;
   });
@@ -91,7 +97,93 @@ function setDot(element, status) {
   if (status) element.classList.add(status);
 }
 
+function isCentralExecutor(settings = {}) {
+  return settings?.executionRole === 'central_executor';
+}
+
+function centralRoutePresentation(status = {}) {
+  const reason = String(status.centralStatusReason || '').trim() || null;
+  if (status.centralConnected === true && status.authorityReady === true && !reason) {
+    return {
+      state: 'connected',
+      label: 'Đã sẵn sàng qua Ubuntu',
+      detail: 'Route trung tâm và policy action cục bộ đã được xác minh.'
+    };
+  }
+  if (status.runtimeRunning !== true) {
+    return {
+      state: 'waiting',
+      label: 'MCP nội bộ chưa sẵn sàng',
+      detail: 'Executor cần MCP loopback/activation cục bộ trước khi có thể pair với Ubuntu.'
+    };
+  }
+  if (status.centralConnected !== true) {
+    return {
+      state: 'waiting',
+      label: 'Chờ pairing Ubuntu',
+      detail: reason
+        ? `Ubuntu chưa xác minh route cho máy này (${reason}).`
+        : 'Ubuntu chưa xác minh route cho máy này.'
+    };
+  }
+  return {
+    state: 'waiting',
+    label: 'Chờ policy action cục bộ',
+    detail: reason
+      ? `Route tới Ubuntu đã có nhưng chưa có local authority (${reason}).`
+      : 'Route tới Ubuntu đã có nhưng local authority chưa sẵn sàng.'
+  };
+}
+
+function renderCentralExecutorMode(snapshot) {
+  const settings = snapshot?.settings || {};
+  const central = isCentralExecutor(settings);
+  const route = centralRoutePresentation(snapshot?.status || {});
+  document.body.dataset.executionRole = central ? 'central-executor' : 'direct-legacy';
+  $$('[data-direct-only]').forEach((element) => { element.hidden = central; });
+  const notice = $('#centralExecutorNotice');
+  const noticeText = $('#centralExecutorNoticeText');
+  const guide = $('#centralExecutorGuide');
+  const pairingInput = $('#controlPlaneServerUrl');
+  const pairingButton = $('#requestControlPlaneEnrollment');
+  const pairingStatus = $('#controlPlaneEnrollmentStatus');
+  const policyInput = $('#controlPlaneContextId');
+  const policyReplace = $('#replaceControlPlanePolicy');
+  const policyButton = $('#installControlPlaneReadOnlyPolicy');
+  const policyStatus = $('#controlPlanePolicyStatus');
+  if (notice) notice.hidden = !central;
+  if (guide) guide.hidden = !central;
+  if (noticeText && central) {
+    noticeText.textContent = `Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu. ${route.label}: ${route.detail}`;
+  }
+  if (pairingInput) pairingInput.disabled = !central || state.centralEnrollmentBusy === true;
+  if (pairingButton) pairingButton.disabled = !central || state.busy || state.centralEnrollmentBusy === true;
+  if (policyInput) policyInput.disabled = !central || state.centralPolicyBusy === true;
+  if (policyReplace) policyReplace.disabled = !central || state.centralPolicyBusy === true;
+  if (policyButton) policyButton.disabled = !central || state.busy || state.centralPolicyBusy === true;
+  if (pairingStatus && central && !state.centralEnrollmentReceipt) {
+    pairingStatus.textContent = 'Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI. Sau đó Ubuntu vẫn phải duyệt identity, binding, context và policy riêng.';
+  }
+  if (pairingStatus && central && state.centralEnrollmentReceipt) {
+    pairingStatus.textContent = `Đã gửi ${state.centralEnrollmentReceipt.enrollment_id}. Chờ Ubuntu duyệt identity; pairing chưa cấp binding, context hay quyền chạy.`;
+  }
+  if (policyStatus && central && !state.centralPolicyReceipt) {
+    policyStatus.textContent = 'Pairing, binding, context và policy là bốn bước độc lập. Policy này không cấp ghi hay thực thi lệnh.';
+  }
+  if (policyStatus && central && state.centralPolicyReceipt) {
+    policyStatus.textContent = `Đã cài read-only policy tới ${new Date(state.centralPolicyReceipt.expires_at_ms).toLocaleString('vi-VN')}. Windows ACL chưa được xác minh; policy không cấp ghi hay thực thi.`;
+  }
+  for (const selector of ['#runtimeKeyInput', '#saveRuntimeKey', '#removeRuntimeKey', '#tunnelIdInput', '#recoveryTunnelIdInput', '#saveRecoveryTunnel']) {
+    const control = $(selector);
+    if (control) control.disabled = central;
+  }
+  return { central, route };
+}
+
 function recoveryTunnelPresentation(source) {
+  if (isCentralExecutor(source?.settings)) {
+    return { state: 'not_configured', label: 'Do Ubuntu quản lý', detail: 'Central executor không dùng Recovery OpenAI Tunnel tại Windows.' };
+  }
   if (source?.status?.signalStale === true || source?.signalStale === true) {
     return { state: 'connecting', label: 'Telemetry gián đoạn', detail: 'Đang giữ receipt gần nhất và chờ heartbeat mới từ Recovery Host.' };
   }
@@ -135,6 +227,7 @@ function renderDevice(source) {
   const gitLabel = git.available ? `${git.branch || 'detached'} @ ${git.head_short || 'no-head'}${git.dirty ? ' · dirty' : ' · clean'}` : 'Không phải Git repo / chưa có dữ liệu';
   const coding = device.coding || {};
   const recovery = device.recovery || {};
+  const central = isCentralExecutor(settings);
   const top = $('#topDeviceButton');
   if (top) { top.classList.remove('ready', 'warn'); top.classList.add(online ? (coding.mcp_running ? 'ready' : 'warn') : 'warn'); top.title = deviceId ? `Current device: ${deviceId}` : 'Device identity unavailable'; }
   if ($('#topDeviceName')) $('#topDeviceName').textContent = displayName;
@@ -145,10 +238,18 @@ function renderDevice(source) {
   if ($('#deviceInstanceId')) { $('#deviceInstanceId').textContent = instanceId || '—'; $('#deviceInstanceId').title = instanceId; }
   if ($('#deviceWorkspace')) { $('#deviceWorkspace').textContent = device.workspace || settings.workspace || '—'; $('#deviceWorkspace').title = device.workspace || settings.workspace || ''; }
   if ($('#deviceGitState')) $('#deviceGitState').textContent = gitLabel;
-  if ($('#deviceCodingState')) $('#deviceCodingState').textContent = coding.mcp_running && coding.tunnel_running ? 'Coding ready' : coding.mcp_running ? 'MCP ready · Tunnel down' : 'Coding stopped';
-  if ($('#deviceRecoveryState')) $('#deviceRecoveryState').textContent = recovery.mcp_running && recovery.tunnel_running ? 'Recovery ready' : recovery.mcp_running ? `Recovery MCP ready · ${recovery.tunnel_state || 'Tunnel down'}` : 'Recovery unavailable';
-  if ($('#deviceCodingTunnelId')) $('#deviceCodingTunnelId').textContent = `Tunnel: ${coding.tunnel_id || settings.tunnelId || 'chưa cấu hình'}`;
-  if ($('#deviceRecoveryTunnelId')) $('#deviceRecoveryTunnelId').textContent = `Tunnel: ${recovery.tunnel_id || settings.recoveryTunnelId || 'chưa cấu hình'}`;
+  if ($('#deviceCodingState')) $('#deviceCodingState').textContent = central
+    ? (coding.mcp_running ? 'Local executor ready · Ubuntu managed' : 'Local executor stopped')
+    : (coding.mcp_running && coding.tunnel_running ? 'Coding ready' : coding.mcp_running ? 'MCP ready · Tunnel down' : 'Coding stopped');
+  if ($('#deviceRecoveryState')) $('#deviceRecoveryState').textContent = central
+    ? (recovery.mcp_running ? 'Recovery MCP local · no OpenAI Tunnel' : 'Recovery unavailable')
+    : (recovery.mcp_running && recovery.tunnel_running ? 'Recovery ready' : recovery.mcp_running ? `Recovery MCP ready · ${recovery.tunnel_state || 'Tunnel down'}` : 'Recovery unavailable');
+  if ($('#deviceCodingTunnelId')) $('#deviceCodingTunnelId').textContent = central
+    ? 'OpenAI Tunnel: Ubuntu quản lý'
+    : `Tunnel: ${coding.tunnel_id || settings.tunnelId || 'chưa cấu hình'}`;
+  if ($('#deviceRecoveryTunnelId')) $('#deviceRecoveryTunnelId').textContent = central
+    ? 'Recovery Tunnel: không dùng tại executor'
+    : `Tunnel: ${recovery.tunnel_id || settings.recoveryTunnelId || 'chưa cấu hình'}`;
 }
 
 function navigate(page) {
@@ -158,7 +259,18 @@ function navigate(page) {
   const primaryPage = ['build', 'health', 'guide', 'logs', 'settings'].includes(page) ? 'system' : page;
   $$('.nav-item').forEach((item) => item.classList.toggle('active', item.dataset.page === primaryPage));
   $$('.page').forEach((item) => item.classList.toggle('active', item.dataset.pageView === page));
-  const [eyebrow, title, subtitle] = pageMeta[page];
+  let [eyebrow, title, subtitle] = pageMeta[page];
+  if (isCentralExecutor(state.snapshot?.settings)) {
+    if (page === 'deploy') {
+      eyebrow = 'UBUNTU CONTROL PLANE';
+      title = 'Kết nối executor với Ubuntu';
+      subtitle = 'Máy này không tạo OpenAI Tunnel hoặc Runtime API Key; pairing và policy từ Ubuntu quyết định route.';
+    } else if (page === 'guide') {
+      eyebrow = 'CENTRAL EXECUTOR';
+      title = 'Hướng dẫn pairing với Ubuntu';
+      subtitle = 'Theo dõi route evidence và policy action; connector OpenAI chỉ được quản lý tại server Ubuntu.';
+    }
+  }
   $('#pageEyebrow').textContent = eyebrow;
   $('#pageTitle').textContent = title;
   $('#pageSubtitle').textContent = subtitle;
@@ -463,10 +575,18 @@ function activationClosureDisplayState(closure, status = {}) {
   if (Object.hasOwn(value, 'runtime_running') && value.runtime_running !== true) {
     return { liveClosed: false, reason: 'runtime_running' };
   }
-  if (Object.hasOwn(value, 'tunnel_running') && value.tunnel_running !== true) {
+  const centralExecutor = status.executionRole === 'central_executor';
+  if (!centralExecutor && Object.hasOwn(value, 'tunnel_running') && value.tunnel_running !== true) {
     return { liveClosed: false, reason: 'tunnel_running' };
   }
-  if (status.runtimeRunning !== true || status.tunnelRunning !== true || status.fullyReady !== true) {
+  if (centralExecutor && (
+    (Object.hasOwn(value, 'central_connected') && value.central_connected !== true)
+    || (Object.hasOwn(value, 'authority_ready') && value.authority_ready !== true)
+  )) {
+    return { liveClosed: false, reason: 'central_route_evidence' };
+  }
+  if (status.runtimeRunning !== true || status.fullyReady !== true || (!centralExecutor && status.tunnelRunning !== true)
+    || (centralExecutor && (status.centralConnected !== true || status.authorityReady !== true || status.centralStatusReason != null))) {
     return { liveClosed: false, reason: 'runtime_status_disagreement' };
   }
   return { liveClosed: true, reason: null };
@@ -474,6 +594,8 @@ function activationClosureDisplayState(closure, status = {}) {
 
 function renderRuntimeSourceStatus(snapshot) {
   const status = snapshot?.status || {};
+  const central = isCentralExecutor(snapshot?.settings);
+  const route = centralRoutePresentation(status);
   const recoveryHost = snapshot?.recoveryHost || {};
   const uiRecovery = recoveryHost.electron_ui_recovery || {};
   const electron = componentSourcePresentation(recoveryHost.electron_ui_revision, {
@@ -488,9 +610,11 @@ function renderRuntimeSourceStatus(snapshot) {
     running: status.runtimeRunning === true,
     label: 'Coding MCP'
   });
-  const tunnel = status.tunnelRunning === true
-    ? { state: 'READY', detail: 'Tunnel READY · health receipt present' }
-    : { state: 'STOPPED', detail: 'Tunnel hiện chưa kết nối.' };
+  const tunnel = central
+    ? { state: route.state === 'connected' ? 'CENTRAL' : 'WAITING', detail: `${route.label} · ${route.detail}` }
+    : (status.tunnelRunning === true
+      ? { state: 'READY', detail: 'Tunnel READY · health receipt present' }
+      : { state: 'STOPPED', detail: 'Tunnel hiện chưa kết nối.' });
   const sourcePresentations = [electron, recovery, coding];
   const bindings = [
     ['#runtimeElectronState', '#runtimeElectronMeta', electron, uiRecovery.pid ? `PID ${uiRecovery.pid} · ${uiRecovery.runtime_mode || 'unknown'} · ${electron.detail}` : electron.detail],
@@ -509,12 +633,12 @@ function renderRuntimeSourceStatus(snapshot) {
   });
   const stale = sourcePresentations.filter((item) => item.state === 'STALE').length;
   const current = sourcePresentations.filter((item) => item.state === 'CURRENT').length;
-  const tunnelReady = tunnel.state === 'READY';
+  const tunnelReady = central ? route.state === 'connected' : tunnel.state === 'READY';
   const summary = $('#runtimeSourceSummary');
   if (summary) {
     summary.textContent = stale
-      ? `SOURCE STALE · ${stale}/3 pending · TUNNEL ${tunnel.state}`
-      : `SOURCE ${current}/3 CURRENT · TUNNEL ${tunnel.state}`;
+      ? `SOURCE STALE · ${stale}/3 pending · ${central ? 'CENTRAL' : 'TUNNEL'} ${tunnel.state}`
+      : `SOURCE ${current}/3 CURRENT · ${central ? 'CENTRAL' : 'TUNNEL'} ${tunnel.state}`;
     summary.className = `cc-pill ${stale ? 'is-blocked' : current === 3 && tunnelReady ? 'is-active' : 'is-waiting'}`;
   }
   const notice = $('#sourceUpdateNotice');
@@ -550,6 +674,7 @@ function renderSnapshot(snapshot, options = {}) {
   applyFormValues(snapshot, options.forceForms);
   const { settings, secrets, environment, status } = snapshot;
   state.selectedWorkspace = settings.workspace;
+  const { central, route: centralRoute } = renderCentralExecutorMode(snapshot);
   const ready = status.fullyReady;
   renderRecoveryTunnelSettings(snapshot);
   renderDevice(snapshot);
@@ -558,15 +683,17 @@ function renderSnapshot(snapshot, options = {}) {
   const activationIncomplete = status.updateIncomplete === true
     || status.activationEpoch?.update_incomplete === true
     || status.activationEpoch?.state === 'UPDATE_INCOMPLETE';
-  $('#sideRuntimeText').textContent = ready
-    ? 'Dịch vụ sẵn sàng'
-    : activationIncomplete
-      ? 'Đang hoàn tất activation epoch'
-      : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy';
+  $('#sideRuntimeText').textContent = central
+    ? (ready ? 'Executor Ubuntu đã sẵn sàng' : `${centralRoute.label}`)
+    : (ready
+      ? 'Dịch vụ sẵn sàng'
+      : activationIncomplete
+        ? 'Đang hoàn tất activation epoch'
+        : status.runtimeRunning ? 'Đang chờ Tunnel' : 'Dịch vụ chưa chạy');
   setDot($('#sideRuntimeDot'), ready ? 'ready' : status.runtimeRunning ? 'warn' : 'error');
   $('#sideWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục làm việc';
   $('#sideMcp').textContent = status.runtimeRunning ? 'ON' : 'OFF';
-  $('#sideTunnel').textContent = status.tunnelRunning ? 'ON' : 'OFF';
+  $('#sideTunnel').textContent = central ? 'UBUNTU' : (status.tunnelRunning ? 'ON' : 'OFF');
 
   $('#runtimeStatus').textContent = environment.python.installed ? 'Môi trường bình thường' : 'Thiếu môi trường runtime';
   $('#runtimeMeta').textContent = environment.python.version || 'Không tìm thấy Python tích hợp';
@@ -575,30 +702,38 @@ function renderSnapshot(snapshot, options = {}) {
   $('#mcpStatus').textContent = status.runtimeRunning ? 'Đang chạy bình thường' : 'Chưa khởi động';
   $('#mcpMeta').textContent = status.localMcpUrl;
   setDot($('#mcpDot'), status.runtimeRunning ? 'ready' : 'error');
-  $('#tunnelStatus').textContent = status.tunnelRunning ? 'Đã kết nối' : 'Chưa kết nối';
-  $('#tunnelMeta').textContent = settings.tunnelId || 'Chưa điền Tunnel ID';
-  setDot($('#tunnelDot'), status.tunnelRunning ? 'ready' : settings.tunnelId ? 'warn' : 'error');
+  $('#tunnelStatus').textContent = central
+    ? 'Do Ubuntu quản lý'
+    : (status.tunnelRunning ? 'Đã kết nối' : 'Chưa kết nối');
+  $('#tunnelMeta').textContent = central
+    ? `${centralRoute.label} · ${centralRoute.detail}`
+    : (settings.tunnelId || 'Chưa điền Tunnel ID');
+  setDot($('#tunnelDot'), central ? (centralRoute.state === 'connected' ? 'ready' : 'warn') : (status.tunnelRunning ? 'ready' : settings.tunnelId ? 'warn' : 'error'));
   $('#workspaceStatus').textContent = environment.workspace.exists ? 'Đã ủy quyền' : 'Chưa chọn';
   $('#workspaceMeta').textContent = settings.workspace || 'Chỉ thư mục được chọn mới có thể được MCP truy cập';
   setDot($('#workspaceDot'), environment.workspace.exists ? 'ready' : 'error');
   $('#selectedWorkspace').textContent = settings.workspace || 'Chưa chọn thư mục';
   renderAuthorizedRoots(settings.authorizedRoots || []);
 
-  $('#heroBadge').textContent = ready
-    ? 'Tất cả dịch vụ đang hoạt động bình thường'
-    : activationIncomplete ? 'UPDATE_INCOMPLETE · đang đồng bộ runtime' : 'Chưa hoàn tất triển khai';
-  $('#heroTitle').textContent = ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn';
-  $('#heroText').textContent = ready
-    ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
-    : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.';
-  $('#heroStartButton').textContent = ready ? 'Triển khai lại' : 'Bắt đầu triển khai';
-  $('#topStartButton').textContent = ready ? 'Triển khai lại' : 'Khởi động nhanh';
+  $('#heroBadge').textContent = central
+    ? (ready ? 'Executor central đã sẵn sàng' : `CENTRAL EXECUTOR · ${centralRoute.label}`)
+    : (ready ? 'Tất cả dịch vụ đang hoạt động bình thường' : activationIncomplete ? 'UPDATE_INCOMPLETE · đang đồng bộ runtime' : 'Chưa hoàn tất triển khai');
+  $('#heroTitle').textContent = central
+    ? 'Máy thực thi được Ubuntu quản lý'
+    : (ready ? 'Workspace lập trình web đã sẵn sàng' : 'Cho phép Web Chat truy cập an toàn thư mục mã nguồn của bạn');
+  $('#heroText').textContent = central
+    ? `Không cần Runtime API Key hoặc OpenAI Tunnel tại máy này. ${centralRoute.detail}`
+    : (ready
+      ? 'Hiện đang chạy qua môi trường portable tích hợp, trang web chỉ có thể truy cập thư mục làm việc đã chọn.'
+      : 'Chọn một thư mục làm việc, cấu hình OpenAI Tunnel, sau đó trợ lý sẽ hoàn tất việc khởi động MCP, xác thực, kiểm tra sức khỏe và chẩn đoán sự cố.');
+  $('#heroStartButton').textContent = ready ? 'Triển khai lại' : (central ? 'Kiểm tra Executor' : 'Bắt đầu triển khai');
+  $('#topStartButton').textContent = ready ? 'Triển khai lại' : (central ? 'Kiểm tra Executor' : 'Khởi động nhanh');
 
-  $('#runtimeKeyHint').textContent = secrets.runtimeApiKey ? 'Đã lưu bằng kho lưu trữ an toàn Windows' : 'Chưa lưu';
-  $('#runtimeKeyHint').style.color = secrets.runtimeApiKey ? 'var(--green)' : '';
-  $('#settingsKeyState').textContent = secrets.runtimeApiKey ? 'Đã mã hóa và lưu' : 'Chưa lưu';
-  $('#guideLocalUrl').textContent = status.localMcpUrl;
-  $('#guideTunnelId').textContent = settings.tunnelId || 'Chưa điền';
+  $('#runtimeKeyHint').textContent = central ? 'Không dùng tại central executor; Ubuntu giữ credential.' : (secrets.runtimeApiKey ? 'Đã lưu bằng kho lưu trữ an toàn Windows' : 'Chưa lưu');
+  $('#runtimeKeyHint').style.color = central || secrets.runtimeApiKey ? 'var(--green)' : '';
+  $('#settingsKeyState').textContent = central ? 'Ubuntu quản lý credential' : (secrets.runtimeApiKey ? 'Đã mã hóa và lưu' : 'Chưa lưu');
+  $('#guideLocalUrl').textContent = central ? 'MCP nội bộ executor · không public' : status.localMcpUrl;
+  $('#guideTunnelId').textContent = central ? 'Ubuntu quản lý' : (settings.tunnelId || 'Chưa điền');
   const connector = connectorContractPresentation(status);
   const connectorContractNotice = $('#connectorContractNotice');
   if (connectorContractNotice) {
@@ -688,6 +823,14 @@ function renderDeploySummary() {
   if (!snapshot) return;
   const missing = [];
   const workspace = state.selectedWorkspace || snapshot.settings.workspace;
+  if (isCentralExecutor(snapshot.settings)) {
+    const route = centralRoutePresentation(snapshot.status || {});
+    if (!workspace) missing.push('Thư mục làm việc');
+    $('#deploySummary').textContent = missing.length
+      ? `Central executor còn cần: ${missing.join('、')}. Không cần Runtime API Key hay Tunnel ID tại Windows.`
+      : `${route.label}. ${route.detail} Không cần Runtime API Key hay Tunnel ID tại Windows.`;
+    return;
+  }
   const tunnelId = $('#tunnelIdInput').value.trim();
   if (!workspace) missing.push('Thư mục làm việc');
   if (!tunnelId) missing.push('Tunnel ID');
@@ -707,6 +850,8 @@ async function refreshSnapshot(options = {}) {
 }
 
 function collectSettings() {
+  const existing = state.snapshot?.settings || {};
+  const central = isCentralExecutor(existing);
   return {
     workspace: state.selectedWorkspace,
     permissionMode: $('input[name="permission"]:checked')?.value || 'safe',
@@ -715,8 +860,11 @@ function collectSettings() {
     healthPort: Number($('#healthPortInput').value),
     proxyMode: $('#proxyModeSelect').value,
     proxyUrl: $('#proxyUrlInput').value.trim(),
-    tunnelId: $('#tunnelIdInput').value.trim(),
-    recoveryTunnelId: $('#recoveryTunnelIdInput').value.trim(),
+    // Central handoff preserves any legacy direct profile for explicit
+    // rollback. The renderer must never clear tunnel fields merely because it
+    // hides them from an executor that is no longer allowed to use them.
+    tunnelId: central ? String(existing.tunnelId || '') : $('#tunnelIdInput').value.trim(),
+    recoveryTunnelId: central ? String(existing.recoveryTunnelId || '') : $('#recoveryTunnelIdInput').value.trim(),
     theme: $('#themeSelect').value,
     startWithWindows: $('#startWithWindowsToggle').checked,
     keepRunningOnClose: $('#keepRunningToggle').checked,
@@ -734,11 +882,57 @@ async function saveSettings(showToast = true) {
 }
 
 async function saveKeyIfPresent() {
+  if (isCentralExecutor(state.snapshot?.settings)) return false;
   const key = $('#runtimeKeyInput').value.trim();
   if (!key) return false;
   unwrap(await api.saveRuntimeKey(key));
   $('#runtimeKeyInput').value = '';
   return true;
+}
+
+async function requestControlPlaneEnrollment() {
+  if (!isCentralExecutor(state.snapshot?.settings)) {
+    throw new Error('Pairing Ubuntu chỉ khả dụng cho central executor.');
+  }
+  const field = $('#controlPlaneServerUrl');
+  const serverUrl = String(field?.value || '').trim();
+  if (!serverUrl) throw new Error('Nhập HTTPS origin của Ubuntu Control Plane trước.');
+  state.centralEnrollmentBusy = true;
+  renderCentralExecutorMode(state.snapshot);
+  try {
+    const receipt = unwrap(await api.requestControlPlaneEnrollment(serverUrl));
+    state.centralEnrollmentReceipt = receipt;
+    toast('Đã gửi yêu cầu pairing', 'Ubuntu phải duyệt identity, rồi cấp binding, context và policy riêng trước khi máy này được chạy.', 'success');
+    await refreshSnapshot({ forceForms: false });
+    return receipt;
+  } finally {
+    state.centralEnrollmentBusy = false;
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  }
+}
+
+async function installControlPlaneReadOnlyPolicy() {
+  if (!isCentralExecutor(state.snapshot?.settings)) {
+    throw new Error('Read-only policy Ubuntu chỉ khả dụng cho central executor.');
+  }
+  const contextField = $('#controlPlaneContextId');
+  const contextId = String(contextField?.value || '').trim();
+  if (!contextId) throw new Error('Nhập Context ID do Ubuntu Console vừa cấp trước.');
+  state.centralPolicyBusy = true;
+  renderCentralExecutorMode(state.snapshot);
+  try {
+    const receipt = unwrap(await api.installControlPlaneReadOnlyPolicy({
+      contextId,
+      replaceExisting: $('#replaceControlPlanePolicy')?.checked === true
+    }));
+    state.centralPolicyReceipt = receipt;
+    toast('Đã cài policy read-only', 'Node tự xác thực với Ubuntu cho đúng context còn hiệu lực. Policy không cấp ghi hoặc thực thi.', 'success');
+    await refreshSnapshot({ forceForms: false });
+    return receipt;
+  } finally {
+    state.centralPolicyBusy = false;
+    if (state.snapshot) renderCentralExecutorMode(state.snapshot);
+  }
 }
 
 function updateProgress(payload) {
@@ -758,7 +952,10 @@ async function runRuntime(action) {
   try {
     const result = unwrap(await api[action]());
     renderSnapshot(result, { forceForms: true });
-    toast(action === 'stop' ? 'Dịch vụ đã dừng' : 'Thao tác hoàn tất', action === 'stop' ? 'MCP và Tunnel đã dừng an toàn.' : 'MCP và Tunnel đã qua kiểm tra sức khỏe cục bộ.');
+    const central = isCentralExecutor(result?.settings || state.snapshot?.settings);
+    toast(action === 'stop' ? 'Dịch vụ đã dừng' : 'Thao tác hoàn tất', action === 'stop'
+      ? (central ? 'Executor cục bộ đã dừng; Tunnel Ubuntu không bị thay đổi.' : 'MCP và Tunnel đã dừng an toàn.')
+      : (central ? 'Đã kiểm tra MCP executor và route evidence tới Ubuntu.' : 'MCP và Tunnel đã qua kiểm tra sức khỏe cục bộ.'));
   } catch (error) {
     toast('Thao tác thất bại', error.message, 'error');
     if (/工作目录|Thư mục làm việc|Runtime API Key|Tunnel ID|Python/.test(error.message)) navigate('deploy');
@@ -776,7 +973,10 @@ async function deployNow() {
     navigate('overview');
     const result = unwrap(await api.start());
     renderSnapshot(result, { forceForms: true });
-    toast('Triển khai hoàn tất', 'Bây giờ bạn có thể làm theo trang hướng dẫn để tạo hoặc kiểm tra MCP trong ChatGPT.');
+    const central = isCentralExecutor(result?.settings || state.snapshot?.settings);
+    toast('Triển khai hoàn tất', central
+      ? 'Executor cục bộ đã được kiểm tra. Pairing/policy Ubuntu vẫn là authority để chạy action.'
+      : 'Bây giờ bạn có thể làm theo trang hướng dẫn để tạo hoặc kiểm tra MCP trong ChatGPT.');
   } catch (error) {
     toast('Triển khai thất bại', error.message, 'error');
   } finally {
@@ -1023,6 +1223,14 @@ function bindEvents() {
   $('#overviewRestart').addEventListener('click', () => runRuntime('restart'));
   $('#overviewStop').addEventListener('click', () => runRuntime('stop'));
   $('#deployNow').addEventListener('click', deployNow);
+  $('#requestControlPlaneEnrollment')?.addEventListener('click', async () => {
+    try { await requestControlPlaneEnrollment(); }
+    catch (error) { toast('Không thể gửi pairing Ubuntu', error.message, 'error'); }
+  });
+  $('#installControlPlaneReadOnlyPolicy')?.addEventListener('click', async () => {
+    try { await installControlPlaneReadOnlyPolicy(); }
+    catch (error) { toast('Không thể cài policy read-only', error.message, 'error'); }
+  });
   $('#chooseWorkspace').addEventListener('click', chooseWorkspace);
   $('#addAuthorizedRoot').addEventListener('click', addAuthorizedRoot);
   $('#saveDeploySettings').addEventListener('click', async () => {

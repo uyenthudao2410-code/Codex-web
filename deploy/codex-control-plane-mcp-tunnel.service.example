@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenAI Secure MCP Tunnel for Ubuntu Control Plane
+After=network-online.target codex-control-plane.service
+Wants=network-online.target codex-control-plane.service
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.config/codex-control-plane/control-plane.env
+# This unit can only connect to the dedicated loopback /mcp listener.  It does
+# not proxy the Tailnet operator UI, enrollment, admin, or node API routes.
+ExecStart=%h/.local/lib/codex-control-plane/current/deploy/control-plane-mcp-tunnel-launcher.sh
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

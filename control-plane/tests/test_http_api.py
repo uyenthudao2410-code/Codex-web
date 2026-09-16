@@ -19,13 +19,14 @@ from control_plane.http_api import (
     CSRF_HEADER_NAME,
     SESSION_COOKIE_NAME,
     ControlPlaneHttpServer,
+    _mcp_ingress_address_from_environment,
     _package_source_sha256,
     _web_origin,
 )
 from control_plane.web_ui import WEB_UI_JAVASCRIPT
 from control_plane.mcp_facade import _central_lifecycle_state
 from control_plane.node_agent import poll_read_only_once
-from control_plane.store import ControlPlaneStore
+from control_plane.store import ControlPlaneStore, SCHEMA_VERSION
 
 
 class _CommitFailingConnection:
@@ -237,6 +238,130 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(self.server.store.health()["counts"]["contexts"], 0)
         self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
 
+    def test_browser_operator_can_create_and_revoke_bounded_binding_context_with_csrf(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-browser-binding-0001",
+            endpoint_id="endpoint-browser-binding-0001",
+            display_name="Browser binding node",
+        )
+        cookie, csrf_token = self._ui_login()
+        payload = {
+            "device_id": node["device_id"],
+            "workspace_id": "workspace-browser-binding-0001",
+            "workspace_generation": "generation-browser-binding-0001",
+            "display_name": "Browser binding workspace",
+        }
+        status, forbidden, _headers = self._request_with_headers(
+            "/v1/ui/bindings",
+            method="POST",
+            payload=payload,
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        self.assertEqual(self.server.store.health()["counts"]["bindings"], 0)
+
+        status, binding, _headers = self._request_with_headers(
+            "/v1/ui/bindings",
+            method="POST",
+            payload=payload,
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(binding["device_id"], node["device_id"])
+        self.assertNotIn("credential", json.dumps(binding))
+
+        status, invalid_context, _headers = self._request_with_headers(
+            "/v1/ui/contexts",
+            method="POST",
+            payload={"binding_id": binding["binding_id"], "duration_minutes": 2},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(invalid_context["error"]["code"], "VALIDATION_ERROR")
+
+        before_context = self.server.store.clock()
+        status, context, _headers = self._request_with_headers(
+            "/v1/ui/contexts",
+            method="POST",
+            payload={"binding_id": binding["binding_id"], "duration_minutes": 15},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 201)
+        self.assertGreaterEqual(context["expires_at_ms"], before_context + 15 * 60 * 1000)
+        self.assertLessEqual(context["expires_at_ms"], self.server.store.clock() + 15 * 60 * 1000)
+
+        status, closed, _headers = self._request_with_headers(
+            f"/v1/ui/contexts/{context['context_id']}/close",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNotNone(closed["closed_at_ms"])
+
+        status, revoked, _headers = self._request_with_headers(
+            f"/v1/ui/bindings/{binding['binding_id']}/revoke",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertIsNotNone(revoked["revoked_at_ms"])
+
+        self.assertIn("/v1/ui/bindings", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("duration_minutes", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("Thu hồi binding", WEB_UI_JAVASCRIPT.decode("utf-8"))
+
+    def test_node_policy_template_is_bound_to_its_live_context_and_node_credential(self) -> None:
+        first = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-policy-template-0001",
+            endpoint_id="endpoint-policy-template-0001",
+            display_name="Policy template node",
+        )
+        second = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-policy-template-0002",
+            endpoint_id="endpoint-policy-template-0002",
+            display_name="Other policy template node",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=first["device_id"],
+            workspace_id="workspace-policy-template-0001",
+            workspace_generation="generation-policy-template-0001",
+            display_name="Policy template workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        path = f"/v1/nodes/{first['device_id']}/read-only-policy-template"
+        status, template = self._post(path, {"context_id": context["context_id"]}, f"Node {first['node_secret']}")
+        self.assertEqual(status, 200)
+        policy = template["policy_template"]
+        self.assertEqual(policy["device_id"], first["device_id"])
+        self.assertEqual(policy["endpoint_id"], "endpoint-policy-template-0001")
+        self.assertEqual(policy["workspace_id"], binding["workspace_id"])
+        self.assertNotIn("node_secret", json.dumps(template))
+        self.assertNotIn("credential", json.dumps(template))
+
+        status, forbidden = self._post(
+            f"/v1/nodes/{second['device_id']}/read-only-policy-template",
+            {"context_id": context["context_id"]},
+            f"Node {second['node_secret']}",
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+
+        self.server.store.close_context(owner_id="owner_default", context_id=context["context_id"])
+        status, closed = self._post(path, {"context_id": context["context_id"]}, f"Node {first['node_secret']}")
+        self.assertEqual(status, 409)
+        self.assertEqual(closed["error"]["code"], "CONFLICT")
+
     def test_action_observation_route_requires_operator_authority(self) -> None:
         status, forbidden = self._get("/v1/actions/action-does-not-exist")
         self.assertEqual(status, 403)
@@ -250,7 +375,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(health["ok"])
         self.assertEqual(health["sqlite_integrity"], "ok")
-        self.assertEqual(health["schema_version"], 8)
+        self.assertEqual(health["schema_version"], SCHEMA_VERSION)
         self.assertEqual(health["admission_mode"], "open")
         self.assertEqual(health["declared_source_revision"], "a" * 40)
         self.assertEqual(health["service_instance_id"], self.server.service_instance_id)
@@ -262,6 +387,118 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(repeat_status, 200)
         self.assertEqual(repeated_health["service_instance_id"], health["service_instance_id"])
         self.assertEqual(repeated_health["package_source_sha256"], health["package_source_sha256"])
+
+    def test_dedicated_loopback_mcp_ingress_exposes_no_ui_or_admin_route(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-mcp-ingress-001",
+            endpoint_id="endpoint-mcp-ingress-001",
+            display_name="MCP ingress fixture",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-mcp-ingress-001",
+            workspace_generation="generation-mcp-ingress-001",
+            display_name="MCP ingress workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        grant = self.server.store.create_mcp_access_grant(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            principal_id="openai-ubuntu-root-ingress-fixture",
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+        ingress = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.server.store,
+            self.operator_token,
+            "a" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+        )
+        ingress_thread = threading.Thread(target=ingress.serve_forever, daemon=True)
+        ingress_thread.start()
+        ingress_url = f"http://127.0.0.1:{ingress.server_port}"
+        try:
+            def request(path: str, *, method: str, payload: dict | None = None, authorization: str | None = None) -> tuple[int, dict]:
+                headers = {"Content-Type": "application/json"} if payload is not None else {}
+                if authorization:
+                    headers["Authorization"] = authorization
+                raw = json.dumps(payload).encode("utf-8") if payload is not None else None
+                candidate = Request(f"{ingress_url}{path}", data=raw, headers=headers, method=method)
+                try:
+                    with urlopen(candidate, timeout=2) as response:
+                        return response.status, json.loads(response.read())
+                except HTTPError as error:
+                    try:
+                        return error.code, json.loads(error.read())
+                    finally:
+                        error.close()
+
+            status, health = request("/healthz", method="GET")
+            self.assertEqual(status, 404)
+            self.assertEqual(health["error"]["code"], "NOT_FOUND")
+            status, admin = request(
+                "/v1/mcp-access-grants",
+                method="POST",
+                payload={},
+                authorization=f"Bearer {self.operator_token}",
+            )
+            self.assertEqual(status, 404)
+            self.assertEqual(admin["error"]["code"], "NOT_FOUND")
+            status, initialized = request(
+                "/mcp",
+                method="POST",
+                payload={"jsonrpc": "2.0", "id": "ingress-init-001", "method": "initialize", "params": {}},
+                authorization=f"Bearer {grant['access_token']}",
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(initialized["result"]["_meta"]["control_plane"]["access_scope"], "server_issued_context_grant")
+        finally:
+            ingress.shutdown()
+            ingress.server_close()
+            ingress_thread.join(timeout=2)
+
+        primary_without_mcp = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.server.store,
+            self.operator_token,
+            "a" * 40,
+            mcp_enabled=False,
+        )
+        primary_thread = threading.Thread(target=primary_without_mcp.serve_forever, daemon=True)
+        primary_thread.start()
+        try:
+            request = Request(
+                f"http://127.0.0.1:{primary_without_mcp.server_port}/mcp",
+                data=json.dumps({"jsonrpc": "2.0", "id": "disabled-primary-001", "method": "initialize", "params": {}}).encode("utf-8"),
+                headers={"Content-Type": "application/json", "Authorization": f"Bearer {grant['access_token']}"},
+                method="POST",
+            )
+            with self.assertRaises(HTTPError) as rejected:
+                urlopen(request, timeout=2)
+            self.assertEqual(rejected.exception.code, 404)
+            rejected.exception.close()
+        finally:
+            primary_without_mcp.shutdown()
+            primary_without_mcp.server_close()
+            primary_thread.join(timeout=2)
+
+    def test_mcp_ingress_environment_is_loopback_and_range_limited(self) -> None:
+        with mock.patch.dict("os.environ", {"CONTROL_PLANE_MCP_BIND": "127.0.0.1", "CONTROL_PLANE_MCP_PORT": "8766"}, clear=True):
+            self.assertEqual(_mcp_ingress_address_from_environment(), ("127.0.0.1", 8766))
+        for environment in (
+            {"CONTROL_PLANE_MCP_BIND": "100.116.112.22", "CONTROL_PLANE_MCP_PORT": "8766"},
+            {"CONTROL_PLANE_MCP_BIND": "127.0.0.1", "CONTROL_PLANE_MCP_PORT": "0"},
+            {"CONTROL_PLANE_MCP_BIND": "127.0.0.1", "CONTROL_PLANE_MCP_PORT": "not-a-port"},
+        ):
+            with mock.patch.dict("os.environ", environment, clear=True), self.assertRaises(ValueError):
+                _mcp_ingress_address_from_environment()
 
     def test_private_web_ui_requires_explicit_https_origin_and_serves_only_allowlisted_assets(self) -> None:
         request = Request(f"{self.base_url}/", method="GET")
@@ -647,6 +884,14 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
                     "tool_contract_sha256": "a" * 64,
                 },
                 "facade_contract": request["facade_contract"],
+                "workspace_summary": {
+                    "schema_version": 1,
+                    "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+                    "entries": [{"name": "office-marker.txt", "type": "file", "size_bytes": 17, "is_hidden": False, "is_ignored": False}],
+                    "entries_truncated": False,
+                    "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+                },
+                "workspace_summary_sha256": "e" * 64,
                 "response_sha256": "d" * 64,
                 "workspace": "E:/must-not-reach-central-or-browser",
             }, None)
@@ -763,6 +1008,12 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             binding_id=binding["binding_id"],
             expires_at_ms=self.server.store.clock() + 60_000,
         )
+        grant = self.server.store.create_mcp_access_grant(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            principal_id="openai-tunnel-commit-failure-fixture",
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
         before = self.server.store.health()["counts"]
         original_connection = self.server.store._connection
         with original_connection() as connection:
@@ -792,7 +1043,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             },
         }
         with mock.patch.object(self.server.store, "_connection", failing_connection):
-            status, response = self._post("/mcp", request, f"Bearer {self.operator_token}")
+            status, response = self._post("/mcp", request, f"Bearer {grant['access_token']}")
 
         self.assertEqual(status, 503)
         self.assertEqual(response, {
@@ -843,6 +1094,31 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             )
 
     def test_mcp_facade_authenticates_and_queues_only_the_fixed_read_only_intent(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-mcp-facade-001",
+            endpoint_id="endpoint-mcp-facade-001",
+            display_name="MCP facade canary",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-mcp-facade-001",
+            workspace_generation="generation-mcp-facade-001",
+            display_name="MCP facade workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        grant = self.server.store.create_mcp_access_grant(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            principal_id="openai-tunnel-fixture-001",
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+        mcp_authorization = f"Bearer {grant['access_token']}"
         initialize = {
             "jsonrpc": "2.0",
             "id": "initialize-001",
@@ -853,15 +1129,20 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
 
-        status, initialized = self._post("/mcp", initialize, f"Bearer {self.operator_token}")
+        status, operator_forbidden = self._post("/mcp", initialize, f"Bearer {self.operator_token}")
+        self.assertEqual(status, 403)
+        self.assertEqual(operator_forbidden["error"]["code"], "FORBIDDEN")
+
+        status, initialized = self._post("/mcp", initialize, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertEqual(initialized["result"]["protocolVersion"], "2025-11-25")
         self.assertEqual(initialized["result"]["_meta"]["control_plane"]["execution"], "local_admission_required")
+        self.assertEqual(initialized["result"]["_meta"]["control_plane"]["access_scope"], "server_issued_context_grant")
 
         status, listed = self._post(
             "/mcp",
             {"jsonrpc": "2.0", "id": "list-001", "method": "tools/list", "params": {}},
-            f"Bearer {self.operator_token}",
+            mcp_authorization,
         )
         self.assertEqual(status, 200)
         tools = listed["result"]["tools"]
@@ -886,7 +1167,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             "method": "server/discover",
             "params": {},
         }
-        status, discovered = self._post("/mcp", discover, f"Bearer {self.operator_token}")
+        status, discovered = self._post("/mcp", discover, mcp_authorization)
         self.assertEqual(status, 200)
         discovery = discovered["result"]
         self.assertEqual(discovery["protocolVersion"], initialized["result"]["protocolVersion"])
@@ -898,31 +1179,13 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         )
         self.assertTrue(all(tool["inputSchema"]["additionalProperties"] is False for tool in discovery["tools"]))
 
-        node = self.server.store.enroll_node(
-            owner_id="owner_default",
-            device_id="device-mcp-facade-001",
-            endpoint_id="endpoint-mcp-facade-001",
-            display_name="MCP facade canary",
-        )
-        binding = self.server.store.create_binding(
-            owner_id="owner_default",
-            device_id=node["device_id"],
-            workspace_id="workspace-mcp-facade-001",
-            workspace_generation="generation-mcp-facade-001",
-            display_name="MCP facade workspace",
-        )
-        context = self.server.store.create_context(
-            owner_id="owner_default",
-            binding_id=binding["binding_id"],
-            expires_at_ms=self.server.store.clock() + 60_000,
-        )
         call = {
             "jsonrpc": "2.0",
             "id": "call-001",
             "method": "tools/call",
             "params": {"name": "workspace_context", "arguments": {"context_id": context["context_id"]}},
         }
-        status, observed = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, observed = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         workspace = observed["result"]["structuredContent"]
         self.assertFalse(workspace["workspace_accessed"])
@@ -941,7 +1204,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
                 for key in ("schema_version", "profile", "sha256")
             },
         }
-        status, queued = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, queued = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         intent = queued["result"]["structuredContent"]
         self.assertFalse(intent["workspace_accessed"])
@@ -958,7 +1221,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         action = {"action_id": intent["action_id"]}
 
         call["id"] = "call-request-read-only-replay-001"
-        status, replayed = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, replayed = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         replay = replayed["result"]["structuredContent"]
         self.assertTrue(replay["replayed"])
@@ -967,7 +1230,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
 
         call["id"] = "call-request-read-only-conflict-001"
         call["params"]["arguments"]["expires_at_ms"] += 1
-        status, conflict = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, conflict = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertEqual(conflict["error"]["code"], -32602)
         self.assertEqual(self.server.store.health()["counts"]["actions"], 1)
@@ -979,7 +1242,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             "profile": self.server.mcp_facade.contract["profile"],
             "sha256": "0" * 64,
         }
-        status, mismatch = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, mismatch = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertEqual(mismatch["error"]["code"], -32602)
         self.assertEqual(mismatch["error"]["data"]["code"], "CONTRACT_MISMATCH")
@@ -1006,26 +1269,50 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             "context_id": context["context_id"],
             "action_id": action["action_id"],
         }
-        status, dispatch_unconfirmed = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, dispatch_unconfirmed = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertEqual(
             dispatch_unconfirmed["result"]["structuredContent"]["action"]["central_lifecycle_state"],
             "dispatch_unconfirmed",
         )
+        workspace_summary = {
+            "schema_version": 1,
+            "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+            "entries": [{"name": "office-marker.txt", "type": "file", "size_bytes": 17, "is_hidden": False, "is_ignored": False}],
+            "entries_truncated": False,
+            "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+        }
+        workspace_summary_sha256 = hashlib.sha256(
+            json.dumps(workspace_summary, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
         self.server.store.record_receipt(
             device_id=node["device_id"],
             action_id=action["action_id"],
             attempt_id=attempt["attempt_id"],
             receipt_state="completed",
             local_handle="local-handle-must-not-reach-facade",
-            payload={"workspace": "E:/must-not-reach-facade", "raw_response": "must-not-reach-facade"},
+            payload={
+                "schema_version": 1,
+                "operation_kind": "control_plane_read_only_workspace_context",
+                "workspace_accessed": True,
+                "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+                "facade_contract": {
+                    key: self.server.mcp_facade.contract[key]
+                    for key in ("schema_version", "profile", "sha256")
+                },
+                "workspace_summary": workspace_summary,
+                "workspace_summary_sha256": workspace_summary_sha256,
+                "response_sha256": "a" * 64,
+                "workspace": "E:/must-not-reach-facade",
+                "raw_response": "must-not-reach-facade",
+            },
         )
         call["id"] = "call-action-status-001"
         call["params"]["arguments"] = {
             "context_id": context["context_id"],
             "action_id": action["action_id"],
         }
-        status, action_observed = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, action_observed = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         lifecycle = action_observed["result"]["structuredContent"]["action"]
         self.assertEqual(lifecycle["action_id"], action["action_id"])
@@ -1034,9 +1321,16 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(len(lifecycle["attempts"]), 1)
         self.assertEqual(len(lifecycle["receipts"]), 1)
         self.assertEqual(lifecycle["receipts"][0]["receipt_state"], "completed")
+        relay = action_observed["result"]["structuredContent"]
+        self.assertTrue(relay["workspace_accessed"])
+        self.assertEqual(relay["execution"], "completed_read_relay")
+        self.assertEqual(relay["workspace_read"]["workspace_summary"], workspace_summary)
+        self.assertEqual(relay["workspace_read"]["workspace_summary_sha256"], workspace_summary_sha256)
         self.assertNotIn("arguments_json", json.dumps(lifecycle))
         self.assertNotIn("admission_reference", json.dumps(lifecycle))
         self.assertNotIn("must-not-reach-facade", json.dumps(lifecycle))
+        self.assertNotIn("must-not-reach-facade", json.dumps(relay))
+        self.assertNotIn("local-handle-must-not-reach-facade", json.dumps(relay))
 
         other_context = self.server.store.create_context(
             owner_id="owner_default",
@@ -1045,13 +1339,15 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         )
         call["id"] = "call-action-status-foreign-context"
         call["params"]["arguments"]["context_id"] = other_context["context_id"]
-        status, wrong_context = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, wrong_context = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertEqual(wrong_context["error"]["code"], -32602)
+        self.assertEqual(wrong_context["error"]["data"]["code"], "FORBIDDEN")
 
         call["id"] = "call-002"
+        call["params"]["arguments"]["context_id"] = context["context_id"]
         call["params"]["name"] = "exec_command"
-        status, rejected = self._post("/mcp", call, f"Bearer {self.operator_token}")
+        status, rejected = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
         self.assertTrue(rejected["result"]["isError"])
         self.assertEqual(rejected["result"]["structuredContent"]["code"], "LOCAL_ADMISSION_BRIDGE_REQUIRED")
@@ -1061,7 +1357,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         status, invalid_tool = self._post(
             "/mcp",
             {"jsonrpc": "2.0", "id": "call-003", "method": "tools/call", "params": {"name": "unknown", "arguments": {"context_id": context["context_id"]}}},
-            f"Bearer {self.operator_token}",
+            mcp_authorization,
         )
         self.assertEqual(status, 200)
         self.assertEqual(invalid_tool["error"]["code"], -32602)
@@ -1069,10 +1365,73 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         status, malformed = self._post(
             "/mcp",
             {"jsonrpc": "2.0", "id": True, "method": "ping", "params": {}},
-            f"Bearer {self.operator_token}",
+            mcp_authorization,
         )
         self.assertEqual(status, 200)
         self.assertEqual(malformed["error"]["code"], -32600)
+
+    def test_operator_issues_and_revokes_a_redacted_context_scoped_mcp_grant(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-mcp-grant-http-001",
+            endpoint_id="endpoint-mcp-grant-http-001",
+            display_name="MCP grant HTTP canary",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-mcp-grant-http-001",
+            workspace_generation="generation-mcp-grant-http-001",
+            display_name="MCP grant HTTP workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        body = {
+            "context_id": context["context_id"],
+            "principal_id": "openai-tunnel-http-fixture",
+            "expires_at_ms": self.server.store.clock() + 30_000,
+        }
+        status, forbidden = self._post("/v1/mcp-access-grants", body)
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+
+        status, created = self._post("/v1/mcp-access-grants", body, f"Bearer {self.operator_token}")
+        self.assertEqual(status, 201)
+        self.assertEqual(created["context_id"], context["context_id"])
+        self.assertEqual(created["principal_id"], body["principal_id"])
+        self.assertRegex(created["access_token"], r"^mcp_[A-Za-z0-9_-]{32,}$")
+
+        status, listed = self._get("/v1/mcp-access-grants", f"Bearer {self.operator_token}")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(listed["mcp_access_grants"]), 1)
+        self.assertNotIn("access_token", json.dumps(listed))
+        self.assertNotIn("token_digest", json.dumps(listed))
+
+        initialize = {"jsonrpc": "2.0", "id": "grant-init", "method": "initialize", "params": {}}
+        status, initialized = self._post("/mcp", initialize, f"Bearer {created['access_token']}")
+        self.assertEqual(status, 200)
+        self.assertEqual(initialized["result"]["protocolVersion"], "2025-11-25")
+
+        status, invalid_revoke = self._post(
+            f"/v1/mcp-access-grants/{created['grant_id']}/revoke",
+            {"unexpected": True},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(invalid_revoke["error"]["code"], "VALIDATION_ERROR")
+        status, revoked = self._post(
+            f"/v1/mcp-access-grants/{created['grant_id']}/revoke",
+            {},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        self.assertIsInstance(revoked["revoked_at_ms"], int)
+        status, revoked_token = self._post("/mcp", initialize, f"Bearer {created['access_token']}")
+        self.assertEqual(status, 403)
+        self.assertEqual(revoked_token["error"]["code"], "FORBIDDEN")
 
     def test_facade_lifecycle_state_never_infers_local_execution_or_outcome(self) -> None:
         self.assertEqual(_central_lifecycle_state({"delivery_state": "queued", "receipts": []}), "queued")

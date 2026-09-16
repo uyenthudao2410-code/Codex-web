@@ -369,22 +369,49 @@ function validateReadyVerification(verification, epochId, record = null) {
     }
   }
   const pass = census.pass === true || census.verified === true;
+  const centralExecutor = record?.metadata?.execution_role === 'central_executor'
+    && record?.metadata?.component_profile === 'central_executor_v1';
   const legacyPass = census.all_components_same_epoch === true
-    && census.connector_acknowledged === true;
+    && (centralExecutor
+      ? census.central_route_verified === true
+      : census.connector_acknowledged === true);
   if (!pass && !legacyPass) {
-    throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', 'Final census did not prove all components and connector admission are ready.');
+    throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', centralExecutor
+      ? 'Final census did not prove all components and the central route are ready.'
+      : 'Final census did not prove all components and connector admission are ready.');
   }
   if (census.pass === false || census.verified === false) {
     throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', 'Final census explicitly reports an incomplete activation.');
   }
   const negativeFlags = [
     'all_components_same_epoch', 'epoch_matches', 'workspace_matches', 'device_matches',
-    'revision_matches', 'process_identity_verified', 'connector_acknowledged',
+    'revision_matches', 'process_identity_verified',
     'ui_verified', 'recovery_plane_verified'
   ];
+  if (centralExecutor) {
+    negativeFlags.push('central_route_verified', 'central_connected', 'authority_ready');
+  } else {
+    negativeFlags.push('connector_acknowledged');
+  }
   for (const flag of negativeFlags) {
     if (Object.prototype.hasOwnProperty.call(census, flag) && census[flag] !== true) {
       throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', `Final census flag ${flag} is not true.`);
+    }
+  }
+  if (centralExecutor) {
+    // Central activation replaces the connector acknowledgement with a
+    // credential-free, authenticated route observation.  Unlike legacy
+    // records, every component/identity proof is mandatory here so a partial
+    // client activation cannot open authority merely because its route is up.
+    for (const flag of [
+      'all_components_same_epoch', 'epoch_matches', 'workspace_matches',
+      'device_matches', 'revision_matches', 'process_identity_verified',
+      'ui_verified', 'recovery_plane_verified', 'central_route_verified',
+      'central_connected', 'authority_ready'
+    ]) {
+      if (census[flag] !== true) {
+        throw epochError('ACTIVATION_EPOCH_READY_PROOF_REQUIRED', `Central final census requires ${flag}=true.`);
+      }
     }
   }
   if (record && Array.isArray(record.components) && record.components.length > 0 && census.components && isPlainObject(census.components)) {
@@ -535,14 +562,14 @@ function normalizeRecord(value, { allowLegacy = false } = {}) {
     throw storeError('Activation epoch request_fingerprint does not match request_intent.');
   }
   if (!allowLegacy && (state === 'READY_COMMITTED' || state === 'READY')) {
-    validateReadyVerification(verification, id, { components });
+    validateReadyVerification(verification, id, { components, metadata });
   }
   if (readyCommitDigest) {
     if (state !== 'READY_COMMITTED' && state !== 'READY' && state !== 'FAILED') {
       throw storeError('Activation epoch ready_commit_digest is only valid after verification commit.');
     }
     if (!verification) throw storeError('Activation epoch ready_commit_digest requires verification proof.');
-    validateReadyVerification(verification, id, { components });
+    validateReadyVerification(verification, id, { components, metadata });
     if (readyCommitDigest !== readyCommitDigestFor(id, expires.unixMs, verification)) {
       throw storeError('Activation epoch ready_commit_digest does not bind the canonical verification proof.');
     }

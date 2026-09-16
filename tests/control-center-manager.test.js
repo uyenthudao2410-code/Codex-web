@@ -34,6 +34,43 @@ test('manager exposes truthful current-device identity, Git and existing safe ru
   assert.match(app, /repairHealth\(\)/);
 });
 
+test('central executor UI does not require or erase a Windows OpenAI Tunnel profile', () => {
+  const html = read('renderer/index.html');
+  const app = read('renderer/app.js');
+  const preload = read('electron/preload.js');
+  const main = read('electron/main.js');
+  assert.match(html, /id="centralExecutorNotice"/);
+  assert.match(html, /id="centralExecutorGuide"/);
+  assert.match(html, /id="controlPlaneServerUrl"/);
+  assert.match(html, /id="requestControlPlaneEnrollment"/);
+  assert.match(html, /id="controlPlaneEnrollmentStatus"/);
+  assert.match(html, /id="controlPlaneContextId"/);
+  assert.match(html, /id="replaceControlPlanePolicy"/);
+  assert.match(html, /id="installControlPlaneReadOnlyPolicy"/);
+  assert.match(html, /Policy này không cấp ghi hay thực thi lệnh/);
+  assert.match(html, /data-direct-only/);
+  assert.match(app, /function isCentralExecutor\(/);
+  assert.match(app, /function centralRoutePresentation\(/);
+  assert.match(app, /function renderCentralExecutorMode\(/);
+  assert.match(app, /Runtime API Key và OpenAI Tunnel chính chỉ thuộc Ubuntu/);
+  assert.match(app, /tunnelId: central \? String\(existing\.tunnelId \|\| ''\)/);
+  assert.match(app, /recoveryTunnelId: central \? String\(existing\.recoveryTunnelId \|\| ''\)/);
+  assert.match(app, /Không cần Runtime API Key hay Tunnel ID tại Windows/);
+  assert.match(app, /status\.centralConnected !== true/);
+  assert.match(app, /status\.authorityReady !== true/);
+  assert.match(app, /function requestControlPlaneEnrollment\(/);
+  assert.match(app, /function installControlPlaneReadOnlyPolicy\(/);
+  assert.match(app, /installControlPlaneReadOnlyPolicy\(\{[\s\S]*contextId/);
+  assert.match(app, /identity, binding, context và policy riêng/);
+  assert.match(preload, /requestControlPlaneEnrollment:\s*\(serverUrl\)\s*=>\s*ipcRenderer\.invoke\('control-plane:enroll', serverUrl\)/);
+  assert.match(preload, /installControlPlaneReadOnlyPolicy:\s*\(request\)\s*=>\s*ipcRenderer\.invoke\('control-plane:install-read-only-policy', request\)/);
+  assert.match(main, /secureHandle\('control-plane:enroll'/);
+  assert.match(main, /secureHandle\('control-plane:install-read-only-policy'/);
+  assert.match(main, /assertManagerIpc\(event\)/);
+  assert.match(main, /CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED/);
+  assert.match(main, /CONTROL_PLANE_POLICY_ROLE_REQUIRED/);
+});
+
 test('manager Command Center exposes the truthful nine-node topology in the overview fabric', () => {
   const html = read('renderer/index.html');
   for (const suffix of ['ChatWeb', 'Desktop', 'OpenCode', 'Fast', 'Hub', 'DeepSeek', 'Terra', 'Writer', 'Sol']) {

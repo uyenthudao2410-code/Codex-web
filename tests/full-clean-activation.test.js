@@ -1614,6 +1614,92 @@ test('final census rebuilds an ordinary no-checkpoint projection before health a
   assert.equal(mixedObservation.pass, false);
 });
 
+test('central full-clean replacement persists its epoch role and never supplies node Tunnel credentials', async (t) => {
+  const { root, paths } = fixture(t);
+  const activationEpochId = id('activation-central-handoff', '0001');
+  const operationId = id('operation-central-handoff', '0001');
+  const nowUnixMs = 1_700_000_000_000;
+  const store = new ActivationEpochStore({ paths, now: () => nowUnixMs });
+  store.create({
+    activation_epoch_id: activationEpochId,
+    operation_id: operationId,
+    components: ['recovery_host', 'coding_mcp', 'electron_ui'],
+    expires_at_unix_ms: nowUnixMs + 120_000,
+    metadata: {
+      reason: 'central-handoff-test',
+      execution_role: 'central_executor',
+      component_profile: 'central_executor_v1'
+    }
+  });
+  let settings = {
+    workspace: root,
+    executionRole: 'direct_legacy',
+    tunnelId: 'tunnel_legacy_primary',
+    recoveryTunnelId: 'tunnel_legacy_recovery',
+    recoveryMcpPort: 18767,
+    recoveryHealthPort: 18083
+  };
+  const observed = { saves: [], starts: [], ensure: [], secretNames: [] };
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: store,
+    now: () => nowUnixMs,
+    settings: {
+      load: () => settings,
+      save: (patch) => {
+        observed.saves.push(patch);
+        settings = { ...settings, ...patch };
+        return settings;
+      }
+    },
+    secrets: { get: (name) => { observed.secretNames.push(name); return name === 'mcpAuthToken' ? 'loopback-only-token' : 'must-not-be-read'; } },
+    orchestrator: {
+      setActivationEpoch() {},
+      ensureToken: async () => 'loopback-only-token',
+      start: async (options) => { observed.starts.push(options); return {}; },
+      stop: async () => {}
+    },
+    recoveryPlane: {
+      setActivationEpoch() {},
+      ensure: async (recoverySettings, options) => { observed.ensure.push({ recoverySettings, options }); return {}; },
+      stop: async () => {}
+    },
+    getUiRegistration: () => ({ instance_id: 'ui-central-handoff-0001', activation_epoch_id: activationEpochId }),
+    getUiPresence: () => ({ alive: true, instance_id: 'ui-central-handoff-0001' })
+  });
+  coordinator.finalCensus = async () => ({
+    activation_epoch_id: activationEpochId,
+    pass: false,
+    verified: false,
+    reason: 'CENTRAL_ROUTE_EVIDENCE_MISSING'
+  });
+
+  const result = await coordinator.continueReplacement({ activationEpochId });
+  assert.equal(result.state, 'VERIFYING');
+  assert.deepEqual(observed.saves, [{ executionRole: 'central_executor' }]);
+  assert.equal(observed.starts.length, 1);
+  assert.equal(observed.ensure.length, 1);
+  assert.equal(observed.ensure[0].recoverySettings.tunnelId, '');
+  assert.equal(observed.ensure[0].recoverySettings.recoveryTunnelId, '');
+  assert.equal(observed.ensure[0].options.runtimeApiKey, '');
+  assert.equal(observed.secretNames.includes('runtimeApiKey'), false);
+  assert.equal(store.current().metadata.execution_role, 'central_executor');
+  assert.equal(store.current().metadata.component_profile, 'central_executor_v1');
+});
+
+test('execution role changes are refused outside an explicit full-clean handoff', async (t) => {
+  const { root, paths } = fixture(t);
+  const coordinator = new FullCleanActivation({
+    paths,
+    epochStore: epochStore(paths),
+    settings: { load: () => ({ workspace: root, executionRole: 'direct_legacy' }) }
+  });
+  await assert.rejects(
+    coordinator.restart({ executionRole: 'central_executor' }),
+    { code: 'ACTIVATION_EXECUTION_ROLE_HANDOFF_REQUIRED' }
+  );
+});
+
 test('full-clean restart refuses a missing accepted source checkpoint before any epoch or process mutation', async (t) => {
   const { root, paths } = fixture(t);
   const store = epochStore(paths);

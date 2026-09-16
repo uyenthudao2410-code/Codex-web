@@ -1,5 +1,12 @@
 # Kế hoạch đóng gói, UI kiểm soát và chạy thử Ubuntu → Windows
 
+**Phạm vi được làm rõ ngày 16/09/2026:** bản này giữ chronology/proof của
+additive pilot. Đích hiện tại là Ubuntu giữ Tunnel chính + MCP gốc và các máy
+dùng client/node, theo [kế hoạch central MCP](UBUNTU_CENTRAL_MCP_COMPLETION_PLAN.md).
+RC-A/RC-B dưới đây không thay Definition of Done mới vì còn loại trừ primary
+cutover/controller server. Windows office đã được cài sau baseline ở đây;
+không dùng các đoạn “chưa cài/chưa deploy” cũ thay cho live recheck.
+
 Ngày lập: **16-09-2026**. Source baseline: `main@b57ab92325560070e290a90dd5788f61313afb2d`.
 
 **Trạng thái triển khai (16-09-2026):** W1 đã có source + focused proof: idle

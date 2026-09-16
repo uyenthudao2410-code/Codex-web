@@ -25,6 +25,65 @@ python -m control_plane
 The default listener is `127.0.0.1:8765`. Do not bind a public address until a
 network and TLS/authentication boundary has been explicitly configured.
 
+## Ubuntu root MCP ingress and OpenAI Tunnel
+
+The production launcher starts two listeners in one process:
+
+- `CONTROL_PLANE_BIND:CONTROL_PLANE_PORT` is the private Tailnet-facing
+  operator UI and node/API listener. In production it has **no** `/mcp` route.
+- `127.0.0.1:${CONTROL_PLANE_MCP_PORT:-8766}` is a dedicated, loopback-only
+  root MCP ingress. It accepts only `POST /mcp`; UI, health, enrollment,
+  admin, node, and browser routes return `404` there.
+
+The OpenAI Tunnel service template receives the second listener only. This
+prevents an MCP tunnel profile from becoming a proxy for the private console
+or node control API. It does not grant the Tunnel client operator authority:
+`/mcp` still requires a short-lived, server-issued context-scoped grant.
+
+Create the Linux `tunnel-client` profile manually using the current official
+[Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
+The profile must use exactly
+`http://127.0.0.1:<CONTROL_PLANE_MCP_PORT>/mcp`; run
+`tunnel-client doctor --profile <profile> --explain` before enabling
+`codex-control-plane-mcp-tunnel.service`. Keep the runtime API key in the
+protected tunnel-client profile/init flow, never in this repository, SQLite,
+the control-plane environment file, or a service command line. The service
+only runs `tunnel-client run --profile <profile>` and validates that the named
+Tunnel ID and client binary are present in the protected environment.
+
+After the verified candidate has started the loopback listener, the operator
+creates that named HTTP profile in a private terminal. The current official
+client flow uses `CONTROL_PLANE_API_KEY` only for `init`; replace the
+placeholders locally and clear that shell variable immediately afterwards:
+
+```bash
+export CONTROL_PLANE_API_KEY='<runtime-api-key-entered-locally>'
+tunnel-client init \
+  --profile ubuntu-root-mcp \
+  --tunnel-id 'tunnel_<ubuntu-root-mcp>' \
+  --mcp-server-url 'http://127.0.0.1:8766/mcp'
+unset CONTROL_PLANE_API_KEY
+tunnel-client doctor --profile ubuntu-root-mcp --explain
+```
+
+This creates no public endpoint and must happen on Ubuntu, never a Windows
+executor. The later systemd service only uses the protected profile. Record
+the selected binary version/checksum and the content-free `doctor` result in
+the deployment receipt; do not paste its credential-bearing profile anywhere.
+
+Do not activate this service against a Windows Tunnel ID. First stop/fence the
+old owner through the approved cutover procedure, then initialize one new or
+explicitly transferred Ubuntu profile. A live `tunnel-client` health/ready
+surface and an actual supported OpenAI-product MCP call are required evidence;
+a Tailnet `curl` to `/mcp` or `/healthz` does not prove the Tunnel path.
+
+`CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION` is a required, observation-only
+healthcheck expectation. Set it to `recovery` while intake/dispatch is
+deliberately closed for migration or a canary; set it to `open` only after the
+separate readiness review explicitly opens admission. This variable never
+changes admission. A healthcheck pass in `recovery` proves planned maintenance,
+not execution readiness.
+
 ## Private browser operator UI (source capability, not a live deployment claim)
 
 The browser UI is **disabled by default**. It becomes available only when
@@ -52,16 +111,16 @@ therefore share that small single-owner rate limit unless an approved trusted
 proxy design adds a separately validated client identity.
 
 The UI requires the configured exact `Origin` and session-bound
-`X-Control-Plane-CSRF` value for writes. It can approve exactly one existing,
-pending enrollment request (identity only; no policy, binding, context or
-execution), close central admission to `recovery`, and queue only the fixed
-`workspace_context` read-only canary for one already-live context; it cannot
-create an enrollment, choose a tool, arguments, path, target, expiry, policy,
-or node credential. The server owns a 10-minute maximum expiry and one
-idempotency key per session/context, so a refresh or response loss replays the
-same central action. Queue acceptance is not local execution or a completed
-effect. Reopening remains an explicit operator-runbook action through the
-existing Bearer surface after independent readiness/inflight review.
+`X-Control-Plane-CSRF` value for writes. It can approve an existing pending
+enrollment (identity only); create an opaque workspace binding for an approved
+node; issue a 5-minute to 24-hour, server-clock context; close a context or
+revoke a binding; close central admission to `recovery`; and queue only the
+fixed `workspace_context` read-only canary for one already-live context. It
+cannot create an enrollment, choose a tool/arguments/path, create a policy,
+grant a node credential, open admission, or execute an action. Queue
+acceptance is not local execution or a completed effect. Reopening remains an
+explicit operator-runbook action through the existing Bearer surface after
+independent readiness/inflight review.
 Closing admission blocks new central intake/dispatch; it does not stop a
 Windows job or prove an existing effect has not happened.
 The overview is an authenticated, no-store central read model. It exposes a
@@ -167,7 +226,8 @@ npm run dist:control-plane
 
 The command writes a new `dist/codex-control-plane-<revision>/` directory and
 matching `.tar.gz` archive. Each contains the Python backend and embedded Web
-UI, versioned systemd service/timer templates, release-local backup and health
+UI, versioned systemd service/timer templates (including the separate root MCP
+Tunnel unit), release-local backup and health
 scripts, a secret-free environment example, `DEPLOYMENT.md`, and a manifest
 with source revision, package fingerprint and per-file/component hashes. It
 refuses to overwrite an existing release output or build from source drift.
@@ -226,15 +286,32 @@ session, backup, or real environment file. Creating it does not change the
   `reconcile_required` and is not redelivered. `accepted` and `completed`
   receipts require a non-empty local handle, while a later terminal receipt is
   required to settle an accepted or unknown action.
-- `POST /mcp` is an operator-Bearer authenticated, stateless JSON-RPC façade
-  for MCP `2025-11-25`. It declares exactly the eight public `smart-v3` tool
-  names and an explicit control-plane `context_id` envelope; this is not a
-  byte claim about the Windows tools' local input schemas. `workspace_context`
-  defaults to owner-scoped **central** target/node status with
-  `workspace_accessed=false`; an optional existing `action_id` under that
-  context adds a redacted lifecycle projection (action/attempt/receipt IDs,
-  state and digests only), never action arguments, receipt payloads, local
-  handles or paths. Its explicitly named `request_read_only` operation accepts
+- `POST /mcp` is a stateless JSON-RPC façade for MCP `2025-11-25`, reachable
+  only with a **server-issued MCP access grant**, not the operator Bearer.
+  An operator creates a grant through `POST /v1/mcp-access-grants` for exactly
+  one live `context_id`, an identified external principal, and an expiry no
+  later than that context. The raw bearer is returned only by that create
+  response; SQLite retains a domain-separated digest, authenticated grant
+  metadata is redacted by `GET /v1/mcp-access-grants`, and an operator can
+  immediately revoke it through `POST /v1/mcp-access-grants/{grant_id}/revoke`.
+  A revoked/expired grant, closed context, or revoked binding/node cannot call
+  `/mcp`. Caller headers and request fields cannot select another context.
+  This is the credential intended for the Ubuntu-owned Tunnel/controller after
+  its ingress deployment gate, not a Windows node credential or a way to give
+  an external client the operator token.
+
+  The façade declares exactly the eight public `smart-v3` tool names and an
+  explicit control-plane `context_id` envelope; this is not a byte claim about
+  the Windows tools' local input schemas. `workspace_context` defaults to
+  context-scoped **central** target/node status with
+  `workspace_accessed=false`. An optional existing `action_id` under that
+  context normally adds a redacted lifecycle projection (action/attempt/receipt
+  IDs, state and digests only). If, and only if, that exact action has a
+  completed receipt for the current façade contract, it also returns a bounded
+  metadata-only summary: project type/name/version, at most one root entry and
+  compact Git state. It never returns action arguments, raw receipt payloads,
+  local handles, paths, file contents, task text, or symlink targets. Its
+  explicitly named `request_read_only` operation accepts
   only an exact `context_id`, expiry, idempotency key, and the exact façade
   `{schema_version,profile,sha256}` advertised by `initialize` or `tools/list`.
   It atomically seals the fixed `workspace_context({detail:"compact",max_entries:1})`
@@ -247,12 +324,13 @@ session, backup, or real environment file. Creating it does not change the
   not forward the client token or request body to a node, poll, or execute
   anything.
 
-This remains a central MCP façade, not a Windows local-MCP execution adapter or
-an end-to-end MCP relay. It can record one fixed durable read-only intent, but
-the node's separately named local admission lane must independently pass its
-policy, strict-runtime and actor gates. Mutation remains blocked until a local
-adapter can pass the local authority gate.
-Schema migrations are additive, source-versioned (current `user_version=7`),
+This is a bounded asynchronous central read relay, not a Windows local-MCP
+execution adapter or a general end-to-end MCP proxy. The node's separately
+named local admission lane must independently pass its policy, strict-runtime
+and actor gates before a completed receipt can be observed. Mutation remains
+blocked until a local adapter can pass the local authority gate. A grant alone
+is never a file, process, local-policy, or task-approval authority.
+Schema migrations are additive, source-versioned (current `user_version=9`),
 and applied atomically by the store. `ControlPlaneStore.backup_to()` creates a
 verified, non-overwriting SQLite Backup API snapshot when an operator calls it
 explicitly. It is not an automatic startup backup and does not execute a
@@ -360,14 +438,21 @@ restore. Follow the operator-approved procedure in the recovery runbook.
 
 ## Node enrollment without copying a server secret
 
-On the node, choose a private configuration path outside the repository and run
-the client with the exact stable identities obtained from the local runtime:
+Normal Windows onboarding is through the packaged Command Center in
+`central_executor` mode: enter the HTTPS Ubuntu origin and select **Gửi yêu cầu
+pairing**. It uses the installed node agent and the one Electron data root,
+`%APPDATA%\web-mcp-assistant\control-plane-node.json`; the operator must still
+approve the resulting enrollment on Ubuntu. It never asks for an OpenAI key,
+Tunnel ID, operator bearer, or a workspace path.
+
+The source command below is for an isolated development fixture only. HTTPS is
+required away from loopback; do not substitute the Tailnet IP over HTTP:
 
 ```powershell
 $env:PYTHONPATH = "$PWD/control-plane"
 python -m control_plane.node_agent request-enrollment `
-  --config "$env:APPDATA/coding-tools-control-plane/node.json" `
-  --server-url http://100.116.112.22:8765 `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --server-url https://svhome.tail0e4032.ts.net `
   --device-id <installed-device-id> `
   --endpoint-id <current-endpoint-id> `
   --display-name <installed-display-name>
@@ -416,11 +501,13 @@ admits exactly `workspace_context` with `{ "detail": "compact", "max_entries":
 1 }`; it owns the local MCP token and attestation internally, uses the distinct
 `electron-control-plane-bridge` actor, and never exposes either credential to
 the Python node agent or central service. The bridge receipt must return the
-same façade pin before it can be accepted. A local journal is written before the
+same façade pin plus a bounded, independently hashed metadata-only workspace
+summary before it can be accepted. A local journal is written before the
 subprocess call; an interrupted prepared entry becomes an `unknown` receipt
 instead of being retried. The poll command itself does not create a policy,
-binding, context, action, or any central façade relay, and it is not a
-scheduler, logged-out Windows service, mutation lane, or live-canary result.
+binding, context, or action; it can only complete a prior sealed intent, and is
+not a scheduler, logged-out Windows service, mutation lane, or live-canary
+result.
 
 After the explicit policy has been installed and its local ACL reviewed, an
 operator may run a **bounded, logged-in** loop locally. It first verifies that
@@ -434,7 +521,7 @@ read-only poll. The process has no scheduler installer, cannot run longer than
 # One hour at a 60-second cadence; do not run this before the explicit policy
 # installation and Windows ACL gate above have been completed.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-loop `
-  --config "$env:APPDATA\coding-tools-control-plane\node.json" `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --interval-seconds 60 `
   --max-iterations 60
 ```
@@ -444,35 +531,72 @@ transport error is recorded for that iteration and never authorizes a retry of
 a possible local effect; an interrupted prepared bridge entry remains an
 `unknown` receipt as with the one-shot lane.
 
-### Explicit packaged read-only policy installation
+### Long-lived same-user read-only agent
 
-An installed Windows node can now create or disable **only** this one local
-read-only policy through its packaged `node-agent.cmd`. This is a deliberate
-local operator action, not a browser/Ubuntu command and not an auto-enrollment
-side effect. The launcher fixes bundled Python, the installed Electron tree,
-the packaged runtime mode, and `%APPDATA%\web-mcp-assistant`; it does not use a
-source checkout or global Node. The launcher accepts its fixed runtime arguments
-for enrollment, heartbeat and the safe non-dequeuing poll as well.
+After the packaged node has a reviewed, explicit policy, the named
+`run-read-only-agent` entrypoint is managed by the existing **same-user
+Recovery Supervisor** in a newly installed candidate. The Supervisor verifies
+the packaged Python and agent hashes from its manifest, then starts it only
+when the private node configuration and an enabled, unexpired, matching local
+policy exist. An older supervisor manifest has no agent fields and remains
+`manifest_legacy`; it never guesses an agent path or starts one. Unlike the
+bounded diagnostic loop, the agent runs until the local operator stops it or
+its policy becomes unavailable. It is still only the allowlisted
+`workspace_context` bridge: it does not receive a Tunnel ID, Runtime API key,
+arbitrary command, patch, or write permission.
 
-Before installation, record the exact office device/endpoint, one non-sensitive
-workspace ID/generation, a façade contract from the selected central artifact,
-and an exact expiry time. The policy accepts a maximum of 24 hours and binds
-the node configuration's central origin/device/endpoint to all of those values.
-It contains no operator bearer or node credential. Do not copy a policy between
-nodes or replace an active policy merely to change target/workspace.
+Every iteration revalidates the locally stored policy *before* publishing a
+heartbeat or polling the central queue. A disabled, expired, malformed, or
+wrong-node policy therefore stops the agent rather than generating repeated
+rejections. Runtime and network failures use bounded exponential backoff; they
+never repeat a possible local bridge effect. One atomically-created lock next
+to the private node configuration prevents two same-profile agents from
+dequeueing concurrently. A lock is reclaimed only when its recorded PID is
+confirmed dead; malformed or uncertain locks remain fail-closed for local
+operator review.
 
 ```powershell
-# Run on the logged-in Windows pilot node. The installed launcher supplies
+# The packaged same-user Supervisor starts this exact command after local
+# policy onboarding. Running it manually is only for focused diagnostics. The
+# command does not install another Scheduled Task and does not support
+# logged-out Windows or Session 0/SYSTEM execution.
+& '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-agent `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --interval-seconds 15 `
+  --max-backoff-seconds 300
+```
+
+`--max-iterations` is a focused diagnostic/test bound only; the default `0`
+means the supervisor owns the process lifetime. Do not use the agent as proof
+of central mutation, unattended boot, or a complete Windows onboarding flow:
+those gates require the separate pairing, lifecycle and authority proof.
+
+### Explicit packaged read-only policy installation
+
+The normal candidate workflow is: Ubuntu operator approves the node, creates
+an opaque binding, issues a live context, then the same Windows user pastes the
+`ctx_…` value into Command Center and selects **Cài policy read-only**. Electron
+starts its packaged node agent only after that local click. The agent
+authenticates itself to Ubuntu; Ubuntu returns a template only for that exact
+live context, device and endpoint. It derives owner/workspace/generation/
+expiry/facade contract from the server response, rather than accepting them
+from the Windows UI. No OpenAI key, Tunnel ID, operator bearer, node secret,
+Windows path, or workspace content is put in the UI or receipt.
+
+For break-glass diagnostics where Command Center cannot be used, the equivalent
+installed command accepts only the context ID and still requires local
+confirmation. It is not an auto-enrollment side effect. The launcher fixes
+bundled Python, installed Electron tree, packaged runtime mode and
+`%APPDATA%\web-mcp-assistant`; it does not use a source checkout or global Node.
+Do not copy a policy between nodes. Omit `--replace` unless the logged-in user
+has deliberately selected a replacement context.
+
+```powershell
+# Run only on the logged-in Windows pilot node. The installed launcher supplies
 # --runtime-mode packaged, --project-root and --node itself.
-& '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy `
-  --config "$env:APPDATA\coding-tools-control-plane\node.json" `
-  --owner-id 'owner_default' `
-  --workspace-id '<approved-canary-workspace-id>' `
-  --workspace-generation '<approved-canary-generation>' `
-  --facade-schema-version <exact-schema-version> `
-  --facade-profile '<exact-profile>' `
-  --facade-sha256 '<exact-64-hex>' `
-  --expires-at-ms <exact-unix-milliseconds> `
+& '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy-from-context `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --context-id 'ctx_<issued-by-ubuntu-console>' `
   --confirm-install
 
 # Credential-free local observation, then an explicit local fail-closed stop.
@@ -480,27 +604,40 @@ nodes or replace an active policy merely to change target/workspace.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' disable-read-only-policy --confirm-disable
 ```
 
-The install command refuses a missing confirmation, an expired/over-24-hour
-policy, malformed owner/workspace/contract values, an already existing policy
-without `--replace`, or a caller-supplied packaged data root. It returns only a
-policy contract SHA, expiry, runtime mode and `windows_acl_verified=false`;
-that last field is intentional. Windows ACL ownership must be inspected during
-the install gate and cannot be inferred from Python `chmod`. Disabling writes a
-disabled policy instead of deleting it, preserving local evidence while making
-Recovery Host reject the bridge. The command never starts a scheduler, invokes
-the bridge, dequeues central work, changes a binding/context/action, or grants
-mutation authority.
+The install command refuses a missing confirmation, closed/expired/wrong-node
+context, an over-24-hour policy, malformed server template, an already existing
+policy without `--replace`, or a caller-supplied packaged data root. It returns
+only a policy contract SHA, expiry, runtime mode and
+`windows_acl_verified=false`; that last field is intentional. Windows ACL
+ownership must be inspected during the install gate and cannot be inferred from
+Python `chmod`. Disabling writes a disabled policy instead of deleting it,
+preserving local evidence while making Recovery Host reject the bridge. The
+command never starts a scheduler, invokes the bridge, dequeues central work,
+changes a binding/context/action, or grants mutation authority.
 
 ```powershell
 $env:PYTHONPATH = "$PWD/control-plane"
 python -m control_plane.node_agent runtime-heartbeat `
-  --config "$env:APPDATA/coding-tools-control-plane/node.json" `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --project-root "$PWD"
 ```
 
 This command does not execute a remote action and does not make Electron work
 while Windows is logged out. It may later be called by a logon-scoped scheduler
 only after the interactive-runtime availability design has its own proof.
+
+When it receives a complete authenticated heartbeat echo, the node agent writes
+the credential-free `control-plane-route-evidence.json` beside the Electron
+data root. Electron accepts it only for its own stable device ID and only for
+60 seconds; a malformed, future, stale, copied-to-another-device, or missing
+record leaves central routing unavailable. The evidence contains the central
+origin, endpoint ID, credential generation, timestamps and policy state—never
+the node secret, workspace path, or an action grant. In `central_executor`
+mode, this is the replacement readiness proof for a **Windows OpenAI Tunnel**:
+it proves a recent authenticated node-to-Ubuntu path, not that a Tunnel runs on
+Windows. A locally enabled policy is still required before the narrow
+read-only lane can be ready, and each action is admitted again by Recovery
+Host. It is therefore not evidence of generic write/exec authority.
 
 ## Focused proof
 

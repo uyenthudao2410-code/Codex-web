@@ -6,7 +6,12 @@ const { RecoveryPlaneService } = require('./recoveryPlaneService');
 const { HealthService } = require('./healthService');
 const { HubProxyGateway } = require('./hubProxyGateway');
 const { RecoveryIpcServer } = require('./recoveryIpc');
-const { loadReadOnlyBridgePolicy, admitReadOnlyBridgeRequest } = require('./controlPlaneReadOnlyBridge');
+const {
+  loadReadOnlyBridgePolicy,
+  admitReadOnlyBridgeRequest,
+  normaliseWorkspaceSummary,
+  workspaceSummaryDigest
+} = require('./controlPlaneReadOnlyBridge');
 const { ensureParent, readJson } = require('./jsonStore');
 const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
@@ -74,18 +79,21 @@ function controlPlaneBridgeError(code, message) {
 // action path requires a current-process rediscovery plus a fresh runtime
 // snapshot on the exact Recovery Host that owns the IPC descriptor.
 function strictControlPlaneBridgeRuntime(runtime) {
+  const centralExecutor = runtime?.executionRole === 'central_executor';
   return Boolean(
     runtime
     && runtime.componentsReady === true
-    && runtime.connectorReady === true
     && runtime.fullyReady === true
     && runtime.updateIncomplete !== true
-    && runtime.connectorContractState === 'CURRENT_ACKNOWLEDGED'
-    && runtime.connectorFreshnessMode === 'current_process_discovery'
-    && runtime.connectorRediscovered === true
-    && runtime.connectorRefreshRequired === false
-    && runtime.connectorAcknowledgementPending === false
-    && connectorTimestampValid(runtime.connectorRediscoveredAt)
+    && (centralExecutor
+      ? runtime.centralConnected === true && runtime.authorityReady === true && runtime.centralStatusReason == null
+      : runtime.connectorReady === true
+        && runtime.connectorContractState === 'CURRENT_ACKNOWLEDGED'
+        && runtime.connectorFreshnessMode === 'current_process_discovery'
+        && runtime.connectorRediscovered === true
+        && runtime.connectorRefreshRequired === false
+        && runtime.connectorAcknowledgementPending === false
+        && connectorTimestampValid(runtime.connectorRediscoveredAt))
   );
 }
 
@@ -1427,6 +1435,14 @@ class RecoveryHost {
       && this.lastSupervisionStatus?.connectorAcknowledgementPending === false
       && connectorAckShaMatches
     );
+    const centralExecutor = this.lastSupervisionStatus?.executionRole === 'central_executor';
+    const centralRouteReady = Boolean(
+      centralExecutor
+      && this.lastSupervisionStatus?.centralConnected === true
+      && this.lastSupervisionStatus?.authorityReady === true
+      && this.lastSupervisionStatus?.centralStatusReason == null
+    );
+    const runtimeAdmissionReady = centralExecutor ? centralRouteReady : connectorReady && connectorAckShaMatches;
     const activationClosure = activationClosureProjection({
       autoActivation,
       recoveryHostRevision: codeRevision,
@@ -1491,21 +1507,23 @@ class RecoveryHost {
         state: 'blocked',
         ...this.readyAdoptionBlockDetails()
       } : { state: 'adopted' },
-      recovery_plane_mode: 'independent_mcp_tunnel_v1',
+      recovery_plane_mode: centralExecutor ? 'central-node-agent-v1' : 'independent_mcp_tunnel_v1',
       recovery_plane: this.lastRecoveryPlaneStatus,
       last_progress: this.lastProgress,
       runtime: this.lastSupervisionStatus ? {
         mcp: Boolean(this.lastSupervisionStatus.mcpRunning),
         tunnel: Boolean(this.lastSupervisionStatus.tunnelRunning),
+        execution_role: centralExecutor ? 'central_executor' : 'direct_legacy',
+        central_connected: centralExecutor ? this.lastSupervisionStatus.centralConnected === true : false,
+        authority_ready: centralExecutor ? this.lastSupervisionStatus.authorityReady === true : false,
+        central_status_reason: centralExecutor ? this.lastSupervisionStatus.centralStatusReason || null : null,
         fully_ready: Boolean(this.lastSupervisionStatus.fullyReady
           && epochStatus.admission_open === true
           && fullCleanAvailable
-          && connectorReady
-          && connectorAckShaMatches),
+          && runtimeAdmissionReady),
         update_incomplete: Boolean(epochStatus.update_incomplete
           || !fullCleanAvailable
-          || !connectorReady
-          || !connectorAckShaMatches),
+          || !runtimeAdmissionReady),
         connector_ready: connectorReady,
         connector_ack_sha_matches: connectorAckShaMatches,
         connector_current_sha256: connectorCurrentSha256 || null,
@@ -1864,6 +1882,21 @@ class RecoveryHost {
       throw controlPlaneBridgeError(
         'CONTROL_PLANE_BRIDGE_CONTRACT_CHANGED',
         'control-plane read-only bridge facade contract changed while the action was in flight.'
+      );
+    }
+    let workspaceSummary;
+    try {
+      workspaceSummary = normaliseWorkspaceSummary(result?.workspace_summary);
+    } catch {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_RESULT_INVALID',
+        'control-plane read-only bridge returned an invalid workspace summary.'
+      );
+    }
+    if (result?.workspace_summary_sha256 !== workspaceSummaryDigest(workspaceSummary)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_BRIDGE_RESULT_INVALID',
+        'control-plane read-only bridge workspace summary integrity is invalid.'
       );
     }
     return result;

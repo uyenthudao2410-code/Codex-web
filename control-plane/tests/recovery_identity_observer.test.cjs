@@ -146,6 +146,26 @@ test('packaged runtime status is ready only with exact Recovery Host and current
   });
   assert.equal(staleOwner.strict_ready, false);
   assert.equal(staleOwner.error_code, 'PACKAGED_RUNTIME_UNREADY');
+
+  const central = normalizedRuntimeStatus(packaged, {
+    pid: 4242,
+    instance_id: packaged.instance_id,
+    process_start_token: packaged.owner_process_start_token,
+    state: 'healthy',
+    full_clean_activation: { available: true },
+    activation_epoch: { admission_open: true, update_incomplete: false },
+    runtime: {
+      execution_role: 'central_executor',
+      fully_ready: true,
+      update_incomplete: false,
+      central_connected: true,
+      authority_ready: true,
+      central_status_reason: null,
+      connector_ready: false,
+      connector_ack_sha_matches: false
+    }
+  });
+  assert.equal(central.strict_ready, true, 'central nodes prove an authenticated node route, not a local OpenAI Tunnel');
 });
 
 test('identity observer uses the packaged installation identity rather than a development checkout', async (t) => {

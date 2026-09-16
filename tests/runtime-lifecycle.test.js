@@ -45,7 +45,7 @@ test.beforeEach(() => {
   fs.rmSync(`${supervisorRequestPath}.processing`, { force: true });
   fs.rmSync(`${supervisorRequestPath}.processing.bak`, { force: true });
 });
-const { RuntimeOrchestrator, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
+const { RuntimeOrchestrator, executionRole, runtimeReadiness, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { classifyStoredDeviceOwner } = require('../electron/services/deviceIdentity');
 
 test('process liveness rejects missing and non-positive PIDs before OS probing', () => {
@@ -250,6 +250,149 @@ test('terminal activation epochs block runtime start before MCP or Tunnel mutati
   }
 
   assert.deepEqual(calls, { settings: 0, environment: 0, nativeStart: 0, tunnelStart: 0 });
+});
+
+test('central executor readiness never treats a local MCP as a local OpenAI Tunnel or central authority', () => {
+  assert.equal(executionRole({ executionRole: 'central_executor' }), 'central_executor');
+  assert.equal(executionRole({ executionRole: 'unknown' }), 'direct_legacy');
+
+  const central = runtimeReadiness({
+    role: 'central_executor',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    epochReady: true,
+    revisionReady: true,
+    connectorReady: false,
+    activationIncomplete: false,
+    revisionDrift: false
+  });
+  assert.deepEqual(central, {
+    executionRole: 'central_executor',
+    localReady: true,
+    directReady: false,
+    centralConnected: false,
+    authorityReady: false,
+    componentsReady: true,
+    fullyReady: false,
+    updateIncomplete: false,
+    centralStatusReason: 'CENTRAL_ROUTE_NOT_CONFIGURED'
+  });
+
+  const pairedCentral = runtimeReadiness({
+    role: 'central_executor',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: false,
+    epochReady: true,
+    revisionReady: true,
+    connectorReady: false,
+    activationIncomplete: false,
+    revisionDrift: false,
+    centralConnected: true,
+    authorityReady: true,
+    centralRouteReason: 'CENTRAL_ROUTE_READY'
+  });
+  assert.equal(pairedCentral.directReady, false);
+  assert.equal(pairedCentral.centralConnected, true);
+  assert.equal(pairedCentral.authorityReady, true);
+  assert.equal(pairedCentral.fullyReady, true);
+  assert.equal(pairedCentral.centralStatusReason, null);
+
+  const direct = runtimeReadiness({
+    role: 'direct_legacy',
+    mcpRunning: true,
+    nativeAlive: true,
+    tunnelRunning: true,
+    epochReady: true,
+    revisionReady: true,
+    connectorReady: true,
+    activationIncomplete: false,
+    revisionDrift: false
+  });
+  assert.equal(direct.directReady, true);
+  assert.equal(direct.fullyReady, true);
+  assert.equal(direct.centralStatusReason, null);
+});
+
+test('central executor starts its local MCP without a node Runtime API Key or Tunnel client', { timeout: 10_000 }, async (t) => {
+  const reservation = http.createServer();
+  await new Promise((resolve) => reservation.listen(0, '127.0.0.1', resolve));
+  const mcpPort = reservation.address().port;
+  await new Promise((resolve) => reservation.close(resolve));
+  const settings = {
+    executionRole: 'central_executor',
+    workspace: process.cwd(),
+    mcpPort,
+    healthPort: mcpPort + 1,
+    recoveryMcpPort: mcpPort + 2,
+    recoveryHealthPort: mcpPort + 3,
+    proxyMode: 'auto',
+    tunnelId: '',
+    recoveryTunnelId: ''
+  };
+  const calls = { secretNames: [], nativeStart: 0, nativeStop: 0, tunnelStart: 0, tunnelStop: 0, snapshot: 0 };
+  let server = null;
+  t.after(async () => {
+    if (server?.listening) await new Promise((resolve) => server.close(resolve));
+  });
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => settings },
+    secrets: {
+      get: (name) => {
+        calls.secretNames.push(name);
+        return name === 'mcpAuthToken' ? 'local-loopback-token' : '';
+      }
+    },
+    environment: {
+      inspect: async () => ({ python: { installed: true }, tunnelClient: { installed: false } })
+    },
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.assertMcpReplacementAllowed = () => ({ update_incomplete: false });
+  orchestrator.assertActivationRevisionContinuity = () => ({ verified: false });
+  orchestrator.setManualStop = () => {};
+  orchestrator.native.stop = async () => { calls.nativeStop += 1; return true; };
+  orchestrator.native.status = async () => true;
+  orchestrator.native.start = async () => {
+    calls.nativeStart += 1;
+    server = http.createServer((request, response) => {
+      assert.equal(request.url, '/__control/health');
+      assert.equal(request.headers.authorization, 'Bearer local-loopback-token');
+      const body = JSON.stringify({ ready: true, workspace: settings.workspace });
+      response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+      response.end(body);
+    });
+    await new Promise((resolve) => server.listen(mcpPort, '127.0.0.1', resolve));
+    return { pid: 1234, reused: false };
+  };
+  orchestrator.tunnel.stop = async () => { calls.tunnelStop += 1; return true; };
+  orchestrator.tunnel.start = async () => { calls.tunnelStart += 1; throw new Error('central executor must not start a node Tunnel'); };
+  orchestrator.snapshot = async () => { calls.snapshot += 1; return { status: 'local-ready' }; };
+
+  assert.deepEqual(await orchestrator.start(), { status: 'local-ready' });
+  assert.equal(calls.nativeStart, 1);
+  assert.equal(calls.tunnelStop, 1, 'an owned stale direct Tunnel is retired before local executor bootstrap');
+  assert.equal(calls.tunnelStart, 0);
+  assert.equal(calls.snapshot, 1);
+  assert.equal(calls.secretNames.includes('runtimeApiKey'), false);
+  assert.equal(calls.secretNames.includes('mcpAuthToken'), true);
+});
+
+test('central executor refuses Tunnel-only repair without reading node Runtime credentials', async () => {
+  const calls = [];
+  const orchestrator = new RuntimeOrchestrator({
+    settings: { load: () => ({ executionRole: 'central_executor' }) },
+    secrets: { get: (name) => { calls.push(name); return ''; } },
+    environment: {},
+    log: { info() {}, warn() {}, error() {} },
+    emitProgress() {}
+  });
+  orchestrator.assertSoftRecoveryAllowed = () => ({});
+  orchestrator.assertActivationRevisionContinuity = () => ({ verified: false });
+  await assert.rejects(orchestrator.recoverTunnelOnly(), { code: 'CENTRAL_EXECUTOR_TUNNEL_DISABLED' });
+  assert.deepEqual(calls, []);
 });
 
 test('Coding MCP health is trusted only when workspace and device_id both match', async (t) => {
@@ -2555,6 +2698,20 @@ test('supervisor trusts MCP health over a stale owned-process record', async () 
   assert.equal(calls.restart, 0);
 });
 
+test('central executor supervisor never attempts a node Tunnel repair', async () => {
+  const { orchestrator, calls } = recoveryHarness({
+    executionRole: 'central_executor',
+    fullyReady: false,
+    mcpRunning: true,
+    nativeAlive: false,
+    tunnelRunning: false
+  });
+  orchestrator.heartbeatFailureKind = 'mcp_native_identity_unavailable';
+  await orchestrator.supervise();
+  assert.equal(calls.tunnel, 0);
+  assert.equal(calls.mcp, 1);
+});
+
 test('supervisor does not kill a live MCP process after transient health failures', async () => {
   const { orchestrator, calls } = recoveryHarness({
     fullyReady: false,
@@ -2710,7 +2867,8 @@ test('MCP-only soft recovery stops the replacement when disk revision drifts aft
     environment: {},
     log: { info() {}, warn() {}, error() {} },
     emitProgress() {},
-    activationEpochId
+    activationEpochId,
+    listenerPidProbe: async () => process.pid
   });
   orchestrator.validate = () => {};
   orchestrator.activationEpochStore = {

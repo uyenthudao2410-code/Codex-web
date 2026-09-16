@@ -16,7 +16,7 @@ from http.cookies import CookieError, SimpleCookie
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from threading import Lock
+from threading import Lock, Thread
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -254,9 +254,13 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
         expected_package_source_sha256: str | None = None,
         web_origin: str | None = None,
         web_session_ttl_seconds: int = DEFAULT_WEB_SESSION_TTL_SECONDS,
+        mcp_enabled: bool = True,
+        mcp_ingress_only: bool = False,
     ) -> None:
         if len(operator_token) < 32:
             raise ValueError("CONTROL_PLANE_OPERATOR_TOKEN must have at least 32 characters.")
+        if mcp_ingress_only and not mcp_enabled:
+            raise ValueError("an MCP ingress-only listener must enable the MCP route.")
         self.store = store
         self.mcp_facade = ControlPlaneMcpFacade(store)
         self.operator_token = operator_token
@@ -280,6 +284,11 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
         self.web_origin = _web_origin(web_origin)
         self.web_session_ttl_seconds = web_session_ttl_seconds
         self.operator_sessions = _OperatorSessions(ttl_seconds=web_session_ttl_seconds) if self.web_origin else None
+        # A Tunnel receives exactly this listener, never the private UI or
+        # enrollment/admin API.  The primary listener can disable `/mcp` once
+        # this separate loopback ingress is enabled by serve_from_environment.
+        self.mcp_enabled = bool(mcp_enabled)
+        self.mcp_ingress_only = bool(mcp_ingress_only)
         super().__init__(address, ControlPlaneHandler)
 
 
@@ -359,6 +368,16 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         if not hmac.compare_digest(token, self.server.operator_token):
             raise PermissionError("operator authentication failed.")
         return "owner_default"
+
+    def _mcp_client(self) -> dict[str, Any]:
+        """Authenticate a server-issued MCP grant, never the operator bearer.
+
+        The token's durable grant supplies owner, principal and exactly one
+        context.  Caller-controlled headers or JSON fields cannot widen that
+        scope, and the raw bearer never reaches a node.
+        """
+
+        return self.server.store.authenticate_mcp_access_token(access_token=self._auth("Bearer"))
 
     def _require_web_origin(self) -> None:
         if self.server.web_origin is None:
@@ -441,6 +460,92 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             key: result[key]
             for key in ("request_id", "action_id", "replayed")
         } | {"expires_at_ms": intent.expires_at_ms}
+
+    def _create_ui_binding(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Create an explicit owner-scoped binding from the private console.
+
+        The browser is deliberately not allowed to submit a path or a policy.
+        ``workspace_id`` and ``workspace_generation`` are opaque identifiers
+        whose local meaning is checked again by the separately installed node
+        policy before it can dequeue anything.
+        """
+        if set(body) != {"device_id", "workspace_id", "workspace_generation", "display_name"}:
+            raise ValidationError("browser binding payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True)
+        fields = {name: self._field(body, name) for name in body}
+        if any(not isinstance(value, str) for value in fields.values()):
+            raise ValidationError("browser binding fields must be strings.")
+        return self.server.store.create_binding(owner_id=owner_id, **fields)
+
+    def _create_ui_context(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Issue one short-lived context without trusting a browser clock."""
+        if set(body) != {"binding_id", "duration_minutes"}:
+            raise ValidationError("browser context payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True)
+        binding_id = self._field(body, "binding_id")
+        duration_minutes = self._field(body, "duration_minutes")
+        if not isinstance(binding_id, str) or isinstance(duration_minutes, bool) or not isinstance(duration_minutes, int):
+            raise ValidationError("browser context fields are invalid.")
+        # This is a temporary local authority window, not a server session or
+        # a policy lifetime. Keep the browser path bounded from both sides.
+        if not 5 <= duration_minutes <= 24 * 60:
+            raise ValidationError("browser context duration must be between 5 minutes and 24 hours.")
+        expires_at_ms = self.server.store.clock() + duration_minutes * 60 * 1000
+        return self.server.store.create_context(
+            owner_id=owner_id,
+            binding_id=binding_id,
+            expires_at_ms=expires_at_ms,
+        )
+
+    def _ui_revoke_binding(self, binding_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if body:
+            raise ValidationError("browser binding revocation payload is invalid.")
+        return self.server.store.revoke_binding(
+            owner_id=self._ui_operator(require_csrf=True),
+            binding_id=binding_id,
+        )
+
+    def _ui_close_context(self, context_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if body:
+            raise ValidationError("browser context close payload is invalid.")
+        return self.server.store.close_context(
+            owner_id=self._ui_operator(require_csrf=True),
+            context_id=context_id,
+        )
+
+    def _node_read_only_policy_template(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Return a live-context template only to its authenticated executor.
+
+        This is not an installed policy and does not change a node. The same-
+        user Windows UI must still make an explicit local install decision; the
+        returned metadata merely prevents copying a context from another node
+        or inventing a facade contract in that UI.
+        """
+        if set(body) != {"context_id"} or not isinstance(body.get("context_id"), str):
+            raise ValidationError("node policy template payload is invalid.")
+        self._node(device_id)
+        node = self.server.store.node(device_id=device_id)
+        context = self.server.store.context(
+            owner_id=str(node["owner_id"]),
+            context_id=str(body["context_id"]),
+            require_live=True,
+        )
+        if context["device_id"] != device_id or context["endpoint_id"] != node["endpoint_id"]:
+            raise PermissionError("context is not assigned to this node.")
+        return {
+            "policy_template": {
+                "owner_id": context["owner_id"],
+                "device_id": context["device_id"],
+                "endpoint_id": context["endpoint_id"],
+                "workspace_id": context["workspace_id"],
+                "workspace_generation": context["workspace_generation"],
+                "expires_at_ms": context["expires_at_ms"],
+                "facade_contract": {
+                    key: self.server.mcp_facade.contract[key]
+                    for key in ("schema_version", "profile", "sha256")
+                },
+            }
+        }
 
     def _session_cookie(self, token: str, *, expires: bool = False) -> str:
         if expires:
@@ -532,6 +637,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         try:
+            if self.server.mcp_ingress_only:
+                self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
+                return
             if self.server.web_origin is not None and self.path == "/":
                 self._asset(content_type="text/html; charset=utf-8", body=WEB_UI_HTML)
                 return
@@ -563,6 +671,12 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 return
             if self.path == "/v1/contexts":
                 self._json(HTTPStatus.OK, {"contexts": self.server.store.list_contexts(owner_id=self._operator())})
+                return
+            if self.path == "/v1/mcp-access-grants":
+                self._json(
+                    HTTPStatus.OK,
+                    {"mcp_access_grants": self.server.store.list_mcp_access_grants(owner_id=self._operator())},
+                )
                 return
             if self.path == "/v1/work-requests":
                 self._json(HTTPStatus.OK, {"work_requests": self.server.store.list_work_requests(owner_id=self._operator())})
@@ -611,6 +725,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         try:
+            if self.server.mcp_ingress_only and self.path != "/mcp":
+                self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
+                return
             body = self._body()
             if self.path == "/v1/ui/login":
                 token, session = self._login(body)
@@ -634,9 +751,16 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 )
                 return
             if self.path == "/mcp":
-                # The central facade accepts only the operator identity in this
-                # pilot. It never forwards this token or body to a node.
-                response = self.server.mcp_facade.handle(body, owner_id=self._operator())
+                if not self.server.mcp_enabled:
+                    self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
+                    return
+                principal = self._mcp_client()
+                response = self.server.mcp_facade.handle(
+                    body,
+                    owner_id=str(principal["owner_id"]),
+                    principal_id=str(principal["principal_id"]),
+                    granted_context_id=str(principal["context_id"]),
+                )
                 if response is None:
                     self.send_response(HTTPStatus.ACCEPTED)
                     self.send_header("Content-Length", "0")
@@ -653,6 +777,27 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     display_name=self._field(body, "display_name"),
                 )
                 self._json(HTTPStatus.CREATED, result)
+                return
+            if self.path == "/v1/mcp-access-grants":
+                if set(body) != {"context_id", "principal_id", "expires_at_ms"}:
+                    raise ValidationError("MCP access grant payload is invalid.")
+                result = self.server.store.create_mcp_access_grant(
+                    owner_id=self._operator(),
+                    context_id=self._field(body, "context_id"),
+                    principal_id=self._field(body, "principal_id"),
+                    expires_at_ms=self._field(body, "expires_at_ms"),
+                )
+                self._json(HTTPStatus.CREATED, result)
+                return
+            mcp_grant_revoke_match = re.fullmatch(r"/v1/mcp-access-grants/([^/]+)/revoke", self.path)
+            if mcp_grant_revoke_match:
+                if body:
+                    raise ValidationError("MCP access grant revocation payload is invalid.")
+                result = self.server.store.revoke_mcp_access_grant(
+                    owner_id=self._operator(),
+                    grant_id=mcp_grant_revoke_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
                 return
             if self.path == "/v1/enrollment-requests":
                 result = self.server.store.request_enrollment(
@@ -687,6 +832,20 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 return
             if self.path == "/v1/ui/read-only-requests":
                 self._json(HTTPStatus.CREATED, self._create_ui_read_only_request(body))
+                return
+            if self.path == "/v1/ui/bindings":
+                self._json(HTTPStatus.CREATED, self._create_ui_binding(body))
+                return
+            if self.path == "/v1/ui/contexts":
+                self._json(HTTPStatus.CREATED, self._create_ui_context(body))
+                return
+            ui_binding_revoke_match = re.fullmatch(r"/v1/ui/bindings/([^/]+)/revoke", self.path)
+            if ui_binding_revoke_match:
+                self._json(HTTPStatus.OK, self._ui_revoke_binding(ui_binding_revoke_match.group(1), body))
+                return
+            ui_context_close_match = re.fullmatch(r"/v1/ui/contexts/([^/]+)/close", self.path)
+            if ui_context_close_match:
+                self._json(HTTPStatus.OK, self._ui_close_context(ui_context_close_match.group(1), body))
                 return
             binding_match = re.fullmatch(r"/v1/bindings/([^/]+)/revoke", self.path)
             if binding_match:
@@ -770,6 +929,13 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 )
                 self._json(HTTPStatus.OK, result)
                 return
+            node_policy_template_match = re.fullmatch(r"/v1/nodes/([^/]+)/read-only-policy-template", self.path)
+            if node_policy_template_match:
+                self._json(
+                    HTTPStatus.OK,
+                    self._node_read_only_policy_template(node_policy_template_match.group(1), body),
+                )
+                return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/poll", self.path)
             if node_match:
                 device_id = node_match.group(1)
@@ -811,18 +977,62 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         self._json(status, {"error": {"code": error.code, "message": str(error)}})
 
 
+def _mcp_ingress_address_from_environment() -> tuple[str, int]:
+    """Return the exact private listener address used by OpenAI Tunnel.
+
+    The Tunnel client runs on this Ubuntu host, so an IPv4 loopback literal is
+    sufficient and avoids a hostname resolving unexpectedly to a Tailnet or
+    public address.  The dedicated listener is intentionally separate from
+    ``CONTROL_PLANE_BIND``: that other address serves the Tailnet operator UI
+    and node APIs, which must never be reachable through a Tunnel profile.
+    """
+
+    bind = str(os.environ.get("CONTROL_PLANE_MCP_BIND", "127.0.0.1")).strip()
+    if bind != "127.0.0.1":
+        raise ValueError("CONTROL_PLANE_MCP_BIND must be exactly 127.0.0.1.")
+    try:
+        port = int(os.environ.get("CONTROL_PLANE_MCP_PORT", "8766"))
+    except ValueError as exc:
+        raise ValueError("CONTROL_PLANE_MCP_PORT must be an integer.") from exc
+    if not 1024 <= port <= 65535:
+        raise ValueError("CONTROL_PLANE_MCP_PORT must be in the range 1024-65535.")
+    return bind, port
+
+
 def serve_from_environment() -> None:
     database = os.environ.get("CONTROL_PLANE_DB", "./var/control-plane.sqlite3")
     operator_token = os.environ.get("CONTROL_PLANE_OPERATOR_TOKEN", "")
     bind = os.environ.get("CONTROL_PLANE_BIND", "127.0.0.1")
     port = int(os.environ.get("CONTROL_PLANE_PORT", "8765"))
-    server = ControlPlaneHttpServer(
-        (bind, port),
-        ControlPlaneStore(database),
+    mcp_bind, mcp_port = _mcp_ingress_address_from_environment()
+    store = ControlPlaneStore(database)
+    shared = (
+        store,
         operator_token,
         os.environ.get("CONTROL_PLANE_DECLARED_SOURCE_REVISION"),
         os.environ.get("CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256"),
-        os.environ.get("CONTROL_PLANE_WEB_ORIGIN"),
-        int(os.environ.get("CONTROL_PLANE_WEB_SESSION_TTL_SECONDS", str(DEFAULT_WEB_SESSION_TTL_SECONDS))),
     )
-    server.serve_forever(poll_interval=0.5)
+    # Bind both listeners before serving either one: a port collision must
+    # fail the service start rather than leave a UI-only process looking ready.
+    server = ControlPlaneHttpServer(
+        (bind, port),
+        *shared,
+        web_origin=os.environ.get("CONTROL_PLANE_WEB_ORIGIN"),
+        web_session_ttl_seconds=int(os.environ.get("CONTROL_PLANE_WEB_SESSION_TTL_SECONDS", str(DEFAULT_WEB_SESSION_TTL_SECONDS))),
+        mcp_enabled=False,
+    )
+    mcp_server = ControlPlaneHttpServer(
+        (mcp_bind, mcp_port),
+        *shared,
+        mcp_enabled=True,
+        mcp_ingress_only=True,
+    )
+    mcp_thread = Thread(target=mcp_server.serve_forever, kwargs={"poll_interval": 0.5}, daemon=True)
+    mcp_thread.start()
+    try:
+        server.serve_forever(poll_interval=0.5)
+    finally:
+        mcp_server.shutdown()
+        mcp_server.server_close()
+        mcp_thread.join(timeout=2)
+        server.server_close()

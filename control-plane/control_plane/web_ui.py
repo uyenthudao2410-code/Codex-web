@@ -69,7 +69,7 @@ WEB_UI_HTML = """<!doctype html>
         <article class="card">
           <h2>Giới hạn pilot</h2>
           <p>Read-only control surface. Trạng thái “ready” của node là heartbeat do node báo, không phải bằng chứng job đang chạy hoặc quyền ghi.</p>
-          <p class="muted">Browser chỉ có thể queue một canary `workspace_context` cố định trên context còn hiệu lực. Thao tác hủy/stop, binding wizard và remote execution chỉ xuất hiện sau các gate riêng.</p>
+          <p class="muted">Browser có thể tạo binding/context hẹp và queue một canary `workspace_context` cố định. Policy cục bộ, admission và remote execution vẫn là các gate tách biệt.</p>
         </article>
       </div>
 
@@ -80,7 +80,24 @@ WEB_UI_HTML = """<!doctype html>
       </section>
       <section class="panel">
         <h2>Workspace bindings và contexts</h2>
-        <div class="table-wrap"><table><thead><tr><th>Binding / workspace</th><th>Node</th><th>Generation</th><th>Context / expiry</th><th>Canary</th></tr></thead><tbody id="bindings-body"></tbody></table></div>
+        <p class="muted">Chỉ nhập workspace ID và generation đã được đối soát độc lập với máy node. Không nhập path Windows, nội dung file hoặc secret ở đây. Binding chưa cấp policy hay quyền chạy.</p>
+        <div class="operator-forms">
+          <form id="binding-form" class="operator-form">
+            <h3>Tạo workspace binding</h3>
+            <label>Node đã duyệt <select id="binding-device-id" required></select></label>
+            <label>Workspace ID <input id="binding-workspace-id" maxlength="128" autocomplete="off" required></label>
+            <label>Workspace generation <input id="binding-workspace-generation" maxlength="128" autocomplete="off" required></label>
+            <label>Tên hiển thị <input id="binding-display-name" maxlength="120" autocomplete="off" required></label>
+            <button type="submit">Tạo binding</button>
+          </form>
+          <form id="context-form" class="operator-form">
+            <h3>Cấp context tạm thời</h3>
+            <label>Binding <select id="context-binding-id" required></select></label>
+            <label>Thời lượng <select id="context-duration-minutes"><option value="15">15 phút</option><option value="60" selected>1 giờ</option><option value="240">4 giờ</option><option value="1440">24 giờ</option></select></label>
+            <button type="submit">Cấp context</button>
+          </form>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Binding / workspace</th><th>Node</th><th>Generation</th><th>Context / expiry</th><th>Canary</th><th>Control</th></tr></thead><tbody id="bindings-body"></tbody></table></div>
       </section>
       <section class="panel">
         <h2>Yêu cầu và enrollment</h2>
@@ -103,11 +120,11 @@ WEB_UI_HTML = """<!doctype html>
 WEB_UI_CSS = """* { box-sizing: border-box; }
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1220; color: #e5edf9; }
 body { margin: 0; min-width: 320px; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { background: #1d70f7; border: 1px solid #478cff; border-radius: .45rem; color: white; cursor: pointer; padding: .65rem .9rem; }
 button.secondary { background: transparent; border-color: #71829d; }
 button:disabled { cursor: not-allowed; opacity: .55; }
-input { background: #111c2e; border: 1px solid #71829d; border-radius: .4rem; color: #fff; padding: .65rem; width: min(100%, 34rem); }
+input, select { background: #111c2e; border: 1px solid #71829d; border-radius: .4rem; color: #fff; padding: .65rem; width: min(100%, 34rem); }
 .shell { margin: 0 auto; max-width: 1280px; padding: 1.4rem; }
 header { align-items: start; border-bottom: 1px solid #2a3b56; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; }
 h1, h2, p { margin-top: 0; }
@@ -118,6 +135,10 @@ h2 { font-size: 1.05rem; }
 .panel, .card { background: #111c2e; border: 1px solid #2a3b56; border-radius: .65rem; margin: 1rem 0; padding: 1rem; }
 .grid { display: grid; gap: 1rem; }
 .cards { grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+.operator-forms { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 1rem 0; }
+.operator-form { border: 1px solid #2a3b56; border-radius: .5rem; display: grid; gap: .7rem; padding: .9rem; }
+.operator-form h3 { font-size: .95rem; margin: 0; }
+.operator-form label { display: grid; gap: .35rem; color: #aebed5; font-size: .9rem; }
 .card { margin: 0; }
 dl { display: grid; gap: .45rem .8rem; grid-template-columns: minmax(7rem, auto) 1fr; margin: 0; }
 dt, .muted { color: #aebed5; }
@@ -149,6 +170,8 @@ WEB_UI_JAVASCRIPT = """(() => {
   const connectionStatus = byId('connection-status');
   const refresh = byId('refresh');
   const logout = byId('logout');
+  const bindingForm = byId('binding-form');
+  const contextForm = byId('context-form');
 
   function text(id, value) { byId(id).textContent = value === null || value === undefined || value === '' ? 'chưa có quan sát' : String(value); }
   function formatTime(value) {
@@ -168,6 +191,19 @@ WEB_UI_JAVASCRIPT = """(() => {
     return 'chưa có quan sát policy từ node';
   }
   function appendCell(row, value) { const cell = document.createElement('td'); cell.textContent = value === null || value === undefined || value === '' ? '—' : String(value); row.appendChild(cell); }
+  function setSelectOptions(id, entries, placeholder, label) {
+    const select = byId(id); const previous = select.value;
+    while (select.firstChild) select.removeChild(select.firstChild);
+    const initial = document.createElement('option'); initial.value = ''; initial.textContent = placeholder; select.appendChild(initial);
+    for (const entry of entries) { const option = document.createElement('option'); option.value = entry.value; option.textContent = entry.label; select.appendChild(option); }
+    if (entries.some((entry) => entry.value === previous)) select.value = previous;
+    else if (entries.length === 1) select.value = entries[0].value;
+  }
+  function appendBindingControls(row, binding, activeContext) {
+    const cell = document.createElement('td');
+    if (activeContext) { const close = document.createElement('button'); close.type = 'button'; close.className = 'secondary'; close.textContent = 'Đóng context'; close.disabled = !csrfToken; close.addEventListener('click', () => closeContext(activeContext.context_id, close)); cell.appendChild(close); }
+    const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'secondary'; revoke.textContent = 'Thu hồi binding'; revoke.disabled = !csrfToken; revoke.addEventListener('click', () => revokeBinding(binding.binding_id, revoke)); cell.appendChild(revoke); row.appendChild(cell);
+  }
   function appendReadOnlyButton(row, context) {
     const cell = document.createElement('td');
     const active = context && !context.closed_at_ms && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > Date.now();
@@ -212,12 +248,14 @@ WEB_UI_JAVASCRIPT = """(() => {
     const nodes = clearBody('nodes-body');
     if (!data.nodes?.length) emptyRow(nodes, 6, 'Chưa có node được enrollment.');
     for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, node.readiness); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
+    setSelectOptions('binding-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
 
     const contextsByBinding = new Map();
     for (const context of data.contexts || []) { const entries = contextsByBinding.get(context.binding_id) || []; entries.push(`${context.context_id} / ${formatTime(context.expires_at_ms)}`); contextsByBinding.set(context.binding_id, entries); }
     const bindings = clearBody('bindings-body');
     if (!data.bindings?.length) emptyRow(bindings, 5, 'Chưa có workspace binding.');
-    for (const binding of data.bindings || []) { const row = document.createElement('tr'); const matchingContexts = (data.contexts || []).filter((context) => context.binding_id === binding.binding_id); appendCell(row, `${binding.display_name || binding.binding_id} / ${binding.workspace_id || '—'}`); appendCell(row, binding.device_id); appendCell(row, binding.workspace_generation); appendCell(row, (contextsByBinding.get(binding.binding_id) || []).join('\\n') || 'chưa có context'); appendReadOnlyButton(row, matchingContexts.find((context) => !context.closed_at_ms && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > Date.now()) || null); bindings.appendChild(row); }
+    for (const binding of data.bindings || []) { const row = document.createElement('tr'); const matchingContexts = (data.contexts || []).filter((context) => context.binding_id === binding.binding_id); const activeContext = matchingContexts.find((context) => !context.closed_at_ms && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > Date.now()) || null; appendCell(row, `${binding.display_name || binding.binding_id} / ${binding.workspace_id || '—'}`); appendCell(row, binding.device_id); appendCell(row, binding.workspace_generation); appendCell(row, (contextsByBinding.get(binding.binding_id) || []).join('\\n') || 'chưa có context'); appendReadOnlyButton(row, activeContext); appendBindingControls(row, binding, activeContext); bindings.appendChild(row); }
+    setSelectOptions('context-binding-id', (data.bindings || []).map((binding) => ({ value: binding.binding_id, label: `${binding.display_name || binding.binding_id} (${binding.workspace_id})` })), 'Chọn binding', 'binding');
 
     const requests = clearBody('requests-body');
     const work = data.work_requests || [];
@@ -279,10 +317,36 @@ WEB_UI_JAVASCRIPT = """(() => {
       await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không duyệt enrollment: ${error.message}`; button.disabled = false; }
   }
+  async function revokeBinding(bindingId, button) {
+    if (!csrfToken || !bindingId || !confirm('Thu hồi binding sẽ từ chối action chưa gửi của binding này. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang thu hồi binding…';
+    try { await api(`/v1/ui/bindings/${encodeURIComponent(bindingId)}/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); connectionStatus.textContent = 'Binding đã bị thu hồi; policy local phải được xử lý riêng.'; await loadOverview(); }
+    catch (error) { connectionStatus.textContent = `Không thu hồi binding: ${error.message}`; button.disabled = false; }
+  }
+  async function closeContext(contextId, button) {
+    if (!csrfToken || !contextId || !confirm('Đóng context sẽ chặn intake mới trong context này. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang đóng context…';
+    try { await api(`/v1/ui/contexts/${encodeURIComponent(contextId)}/close`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); connectionStatus.textContent = 'Context đã đóng; action đã gửi vẫn cần reconciliation riêng.'; await loadOverview(); }
+    catch (error) { connectionStatus.textContent = `Không đóng context: ${error.message}`; button.disabled = false; }
+  }
   byId('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); const input = byId('operator-token'); const error = byId('login-error'); error.textContent = '';
     try { const result = await api('/v1/ui/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operator_token: input.value }) }); input.value = ''; csrfToken = result.csrf_token; setSessionVisible(true); await loadOverview(); }
     catch (failure) { input.value = ''; error.textContent = failure.message; }
+  });
+  bindingForm.addEventListener('submit', async (event) => {
+    event.preventDefault(); const button = bindingForm.querySelector('button[type="submit"]'); button.disabled = true; connectionStatus.textContent = 'Đang tạo workspace binding…';
+    try {
+      const binding = await api('/v1/ui/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ device_id: byId('binding-device-id').value, workspace_id: byId('binding-workspace-id').value.trim(), workspace_generation: byId('binding-workspace-generation').value.trim(), display_name: byId('binding-display-name').value.trim() }) });
+      connectionStatus.textContent = `Đã tạo ${binding.binding_id}; cấp context riêng khi cần.`; bindingForm.reset(); await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không tạo binding: ${error.message}`; } finally { button.disabled = !csrfToken; }
+  });
+  contextForm.addEventListener('submit', async (event) => {
+    event.preventDefault(); const button = contextForm.querySelector('button[type="submit"]'); button.disabled = true; connectionStatus.textContent = 'Đang cấp context tạm thời…';
+    try {
+      const context = await api('/v1/ui/contexts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ binding_id: byId('context-binding-id').value, duration_minutes: Number(byId('context-duration-minutes').value) }) });
+      connectionStatus.textContent = `Đã cấp ${context.context_id} đến ${formatTime(context.expires_at_ms)}.`; await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không cấp context: ${error.message}`; } finally { button.disabled = !csrfToken; }
   });
   refresh.addEventListener('click', loadOverview);
   logout.addEventListener('click', async () => { try { await api('/v1/ui/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); } finally { csrfToken = null; stopPolling(); setSessionVisible(false); connectionStatus.textContent = 'Đã đăng xuất; phiên server đã bị hủy.'; } });

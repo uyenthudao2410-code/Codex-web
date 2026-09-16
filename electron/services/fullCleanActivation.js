@@ -19,6 +19,10 @@ const {
 const { normalizeSourceCheckpoint } = require('./recoveryActivation');
 
 const COMPONENTS = Object.freeze(['recovery_host', 'coding_mcp', 'electron_ui']);
+const DIRECT_EXECUTION_ROLE = 'direct_legacy';
+const CENTRAL_EXECUTION_ROLE = 'central_executor';
+const DIRECT_COMPONENT_PROFILE = 'direct_legacy_v1';
+const CENTRAL_COMPONENT_PROFILE = 'central_executor_v1';
 // Full-clean activation includes Recovery Host handoff, cold Electron
 // startup, MCP/Tunnel readiness and an exact postflight census.  This deadline
 // is intentionally bounded but must exceed the cold-start path; otherwise the
@@ -88,6 +92,55 @@ function epochError(code, message, details = {}) {
 }
 
 function text(value) { return String(value || '').trim(); }
+
+function normalizedExecutionRole(value) {
+  const role = text(value) || DIRECT_EXECUTION_ROLE;
+  if (role !== DIRECT_EXECUTION_ROLE && role !== CENTRAL_EXECUTION_ROLE) {
+    throw epochError('ACTIVATION_EXECUTION_ROLE_INVALID', 'Activation execution role is not supported.');
+  }
+  return role;
+}
+
+function executionProfileForRole(value) {
+  const executionRole = normalizedExecutionRole(value);
+  return Object.freeze({
+    executionRole,
+    componentProfile: executionRole === CENTRAL_EXECUTION_ROLE
+      ? CENTRAL_COMPONENT_PROFILE
+      : DIRECT_COMPONENT_PROFILE
+  });
+}
+
+function executionProfileForRecord(record) {
+  const metadata = record?.metadata && typeof record.metadata === 'object' ? record.metadata : {};
+  const role = normalizedExecutionRole(metadata.execution_role);
+  const expected = executionProfileForRole(role);
+  // Historical direct epochs predate profile metadata. They remain direct only;
+  // a central epoch always has to carry its explicit immutable profile.
+  const observed = text(metadata.component_profile);
+  if (role === CENTRAL_EXECUTION_ROLE && observed !== expected.componentProfile) {
+    throw epochError('ACTIVATION_EXECUTION_PROFILE_INVALID', 'Central activation epoch is missing its immutable component profile.');
+  }
+  if (observed && observed !== expected.componentProfile) {
+    throw epochError('ACTIVATION_EXECUTION_PROFILE_INVALID', 'Activation epoch execution role and component profile disagree.');
+  }
+  return expected;
+}
+
+function requestedExecutionProfile(options, settings) {
+  const requested = text(options?.executionRole);
+  const current = normalizedExecutionRole(settings?.executionRole);
+  if (!requested) return executionProfileForRole(current);
+  const profile = executionProfileForRole(requested);
+  if (profile.executionRole !== current
+    && options?.mode !== 'full_clean_execution_role_handoff') {
+    throw epochError(
+      'ACTIVATION_EXECUTION_ROLE_HANDOFF_REQUIRED',
+      'Changing execution role requires a dedicated full-clean handoff.'
+    );
+  }
+  return profile;
+}
 
 function canonicalLedgerCensusFailure(error) {
   const code = text(error?.code);
@@ -794,7 +847,10 @@ function oneShotCensus(command, args, options = {}) {
         budgetMs: timeoutMs
       }));
     }, timeoutMs);
-    timeout.unref?.();
+    // This Promise is the caller's bounded safety gate.  Do not unref its
+    // deadline: a broken owned child may otherwise leave the Promise pending
+    // while Node is free to terminate the controller/test process before the
+    // fail-closed cleanup result is produced.
     child.stderr?.setEncoding?.('utf8');
     child.stderr?.on?.('data', (chunk) => {
       if (stderr.length < 64 * 1024) stderr += chunk;
@@ -869,7 +925,8 @@ function heldCensus(command, args, options) {
         budgetMs: timeoutMs
       }));
     }, timeoutMs);
-    timeout.unref?.();
+    // Keep the bounded admission gate alive until it has either observed the
+    // child or produced the explicit cleanup-uncertain failure.
     child.stderr.setEncoding('utf8');
     child.stderr.on('data', (chunk) => { if (stderr.length < 64 * 1024) stderr += chunk; });
     child.stdout.setEncoding('utf8');
@@ -1356,6 +1413,19 @@ class FullCleanActivation {
     return value;
   }
 
+  _persistExecutionProfile(settings, profile) {
+    const current = normalizedExecutionRole(settings?.executionRole);
+    if (current === profile.executionRole) return settings;
+    if (typeof this.settings?.save !== 'function') {
+      throw epochError('ACTIVATION_EXECUTION_ROLE_PERSIST_UNAVAILABLE', 'Full-clean handoff cannot persist the requested execution role.');
+    }
+    const saved = this.settings.save({ executionRole: profile.executionRole });
+    if (normalizedExecutionRole(saved?.executionRole) !== profile.executionRole) {
+      throw epochError('ACTIVATION_EXECUTION_ROLE_PERSIST_FAILED', 'Persisted execution role does not match the activation epoch.');
+    }
+    return saved;
+  }
+
   // Loopback service ports the Recovery Plane stop may use as idle proof.
   // When a stored PID is alive but its OS start token is unobservable (for
   // example a recycled PID now owned by a protected system process), the
@@ -1741,6 +1811,7 @@ class FullCleanActivation {
     // final admission gates, but it is not allowed to invent a RUN/WAVE
     // checkpoint for an operation that is only refreshing the installation.
     const refresh = options?.refresh === true || options?.mode === 'full_clean_refresh';
+    const profile = requestedExecutionProfile(options, this._settings());
     const sourceCheckpoint = refresh ? null : requireCanonicalSourceCheckpoint(options?.sourceCheckpoint);
     const maintenanceWorkspace = refresh
       ? exactStaleRunMaintenanceWorkspace(this._settings(), options?.reason, options?.maintenanceWorkspace)
@@ -1755,7 +1826,9 @@ class FullCleanActivation {
       expected_disk_revision: text(options.expectedDiskRevision) || null,
       activation_epoch_id: text(options.activationEpochId) || null,
       expires_at_unix_ms: options.expiresAtUnixMs == null ? null : Number(options.expiresAtUnixMs),
-      allow_acceptance_pending: options.allowAcceptancePending === true
+      allow_acceptance_pending: options.allowAcceptancePending === true,
+      execution_role: profile.executionRole,
+      component_profile: profile.componentProfile
     });
     if (this.inFlight) {
       if (this.inFlightRequestKey === requestKey) return this.inFlight;
@@ -1764,7 +1837,15 @@ class FullCleanActivation {
       });
     }
     this.inFlightRequestKey = requestKey;
-    const tracked = this._restart({ ...options, refresh, operationId: requestedOperationId, sourceCheckpoint, maintenanceWorkspace }).finally(() => {
+    const tracked = this._restart({
+      ...options,
+      refresh,
+      operationId: requestedOperationId,
+      sourceCheckpoint,
+      maintenanceWorkspace,
+      executionRole: profile.executionRole,
+      componentProfile: profile.componentProfile
+    }).finally(() => {
       if (this.inFlight === tracked) {
         this.inFlight = null;
         this.inFlightRequestKey = null;
@@ -1780,7 +1861,8 @@ class FullCleanActivation {
     const maintenanceWorkspace = refresh
       ? exactStaleRunMaintenanceWorkspace(this._settings(), options?.reason, options?.maintenanceWorkspace)
       : '';
-    options = { ...options, refresh, sourceCheckpoint, maintenanceWorkspace };
+    const profile = requestedExecutionProfile(options, this._settings());
+    options = { ...options, refresh, sourceCheckpoint, maintenanceWorkspace, executionRole: profile.executionRole, componentProfile: profile.componentProfile };
     const operation_id = text(options.operationId) || operationId();
     const expiresAtUnixMs = Number(options.expiresAtUnixMs || (this.now() + DEFAULT_TTL_MS));
     if (!Number.isSafeInteger(expiresAtUnixMs) || expiresAtUnixMs <= this.now()) throw epochError('ACTIVATION_REQUEST_EXPIRED', 'Full clean activation request is expired.');
@@ -1789,6 +1871,15 @@ class FullCleanActivation {
     // the existing transaction and never create a second epoch.
     const existing = this.store.current();
     if (existing && existing.operation_id === operation_id) {
+      const existingProfile = executionProfileForRecord(existing);
+      if (existingProfile.executionRole !== profile.executionRole
+        || existingProfile.componentProfile !== profile.componentProfile) {
+        throw epochError('ACTIVATION_EXECUTION_ROLE_MISMATCH', 'Activation replay execution role does not match the durable epoch.', {
+          activation_epoch_id: existing.activation_epoch_id,
+          requested_execution_role: profile.executionRole,
+          durable_execution_role: existingProfile.executionRole
+        });
+      }
       const suppliedEpochId = text(options.activationEpochId);
       if (suppliedEpochId && existing.activation_epoch_id !== suppliedEpochId) {
         throw epochError('ACTIVATION_EPOCH_ID_MISMATCH', 'The replay activation epoch does not match the current durable operation.', {
@@ -1914,6 +2005,8 @@ class FullCleanActivation {
           reason: options.reason || 'operator_restart',
           allow_acceptance_pending: options.allowAcceptancePending === true,
           refresh: options.refresh === true,
+          execution_role: profile.executionRole,
+          component_profile: profile.componentProfile,
           ...(options.maintenanceWorkspace ? { maintenance_workspace: options.maintenanceWorkspace } : {}),
           requested_at_unix_ms: this.now(),
           expires_at_unix_ms: expiresAtUnixMs,
@@ -2151,9 +2244,15 @@ class FullCleanActivation {
         return { activation_epoch_id: epochId, state: 'READY', admission_open: true, fully_ready: true, census: proof };
       }
       this.setActivationEpoch(epochId);
-      const settings = this._settings();
+      const profile = executionProfileForRecord(record);
+      let settings = this._settings();
       await this._reconcileExactStaleRunsWhileStopped(record, effectiveExpiry);
       this.store.update(epochId, { state: 'STARTING', reason: 'replacement-loading-durable-runtime' });
+      // The old runtime is already fenced and stopped before a replacement can
+      // reach this point. Persist the target role only now, from the durable
+      // epoch rather than an IPC/Settings toggle, so a crash resumes the same
+      // cutover profile and never silently resurrects the old direct ingress.
+      settings = this._persistExecutionProfile(settings, profile);
       if (typeof this.orchestrator?.start !== 'function') {
         throw epochError('RUNTIME_START_UNAVAILABLE', 'Full clean activation requires a Coding MCP runtime launcher.');
       }
@@ -2169,8 +2268,15 @@ class FullCleanActivation {
         throw epochError('RECOVERY_PLANE_UNAVAILABLE', 'Full clean activation requires the Recovery MCP/Tunnel plane launcher.');
       }
       const token = await this.orchestrator?.ensureToken?.();
-      const runtimeApiKey = this.secrets?.get?.('runtimeApiKey');
-      await this.recoveryPlane.ensure(settings, { authToken: token, runtimeApiKey, activationEpochId: epochId });
+      // A central executor keeps a local Recovery MCP but must not start a
+      // second cloud-facing Recovery Tunnel or read a node Runtime API key.
+      const recoverySettings = profile.executionRole === CENTRAL_EXECUTION_ROLE
+        ? { ...settings, tunnelId: '', recoveryTunnelId: '' }
+        : settings;
+      const runtimeApiKey = profile.executionRole === CENTRAL_EXECUTION_ROLE
+        ? ''
+        : this.secrets?.get?.('runtimeApiKey');
+      await this.recoveryPlane.ensure(recoverySettings, { authToken: token, runtimeApiKey, activationEpochId: epochId });
       const registration = this.getUiRegistration?.();
       const uiPresent = this.getUiPresence?.() || {};
       if (!registration || registration.activation_epoch_id !== epochId || !uiPresent.alive) {
@@ -2204,6 +2310,8 @@ class FullCleanActivation {
     if (!record || String(record.activation_epoch_id || '') !== epochId) {
       throw epochError('ACTIVATION_EPOCH_NOT_CURRENT', 'Final census must target the current durable activation epoch.');
     }
+    const profile = executionProfileForRecord(record);
+    const centralExecutor = profile.executionRole === CENTRAL_EXECUTION_ROLE;
     const settings = this._settings();
     let activationObservation = null;
     let activationObservationFailure = null;
@@ -2277,8 +2385,8 @@ class FullCleanActivation {
       projectionRebuild = validateProjection();
     }
     const runtime = await this.orchestrator?.lightweightSnapshot?.({ mcpHealth: health }) || {};
-    let tunnelStatusVerified = runtime.tunnelRunning === true;
-    if (typeof this.orchestrator?.tunnel?.status === 'function') {
+    let tunnelStatusVerified = !centralExecutor && runtime.tunnelRunning === true;
+    if (!centralExecutor && typeof this.orchestrator?.tunnel?.status === 'function') {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
           tunnelStatusVerified = await this.orchestrator.tunnel.status(settings, { activationEpochId: epochId }) === true;
@@ -2303,19 +2411,22 @@ class FullCleanActivation {
     const currentTunnelPid = numeric(state.tunnelPid);
     const expectedDeviceInstanceId = this._deviceInstanceId();
     let connectorContractStatus = null;
-    try {
-      connectorContractStatus = this.orchestrator?.connectorContractStatus?.(
-        health?.tool_contract || null,
-        health?.connector_tool_discovery || null,
-        health?.connector_client_contact || null,
-        health?.connector_activation_bootstrap || null,
-        health
-      ) || null;
-    } catch { connectorContractStatus = null; }
+    if (!centralExecutor) {
+      try {
+        connectorContractStatus = this.orchestrator?.connectorContractStatus?.(
+          health?.tool_contract || null,
+          health?.connector_tool_discovery || null,
+          health?.connector_client_contact || null,
+          health?.connector_activation_bootstrap || null,
+          health
+        ) || null;
+      } catch { connectorContractStatus = null; }
+    }
     const identityChanged = (current, previous) => Boolean(current && (!text(previous) || current !== text(previous)));
-    const epochMatches = Boolean(health && String(health.activation_epoch_id || '') === epochId
-      && String(state.nativeActivationEpochId || '') === epochId
-      && String(state.tunnelActivationEpochId || '') === epochId);
+    const mcpEpochMatches = Boolean(health && String(health.activation_epoch_id || '') === epochId
+      && String(state.nativeActivationEpochId || '') === epochId);
+    const epochMatches = Boolean(mcpEpochMatches
+      && (centralExecutor || String(state.tunnelActivationEpochId || '') === epochId));
     const workspaceMatches = Boolean(settings.workspace && health && String(health.workspace || '').toLowerCase() === String(settings.workspace).toLowerCase());
     const deviceMatches = Boolean(!this.deviceIdentity?.device_id || (health
       && String(health.device_id || '').toLowerCase() === String(this.deviceIdentity.device_id).toLowerCase()
@@ -2332,7 +2443,7 @@ class FullCleanActivation {
       && (!stateMcpRevision || stateMcpRevision === revision.running_revision)
       && (!health?.code_revision || String(health.code_revision) === String(revision.running_revision))
       && (!expectedMcpRevision || revision.disk_revision === expectedMcpRevision));
-    const tunnelEpochMatches = Boolean(currentTunnelPid && currentTunnelId
+    const tunnelEpochMatches = Boolean(!centralExecutor && currentTunnelPid && currentTunnelId
       && String(state.tunnelActivationEpochId || '') === epochId
       && state.tunnelFingerprint === tunnelFingerprint(settings, this.deviceIdentity?.device_id || '', epochId)
       && identityChanged(currentTunnelId, oldTunnel.instance_id)
@@ -2437,10 +2548,10 @@ class FullCleanActivation {
       && currentRecoveryMcpPid && isAlivePid(currentRecoveryMcpPid)
       && recoveryMcpIdentityChanged
       && recoveryMcpHealthVerified);
-    // Configuration is derived from current settings.  A configured Recovery
-    // Tunnel with a missing/inconsistent status is incomplete, never silently
-    // treated as "not configured".
-    const recoveryTunnelConfigured = Boolean(String(settings.recoveryTunnelId || '').trim());
+    // A central executor deliberately has no recovery cloud Tunnel. Ignore a
+    // stale direct profile here only after the immutable epoch profile says it
+    // is central; direct mode remains strict about a configured Tunnel.
+    const recoveryTunnelConfigured = !centralExecutor && Boolean(String(settings.recoveryTunnelId || '').trim());
     const recoveryTunnelEpochMatches = Boolean(String(plane.activation_epoch_id || '') === epochId
       && String(plane.tunnel?.activation_epoch_id || planeState.recoveryTunnelActivationEpochId || '') === epochId);
     let recoveryTunnelHealthVerified = false;
@@ -2458,13 +2569,19 @@ class FullCleanActivation {
         && recoveryTunnelIdentityChanged
         && recoveryTunnelHealthVerified)
       : Boolean(!plane.tunnel || plane.tunnel.state === 'not_configured' || plane.tunnel.configured !== true);
-    const componentsReadyForConnector = Boolean(runtime.mcpRunning === true && tunnelStatusVerified && health?.ready === true
+    const centralRouteVerified = Boolean(centralExecutor
+      && runtime.centralConnected === true
+      && runtime.authorityReady === true
+      && runtime.centralStatusReason == null);
+    const componentsReadyForAdmission = Boolean(runtime.mcpRunning === true && health?.ready === true
       && processIdentity && epochMatches && workspaceMatches && deviceMatches && revisionMatches
-      && tunnelEpochMatches && hostChanged && recoveryHostRevisionMatches
+      && (centralExecutor || (tunnelStatusVerified && tunnelEpochMatches))
+      && hostChanged && recoveryHostRevisionMatches
       && recoveryHostEpochMatches
-      && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid);
+      && uiReady && recoveryMcpReady && recoveryTunnelReady && projectionRebuild.valid
+      && (!centralExecutor || centralRouteVerified));
     let connectorAcknowledgement = { attempted: false, completed: false, error: null };
-    if (componentsReadyForConnector
+    if (!centralExecutor && componentsReadyForAdmission
       && [
         'CHANGED_DISCOVERED_NEEDS_ACK',
         'CHANGED_COMPATIBLE_NEEDS_ACK',
@@ -2487,16 +2604,18 @@ class FullCleanActivation {
         };
       }
     }
-    const connectorReady = validateConnectorReadyGate({
+    const connectorReady = centralExecutor ? null : validateConnectorReadyGate({
       health,
       contractStatus: connectorContractStatus,
       nowUnixMs: censusNowUnixMs
     });
-    const pass = Boolean(componentsReadyForConnector && connectorReady.valid);
+    const pass = Boolean(componentsReadyForAdmission && (centralExecutor || connectorReady?.valid === true));
     return {
       verified: pass,
       pass,
       activation_epoch_id: epochId,
+      execution_role: profile.executionRole,
+      component_profile: profile.componentProfile,
       host_instance_id: this.recoveryInstanceId || null,
       host_pid: Number(process.pid) || null,
       expected_old_host_instance_id: expectedHostId || null,
@@ -2528,14 +2647,22 @@ class FullCleanActivation {
       process_identity_changed: Boolean(identityChanged(currentMcpProcessId, oldMcp.process_instance_id)
         && identityChanged(currentMcpServerId, oldMcp.server_instance_id)
         && identityChanged(currentSupervisorId, oldMcp.supervisor_instance_id)),
-      tunnel_identity_changed: tunnelEpochMatches,
+      tunnel_required: !centralExecutor,
+      tunnel_identity_changed: centralExecutor ? null : tunnelEpochMatches,
       recovery_plane_identity_changed: recoveryMcpIdentityChanged && (!recoveryTunnelConfigured || recoveryTunnelIdentityChanged),
       recovery_plane_epoch_matches: recoveryMcpEpochMatches && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
-      epoch_matches: epochMatches && tunnelEpochMatches && recoveryHostEpochMatches && recoveryMcpEpochMatches
+      epoch_matches: epochMatches && (centralExecutor || tunnelEpochMatches) && recoveryHostEpochMatches && recoveryMcpEpochMatches
         && (!recoveryTunnelConfigured || recoveryTunnelEpochMatches),
-      connector_acknowledged: connectorReady.valid,
-      connector_validation: connectorReady,
-      connector_acknowledgement: connectorAcknowledgement,
+      ...(centralExecutor ? {
+        central_connected: runtime.centralConnected === true,
+        authority_ready: runtime.authorityReady === true,
+        central_route_verified: centralRouteVerified,
+        central_status_reason: text(runtime.centralStatusReason) || null
+      } : {
+        connector_acknowledged: connectorReady.valid,
+        connector_validation: connectorReady,
+        connector_acknowledgement: connectorAcknowledgement
+      }),
       ui_verified: uiReady,
       recovery_plane_verified: recoveryMcpReady && recoveryTunnelReady,
       projection_rebuild_verified: projectionRebuild.valid,

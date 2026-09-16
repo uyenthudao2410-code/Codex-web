@@ -19,6 +19,11 @@ const IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/;
 const ACTION_IDENTIFIER_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/;
 const MAX_POLICY_BYTES = 16 * 1024;
 const FACADE_CONTRACT_SHA256_RE = /^[a-f0-9]{64}$/;
+const WORKSPACE_SUMMARY_SCHEMA_VERSION = 1;
+const WORKSPACE_SUMMARY_MAX_BYTES = 8 * 1024;
+const WORKSPACE_SUMMARY_TEXT_MAX = 256;
+const WORKSPACE_SUMMARY_ENTRY_TYPES = new Set(['file', 'directory', 'symlink', 'other']);
+const WORKSPACE_SUMMARY_PROJECT_TYPES = new Set(['unknown', 'electron', 'node', 'python', 'rust', 'go']);
 
 function bridgeError(code, message) {
   return Object.assign(new Error(message), { code });
@@ -40,11 +45,155 @@ function digest(value) {
   return crypto.createHash('sha256').update(canonicalJson(value), 'utf8').digest('hex');
 }
 
+// Policy fingerprints intentionally retain their established canonical form.
+// The compact relay crosses JavaScript, a CJS subprocess, and Python; unlike
+// the policy form it must recursively canonicalise objects *inside arrays* so
+// all three boundaries can independently prove the same summary bytes.
+function canonicalWorkspaceSummaryJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map((item) => canonicalWorkspaceSummaryJson(item)).join(',')}]`;
+  return `{${Object.keys(value).sort().map((key) => (
+    `${JSON.stringify(key)}:${canonicalWorkspaceSummaryJson(value[key])}`
+  )).join(',')}}`;
+}
+
+function workspaceSummaryDigest(value) {
+  return crypto.createHash('sha256').update(canonicalWorkspaceSummaryJson(value), 'utf8').digest('hex');
+}
+
+function summaryText(value, field, { allowEmpty = false, maxLength = WORKSPACE_SUMMARY_TEXT_MAX } = {}) {
+  if (typeof value !== 'string' || value.length > maxLength || /[\u0000-\u001f\u007f]/.test(value)
+    || (!allowEmpty && !value)) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', `${field} is invalid.`);
+  }
+  return value;
+}
+
+function compactWorkspaceSummary(value) {
+  // The local MCP response contains an absolute workspace path and may gain
+  // additional fields over time.  This is the only allowlisted projection
+  // that may leave the node after an explicit read-only admission.  It is
+  // deliberately metadata-only: no file contents, task text, symlink target,
+  // absolute path, IPC identity secret, or arbitrary local response field.
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace response has an invalid compact shape.');
+  }
+  // ``workspace`` is required for the caller's local target check but must
+  // never be copied to the central result.
+  if (typeof value.workspace !== 'string' || !value.workspace) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace response does not identify its local target.');
+  }
+  const project = value.project;
+  if (!exactKeys(project, ['type', 'name', 'version'])
+    || !WORKSPACE_SUMMARY_PROJECT_TYPES.has(project.type)) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace project summary is invalid.');
+  }
+  const entries = value.entries;
+  if (!Array.isArray(entries) || entries.length > READ_ONLY_ARGUMENTS.max_entries || typeof value.entries_truncated !== 'boolean') {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace entry summary is invalid.');
+  }
+  const safeEntries = entries.map((entry) => {
+    if (!exactKeys(entry, ['name', 'path', 'type', 'size_bytes', 'modified', 'is_hidden', 'is_ignored'])
+      || !WORKSPACE_SUMMARY_ENTRY_TYPES.has(entry.type)
+      || !Number.isSafeInteger(entry.size_bytes) || entry.size_bytes < 0
+      || typeof entry.is_hidden !== 'boolean' || typeof entry.is_ignored !== 'boolean') {
+      throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace entry summary is invalid.');
+    }
+    const name = summaryText(entry.name, 'workspace entry name');
+    const relativePath = summaryText(entry.path, 'workspace entry path');
+    // The fixed local request lists exactly the root.  Accept neither nested
+    // nor platform-absolute paths, so an MCP regression cannot disclose a
+    // different local root through this small relay.
+    if (relativePath !== name || /[\\/]/.test(name) || name === '.' || name === '..') {
+      throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace entry is not rooted at the admitted workspace.');
+    }
+    return Object.freeze({
+      name,
+      type: entry.type,
+      size_bytes: entry.size_bytes,
+      is_hidden: entry.is_hidden,
+      is_ignored: entry.is_ignored,
+    });
+  });
+  const git = value.git;
+  if (!exactKeys(git, ['is_repo', 'branch', 'changed_count', 'truncated'])
+    || typeof git.is_repo !== 'boolean'
+    || !Number.isSafeInteger(git.changed_count) || git.changed_count < 0 || git.changed_count > 100_000
+    || typeof git.truncated !== 'boolean') {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace Git summary is invalid.');
+  }
+  const summary = {
+    schema_version: WORKSPACE_SUMMARY_SCHEMA_VERSION,
+    project: {
+      type: project.type,
+      name: summaryText(project.name, 'workspace project name'),
+      version: summaryText(project.version, 'workspace project version', { allowEmpty: true, maxLength: 128 }),
+    },
+    entries: safeEntries,
+    entries_truncated: value.entries_truncated,
+    git: {
+      is_repo: git.is_repo,
+      branch: summaryText(git.branch == null ? '' : git.branch, 'workspace Git branch', { allowEmpty: true }),
+      changed_count: git.changed_count,
+      truncated: git.truncated,
+    },
+  };
+  return normaliseWorkspaceSummary(summary);
+}
+
 function exactKeys(value, expected) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const actual = Object.keys(value).sort();
   const wanted = [...expected].sort();
   return actual.length === wanted.length && actual.every((key, index) => key === wanted[index]);
+}
+
+function normaliseWorkspaceSummary(value) {
+  if (!exactKeys(value, ['schema_version', 'project', 'entries', 'entries_truncated', 'git'])
+    || value.schema_version !== WORKSPACE_SUMMARY_SCHEMA_VERSION
+    || !exactKeys(value.project, ['type', 'name', 'version'])
+    || !WORKSPACE_SUMMARY_PROJECT_TYPES.has(value.project.type)
+    || !Array.isArray(value.entries) || value.entries.length > READ_ONLY_ARGUMENTS.max_entries
+    || typeof value.entries_truncated !== 'boolean'
+    || !exactKeys(value.git, ['is_repo', 'branch', 'changed_count', 'truncated'])
+    || typeof value.git.is_repo !== 'boolean'
+    || !Number.isSafeInteger(value.git.changed_count) || value.git.changed_count < 0 || value.git.changed_count > 100_000
+    || typeof value.git.truncated !== 'boolean') {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace relay summary is invalid.');
+  }
+  const entries = value.entries.map((entry) => {
+    if (!exactKeys(entry, ['name', 'type', 'size_bytes', 'is_hidden', 'is_ignored'])
+      || !WORKSPACE_SUMMARY_ENTRY_TYPES.has(entry.type)
+      || !Number.isSafeInteger(entry.size_bytes) || entry.size_bytes < 0
+      || typeof entry.is_hidden !== 'boolean' || typeof entry.is_ignored !== 'boolean') {
+      throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace relay summary is invalid.');
+    }
+    const name = summaryText(entry.name, 'workspace entry name');
+    if (/[\\/]/.test(name) || name === '.' || name === '..') {
+      throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace relay entry is invalid.');
+    }
+    return Object.freeze({ name, type: entry.type, size_bytes: entry.size_bytes, is_hidden: entry.is_hidden, is_ignored: entry.is_ignored });
+  });
+  const summary = {
+    schema_version: WORKSPACE_SUMMARY_SCHEMA_VERSION,
+    project: {
+      type: value.project.type,
+      name: summaryText(value.project.name, 'workspace project name'),
+      version: summaryText(value.project.version, 'workspace project version', { allowEmpty: true, maxLength: 128 }),
+    },
+    entries,
+    entries_truncated: value.entries_truncated,
+    git: {
+      is_repo: value.git.is_repo,
+      branch: summaryText(value.git.branch, 'workspace Git branch', { allowEmpty: true }),
+      changed_count: value.git.changed_count,
+      truncated: value.git.truncated,
+    },
+  };
+  if (Buffer.byteLength(canonicalWorkspaceSummaryJson(summary), 'utf8') > WORKSPACE_SUMMARY_MAX_BYTES) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID', 'workspace summary exceeds its bounded relay size.');
+  }
+  return Object.freeze({ ...summary, project: Object.freeze(summary.project), entries: Object.freeze(entries), git: Object.freeze(summary.git) });
 }
 
 function identifier(value, name, pattern = IDENTIFIER_RE) {
@@ -198,10 +347,15 @@ module.exports = {
   BRIDGE_CLIENT_TYPE,
   READ_ONLY_TOOL_NAME,
   READ_ONLY_ARGUMENTS,
+  WORKSPACE_SUMMARY_SCHEMA_VERSION,
   facadeContract,
   loadReadOnlyBridgePolicy,
   admitReadOnlyBridgeRequest,
+  compactWorkspaceSummary,
+  normaliseWorkspaceSummary,
   normalisePolicy,
   canonicalJson,
-  digest
+  digest,
+  canonicalWorkspaceSummaryJson,
+  workspaceSummaryDigest
 };

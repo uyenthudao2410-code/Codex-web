@@ -1,5 +1,12 @@
 # Ubuntu 24/7 Control Plane — hiện trạng và kế hoạch hoàn thiện
 
+**Hướng triển khai đã được người dùng làm rõ ngày 16/09/2026:** Ubuntu giữ
+Tunnel chính và MCP gốc; các máy là client/node thực thi. Dùng
+[kế hoạch hoàn thiện central MCP](UBUNTU_CENTRAL_MCP_COMPLETION_PLAN.md) cho
+thứ tự công việc và Definition of Done mới: primary cutover và controller
+server không còn là việc bị hoãn sau additive pilot. Các baseline/proof cũ
+bên dưới vẫn là lịch sử, không phải bằng chứng các gate mới đã đạt.
+
 Cập nhật: 15/09/2026, Asia/Saigon. Cửa sổ kiểm tra runtime/fixture: 08:58–14:41 +07:00.
 
 Baseline: `E:/DEV/Codex-web`, nhánh `main`, HEAD `a0f3a6f5b9530e86e31a88a23b9b144482b3f8c6`; worktree sạch lúc bắt đầu. Git tree của `control-plane/`: `476f8d8ea633de1df774999ab9194c7de81de9fb`.

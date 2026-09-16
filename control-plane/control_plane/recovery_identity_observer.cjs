@@ -53,6 +53,13 @@ function exactRecoveryHost(descriptor, status) {
 function normalizedRuntimeStatus(descriptor, status) {
   const runtime = status?.runtime;
   const epoch = status?.activation_epoch;
+  const centralExecutor = runtime?.execution_role === 'central_executor';
+  const routeReady = centralExecutor
+    ? runtime?.central_connected === true
+      && runtime?.authority_ready === true
+      && runtime?.central_status_reason == null
+    : runtime?.connector_ready === true
+      && runtime?.connector_ack_sha_matches === true;
   const strictReady = exactRecoveryHost(descriptor, status)
     && text(descriptor?.runtime_mode) === 'packaged'
     && text(status?.state) === 'healthy'
@@ -61,8 +68,7 @@ function normalizedRuntimeStatus(descriptor, status) {
     && epoch?.update_incomplete === false
     && runtime?.fully_ready === true
     && runtime?.update_incomplete === false
-    && runtime?.connector_ready === true
-    && runtime?.connector_ack_sha_matches === true;
+    && routeReady;
   return {
     observation_schema_version: 1,
     observation_kind: 'recovery_runtime_read_only',

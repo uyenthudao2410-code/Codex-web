@@ -34,13 +34,27 @@ test('trusted values are preserved', () => {
 
 test('legacy default port pair migrates without overwriting custom ports', () => {
   const migrated = normalize({ configVersion: 5, mcpPort: 18765, healthPort: 18081 });
-  assert.equal(migrated.configVersion, 6);
+  assert.equal(migrated.configVersion, 7);
   assert.equal(migrated.mcpPort, 18766);
   assert.equal(migrated.healthPort, 18082);
 
   const custom = normalize({ configVersion: 5, mcpPort: 19000, healthPort: 19001 });
   assert.equal(custom.mcpPort, 19000);
   assert.equal(custom.healthPort, 19001);
+});
+
+test('execution role is distinct from development or packaged runtime identity', () => {
+  const legacy = normalize({ configVersion: 6 });
+  assert.equal(legacy.configVersion, 7);
+  assert.equal(legacy.executionRole, 'direct_legacy');
+
+  const central = normalize({ executionRole: 'central_executor' });
+  assert.equal(central.executionRole, 'central_executor');
+  assert.equal(central.tunnelId, '', 'choosing the role does not invent a Tunnel identity');
+  assert.equal(central.recoveryTunnelId, '', 'choosing the role does not invent a Recovery Tunnel identity');
+
+  const invalid = normalize({ executionRole: 'runtime_mode' });
+  assert.equal(invalid.executionRole, 'direct_legacy');
 });
 
 test('runtime ports cannot overlap', () => {
@@ -57,6 +71,15 @@ test('manual proxy mode requires an address', () => {
 
 test('tunnel id must use the official prefix', () => {
   assert.throws(() => validateRuntimeSettings(normalize({ tunnelId: 'wrong-id' })), /tunnel_/);
+});
+
+test('central executor validation ignores stale direct and recovery Tunnel settings', () => {
+  const central = normalize({
+    executionRole: 'central_executor',
+    tunnelId: 'legacy-direct-id',
+    recoveryTunnelId: 'legacy-recovery-id'
+  });
+  assert.doesNotThrow(() => validateRuntimeSettings(central));
 });
 
 test('recent workspaces use a 50-item MRU list', () => {
@@ -79,6 +102,14 @@ test('workspace paths are fully qualified and preserve filesystem roots', () => 
   assert.equal(normalizeWorkspacePath(absoluteRoot), path.normalize(absoluteRoot));
   assert.equal(normalizeWorkspacePath('.'), '');
   assert.equal(normalizeWorkspacePath('relative-workspace'), '');
+
+  // A controller/test host may not share the executor's OS. Persisted and
+  // health-payload Windows paths must still retain their own path semantics.
+  assert.equal(normalizeWorkspacePath('C:'), '');
+  assert.equal(normalizeWorkspacePath('E:.'), '');
+  assert.equal(normalizeWorkspacePath('C:\\'), 'C:\\');
+  assert.equal(normalizeWorkspacePath('C:\\workspace\\'), 'C:\\workspace');
+  assert.equal(workspaceKey('C:\\Workspace'), workspaceKey('c:/workspace/'));
 
   if (process.platform === 'win32') {
     assert.equal(normalizeWorkspacePath('C:'), '');

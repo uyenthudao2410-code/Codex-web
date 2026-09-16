@@ -67,6 +67,19 @@ class RuntimePaths {
   // deliberately separate from settings and secrets.  It only grants the
   // narrow control-plane read-only bridge; it is never generated at startup.
   controlPlaneReadOnlyPolicyFile() { return path.join(this.dataRootPath, 'control-plane-read-only-policy.json'); }
+  // This private node enrollment configuration belongs to this installed
+  // executor profile. Keeping it beneath dataRoot makes the Supervisor and
+  // Electron UI agree on one target without an APPDATA-wide side channel.
+  controlPlaneNodeConfigFile() { return path.join(this.dataRootPath, 'control-plane-node.json'); }
+  controlPlaneNodeAgent() {
+    return this.runtimeModeValue === 'packaged'
+      ? path.join(this.resourcesRootPath, 'control-plane', 'node_agent.py')
+      : path.join(this.appRootPath, 'control-plane', 'control_plane', 'node_agent.py');
+  }
+  // Credential-free evidence written by the same-user node agent only after
+  // Ubuntu accepts an authenticated heartbeat.  It is a freshness projection,
+  // not a grant and never contains the node credential.
+  controlPlaneRouteEvidenceFile() { return path.join(this.dataRootPath, 'control-plane-route-evidence.json'); }
   // A stale Recovery Host cannot safely execute a full-clean request.  The
   // bootstrap envelope is a small, integrity-bound control-plane handoff used
   // to start the current checkout before the activation coordinator runs.  It

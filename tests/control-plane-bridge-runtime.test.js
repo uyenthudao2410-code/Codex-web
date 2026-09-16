@@ -6,7 +6,12 @@ const os = require('node:os');
 const path = require('node:path');
 
 const { RuntimeOrchestrator } = require('../electron/services/runtimeOrchestrator');
-const { BRIDGE_CLIENT_ID, BRIDGE_CLIENT_TYPE, READ_ONLY_ARGUMENTS } = require('../electron/services/controlPlaneReadOnlyBridge');
+const {
+  BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE,
+  READ_ONLY_ARGUMENTS,
+  workspaceSummaryDigest
+} = require('../electron/services/controlPlaneReadOnlyBridge');
 
 function listen(server) { return new Promise((resolve) => server.listen(0, '127.0.0.1', resolve)); }
 
@@ -45,7 +50,18 @@ test('control-plane read-only bridge owns an attested actor and never accepts ce
       assert.equal(body.params.arguments.path, undefined);
       const payload = JSON.stringify({
         jsonrpc: '2.0', id: body.id,
-        result: { structuredContent: { workspace } }
+        result: {
+          structuredContent: {
+            workspace,
+            project: { type: 'node', name: 'office-fixture', version: '1.0.0' },
+            entries: [{
+              name: 'office-marker.txt', path: 'office-marker.txt', type: 'file',
+              size_bytes: 17, modified: '2026-09-16T00:00:00Z', is_hidden: false, is_ignored: false
+            }],
+            entries_truncated: false,
+            git: { is_repo: true, branch: 'main', changed_count: 0, truncated: false }
+          }
+        }
       });
       response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
       response.end(payload);
@@ -84,6 +100,16 @@ test('control-plane read-only bridge owns an attested actor and never accepts ce
   assert.equal(Object.hasOwn(result.runtime_identity, 'mcp_server_instance_id'), false);
   assert.match(result.local_handle, /^cp_ro_[a-f0-9]{48}$/);
   assert.match(result.response_sha256, /^[a-f0-9]{64}$/);
+  assert.deepEqual(result.workspace_summary, {
+    schema_version: 1,
+    project: { type: 'node', name: 'office-fixture', version: '1.0.0' },
+    entries: [{ name: 'office-marker.txt', type: 'file', size_bytes: 17, is_hidden: false, is_ignored: false }],
+    entries_truncated: false,
+    git: { is_repo: true, branch: 'main', changed_count: 0, truncated: false }
+  });
+  assert.match(result.workspace_summary_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(result.workspace_summary_sha256, workspaceSummaryDigest(result.workspace_summary));
+  assert.equal(JSON.stringify(result.workspace_summary).includes(workspace), false);
   assert.deepEqual(result.facade_contract, facadeContract);
   assert.equal(requests, 1);
 
@@ -105,7 +131,15 @@ test('control-plane read-only bridge refuses a workspace response outside the cu
   const workspace = path.join(os.tmpdir(), 'webcodex-control-plane-bridge-expected');
   const facadeContract = { schema_version: 3, profile: 'control-plane-read-only-queue-v2', sha256: 'f'.repeat(64) };
   const server = http.createServer((_request, response) => {
-    const payload = JSON.stringify({ jsonrpc: '2.0', id: 'ignored', result: { structuredContent: { workspace: path.join(os.tmpdir(), 'outside') } } });
+    const payload = JSON.stringify({
+      jsonrpc: '2.0', id: 'ignored',
+      result: { structuredContent: {
+        workspace: path.join(os.tmpdir(), 'outside'),
+        project: { type: 'node', name: 'office-fixture', version: '' },
+        entries: [], entries_truncated: false,
+        git: { is_repo: false, branch: '', changed_count: 0, truncated: false }
+      } }
+    });
     response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) });
     response.end(payload);
   });

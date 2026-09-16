@@ -236,7 +236,7 @@ function activeRefreshRecord({
 
 function runtimeStatusHarness() {
   const source = fs.readFileSync(path.resolve(__dirname, '..', 'renderer', 'app.js'), 'utf8');
-  const start = source.indexOf('function shortRevision');
+  const start = source.indexOf('function isCentralExecutor');
   const end = source.indexOf('function renderSnapshot');
   assert.ok(start >= 0 && end > start, 'runtime status presentation functions must remain discoverable');
   const selectors = [
@@ -1487,6 +1487,41 @@ test('Command Center counts three revisioned components and reports Tunnel readi
   fixture.render(snapshot);
   assert.equal(fixture.elements.get('#runtimeTunnelSourceState').textContent, 'STOPPED');
   assert.equal(fixture.elements.get('#runtimeSourceSummary').textContent, 'SOURCE 3/3 CURRENT · TUNNEL STOPPED');
+  assert.equal(fixture.elements.get('#runtimeSourceSummary').className, 'cc-pill is-waiting');
+});
+
+test('Command Center reports Ubuntu route evidence instead of a Windows Tunnel for central executors', () => {
+  const fixture = runtimeStatusHarness();
+  const revision = { running_revision: REVISION, disk_revision: REVISION, update_pending: false };
+  const snapshot = {
+    settings: { executionRole: 'central_executor' },
+    status: {
+      executionRole: 'central_executor',
+      runtimeRunning: true,
+      tunnelRunning: false,
+      fullyReady: true,
+      centralConnected: true,
+      authorityReady: true,
+      centralStatusReason: null,
+      codeRevision: { codingMcp: revision }
+    },
+    recoveryHost: {
+      state: 'healthy',
+      code_revision: revision,
+      electron_ui_revision: revision,
+      electron_ui_recovery: { alive: true, pid: 42001, runtime_mode: 'development' }
+    }
+  };
+  fixture.render(snapshot);
+  assert.equal(fixture.elements.get('#runtimeTunnelSourceState').textContent, 'CENTRAL');
+  assert.equal(fixture.elements.get('#runtimeSourceSummary').textContent, 'SOURCE 3/3 CURRENT · CENTRAL CENTRAL');
+  assert.equal(fixture.elements.get('#runtimeSourceSummary').className, 'cc-pill is-active');
+
+  snapshot.status.authorityReady = false;
+  snapshot.status.centralStatusReason = 'CENTRAL_LOCAL_POLICY_NOT_READY';
+  fixture.render(snapshot);
+  assert.equal(fixture.elements.get('#runtimeTunnelSourceState').textContent, 'WAITING');
+  assert.match(fixture.elements.get('#runtimeTunnelSourceMeta').textContent, /Chờ policy action cục bộ/);
   assert.equal(fixture.elements.get('#runtimeSourceSummary').className, 'cc-pill is-waiting');
 });
 

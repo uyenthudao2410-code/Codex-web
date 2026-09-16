@@ -139,6 +139,8 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   saveRuntimeKey: (value) => ipcRenderer.invoke('secrets:runtime-key', value),
   removeRuntimeKey: () => ipcRenderer.invoke('secrets:runtime-key-remove'),
   regenerateMcpToken: () => ipcRenderer.invoke('secrets:mcp-token-regenerate'),
+  requestControlPlaneEnrollment: (serverUrl) => ipcRenderer.invoke('control-plane:enroll', serverUrl),
+  installControlPlaneReadOnlyPolicy: (request) => ipcRenderer.invoke('control-plane:install-read-only-policy', request),
   start: () => ipcRenderer.invoke('runtime:start'),
   stop: () => ipcRenderer.invoke('runtime:stop'),
   restart: () => ipcRenderer.invoke('runtime:restart'),

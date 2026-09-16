@@ -26,10 +26,73 @@ const {
   BRIDGE_CLIENT_TYPE,
   READ_ONLY_TOOL_NAME,
   READ_ONLY_ARGUMENTS,
-  digest: controlPlaneBridgeDigest
+  compactWorkspaceSummary,
+  digest: controlPlaneBridgeDigest,
+  workspaceSummaryDigest
 } = require('./controlPlaneReadOnlyBridge');
+const { readControlPlaneRouteEvidence } = require('./controlPlaneRouteEvidence');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+// `runtimeIdentity().mode` answers where Electron was loaded from
+// (development or packaged).  This role answers who owns the OpenAI ingress.
+// Keep this normalization local to the lifecycle boundary so a malformed or
+// legacy settings file can never silently opt a device into central control.
+function executionRole(settings) {
+  return settings?.executionRole === 'central_executor' ? 'central_executor' : 'direct_legacy';
+}
+
+// A local executor being healthy and a centrally-authorized action being
+// allowed are deliberately separate facts.  In particular, a node must never
+// report a fake local Tunnel/connector just to make the old direct readiness
+// badge green.  The central route handshake and per-action authority are added
+// by the node enrollment wave; until then their truthful state is false.
+function runtimeReadiness({
+  role,
+  mcpRunning,
+  nativeAlive,
+  tunnelRunning,
+  epochReady,
+  revisionReady,
+  connectorReady,
+  activationIncomplete,
+  revisionDrift,
+  centralConnected = false,
+  authorityReady = false,
+  centralRouteReason = ''
+}) {
+  const normalizedRole = role === 'central_executor' ? 'central_executor' : 'direct_legacy';
+  const localReady = Boolean(mcpRunning && nativeAlive && epochReady && revisionReady);
+  const directComponentsReady = Boolean(mcpRunning && tunnelRunning && epochReady && revisionReady);
+  if (normalizedRole === 'central_executor') {
+    return {
+      executionRole: normalizedRole,
+      localReady,
+      directReady: false,
+      centralConnected: Boolean(centralConnected),
+      authorityReady: Boolean(authorityReady),
+      componentsReady: localReady,
+      fullyReady: Boolean(localReady && centralConnected && authorityReady),
+      updateIncomplete: Boolean(activationIncomplete || revisionDrift),
+      centralStatusReason: !localReady
+        ? 'LOCAL_EXECUTOR_NOT_READY'
+        : (!centralConnected
+            ? (String(centralRouteReason || '').trim() || 'CENTRAL_ROUTE_NOT_CONFIGURED')
+            : (!authorityReady ? 'CENTRAL_LOCAL_POLICY_NOT_READY' : null))
+    };
+  }
+  return {
+    executionRole: normalizedRole,
+    localReady,
+    directReady: Boolean(directComponentsReady && connectorReady),
+    centralConnected: false,
+    authorityReady: false,
+    componentsReady: directComponentsReady,
+    fullyReady: Boolean(directComponentsReady && connectorReady),
+    updateIncomplete: Boolean(activationIncomplete || revisionDrift || !connectorReady),
+    centralStatusReason: null
+  };
+}
 
 function assertActivationDeadline(expiresAtUnixMs, boundary, processMutated = false) {
   const expiresAt = Number(expiresAtUnixMs || 0);
@@ -455,7 +518,7 @@ function controlMcpActivation(port, token, payload) {
 }
 
 class RuntimeOrchestrator {
-  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null, resolveFullCleanSourceCheckpoint = null }) {
+  constructor({ settings, secrets, environment, log, emitProgress = () => {}, emitStatus = () => {}, paths = defaultPaths, revisionTracker = null, deviceIdentity = null, deviceInstanceId = '', activationEpochId = '', fullCleanActivation = null, resolveFullCleanSourceCheckpoint = null, listenerPidProbe = null }) {
     this.settingsStore = settings;
     this.secrets = secrets;
     this.environment = environment;
@@ -463,6 +526,10 @@ class RuntimeOrchestrator {
     this.emitProgress = emitProgress;
     this.emitStatus = emitStatus;
     this.paths = paths;
+    // Production uses the Windows loopback listener probe.  Keep a narrowly
+    // scoped seam for lifecycle proofs; it never changes the default owner
+    // check or exposes a renderer-controlled override.
+    this.listenerPidProbe = typeof listenerPidProbe === 'function' ? listenerPidProbe : null;
     this.revisions = revisionTracker || new ComponentRevisionTracker({ paths });
     this.activationEpochStore = (() => { try { return new ActivationEpochStore({ paths }); } catch { return null; } })();
     this.activationEpochId = String(activationEpochId || '').trim() || (() => {
@@ -998,7 +1065,37 @@ class RuntimeOrchestrator {
 
   deviceProjection(settings, { mcpHealth = null, nativeAlive = false, tunnelRunning = false, git = null } = {}) {
     if (!this.device) return null;
-    return { scope: 'current_device_only', registry: 'local', device_id: this.device.deviceId, device_instance_id: this.device.deviceInstanceId, display_name: this.device.displayName, online: true, workspace: String(settings?.workspace || ''), coding: { mcp_running: Boolean(mcpHealth), native_alive: Boolean(nativeAlive), tunnel_running: Boolean(tunnelRunning), tunnel_id: String(settings?.tunnelId || '') || null, endpoint_device_instance_id: String(mcpHealth?.device_instance_id || '') || null, ownership: 'device_id' }, git: git || { available: false, branch: null, head: null, head_short: null, dirty: null } };
+    const role = executionRole(settings);
+    return {
+      scope: 'current_device_only',
+      registry: 'local',
+      device_id: this.device.deviceId,
+      device_instance_id: this.device.deviceInstanceId,
+      display_name: this.device.displayName,
+      online: true,
+      workspace: String(settings?.workspace || ''),
+      execution_role: role,
+      coding: {
+        mcp_running: Boolean(mcpHealth),
+        native_alive: Boolean(nativeAlive),
+        // A stale direct-Tunnel setting must not make a central executor look
+        // as if it exposes or manages a second OpenAI ingress.
+        tunnel_running: role === 'direct_legacy' && Boolean(tunnelRunning),
+        tunnel_managed: role === 'direct_legacy',
+        tunnel_id: role === 'direct_legacy' ? (String(settings?.tunnelId || '') || null) : null,
+        endpoint_device_instance_id: String(mcpHealth?.device_instance_id || '') || null,
+        ownership: 'device_id'
+      },
+      git: git || { available: false, branch: null, head: null, head_short: null, dirty: null }
+    };
+  }
+
+  centralRouteEvidence(settings, now = Date.now()) {
+    if (executionRole(settings) !== 'central_executor') return null;
+    return readControlPlaneRouteEvidence(this.paths, {
+      expectedDeviceId: this.device?.deviceId || '',
+      now
+    });
   }
 
   async preflightLegacyDeviceMigration(probes = {}) {
@@ -1312,6 +1409,15 @@ class RuntimeOrchestrator {
             }));
             return;
           }
+          let workspaceSummary;
+          try {
+            workspaceSummary = compactWorkspaceSummary(structured);
+          } catch (error) {
+            reject(Object.assign(new Error('Coding Tools MCP returned an unsafe workspace relay summary.'), {
+              code: error?.code || 'CONTROL_PLANE_BRIDGE_RESULT_INVALID'
+            }));
+            return;
+          }
           const localHandle = `cp_ro_${controlPlaneBridgeDigest({
             policy_sha256: policySha256,
             action_id: actionId,
@@ -1345,6 +1451,8 @@ class RuntimeOrchestrator {
               activation_epoch_id: attestation.activationEpochId,
               tool_contract_sha256: attestation.contractSha256
             },
+            workspace_summary: workspaceSummary,
+            workspace_summary_sha256: workspaceSummaryDigest(workspaceSummary),
             response_sha256: controlPlaneBridgeDigest(structured)
           });
         });
@@ -2418,26 +2526,35 @@ class RuntimeOrchestrator {
     try {
       const settings = this.settingsStore.load();
       this.validate(settings);
-      const runtimeApiKey = this.secrets.get('runtimeApiKey');
-      if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
-      if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
+      const centralExecutor = executionRole(settings) === 'central_executor';
+      // Central nodes own only their loopback MCP credential.  They must not
+      // read a Runtime API Key or require a primary Tunnel ID: those belong to
+      // the Ubuntu root ingress, not to a Windows/local executor.
+      const runtimeApiKey = centralExecutor ? '' : this.secrets.get('runtimeApiKey');
+      if (!centralExecutor && !runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
+      if (!centralExecutor && !settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
       const token = await this.ensureToken();
 
       this.progress('preflight', 8, 'Đang kiểm tra thư mục làm việc, môi trường chạy và cổng');
-      const env = await this.environment.inspect(settings, { forceProxy: true });
-      if (!env.tunnelClient.installed) throw new Error('Thiếu tệp thực thi OpenAI tunnel-client.');
+      const env = await this.environment.inspect(settings, { forceProxy: !centralExecutor });
+      if (!centralExecutor && !env.tunnelClient.installed) throw new Error('Thiếu tệp thực thi OpenAI tunnel-client.');
       if (!env.python.installed) {
         throw new Error('Môi trường runtime portable chưa sẵn sàng, phiên bản phát triển cần Python 3.11+; bản phát hành sẽ tích hợp sẵn Python.');
       }
 
-      this.progress('proxy-detect', 14, 'Đang kiểm tra kết nối trực tiếp, Proxy hệ thống Windows và cổng Proxy cục bộ');
-      const proxy = await resolveProxy(settings);
-      if (settings.proxyMode === 'manual' && !proxy.reachable) {
-        throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}. Vui lòng khởi động phần mềm proxy, thay đổi cổng hoặc chuyển sang tự động phát hiện.`);
+      let proxy = null;
+      if (!centralExecutor) {
+        this.progress('proxy-detect', 14, 'Đang kiểm tra kết nối trực tiếp, Proxy hệ thống Windows và cổng Proxy cục bộ');
+        proxy = await resolveProxy(settings);
+        if (settings.proxyMode === 'manual' && !proxy.reachable) {
+          throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}. Vui lòng khởi động phần mềm proxy, thay đổi cổng hoặc chuyển sang tự động phát hiện.`);
+        }
+        const proxyLabel = proxy.resolvedUrl || 'Kết nối trực tiếp';
+        this.log.info('Hoàn tất kiểm tra tuyến đường mạng', { mode: settings.proxyMode, source: proxy.source, route: proxyLabel, reachable: proxy.reachable });
+        this.progress('proxy-ready', 16, proxy.reachable ? `Tuyến đường mạng khả dụng: ${proxyLabel}` : 'Chưa xác minh được tuyến đường mạng khả dụng, sẽ tiếp tục thử kết nối trực tiếp và giữ nhật ký chẩn đoán');
+      } else {
+        this.progress('local-executor-preflight', 16, 'Chế độ executor trung tâm: chỉ khởi động MCP cục bộ, không dùng OpenAI Tunnel hay Runtime API Key của máy này');
       }
-      const proxyLabel = proxy.resolvedUrl || 'Kết nối trực tiếp';
-      this.log.info('Hoàn tất kiểm tra tuyến đường mạng', { mode: settings.proxyMode, source: proxy.source, route: proxyLabel, reachable: proxy.reachable });
-      this.progress('proxy-ready', 16, proxy.reachable ? `Tuyến đường mạng khả dụng: ${proxyLabel}` : 'Chưa xác minh được tuyến đường mạng khả dụng, sẽ tiếp tục thử kết nối trực tiếp và giữ nhật ký chẩn đoán');
 
       this.progress('runtime-stop-old', 18, 'Đang dọn dẹp các instance chạy cũ từ lần khởi động trước');
       await this.tunnel.stop();
@@ -2445,7 +2562,7 @@ class RuntimeOrchestrator {
       if (await canConnect('127.0.0.1', settings.mcpPort, 350)) {
         throw new Error(`Cổng cục bộ ${settings.mcpPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng MCP trong trang "Thư mục làm việc".`);
       }
-      if (await canConnect('127.0.0.1', settings.healthPort, 350)) {
+      if (!centralExecutor && await canConnect('127.0.0.1', settings.healthPort, 350)) {
         throw new Error(`Cổng cục bộ ${settings.healthPort} đang bị ứng dụng khác chiếm dụng. Trợ lý sẽ không cưỡng chế chấm dứt tiến trình không xác định, vui lòng thay đổi cổng bảng điều khiển Tunnel.`);
       }
 
@@ -2470,15 +2587,17 @@ class RuntimeOrchestrator {
       }
       if (!ready) throw new Error('Coding Tools MCP không vượt qua kiểm tra sức khỏe trong thời gian quy định.');
 
-      const attestationHealth = await this.currentMcpHealth({ timeoutMs: 5000 });
-      const connectorAttestation = this.connectorAttestationForHealth(attestationHealth, {
-        establish: true,
-        secret: connectorAttestationSecret
-      });
-      await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this), {
-        activationEpochId: launchActivationEpochId,
-        connectorAttestation
-      });
+      if (!centralExecutor) {
+        const attestationHealth = await this.currentMcpHealth({ timeoutMs: 5000 });
+        const connectorAttestation = this.connectorAttestationForHealth(attestationHealth, {
+          establish: true,
+          secret: connectorAttestationSecret
+        });
+        await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this), {
+          activationEpochId: launchActivationEpochId,
+          connectorAttestation
+        });
+      }
       this.setManualStop(false);
       this.autoRecoveryBlocked = false;
       this.lastStartFailure = '';
@@ -2489,7 +2608,13 @@ class RuntimeOrchestrator {
       this.nextRecoveryAt = 0;
       this.lastRecoveryAt = Date.now();
       this.lastHealthyAt = Date.now();
-      this.progress('complete', 100, 'Triển khai hoàn tất, cả MCP và OpenAI Tunnel đều đang chạy');
+      this.progress(
+        centralExecutor ? 'local-executor-ready' : 'complete',
+        100,
+        centralExecutor
+          ? 'Coding Tools MCP cục bộ đã sẵn sàng; chờ ghép nối và quyền action từ Ubuntu.'
+          : 'Triển khai hoàn tất, cả MCP và OpenAI Tunnel đều đang chạy'
+      );
       this.invalidateSnapshot();
       return await this.snapshot({ force: true, reason: 'started' });
     } catch (error) {
@@ -2674,17 +2799,38 @@ class RuntimeOrchestrator {
         && codeRevision.running_revision !== codeRevision.disk_revision)
     );
     const revisionReady = codeRevision.state !== 'unavailable' && !revisionDrift;
-    const componentsReady = Boolean(mcpRunning && tunnelRunning && epochReady && revisionReady);
     const connectorReady = connectorFreshness.ready === true;
+    const centralRoute = this.centralRouteEvidence(settings);
+    const readiness = runtimeReadiness({
+      role: executionRole(settings),
+      mcpRunning,
+      nativeAlive,
+      tunnelRunning,
+      epochReady,
+      revisionReady,
+      connectorReady,
+      activationIncomplete: activationEpoch.update_incomplete === true,
+      revisionDrift,
+      centralConnected: centralRoute?.connected === true,
+      authorityReady: centralRoute?.authorityReady === true,
+      centralRouteReason: centralRoute?.reason || ''
+    });
     return {
       workspace: settings.workspace,
       mcpRunning,
       nativeAlive,
       tunnelRunning,
-      componentsReady,
+      ...readiness,
+      centralRoute: centralRoute?.evidence ? {
+        serverOrigin: centralRoute.evidence.serverOrigin,
+        endpointId: centralRoute.evidence.endpointId,
+        credentialGeneration: centralRoute.evidence.credentialGeneration,
+        observedAtMs: centralRoute.evidence.observedAtMs,
+        runtimeReadiness: centralRoute.evidence.runtimeReadiness,
+        policyState: centralRoute.evidence.policyState,
+        policyExpiresAtMs: centralRoute.evidence.policyExpiresAtMs
+      } : null,
       connectorReady,
-      fullyReady: componentsReady && connectorReady,
-      updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift || !connectorReady,
       activationEpoch,
       device: this.deviceProjection(settings, { mcpHealth, nativeAlive, tunnelRunning, git }),
       toolContract: connectorContract.available ? {
@@ -2711,6 +2857,11 @@ class RuntimeOrchestrator {
     this.assertSoftRecoveryAllowed();
     this.assertActivationRevisionContinuity();
     const settings = this.settingsStore.load();
+    if (executionRole(settings) === 'central_executor') {
+      throw Object.assign(new Error('Central executor nodes do not run a local OpenAI Tunnel; recover the Ubuntu route or node pairing instead.'), {
+        code: 'CENTRAL_EXECUTOR_TUNNEL_DISABLED'
+      });
+    }
     const runtimeApiKey = this.secrets.get('runtimeApiKey');
     if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
     if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
@@ -2739,13 +2890,17 @@ class RuntimeOrchestrator {
     this.assertSoftRecoveryAllowed();
     const settings = this.settingsStore.load();
     this.validate(settings);
-    const runtimeApiKey = this.secrets.get('runtimeApiKey');
-    if (!runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
-    if (!settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
+    const centralExecutor = executionRole(settings) === 'central_executor';
+    const runtimeApiKey = centralExecutor ? '' : this.secrets.get('runtimeApiKey');
+    if (!centralExecutor && !runtimeApiKey) throw new Error('Vui lòng lưu Runtime API Key trong "Cấu hình triển khai" trước.');
+    if (!centralExecutor && !settings.tunnelId) throw new Error('Vui lòng điền OpenAI Tunnel ID trước.');
     const token = await this.ensureToken();
-    const proxy = await resolveProxy(settings);
-    if (settings.proxyMode === 'manual' && !proxy.reachable) {
-      throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`);
+    let proxy = null;
+    if (!centralExecutor) {
+      proxy = await resolveProxy(settings);
+      if (settings.proxyMode === 'manual' && !proxy.reachable) {
+        throw new Error(`Proxy thủ công không khả dụng: ${settings.proxyUrl}.`);
+      }
     }
     const before = readJson(this.paths.stateFile(), {});
     const continuity = this.assertActivationRevisionContinuity();
@@ -2773,6 +2928,12 @@ class RuntimeOrchestrator {
     // untouched so an empty launch identity does not become a new binding.
     if (launchActivationEpochId && launchActivationEpochId !== this.activationEpochId) {
       this.setActivationEpoch(launchActivationEpochId);
+    }
+    if (centralExecutor) {
+      // Completing a direct-to-central handoff must not leave an owned legacy
+      // Tunnel running beside the Ubuntu ingress.  This is an owned-service
+      // stop, never a port/PID kill of an unknown process.
+      await this.tunnel.stop();
     }
     if (isAlive(oldNativePid)) {
       // Semantic recovery may replace a persistently hung process, but only
@@ -2803,7 +2964,7 @@ class RuntimeOrchestrator {
         health = await this.currentMcpHealth();
         if (health && ownedPid > 0 && isAlive(ownedPid)
           && (!expectedRevision || String(health.code_revision || '') === expectedRevision)
-          && await loopbackListenerPid(settings.mcpPort) === ownedPid) break;
+          && await (this.listenerPidProbe || loopbackListenerPid)(settings.mcpPort) === ownedPid) break;
         health = null;
         if (!(await this.native.status(settings, { activationEpochId: launchActivationEpochId }))) {
           throw Object.assign(new Error('Coding Tools MCP exited during MCP-only recovery.'), { code: 'MCP_RECOVERY_PROCESS_EXITED' });
@@ -2824,27 +2985,32 @@ class RuntimeOrchestrator {
           });
         }
       }
-      // The managed Tunnel carries a static attestation bound to the exact MCP
-      // process/server tuple. Replacing MCP therefore invalidates the old
-      // Tunnel header even when the public contract is unchanged. Refresh only
-      // this dependent Tunnel (not Recovery Host/UI/recovery plane) so soft
-      // recovery remains scoped while connector provenance stays usable.
-      const connectorAttestation = this.connectorAttestationForHealth(health, {
-        establish: true,
-        secret: connectorAttestationSecret
-      });
-      const tunnelStarted = await this.tunnel.start(
-        { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
-        runtimeApiKey,
-        token,
-        this.progress.bind(this),
-        {
-          activationEpochId: launchActivationEpochId,
-          connectorAttestation
-        }
-      );
+      let tunnelStarted = null;
+      if (!centralExecutor) {
+        // The managed Tunnel carries a static attestation bound to the exact MCP
+        // process/server tuple. Replacing MCP therefore invalidates the old
+        // Tunnel header even when the public contract is unchanged. Refresh only
+        // this dependent Tunnel (not Recovery Host/UI/recovery plane) so soft
+        // recovery remains scoped while connector provenance stays usable.
+        const connectorAttestation = this.connectorAttestationForHealth(health, {
+          establish: true,
+          secret: connectorAttestationSecret
+        });
+        tunnelStarted = await this.tunnel.start(
+          { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
+          runtimeApiKey,
+          token,
+          this.progress.bind(this),
+          {
+            activationEpochId: launchActivationEpochId,
+            connectorAttestation
+          }
+        );
+      }
       const after = readJson(this.paths.stateFile(), {});
-      this.log.info('Coding Tools MCP và attestation phụ thuộc của Coding Tunnel đã được khôi phục', {
+      this.log.info(centralExecutor
+        ? 'Coding Tools MCP local executor đã được khôi phục mà không khởi động OpenAI Tunnel tại node'
+        : 'Coding Tools MCP và attestation phụ thuộc của Coding Tunnel đã được khôi phục', {
         oldPid: oldNativePid || null,
         newPid: ownedPid,
         oldTunnelPid: tunnelPid || null,
@@ -2857,7 +3023,8 @@ class RuntimeOrchestrator {
         old_tunnel_pid: tunnelPid || null,
         tunnel_pid: Number(after.tunnelPid || tunnelStarted?.pid || 0) || null,
         tunnel_preserved: false,
-        tunnel_attestation_refreshed: true,
+        tunnel_attestation_refreshed: !centralExecutor,
+        central_executor: centralExecutor,
         health_verified: true
       };
     } catch (error) {
@@ -2930,9 +3097,10 @@ class RuntimeOrchestrator {
         mcpHealthFailureDeterministic: status.mcpHealthFailureDeterministic === true
       };
     }
-    const failureKind = status.mcpRunning
-      ? 'tunnel_unavailable'
-      : (status.nativeAlive ? 'mcp_health_unavailable' : 'mcp_process_exited');
+    const centralExecutor = status.executionRole === 'central_executor';
+    const failureKind = centralExecutor
+      ? (status.mcpRunning ? 'mcp_native_identity_unavailable' : (status.nativeAlive ? 'mcp_health_unavailable' : 'mcp_process_exited'))
+      : (status.mcpRunning ? 'tunnel_unavailable' : (status.nativeAlive ? 'mcp_health_unavailable' : 'mcp_process_exited'));
     if (failureKind !== this.heartbeatFailureKind) {
       this.endFailureStreak();
       this.heartbeatFailureKind = failureKind;
@@ -2960,7 +3128,7 @@ class RuntimeOrchestrator {
       tunnelRunning: status.tunnelRunning
     });
     try {
-      if (status.mcpRunning) {
+      if (!centralExecutor && status.mcpRunning) {
         await this.recoverTunnelOnly();
       } else if (status.nativeAlive) {
         this.deferredRecoveryCount += 1;
@@ -3055,8 +3223,22 @@ class RuntimeOrchestrator {
         && codeRevision.running_revision !== codeRevision.disk_revision)
     );
     const revisionReady = codeRevision.state !== 'unavailable' && !revisionDrift;
-    const componentsReady = Boolean(runtimeRunning && nativeAlive && tunnelRunning && epochReady && revisionReady);
     const connectorReady = connectorFreshness.ready === true;
+    const centralRoute = this.centralRouteEvidence(settings);
+    const readiness = runtimeReadiness({
+      role: executionRole(settings),
+      mcpRunning: runtimeRunning,
+      nativeAlive,
+      tunnelRunning,
+      epochReady,
+      revisionReady,
+      connectorReady,
+      activationIncomplete: activationEpoch.update_incomplete === true,
+      revisionDrift,
+      centralConnected: centralRoute?.connected === true,
+      authorityReady: centralRoute?.authorityReady === true,
+      centralRouteReason: centralRoute?.reason || ''
+    });
     return this.publishSnapshot({
       settings,
       secrets: this.secrets.status(),
@@ -3066,10 +3248,17 @@ class RuntimeOrchestrator {
         busy: this.busy,
         runtimeRunning,
         tunnelRunning,
-        componentsReady,
+        ...readiness,
+        centralRoute: centralRoute?.evidence ? {
+          serverOrigin: centralRoute.evidence.serverOrigin,
+          endpointId: centralRoute.evidence.endpointId,
+          credentialGeneration: centralRoute.evidence.credentialGeneration,
+          observedAtMs: centralRoute.evidence.observedAtMs,
+          runtimeReadiness: centralRoute.evidence.runtimeReadiness,
+          policyState: centralRoute.evidence.policyState,
+          policyExpiresAtMs: centralRoute.evidence.policyExpiresAtMs
+        } : null,
         connectorReady,
-        fullyReady: componentsReady && connectorReady,
-        updateIncomplete: activationEpoch.update_incomplete === true || revisionDrift || !connectorReady,
         activationEpoch,
         localMcpUrl: `http://127.0.0.1:${settings.mcpPort}/mcp`,
         tunnelUiUrl: `http://127.0.0.1:${settings.healthPort}/ui`,
@@ -3096,4 +3285,4 @@ class RuntimeOrchestrator {
   }
 }
 
-module.exports = { RuntimeOrchestrator, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };
+module.exports = { RuntimeOrchestrator, executionRole, runtimeReadiness, probeMcp, readMcpHealth, readMcpHealthObservation, readMcpActivationPreflight, activationPreflightProof, parseGitStatusPorcelainV2, parseLoopbackListenerPid, loopbackListenerPid, setMcpAuthorizedRoots };

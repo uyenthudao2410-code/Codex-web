@@ -2,12 +2,14 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {
   runReadOnlyBridge,
   runDevelopmentReadOnlyBridge,
+  canonicalJson,
   normalisedResult
 } = require('../control_plane/recovery_read_only_bridge.cjs');
 const { RPC_ACTIONS } = require('../../electron/services/recoveryIpc');
@@ -42,6 +44,20 @@ const request = Object.freeze({
 });
 
 function safeResult() {
+  const workspaceSummary = {
+    schema_version: 1,
+    project: { type: 'node', name: 'office-fixture', version: '1.0.0' },
+    entries: [{ name: 'office-marker.txt', type: 'file', size_bytes: 17, is_hidden: false, is_ignored: false }],
+    entries_truncated: false,
+    git: { is_repo: true, branch: 'main', changed_count: 0, truncated: false }
+  };
+  const canonical = (value) => {
+    if (value === null || typeof value !== 'object') return JSON.stringify(value);
+    if (Array.isArray(value)) return `[${value.map((item) => canonical(item)).join(',')}]`;
+    return `{${Object.keys(value).sort().map((key) => (
+      `${JSON.stringify(key)}:${canonical(value[key])}`
+    )).join(',')}}`;
+  };
   return {
     schema_version: 1,
     operation_kind: 'control_plane_read_only_workspace_context',
@@ -58,9 +74,19 @@ function safeResult() {
       tool_contract_sha256: 'd'.repeat(64)
     },
     facade_contract: { ...request.facade_contract },
+    workspace_summary: workspaceSummary,
+    workspace_summary_sha256: crypto.createHash('sha256').update(canonical(workspaceSummary), 'utf8').digest('hex'),
     response_sha256: 'e'.repeat(64)
   };
 }
+
+test('read-only bridge uses the same recursive canonical bytes as the Python facade', () => {
+  const summary = safeResult().workspace_summary;
+  const canonicalFromFacade = '{"entries":[{"is_hidden":false,"is_ignored":false,"name":"office-marker.txt","size_bytes":17,"type":"file"}],"entries_truncated":false,"git":{"branch":"main","changed_count":0,"is_repo":true,"truncated":false},"project":{"name":"office-fixture","type":"node","version":"1.0.0"},"schema_version":1}';
+  const sha256FromFacade = 'f334080998dda44a715267f1d6da98c7338aeb201fdb9a93313880b37c564407';
+  assert.equal(canonicalJson(summary), canonicalFromFacade);
+  assert.equal(crypto.createHash('sha256').update(canonicalJson(summary), 'utf8').digest('hex'), sha256FromFacade);
+});
 
 test('read-only bridge forwards only the pre-admitted request and strips IPC descriptor secrets', async () => {
   const calls = [];
@@ -92,6 +118,7 @@ test('read-only bridge allowlists its result so a local workspace path is never 
   const result = normalisedResult(descriptor, unsafe);
   assert.equal(Object.hasOwn(result, 'workspace'), false);
   assert.equal(JSON.stringify(result).includes('private-workspace'), false);
+  assert.equal(result.workspace_summary.entries[0].name, 'office-marker.txt');
 });
 
 test('read-only bridge rejects an installation mismatch before it opens Recovery IPC', async () => {

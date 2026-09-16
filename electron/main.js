@@ -31,6 +31,8 @@ const { ComponentRevisionTracker } = require('./services/componentRevision');
 const { activationSourceCheckpoint } = require('./services/activationClosure');
 const { startRecoveryHostApplication } = require('./recoveryHost');
 const { UiPerformanceMetrics, jsonByteLength } = require('./services/uiPerformanceMetrics');
+const { loadOrCreateDeviceIdentity } = require('./services/deviceIdentity');
+const { ControlPlaneEnrollmentService } = require('./services/controlPlaneEnrollment');
 
 // Version 1.0 has a new product identity but retains the existing encrypted
 // desktop profile so an upgrade does not orphan its runtime configuration.
@@ -61,6 +63,7 @@ const secrets = new SecretStore(runtimePaths);
 const log = new LogService(runtimePaths);
 const environment = new EnvironmentService(runtimePaths);
 const chatEvaluationJournal = new ChatEvaluationJournal();
+const controlPlaneEnrollment = new ControlPlaneEnrollmentService({ paths: runtimePaths });
 const uiRevisionTracker = new ComponentRevisionTracker({ paths: runtimePaths });
 const uiInstanceId = crypto.randomBytes(16).toString('hex');
 const uiStartedAtUnixMs = Date.now();
@@ -965,6 +968,36 @@ function registerIpc() {
     return uiPerformanceMetrics.report();
   }));
   secureHandle('workspace:hub', () => invokeSafely(async () => { const current = settings.load(); return { activeWorkspace: current.workspace, recentWorkspaces: current.recentWorkspaces || [] }; }));
+  secureHandle('control-plane:enroll', (event, serverUrl) => invokeSafely(async () => {
+    // Pairing creates a pending central enrollment record. Keep it confined
+    // to the Command Center and an Ubuntu-managed executor; it is neither a
+    // role switch nor a grant.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Pairing Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.request({
+      serverUrl,
+      deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
+    });
+  }));
+  secureHandle('control-plane:install-read-only-policy', (event, request) => invokeSafely(async () => {
+    // The node agent re-authenticates directly to Ubuntu with its local node
+    // credential. The renderer never receives that credential or an operator
+    // bearer, and a local click is still required for every install/replace.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Read-only policy Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_POLICY_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.installReadOnlyPolicy({
+      contextId: request?.contextId,
+      replaceExisting: request?.replaceExisting === true
+    });
+  }));
   secureHandle('workspace:switch', (_event, workspace) => invokeSafely(() => orchestrator.switchWorkspace(workspace)));
   secureHandle('workspace:authorized-roots', (_event, roots) => invokeSafely(() => orchestrator.updateAuthorizedRoots(roots)));
   secureHandle('workspace:choose-authorized-root', () => invokeSafely(async () => {

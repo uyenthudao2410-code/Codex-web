@@ -1,10 +1,11 @@
-"""Fail-closed MCP facade for central status and one sealed read-only intent.
+"""Fail-closed, context-scoped root MCP facade.
 
-This module is deliberately not a node relay. It gives an authenticated pilot
-client one MCP-shaped way to discover the exact eight-tool public surface,
-inspect central ``workspace_context`` state, and atomically record exactly one
-fixed read-only intent. It never calls a node, forwards a client credential,
-polls, or turns a central record into local authority.
+This module gives one authenticated, time-bounded, context-scoped MCP
+principal a way to discover the exact eight tool public surface, inspect that
+context's central state, and atomically record exactly one fixed read-only
+intent. After the separately admitted node action completes, it can expose one
+allowlisted compact receipt projection. It never calls a node, forwards a
+client credential, polls, or turns a central record into local authority.
 """
 
 from __future__ import annotations
@@ -14,12 +15,13 @@ import json
 import re
 from typing import Any
 
-from .store import ControlPlaneError, ControlPlaneStore, ValidationError
+from .node_agent import safe_workspace_summary
+from .store import ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
 
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
-FACADE_SCHEMA_VERSION = 3
-FACADE_PROFILE = "control-plane-read-only-queue-v2"
+FACADE_SCHEMA_VERSION = 5
+FACADE_PROFILE = "control-plane-scoped-read-only-relay-v4"
 PUBLIC_TOOL_NAMES = (
     "workspace_context",
     "agent_workflow",
@@ -52,8 +54,9 @@ def _tool_input_schema() -> dict[str, Any]:
     """Use one explicit envelope; it is not the local tool's byte schema.
 
     The only central mutation represented here is an authenticated, idempotent
-    request for the exact fixed read-only operation. It creates a central
-    intent/action but cannot dispatch it or grant local authority.
+    request for the exact fixed read-only operation under the caller's one
+    server-issued context grant. It creates a central intent/action but cannot
+    dispatch it or grant local authority.
     """
     return {
         "type": "object",
@@ -105,7 +108,7 @@ def _tool_input_schema() -> dict[str, Any]:
 
 def _tool_description(name: str) -> str:
     if name == "workspace_context":
-        return "Return central owner-scoped target/node status, or queue only the fixed read-only workspace_context action; no local workspace is accessed by this facade."
+        return "Return central status, queue only the fixed read-only workspace_context action, or show its verified compact completed receipt; this facade never directly accesses a local workspace."
     return "Declared public tool name. Relay is unavailable until a separate local admission bridge is accepted."
 
 
@@ -131,6 +134,64 @@ def _central_lifecycle_state(action: dict[str, Any]) -> str:
     if receipt_state in {"completed", "rejected", "failed"}:
         return str(receipt_state)
     return "settled_with_nonterminal_receipt"
+
+
+def _completed_workspace_relay(action: dict[str, Any], contract: dict[str, int | str]) -> dict[str, Any] | None:
+    """Return only the exact, bounded local summary from a completed receipt.
+
+    Receipts are untrusted network input even after they are durable.  The
+    node agent performs the first allowlist, but this final client-facing
+    boundary validates it again and never returns the raw receipt payload,
+    absolute Windows workspace, local handle, or a summary from a stale
+    facade contract.
+    """
+
+    if action.get("tool_name") != "workspace_context":
+        return None
+    receipts = action.get("receipts")
+    if not isinstance(receipts, list):
+        return None
+    for receipt in reversed(receipts):
+        if not isinstance(receipt, dict) or receipt.get("receipt_state") != "completed":
+            continue
+        raw_payload = receipt.get("payload_json")
+        if not isinstance(raw_payload, str) or len(raw_payload.encode("utf-8")) > 16 * 1024:
+            continue
+        try:
+            payload = json.loads(raw_payload)
+        except (TypeError, ValueError):
+            continue
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != 1
+            or payload.get("operation_kind") != "control_plane_read_only_workspace_context"
+            or payload.get("workspace_accessed") is not True
+            or payload.get("actor") != {"client_id": "electron-control-plane-bridge", "client_type": "electron"}
+            or payload.get("facade_contract") != contract
+            or not isinstance(payload.get("workspace_summary_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", payload["workspace_summary_sha256"].lower()) is None
+            or not isinstance(payload.get("response_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", payload["response_sha256"].lower()) is None
+        ):
+            continue
+        try:
+            summary = safe_workspace_summary(payload.get("workspace_summary"))
+        except RuntimeError:
+            continue
+        summary_sha256 = payload["workspace_summary_sha256"].lower()
+        expected_summary_sha256 = hashlib.sha256(
+            _canonical_json(summary).encode("utf-8")
+        ).hexdigest()
+        if summary_sha256 != expected_summary_sha256:
+            continue
+        return {
+            "receipt_id": receipt.get("receipt_id"),
+            "received_at_ms": receipt.get("received_at_ms"),
+            "workspace_summary": summary,
+            "workspace_summary_sha256": summary_sha256,
+            "response_sha256": payload["response_sha256"].lower(),
+        }
+    return None
 
 
 def tool_contract() -> dict[str, Any]:
@@ -204,12 +265,14 @@ class ControlPlaneMcpFacade:
             "serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
             "capabilities": {"tools": {"listChanged": False}},
             "instructions": (
-                "This facade is central status plus a queued fixed read-only intent. It never accesses a local workspace, "
-                "calls a node, or grants local admission; a separate local bridge must accept the action."
+                "This facade is context-scoped central status plus a queued fixed read-only intent and a verified compact completed "
+                "receipt projection. It never directly accesses a local workspace, calls a node, or grants local admission; a separate "
+                "local bridge must accept and complete the action."
             ),
             "_meta": {
                 "control_plane": {
                     "execution": "local_admission_required",
+                    "access_scope": "server_issued_context_grant",
                     "tool_contract": {
                         key: self.contract[key] for key in ("schema_version", "profile", "sha256")
                     },
@@ -223,6 +286,7 @@ class ControlPlaneMcpFacade:
             "_meta": {
                 "control_plane": {
                     "execution": "local_admission_required",
+                    "access_scope": "server_issued_context_grant",
                     "tool_contract": {
                         key: self.contract[key] for key in ("schema_version", "profile", "sha256")
                     },
@@ -360,19 +424,36 @@ class ControlPlaneMcpFacade:
                 )
             },
         }
+        content = "Central status only; no local workspace was accessed."
         if "action_id" in arguments:
             observation["action"] = self._action_status(
                 owner_id=owner_id,
                 context_id=context["context_id"],
                 action_id=arguments["action_id"],
             )
+            action = self.store.action_observation(owner_id=owner_id, action_id=arguments["action_id"])
+            relay = _completed_workspace_relay(action, _contract_metadata(self.contract))
+            if relay is not None:
+                observation.update({
+                    "workspace_accessed": True,
+                    "execution": "completed_read_relay",
+                    "local_admission": "completed",
+                    "workspace_read": relay,
+                })
+                content = "Compact workspace metadata was read by the selected local node and relayed through its completed receipt."
         return {
-            "content": [{"type": "text", "text": "Central status only; no local workspace was accessed."}],
+            "content": [{"type": "text", "text": content}],
             "structuredContent": observation,
             "isError": False,
         }
 
-    def _request_read_only_workspace_context(self, *, owner_id: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    def _request_read_only_workspace_context(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
         current_contract = _contract_metadata(self.contract)
         if arguments["expected_facade_contract"] != current_contract:
             raise ContractMismatchError("expected facade contract does not match this control-plane surface.")
@@ -382,6 +463,7 @@ class ControlPlaneMcpFacade:
             idempotency_key=arguments["idempotency_key"],
             expires_at_ms=arguments["expires_at_ms"],
             facade_contract=current_contract,
+            principal_id=principal_id,
         )
         action = self._action_status(
             owner_id=owner_id,
@@ -406,8 +488,24 @@ class ControlPlaneMcpFacade:
             "isError": False,
         }
 
-    def _call_tool(self, *, owner_id: str, params: dict[str, Any]) -> dict[str, Any]:
+    @staticmethod
+    def _require_granted_context(*, requested_context_id: str, granted_context_id: str) -> None:
+        if requested_context_id != granted_context_id:
+            raise PermissionError("MCP client access grant does not cover context_id.")
+
+    def _call_tool(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        granted_context_id: str,
+        params: dict[str, Any],
+    ) -> dict[str, Any]:
         name, arguments = self._arguments(params)
+        self._require_granted_context(
+            requested_context_id=arguments["context_id"],
+            granted_context_id=granted_context_id,
+        )
         if name != "workspace_context":
             return self._call_error(
                 code="LOCAL_ADMISSION_BRIDGE_REQUIRED",
@@ -415,10 +513,21 @@ class ControlPlaneMcpFacade:
                 tool_name=name,
             )
         if arguments["operation"] == "request_read_only":
-            return self._request_read_only_workspace_context(owner_id=owner_id, arguments=arguments)
+            return self._request_read_only_workspace_context(
+                owner_id=owner_id,
+                principal_id=principal_id,
+                arguments=arguments,
+            )
         return self._workspace_context(owner_id=owner_id, arguments=arguments)
 
-    def handle(self, request: dict[str, Any], *, owner_id: str) -> dict[str, Any] | None:
+    def handle(
+        self,
+        request: dict[str, Any],
+        *,
+        owner_id: str,
+        principal_id: str,
+        granted_context_id: str,
+    ) -> dict[str, Any] | None:
         """Handle one authenticated JSON-RPC request without persistent session state."""
         request_id = _response_id(request)
         try:
@@ -446,7 +555,12 @@ class ControlPlaneMcpFacade:
             elif method == "server/discover":
                 result = {**self._initialize({}), **self._tools_list()}
             elif method == "tools/call":
-                result = self._call_tool(owner_id=owner_id, params=params)
+                result = self._call_tool(
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    granted_context_id=granted_context_id,
+                    params=params,
+                )
             else:
                 return _rpc_error(request_id, -32601, f"Unknown method: {method}")
             return self._result(request, result)

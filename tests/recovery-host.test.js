@@ -16,11 +16,13 @@ const {
 const { RecoveryActionStore } = require('../electron/services/recoveryActionStore');
 const { RecoveryActivation } = require('../electron/services/recoveryActivation');
 const { RecoveryIpcClient, RecoveryIpcServer, RPC_ACTIONS } = require('../electron/services/recoveryIpc');
+const { compactWorkspaceSummary, workspaceSummaryDigest } = require('../electron/services/controlPlaneReadOnlyBridge');
 const {
   RecoveryHost,
   acquireRecoveryHostLock,
   releaseRecoveryHostLock,
-  validatePersistedReadyConnectorProof
+  validatePersistedReadyConnectorProof,
+  strictControlPlaneBridgeRuntime
 } = require('../electron/services/recoveryHost');
 const {
   recoveryHostArguments,
@@ -77,6 +79,19 @@ function activationLifecycle(operationId, sourceCheckpoint, fenced) {
   };
 }
 
+function controlPlaneWorkspaceSummary() {
+  return compactWorkspaceSummary({
+    workspace: 'E:\\private-workspace',
+    project: { type: 'node', name: 'office-fixture', version: '1.0.0' },
+    entries: [{
+      name: 'office-marker.txt', path: 'office-marker.txt', type: 'file',
+      size_bytes: 17, modified: '2026-09-16T00:00:00Z', is_hidden: false, is_ignored: false
+    }],
+    entries_truncated: false,
+    git: { is_repo: true, branch: 'main', changed_count: 0, truncated: false }
+  });
+}
+
 function fixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'webcodex-recovery-host-'));
   const dataRoot = path.join(root, 'data');
@@ -88,6 +103,33 @@ function fixture(t) {
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   return createRuntimePaths({ dataRoot, resourcesRoot, appRoot });
 }
+
+test('central bridge admission requires a fresh route and local policy rather than a Windows Tunnel connector', () => {
+  const base = {
+    executionRole: 'central_executor',
+    componentsReady: true,
+    fullyReady: true,
+    updateIncomplete: false,
+    connectorReady: false,
+    connectorContractState: 'UNAVAILABLE',
+    connectorFreshnessMode: null,
+    connectorRediscovered: false,
+    connectorRefreshRequired: false,
+    connectorAcknowledgementPending: false
+  };
+  assert.equal(strictControlPlaneBridgeRuntime({
+    ...base,
+    centralConnected: true,
+    authorityReady: true,
+    centralStatusReason: null
+  }), true);
+  assert.equal(strictControlPlaneBridgeRuntime({
+    ...base,
+    centralConnected: true,
+    authorityReady: false,
+    centralStatusReason: 'CENTRAL_LOCAL_POLICY_NOT_READY'
+  }), false);
+});
 
 function seedReadyEpoch(host, {
   freshnessMode = 'current_process_discovery',
@@ -1424,6 +1466,8 @@ test('Recovery Host admits a control-plane read-only context only from explicit 
         tool_contract_sha256: 'a'.repeat(64)
       },
       facade_contract: { ...admission.facade_contract },
+      workspace_summary: controlPlaneWorkspaceSummary(),
+      workspace_summary_sha256: workspaceSummaryDigest(controlPlaneWorkspaceSummary()),
       response_sha256: 'c'.repeat(64)
     };
   };
@@ -1448,6 +1492,8 @@ test('Recovery Host admits a control-plane read-only context only from explicit 
       tool_contract_sha256: 'a'.repeat(64)
     },
     facade_contract: { ...admission.facade_contract, sha256: 'e'.repeat(64) },
+    workspace_summary: controlPlaneWorkspaceSummary(),
+    workspace_summary_sha256: workspaceSummaryDigest(controlPlaneWorkspaceSummary()),
     response_sha256: 'c'.repeat(64)
   });
   await assert.rejects(

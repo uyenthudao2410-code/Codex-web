@@ -23,7 +23,7 @@ from typing import Any, Iterator
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
@@ -41,6 +41,19 @@ ALLOWED_TOOL_NAMES = {
     "request_permissions",
     "view_image",
 }
+
+
+def _mcp_access_token_digest(value: str) -> str:
+    """Hash a root-MCP bearer without reusing the node-secret namespace.
+
+    The raw bearer is returned exactly once when an operator creates a grant.
+    The durable store and every observation surface retain only this
+    domain-separated digest.
+    """
+
+    return hashlib.sha256(
+        b"coding-tools-control-plane:mcp-access-grant:v1\0" + str(value or "").encode("utf-8")
+    ).hexdigest()
 
 
 class ControlPlaneError(RuntimeError):
@@ -558,6 +571,7 @@ class ControlPlaneStore:
                 );
                 CREATE TABLE IF NOT EXISTS mcp_read_only_intents (
                     owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL,
                     idempotency_key TEXT NOT NULL,
                     intent_digest TEXT NOT NULL,
                     facade_schema_version INTEGER NOT NULL,
@@ -570,11 +584,23 @@ class ControlPlaneStore:
                     UNIQUE(request_id),
                     UNIQUE(action_id)
                 );
+                CREATE TABLE IF NOT EXISTS mcp_access_grants (
+                    grant_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL,
+                    context_id TEXT NOT NULL REFERENCES contexts(context_id),
+                    token_digest TEXT NOT NULL UNIQUE,
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER
+                );
                 CREATE INDEX IF NOT EXISTS actions_node_delivery_idx
                     ON actions(device_id, delivery_state, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS receipts_action_idx ON receipts(action_id, received_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_read_only_intents_action_idx
                     ON mcp_read_only_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_access_grants_context_idx
+                    ON mcp_access_grants(context_id, expires_at_ms);
                     """.split(";"),
                 ):
                     connection.execute(statement)
@@ -613,6 +639,13 @@ class ControlPlaneStore:
                     connection.execute("ALTER TABLE mcp_read_only_intents ADD COLUMN facade_profile TEXT NOT NULL DEFAULT ''")
                 if "facade_contract_sha256" not in intent_columns:
                     connection.execute("ALTER TABLE mcp_read_only_intents ADD COLUMN facade_contract_sha256 TEXT NOT NULL DEFAULT ''")
+                # Earlier façade requests predate a root-MCP client identity.
+                # Keep that history inspectable, but never let it authenticate
+                # a new scoped grant or be mistaken for a current principal.
+                if "principal_id" not in intent_columns:
+                    connection.execute(
+                        "ALTER TABLE mcp_read_only_intents ADD COLUMN principal_id TEXT NOT NULL DEFAULT 'legacy_unscoped'"
+                    )
                 # A pre-v2 receipt did not persist an attempt binding. Retain it as
                 # historical evidence but never infer that a new receipt replays it.
                 connection.execute(
@@ -1323,6 +1356,188 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return self.action(owner_id=owner_id, action_id=action_id)
 
+    def create_mcp_access_grant(
+        self,
+        *,
+        owner_id: str,
+        context_id: str,
+        principal_id: str,
+        expires_at_ms: int,
+    ) -> dict[str, Any]:
+        """Issue one context-bound bearer for the root MCP ingress.
+
+        This is deliberately not the operator bearer and does not create a
+        local action.  Its audience is one external MCP client/controller,
+        its target is one existing context, and closing that context or
+        revoking its binding/node makes the bearer unusable even before the
+        recorded expiry.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        context_id = _text(context_id, "context_id")
+        principal_id = _text(principal_id, "principal_id")
+        if isinstance(expires_at_ms, bool):
+            raise ValidationError("MCP access grant expiry is invalid.")
+        try:
+            expires_at_ms = int(expires_at_ms)
+        except (TypeError, ValueError) as error:
+            raise ValidationError("MCP access grant expiry is invalid.") from error
+
+        access_token = f"mcp_{secrets.token_urlsafe(32)}"
+        token_digest = _mcp_access_token_digest(access_token)
+        grant_id = f"mcpgrant_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            now = self.clock()
+            live = connection.execute(
+                """
+                SELECT
+                    c.context_id, c.owner_id AS context_owner_id,
+                    c.expires_at_ms AS context_expires_at_ms, c.closed_at_ms,
+                    b.owner_id AS binding_owner_id, b.revoked_at_ms AS binding_revoked_at_ms,
+                    n.owner_id AS node_owner_id, n.revoked_at_ms AS node_revoked_at_ms
+                FROM contexts c
+                JOIN bindings b ON b.binding_id = c.binding_id
+                JOIN nodes n ON n.device_id = c.device_id
+                WHERE c.context_id = ?
+                """,
+                (context_id,),
+            ).fetchone()
+            if live is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("context does not exist.")
+            if (
+                live["context_owner_id"] != owner_id
+                or live["binding_owner_id"] != owner_id
+                or live["node_owner_id"] != owner_id
+            ):
+                connection.execute("ROLLBACK")
+                raise PermissionError("context authority does not match this principal.")
+            if (
+                live["closed_at_ms"] is not None
+                or live["binding_revoked_at_ms"] is not None
+                or live["node_revoked_at_ms"] is not None
+                or expires_at_ms <= now
+                or expires_at_ms > live["context_expires_at_ms"]
+            ):
+                connection.execute("ROLLBACK")
+                raise ConflictError("MCP access grant authority is not live.")
+            connection.execute(
+                """
+                INSERT INTO mcp_access_grants(
+                    grant_id, owner_id, principal_id, context_id, token_digest,
+                    created_at_ms, expires_at_ms, revoked_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (grant_id, owner_id, principal_id, context_id, token_digest, now, expires_at_ms),
+            )
+            self._event(
+                connection,
+                "mcp_access_grant",
+                grant_id,
+                "mcp_access_grant_created",
+                {"principal_id": principal_id, "context_id": context_id, "expires_at_ms": expires_at_ms},
+            )
+            connection.execute("COMMIT")
+        return {
+            "grant_id": grant_id,
+            "owner_id": owner_id,
+            "principal_id": principal_id,
+            "context_id": context_id,
+            "expires_at_ms": expires_at_ms,
+            # This is the only raw-token return path. It must be handled by
+            # the protected caller and never copied into an observation/log.
+            "access_token": access_token,
+        }
+
+    def authenticate_mcp_access_token(self, *, access_token: str) -> dict[str, Any]:
+        """Resolve one unrevoked, still-live root-MCP bearer to its scope."""
+
+        token_digest = _mcp_access_token_digest(access_token)
+        with self._connection() as connection:
+            row = connection.execute(
+                """
+                SELECT
+                    g.grant_id, g.owner_id, g.principal_id, g.context_id,
+                    g.token_digest, g.expires_at_ms, g.revoked_at_ms,
+                    c.owner_id AS context_owner_id, c.expires_at_ms AS context_expires_at_ms,
+                    c.closed_at_ms,
+                    b.owner_id AS binding_owner_id, b.revoked_at_ms AS binding_revoked_at_ms,
+                    n.owner_id AS node_owner_id, n.revoked_at_ms AS node_revoked_at_ms
+                FROM mcp_access_grants g
+                JOIN contexts c ON c.context_id = g.context_id
+                JOIN bindings b ON b.binding_id = c.binding_id
+                JOIN nodes n ON n.device_id = c.device_id
+                WHERE g.token_digest = ?
+                """,
+                (token_digest,),
+            ).fetchone()
+        if row is None or not hmac.compare_digest(str(row["token_digest"]), token_digest):
+            raise PermissionError("MCP client authentication failed.")
+        now = self.clock()
+        if (
+            row["revoked_at_ms"] is not None
+            or row["expires_at_ms"] <= now
+            or row["context_expires_at_ms"] <= now
+            or row["closed_at_ms"] is not None
+            or row["binding_revoked_at_ms"] is not None
+            or row["node_revoked_at_ms"] is not None
+            or row["context_owner_id"] != row["owner_id"]
+            or row["binding_owner_id"] != row["owner_id"]
+            or row["node_owner_id"] != row["owner_id"]
+        ):
+            raise PermissionError("MCP client access grant is no longer live.")
+        return {
+            key: row[key]
+            for key in ("grant_id", "owner_id", "principal_id", "context_id", "expires_at_ms")
+        }
+
+    def list_mcp_access_grants(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """Return redacted grant metadata for operator lifecycle control."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT grant_id, owner_id, principal_id, context_id,
+                       created_at_ms, expires_at_ms, revoked_at_ms
+                FROM mcp_access_grants
+                WHERE owner_id = ?
+                ORDER BY created_at_ms, grant_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def revoke_mcp_access_grant(self, *, owner_id: str, grant_id: str) -> dict[str, Any]:
+        """Revoke a root-MCP bearer without altering unrelated node authority."""
+
+        owner_id = _text(owner_id, "owner_id")
+        grant_id = _text(grant_id, "grant_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute("SELECT * FROM mcp_access_grants WHERE grant_id = ?", (grant_id,)).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("MCP access grant does not exist.")
+            if row["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("MCP access grant is not owned by this principal.")
+            if row["revoked_at_ms"] is None:
+                now = self.clock()
+                connection.execute("UPDATE mcp_access_grants SET revoked_at_ms = ? WHERE grant_id = ?", (now, grant_id))
+                self._event(connection, "mcp_access_grant", grant_id, "mcp_access_grant_revoked", {})
+            result = connection.execute(
+                """
+                SELECT grant_id, owner_id, principal_id, context_id,
+                       created_at_ms, expires_at_ms, revoked_at_ms
+                FROM mcp_access_grants WHERE grant_id = ?
+                """,
+                (grant_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return _row(result) or {}
+
     def request_mcp_read_only_workspace_context(
         self,
         *,
@@ -1331,6 +1546,7 @@ class ControlPlaneStore:
         idempotency_key: str,
         expires_at_ms: int,
         facade_contract: dict[str, Any],
+        principal_id: str = "operator_browser",
     ) -> dict[str, Any]:
         """Atomically create one fixed read-only request and sealed action.
 
@@ -1342,6 +1558,7 @@ class ControlPlaneStore:
         call can happen.
         """
         owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
         context_id = _text(context_id, "context_id")
         idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
         if isinstance(expires_at_ms, bool):
@@ -1354,7 +1571,8 @@ class ControlPlaneStore:
 
         arguments = dict(MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS)
         intent = {
-            "kind": "mcp_facade_read_only_workspace_context_v2",
+            "kind": "mcp_facade_read_only_workspace_context_v4",
+            "principal_id": principal_id,
             "context_id": context_id,
             "tool_name": "workspace_context",
             "arguments": arguments,
@@ -1503,13 +1721,14 @@ class ControlPlaneStore:
             connection.execute(
                 """
                 INSERT INTO mcp_read_only_intents(
-                    owner_id, idempotency_key, intent_digest,
+                    owner_id, principal_id, idempotency_key, intent_digest,
                     facade_schema_version, facade_profile, facade_contract_sha256,
                     request_id, action_id, created_at_ms
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     owner_id,
+                    principal_id,
                     idempotency_key,
                     intent_digest,
                     facade_contract["schema_version"],
@@ -1855,6 +2074,7 @@ class ControlPlaneStore:
                     "actions",
                     "receipts",
                     "mcp_read_only_intents",
+                    "mcp_access_grants",
                 )
             }
         return {

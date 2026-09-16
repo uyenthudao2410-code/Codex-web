@@ -11,6 +11,7 @@ readonly BACKUP_DIR="${CONTROL_PLANE_BACKUP_DIR:-}"
 readonly BACKUP_STATUS="$BACKUP_DIR/last-automatic-backup.json"
 readonly HEALTH_STATUS="$BACKUP_DIR/last-healthcheck.json"
 readonly HEALTH_URL="${CONTROL_PLANE_HEALTH_URL:-}"
+readonly EXPECTED_ADMISSION="${CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION:-}"
 readonly MAX_BACKUP_AGE_SECONDS=8100 # two hourly periods plus scheduler jitter
 
 if [[ ! -f "$PACKAGE_ROOT/control_plane/deployment_verifier.py" ]]; then
@@ -19,6 +20,10 @@ if [[ ! -f "$PACKAGE_ROOT/control_plane/deployment_verifier.py" ]]; then
 fi
 if [[ "$BACKUP_DIR" != /* || -z "$HEALTH_URL" ]]; then
   printf 'control-plane healthcheck requires CONTROL_PLANE_BACKUP_DIR and CONTROL_PLANE_HEALTH_URL\n' >&2
+  exit 2
+fi
+if [[ "$EXPECTED_ADMISSION" != "open" && "$EXPECTED_ADMISSION" != "recovery" ]]; then
+  printf 'control-plane healthcheck requires CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION=open|recovery\n' >&2
   exit 2
 fi
 
@@ -38,7 +43,7 @@ deployment_receipt=$(PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$PACKAGE_ROOT" \
   /usr/bin/python3 -B -m control_plane.deployment_verifier \
   --health-url "$HEALTH_URL" \
   --expected-package-source-sha256 "$package_sha256" \
-  --expected-admission open)
+  --expected-admission "$EXPECTED_ADMISSION")
 
 status_tmp="$BACKUP_DIR/.last-healthcheck.$$.json"
 /usr/bin/python3 - "$status_tmp" "$BACKUP_STATUS" "$deployment_receipt" "$MAX_BACKUP_AGE_SECONDS" <<'PY'
