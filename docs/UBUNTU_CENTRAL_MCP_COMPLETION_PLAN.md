@@ -1027,17 +1027,17 @@ identity rõ ràng. Public release/signing certificate là quyết định riên
 | Tiêu chí | Bằng chứng mạnh nhất hiện có | Kết luận / gate kế tiếp |
 | --- | --- | --- |
 | Root Tunnel/MCP Ubuntu | `codex-control-plane.service` active: root MCP chỉ bind loopback `127.0.0.1:8766` (anonymous POST `403`), Tailnet Console `:8765/mcp` trả `404`; `tunnel-client v0.0.14` Linux đã verify checksum và cài private, nhưng profile/Tunnel ID chưa có | **Chưa đạt primary Tunnel**; cần Tunnel OpenAI mới/được chuyển chính thức, runtime credential local, profile HTTP tới `127.0.0.1:8766/mcp`, `doctor`, rồi client thật |
-| Windows không cần key/Tunnel | Candidate `9cc2d96` đã build/cài trên `DESKTOP-63643J4`; focused Windows Electron/recovery suite 113/113 pass, `app.asar` installed khớp candidate, Supervisor packaged healthy | **Chưa central live**; phải chạy nút full-clean handoff, sau đó pair/bind/context/policy Ubuntu thật |
-| Executor central không cloud Tunnel | Runtime/lifecycle/supervisor source + packaged agent đã có; Supervisor office báo `waiting_for_pairing`, không spawn agent | **Chưa đạt**; role Windows vẫn chưa handoff nên chưa có bằng chứng central startup không Tunnel trên office |
+| Windows không cần key/Tunnel | Office đã handoff live sang `central_executor`; candidate source `74056b8`, `READY`, local MCP hoạt động, primary/recovery Tunnel PID null và không có tunnel-client của app | **Đạt lát cắt onboarding office**; không chứng minh controller AI, dispatch hoặc root tool parity |
+| Executor central không cloud Tunnel | Supervisor healthy, một agent PID ổn định, heartbeat authenticated liên tục; Windows `fullyReady/centralConnected/authorityReady=true`, Ubuntu báo node ready | **Live có policy metadata read-only 24h**; chưa có 24h soak hoặc fault/logon matrix |
 | Server-owned AI/controller | Chỉ có plan/contract; chưa có provider/model/budget/lease adapter | **Chưa bắt đầu**; cần quyết định provider, consent dữ liệu và budget |
 | Read/write/process/stop | Một relay `workspace_context` read-only có source proof | **Chưa đạt**; bảy tool và Job lifecycle thực chưa có |
-| UI vận hành | Ubuntu private Console active; Windows Command Center candidate đã cài và có nút handoff được manager-IPC fence | **Một phần packaged**, chưa click handoff/pair/E2E đúng UI interactive |
+| UI vận hành | Ubuntu Console active; Windows UI có status/retry truthful, IPC handoff và pairing/policy live đã thực hiện qua cùng backend được xác thực | **Một phần live**; UI đã có canary backend, không gọi đây là visual click-through hay AI E2E |
 | Eight-tool parity | Tám tên công khai, chỉ một lane relay read-only | **Chưa đạt**; không xem discovery là capability parity |
 | Fault/offline/rollback | Một số source fixtures, SQLite backup/health source proof | **Chưa nghiệm thu** trên package/node thật |
-| Multi-node đúng đích | Registry live chỉ có node cũ + enrollment pending; office chưa onboarding thật | **Chưa đạt** |
+| Multi-node đúng đích | Office mới được enroll đúng identity, tách biệt DaoChienThang cũ; office heartbeat ready | **Chưa đủ multi-node E2E**; máy cũ chưa canary trên central role |
 | Upgrade/backup/soak | Ubuntu verified release/SQLite snapshot trước deployment; Windows upgrade cài cùng user và Supervisor được reinstall, heartbeat healthy | **Chưa đạt**; không có rollback exercise hay 24h soak |
 | Tác vụ người dùng thật | Không có action/receipt live | **Chưa đạt** |
-| Delivery/runbook | `main@9cc2d96` đã push GitHub; delivery/secret guard pass trước push; candidate installer SHA-256 và unsigned state đã xác minh | **Một phần delivery**; chưa có tagged/public release, tunnel/agent E2E hay walkthrough vận hành |
+| Delivery/runbook | Code hotfix `main@74056b8` đã push GitHub; delivery/secret guard pass; final installer SHA-256 và unsigned state đã xác minh, installed bundle byte-match | **Một phần delivery**; chưa tagged/public release, OpenAI Tunnel E2E hoặc walkthrough đầy đủ |
 
 G4 chỉ là mốc đọc thử; G5 chỉ là technical execution; **không đóng mục tiêu
 tổng thể trước G6–G9 và checklist này**. Nếu external credential/hardware chưa
@@ -1117,6 +1117,40 @@ Kiểm tra bền vững phát hiện lỗi tiếp theo: Supervisor PowerShell d�
 Hotfix và postflight dài hơn TTL heartbeat phải đóng điểm này trước handoff cuối.
 `npm audit --omit=dev` còn advisory high cho `js-yaml` có sẵn; không trộn upgrade
 dependency ngoài phạm vi vào bản sửa migration này.
+
+Checkpoint đóng lỗi chuyển vai trò/heartbeat (16-09-2026, 22:16 +07):
+
+- Hotfix Supervisor `e0e74fb` + `74056b8` sửa biến `$Host`, độ dài secret bị
+  so sánh chuỗi, IPv6 .NET 4.8 và việc đọc PID từ OrderedDictionary. Test thật
+  PowerShell kiểm hai chu kỳ chỉ spawn một agent; full Windows Supervisor
+  **16/16 pass**. Không sửa gate authentication hoặc local policy.
+- Đã deploy duy nhất Supervisor resource và reinstall đúng same-user Scheduled
+  Task từ bytes đã kiểm; không restart local MCP/Host thêm lần nữa. Final
+  installer `74056b8` build thành công, SHA-256
+  `7c5ae465154b56928a11db51999e80e4ae9ee4450afe01096654664d6da90dc1`,
+  **120962894 bytes**, `NotSigned`. Installed EXE, app.asar và **290 bundled
+  resource files** khớp exact candidate, không có mismatch.
+- Final candidate packaged smoke pass, giữ production descriptor và không đổi
+  Scheduled Task của production trong smoke. Smoke sanitation trên cây đã chạy
+  gặp `__pycache__` do Python runtime sinh ra; không xóa cache/evidence để làm
+  xanh. Thay vào đó ghi riêng hash verification tất cả source bytes và live
+  postflight. Đây không phải isolated installed-smoke PASS giả.
+- Hai mẫu live `15:14:38Z` và `15:16:25Z` giữ cùng agent **31504**, Supervisor
+  healthy/running, route age **5581 ms / 13061 ms**, vượt cửa sổ stale 60 giây
+  nhưng vẫn fresh. Windows `central_executor`, MCP ON, Tunnel OFF,
+  `fullyReady=true`, epoch READY/OPEN; Host revision current. Ubuntu quan sát
+  node office `readiness=ready`, policy enabled, last-seen age 13555 ms.
+- Primary và recovery Tunnel PID null; không có process tunnel-client của app.
+  Policy metadata read-only hết hạn **17-09-2026 22:02:44 +07**, không tự gia hạn.
+  Quan sát ACL của config/policy không có allow cho Everyone, Authenticated
+  Users hoặc Users; không đổi claim `windows_acl_verified=false` trong receipt.
+- Ubuntu global admission vẫn `recovery`; không gửi work request, không gọi model,
+  không mở Tunnel OpenAI, không thêm quyền write/exec. Đã yêu cầu focus Command
+  Center của đúng UI instance; native visual click-through chưa được quan sát.
+
+Kết luận: lỗi người dùng báo đã được sửa, cài và chứng minh live cả đổi role lẫn
+heartbeat dài hơn TTL. Toàn bộ kiến trúc vẫn chưa complete: cần primary Tunnel
+Ubuntu/credential, root execution/controller capability, tác vụ thật và soak.
 
 Đã chốt: Ubuntu `svhome` là server; Tunnel/MCP gốc ở server; Windows office
 là node đầu; có UI; không bắt node tự cấu hình OpenAI; installer unsigned cũ
