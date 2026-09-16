@@ -144,6 +144,7 @@ contextBridge.exposeInMainWorld('mcpAssistant', {
   start: () => ipcRenderer.invoke('runtime:start'),
   stop: () => ipcRenderer.invoke('runtime:stop'),
   restart: () => ipcRenderer.invoke('runtime:restart'),
+  handoffCentralExecutor: () => ipcRenderer.invoke('runtime:handoff-central-executor'),
   activationPreflight: (component, allowAcceptancePending = false) => ipcRenderer.invoke('code:activation-preflight', component, allowAcceptancePending),
   activateUpdate: (component, allowAcceptancePending = false) => ipcRenderer.invoke('code:activate-update', component, allowAcceptancePending),
   activationStatus: (operationId) => ipcRenderer.invoke('code:activation-status', operationId),

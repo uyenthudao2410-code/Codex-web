@@ -273,6 +273,11 @@
                 <label class="choice"><input id="replaceControlPlanePolicy" type="checkbox"><span><b>Thay policy read-only cục bộ đang có</b><small>Chỉ chọn khi gia hạn hoặc đổi context; mỗi lần cài vẫn cần context Ubuntu còn hiệu lực.</small></span></label>
                 <div class="input-action"><button id="installControlPlaneReadOnlyPolicy" type="button">Cài policy read-only</button><small id="controlPlanePolicyStatus">Pairing, binding, context và policy là bốn bước độc lập. Policy này không cấp ghi hay thực thi lệnh.</small></div>
               </div>
+              <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
+                <b>Chuyển vai trò máy này sang executor Ubuntu</b>
+                <p>Thao tác này chạy một full-clean handoff có checkpoint: dừng dịch vụ Windows cũ trước, rồi chuyển máy sang chỉ chạy MCP/workspace cục bộ. Runtime API Key và OpenAI Tunnel đang lưu tại Windows không được gửi sang Ubuntu và sẽ không còn được dùng. Sau đó vẫn phải pairing và cài policy do Ubuntu cấp.</p>
+                <div class="inline-actions"><button class="primary-button" id="handoffCentralExecutor" type="button">Chuyển sang executor Ubuntu</button></div>
+              </div>
               <div data-direct-only>
               <div class="panel-title"><div><h3>Định danh OpenAI Tunnel</h3><p>Khóa mật mã được mã hóa lưu trữ trong tiến trình chính, giao diện và nhật ký không bao giờ đọc văn bản thuần.</p></div><span class="security-chip">Mã hóa Windows</span></div>
               <label class="field"><span>Runtime API Key</span><div class="input-action"><input id="runtimeKeyInput" type="password" autocomplete="off" placeholder="Dán Runtime API Key"><button id="saveRuntimeKey">Lưu an toàn</button></div><small id="runtimeKeyHint">Chưa lưu</small></label>

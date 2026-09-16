@@ -26,6 +26,7 @@ function createPreviewApi() {
     saveRuntimeKey: () => ok(snapshot.secrets), removeRuntimeKey: () => ok(snapshot.secrets), regenerateMcpToken: () => ok(snapshot.secrets),
     requestControlPlaneEnrollment: () => ok({ enrollment_id: 'enroll_preview_0001', device_id: snapshot.device.device_id, state: 'pending_operator_approval' }),
     installControlPlaneReadOnlyPolicy: () => ok({ enabled: true, expires_at_ms: Date.now() + 60 * 60 * 1000, policy_sha256: 'a'.repeat(64), runtime_mode: 'packaged', windows_acl_verified: false }),
+    handoffCentralExecutor: () => { snapshot.settings.executionRole = 'central_executor'; snapshot.status.executionRole = 'central_executor'; snapshot.status.tunnelRunning = false; snapshot.status.fullyReady = false; return ok(snapshot); },
     start: () => ok(snapshot), stop: () => ok(snapshot), restart: () => ok(snapshot), acknowledgeConnectorContract: () => ok(snapshot),
     logs: () => ok([{ time: new Date().toISOString(), level: 'info', message: 'Chế độ xem trước giao diện tĩnh' }]), clearLogs: () => ok(true),
     taskState: () => ok({ exists: false, state: null }), clearTaskState: () => ok(true), pauseTask: () => ok({}), resumeTask: () => ok({}), stopTask: () => ok({}), taskHistory: () => ok([]), performanceTrace: () => ok(null), clearPerformanceTrace: () => ok(true), recordUiPerformance: () => ok({ accepted: false }), uiPerformance: () => ok(null),
@@ -85,7 +86,7 @@ function toast(title, message = '', type = 'success') {
 function setBusy(value, overlay = false) {
   state.busy = value;
   $('#busyOverlay').classList.toggle('visible', value && overlay);
-  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair', '#requestControlPlaneEnrollment', '#installControlPlaneReadOnlyPolicy'].forEach((selector) => {
+  ['#topStartButton', '#heroStartButton', '#deployNow', '#overviewRestart', '#overviewStop', '#deviceStart', '#deviceRestart', '#deviceStop', '#deviceRepair', '#handoffCentralExecutor', '#requestControlPlaneEnrollment', '#installControlPlaneReadOnlyPolicy'].forEach((selector) => {
     const element = $(selector);
     if (element) element.disabled = value;
   });
@@ -935,6 +936,28 @@ async function installControlPlaneReadOnlyPolicy() {
   }
 }
 
+async function handoffCentralExecutor() {
+  if (isCentralExecutor(state.snapshot?.settings)) {
+    toast('Máy này đã là executor Ubuntu', 'Không khởi chạy lại handoff vai trò. Hãy kiểm tra pairing và policy Ubuntu.', 'success');
+    return state.snapshot;
+  }
+  setBusy(true, true);
+  try {
+    // Main captures the Recovery Host checkpoint and owns the full-clean
+    // activation. No Windows Tunnel/key/profile input crosses this IPC.
+    const result = unwrap(await api.handoffCentralExecutor());
+    renderSnapshot(result, { forceForms: true });
+    toast('Đã chuyển sang executor Ubuntu', 'Windows không còn dùng OpenAI Tunnel cục bộ. Tiếp theo gửi pairing tới Ubuntu và cài policy được cấp.', 'success');
+    return result;
+  } catch (error) {
+    toast('Không thể chuyển sang executor Ubuntu', error.message, 'error');
+    throw error;
+  } finally {
+    setBusy(false);
+    await refreshSnapshot({ forceForms: true });
+  }
+}
+
 function updateProgress(payload) {
   const percent = Math.max(0, Math.min(100, Number(payload.percent || 0)));
   $('#progressPercent').textContent = `${percent}%`;
@@ -1223,6 +1246,10 @@ function bindEvents() {
   $('#overviewRestart').addEventListener('click', () => runRuntime('restart'));
   $('#overviewStop').addEventListener('click', () => runRuntime('stop'));
   $('#deployNow').addEventListener('click', deployNow);
+  $('#handoffCentralExecutor')?.addEventListener('click', async () => {
+    try { await handoffCentralExecutor(); }
+    catch (_) { /* The handoff function has already shown a redacted error. */ }
+  });
   $('#requestControlPlaneEnrollment')?.addEventListener('click', async () => {
     try { await requestControlPlaneEnrollment(); }
     catch (error) { toast('Không thể gửi pairing Ubuntu', error.message, 'error'); }

@@ -257,6 +257,31 @@ dây chuyền. Validation: `tests/full-clean-activation.test.js` **58/58**,
 role-handoff UI có kiểm soát, pairing/policy thật, cutover office node và
 rollback/soak. Không thay Settings hay Tunnel trên máy đang dùng.
 
+### Checkpoint triển khai G2-E — role-handoff UI có kiểm soát, chờ package Windows (16-09-2026)
+
+Khoảng trống UI ở G2-D đã được đóng trong source. Khi Windows còn
+`direct_legacy`, Connections hiện một nút duy nhất **Chuyển sang executor
+Ubuntu**. IPC không nhận role, key, Tunnel, workspace hoặc tham số từ renderer;
+nó chỉ nhận từ Manager, lấy checkpoint Recovery Host mới qua
+`fullCleanRestartOptions()`, rồi yêu cầu đúng
+`executionRole=central_executor` với mode
+`full_clean_execution_role_handoff`. `FullCleanActivation` vẫn là nơi duy nhất
+persist role sau fence/census; Settings/UI không thể tự set cờ role.
+
+Nút biến mất sau khi role central được xác nhận. Cấu hình direct cũ không bị
+hiển thị hoặc gửi tới Ubuntu và không còn được Runtime đọc; nó chỉ còn là dữ
+liệu rollback có kiểm soát. Bước kế tiếp bắt buộc vẫn là pairing, binding,
+context và policy từ Ubuntu; handoff không tự cấp route evidence, action grant
+hay quyền ghi/thực thi.
+
+Proof source: syntax Electron/renderer, `tests/control-center-manager.test.js`,
+`tests/recovery-plane.test.js`, `tests/dev-ui-lifecycle.test.js`,
+`tests/full-clean-activation.test.js`, `tests/activation-epoch.test.js`,
+`tests/runtime-lifecycle.test.js`, `tests/settings.test.js` và các test
+control-plane focused đã pass trên Ubuntu. Chưa coi là rollout: còn phải commit,
+đóng gói/cài candidate Windows, thực thi nút handoff trên `DESKTOP-63643J4`,
+rồi đo pairing/policy/route proof live trước khi mở bất kỳ admission nào.
+
 ### Checkpoint triển khai G3-A — read-only agent bền vững source/test, chưa onboarding (16-09-2026)
 
 Node adapter có thêm `run-read-only-agent`: process cùng user chạy dài hạn

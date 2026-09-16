@@ -1215,6 +1215,24 @@ function registerIpc() {
     secrets.set('mcpAuthToken', crypto.randomBytes(32).toString('base64url'));
     return secrets.status();
   }));
+  secureHandle('runtime:handoff-central-executor', (event) => invokeSafely(async () => {
+    // The renderer may request this one-way role change only from the local
+    // Manager. It never supplies a role, credential, Tunnel, or workspace:
+    // FullCleanActivation owns the durable transition after the canonical
+    // Recovery Host source checkpoint has been captured.
+    assertManagerIpc(event);
+    const current = settings.load();
+    if (current.executionRole === 'central_executor') {
+      return orchestrator.snapshot({ force: true, reason: 'central-executor-handoff-already-active' });
+    }
+    const restart = await fullCleanRestartOptions();
+    return orchestrator.restart({
+      ...restart,
+      reason: 'operator_central_executor_handoff',
+      executionRole: 'central_executor',
+      mode: 'full_clean_execution_role_handoff'
+    });
+  }));
   secureHandle('runtime:start', () => invokeSafely(() => orchestrator.start()));
   secureHandle('runtime:stop', () => invokeSafely(() => orchestrator.stop()));
   secureHandle('runtime:restart', () => invokeSafely(async () => orchestrator.restart(await fullCleanRestartOptions())));
