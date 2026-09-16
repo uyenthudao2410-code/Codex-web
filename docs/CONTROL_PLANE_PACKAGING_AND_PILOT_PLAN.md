@@ -42,10 +42,15 @@ giữ hai phép kiểm byte-exact riêng: tree `resources` và đúng năm tệp
 Trên `main@e0b5bbd…`, focused verifier đạt `8/8`; `electron-builder --win nsis`
 thành công; `node scripts/packaged-recovery-smoke.js` đạt `ok:true` với 13
 resource bắt buộc, isolated user-data, Recovery host/MCP healthy và Supervisor
-fail-closed. Artifact là `coding-tools-mcp-setup-1.0.0.exe`, `121767504` bytes,
-SHA-256 `ab376d7b9f1517cc0077d1d7213b874236a4fb5a85148c089d7cec74f750cb54`.
-`Get-AuthenticodeSignature` trả `NotSigned`; đây là candidate đã build/smoke,
-không phải installed, upgrade, published hay signed release proof.
+fail-closed. `node scripts/installed-recovery-smoke.js` sau đó cài đúng
+installer vào scratch path, xác nhận registration tạm, chạy cùng packaged
+smoke, gỡ file/registration với exit `0`, và chứng minh production Recovery
+descriptor/Scheduled Task không đổi. Artifact là
+`coding-tools-mcp-setup-1.0.0.exe`, `121767504` bytes, SHA-256
+`ab376d7b9f1517cc0077d1d7213b874236a4fb5a85148c089d7cec74f750cb54`.
+`Get-AuthenticodeSignature` trả `NotSigned`; đây là candidate đã build và có
+isolated-install smoke, không phải office upgrade, published hay signed release
+proof.
 
 **Fingerprint ứng viên Ubuntu (worktree dirty, chưa triển khai):**
 `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`
