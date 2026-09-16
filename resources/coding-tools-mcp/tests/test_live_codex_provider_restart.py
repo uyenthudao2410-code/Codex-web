@@ -79,7 +79,7 @@ class LiveCodexProviderRestartTests(unittest.TestCase):
                         profile="packet",
                         model="gpt-5.4-mini",
                         effort="low",
-                        wait_ms=4_000,
+                        deadline_ms=4_000,
                     )
                     observation = resumed.get("observation") or {}
                     self.assertTrue(observation.get("terminal"))
