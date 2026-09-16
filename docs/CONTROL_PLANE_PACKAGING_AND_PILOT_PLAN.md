@@ -10,11 +10,13 @@ identity/status/read-only bridge và package manifest/verifier. W3 có source +
 focused HTTP proof cho UI same-origin: session in-memory, redacted overview,
 CSRF/Origin, approval enrollment identity-only, admission control, action/receipt
 lifecycle không payload, policy observation redacted và fixed browser read-only
-canary; chưa có browser/HTTPS proof thật. W4 có
-source policy provisioning packaged, nhưng chưa có Electron onboarding, actual
-enrollment hay canary. Đã chạy unpacked Linux resource build + exact adapter
-manifest check từ source hiện hành; Windows-only smoke bị skip trên Ubuntu, nên
-chưa có NSIS/Windows candidate proof. Chưa cài/activate trên Windows, chưa
+canary; chưa có browser/HTTPS proof thật. W4 có source policy provisioning
+packaged, nhưng chưa có Electron onboarding, actual enrollment hay canary. Sau
+transfer Git bundle có kiểm tra hash, Windows candidate `main@e0b5bbd…` đã chạy
+focused package verifier `8/8`, Electron Builder NSIS thành công và packaged
+Recovery smoke thành công. Installer có SHA-256 được ghi bên dưới nhưng trạng
+thái Authenticode là `NotSigned`, nên không được cài lên office node. Ubuntu
+vẫn chạy revision/schema cũ; SSH deploy bị từ chối public-key, vì thế chưa
 restart Ubuntu/Windows, chưa mở ingress, chưa gửi dữ liệu ra ngoài hay publish
 release. W4–W8 và RC-A/RC-B vẫn chưa đạt; W3 chỉ được đóng sau evidence
 HTTPS/browser thật và telemetry/local-observation contract. Phải xác nhận lại
@@ -25,13 +27,25 @@ cho HTTP UI đạt `20/20`, store/node-agent + cross-language policy digest đ�
 `56/56`; deployment-health verifier đạt `4/4`; focused Node cho recovery/adapter/bridge đạt `80/80`; verifier bundle
 đạt `8/8`. `npm run test:recovery:packaged` đã tạo `dist/linux-unpacked` và
 exact-resource verifier xác nhận đúng năm adapter resource; smoke chủ động
-`skip` vì chỉ có ý nghĩa trên Windows. `npm test` không phải release gate xanh:
+`skip` vì chỉ có ý nghĩa trên Windows. `npm test` trên Ubuntu không phải release gate xanh:
 `691 pass / 23 fail / 53 cancelled / 15 skipped`. Một phần lỗi là môi trường
 Ubuntu không có executable/hành vi Windows (`python`, `where.exe`, `netstat.exe`,
 đường dẫn Windows); phần còn lại gồm assertion supervisor/MCP/workspace. Chúng
 phải được tái lập và phân loại trên Windows candidate sạch trước W5; không đổi
-oracle để làm xanh trên Ubuntu. Không có NSIS artifact, installed smoke hay
-Windows package proof từ các lệnh này.
+oracle để làm xanh trên Ubuntu.
+
+**Windows candidate proof (16-09-2026):** `npm run dist` tại
+`main@1f585b9…` đã chạy hết test lane (Python `1158/1158` pass trong 29 phút
+03 giây) rồi phát hiện verifier after-pack tự mâu thuẫn: adapter
+`resources/control-plane` bị so với source root `resources`. Sửa `0e07395…`
+giữ hai phép kiểm byte-exact riêng: tree `resources` và đúng năm tệp adapter.
+Trên `main@e0b5bbd…`, focused verifier đạt `8/8`; `electron-builder --win nsis`
+thành công; `node scripts/packaged-recovery-smoke.js` đạt `ok:true` với 13
+resource bắt buộc, isolated user-data, Recovery host/MCP healthy và Supervisor
+fail-closed. Artifact là `coding-tools-mcp-setup-1.0.0.exe`, `121767504` bytes,
+SHA-256 `ab376d7b9f1517cc0077d1d7213b874236a4fb5a85148c089d7cec74f750cb54`.
+`Get-AuthenticodeSignature` trả `NotSigned`; đây là candidate đã build/smoke,
+không phải installed, upgrade, published hay signed release proof.
 
 **Fingerprint ứng viên Ubuntu (worktree dirty, chưa triển khai):**
 `sha256:4bef62162e8a5ccc6de136dbabd2079d5c605a8bbf130aabf48de67655880040`
@@ -45,16 +59,17 @@ qua Tailnet, Node `24.19.0`, npm `11.14.1`, Python `3.11.7`; checkout sạch
 lỗi `recovery-plane.test.js`: child Recovery MCP không mở một port ephemeral
 trong lần chạy full song song. Port rảnh sau test và cùng test chạy riêng đạt
 `1/1` trong 1.8s, nên đây là flake/parallelism candidate, chưa được phép gọi
-full suite xanh. Candidate W1–W4 hiện chưa ở máy Windows vì chưa có commit/push
-hoặc chuyển giao candidate sạch; không được dùng baseline này làm Windows proof
-cho source mới. Khi giới hạn Node test concurrency là `4`, toàn bộ Node suite,
-`source root clean` và secret check của baseline đã pass; script `npm test` của
-source hiện tại dùng cùng giới hạn để giữ gate lặp lại được. Candidate mới vẫn
-phải chạy gate này lại trên Windows sau exact-source transfer.
+full suite xanh. Candidate W1–W4 đã được chuyển qua Git bundle có SHA-256 khớp
+và fast-forward đến `main@e0b5bbd…`; không thay credential/remote GitHub. Khi
+giới hạn Node test concurrency là `4`, toàn bộ Node suite, `source root clean`
+và secret check của baseline đã pass; script `npm test` của source hiện tại dùng
+cùng giới hạn để giữ gate lặp lại được. Package proof của candidate được ghi ở
+phần validation trên; chỉ focused verifier được chạy lại sau fix vì Python
+test lane không đổi kể từ lượt `1158/1158` pass.
 
 **Recheck live chỉ-đọc (16-09-2026):** `codex-control-plane.service` trên
 Ubuntu đang `active`, có health SQLite `ok`, nhưng service đang chạy revision
-`000938f…`, khác source `b57ab92…` và khác source worktree hiện có. Central
+`000938f…`, khác source `e0b5bbd…` và khác source worktree hiện có. Central
 hiện có 1 node/enrollment request nhưng 0 binding, context, work request,
 action, receipt và read-only intent; Tailscale chưa có Serve/Funnel config.
 Như vậy UI/package source mới **chưa** được triển khai hoặc chạy live. Không
