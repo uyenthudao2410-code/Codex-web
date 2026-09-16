@@ -124,14 +124,16 @@ function Invoke-RecoveryPing([string]$DataRoot) {
   }catch{$ownerPid=0;$instance=$null;try{if($null-ne$d){$ownerPid=[int]$d.owner_pid;$instance=[string]$d.instance_id}}catch{};[pscustomobject]@{healthy=$false;code='PING_UNAVAILABLE';owner_alive=(Test-ProcessAlive $ownerPid);owner_pid=$ownerPid;instance_id=$instance}}
 }
 function Convert-ToUtc($Value){if($null-eq$Value-or[string]::IsNullOrWhiteSpace([string]$Value)){return $null};try{[DateTimeOffset]::Parse([string]$Value).ToUniversalTime()}catch{$null}}
-function Get-OptionalProperty($Object,[string]$Name,$Default){if($null-eq$Object){return $Default};$property=$Object.PSObject.Properties[$Name];if($null-eq$property){return $Default};$property.Value}
+function Get-OptionalProperty($Object,[string]$Name,$Default){if($null-eq$Object){return $Default};if($Object-is[Collections.IDictionary]){if($Object.Contains($Name)){return $Object[$Name]};return $Default};$property=$Object.PSObject.Properties[$Name];if($null-eq$property){return $Default};$property.Value}
 function Get-ControlPlaneAgentConfigPath($M) { Join-Path ([string]$M.data_root) 'control-plane-node.json' }
 function Get-ControlPlaneAgentPolicyPath($M) { Join-Path ([string]$M.data_root) 'control-plane-read-only-policy.json' }
 function Get-ControlPlaneOrigin([string]$Value) {
   try { $uri=[Uri]$Value } catch { return $null }
   if(-not$uri.IsAbsoluteUri-or$uri.Scheme-notin@('http','https')-or[string]::IsNullOrWhiteSpace($uri.Host)-or$uri.UserInfo-or$uri.Query-or$uri.Fragment-or$uri.AbsolutePath-notin@('','/')){return $null}
   # $Host is a read-only PowerShell automatic variable (case-insensitive).
-  $originHost=$uri.Host.ToLowerInvariant();if($originHost.Contains(':')-and-not$originHost.StartsWith('[')){$originHost="[$originHost]"};$originPort=[int]$uri.Port
+  $originHost=$uri.Host.ToLowerInvariant()
+  if($originHost.Contains(':')){try{$originHost="[$([Net.IPAddress]::Parse($originHost.Trim([char[]]'[]')).ToString().ToLowerInvariant())]"}catch{return $null}}
+  $originPort=[int]$uri.Port
   "$($uri.Scheme.ToLowerInvariant())://$originHost$(if(($uri.Scheme-eq'http'-and$originPort-ne80)-or($uri.Scheme-eq'https'-and$originPort-ne443)){":$originPort"})"
 }
 function Get-ControlPlaneAgentSpec($M) {

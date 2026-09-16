@@ -91,6 +91,7 @@ test('Recovery Supervisor central eligibility helpers evaluate real PowerShell w
     ['https://EXAMPLE.test:443/', 'https://example.test'],
     ['http://100.116.112.22:8765/', 'http://100.116.112.22:8765'],
     ['http://[fd7a:115c:a1e0::1]:8765/', 'http://[fd7a:115c:a1e0::1]:8765'],
+    ['http://[fd7a:115c:a1e0:0000:0000:0000:0000:0001]:8765/', 'http://[fd7a:115c:a1e0::1]:8765'],
     ['https://user:pass@example.test/', null],
     ['https://example.test/path', null],
     ['https://example.test/?query=1', null],
@@ -106,7 +107,7 @@ $MaxJsonBytes=65536
 $parseTokens=$null;$parseErrors=$null
 $parsed=[Management.Automation.Language.Parser]::ParseFile($env:WEBCODEX_TEST_SUPERVISOR_SCRIPT,[ref]$parseTokens,[ref]$parseErrors)
 if($parseErrors.Count-ne0){throw 'Supervisor PowerShell parser rejected the source.'}
-foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Get-OptionalProperty','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec')){
+foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','Get-OptionalProperty','Get-ControlPlaneAgentConfigPath','Get-ControlPlaneAgentPolicyPath','Get-ControlPlaneOrigin','Get-ControlPlaneAgentSpec','Invoke-ControlPlaneReadOnlyAgent')){
   $definition=$parsed.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name-eq$helperName},$true)
   if($null-eq$definition){throw 'Required pure supervisor helper missing.'}
   . ([scriptblock]::Create($definition.Extent.Text))
@@ -114,7 +115,18 @@ foreach($helperName in @('Get-Sha256File','Read-BoundedJson','Test-PathEqual','G
 $inputFixture=[IO.File]::ReadAllText($env:WEBCODEX_TEST_SUPERVISOR_FIXTURE)|ConvertFrom-Json
 $results=@(foreach($fixture in $inputFixture.fixtures){$spec=Get-ControlPlaneAgentSpec $fixture.manifest;[pscustomobject]@{name=$fixture.name;eligible=$spec.eligible;state=$spec.state}})
 $originResults=@(foreach($value in $inputFixture.origins){[pscustomobject]@{value=$value;origin=(Get-ControlPlaneOrigin $value)}})
-[pscustomobject]@{cases=$results;origins=$originResults}|ConvertTo-Json -Depth 5 -Compress
+# New-State uses an OrderedDictionary, not a JSON PSCustomObject. Retain the
+# first child PID across polls instead of launching an agent on every cycle.
+# Both process boundaries are inert mocks; no process is probed or spawned.
+$script:fixtureStartCount=0
+function Test-ProcessAlive([int]$ProcessId){$ProcessId-eq123}
+function Start-ControlPlaneReadOnlyAgent($M,$Spec){$script:fixtureStartCount+=1;123}
+$fixtureState=[ordered]@{control_plane_agent_pid=$null;control_plane_agent_state='not_checked';control_plane_agent_last_error_code=$null;control_plane_agent_last_started_at=$null}
+$fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifest $fixtureState
+$firstAgentState=$fixtureState.control_plane_agent_state
+$fixtureState=Invoke-ControlPlaneReadOnlyAgent $inputFixture.fixtures[0].manifest $fixtureState
+$agentCycle=[pscustomobject]@{first_state=$firstAgentState;second_state=$fixtureState.control_plane_agent_state;starts=$script:fixtureStartCount;pid=$fixtureState.control_plane_agent_pid}
+[pscustomobject]@{cases=$results;origins=$originResults;agent_cycle=$agentCycle}|ConvertTo-Json -Depth 5 -Compress
 `;
   const result = spawnSync(process.platform === 'win32' ? 'powershell.exe' : 'pwsh', [
     '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(command, 'utf16le').toString('base64')
@@ -133,6 +145,7 @@ $originResults=@(foreach($value in $inputFixture.origins){[pscustomobject]@{valu
   const observed = JSON.parse(result.stdout.trim());
   assert.deepEqual(observed.cases, cases.map(([name, , , state]) => ({ name, eligible: state === 'eligible', state })));
   assert.deepEqual(observed.origins, origins.map(([value, origin]) => ({ value, origin })));
+  assert.deepEqual(observed.agent_cycle, { first_state: 'started', second_state: 'running', starts: 1, pid: 123 });
 });
 
 if (process.platform !== 'win32') test('Recovery Supervisor runtime tests require Windows', { skip: true }, () => {});
