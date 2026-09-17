@@ -3,6 +3,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
+const { spawnSync } = require("node:child_process");
+const { flipFuses, FuseVersion, FuseV1Options } = require("@electron/fuses");
 
 const FORBIDDEN_DIRECTORY_NAMES = new Set([
   "__pycache__",
@@ -24,6 +26,39 @@ const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
   "recovery_read_only_bridge.cjs",
   "recovery_runtime_adapter.cjs",
 ]);
+
+function assertRunAsNode(executable, { spawnSyncFn = spawnSync } = {}) {
+  const environment = { ...process.env, ELECTRON_RUN_AS_NODE: "1" };
+  delete environment.NODE_OPTIONS;
+  delete environment.NODE_EXTRA_CA_CERTS;
+  const result = spawnSyncFn(executable, ["-e", "process.stdout.write('CODING_TOOLS_RUN_AS_NODE_OK')"], {
+    env: environment,
+    encoding: "utf8",
+    timeout: 5000,
+    windowsHide: true
+  });
+  if (result?.error || result?.status !== 0 || String(result?.stdout || "") !== "CODING_TOOLS_RUN_AS_NODE_OK") {
+    throw new Error("packaged Electron RunAsNode fuse is not executable");
+  }
+  return { executable, run_as_node: true };
+}
+
+async function configureWindowsFuses(context) {
+  if (context?.electronPlatformName !== "win32") return null;
+  const executableName = String(context?.packager?.appInfo?.productFilename || "Coding Tools MCP");
+  const executable = path.join(context.appOutDir, `${executableName}.exe`);
+  if (!fs.existsSync(executable)) {
+    throw new Error(`packaged Electron executable is missing: ${executable}`);
+  }
+  // The installed node agent invokes only the allowlisted CJS adapters with
+  // ELECTRON_RUN_AS_NODE. Keep this fuse enabled so it does not silently turn
+  // into a GUI launch and leave a read-only action without a typed receipt.
+  await flipFuses(executable, {
+    version: FuseVersion.V1,
+    [FuseV1Options.RunAsNode]: true
+  });
+  return assertRunAsNode(executable);
+}
 
 function forbiddenReason(relativePath, isDirectory) {
   const normalized = relativePath.split(path.sep).join("/");
@@ -167,6 +202,7 @@ async function afterPack(context) {
   if (context?.electronPlatformName !== "win32") {
     return;
   }
+  await configureWindowsFuses(context);
   const sourceResourcesRoot = path.resolve(__dirname, "..", "resources");
   const packagedResourcesRoot = path.join(context.appOutDir, "resources", "resources");
   assertExactPackagedResources(sourceResourcesRoot, packagedResourcesRoot, {
@@ -182,6 +218,8 @@ exports.default = afterPack;
 exports.assertSanitizedPackagedResources = assertSanitizedPackagedResources;
 exports.assertExactPackagedResources = assertExactPackagedResources;
 exports.assertExactControlPlaneAdapter = assertExactControlPlaneAdapter;
+exports.assertRunAsNode = assertRunAsNode;
+exports.configureWindowsFuses = configureWindowsFuses;
 exports.forbiddenReason = forbiddenReason;
 exports.SANCTIONED_CODING_MCP_RUNTIME_FILES = SANCTIONED_CODING_MCP_RUNTIME_FILES;
 exports.CONTROL_PLANE_ADAPTER_FILES = CONTROL_PLANE_ADAPTER_FILES;

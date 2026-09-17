@@ -8,6 +8,7 @@ const {
   assertSanitizedPackagedResources,
   assertExactPackagedResources,
   assertExactControlPlaneAdapter,
+  assertRunAsNode,
   CONTROL_PLANE_ADAPTER_FILES
 } = require('../scripts/verify-packaged-resources');
 const { cleanDistRoot } = require('../scripts/clean-dist');
@@ -69,6 +70,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
     'the installed node adapter must have one explicit packaged file set');
   assert.deepEqual(packageJson.build?.electronLanguages, ['en-US', 'vi']);
   assert.equal(packageJson.build?.afterPack, 'scripts/verify-packaged-resources.js');
+  assert.equal(packageJson.devDependencies?.['@electron/fuses'], '1.8.0');
   assert.match(packageJson.scripts?.dist || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:dir'] || '', /node scripts\/clean-dist\.js/);
   assert.match(packageJson.scripts?.['dist:control-plane'] || '', /build-control-plane-release\.py --output-dir dist/);
@@ -77,6 +79,23 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.match(packagedSmoke, /reconcile_exact_stale_run\.py/);
   assert.match(packagedSmoke, /assertExactControlPlaneAdapter/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
+});
+
+test('packaged Electron proof requires an executable RunAsNode fuse', () => {
+  const observed = [];
+  const result = assertRunAsNode('C:\\fixture\\Coding Tools MCP.exe', {
+    spawnSyncFn(executable, args, options) {
+      observed.push({ executable, args, options });
+      return { status: 0, stdout: 'CODING_TOOLS_RUN_AS_NODE_OK' };
+    }
+  });
+  assert.equal(result.run_as_node, true);
+  assert.deepEqual(observed[0].args, ['-e', "process.stdout.write('CODING_TOOLS_RUN_AS_NODE_OK')"]);
+  assert.equal(observed[0].options.env.ELECTRON_RUN_AS_NODE, '1');
+  assert.equal(observed[0].options.env.NODE_OPTIONS, undefined);
+  assert.throws(() => assertRunAsNode('C:\\fixture\\Coding Tools MCP.exe', {
+    spawnSyncFn: () => ({ status: 0, stdout: '' })
+  }), /RunAsNode fuse/);
 });
 
 test('dist cleaner removes stale package output before Electron Builder runs', () => {
