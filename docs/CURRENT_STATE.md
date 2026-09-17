@@ -41,6 +41,15 @@ per-user identity; it stops authenticating when that context/grant expires or
 is revoked. Configuration/doctor success is not a cloud-client execution proof.
 See the completion plan for the exact deployment receipt and remaining gates.
 
+The first user-confirmed ChatGPT connector creation reached root
+`server/discover`, but the facade replied with the legacy initialize/list
+shape. Modern MCP discovery requires supported versions, complete-result/cache
+fields, and namespaced server information. A scoped dual-era adapter now serves
+MCP `2026-07-28` requests independently while preserving legacy initialize
+clients, exact grants, tool schemas and recovery admission. A successful HTTP
+200 or Tunnel poll is not connector creation proof; record the actual ChatGPT
+application/discovery outcome separately.
+
 ## 0. Current convergence guidance — 2026-09-04
 
 The current engineering strategy is **convergence, not architecture expansion**. Do not build more system merely because a historical plan contains another layer or because an evidence gate is still open. Existing implementation should be closed by exact provenance, a real end-to-end Problem continuity observation, natural evidence, and accepted-result economics before another framework or control plane is authorized.

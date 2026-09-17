@@ -1126,6 +1126,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             ("2025-11-25", "2025-11-25"),
             ("2025-06-18", "2025-06-18"),
             ("2025-03-26", "2025-11-25"),
+            ("2026-07-28", "2025-11-25"),
             ("2024-11-05", "2025-11-25"),
             ("2099-01-01", "2025-11-25"),
         ):
@@ -1217,6 +1218,211 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         counts = self.server.store.health()["counts"]
         for collection in ("mcp_read_only_intents", "work_requests", "actions"):
             self.assertEqual(counts[collection], 0, "notifications must never queue a tool action")
+
+    @staticmethod
+    def _modern_mcp_body(method: str, params: dict | None = None) -> dict:
+        return {
+            "jsonrpc": "2.0", "id": "modern-fixture-001", "method": method,
+            "params": {
+                **(params or {}),
+                "_meta": {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientCapabilities": {},
+                    "io.modelcontextprotocol/clientInfo": {"name": "modern-fixture", "version": "1.0"},
+                },
+            },
+        }
+
+    def _modern_mcp_post(
+        self, grant: dict, body: dict, header_overrides: dict[str, str | None] | None = None,
+    ) -> tuple[int, dict, dict[str, str]]:
+        headers = {
+            "Authorization": f"Bearer {grant['access_token']}",
+            "Accept": "application/json, text/event-stream",
+            "MCP-Protocol-Version": "2026-07-28",
+            "Mcp-Method": body["method"],
+        }
+        if body["method"] == "tools/call":
+            headers["Mcp-Name"] = body["params"]["name"]
+        for key, value in (header_overrides or {}).items():
+            if value is None:
+                headers.pop(key, None)
+            else:
+                headers[key] = value
+        return self._request_with_headers("/mcp", method="POST", payload=body, headers=headers)
+
+    def test_modern_mcp_discovery_list_and_status_need_no_initialize_or_session(self) -> None:
+        grant = self._mcp_wire_grant()
+        self.server.store.set_admission_mode(mode="recovery")
+        contract_before = json.dumps(self.server.mcp_facade.contract, sort_keys=True)
+        status, discovered, headers = self._modern_mcp_post(grant, self._modern_mcp_body("server/discover"))
+        self.assertEqual(status, 200)
+        self.assertNotIn("Mcp-Session-Id", headers)
+        discovery = discovered["result"]
+        self.assertEqual(discovery["supportedVersions"], ["2026-07-28", "2025-11-25", "2025-06-18"])
+        self.assertEqual(discovery["capabilities"], {"tools": {"listChanged": False}})
+        self.assertEqual(discovery["resultType"], "complete")
+        self.assertEqual(discovery["ttlMs"], 0)
+        self.assertEqual(discovery["cacheScope"], "private")
+        self.assertNotIn("protocolVersion", discovery)
+        self.assertNotIn("serverInfo", discovery)
+        server_info = {"name": "coding-tools-control-plane", "version": "0.1.0"}
+        self.assertEqual(discovery["_meta"]["io.modelcontextprotocol/serverInfo"], server_info)
+
+        listed_body = self._modern_mcp_body("tools/list")
+        # Identity is advisory and optional; client capabilities remain required.
+        listed_body["params"]["_meta"].pop("io.modelcontextprotocol/clientInfo")
+        status, listed, headers = self._modern_mcp_post(grant, listed_body, {"Mcp-Session-Id": "untrusted-ignored"})
+        self.assertEqual(status, 200)
+        self.assertNotIn("Mcp-Session-Id", headers)
+        self.assertEqual(listed["result"]["tools"], self.server.mcp_facade.contract["tools"])
+        self.assertEqual(len(listed["result"]["tools"]), 8)
+        self.assertEqual(listed["result"]["resultType"], "complete")
+        self.assertEqual(listed["result"]["ttlMs"], 0)
+        self.assertEqual(listed["result"]["cacheScope"], "private")
+        self.assertEqual(listed["result"]["_meta"]["control_plane"], discovery["_meta"]["control_plane"])
+
+        call = self._modern_mcp_body("tools/call", {
+            "name": "workspace_context", "arguments": {"context_id": grant["context_id"], "operation": "status"},
+        })
+        status, observed, _ = self._modern_mcp_post(grant, call)
+        self.assertEqual(status, 200)
+        self.assertEqual(observed["result"]["resultType"], "complete")
+        self.assertNotIn("ttlMs", observed["result"])
+        self.assertEqual(observed["result"]["_meta"]["io.modelcontextprotocol/serverInfo"], server_info)
+        self.assertFalse(observed["result"]["structuredContent"]["workspace_accessed"])
+        self.assertEqual(observed["result"]["structuredContent"]["context"]["context_id"], grant["context_id"])
+        self.assertEqual(json.dumps(self.server.mcp_facade.contract, sort_keys=True), contract_before)
+        self.assertEqual(self.server.store.admission_status()["admission_mode"], "recovery")
+        for collection in ("mcp_read_only_intents", "work_requests", "actions"):
+            self.assertEqual(self.server.store.health()["counts"][collection], 0)
+
+    def test_modern_mcp_headers_fail_closed_before_tool_dispatch(self) -> None:
+        grant = self._mcp_wire_grant()
+        call = self._modern_mcp_body("tools/call", {
+            "name": "workspace_context", "arguments": {"context_id": grant["context_id"]},
+        })
+        for overrides in (
+            {"MCP-Protocol-Version": None}, {"MCP-Protocol-Version": "2025-11-25"},
+            {"Mcp-Method": None}, {"Mcp-Method": "tools/list"},
+            {"Mcp-Name": None}, {"Mcp-Name": "exec_command"},
+            {"Mcp-Name": "=?base64?invalid!?="},
+        ):
+            with self.subTest(headers=overrides):
+                status, rejected, _ = self._modern_mcp_post(grant, call, overrides)
+                self.assertEqual(status, 400)
+                self.assertEqual(rejected["error"]["code"], -32020)
+                self.assertEqual(rejected["id"], call["id"])
+        status, accepted, _ = self._modern_mcp_post(grant, call, {"Mcp-Name": "=?base64?d29ya3NwYWNlX2NvbnRleHQ=?="})
+        self.assertEqual(status, 200)
+        self.assertFalse(accepted["result"]["structuredContent"]["workspace_accessed"])
+
+        for body_change in ({}, {"_meta": {}}, {"_meta": None}):
+            request = {**call, "params": {"name": "workspace_context", **body_change}}
+            status, rejected, _ = self._modern_mcp_post(grant, request)
+            self.assertEqual(status, 400)
+            self.assertEqual(rejected["error"]["code"], -32020)
+
+    def test_modern_mcp_metadata_is_required_on_every_request(self) -> None:
+        grant = self._mcp_wire_grant()
+        status, _, _ = self._modern_mcp_post(grant, self._modern_mcp_body("server/discover"))
+        self.assertEqual(status, 200)
+        for field, value in (
+            ("io.modelcontextprotocol/clientCapabilities", None),
+            ("io.modelcontextprotocol/clientCapabilities", []),
+            ("io.modelcontextprotocol/clientInfo", None),
+            ("io.modelcontextprotocol/clientInfo", {"name": "missing-version"}),
+            ("io.modelcontextprotocol/clientInfo", {"name": 4, "version": "1"}),
+        ):
+            with self.subTest(field=field, value=value):
+                request = self._modern_mcp_body("tools/list")
+                request["params"]["_meta"][field] = value
+                status, rejected, _ = self._modern_mcp_post(grant, request)
+                self.assertEqual(status, 400)
+                self.assertEqual(rejected["error"]["code"], -32602)
+        request = self._modern_mcp_body("tools/list")
+        request["params"]["_meta"].pop("io.modelcontextprotocol/clientCapabilities")
+        status, rejected, _ = self._modern_mcp_post(grant, request)
+        self.assertEqual(status, 400)
+        self.assertEqual(rejected["error"]["code"], -32602)
+
+    def test_modern_mcp_unsupported_versions_and_legacy_only_methods_are_explicit(self) -> None:
+        grant = self._mcp_wire_grant()
+        request = self._modern_mcp_body("server/discover")
+        request["params"]["_meta"]["io.modelcontextprotocol/protocolVersion"] = "2099-01-01"
+        status, rejected, _ = self._modern_mcp_post(grant, request, {"MCP-Protocol-Version": "2099-01-01"})
+        self.assertEqual(status, 400)
+        self.assertEqual(rejected["error"]["code"], -32022)
+        self.assertEqual(rejected["error"]["data"], {
+            "supported": ["2026-07-28", "2025-11-25", "2025-06-18"], "requested": "2099-01-01",
+        })
+        for method in ("initialize", "ping", "notifications/initialized", "unknown/method"):
+            with self.subTest(method=method):
+                status, rejected, _ = self._modern_mcp_post(grant, self._modern_mcp_body(method))
+                self.assertEqual(status, 404)
+                self.assertEqual(rejected["error"]["code"], -32601)
+
+    def test_modern_mcp_preserves_auth_context_scope_and_unimplemented_tools(self) -> None:
+        grant = self._mcp_wire_grant()
+        request = self._modern_mcp_body("server/discover")
+        for authorization in (None, f"Bearer {self.operator_token}"):
+            status, rejected, _ = self._modern_mcp_post(grant, request, {"Authorization": authorization})
+            self.assertEqual(status, 403)
+            self.assertEqual(rejected["error"]["code"], "FORBIDDEN")
+        status, rejected, _ = self._modern_mcp_post(grant, request, {"Origin": "https://untrusted.example"})
+        self.assertEqual(status, 403)
+        self.assertEqual(rejected["error"]["code"], "FORBIDDEN")
+
+        call = self._modern_mcp_body("tools/call", {
+            "name": "workspace_context", "arguments": {"context_id": "ctx_outside_access_grant"},
+        })
+        status, rejected, _ = self._modern_mcp_post(grant, call)
+        self.assertEqual(status, 400)
+        self.assertEqual(rejected["error"]["data"]["code"], "FORBIDDEN")
+        call["params"]["arguments"]["context_id"] = grant["context_id"]
+        call["params"]["name"] = "exec_command"
+        status, unavailable, _ = self._modern_mcp_post(grant, call)
+        self.assertEqual(status, 200)
+        self.assertEqual(unavailable["result"]["resultType"], "complete")
+        self.assertTrue(unavailable["result"]["isError"])
+        self.assertEqual(unavailable["result"]["structuredContent"]["code"], "LOCAL_ADMISSION_BRIDGE_REQUIRED")
+        self.server.store.revoke_mcp_access_grant(owner_id="owner_default", grant_id=grant["grant_id"])
+        status, rejected, _ = self._modern_mcp_post(grant, request)
+        self.assertEqual(status, 403)
+        self.assertEqual(rejected["error"]["code"], "FORBIDDEN")
+
+    def test_modern_mcp_invalid_ids_and_recovery_never_enqueue(self) -> None:
+        grant = self._mcp_wire_grant()
+        call = self._modern_mcp_body("tools/call", {
+            "name": "workspace_context",
+            "arguments": {
+                "context_id": grant["context_id"], "operation": "request_read_only",
+                "idempotency_key": "modern-invalid-id-no-effect",
+                "expires_at_ms": self.server.store.clock() + 20_000,
+                "expected_facade_contract": {
+                    key: self.server.mcp_facade.contract[key] for key in ("schema_version", "profile", "sha256")
+                },
+            },
+        })
+        # Exercise invalid request IDs while admission is open, so it cannot
+        # mask an accidental tool side effect.
+        for invalid_id in (None, True, [], {}):
+            status, rejected, _ = self._modern_mcp_post(grant, {**call, "id": invalid_id})
+            self.assertEqual(status, 400)
+            self.assertEqual(rejected["error"]["code"], -32600)
+            self.assertNotIn("id", rejected)
+        without_id = dict(call)
+        without_id.pop("id")
+        status, rejected, _ = self._modern_mcp_post(grant, without_id)
+        self.assertEqual(status, 400)
+        self.assertEqual(rejected["error"]["code"], "VALIDATION_ERROR")
+        self.server.store.set_admission_mode(mode="recovery")
+        status, rejected, _ = self._modern_mcp_post(grant, call)
+        self.assertEqual(status, 400)
+        self.assertIn("error", rejected)
+        for collection in ("mcp_read_only_intents", "work_requests", "actions"):
+            self.assertEqual(self.server.store.health()["counts"][collection], 0)
+        self.assertEqual(self.server.store.admission_status()["admission_mode"], "recovery")
 
     def test_mcp_facade_authenticates_and_queues_only_the_fixed_read_only_intent(self) -> None:
         node = self.server.store.enroll_node(

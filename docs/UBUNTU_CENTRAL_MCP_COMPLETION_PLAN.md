@@ -1134,6 +1134,27 @@ metadata lookup hoặc doctor PASS là client OpenAI đã dùng được root MC
   Tunnel process vẫn live. Hoàn tất các capability/controller/soak vẫn là gate
   riêng; không gộp trạng thái `ready` của transport thành hoàn thành sản phẩm.
 
+### ChatGPT discovery integration — 17-09-2026
+
+Sau xác nhận tạo app của user, đã submit form `Ubuntu Control Plane` trong
+workspace Business `Không gian làm việc của Thắng`, Connection=Tunnel
+`Ubuntu-Central-MCP`, không nhập credential vào trình duyệt. Lần đầu không có
+success UI; kiểm danh sách Installed và Personal/Created by me chưa thấy app,
+không submit lặp mù.
+
+Tunnel metrics ghi đúng **server/discover → upstream HTTP 200** khoảng
+09:03 +07. Counter POST400 có sẵn không đủ liên hệ tới request này; nhận định
+ban đầu “discovery bị 400” đã được sửa sau khi đối chiếu source metric official
+client. v0.0.14 dispatcher giữ request ID hợp lệ và không sửa JSON-RPC body;
+Go SDK v1.7.0 tự dựng Content-Length và các header protocol/method/name từ
+metadata. Không nới missing-ID/framing/auth để tìm cách tạo app.
+
+Root legacy discovery thiếu `supportedVersions`, `resultType`, cache scope/TTL
+và namespaced serverInfo mà MCP 2026-07-28 client cần. Compatibility fix chỉ
+ở root facade/HTTP, giữ đúng tool contract/policy/auth và không nhận capability
+write/exec mới. Modern discovery/list/status được kiểm riêng với dữ liệu fixture;
+kết quả ChatGPT live sẽ được ghi sau rollout/retry xác nhận.
+
 ### Sửa lỗi handoff được người dùng tái hiện — 16-09-2026
 
 Baseline sửa lỗi `main@8b7a82d`: ảnh Windows và RPC read-only xác nhận

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
 import hmac
 import json
@@ -20,7 +22,13 @@ from threading import Lock, Thread
 from typing import Any
 from urllib.parse import urlsplit
 
-from .mcp_facade import ControlPlaneMcpFacade
+from .mcp_facade import (
+    STATELESS_MCP_PROTOCOL_VERSION,
+    SUPPORTED_MCP_PROTOCOL_VERSIONS,
+    ControlPlaneMcpFacade,
+    _response_id,
+    _rpc_error,
+)
 from .store import ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
 from .web_ui import WEB_UI_CSP, WEB_UI_CSS, WEB_UI_HTML, WEB_UI_JAVASCRIPT
 
@@ -378,6 +386,51 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         """
 
         return self.server.store.authenticate_mcp_access_token(access_token=self._auth("Bearer"))
+
+    def _mcp_http_protocol(self, body: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
+        """Validate modern mirrored headers before dispatch, without session state.
+
+        Keep legacy initialize/headerless clients working. A modern marker in
+        either the header or body requires both to match; it cannot silently
+        downgrade into the legacy path when one of them is missing.
+        """
+        header_version = self.headers.get("MCP-Protocol-Version")
+        params = body.get("params")
+        meta = params.get("_meta") if isinstance(params, dict) else None
+        body_version = meta.get("io.modelcontextprotocol/protocolVersion") if isinstance(meta, dict) else None
+        modern = header_version == STATELESS_MCP_PROTOCOL_VERSION or body_version == STATELESS_MCP_PROTOCOL_VERSION
+        request_id = _response_id(body)
+        for version in (header_version, body_version):
+            if version is not None and (not isinstance(version, str) or re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", version) is None):
+                return modern, _rpc_error(request_id, -32602, "Protocol version must be a date string.")
+            if version is not None and version not in SUPPORTED_MCP_PROTOCOL_VERSIONS:
+                return modern, _rpc_error(
+                    request_id, -32022, "Unsupported protocol version",
+                    {"supported": list(SUPPORTED_MCP_PROTOCOL_VERSIONS), "requested": version},
+                )
+        if not modern:
+            return False, None
+        if header_version != body_version:
+            return True, _rpc_error(request_id, -32020, "MCP-Protocol-Version must match params._meta protocolVersion.")
+        method = body.get("method")
+        if not isinstance(method, str) or self.headers.get("Mcp-Method") != method:
+            return True, _rpc_error(request_id, -32020, "Mcp-Method must match the JSON-RPC method.")
+        if method in {"tools/call", "resources/read", "prompts/get"}:
+            name = params.get("uri" if method == "resources/read" else "name")
+            header_name = self.headers.get("Mcp-Name")
+            if isinstance(header_name, str) and header_name.startswith("=?base64?") and header_name.endswith("?="):
+                try:
+                    header_name = base64.b64decode(header_name[9:-2], validate=True).decode("utf-8")
+                except (ValueError, binascii.Error, UnicodeDecodeError):
+                    header_name = None
+            elif isinstance(header_name, str) and (
+                header_name != header_name.strip()
+                or any(not (32 <= ord(char) <= 126 or char == "\t") for char in header_name)
+            ):
+                header_name = None
+            if not isinstance(name, str) or not name or header_name != name:
+                return True, _rpc_error(request_id, -32020, "Mcp-Name must match the named request.")
+        return True, None
 
     def _require_web_origin(self) -> None:
         if self.server.web_origin is None:
@@ -755,18 +808,32 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
                     return
                 principal = self._mcp_client()
+                modern, protocol_error = self._mcp_http_protocol(body)
+                if protocol_error is not None:
+                    if protocol_error.get("id") is None:
+                        protocol_error.pop("id", None)
+                    self._json(HTTPStatus.BAD_REQUEST, protocol_error)
+                    return
+                if modern and self.headers.get("Origin"):
+                    self._require_web_origin()
                 response = self.server.mcp_facade.handle(
                     body,
                     owner_id=str(principal["owner_id"]),
                     principal_id=str(principal["principal_id"]),
                     granted_context_id=str(principal["context_id"]),
+                    stateless_2026=modern,
                 )
                 if response is None:
                     self.send_response(HTTPStatus.ACCEPTED)
                     self.send_header("Content-Length", "0")
                     self.end_headers()
                 else:
-                    self._json(HTTPStatus.OK, response)
+                    status = HTTPStatus.OK
+                    if modern and "error" in response:
+                        status = HTTPStatus.NOT_FOUND if response["error"]["code"] == -32601 else HTTPStatus.BAD_REQUEST
+                        if response.get("id") is None:
+                            response.pop("id", None)
+                    self._json(status, response)
                 return
             if self.path == "/v1/nodes/enroll":
                 owner = self._operator()

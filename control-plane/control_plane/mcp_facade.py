@@ -20,10 +20,13 @@ from .store import ControlPlaneError, ControlPlaneStore, PermissionError, Valida
 
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
-# Both revisions support this facade's JSON-only tools and structured results.
+STATELESS_MCP_PROTOCOL_VERSION = "2026-07-28"
+# The initialize handshake only negotiates legacy revisions. The modern
+# revision uses per-request metadata and server/discover instead.
 # Do not advertise 2025-03-26: its batching and older result contract are not
 # implemented here. Unsupported offers negotiate our latest supported revision.
-SUPPORTED_MCP_PROTOCOL_VERSIONS = (MCP_PROTOCOL_VERSION, "2025-06-18")
+LEGACY_MCP_PROTOCOL_VERSIONS = (MCP_PROTOCOL_VERSION, "2025-06-18")
+SUPPORTED_MCP_PROTOCOL_VERSIONS = (STATELESS_MCP_PROTOCOL_VERSION, *LEGACY_MCP_PROTOCOL_VERSIONS)
 FACADE_SCHEMA_VERSION = 5
 FACADE_PROFILE = "control-plane-scoped-read-only-relay-v4"
 PUBLIC_TOOL_NAMES = (
@@ -264,7 +267,7 @@ class ControlPlaneMcpFacade:
         requested = params.get("protocolVersion", MCP_PROTOCOL_VERSION)
         if not isinstance(requested, str) or not requested.strip():
             raise ValidationError("MCP protocol version must be a non-empty string.")
-        negotiated = requested if requested in SUPPORTED_MCP_PROTOCOL_VERSIONS else MCP_PROTOCOL_VERSION
+        negotiated = requested if requested in LEGACY_MCP_PROTOCOL_VERSIONS else MCP_PROTOCOL_VERSION
         return {
             "protocolVersion": negotiated,
             "serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
@@ -298,6 +301,32 @@ class ControlPlaneMcpFacade:
                 }
             },
         }
+
+    @staticmethod
+    def _validate_stateless_params(params: dict[str, Any]) -> None:
+        meta = params.get("_meta")
+        if not isinstance(meta, dict) or meta.get("io.modelcontextprotocol/protocolVersion") != STATELESS_MCP_PROTOCOL_VERSION:
+            raise ValidationError("MCP 2026-07-28 requires matching params._meta protocolVersion.")
+        if not isinstance(meta.get("io.modelcontextprotocol/clientCapabilities"), dict):
+            raise ValidationError("MCP 2026-07-28 requires params._meta clientCapabilities.")
+        if "io.modelcontextprotocol/clientInfo" in meta:
+            info = meta["io.modelcontextprotocol/clientInfo"]
+            if not isinstance(info, dict) or not all(isinstance(info.get(key), str) for key in ("name", "version")):
+                raise ValidationError("MCP clientInfo must contain string name and version fields when present.")
+
+    @staticmethod
+    def _stateless_result(result: dict[str, Any], *, cacheable: bool) -> dict[str, Any]:
+        # Decorate the response, not the tool contract or any durable record.
+        # Legacy and modern clients therefore observe the same authority and
+        # exact eight-tool schema hash.
+        decorated = {**result, "resultType": "complete"}
+        decorated["_meta"] = {
+            **result.get("_meta", {}),
+            "io.modelcontextprotocol/serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
+        }
+        if cacheable:
+            decorated.update({"ttlMs": 0, "cacheScope": "private"})
+        return decorated
 
     @staticmethod
     def _call_error(*, code: str, message: str, tool_name: str) -> dict[str, Any]:
@@ -532,6 +561,7 @@ class ControlPlaneMcpFacade:
         owner_id: str,
         principal_id: str,
         granted_context_id: str,
+        stateless_2026: bool = False,
     ) -> dict[str, Any] | None:
         """Handle one authenticated JSON-RPC request without persistent session state."""
         request_id = _response_id(request)
@@ -563,6 +593,10 @@ class ControlPlaneMcpFacade:
             if not isinstance(params, dict):
                 raise ValidationError("MCP method params must be an object.")
             method = request["method"]
+            if stateless_2026:
+                self._validate_stateless_params(params)
+            if stateless_2026 and method in {"initialize", "ping"}:
+                return _rpc_error(request_id, -32601, "Method not found")
             if method == "initialize":
                 if request_id is None:
                     return _rpc_error(None, -32600, "Invalid Request: initialize requires a non-null request id")
@@ -572,7 +606,16 @@ class ControlPlaneMcpFacade:
             elif method == "tools/list":
                 result = self._tools_list()
             elif method == "server/discover":
-                result = {**self._initialize({}), **self._tools_list()}
+                if stateless_2026:
+                    initialized = self._initialize({})
+                    result = {
+                        "supportedVersions": list(SUPPORTED_MCP_PROTOCOL_VERSIONS),
+                        "capabilities": initialized["capabilities"],
+                        "instructions": initialized["instructions"],
+                        "_meta": initialized["_meta"],
+                    }
+                else:
+                    result = {**self._initialize({}), **self._tools_list()}
             elif method == "tools/call":
                 result = self._call_tool(
                     owner_id=owner_id,
@@ -582,6 +625,8 @@ class ControlPlaneMcpFacade:
                 )
             else:
                 return _rpc_error(request_id, -32601, f"Unknown method: {method}")
+            if stateless_2026:
+                result = self._stateless_result(result, cacheable=method in {"server/discover", "tools/list"})
             return self._result(request, result)
         except ControlPlaneError as error:
             return _rpc_error(request_id, -32602, "Invalid params", {"code": error.code, "message": str(error)})
