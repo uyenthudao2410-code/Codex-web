@@ -1658,6 +1658,7 @@ class RuntimeOrchestrator {
       const expiresAtUnixMs = Number(options.expiresAtUnixMs || 0);
       const settings = this.settingsStore.load();
       this.validate(settings);
+      const centralExecutor = executionRole(settings) === 'central_executor';
       const token = await this.ensureToken();
       const diskRevision = this.revisions.disk('coding_mcp', { force: true }).revision;
       if (diskRevision !== expectedRevision) {
@@ -1727,12 +1728,19 @@ class RuntimeOrchestrator {
           details: { expected_revision: expectedRevision, disk_revision: verifiedDiskRevision }
         });
       }
-      let tunnelStarted = null;
-      if (tunnelLaunch) {
-        const connectorAttestation = this.connectorAttestationForHealth(health, {
+      // The Recovery Host must retain an exact binding for every central MCP
+      // it owns. A central executor does not launch a node Tunnel, but its
+      // local read-only bridge still authenticates to loopback MCP with this
+      // binding. Preserve the legacy no-Tunnel direct activation path, which
+      // intentionally does not require a connector identity.
+      const connectorAttestation = (centralExecutor || tunnelLaunch)
+        ? this.connectorAttestationForHealth(health, {
           establish: true,
           secret: connectorAttestationSecret
-        });
+        })
+        : null;
+      let tunnelStarted = null;
+      if (tunnelLaunch) {
         tunnelStarted = await this.tunnel.start(
           { ...settings, effectiveProxyUrl: tunnelLaunch.proxy.resolvedUrl },
           tunnelLaunch.runtimeApiKey,
@@ -2587,12 +2595,16 @@ class RuntimeOrchestrator {
       }
       if (!ready) throw new Error('Coding Tools MCP không vượt qua kiểm tra sức khỏe trong thời gian quy định.');
 
+      // Central executors have no node Tunnel, yet the Recovery Host still
+      // needs this per-process binding to authorize the Ubuntu read-only
+      // bridge.  Establish it immediately after the exact MCP health check
+      // for both execution roles; only Tunnel launch remains direct-only.
+      const attestationHealth = await this.currentMcpHealth({ timeoutMs: 5000 });
+      const connectorAttestation = this.connectorAttestationForHealth(attestationHealth, {
+        establish: true,
+        secret: connectorAttestationSecret
+      });
       if (!centralExecutor) {
-        const attestationHealth = await this.currentMcpHealth({ timeoutMs: 5000 });
-        const connectorAttestation = this.connectorAttestationForHealth(attestationHealth, {
-          establish: true,
-          secret: connectorAttestationSecret
-        });
         await this.tunnel.start({ ...settings, effectiveProxyUrl: proxy.resolvedUrl }, runtimeApiKey, token, this.progress.bind(this), {
           activationEpochId: launchActivationEpochId,
           connectorAttestation
@@ -2985,6 +2997,13 @@ class RuntimeOrchestrator {
           });
         }
       }
+      // A replacement MCP always needs a new local attestation binding.  The
+      // binding is also consumed by central-executor read-only relay calls,
+      // even though that role intentionally never starts a node Tunnel.
+      const connectorAttestation = this.connectorAttestationForHealth(health, {
+        establish: true,
+        secret: connectorAttestationSecret
+      });
       let tunnelStarted = null;
       if (!centralExecutor) {
         // The managed Tunnel carries a static attestation bound to the exact MCP
@@ -2992,10 +3011,6 @@ class RuntimeOrchestrator {
         // Tunnel header even when the public contract is unchanged. Refresh only
         // this dependent Tunnel (not Recovery Host/UI/recovery plane) so soft
         // recovery remains scoped while connector provenance stays usable.
-        const connectorAttestation = this.connectorAttestationForHealth(health, {
-          establish: true,
-          secret: connectorAttestationSecret
-        });
         tunnelStarted = await this.tunnel.start(
           { ...settings, effectiveProxyUrl: proxy.resolvedUrl },
           runtimeApiKey,

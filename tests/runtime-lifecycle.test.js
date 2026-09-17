@@ -367,6 +367,14 @@ test('central executor starts its local MCP without a node Runtime API Key or Tu
     await new Promise((resolve) => server.listen(mcpPort, '127.0.0.1', resolve));
     return { pid: 1234, reused: false };
   };
+  const attestationHealth = {
+    ready: true,
+    activation_epoch_id: 'activation-central-executor-0001',
+    process_instance_id: 'process-central-executor-0001',
+    instance_id: 'server-central-executor-0001',
+    tool_contract: { sha256: 'c'.repeat(64) }
+  };
+  orchestrator.currentMcpHealth = async () => attestationHealth;
   orchestrator.tunnel.stop = async () => { calls.tunnelStop += 1; return true; };
   orchestrator.tunnel.start = async () => { calls.tunnelStart += 1; throw new Error('central executor must not start a node Tunnel'); };
   orchestrator.snapshot = async () => { calls.snapshot += 1; return { status: 'local-ready' }; };
@@ -378,6 +386,12 @@ test('central executor starts its local MCP without a node Runtime API Key or Tu
   assert.equal(calls.snapshot, 1);
   assert.equal(calls.secretNames.includes('runtimeApiKey'), false);
   assert.equal(calls.secretNames.includes('mcpAuthToken'), true);
+  assert.deepEqual(orchestrator.connectorAttestationBinding, {
+    activationEpochId: attestationHealth.activation_epoch_id,
+    processInstanceId: attestationHealth.process_instance_id,
+    serverInstanceId: attestationHealth.instance_id,
+    contractSha256: attestationHealth.tool_contract.sha256
+  }, 'central executor establishes the local bridge attestation without starting a node Tunnel');
 });
 
 test('central executor refuses Tunnel-only repair without reading node Runtime credentials', async () => {
