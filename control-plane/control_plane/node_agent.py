@@ -11,6 +11,7 @@ remote mutation authority.
 from __future__ import annotations
 
 import argparse
+import errno
 import hashlib
 import json
 import os
@@ -1522,7 +1523,17 @@ def _pid_is_live(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    except OSError:
+    except OSError as error:
+        # On Windows, os.kill(pid, 0) reports a missing PID as WinError 87
+        # (and commonly errno=EINVAL), not ProcessLookupError.  Treat that
+        # one documented missing-process result as dead so a crashed same-user
+        # agent cannot pin its read-only lock forever.  Every other unfamiliar
+        # failure remains live/fail-closed.
+        if os.name == "nt" and (
+            getattr(error, "winerror", None) == 87
+            or getattr(error, "errno", None) == errno.EINVAL
+        ):
+            return False
         # An unfamiliar error must not let this process remove a possibly-live
         # lock. The operator can inspect/stop the existing local owner.
         return True

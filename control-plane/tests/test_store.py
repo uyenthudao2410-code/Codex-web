@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import io
 import hashlib
 import json
@@ -22,6 +23,7 @@ from control_plane.maintenance import main as maintenance_main
 from control_plane.node_agent import (
     READ_ONLY_JOURNAL_SCHEMA_VERSION,
     _journal_path,
+    _pid_is_live,
     _request,
     _read_journal,
     _read_only_bridge_request,
@@ -1390,6 +1392,13 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_READ_ONLY_AGENT_ALREADY_RUNNING"):
             run_read_only_agent(args)
         self.assertTrue(lock_path.exists())
+
+    def test_windows_invalid_parameter_process_probe_is_confirmed_dead(self) -> None:
+        missing_process = OSError(errno.EINVAL, "The parameter is incorrect")
+        missing_process.winerror = 87
+        with mock.patch("control_plane.node_agent.os.name", "nt"), \
+             mock.patch("control_plane.node_agent.os.kill", side_effect=missing_process):
+            self.assertFalse(_pid_is_live(71_001))
 
     def test_read_only_agent_reclaims_only_a_confirmed_dead_lock_owner(self) -> None:
         config_path = Path(self.tempdir.name) / "agent-stale-lock-node.json"
