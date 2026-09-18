@@ -106,7 +106,14 @@ WEB_UI_HTML = """<!doctype html>
       </section>
       <section class="panel">
         <h2>Action và receipt</h2>
-        <p class="muted">“Đã gửi” không phải là “đã thực thi”. Payload, local handle và nội dung workspace không được hiển thị ở đây.</p>
+        <p class="muted">“Đã gửi” không phải là “đã thực thi”. Payload, local handle và nội dung workspace không được hiển thị ở đây. Một action lịch sử có receipt <code>unknown</code> chỉ được cách ly sau khi operator gõ xác nhận; cách ly không nói rằng Windows chưa đọc hoặc đã hoàn tất.</p>
+        <form id="action-reconciliation-form" class="operator-form reconciliation-form">
+          <h3>Cách ly action lịch sử chưa xác định</h3>
+          <label>Node <select id="reconciliation-device-id" required></select></label>
+          <label>Action IDs (mỗi ID một dòng)<textarea id="reconciliation-action-ids" rows="4" maxlength="7000" autocomplete="off" spellcheck="false" required></textarea></label>
+          <label>Gõ chính xác <code>HISTORICAL_READ_ONLY_UNKNOWN_EFFECT</code> để chấp nhận rủi ro kiểm toán <input id="reconciliation-declaration" maxlength="128" autocomplete="off" spellcheck="false" required></label>
+          <button type="submit">Cách ly, không retry</button>
+        </form>
         <div class="table-wrap"><table><thead><tr><th>Action / tool</th><th>Context / node</th><th>Delivery</th><th>Receipt mới nhất</th><th>Thời gian</th></tr></thead><tbody id="actions-body"></tbody></table></div>
       </section>
     </section>
@@ -120,11 +127,11 @@ WEB_UI_HTML = """<!doctype html>
 WEB_UI_CSS = """* { box-sizing: border-box; }
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #0b1220; color: #e5edf9; }
 body { margin: 0; min-width: 320px; }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { background: #1d70f7; border: 1px solid #478cff; border-radius: .45rem; color: white; cursor: pointer; padding: .65rem .9rem; }
 button.secondary { background: transparent; border-color: #71829d; }
 button:disabled { cursor: not-allowed; opacity: .55; }
-input, select { background: #111c2e; border: 1px solid #71829d; border-radius: .4rem; color: #fff; padding: .65rem; width: min(100%, 34rem); }
+input, select, textarea { background: #111c2e; border: 1px solid #71829d; border-radius: .4rem; color: #fff; padding: .65rem; width: min(100%, 34rem); }
 .shell { margin: 0 auto; max-width: 1280px; padding: 1.4rem; }
 header { align-items: start; border-bottom: 1px solid #2a3b56; display: flex; gap: 1rem; justify-content: space-between; margin-bottom: 1.25rem; padding-bottom: 1rem; }
 h1, h2, p { margin-top: 0; }
@@ -139,6 +146,7 @@ h2 { font-size: 1.05rem; }
 .operator-form { border: 1px solid #2a3b56; border-radius: .5rem; display: grid; gap: .7rem; padding: .9rem; }
 .operator-form h3 { font-size: .95rem; margin: 0; }
 .operator-form label { display: grid; gap: .35rem; color: #aebed5; font-size: .9rem; }
+.reconciliation-form { margin: 1rem 0; }
 .card { margin: 0; }
 dl { display: grid; gap: .45rem .8rem; grid-template-columns: minmax(7rem, auto) 1fr; margin: 0; }
 dt, .muted { color: #aebed5; }
@@ -172,6 +180,7 @@ WEB_UI_JAVASCRIPT = """(() => {
   const logout = byId('logout');
   const bindingForm = byId('binding-form');
   const contextForm = byId('context-form');
+  const actionReconciliationForm = byId('action-reconciliation-form');
 
   function text(id, value) { byId(id).textContent = value === null || value === undefined || value === '' ? 'chưa có quan sát' : String(value); }
   function formatTime(value) {
@@ -249,6 +258,7 @@ WEB_UI_JAVASCRIPT = """(() => {
     if (!data.nodes?.length) emptyRow(nodes, 6, 'Chưa có node được enrollment.');
     for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, node.readiness); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
     setSelectOptions('binding-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
+    setSelectOptions('reconciliation-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
 
     const contextsByBinding = new Map();
     for (const context of data.contexts || []) { const entries = contextsByBinding.get(context.binding_id) || []; entries.push(`${context.context_id} / ${formatTime(context.expires_at_ms)}`); contextsByBinding.set(context.binding_id, entries); }
@@ -273,6 +283,7 @@ WEB_UI_JAVASCRIPT = """(() => {
       const delivery = action.delivery_state === 'queued' ? 'queued — chưa gửi node'
         : action.delivery_state === 'dispatch_unconfirmed' ? 'dispatch_unconfirmed — chưa rõ node đã nhận'
         : action.delivery_state === 'accepted' ? 'accepted — chờ receipt kết thúc'
+        : action.delivery_state === 'reconcile_required' && action.reconciliation_disposition === 'quarantined_unknown' ? 'quarantined_unknown — rủi ro unknown đã được operator cách ly; không retry'
         : action.delivery_state === 'reconcile_required' ? 'reconcile_required — không tự retry'
         : `${action.delivery_state || 'unknown'} — xem receipt`;
       appendCell(row, delivery);
@@ -347,6 +358,24 @@ WEB_UI_JAVASCRIPT = """(() => {
       const context = await api('/v1/ui/contexts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ binding_id: byId('context-binding-id').value, duration_minutes: Number(byId('context-duration-minutes').value) }) });
       connectionStatus.textContent = `Đã cấp ${context.context_id} đến ${formatTime(context.expires_at_ms)}.`; await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không cấp context: ${error.message}`; } finally { button.disabled = !csrfToken; }
+  });
+  actionReconciliationForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = actionReconciliationForm.querySelector('button[type="submit"]');
+    const actionIds = byId('reconciliation-action-ids').value.split(/\\s+/).filter(Boolean);
+    const declaration = byId('reconciliation-declaration').value.trim();
+    if (!confirm(`Cách ly ${actionIds.length} action lịch sử với receipt unknown? Thao tác này không retry và không xác nhận effect.`)) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang ghi nhận cách ly lịch sử có kiểm toán…';
+    try {
+      const result = await api('/v1/ui/action-reconciliations/quarantine-historical-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken },
+        body: JSON.stringify({ device_id: byId('reconciliation-device-id').value, action_ids: actionIds, declaration }),
+      });
+      connectionStatus.textContent = `Đã cách ly ${result.actions.length} action historical unknown. Receipt gốc vẫn giữ nguyên; không action nào được retry.`;
+      actionReconciliationForm.reset(); await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không cách ly action: ${error.message}`; }
+    finally { button.disabled = !csrfToken; }
   });
   refresh.addEventListener('click', loadOverview);
   logout.addEventListener('click', async () => { try { await api('/v1/ui/logout', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); } finally { csrfToken = null; stopPolling(); setSessionVisible(false); connectionStatus.textContent = 'Đã đăng xuất; phiên server đã bị hủy.'; } });

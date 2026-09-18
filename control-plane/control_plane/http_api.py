@@ -566,6 +566,24 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             context_id=context_id,
         )
 
+    def _quarantine_historical_unknown_actions(self, body: dict[str, Any], *, browser: bool) -> dict[str, Any]:
+        """Persist a deliberate operator disposition without changing the receipt.
+
+        Browser calls require a same-origin CSRF-protected operator session;
+        bearer calls remain available to the protected operator runbook.  The
+        store validates each exact action again while holding one transaction.
+        """
+
+        if set(body) != {"device_id", "action_ids", "declaration"}:
+            raise ValidationError("historical unknown quarantine payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True) if browser else self._operator()
+        return self.server.store.quarantine_historical_unknown_actions(
+            owner_id=owner_id,
+            device_id=self._field(body, "device_id"),
+            action_ids=self._field(body, "action_ids"),
+            declaration=self._field(body, "declaration"),
+        )
+
     def _node_read_only_policy_template(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """Return a live-context template only to its authenticated executor.
 
@@ -897,6 +915,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 result = self.server.store.set_admission_mode(mode=mode)
                 self._json(HTTPStatus.OK, result)
                 return
+            if self.path == "/v1/ui/action-reconciliations/quarantine-historical-unknown":
+                self._json(HTTPStatus.OK, self._quarantine_historical_unknown_actions(body, browser=True))
+                return
             if self.path == "/v1/ui/read-only-requests":
                 self._json(HTTPStatus.CREATED, self._create_ui_read_only_request(body))
                 return
@@ -969,6 +990,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     expires_at_ms=self._field(body, "expires_at_ms"),
                 )
                 self._json(HTTPStatus.CREATED, result)
+                return
+            if self.path == "/v1/action-reconciliations/quarantine-historical-unknown":
+                self._json(HTTPStatus.OK, self._quarantine_historical_unknown_actions(body, browser=False))
                 return
             node_rotate_match = re.fullmatch(r"/v1/nodes/([^/]+)/rotate-credential", self.path)
             if node_rotate_match:

@@ -258,8 +258,8 @@ session, backup, or real environment file. Creating it does not change the
   or a request with non-payload action lineage; node credentials, action
   arguments, and admission references are not included in these list/request
   observations. `GET /v1/actions/{action_id}` remains the owner-only detailed
-  action, attempt, and receipt observation endpoint. None is an execution or
-  reconciliation endpoint.
+  action, attempt, receipt, and any immutable reconciliation observation
+  endpoint. It is never an execution endpoint.
 - Operator-only `POST /v1/nodes/{device_id}/rotate-credential` rotates the
   node credential and increments its recorded generation; the returned secret
   is shown once and belongs only in protected node configuration. Operator-only
@@ -286,6 +286,17 @@ session, backup, or real environment file. Creating it does not change the
   `reconcile_required` and is not redelivered. `accepted` and `completed`
   receipts require a non-empty local handle, while a later terminal receipt is
   required to settle an accepted or unknown action.
+- A protected operator may use
+  `POST /v1/action-reconciliations/quarantine-historical-unknown` (or the
+  same-origin browser equivalent) only for exact `workspace_context` actions
+  on one selected node that remain `reconcile_required` with a latest
+  `unknown` receipt. It requires the literal declaration
+  `HISTORICAL_READ_ONLY_UNKNOWN_EFFECT`. The result stores an owner/device-bound
+  `quarantined_unknown` disposition, receipt/evidence digests, timestamp and an
+  audit event. It does **not** alter receipts or delivery state, settle the
+  action, permit redelivery, or claim that a workspace was untouched or read.
+  Backup inspection reports both all unresolved actions and the smaller count
+  still unquarantined; the healthcheck may pass only when the latter is zero.
 - `POST /mcp` is a stateless JSON-RPC façade for MCP `2025-11-25`, reachable
   only with a **server-issued MCP access grant**, not the operator Bearer.
   An operator creates a grant through `POST /v1/mcp-access-grants` for exactly
@@ -330,7 +341,7 @@ named local admission lane must independently pass its policy, strict-runtime
 and actor gates before a completed receipt can be observed. Mutation remains
 blocked until a local adapter can pass the local authority gate. A grant alone
 is never a file, process, local-policy, or task-approval authority.
-Schema migrations are additive, source-versioned (current `user_version=9`),
+Schema migrations are additive, source-versioned (current `user_version=10`),
 and applied atomically by the store. `ControlPlaneStore.backup_to()` creates a
 verified, non-overwriting SQLite Backup API snapshot when an operator calls it
 explicitly. It is not an automatic startup backup and does not execute a
@@ -408,8 +419,9 @@ Inspection opens the artifact with SQLite `mode=ro&immutable=1`; it rejects a
 snapshot carrying `-wal` or `-shm` sidecars, a malformed/mismatched expected
 digest, or failed integrity. Its content-free receipt returns the artifact
 digest, schema, durable admission mode when present, per-state action counts,
-and the count requiring reconciliation (`dispatch_unconfirmed`, `accepted`, or
-`reconcile_required`). It does **not** restore files, start/stop the service,
+the total count requiring reconciliation (`dispatch_unconfirmed`, `accepted`,
+or `reconcile_required`), plus audited `quarantined_unknown` and still-
+unquarantined counts. It does **not** restore files, start/stop the service,
 change admission, contact nodes, reconcile effects, or determine that reopening
 admission is safe.
 

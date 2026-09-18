@@ -121,6 +121,22 @@ test('read-only bridge allowlists its result so a local workspace path is never 
   assert.equal(result.workspace_summary.entries[0].name, 'office-marker.txt');
 });
 
+test('read-only bridge retains a safe diagnostic category when a receipt summary is malformed', () => {
+  const malformed = safeResult();
+  malformed.workspace_summary = { schema_version: 1 };
+  assert.throws(
+    () => normalisedResult(descriptor, malformed),
+    { code: 'CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_INVALID' }
+  );
+
+  const digestMismatch = safeResult();
+  digestMismatch.workspace_summary_sha256 = '0'.repeat(64);
+  assert.throws(
+    () => normalisedResult(descriptor, digestMismatch),
+    { code: 'CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_DIGEST_INVALID' }
+  );
+});
+
 test('read-only bridge rejects an installation mismatch before it opens Recovery IPC', async () => {
   let called = false;
   await assert.rejects(

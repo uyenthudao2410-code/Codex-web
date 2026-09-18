@@ -23,11 +23,13 @@ from typing import Any, Iterator
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
+QUARANTINE_UNKNOWN_DISPOSITION = "quarantined_unknown"
+QUARANTINE_UNKNOWN_DECLARATION = "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT"
 UNVERIFIED_RUNTIME_IDENTITIES = {"", "none", "unknown", "unreported", "unverified"}
 POLICY_OBSERVATION_STATES = {"unobserved", "enabled", "expired_or_disabled", "unavailable"}
 POLICY_REASON_PATTERN = re.compile(r"^[A-Z0-9_]{3,96}$")
@@ -218,6 +220,7 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
         }
         delivery_state_counts: dict[str, int] = {}
+        quarantined_unknown_action_count = 0
         if "actions" in tables:
             delivery_state_counts = {
                 str(row["delivery_state"]): int(row["count"])
@@ -225,6 +228,20 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
                     "SELECT delivery_state, COUNT(*) AS count FROM actions GROUP BY delivery_state ORDER BY delivery_state"
                 ).fetchall()
             }
+            if "action_reconciliations" in tables:
+                quarantined_unknown_action_count = int(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM actions AS action
+                        JOIN action_reconciliations AS reconciliation
+                          ON reconciliation.action_id = action.action_id
+                        WHERE action.delivery_state = 'reconcile_required'
+                          AND reconciliation.disposition = ?
+                        """,
+                        (QUARANTINE_UNKNOWN_DISPOSITION,),
+                    ).fetchone()[0]
+                )
         admission_mode: str | None = None
         if "control_plane_state" in tables:
             row = connection.execute(
@@ -237,6 +254,7 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
         delivery_state_counts.get(state, 0)
         for state in ("dispatch_unconfirmed", "accepted", "reconcile_required")
     )
+    unquarantined_unresolved_action_count = unresolved_action_count - quarantined_unknown_action_count
     return {
         "sqlite_integrity": integrity,
         "schema_version": schema_version,
@@ -244,6 +262,8 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
         "admission_mode": admission_mode,
         "delivery_state_counts": delivery_state_counts,
         "unresolved_action_count": unresolved_action_count,
+        "quarantined_unknown_action_count": quarantined_unknown_action_count,
+        "unquarantined_unresolved_action_count": unquarantined_unresolved_action_count,
     }
 
 
@@ -594,6 +614,18 @@ class ControlPlaneStore:
                     expires_at_ms INTEGER NOT NULL,
                     revoked_at_ms INTEGER
                 );
+                CREATE TABLE IF NOT EXISTS action_reconciliations (
+                    action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
+                    owner_id TEXT NOT NULL,
+                    device_id TEXT NOT NULL,
+                    disposition TEXT NOT NULL CHECK(disposition = 'quarantined_unknown'),
+                    declaration TEXT NOT NULL CHECK(declaration = 'HISTORICAL_READ_ONLY_UNKNOWN_EFFECT'),
+                    receipt_id TEXT NOT NULL,
+                    receipt_digest TEXT NOT NULL,
+                    receipt_received_at_ms INTEGER NOT NULL,
+                    evidence_digest TEXT NOT NULL,
+                    reconciled_at_ms INTEGER NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS actions_node_delivery_idx
                     ON actions(device_id, delivery_state, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS receipts_action_idx ON receipts(action_id, received_at_ms);
@@ -601,6 +633,8 @@ class ControlPlaneStore:
                     ON mcp_read_only_intents(action_id);
                 CREATE INDEX IF NOT EXISTS mcp_access_grants_context_idx
                     ON mcp_access_grants(context_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS action_reconciliations_owner_device_idx
+                    ON action_reconciliations(owner_id, device_id, reconciled_at_ms);
                     """.split(";"),
                 ):
                     connection.execute(statement)
@@ -1991,6 +2025,150 @@ class ControlPlaneStore:
             "replayed": False,
         }
 
+    def quarantine_historical_unknown_actions(
+        self,
+        *,
+        owner_id: str,
+        device_id: str,
+        action_ids: Any,
+        declaration: str,
+    ) -> dict[str, Any]:
+        """Record a deliberate, non-terminal disposition for historic unknown reads.
+
+        This is a narrow operator risk acceptance for a fixed read-only canary
+        whose local effect cannot be determined after the original delivery.
+        It never modifies the immutable receipt, does not settle the action,
+        and cannot make the action eligible for redelivery.  A reconciliation
+        record is durable audit evidence, not a claim about what Windows did.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        device_id = _text(device_id, "device_id")
+        if declaration != QUARANTINE_UNKNOWN_DECLARATION:
+            raise ValidationError("historical unknown declaration is invalid.")
+        if not isinstance(action_ids, list) or not 1 <= len(action_ids) <= 50:
+            raise ValidationError("action_ids must contain between 1 and 50 exact action IDs.")
+        normalized_action_ids = [_text(value, "action_id") for value in action_ids]
+        if len(set(normalized_action_ids)) != len(normalized_action_ids):
+            raise ValidationError("action_ids must not contain duplicates.")
+
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node = connection.execute(
+                "SELECT owner_id FROM nodes WHERE device_id = ?", (device_id,)
+            ).fetchone()
+            if node is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("device is not enrolled.")
+            if node["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("device is not owned by this principal.")
+            # Reconciliation is historical evidence handling, not new
+            # execution authority; a revoked node must not erase the owner's
+            # ability to make this disposition for its earlier unknown action.
+            now = self.clock()
+            reconciled: list[dict[str, Any]] = []
+            try:
+                for action_id in normalized_action_ids:
+                    action = connection.execute(
+                        "SELECT * FROM actions WHERE action_id = ?", (action_id,)
+                    ).fetchone()
+                    if action is None:
+                        raise NotFoundError("action does not exist.")
+                    if action["owner_id"] != owner_id:
+                        raise PermissionError("action is not owned by this principal.")
+                    if action["device_id"] != device_id:
+                        raise ConflictError("action does not belong to the selected device.")
+                    if action["tool_name"] != "workspace_context":
+                        raise ConflictError("only workspace_context actions can be quarantined as historical unknowns.")
+                    if action["delivery_state"] != "reconcile_required":
+                        raise ConflictError("action is not awaiting historical unknown reconciliation.")
+                    existing = connection.execute(
+                        "SELECT action_id FROM action_reconciliations WHERE action_id = ?", (action_id,)
+                    ).fetchone()
+                    if existing is not None:
+                        raise ConflictError("action already has an operator reconciliation disposition.")
+                    receipt = connection.execute(
+                        """
+                        SELECT receipt_id, receipt_state, receipt_digest, received_at_ms
+                        FROM receipts
+                        WHERE action_id = ?
+                        ORDER BY received_at_ms DESC, receipt_id DESC
+                        LIMIT 1
+                        """,
+                        (action_id,),
+                    ).fetchone()
+                    if receipt is None or receipt["receipt_state"] != "unknown":
+                        raise ConflictError("action does not retain an unknown latest receipt.")
+                    attempt_count = int(
+                        connection.execute(
+                            "SELECT COUNT(*) FROM delivery_attempts WHERE action_id = ?", (action_id,)
+                        ).fetchone()[0]
+                    )
+                    evidence_digest = _digest(
+                        {
+                            "schema_version": 1,
+                            "action_id": action_id,
+                            "owner_id": owner_id,
+                            "device_id": device_id,
+                            "tool_name": action["tool_name"],
+                            "delivery_state": action["delivery_state"],
+                            "latest_receipt_id": receipt["receipt_id"],
+                            "latest_receipt_state": receipt["receipt_state"],
+                            "latest_receipt_digest": receipt["receipt_digest"],
+                            "latest_receipt_received_at_ms": receipt["received_at_ms"],
+                            "delivery_attempt_count": attempt_count,
+                        }
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO action_reconciliations(
+                            action_id, owner_id, device_id, disposition, declaration,
+                            receipt_id, receipt_digest, receipt_received_at_ms,
+                            evidence_digest, reconciled_at_ms
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            action_id,
+                            owner_id,
+                            device_id,
+                            QUARANTINE_UNKNOWN_DISPOSITION,
+                            QUARANTINE_UNKNOWN_DECLARATION,
+                            receipt["receipt_id"],
+                            receipt["receipt_digest"],
+                            receipt["received_at_ms"],
+                            evidence_digest,
+                            now,
+                        ),
+                    )
+                    self._event(
+                        connection,
+                        "action",
+                        action_id,
+                        "action_historical_unknown_quarantined",
+                        {
+                            "disposition": QUARANTINE_UNKNOWN_DISPOSITION,
+                            "declaration": QUARANTINE_UNKNOWN_DECLARATION,
+                            "evidence_digest": evidence_digest,
+                        },
+                    )
+                    reconciled.append(
+                        {
+                            "action_id": action_id,
+                            "disposition": QUARANTINE_UNKNOWN_DISPOSITION,
+                            "reconciled_at_ms": now,
+                        }
+                    )
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            connection.execute("COMMIT")
+        return {
+            "device_id": device_id,
+            "declaration": QUARANTINE_UNKNOWN_DECLARATION,
+            "actions": reconciled,
+        }
+
     def action_observation(self, *, owner_id: str, action_id: str) -> dict[str, Any]:
         """Return owner-scoped immutable action, delivery attempts, and receipts."""
         action = self.action(owner_id=owner_id, action_id=action_id)
@@ -2003,8 +2181,19 @@ class ControlPlaneStore:
                 "SELECT receipt_id, action_id, device_id, local_handle, receipt_state, payload_json, receipt_digest, received_at_ms FROM receipts WHERE action_id = ? ORDER BY received_at_ms, receipt_id",
                 (action_id,),
             ).fetchall()
+            reconciliation = connection.execute(
+                """
+                SELECT action_id, owner_id, device_id, disposition, declaration,
+                       receipt_id, receipt_digest, receipt_received_at_ms,
+                       evidence_digest, reconciled_at_ms
+                FROM action_reconciliations
+                WHERE action_id = ?
+                """,
+                (action_id,),
+            ).fetchone()
         action["attempts"] = [dict(item) for item in attempts]
         action["receipts"] = [dict(item) for item in receipts]
+        action["reconciliation"] = _row(reconciliation)
         return action
 
     def list_action_lifecycle(self, *, owner_id: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -2023,11 +2212,16 @@ class ControlPlaneStore:
         with self._connection() as connection:
             actions = connection.execute(
                 """
-                SELECT action_id, request_id, context_id, device_id, tool_name,
-                       created_at_ms, expires_at_ms, delivery_state, settled_at_ms
-                FROM actions
-                WHERE owner_id = ?
-                ORDER BY created_at_ms DESC, action_id DESC
+                SELECT action.action_id, action.request_id, action.context_id,
+                       action.device_id, action.tool_name, action.created_at_ms,
+                       action.expires_at_ms, action.delivery_state, action.settled_at_ms,
+                       reconciliation.disposition AS reconciliation_disposition,
+                       reconciliation.reconciled_at_ms
+                FROM actions AS action
+                LEFT JOIN action_reconciliations AS reconciliation
+                  ON reconciliation.action_id = action.action_id
+                WHERE action.owner_id = ?
+                ORDER BY action.created_at_ms DESC, action.action_id DESC
                 LIMIT ?
                 """,
                 (owner_id, bounded_limit),
@@ -2075,12 +2269,37 @@ class ControlPlaneStore:
                     "receipts",
                     "mcp_read_only_intents",
                     "mcp_access_grants",
+                    "action_reconciliations",
                 )
             }
+            unresolved_action_count = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) FROM actions
+                    WHERE delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+                    """
+                ).fetchone()[0]
+            )
+            quarantined_unknown_action_count = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM actions AS action
+                    JOIN action_reconciliations AS reconciliation
+                      ON reconciliation.action_id = action.action_id
+                    WHERE action.delivery_state = 'reconcile_required'
+                      AND reconciliation.disposition = ?
+                    """,
+                    (QUARANTINE_UNKNOWN_DISPOSITION,),
+                ).fetchone()[0]
+            )
         return {
             "ok": integrity == "ok",
             "sqlite_integrity": integrity,
             "schema_version": schema_version,
             "admission_mode": admission_mode,
             "counts": counts,
+            "unresolved_action_count": unresolved_action_count,
+            "quarantined_unknown_action_count": quarantined_unknown_action_count,
+            "unquarantined_unresolved_action_count": unresolved_action_count - quarantined_unknown_action_count,
         }

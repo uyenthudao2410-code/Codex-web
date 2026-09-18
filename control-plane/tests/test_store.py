@@ -24,9 +24,11 @@ from control_plane.node_agent import (
     READ_ONLY_JOURNAL_SCHEMA_VERSION,
     _journal_path,
     _pid_is_live,
+    _read_only_poll_lock_path,
     _request,
     _read_journal,
     _read_only_bridge_request,
+    _safe_bridge_result,
     _write_json_atomic,
     parse_dev_ui_status,
     poll,
@@ -35,6 +37,7 @@ from control_plane.node_agent import (
     run_read_only_agent,
     run_read_only_loop,
     recovery_identity_observation,
+    recovery_read_only_bridge,
     recovery_runtime_status,
     runtime_heartbeat,
     observed_runtime_identity,
@@ -537,6 +540,74 @@ class ControlPlaneStoreTests(unittest.TestCase):
             self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="accepted", local_handle="handle-alpha", payload={})
         terminal = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="failed", local_handle="", payload={"reason": "confirmed_not_executed"})
         self.assertEqual(terminal["delivery_state"], "settled")
+
+    def test_operator_can_quarantine_exact_historical_unknown_without_settling_or_retrying(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-quarantine-unknown-0001",
+            admission_reference="admission-quarantine-unknown-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        self.store.record_receipt(
+            device_id="device-alpha",
+            action_id=action["action_id"],
+            attempt_id=attempt,
+            receipt_state="unknown",
+            local_handle="",
+            payload={"reason": "historic_read_effect_unknown"},
+        )
+
+        quarantined = self.store.quarantine_historical_unknown_actions(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            action_ids=[action["action_id"]],
+            declaration="HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+        )
+        self.assertEqual(quarantined["actions"], [{
+            "action_id": action["action_id"],
+            "disposition": "quarantined_unknown",
+            "reconciled_at_ms": self.now,
+        }])
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "reconcile_required")
+        self.assertEqual([receipt["receipt_state"] for receipt in observation["receipts"]], ["unknown"])
+        self.assertEqual(observation["reconciliation"]["disposition"], "quarantined_unknown")
+        self.assertEqual(observation["reconciliation"]["declaration"], "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        lifecycle = self.store.list_action_lifecycle(owner_id="owner_default")
+        self.assertEqual(lifecycle[0]["reconciliation_disposition"], "quarantined_unknown")
+        health = self.store.health()
+        self.assertEqual(health["unresolved_action_count"], 1)
+        self.assertEqual(health["quarantined_unknown_action_count"], 1)
+        self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
+
+        snapshot_path = Path(self.tempdir.name) / "quarantined-unknown.sqlite3"
+        snapshot = self.store.backup_to(snapshot_path)
+        inspected = inspect_verified_snapshot(snapshot_path, expected_sha256=str(snapshot["snapshot_sha256"]))
+        self.assertEqual(inspected["unresolved_action_count"], 1)
+        self.assertEqual(inspected["quarantined_unknown_action_count"], 1)
+        self.assertEqual(inspected["unquarantined_unresolved_action_count"], 0)
+
+        with self.assertRaises(ConflictError):
+            self.store.quarantine_historical_unknown_actions(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+            )
+        with self.assertRaises(ValidationError):
+            self.store.quarantine_historical_unknown_actions(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="a different declaration",
+            )
 
     def test_rotate_credential_invalidates_old_secret_and_increments_generation(self) -> None:
         original = self.store.node(device_id="device-alpha")
@@ -1393,6 +1464,29 @@ class ControlPlaneStoreTests(unittest.TestCase):
             run_read_only_agent(args)
         self.assertTrue(lock_path.exists())
 
+    def test_read_only_poll_refuses_a_live_queue_drain_lock_before_journal_access(self) -> None:
+        config_path = Path(self.tempdir.name) / "poll-lock-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-poll-lock-0001",
+            "endpoint_id": "endpoint-poll-lock-0001",
+            "node_secret": "poll-lock-secret-not-reported",
+        }), encoding="utf-8")
+        lock_path = _read_only_poll_lock_path(config_path)
+        lock_path.write_text(json.dumps({
+            "schema_version": 1,
+            "instance_id": "another-local-poll-instance",
+            "pid": os.getpid(),
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1,
+        )
+        with mock.patch("control_plane.node_agent._request") as request:
+            with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_READ_ONLY_POLL_ALREADY_RUNNING"):
+                poll_read_only_once(args)
+        request.assert_not_called()
+        self.assertTrue(lock_path.exists())
+
     def test_windows_invalid_parameter_process_probe_is_confirmed_dead(self) -> None:
         missing_process = OSError(errno.EINVAL, "The parameter is incorrect")
         missing_process.winerror = 87
@@ -2020,6 +2114,96 @@ process.stdout.write(JSON.stringify(observation));
         self.assertTrue(entry["receipt"]["receipt_submitted"])
         self.assertNotIn("must-never-reach-central", json.dumps(entry))
 
+    def test_read_only_bridge_defers_projection_until_request_binding(self) -> None:
+        """The bridge must preserve IDs until the only final Python verifier."""
+        request = {
+            "action_id": "act-node-bridge-0001",
+            "attempt_id": "try-node-bridge-0001",
+            "facade_contract": dict(FACADE_CONTRACT),
+        }
+        raw_result = {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "action_id": request["action_id"],
+            "attempt_id": request["attempt_id"],
+            "local_handle": "cp_ro_" + "b" * 48,
+            "workspace_accessed": True,
+            "policy_sha256": "c" * 64,
+            "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+            "runtime_identity": {
+                "activation_epoch_id": "activation-node-bridge-0001",
+                "process_instance_id": "mcp-process-node-bridge-0001",
+                "server_instance_id": "mcp-server-node-bridge-0001",
+                "tool_contract_sha256": "d" * 64,
+            },
+            "facade_contract": dict(FACADE_CONTRACT),
+            "workspace_summary": {
+                "schema_version": 1,
+                "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+                "entries": [],
+                "entries_truncated": False,
+                "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+            },
+            "workspace_summary_sha256": "f" * 64,
+            "response_sha256": "e" * 64,
+        }
+        args = SimpleNamespace(timeout_seconds=20)
+        completed = SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True, "result": raw_result}))
+        with mock.patch("control_plane.node_agent._adapter_command", return_value=(["node"], {})), \
+             mock.patch("control_plane.node_agent.subprocess.run", return_value=completed):
+            result, error = recovery_read_only_bridge(args, Path.cwd(), request)
+
+        self.assertIsNone(error)
+        self.assertEqual(result, raw_result)
+        self.assertEqual(_safe_bridge_result(result, request)["workspace_accessed"], True)
+
+    def test_read_only_bridge_result_emits_typed_safe_diagnostic_categories(self) -> None:
+        request = {
+            "action_id": "act-node-bridge-0001",
+            "attempt_id": "try-node-bridge-0001",
+            "facade_contract": dict(FACADE_CONTRACT),
+        }
+        result = {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "action_id": request["action_id"],
+            "attempt_id": request["attempt_id"],
+            "local_handle": "cp_ro_" + "b" * 48,
+            "workspace_accessed": True,
+            "policy_sha256": "c" * 64,
+            "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+            "runtime_identity": {
+                "activation_epoch_id": "activation-node-bridge-0001",
+                "process_instance_id": "mcp-process-node-bridge-0001",
+                "server_instance_id": "mcp-server-node-bridge-0001",
+                "tool_contract_sha256": "d" * 64,
+            },
+            "facade_contract": dict(FACADE_CONTRACT),
+            "workspace_summary": {
+                "schema_version": 1,
+                "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+                "entries": [],
+                "entries_truncated": False,
+                "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+            },
+            "workspace_summary_sha256": "f" * 64,
+            "response_sha256": "e" * 64,
+        }
+        mutations = {
+            "CONTROL_PLANE_BRIDGE_RESULT_ACTION_INVALID": lambda value: value.__setitem__("action_id", "wrong-action-id"),
+            "CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_INVALID": lambda value: value.__setitem__("workspace_summary", {"schema_version": 1}),
+            "CONTROL_PLANE_BRIDGE_RESULT_IDENTITY_INVALID": lambda value: value.__setitem__("runtime_identity", {}),
+            "CONTROL_PLANE_BRIDGE_RESULT_CONTRACT_INVALID": lambda value: value.__setitem__("facade_contract", {}),
+            "CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_DIGEST_INVALID": lambda value: value.__setitem__("workspace_summary_sha256", "not-a-digest"),
+            "CONTROL_PLANE_BRIDGE_RESULT_DIGEST_INVALID": lambda value: value.__setitem__("response_sha256", "not-a-digest"),
+        }
+        for code, mutate in mutations.items():
+            with self.subTest(code=code):
+                invalid = json.loads(json.dumps(result))
+                mutate(invalid)
+                with self.assertRaisesRegex(RuntimeError, f"^{code}$"):
+                    _safe_bridge_result(invalid, request)
+
     def test_read_only_bridge_requires_canonical_facade_intent_provenance(self) -> None:
         config = {
             "server_url": "https://control.example.test",
@@ -2151,9 +2335,72 @@ process.stdout.write(JSON.stringify(observation));
             "schema_version": 1,
             "operation_kind": "control_plane_read_only_workspace_context",
             "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+            "diagnostic_code": "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
         })
         journal = _read_journal(journal_path)
         entry = journal["entries"]["act-node-bridge-0002|try-node-bridge-0002"]
+        self.assertEqual(entry["state"], "unknown")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+
+    def test_read_only_node_lane_terminalizes_an_unexpected_post_prepare_failure(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-post-prepare-failure.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-post-prepare-0001",
+            "attempt_id": "try-node-bridge-post-prepare-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        receipts: list[dict[str, object]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            receipts.append(payload)
+            return {"receipt_id": "receipt-node-bridge-post-prepare-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge", return_value=(None, "CONTROL_PLANE_BRIDGE_RESULT_INVALID")) as bridge, \
+             mock.patch("control_plane.node_agent._record_local_receipt", side_effect=RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")):
+            self.assertEqual(poll_read_only_once(args), 0)
+
+        bridge.assert_called_once()
+        self.assertEqual(receipts, [{
+            "action_id": action["action_id"],
+            "attempt_id": action["attempt_id"],
+            "receipt_state": "unknown",
+            "local_handle": "",
+            "payload": {
+                "schema_version": 1,
+                "operation_kind": "control_plane_read_only_workspace_context",
+                "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                "diagnostic_code": "CONTROL_PLANE_BRIDGE_RESULT_INVALID",
+            },
+        }])
+        journal = _read_journal(_journal_path(config_path))
+        entry = journal["entries"][f"{action['action_id']}|{action['attempt_id']}"]
         self.assertEqual(entry["state"], "unknown")
         self.assertTrue(entry["receipt"]["receipt_submitted"])
 
@@ -2274,6 +2521,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
                 "schema_version": 1,
                 "operation_kind": "control_plane_read_only_workspace_context",
                 "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                "diagnostic_code": "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
             },
         }])
         journal = _read_journal(journal_path)
@@ -2324,6 +2572,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
                     "schema_version": 1,
                     "operation_kind": "control_plane_read_only_workspace_context",
                     "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                    "diagnostic_code": "CONTROL_PLANE_BRIDGE_TIMEOUT",
                 },
             })
             return {"receipt_id": "receipt-node-bridge-timeout-0001"}

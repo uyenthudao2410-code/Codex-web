@@ -52,7 +52,10 @@ if (
     age_seconds < 0
     or age_seconds > max_age_seconds
     or inspection.get("sqlite_integrity") != "ok"
-    or inspection.get("unresolved_action_count") != 0
+    # Historic unknown read-only actions may have an explicit audited
+    # quarantine. They remain counted as unresolved evidence, but only an
+    # *unquarantined* delivery ambiguity keeps backup health red.
+    or inspection.get("unquarantined_unresolved_action_count") != 0
 ):
     raise SystemExit("control-plane automatic backup is stale or not restorable")
 deployment = json.loads(deployment_text)

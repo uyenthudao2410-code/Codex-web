@@ -23,7 +23,7 @@ from control_plane.http_api import (
     _package_source_sha256,
     _web_origin,
 )
-from control_plane.web_ui import WEB_UI_JAVASCRIPT
+from control_plane.web_ui import WEB_UI_HTML, WEB_UI_JAVASCRIPT
 from control_plane.mcp_facade import _central_lifecycle_state
 from control_plane.node_agent import poll_read_only_once
 from control_plane.store import ControlPlaneStore, SCHEMA_VERSION
@@ -313,6 +313,97 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertIn("/v1/ui/bindings", WEB_UI_JAVASCRIPT.decode("utf-8"))
         self.assertIn("duration_minutes", WEB_UI_JAVASCRIPT.decode("utf-8"))
         self.assertIn("Thu hồi binding", WEB_UI_JAVASCRIPT.decode("utf-8"))
+
+    def test_historical_unknown_quarantine_requires_operator_authentication_and_preserves_receipt(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-http-quarantine-0001",
+            endpoint_id="endpoint-http-quarantine-0001",
+            display_name="HTTP quarantine node",
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-http-quarantine-0001",
+            workspace_generation="generation-http-quarantine-0001",
+            display_name="HTTP quarantine workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        request = self.server.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Historical read-only uncertainty fixture",
+            criteria={"kind": "read_only"},
+            scope={"kind": "fixture"},
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+        action = self.server.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="http-quarantine-action-key-0001",
+            admission_reference="http-quarantine-admission-0001",
+            expires_at_ms=self.server.store.clock() + 20_000,
+        )
+        self.server.store.heartbeat(
+            device_id=node["device_id"],
+            endpoint_id="endpoint-http-quarantine-0001",
+            runtime_instance_id="runtime-http-quarantine-0001",
+            mcp_server_instance_id="server-http-quarantine-0001",
+            activation_epoch="epoch-http-quarantine-0001",
+            contract_version="smart-v3",
+            readiness="ready",
+        )
+        attempt = self.server.store.poll_actions(device_id=node["device_id"])[0]["attempt_id"]
+        self.server.store.record_receipt(
+            device_id=node["device_id"],
+            action_id=action["action_id"],
+            attempt_id=attempt,
+            receipt_state="unknown",
+            local_handle="",
+            payload={"reason": "fixture_unknown"},
+        )
+        payload = {
+            "device_id": node["device_id"],
+            "action_ids": [action["action_id"]],
+            "declaration": "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+        }
+        path = "/v1/action-reconciliations/quarantine-historical-unknown"
+        status, forbidden = self._post(path, payload)
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+
+        cookie, csrf_token = self._ui_login()
+        ui_path = "/v1/ui/action-reconciliations/quarantine-historical-unknown"
+        status, csrf_rejected, _headers = self._request_with_headers(
+            ui_path,
+            method="POST",
+            payload=payload,
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(csrf_rejected["error"]["code"], "FORBIDDEN")
+
+        status, quarantined, _headers = self._request_with_headers(
+            ui_path,
+            method="POST",
+            payload=payload,
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(quarantined["actions"][0]["action_id"], action["action_id"])
+        self.assertNotIn("receipt_digest", json.dumps(quarantined))
+        observation = self.server.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "reconcile_required")
+        self.assertEqual(observation["receipts"][-1]["receipt_state"], "unknown")
+        self.assertEqual(observation["reconciliation"]["disposition"], "quarantined_unknown")
+        self.assertIn("quarantine-historical-unknown", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("HISTORICAL_READ_ONLY_UNKNOWN_EFFECT", WEB_UI_HTML.decode("utf-8"))
 
     def test_node_policy_template_is_bound_to_its_live_context_and_node_credential(self) -> None:
         first = self.server.store.enroll_node(

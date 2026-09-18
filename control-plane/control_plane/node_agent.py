@@ -971,19 +971,29 @@ def _safe_error_code(value: Any, default: str = "CONTROL_PLANE_BRIDGE_FAILED") -
     return code if re.fullmatch(r"[A-Z0-9_]{3,96}", code) else default
 
 
-def _summary_text(value: Any, *, allow_empty: bool = False, max_length: int = WORKSPACE_SUMMARY_TEXT_MAX) -> str:
+def _summary_text(
+    value: Any,
+    *,
+    allow_empty: bool = False,
+    max_length: int = WORKSPACE_SUMMARY_TEXT_MAX,
+    invalid_code: str = "CONTROL_PLANE_BRIDGE_RESULT_INVALID",
+) -> str:
     if not isinstance(value, str) or len(value) > max_length or any(ord(character) < 32 or ord(character) == 127 for character in value):
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError(invalid_code)
     if not allow_empty and not value:
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError(invalid_code)
     return value
 
 
-def safe_workspace_summary(value: Any) -> dict[str, Any]:
-    """Accept only one path-free, metadata-only compact workspace projection."""
+def _safe_workspace_summary(
+    value: Any,
+    *,
+    invalid_code: str = "CONTROL_PLANE_BRIDGE_RESULT_INVALID",
+) -> dict[str, Any]:
+    """Accept one path-free, metadata-only compact workspace projection."""
 
     if not isinstance(value, dict) or set(value) != {"schema_version", "project", "entries", "entries_truncated", "git"}:
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError(invalid_code)
     project = value.get("project")
     entries = value.get("entries")
     git = value.get("git")
@@ -1003,7 +1013,7 @@ def safe_workspace_summary(value: Any) -> dict[str, Any]:
         or not 0 <= git["changed_count"] <= 100_000
         or not isinstance(git.get("truncated"), bool)
     ):
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError(invalid_code)
     safe_entries: list[dict[str, Any]] = []
     for entry in entries:
         if (
@@ -1016,10 +1026,10 @@ def safe_workspace_summary(value: Any) -> dict[str, Any]:
             or not isinstance(entry.get("is_hidden"), bool)
             or not isinstance(entry.get("is_ignored"), bool)
         ):
-            raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
-        name = _summary_text(entry.get("name"))
+            raise RuntimeError(invalid_code)
+        name = _summary_text(entry.get("name"), invalid_code=invalid_code)
         if "/" in name or "\\" in name or name in {".", ".."}:
-            raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+            raise RuntimeError(invalid_code)
         safe_entries.append({
             "name": name,
             "type": entry["type"],
@@ -1031,50 +1041,74 @@ def safe_workspace_summary(value: Any) -> dict[str, Any]:
         "schema_version": WORKSPACE_SUMMARY_SCHEMA_VERSION,
         "project": {
             "type": project["type"],
-            "name": _summary_text(project.get("name")),
-            "version": _summary_text(project.get("version"), allow_empty=True, max_length=128),
+            "name": _summary_text(project.get("name"), invalid_code=invalid_code),
+            "version": _summary_text(project.get("version"), allow_empty=True, max_length=128, invalid_code=invalid_code),
         },
         "entries": safe_entries,
         "entries_truncated": value["entries_truncated"],
         "git": {
             "is_repo": git["is_repo"],
-            "branch": _summary_text(git.get("branch"), allow_empty=True),
+            "branch": _summary_text(git.get("branch"), allow_empty=True, invalid_code=invalid_code),
             "changed_count": git["changed_count"],
             "truncated": git["truncated"],
         },
     }
     if len(json.dumps(result, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")) > WORKSPACE_SUMMARY_MAX_BYTES:
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError(invalid_code)
     return result
+
+
+def safe_workspace_summary(value: Any) -> dict[str, Any]:
+    """Public generic validation used by the central MCP receipt reader."""
+
+    return _safe_workspace_summary(value)
 
 
 def _safe_bridge_result(value: Any, request: dict[str, Any]) -> dict[str, Any]:
     """Allowlist a completed receipt; neither workspace paths nor raw MCP data cross this boundary."""
     if not isinstance(value, dict) or value.get("schema_version") != 1:
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_ENVELOPE_INVALID")
     identity = value.get("runtime_identity")
     actor = value.get("actor")
     facade_contract = value.get("facade_contract")
-    workspace_summary = safe_workspace_summary(value.get("workspace_summary"))
+    workspace_summary = _safe_workspace_summary(
+        value.get("workspace_summary"),
+        invalid_code="CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_INVALID",
+    )
     workspace_summary_sha256 = str(value.get("workspace_summary_sha256") or "").lower()
     if (
         value.get("operation_kind") != "control_plane_read_only_workspace_context"
         or value.get("action_id") != request["action_id"]
         or value.get("attempt_id") != request["attempt_id"]
-        or value.get("workspace_accessed") is not True
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_ACTION_INVALID")
+    if (
+        value.get("workspace_accessed") is not True
         or not re.fullmatch(r"cp_ro_[a-f0-9]{48}", str(value.get("local_handle") or ""))
         or not SHA256_PATTERN.fullmatch(str(value.get("policy_sha256") or "").lower())
         or actor != {"client_id": "electron-control-plane-bridge", "client_type": "electron"}
-        or not isinstance(identity, dict)
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_ENVELOPE_INVALID")
+    if (
+        not isinstance(identity, dict)
         or not all(isinstance(identity.get(field), str) and 0 < len(identity[field]) <= 128 for field in ("activation_epoch_id", "process_instance_id", "server_instance_id"))
         or not SHA256_PATTERN.fullmatch(str(identity.get("tool_contract_sha256") or "").lower())
-        or not isinstance(facade_contract, dict)
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_IDENTITY_INVALID")
+    if (
+        not isinstance(facade_contract, dict)
         or set(facade_contract) != {"schema_version", "profile", "sha256"}
         or facade_contract != request.get("facade_contract")
-        or not SHA256_PATTERN.fullmatch(workspace_summary_sha256)
-        or not SHA256_PATTERN.fullmatch(str(value.get("response_sha256") or "").lower())
     ):
-        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_CONTRACT_INVALID")
+    if (
+        not SHA256_PATTERN.fullmatch(workspace_summary_sha256)
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_DIGEST_INVALID")
+    if (
+        not SHA256_PATTERN.fullmatch(str(value.get("response_sha256") or "").lower())
+    ):
+        raise RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_DIGEST_INVALID")
     return {
         "schema_version": 1,
         "operation_kind": "control_plane_read_only_workspace_context",
@@ -1096,7 +1130,13 @@ def _safe_bridge_result(value: Any, request: dict[str, Any]) -> dict[str, Any]:
 
 
 def recovery_read_only_bridge(args: argparse.Namespace, project_root: Path, request: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
-    """Call the descriptor-hiding CJS bridge once; errors are returned as typed codes."""
+    """Call the descriptor-hiding CJS bridge once; errors are returned as typed codes.
+
+    The result stays inside this process until ``poll_read_only_once`` verifies
+    and allowlists it immediately before the durable receipt boundary.  Do not
+    normalize it here as well: that projection intentionally omits action and
+    attempt identifiers, which the final verifier must compare to its request.
+    """
     bridge = Path(__file__).with_name("recovery_read_only_bridge.cjs")
     if not bridge.is_file():
         return None, "CONTROL_PLANE_BRIDGE_UNAVAILABLE"
@@ -1121,10 +1161,10 @@ def recovery_read_only_bridge(args: argparse.Namespace, project_root: Path, requ
     except json.JSONDecodeError:
         return None, "CONTROL_PLANE_BRIDGE_RESULT_INVALID"
     if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
-        try:
-            return _safe_bridge_result(payload.get("result"), request), None
-        except RuntimeError as error:
-            return None, _safe_error_code(error)
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return None, "CONTROL_PLANE_BRIDGE_RESULT_ENVELOPE_INVALID"
+        return result, None
     error = payload.get("error") if isinstance(payload, dict) else None
     return None, _safe_error_code(error.get("code") if isinstance(error, dict) else None)
 
@@ -1160,7 +1200,10 @@ def _submit_receipt(config: dict[str, Any], entry: dict[str, Any]) -> dict[str, 
     return response
 
 
-def _recover_prepared_entry(entry: dict[str, Any]) -> None:
+def _recover_prepared_entry(
+    entry: dict[str, Any],
+    diagnostic_code: str = "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
+) -> None:
     """A crash after preparation may have crossed the local call boundary; never retry it."""
     if entry.get("state") != "prepared":
         return
@@ -1176,6 +1219,10 @@ def _recover_prepared_entry(entry: dict[str, Any]) -> None:
             "schema_version": 1,
             "operation_kind": "control_plane_read_only_workspace_context",
             "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+            "diagnostic_code": _safe_error_code(
+                diagnostic_code,
+                "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
+            ),
         },
     )
 
@@ -1347,7 +1394,7 @@ def _record_local_receipt(
     return entry
 
 
-def poll_read_only_once(args: argparse.Namespace) -> int:
+def _poll_read_only_once(args: argparse.Namespace) -> int:
     """Run the only admitted execution lane once, with durable no-retry evidence.
 
     This function intentionally does not extend ``poll``. Operators must name
@@ -1441,44 +1488,70 @@ def poll_read_only_once(args: argparse.Namespace) -> int:
             "attempt_id": attempt_id,
         }
         _write_json_atomic(journal_path, journal)
-        result, error_code = recovery_read_only_bridge(args, project_root, request)
-        if result is not None:
+        try:
+            try:
+                result, error_code = recovery_read_only_bridge(args, project_root, request)
+            except Exception:
+                # The durable prepared marker may already cover an indeterminate
+                # local effect. Convert an unexpected bridge-wrapper failure into
+                # the same no-retry UNKNOWN receipt instead of terminating the
+                # long-lived worker without any typed diagnostic.
+                result, error_code = None, "CONTROL_PLANE_BRIDGE_AGENT_EXCEPTION"
+            if result is not None:
+                entry = _record_local_receipt(
+                    journal_path,
+                    journal,
+                    state="completed",
+                    action_id=action_id,
+                    attempt_id=attempt_id,
+                    receipt_state="completed",
+                    local_handle=str(result["local_handle"]),
+                    payload=_safe_bridge_result(result, request),
+                )
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted_receipts += 1
+                completed.append(action_id)
+                continue
+
+            code = _safe_error_code(error_code)
+            pre_effect = code in PRE_EFFECT_REJECTION_CODES
             entry = _record_local_receipt(
                 journal_path,
                 journal,
-                state="completed",
+                state="rejected" if pre_effect else "unknown",
                 action_id=action_id,
                 attempt_id=attempt_id,
-                receipt_state="completed",
-                local_handle=str(result["local_handle"]),
-                payload=_safe_bridge_result(result, request),
+                receipt_state="rejected" if pre_effect else "unknown",
+                local_handle="",
+                payload={
+                    "schema_version": 1,
+                    "operation_kind": "control_plane_read_only_workspace_context",
+                    "code": code if pre_effect else "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                    # Preserve the typed, allowlisted local failure as diagnostic
+                    # evidence without changing UNKNOWN's no-retry semantics or
+                    # putting process output/workspace data in the receipt.
+                    **({} if pre_effect else {"diagnostic_code": code}),
+                },
             )
             _submit_receipt(config, entry)
             _write_json_atomic(journal_path, journal)
             submitted_receipts += 1
-            completed.append(action_id)
-            continue
-
-        code = _safe_error_code(error_code)
-        pre_effect = code in PRE_EFFECT_REJECTION_CODES
-        entry = _record_local_receipt(
-            journal_path,
-            journal,
-            state="rejected" if pre_effect else "unknown",
-            action_id=action_id,
-            attempt_id=attempt_id,
-            receipt_state="rejected" if pre_effect else "unknown",
-            local_handle="",
-            payload={
-                "schema_version": 1,
-                "operation_kind": "control_plane_read_only_workspace_context",
-                "code": code if pre_effect else "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
-            },
-        )
-        _submit_receipt(config, entry)
-        _write_json_atomic(journal_path, journal)
-        submitted_receipts += 1
-        (rejected if pre_effect else unknown).append(action_id)
+            (rejected if pre_effect else unknown).append(action_id)
+        except Exception as error:
+            # Once the durable ``prepared`` marker exists, any unexpected
+            # failure in result validation or receipt construction must be
+            # terminalized as UNKNOWN.  Leaving it prepared would otherwise
+            # make the next worker infer a crash without recording the cause.
+            prepared = journal["entries"].get(key)
+            if not isinstance(prepared, dict) or prepared.get("state") != "prepared":
+                raise
+            _recover_prepared_entry(prepared, _safe_error_code(error))
+            _write_json_atomic(journal_path, journal)
+            _submit_receipt(config, prepared)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            unknown.append(action_id)
 
     print(json.dumps({
         "execution": "read_only_once",
@@ -1490,6 +1563,20 @@ def poll_read_only_once(args: argparse.Namespace) -> int:
         "submitted_receipts": submitted_receipts,
     }, separators=(",", ":")))
     return 0
+
+
+def poll_read_only_once(args: argparse.Namespace) -> int:
+    """Serialise each local queue drain before it can touch the journal.
+
+    The long-lived agent lock owns a process lifetime, but an operator's
+    one-shot diagnostic invocation has a different lifetime.  They must never
+    concurrently replay a prepared marker while the other caller is inside a
+    one-shot bridge effect.
+    """
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    with _exclusive_read_only_poll_lock(config_path):
+        return _poll_read_only_once(args)
 
 
 def _read_only_loop_interval(args: argparse.Namespace) -> int:
@@ -1606,6 +1693,67 @@ def _exclusive_read_only_agent_lock(config_path: Path) -> Iterator[None]:
         break
     if not acquired:
         raise RuntimeError("CONTROL_PLANE_READ_ONLY_AGENT_ALREADY_RUNNING")
+    try:
+        yield
+    finally:
+        try:
+            value = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            value = None
+        if isinstance(value, dict) and value.get("instance_id") == instance_id and value.get("pid") == os.getpid():
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+
+def _read_only_poll_lock_path(config_path: Path) -> Path:
+    """Keep a short-lived queue-drain lock beside the private node config."""
+
+    return config_path.with_name(f"{config_path.name}.read-only-poll.lock")
+
+
+@contextmanager
+def _exclusive_read_only_poll_lock(config_path: Path) -> Iterator[None]:
+    """Exclude an overlapping one-shot poll without changing agent ownership."""
+
+    lock_path = _read_only_poll_lock_path(config_path)
+    instance_id = uuid.uuid4().hex
+    descriptor = {
+        "schema_version": READ_ONLY_AGENT_LOCK_SCHEMA_VERSION,
+        "instance_id": instance_id,
+        "pid": os.getpid(),
+    }
+    acquired = False
+    for _attempt in range(2):
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            file_descriptor = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            if not _stale_read_only_agent_lock(lock_path):
+                raise RuntimeError("CONTROL_PLANE_READ_ONLY_POLL_ALREADY_RUNNING")
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                raise RuntimeError("CONTROL_PLANE_READ_ONLY_POLL_ALREADY_RUNNING") from error
+            continue
+        try:
+            with os.fdopen(file_descriptor, "w", encoding="utf-8") as lock_file:
+                lock_file.write(json.dumps(descriptor, separators=(",", ":")) + "\n")
+                lock_file.flush()
+                os.fsync(lock_file.fileno())
+        except OSError:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+            raise
+        acquired = True
+        break
+    if not acquired:
+        raise RuntimeError("CONTROL_PLANE_READ_ONLY_POLL_ALREADY_RUNNING")
     try:
         yield
     finally:
