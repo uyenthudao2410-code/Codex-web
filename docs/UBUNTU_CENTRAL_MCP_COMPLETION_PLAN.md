@@ -2347,3 +2347,21 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   máy test mới cần add key vào GitHub.
 - Hai intent canary sẽ hết hạn/settle tự nhiên; binding/context/task thử nghiệm giữ
   nguyên để dùng tiếp, không retry mù.
+
+### Receipt Windows build + app — 19-09-2026, Recovery alive, chờ activation của owner
+
+- Source HEAD đóng tarball 65MB (bỏ tests/benchmarks), scp + giải nén tại
+  `C:\winbuild`; `npm install` (288 packages) + Electron 43.2.0 OK.
+- `npm run dist:dir`: icon build xong, pack/unpack + sign主体 xong nhưng builder
+  chết lúc sign exe chính (lần 1 EBUSY, lần 2 dừng không lỗi rõ). App unpacked vẫn
+  đầy đủ (`app.asar`, 294 resource files, exe 225MB).
+- App chạy được trong console session của user (scheduled task một lần, đã xóa):
+  4 process session 1; log ghi Recovery Host sở hữu runtime + UI đã kết nối
+  (hostPid 8468). `device.json` của app trùng đúng node central DaoChienThang.
+- Observer packaged chạy được nhưng `strict_ready=false` (`packaged_runtime_unready`):
+  epoch `activation-mu1nooyz` từ 14/09 đã failed, log yêu cầu full-clean activation.
+  Observer từ chối đúng — không forge identity.
+- Việc duy nhất còn lại cần tay owner trên màn hình máy đó: mở app
+  (Coding Tools MCP) → Command Center → full-clean activation/refresh để cấp epoch
+  mới (và pair central_executor nếu muốn lane điều phối). Sau đó chạy tiếp canary
+  đọc file marker → patch → exec từ đây, không cần build lại.
