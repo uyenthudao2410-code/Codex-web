@@ -2282,3 +2282,18 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   `codex-control-plane-mcp-tunnel.service` vẫn `active/running` trên revision cũ;
   candidate chưa live, chưa Tunnel rediscovery, chưa policy rollout Windows.
   Canary live + soak 24h chờ cửa sổ D4.
+
+### Receipt migration — 19-09-2026, thử 10 → 19 trên bản sao (live không chạm)
+
+- Live DB `~/.local/state/codex-control-plane/control-plane.sqlite3` đọc
+  read-only: `user_version=10`, integrity `ok`, 2 nodes, 1 binding, 19 contexts,
+  16 actions, 13 receipts. Service đang chạy revision `2e1de6f` từ release
+  immutable `current`, không restart trong lượt này.
+- Verified backup (SQLite Backup API, online-safe)
+  `live-backup-pre19.sqlite3`: sha256 `13efded0...`, schema 10, `ok`.
+- Mở bản sao bằng code candidate: migration lên `user_version=19`, integrity
+  `ok`, toàn bộ counts lịch sử giữ nguyên, đủ 6 bảng mới
+  (`mcp_task_sessions`, `mcp_task_action_links`, `mcp_patch_acceptances`,
+  `mcp_exec_intents`, `mcp_exec_stop_requests`, `mcp_artifact_intents`) và cột
+  `mcp_permission_requests.task_id`. Đây là proof migration trên bản sao, không
+  phải rollout live.
