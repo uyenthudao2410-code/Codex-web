@@ -2267,3 +2267,18 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   D3 fixture/policy canary Windows, D4 cửa sổ + rollback đã thử, Tunnel rediscovery,
   soak 24h trên final build. C6 controller AI là luồng B riêng, cần D5 (provider,
   budget, consent) và không chặn pilot A.
+
+### Receipt bàn giao — 19-09-2026, push + build release (không restart service)
+
+- Commit `a0a80b4` đã push `origin/codex/control-plane-quarantine`
+  (`64ca395..a0a80b4`): task sessions, exec bounded + stop, artifacts, wizard,
+  fault matrix + receipts §11. `.coding-tools` evidence giữ theo retention invariant
+  (stage + delivery guard pass, secret check pass).
+- Release `codex-control-plane-a0a80b445083a1922e4ba6c8ad121f42c0e0c27a` build từ
+  source sạch tại `a0a80b4`: archive sha256
+  `1b4c24839c3efc1e6c8493c1c4d8ad0d61eeb9992fda16d73a8ae33f656ae4e4`,
+  `control_plane_schema_version=19`, manifest 31 files, verify-release pass.
+- Services Ubuntu **không restart**: `codex-control-plane.service` và
+  `codex-control-plane-mcp-tunnel.service` vẫn `active/running` trên revision cũ;
+  candidate chưa live, chưa Tunnel rediscovery, chưa policy rollout Windows.
+  Canary live + soak 24h chờ cửa sổ D4.
