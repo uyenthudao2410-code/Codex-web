@@ -2386,3 +2386,29 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   luồng sản phẩm chuẩn (closure → epoch mới → strict_ready), rồi mới tới canary
   thực thi. Central (schema 19, healthy) và transport node (heartbeat/đăng ký/
   binding/dispatch đã chứng minh) đứng yên chờ gate này.
+
+### Receipt dọn máy + gate closure — 20-09-2026, chờ 2 hành động của owner
+
+- Dọn gọn: tắt hết app chồng instance (có lúc 9 process 2 instance) về 1 instance;
+  profile `%APPDATA%\web-mcp-assistant` từ 14/09 được move nguyên sang
+  `.bak-20260920`, profile mới chỉ giữ `device.json` + `control-plane-node.json`
+  genuine (không forge identity). Task scheduler canary đã xóa sau dùng.
+- App unpacked chạy lại 1 instance, MCP ON, heartbeat central tươi, nhưng
+  `strict_ready` vẫn false vì epoch FAILED cũ còn đó.
+- Restart đòi accepted-code closure checkpoint (EOCL: checkpoint/run/wave/proof/
+  git_head + ACTIVATABLE đúng component). Phân tích `recoveryActionStore`: closure
+  chỉ sinh từ accepted checkpoint trong workspace, với `git_head == HEAD hiện tại`
+  và receipts khớp byte từng file. Workspace `E:\Github` đang ở commit cũ
+  `6edece42`, code chạy là candidate mới — không checkpoint nào eligible được.
+  Không forge checkpoint, không sửa epoch tay, không nới gate.
+- Build NSIS trên máy: npm install + Electron 43 OK; `npm run dist` rớt 2 lần ở
+  `test:mcp` — lần 1 do archive thiếu `tests/`, lần 2 đứng sau node suite (đang
+  chạy lại pytest riêng để lấy verdict sạch).
+- Chạy lại pytest độc lập trên Windows xong: **1153 passed, 5 skipped, exit 0**
+  (396s). Code candidate đã có proof đầy đủ trên máy test. Không cần build NSIS
+  cho canary (unpacked app đã chạy đúng, installation check đã pass); giữ app
+  đang chạy, dọn hết scheduled task build.
+- Hai việc chỉ owner làm được: (1) add SSH key đã đưa vào GitHub để fetch
+  candidate về `E:\Github` (repo private, anonymous bị từ chối); (2) quyết định
+  acceptance trên mã nguồn exact có proof thật, sau đó full-clean activation →
+  strict_ready → canary đọc/sửa/test/stop.
