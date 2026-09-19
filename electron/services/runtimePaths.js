@@ -67,10 +67,22 @@ class RuntimePaths {
   // deliberately separate from settings and secrets.  It only grants the
   // narrow control-plane read-only bridge; it is never generated at startup.
   controlPlaneReadOnlyPolicyFile() { return path.join(this.dataRootPath, 'control-plane-read-only-policy.json'); }
+  // File content has a stricter, independently installed policy than compact
+  // workspace metadata.  Its absence is the default deny for all remote file
+  // reads, including reads from an otherwise enrolled workspace.
+  controlPlaneFileReadPolicyFile() { return path.join(this.dataRootPath, 'control-plane-file-read-policy.json'); }
+  // Mutation authority is never inferred from either metadata or file-read
+  // policy.  This operator-installed, expiring file is a separate default-deny
+  // boundary for the one exact approved-patch lane.
+  controlPlaneApprovedPatchPolicyFile() { return path.join(this.dataRootPath, 'control-plane-approved-patch-policy.json'); }
   // This private node enrollment configuration belongs to this installed
   // executor profile. Keeping it beneath dataRoot makes the Supervisor and
   // Electron UI agree on one target without an APPDATA-wide side channel.
   controlPlaneNodeConfigFile() { return path.join(this.dataRootPath, 'control-plane-node.json'); }
+  // Local-only registry of canonical workspace roots selected in the Electron
+  // UI.  Ubuntu receives opaque IDs/generations and capability inventory only;
+  // it never receives these local paths or their hashes.
+  controlPlaneWorkspaceRegistryFile() { return path.join(this.dataRootPath, 'control-plane-workspaces.json'); }
   controlPlaneNodeAgent() {
     return this.runtimeModeValue === 'packaged'
       ? path.join(this.resourcesRootPath, 'control-plane', 'node_agent.py')

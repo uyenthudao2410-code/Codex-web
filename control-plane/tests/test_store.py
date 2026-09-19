@@ -28,6 +28,7 @@ from control_plane.node_agent import (
     _request,
     _read_journal,
     _read_only_bridge_request,
+    _read_only_loop_policy_admission,
     _safe_bridge_result,
     _write_json_atomic,
     parse_dev_ui_status,
@@ -88,9 +89,31 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.store = ControlPlaneStore(Path(self.tempdir.name) / "control.sqlite3", clock=lambda: self.now)
         enrolled = self.store.enroll_node(owner_id="owner_default", device_id="device-alpha", endpoint_id="endpoint-alpha", display_name="Windows Canary")
         self.node_secret = enrolled["node_secret"]
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+            display_name="Canary workspace",
+        )
 
     def tearDown(self) -> None:
         self.tempdir.cleanup()
+
+    def _register_workspace(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+        display_name: str,
+    ) -> dict:
+        return self.store.register_node_workspace(
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+            display_name=display_name,
+            capabilities={"read": True, "write": False, "exec": False},
+        )
 
     def _request(self) -> tuple[dict, dict]:
         binding = self.store.create_binding(owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha", workspace_generation="generation-1", display_name="Canary workspace")
@@ -184,12 +207,158 @@ class ControlPlaneStoreTests(unittest.TestCase):
                 },
             )
 
+    def test_workspace_registration_is_path_free_current_and_fences_replaced_generation(self) -> None:
+        with self.assertRaisesRegex(ConflictError, "workspace registration is not current"):
+            self.store.create_binding(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                workspace_id="workspace-rotation",
+                workspace_generation="generation-rotation-0001",
+                display_name="Rotating workspace",
+            )
+
+        registered = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Rotating workspace",
+        )
+        self.assertFalse(registered["replayed"])
+        self.assertEqual(registered["capabilities"], {"read": True, "write": False, "exec": False})
+        self.assertNotIn("path", registered)
+        replayed = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Rotating workspace",
+        )
+        self.assertTrue(replayed["replayed"])
+
+        binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Owner label may be different from node label",
+        )
+        context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Fence old root before it is delivered",
+            criteria={"kind": "read_only"},
+            scope={"root": "rotation"},
+            expires_at_ms=self.now + 30_000,
+        )
+        queued = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-rotation-action-0001",
+            admission_reference="workspace-rotation-admission-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+
+        replaced = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0002",
+            display_name="Rotating workspace v2",
+        )
+        self.assertFalse(replaced["replayed"])
+        inventory = self.store.list_node_workspaces(owner_id="owner_default", device_id="device-alpha")
+        old = next(item for item in inventory if item["workspace_generation"] == "generation-rotation-0001")
+        current = next(item for item in inventory if item["workspace_generation"] == "generation-rotation-0002")
+        self.assertEqual(old["retired_at_ms"], self.now)
+        self.assertIsNone(current["retired_at_ms"])
+        with self.assertRaises(ConflictError):
+            self.store.binding(owner_id="owner_default", binding_id=binding["binding_id"])
+        self.assertEqual(self.store.context(owner_id="owner_default", context_id=context["context_id"])["closed_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "settled")
+        with self.assertRaisesRegex(ConflictError, "workspace registration is not current"):
+            self.store.create_binding(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                workspace_id="workspace-rotation",
+                workspace_generation="generation-rotation-0001",
+                display_name="Old generation",
+            )
+        with self.assertRaises(PermissionError):
+            self.store.list_node_workspaces(owner_id="another_owner", device_id="device-alpha")
+
     def test_context_is_owner_and_binding_scoped(self) -> None:
         context, _ = self._request()
         with self.assertRaises(PermissionError):
             self.store.context(owner_id="another_owner", context_id=context["context_id"])
         self.assertEqual(context["device_id"], "device-alpha")
         self.assertEqual(context["workspace_id"], "workspace-alpha")
+
+    def test_explicit_workspace_retirement_closes_context_and_only_settles_queued_actions(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+            display_name="Canary workspace",
+        )
+        context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Prove retirement never rewrites a dispatched action",
+            criteria={"kind": "read_only"},
+            scope={"root": "canary"},
+            expires_at_ms=self.now + 30_000,
+        )
+        dispatched = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-retire-dispatched-0001",
+            admission_reference="workspace-retire-dispatched-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        queued = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-retire-queued-0001",
+            admission_reference="workspace-retire-queued-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        delivered = self.store.poll_actions(device_id="device-alpha", limit=1)
+        self.assertEqual([item["action_id"] for item in delivered], [dispatched["action_id"]])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=dispatched["action_id"])["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "queued")
+
+        retired = self.store.retire_node_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+        )
+        self.assertFalse(retired["replayed"])
+        self.assertEqual(retired["retired_at_ms"], self.now)
+        self.assertEqual(self.store.context(owner_id="owner_default", context_id=context["context_id"])["closed_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "settled")
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=dispatched["action_id"])["delivery_state"], "dispatch_unconfirmed")
+        replayed = self.store.retire_node_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+        )
+        self.assertTrue(replayed["replayed"])
 
     def test_mcp_access_grant_is_context_bound_expiring_and_revocable(self) -> None:
         context, _request = self._request()
@@ -241,6 +410,18 @@ class ControlPlaneStoreTests(unittest.TestCase):
             device_id="device-bravo",
             endpoint_id="endpoint-bravo",
             display_name="Bravo node",
+        )
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Alpha shared path",
+        )
+        self._register_workspace(
+            device_id=bravo["device_id"],
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Bravo shared path",
         )
         alpha_binding = self.store.create_binding(
             owner_id="owner_default",
@@ -348,6 +529,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         lifecycle = self.store.list_action_lifecycle(owner_id="owner_default")
         self.assertEqual([item["action_id"] for item in lifecycle], [action["action_id"]])
         self.assertEqual(lifecycle[0]["delivery_state"], "queued")
+        self.assertFalse(lifecycle[0]["approved_patch_candidate"])
         self.assertEqual(lifecycle[0]["receipt_count"], 0)
         self.assertIsNone(lifecycle[0]["latest_receipt_state"])
         self.assertNotIn("arguments_json", lifecycle[0])
@@ -654,6 +836,12 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "settled")
 
     def test_revoked_node_blocks_fresh_context_and_work_request_admission(self) -> None:
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-revoked-node",
+            workspace_generation="generation-revoked-node",
+            display_name="Revoked-node workspace",
+        )
         binding = self.store.create_binding(
             owner_id="owner_default",
             device_id="device-alpha",
@@ -1280,9 +1468,205 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertFalse(config_path.exists())
         self.assertIn("CONTROL_PLANE_SERVER_HTTPS_REQUIRED", errors.getvalue())
 
+    def test_node_workspace_registration_persists_opaque_identity_before_network_retry(self) -> None:
+        config_path = Path(self.tempdir.name) / "workspace-node.json"
+        registry_path = Path(self.tempdir.name) / "workspace-registry.json"
+        workspace_path = Path(self.tempdir.name) / "selected-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-workspace-0001",
+            "endpoint_id": "endpoint-workspace-0001",
+            "display_name": "Workspace executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        command = [
+            "register-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-path", str(workspace_path),
+            "--display-name", "selected-root", "--capability-read",
+        ]
+        output = io.StringIO()
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=RuntimeError("CONTROL_PLANE_NETWORK_UNAVAILABLE")) as request, \
+             redirect_stdout(output), redirect_stderr(errors):
+            self.assertEqual(node_agent_main(command), 1)
+        self.assertEqual(request.call_count, 1)
+        self.assertTrue(registry_path.exists())
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        self.assertEqual(registry["schema_version"], 1)
+        self.assertEqual(len(registry["entries"]), 1)
+        entry = registry["entries"][0]
+        self.assertEqual(entry["canonical_path"], str(workspace_path.resolve()))
+        self.assertTrue(entry["capabilities"]["read"])
+        self.assertFalse(entry["capabilities"]["write"])
+        self.assertFalse(entry["capabilities"]["exec"])
+        self.assertNotIn(str(workspace_path), output.getvalue())
+        self.assertNotIn("n" * 40, output.getvalue())
+
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def retry(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "device_id": "device-workspace-0001",
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "selected-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": None,
+                "replayed": True,
+            }
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=retry), redirect_stdout(output):
+            self.assertEqual(node_agent_main(command), 0)
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-workspace-0001/workspace-registrations",
+            {
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "selected-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+            },
+            "Node " + "n" * 40,
+        )])
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["workspace_id"], entry["workspace_id"])
+        self.assertTrue(receipt["replayed"])
+        self.assertNotIn("canonical_path", receipt)
+        self.assertNotIn(str(workspace_path), output.getvalue())
+
+        invalid = Path(self.tempdir.name) / "does-not-exist"
+        with mock.patch("control_plane.node_agent._request") as request, redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "register-workspace", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-path", str(invalid),
+                "--display-name", "does-not-exist", "--capability-read",
+            ]), 1)
+        request.assert_not_called()
+
+    def test_node_workspace_retirement_keeps_local_entry_until_exact_central_receipt(self) -> None:
+        config_path = Path(self.tempdir.name) / "workspace-retire-node.json"
+        registry_path = Path(self.tempdir.name) / "workspace-retire-registry.json"
+        workspace_path = Path(self.tempdir.name) / "workspace-retire-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-retire-0001",
+            "endpoint_id": "endpoint-retire-0001",
+            "display_name": "Retire executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        register_command = [
+            "register-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-path", str(workspace_path),
+            "--display-name", "workspace-retire-root", "--capability-read",
+        ]
+
+        def register_request(_server_url: str, route: str, payload: dict, _authorization: str | None = None) -> dict:
+            self.assertEqual(route, "/v1/nodes/device-retire-0001/workspace-registrations")
+            return {
+                "device_id": "device-retire-0001",
+                "workspace_id": payload["workspace_id"],
+                "workspace_generation": payload["workspace_generation"],
+                "display_name": "workspace-retire-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": None,
+                "replayed": False,
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=register_request):
+            self.assertEqual(node_agent_main(register_command), 0)
+        entry = json.loads(registry_path.read_text(encoding="utf-8"))["entries"][0]
+        data_root = Path(self.tempdir.name) / "workspace-retire-data"
+        data_root.mkdir()
+        policy_path = data_root / "control-plane-read-only-policy.json"
+        policy_path.write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": "device-retire-0001",
+            "endpoint_id": "endpoint-retire-0001",
+            "workspace_id": entry["workspace_id"],
+            "workspace_generation": entry["workspace_generation"],
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": {
+                "schema_version": 6,
+                "profile": "control-plane-scoped-read-only-relay-v5",
+                "sha256": "a" * 64,
+            },
+        }), encoding="utf-8")
+        retire_command = [
+            "retire-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-id", entry["workspace_id"],
+            "--workspace-generation", entry["workspace_generation"],
+            "--data-root", str(data_root),
+        ]
+
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")) as request, redirect_stderr(errors):
+            self.assertEqual(node_agent_main(retire_command), 1)
+        request.assert_called_once()
+        self.assertEqual(len(json.loads(registry_path.read_text(encoding="utf-8"))["entries"]), 1)
+        self.assertTrue(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+        self.assertIn("CONTROL_PLANE_TRANSPORT_UNAVAILABLE", errors.getvalue())
+
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def replay_retirement(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "device_id": "device-retire-0001",
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "workspace-retire-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": 2,
+                "replayed": True,
+            }
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=replay_retirement), redirect_stdout(output):
+            self.assertEqual(node_agent_main(retire_command), 0)
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-retire-0001/workspace-registrations/retire",
+            {"workspace_id": entry["workspace_id"], "workspace_generation": entry["workspace_generation"]},
+            "Node " + "n" * 40,
+        )])
+        self.assertEqual(json.loads(registry_path.read_text(encoding="utf-8"))["entries"], [])
+        self.assertFalse(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["state"], "retired")
+        self.assertTrue(receipt["replayed"])
+        self.assertNotIn(str(workspace_path), output.getvalue())
+        self.assertNotIn("n" * 40, output.getvalue())
+
+        list_output = io.StringIO()
+        with redirect_stdout(list_output):
+            self.assertEqual(node_agent_main([
+                "list-workspaces", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+            ]), 0)
+        self.assertEqual(json.loads(list_output.getvalue()), {"workspaces": []})
+
     def test_node_installs_only_its_authenticated_context_policy_template(self) -> None:
         config_path = Path(self.tempdir.name) / "node-template.json"
+        registry_path = Path(self.tempdir.name) / "node-template-workspaces.json"
         data_root = Path(self.tempdir.name) / "node-template-data"
+        workspace_path = Path(self.tempdir.name) / "node-template-root"
+        workspace_path.mkdir()
         config_path.write_text(json.dumps({
             "schema_version": 1,
             "server_url": "https://control.example.test",
@@ -1290,6 +1674,17 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "endpoint_id": "endpoint-template-0001",
             "display_name": "Template executor",
             "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-template-0001",
+                "workspace_generation": "generation-template-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Template root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
         }), encoding="utf-8")
         calls: list[tuple[str, str, dict, str | None]] = []
 
@@ -1303,13 +1698,14 @@ class ControlPlaneStoreTests(unittest.TestCase):
                     "workspace_id": "workspace-template-0001",
                     "workspace_generation": "generation-template-0001",
                     "expires_at_ms": int(time.time() * 1000) + 60_000,
-                    "facade_contract": {"schema_version": 5, "profile": "control-plane-scoped-read-only-relay-v4", "sha256": "a" * 64},
+                    "facade_contract": {"schema_version": 6, "profile": "control-plane-scoped-read-only-relay-v5", "sha256": "a" * 64},
                 }
             }
 
         with mock.patch("control_plane.node_agent._request", side_effect=request):
             self.assertEqual(node_agent_main([
                 "install-read-only-policy-from-context", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
                 "--context-id", "ctx-template-0001", "--confirm-install", "--data-root", str(data_root),
             ]), 0)
         policy = json.loads((data_root / "control-plane-read-only-policy.json").read_text(encoding="utf-8"))
@@ -1318,6 +1714,71 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(calls, [
             ("https://control.example.test", "/v1/nodes/device-template-0001/read-only-policy-template", {"context_id": "ctx-template-0001"}, "Node " + "n" * 40),
         ])
+
+        registry_path.write_text(json.dumps({"schema_version": 1, "entries": []}), encoding="utf-8")
+        rejected_data_root = Path(self.tempdir.name) / "node-template-rejected"
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=request), redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-context", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--context-id", "ctx-template-0001", "--confirm-install", "--data-root", str(rejected_data_root),
+            ]), 1)
+        self.assertIn("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", errors.getvalue())
+        self.assertFalse((rejected_data_root / "control-plane-read-only-policy.json").exists())
+
+    def test_read_only_loop_admission_requires_current_local_workspace_generation(self) -> None:
+        config_path = Path(self.tempdir.name) / "loop-workspace-node.json"
+        registry_path = Path(self.tempdir.name) / "loop-workspace-registry.json"
+        data_root = Path(self.tempdir.name) / "loop-workspace-data"
+        workspace_path = Path(self.tempdir.name) / "loop-workspace-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-loop-workspace-0001",
+            "endpoint_id": "endpoint-loop-workspace-0001",
+            "display_name": "Loop executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-loop-workspace-0001",
+                "workspace_generation": "generation-loop-workspace-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Loop root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
+        }), encoding="utf-8")
+        data_root.mkdir()
+        (data_root / "control-plane-read-only-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": "device-loop-workspace-0001",
+            "endpoint_id": "endpoint-loop-workspace-0001",
+            "workspace_id": "workspace-loop-workspace-0001",
+            "workspace_generation": "generation-loop-workspace-0001",
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": {
+                "schema_version": 6,
+                "profile": "control-plane-scoped-read-only-relay-v5",
+                "sha256": "a" * 64,
+            },
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path),
+            workspace_registry=str(registry_path),
+            data_root=str(data_root),
+            runtime_mode="development",
+        )
+        _read_only_loop_policy_admission(args)
+        workspace_path.rmdir()
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT"):
+            _read_only_loop_policy_admission(args)
 
     def test_installed_launcher_arguments_are_accepted_for_enrollment_heartbeat_and_safe_poll(self) -> None:
         """All commands must accept the fixed packaged ``node-agent.cmd`` tail."""
@@ -1355,6 +1816,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             ]), 0)
             self.assertEqual(node_agent_main([
                 "run-read-only-loop", "--config", str(config_path), "--interval-seconds", "15", "--max-iterations", "1",
+                "--workspace-registry", str(config_path.with_name("control-plane-workspaces.json")),
                 *fixed_runtime_args,
             ]), 0)
         self.assertEqual(calls, [

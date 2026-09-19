@@ -12,6 +12,18 @@ const {
   normaliseWorkspaceSummary,
   workspaceSummaryDigest
 } = require('./controlPlaneReadOnlyBridge');
+const {
+  loadFileReadBridgePolicy,
+  resolveRegisteredWorkspaceRoot,
+  admitFileReadBridgeRequest,
+  normaliseFileReadResult
+} = require('./controlPlaneFileReadBridge');
+const {
+  loadApprovedPatchBridgePolicy,
+  resolveRegisteredWorkspaceRoot: resolveApprovedPatchWorkspaceRoot,
+  admitApprovedPatchBridgeRequest,
+  normaliseApprovedPatchResult
+} = require('./controlPlaneApprovedPatchBridge');
 const { ensureParent, readJson } = require('./jsonStore');
 const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
@@ -1964,17 +1976,151 @@ class RecoveryHost {
       workspaceSummary = normaliseWorkspaceSummary(result?.workspace_summary);
     } catch {
       throw controlPlaneBridgeError(
-        'CONTROL_PLANE_BRIDGE_RESULT_INVALID',
+        'CONTROL_PLANE_BRIDGE_WORKSPACE_SUMMARY_INVALID',
         'control-plane read-only bridge returned an invalid workspace summary.'
       );
     }
     if (result?.workspace_summary_sha256 !== workspaceSummaryDigest(workspaceSummary)) {
       throw controlPlaneBridgeError(
-        'CONTROL_PLANE_BRIDGE_RESULT_INVALID',
+        'CONTROL_PLANE_BRIDGE_WORKSPACE_SUMMARY_DIGEST_INVALID',
         'control-plane read-only bridge workspace summary integrity is invalid.'
       );
     }
     return result;
+  }
+
+  async controlPlaneBoundedFileRead(request = {}) {
+    // File content has a distinct policy and cannot inherit the compact
+    // metadata bridge's admission merely because both originate at the same
+    // central node/workspace binding.
+    const policy = loadFileReadBridgePolicy(this.paths);
+    const admitted = admitFileReadBridgeRequest(policy, request);
+    if (admitted.device_id !== this.deviceIdentity.device_id) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_DEVICE_MISMATCH',
+        'control-plane file-read action targets another local device.'
+      );
+    }
+    const workspaceRoot = resolveRegisteredWorkspaceRoot(this.paths, policy);
+    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
+
+    const runtime = await this.orchestrator.lightweightSnapshot();
+    if (!strictControlPlaneBridgeRuntime(runtime)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_RUNTIME_UNREADY',
+        'control-plane file-read bridge requires strict current-process runtime evidence.'
+      );
+    }
+    const identity = await this.mcpIdentityObservation();
+    if (identity.mcp_ready !== true || identity.identity_current !== true) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_IDENTITY_UNPROVEN',
+        'control-plane file-read bridge requires an exact current MCP identity.'
+      );
+    }
+    if (typeof this.orchestrator.controlPlaneBoundedFileRead !== 'function') {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_UNAVAILABLE',
+        'control-plane file-read bridge is unavailable in this runtime.'
+      );
+    }
+    const result = await this.orchestrator.controlPlaneBoundedFileRead(admission);
+    const runtimeIdentity = result?.runtime_identity;
+    if (!runtimeIdentity
+      || runtimeIdentity.activation_epoch_id !== identity.activation_epoch_id
+      || runtimeIdentity.process_instance_id !== identity.mcp_process_instance_id
+      || runtimeIdentity.server_instance_id !== identity.mcp_server_instance_id
+      || runtimeIdentity.tool_contract_sha256 !== identity.tool_contract_sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_IDENTITY_CHANGED',
+        'control-plane file-read bridge identity changed while the action was in flight.'
+      );
+    }
+    let normalized;
+    try {
+      normalized = normaliseFileReadResult(result, admission);
+    } catch (error) {
+      throw controlPlaneBridgeError(
+        error?.code || 'CONTROL_PLANE_FILE_READ_RESULT_INVALID',
+        'control-plane file-read bridge returned an invalid or sensitive result.'
+      );
+    }
+    if (normalized.facade_contract.schema_version !== admission.facade_contract.schema_version
+      || normalized.facade_contract.profile !== admission.facade_contract.profile
+      || normalized.facade_contract.sha256 !== admission.facade_contract.sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_FILE_READ_CONTRACT_CHANGED',
+        'control-plane file-read bridge facade contract changed while the action was in flight.'
+      );
+    }
+    return normalized;
+  }
+
+  async controlPlaneApprovedPatch(request = {}) {
+    // A mutation has an independently installed local policy.  In particular,
+    // neither a central approval nor the bounded-file-read policy can admit a
+    // write at this Recovery Host boundary.
+    const policy = loadApprovedPatchBridgePolicy(this.paths);
+    const admitted = admitApprovedPatchBridgeRequest(policy, request);
+    if (admitted.device_id !== this.deviceIdentity.device_id) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_DEVICE_MISMATCH',
+        'control-plane approved-patch action targets another local device.'
+      );
+    }
+    const workspaceRoot = resolveApprovedPatchWorkspaceRoot(this.paths, policy);
+    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
+
+    const runtime = await this.orchestrator.lightweightSnapshot();
+    if (!strictControlPlaneBridgeRuntime(runtime)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_RUNTIME_UNREADY',
+        'control-plane approved-patch bridge requires strict current-process runtime evidence.'
+      );
+    }
+    const identity = await this.mcpIdentityObservation();
+    if (identity.mcp_ready !== true || identity.identity_current !== true) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_IDENTITY_UNPROVEN',
+        'control-plane approved-patch bridge requires an exact current MCP identity.'
+      );
+    }
+    if (typeof this.orchestrator.controlPlaneApprovedPatch !== 'function') {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_UNAVAILABLE',
+        'control-plane approved-patch bridge is unavailable in this runtime.'
+      );
+    }
+    const result = await this.orchestrator.controlPlaneApprovedPatch(admission);
+    const runtimeIdentity = result?.runtime_identity;
+    if (!runtimeIdentity
+      || runtimeIdentity.activation_epoch_id !== identity.activation_epoch_id
+      || runtimeIdentity.process_instance_id !== identity.mcp_process_instance_id
+      || runtimeIdentity.server_instance_id !== identity.mcp_server_instance_id
+      || runtimeIdentity.tool_contract_sha256 !== identity.tool_contract_sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_IDENTITY_CHANGED',
+        'control-plane approved-patch bridge identity changed while the action was in flight.'
+      );
+    }
+    let normalized;
+    try {
+      normalized = normaliseApprovedPatchResult(result, admission);
+    } catch (error) {
+      throw controlPlaneBridgeError(
+        error?.code || 'CONTROL_PLANE_APPROVED_PATCH_RESULT_INVALID',
+        'control-plane approved-patch bridge returned an invalid receipt.'
+      );
+    }
+    if (normalized.facade_contract.schema_version !== admission.facade_contract.schema_version
+      || normalized.facade_contract.profile !== admission.facade_contract.profile
+      || normalized.facade_contract.sha256 !== admission.facade_contract.sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_APPROVED_PATCH_CONTRACT_CHANGED',
+        'control-plane approved-patch bridge facade contract changed while the action was in flight.'
+      );
+    }
+    return normalized;
   }
 
   handlers() {
@@ -2024,6 +2170,8 @@ class RecoveryHost {
       'runtime.lightweight_snapshot': async () => this.cachedRuntimeSnapshot(),
       'runtime.identity_observation': async () => this.mcpIdentityObservation(),
       'runtime.control_plane_read_only_workspace_context': async (request = {}) => this.controlPlaneReadOnlyWorkspaceContext(request),
+      'runtime.control_plane_bounded_file_read': async (request = {}) => this.controlPlaneBoundedFileRead(request),
+      'runtime.control_plane_approved_patch': async (request = {}) => this.controlPlaneApprovedPatch(request),
       'runtime.record_execution_control_center_progress': async (observation = {}) => {
         this.assertBootstrapMutationAllowed();
         this.assertReadyAdoptionMutationAllowed();

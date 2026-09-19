@@ -29,6 +29,12 @@ from .mcp_facade import (
     _response_id,
     _rpc_error,
 )
+from .mcp_oauth import (
+    OAuthAuthenticationError,
+    OAuthIntrospectionConfiguration,
+    OAuthIntrospectionVerifier,
+    oauth_configuration_from_environment,
+)
 from .store import ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
 from .web_ui import WEB_UI_CSP, WEB_UI_CSS, WEB_UI_HTML, WEB_UI_JAVASCRIPT
 
@@ -44,10 +50,59 @@ MAX_LOGIN_ATTEMPTS_PER_WINDOW = 5
 LOGIN_WINDOW_SECONDS = 5 * 60
 MAX_LOGIN_RATE_LIMIT_KEYS = 4096
 BROWSER_READ_ONLY_MAX_TTL_MS = 10 * 60 * 1000
+MIN_OPERATOR_TOKEN_BYTES = 32
+MAX_OPERATOR_TOKEN_BYTES = 512
 
 
 class RateLimitError(ControlPlaneError):
     code = "RATE_LIMITED"
+
+
+class McpAuthenticationError(ControlPlaneError):
+    """MCP OAuth authentication needs a resource-metadata challenge."""
+
+    code = "UNAUTHENTICATED"
+
+    def __init__(self, message: str, *, required_scopes: tuple[str, ...] = ()) -> None:
+        super().__init__(message)
+        self.required_scopes = required_scopes
+
+
+class McpAccountLinkPendingError(PermissionError):
+    """A verified OAuth identity awaits an explicit local owner decision."""
+
+    code = "OAUTH_ACCOUNT_LINK_PENDING"
+
+    def __init__(self, *, link_request_id: str) -> None:
+        super().__init__("OAuth account link is pending owner approval.")
+        self.link_request_id = link_request_id
+
+
+def _operator_token_bytes(value: Any) -> bytes | None:
+    """Return one safe operator-token representation without coercing input.
+
+    ``hmac.compare_digest`` accepts either two strings or two byte strings,
+    but its string variant deliberately rejects non-ASCII input. Browser JSON
+    is untrusted, so converting an object to a string (or comparing a Unicode
+    string directly) can turn an ordinary failed login into an internal error.
+    The configured token and every presented token therefore have one small,
+    explicit ASCII token shape before they reach the constant-time comparison.
+    ``None`` deliberately covers wrong types, empty/oversize values, Unicode,
+    whitespace, and control characters without disclosing which condition
+    failed to the caller.
+    """
+
+    if not isinstance(value, str):
+        return None
+    try:
+        encoded = value.encode("ascii")
+    except UnicodeEncodeError:
+        return None
+    if not MIN_OPERATOR_TOKEN_BYTES <= len(encoded) <= MAX_OPERATOR_TOKEN_BYTES:
+        return None
+    if any(byte < 33 or byte > 126 for byte in encoded):
+        return None
+    return encoded
 
 
 def _web_origin(value: str | None) -> str | None:
@@ -264,14 +319,42 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
         web_session_ttl_seconds: int = DEFAULT_WEB_SESSION_TTL_SECONDS,
         mcp_enabled: bool = True,
         mcp_ingress_only: bool = False,
+        mcp_oauth: OAuthIntrospectionConfiguration | None = None,
+        mcp_oauth_verifier: OAuthIntrospectionVerifier | None = None,
     ) -> None:
-        if len(operator_token) < 32:
-            raise ValueError("CONTROL_PLANE_OPERATOR_TOKEN must have at least 32 characters.")
+        operator_token_bytes = _operator_token_bytes(operator_token)
+        if operator_token_bytes is None:
+            raise ValueError(
+                "CONTROL_PLANE_OPERATOR_TOKEN must be a 32-512 character printable ASCII token."
+            )
         if mcp_ingress_only and not mcp_enabled:
             raise ValueError("an MCP ingress-only listener must enable the MCP route.")
+        if mcp_oauth is None and mcp_oauth_verifier is not None:
+            raise ValueError("an MCP OAuth verifier requires an MCP OAuth configuration.")
         self.store = store
-        self.mcp_facade = ControlPlaneMcpFacade(store)
-        self.operator_token = operator_token
+        self.mcp_oauth = mcp_oauth
+        self.mcp_oauth_verifier = (
+            mcp_oauth_verifier
+            if mcp_oauth_verifier is not None
+            else OAuthIntrospectionVerifier(mcp_oauth)
+            if mcp_oauth is not None
+            else None
+        )
+        self.mcp_facade = ControlPlaneMcpFacade(
+            store,
+            oauth_scopes=(mcp_oauth.required_scope,) if mcp_oauth is not None else (),
+            oauth_file_read_enabled=bool(mcp_oauth is not None and mcp_oauth.file_read_enabled),
+            oauth_permission_requests_enabled=bool(
+                mcp_oauth is not None and mcp_oauth.permission_requests_enabled
+            ),
+            oauth_patch_write_scope=mcp_oauth.patch_write_scope if mcp_oauth is not None else None,
+            oauth_approved_patch_enabled=bool(
+                mcp_oauth is not None and mcp_oauth.approved_patch_enabled
+            ),
+        )
+        # Keep only bytes so every later constant-time comparison has the
+        # same representation. No route needs the raw text token.
+        self.operator_token = operator_token_bytes
         self.declared_source_revision = _declared_source_revision(declared_source_revision)
         self.started_at_ms = int(time.time() * 1000)
         # A process-lifetime identifier lets an operator correlate health
@@ -372,20 +455,164 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         return match.group(2)
 
     def _operator(self) -> str:
-        token = self._auth("Bearer")
-        if not hmac.compare_digest(token, self.server.operator_token):
+        token = _operator_token_bytes(self._auth("Bearer"))
+        if token is None or not hmac.compare_digest(token, self.server.operator_token):
             raise PermissionError("operator authentication failed.")
         return "owner_default"
 
-    def _mcp_client(self) -> dict[str, Any]:
-        """Authenticate a server-issued MCP grant, never the operator bearer.
+    def _mcp_required_oauth_scopes(self, body: dict[str, Any]) -> tuple[str, ...]:
+        """Choose the verified scope set from the requested public operation.
 
-        The token's durable grant supplies owner, principal and exactly one
-        context.  Caller-controlled headers or JSON fields cannot widen that
-        scope, and the raw bearer never reaches a node.
+        The MCP facade independently validates the body before it can create
+        an effect.  This small preclassification exists only so a missing
+        mutation scope produces the accurate OAuth challenge instead of being
+        accepted under the inventory-only resource scope.
         """
 
-        return self.server.store.authenticate_mcp_access_token(access_token=self._auth("Bearer"))
+        configuration = self.server.mcp_oauth
+        if configuration is None:
+            return ()
+        required = (configuration.required_scope,)
+        if body.get("method") != "tools/call":
+            return required
+        params = body.get("params")
+        if not isinstance(params, dict):
+            return required
+        name = params.get("name")
+        if (
+            name == "request_permissions"
+            and configuration.permission_requests_enabled
+        ) or (
+            name == "agent_workflow"
+            and configuration.approved_patch_enabled
+        ):
+            if configuration.patch_write_scope is None:
+                return required
+            return (configuration.required_scope, configuration.patch_write_scope)
+        return required
+
+    def _mcp_client(self, *, required_scopes: tuple[str, ...] = ()) -> dict[str, Any]:
+        """Authenticate one pilot grant or one verified OAuth access token.
+
+        OAuth mode never falls back to the historical server-issued grant. A
+        valid IdP token still needs an explicit local principal mapping before
+        it can see inventory; raw token/claims never reach a node or receipt.
+        """
+
+        if self.server.mcp_oauth is None:
+            return self.server.store.authenticate_mcp_access_token(access_token=self._auth("Bearer"))
+        header = self.headers.get("Authorization")
+        if not isinstance(header, str) or not header.startswith("Bearer "):
+            raise McpAuthenticationError("OAuth authentication is required.", required_scopes=required_scopes)
+        token = header[len("Bearer "):]
+        if not token or token != token.strip() or "\r" in token or "\n" in token:
+            raise McpAuthenticationError("OAuth authentication is required.", required_scopes=required_scopes)
+        try:
+            identity = (
+                self.server.mcp_oauth_verifier.authenticate(token, required_scopes=required_scopes)
+                if self.server.mcp_oauth_verifier is not None
+                else None
+            )
+        except OAuthAuthenticationError:
+            raise McpAuthenticationError("OAuth authentication is required.", required_scopes=required_scopes) from None
+        if identity is None:
+            raise McpAuthenticationError("OAuth authentication is required.", required_scopes=required_scopes)
+        resolution = self.server.store.resolve_or_request_oauth_principal(
+            owner_id="owner_default",
+            issuer=identity.issuer,
+            subject=identity.subject,
+        )
+        if resolution["state"] == "linked":
+            return {
+                "principal_id": str(resolution["principal_id"]),
+                "owner_id": str(resolution["owner_id"]),
+                "context_id": None,
+                "oauth_scopes": frozenset(identity.scopes),
+            }
+        if resolution["state"] == "pending":
+            # OAuth itself succeeded.  Do not issue another login challenge or
+            # leak a subject; the private owner Console is the only place that
+            # can approve the opaque request.  The request ID is safe to show
+            # back to the authenticated caller, so they can tell the owner
+            # which pending row to review without copying a bearer or claim.
+            raise McpAccountLinkPendingError(
+                link_request_id=str(resolution["link_request"]["link_request_id"])
+            )
+        raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+
+    def _mcp_oauth_authentication_response(
+        self,
+        body: dict[str, Any],
+        *,
+        modern: bool,
+        required_scopes: tuple[str, ...] = (),
+    ) -> None:
+        """Return both HTTP and MCP-level discovery signals for OAuth login."""
+
+        configuration = self.server.mcp_oauth
+        if configuration is None:
+            raise RuntimeError("OAuth authentication response requires OAuth mode.")
+        challenge = configuration.www_authenticate(required_scopes=required_scopes or None)
+        request_id = _response_id(body)
+        if body.get("method") == "tools/call" and request_id is not None:
+            result: dict[str, Any] = {
+                "content": [{"type": "text", "text": "OAuth authentication is required before this tool can be used."}],
+                "structuredContent": {"code": "OAUTH_AUTHENTICATION_REQUIRED", "execution": "not_started"},
+                "isError": True,
+                "_meta": {"mcp/www_authenticate": [challenge]},
+            }
+            if modern:
+                result = self.server.mcp_facade._stateless_result(result, cacheable=False)
+            payload = {"jsonrpc": "2.0", "id": request_id, "result": result}
+        else:
+            payload = _rpc_error(request_id, -32001, "Authentication required", {"code": "UNAUTHENTICATED"})
+            if request_id is None:
+                payload.pop("id", None)
+        self._json(HTTPStatus.UNAUTHORIZED, payload, headers={"WWW-Authenticate": challenge})
+
+    def _mcp_oauth_link_pending_response(
+        self,
+        body: dict[str, Any],
+        *,
+        modern: bool,
+        link_request_id: str,
+    ) -> None:
+        """Explain account-link approval without treating it as OAuth failure.
+
+        A pending link proves that the resource server already verified an
+        access token.  Returning ``WWW-Authenticate`` here would make the
+        client repeat the same successful login and could create an onboarding
+        loop.  The only correlation value is the opaque link-request ID.
+        """
+
+        request_id = _response_id(body)
+        message = "OAuth account link is pending owner approval. Give the owner the opaque link request ID shown here."
+        if body.get("method") == "tools/call" and request_id is not None:
+            result: dict[str, Any] = {
+                "content": [{"type": "text", "text": message}],
+                "structuredContent": {
+                    "code": "OAUTH_ACCOUNT_LINK_PENDING",
+                    "execution": "not_started",
+                    "account_link_request_id": link_request_id,
+                },
+                "isError": True,
+            }
+            if modern:
+                result = self.server.mcp_facade._stateless_result(result, cacheable=False)
+            payload = {"jsonrpc": "2.0", "id": request_id, "result": result}
+        else:
+            payload = _rpc_error(
+                request_id,
+                -32003,
+                "OAuth account link pending",
+                {
+                    "code": "OAUTH_ACCOUNT_LINK_PENDING",
+                    "account_link_request_id": link_request_id,
+                },
+            )
+            if request_id is None:
+                payload.pop("id", None)
+        self._json(HTTPStatus.FORBIDDEN, payload)
 
     def _mcp_http_protocol(self, body: dict[str, Any]) -> tuple[bool, dict[str, Any] | None]:
         """Validate modern mirrored headers before dispatch, without session state.
@@ -618,6 +845,36 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             }
         }
 
+    def _register_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Accept a path-free workspace inventory only from its own node.
+
+        The Electron/node side resolves the selected filesystem path locally.
+        This listener receives no path, path hash, node secret in the body, or
+        task authority.  A registration is deliberately separate from binding,
+        context creation and local policy installation.
+        """
+
+        if set(body) != {"workspace_id", "workspace_generation", "display_name", "capabilities"}:
+            raise ValidationError("node workspace registration payload is invalid.")
+        self._node(device_id)
+        return self.server.store.register_node_workspace(
+            device_id=device_id,
+            workspace_id=self._field(body, "workspace_id"),
+            workspace_generation=self._field(body, "workspace_generation"),
+            display_name=self._field(body, "display_name"),
+            capabilities=self._field(body, "capabilities"),
+        )
+
+    def _retire_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if set(body) != {"workspace_id", "workspace_generation"}:
+            raise ValidationError("node workspace retirement payload is invalid.")
+        self._node(device_id)
+        return self.server.store.retire_node_workspace(
+            device_id=device_id,
+            workspace_id=self._field(body, "workspace_id"),
+            workspace_generation=self._field(body, "workspace_generation"),
+        )
+
     def _session_cookie(self, token: str, *, expires: bool = False) -> str:
         if expires:
             return f"{SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"
@@ -638,6 +895,7 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 # This is deployment-supplied metadata, not an attestation of
                 # loaded bytes. Operators still need service/unit proof.
                 "declared_source_revision": self.server.declared_source_revision,
+                "mcp_authentication_mode": "oauth_introspection" if self.server.mcp_oauth is not None else "legacy_context_grant",
             }
         )
         return payload
@@ -646,6 +904,15 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         """Return bounded central observations; no node credential or raw action payload."""
 
         work_requests = self.server.store.list_work_requests(owner_id=owner_id)
+        nodes = self.server.store.list_nodes(owner_id=owner_id)
+        workspace_registrations = [
+            registration
+            for node in nodes
+            for registration in self.server.store.list_node_workspaces(
+                owner_id=owner_id,
+                device_id=str(node["device_id"]),
+            )
+        ]
         return {
             "observation_kind": "central_control_plane_read_model",
             "observed_at_ms": int(time.time() * 1000),
@@ -665,8 +932,12 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                         "policy_expires_at_ms", "policy_observed_at_ms", "policy_reason",
                     )
                 }
-                for node in self.server.store.list_nodes(owner_id=owner_id)
+                for node in nodes
             ],
+            # A node registration is inventory only. It contains no local path
+            # or secret and the browser cannot turn it into a policy/context
+            # without the existing explicit binding/context calls below.
+            "workspace_registrations": workspace_registrations,
             "bindings": self.server.store.list_bindings(owner_id=owner_id),
             "contexts": self.server.store.list_contexts(owner_id=owner_id),
             # Browser overview deliberately omits raw objective, criteria and
@@ -684,6 +955,15 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             # payloads.  Those remain out of the browser read model.
             "actions": self.server.store.list_action_lifecycle(owner_id=owner_id),
             "enrollment_requests": self.server.store.list_enrollment_requests(),
+            # OAuth requests are deliberately opaque: the Console may decide
+            # yes/no using their ID and lifecycle, but never sees the IdP
+            # subject, issuer, token, or a workspace target.
+            "oauth_link_requests": self.server.store.list_oauth_link_requests(owner_id=owner_id),
+            "oauth_principals": self.server.store.list_oauth_principals(owner_id=owner_id),
+            # A permission request is a review record only.  The private
+            # Console needs its exact bounded scope to decide it, but it never
+            # receives patch text, a Windows absolute root or a local policy.
+            "permission_requests": self.server.store.list_mcp_permission_requests(owner_id=owner_id),
         }
 
     def _login(self, body: dict[str, Any]) -> tuple[str, _OperatorSession]:
@@ -692,8 +972,8 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             raise ValidationError("operator login payload is invalid.")
         if self.server.operator_sessions is None or not self.server.operator_sessions.allow_login_attempt(self.client_address[0]):
             raise RateLimitError("too many operator login attempts; retry later.")
-        presented = str(body.get("operator_token") or "")
-        if not hmac.compare_digest(presented, self.server.operator_token):
+        presented = _operator_token_bytes(body.get("operator_token"))
+        if presented is None or not hmac.compare_digest(presented, self.server.operator_token):
             raise PermissionError("operator authentication failed.")
         return self.server.operator_sessions.create(owner_id="owner_default")
 
@@ -709,6 +989,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         try:
             if self.server.mcp_ingress_only:
+                if self.path == "/.well-known/oauth-protected-resource" and self.server.mcp_oauth is not None:
+                    self._json(HTTPStatus.OK, self.server.mcp_oauth.protected_resource_metadata())
+                    return
                 self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
                 return
             if self.server.web_origin is not None and self.path == "/":
@@ -749,6 +1032,24 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     {"mcp_access_grants": self.server.store.list_mcp_access_grants(owner_id=self._operator())},
                 )
                 return
+            if self.path == "/v1/oauth-principals":
+                self._json(
+                    HTTPStatus.OK,
+                    {"oauth_principals": self.server.store.list_oauth_principals(owner_id=self._operator())},
+                )
+                return
+            if self.path == "/v1/oauth-link-requests":
+                self._json(
+                    HTTPStatus.OK,
+                    {"oauth_link_requests": self.server.store.list_oauth_link_requests(owner_id=self._operator())},
+                )
+                return
+            if self.path == "/v1/permission-requests":
+                self._json(
+                    HTTPStatus.OK,
+                    {"permission_requests": self.server.store.list_mcp_permission_requests(owner_id=self._operator())},
+                )
+                return
             if self.path == "/v1/work-requests":
                 self._json(HTTPStatus.OK, {"work_requests": self.server.store.list_work_requests(owner_id=self._operator())})
                 return
@@ -772,6 +1073,16 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 self._json(
                     HTTPStatus.OK,
                     self.server.store.node_observation(owner_id=self._operator(), device_id=node_match.group(1)),
+                )
+                return
+            node_workspace_match = re.fullmatch(r"/v1/nodes/([^/]+)/workspace-registrations", self.path)
+            if node_workspace_match:
+                self._json(
+                    HTTPStatus.OK,
+                    {"workspace_registrations": self.server.store.list_node_workspaces(
+                        owner_id=self._operator(),
+                        device_id=node_workspace_match.group(1),
+                    )},
                 )
                 return
             context_match = re.fullmatch(r"/v1/contexts/([^/]+)", self.path)
@@ -825,20 +1136,48 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 if not self.server.mcp_enabled:
                     self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
                     return
-                principal = self._mcp_client()
                 modern, protocol_error = self._mcp_http_protocol(body)
                 if protocol_error is not None:
                     if protocol_error.get("id") is None:
                         protocol_error.pop("id", None)
                     self._json(HTTPStatus.BAD_REQUEST, protocol_error)
                     return
-                if modern and self.headers.get("Origin"):
+                required_oauth_scopes = self._mcp_required_oauth_scopes(body)
+                try:
+                    principal = self._mcp_client(required_scopes=required_oauth_scopes)
+                except McpAuthenticationError as error:
+                    self._mcp_oauth_authentication_response(
+                        body,
+                        modern=modern,
+                        required_scopes=error.required_scopes,
+                    )
+                    return
+                except McpAccountLinkPendingError as error:
+                    self._mcp_oauth_link_pending_response(
+                        body,
+                        modern=modern,
+                        link_request_id=error.link_request_id,
+                    )
+                    return
+                # The private Console's same-origin check protects its
+                # cookie-backed browser routes.  A remote OAuth MCP client is
+                # authenticated by its bearer token and may legitimately send
+                # its own Origin (for example, the OpenAI client host), which
+                # must never be compared to the Console origin.  Keep the
+                # legacy grant boundary unchanged, and do not emit CORS
+                # headers: an Origin alone is not authority in either mode.
+                if modern and self.headers.get("Origin") and self.server.mcp_oauth is None:
                     self._require_web_origin()
                 response = self.server.mcp_facade.handle(
                     body,
                     owner_id=str(principal["owner_id"]),
                     principal_id=str(principal["principal_id"]),
-                    granted_context_id=str(principal["context_id"]),
+                    # OAuth inventory is account-scoped rather than bound to
+                    # the historical one-context pilot grant.  Preserve None
+                    # so a future context-gated OAuth operation cannot treat
+                    # the literal text "None" as an authority identifier.
+                    granted_context_id=principal["context_id"],
+                    oauth_scopes=principal.get("oauth_scopes"),
                     stateless_2026=modern,
                 )
                 if response is None:
@@ -874,6 +1213,66 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 )
                 self._json(HTTPStatus.CREATED, result)
                 return
+            if self.path == "/v1/oauth-principals":
+                if set(body) != {"issuer", "subject"}:
+                    raise ValidationError("OAuth principal link payload is invalid.")
+                result = self.server.store.link_oauth_principal(
+                    owner_id=self._operator(),
+                    issuer=self._field(body, "issuer"),
+                    subject=self._field(body, "subject"),
+                )
+                self._json(HTTPStatus.CREATED, result)
+                return
+            oauth_principal_revoke_match = re.fullmatch(r"/v1/oauth-principals/([^/]+)/revoke", self.path)
+            if oauth_principal_revoke_match:
+                if body:
+                    raise ValidationError("OAuth principal revocation payload is invalid.")
+                result = self.server.store.revoke_oauth_principal(
+                    owner_id=self._operator(),
+                    principal_id=oauth_principal_revoke_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            oauth_link_approve_match = re.fullmatch(r"/v1/oauth-link-requests/([^/]+)/approve", self.path)
+            if oauth_link_approve_match:
+                if body:
+                    raise ValidationError("OAuth account-link approval payload is invalid.")
+                result = self.server.store.approve_oauth_link_request(
+                    owner_id=self._operator(),
+                    link_request_id=oauth_link_approve_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            oauth_link_reject_match = re.fullmatch(r"/v1/oauth-link-requests/([^/]+)/reject", self.path)
+            if oauth_link_reject_match:
+                if body:
+                    raise ValidationError("OAuth account-link rejection payload is invalid.")
+                result = self.server.store.reject_oauth_link_request(
+                    owner_id=self._operator(),
+                    link_request_id=oauth_link_reject_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            permission_request_approve_match = re.fullmatch(r"/v1/permission-requests/([^/]+)/approve", self.path)
+            if permission_request_approve_match:
+                if body:
+                    raise ValidationError("permission request approval payload is invalid.")
+                result = self.server.store.approve_mcp_permission_request(
+                    owner_id=self._operator(),
+                    permission_request_id=permission_request_approve_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            permission_request_reject_match = re.fullmatch(r"/v1/permission-requests/([^/]+)/reject", self.path)
+            if permission_request_reject_match:
+                if body:
+                    raise ValidationError("permission request rejection payload is invalid.")
+                result = self.server.store.reject_mcp_permission_request(
+                    owner_id=self._operator(),
+                    permission_request_id=permission_request_reject_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
             mcp_grant_revoke_match = re.fullmatch(r"/v1/mcp-access-grants/([^/]+)/revoke", self.path)
             if mcp_grant_revoke_match:
                 if body:
@@ -906,6 +1305,56 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 result = self.server.store.approve_enrollment(
                     owner_id=owner_id,
                     enrollment_id=ui_enrollment_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            ui_oauth_link_approve_match = re.fullmatch(r"/v1/ui/oauth-link-requests/([^/]+)/approve", self.path)
+            if ui_oauth_link_approve_match:
+                if body:
+                    raise ValidationError("browser OAuth account-link approval payload is invalid.")
+                result = self.server.store.approve_oauth_link_request(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    link_request_id=ui_oauth_link_approve_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            ui_oauth_link_reject_match = re.fullmatch(r"/v1/ui/oauth-link-requests/([^/]+)/reject", self.path)
+            if ui_oauth_link_reject_match:
+                if body:
+                    raise ValidationError("browser OAuth account-link rejection payload is invalid.")
+                result = self.server.store.reject_oauth_link_request(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    link_request_id=ui_oauth_link_reject_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            ui_permission_request_approve_match = re.fullmatch(r"/v1/ui/permission-requests/([^/]+)/approve", self.path)
+            if ui_permission_request_approve_match:
+                if body:
+                    raise ValidationError("browser permission request approval payload is invalid.")
+                result = self.server.store.approve_mcp_permission_request(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    permission_request_id=ui_permission_request_approve_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            ui_permission_request_reject_match = re.fullmatch(r"/v1/ui/permission-requests/([^/]+)/reject", self.path)
+            if ui_permission_request_reject_match:
+                if body:
+                    raise ValidationError("browser permission request rejection payload is invalid.")
+                result = self.server.store.reject_mcp_permission_request(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    permission_request_id=ui_permission_request_reject_match.group(1),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            ui_oauth_principal_revoke_match = re.fullmatch(r"/v1/ui/oauth-principals/([^/]+)/revoke", self.path)
+            if ui_oauth_principal_revoke_match:
+                if body:
+                    raise ValidationError("browser OAuth principal revocation payload is invalid.")
+                result = self.server.store.revoke_oauth_principal(
+                    owner_id=self._ui_operator(require_csrf=True),
+                    principal_id=ui_oauth_principal_revoke_match.group(1),
                 )
                 self._json(HTTPStatus.OK, result)
                 return
@@ -1020,6 +1469,16 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 )
                 self._json(HTTPStatus.OK, result)
                 return
+            node_workspace_match = re.fullmatch(r"/v1/nodes/([^/]+)/workspace-registrations", self.path)
+            if node_workspace_match:
+                result = self._register_node_workspace(node_workspace_match.group(1), body)
+                self._json(HTTPStatus.OK if result["replayed"] else HTTPStatus.CREATED, result)
+                return
+            node_workspace_retire_match = re.fullmatch(r"/v1/nodes/([^/]+)/workspace-registrations/retire", self.path)
+            if node_workspace_retire_match:
+                result = self._retire_node_workspace(node_workspace_retire_match.group(1), body)
+                self._json(HTTPStatus.OK, result)
+                return
             node_policy_template_match = re.fullmatch(r"/v1/nodes/([^/]+)/read-only-policy-template", self.path)
             if node_policy_template_match:
                 self._json(
@@ -1031,7 +1490,21 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if node_match:
                 device_id = node_match.group(1)
                 self._node(device_id)
-                self._json(HTTPStatus.OK, {"actions": self.server.store.poll_actions(device_id=device_id, limit=body.get("limit", 10))})
+                if not set(body) <= {"limit", "lane"}:
+                    raise ValidationError("node poll payload is invalid.")
+                lane = body.get("lane")
+                if lane is not None and not isinstance(lane, str):
+                    raise ValidationError("node poll lane is invalid.")
+                self._json(
+                    HTTPStatus.OK,
+                    {
+                        "actions": self.server.store.poll_actions(
+                            device_id=device_id,
+                            limit=body.get("limit", 10),
+                            lane=lane,
+                        )
+                    },
+                )
                 return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/receipts", self.path)
             if node_match:
@@ -1096,6 +1569,7 @@ def serve_from_environment() -> None:
     bind = os.environ.get("CONTROL_PLANE_BIND", "127.0.0.1")
     port = int(os.environ.get("CONTROL_PLANE_PORT", "8765"))
     mcp_bind, mcp_port = _mcp_ingress_address_from_environment()
+    mcp_oauth = oauth_configuration_from_environment()
     store = ControlPlaneStore(database)
     shared = (
         store,
@@ -1111,12 +1585,14 @@ def serve_from_environment() -> None:
         web_origin=os.environ.get("CONTROL_PLANE_WEB_ORIGIN"),
         web_session_ttl_seconds=int(os.environ.get("CONTROL_PLANE_WEB_SESSION_TTL_SECONDS", str(DEFAULT_WEB_SESSION_TTL_SECONDS))),
         mcp_enabled=False,
+        mcp_oauth=mcp_oauth,
     )
     mcp_server = ControlPlaneHttpServer(
         (mcp_bind, mcp_port),
         *shared,
         mcp_enabled=True,
         mcp_ingress_only=True,
+        mcp_oauth=mcp_oauth,
     )
     mcp_thread = Thread(target=mcp_server.serve_forever, kwargs={"poll_interval": 0.5}, daemon=True)
     mcp_thread.start()

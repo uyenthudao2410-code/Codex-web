@@ -161,6 +161,8 @@ async function main() {
     path.join(packagedControlPlaneRoot, 'node_agent.py'),
     path.join(packagedControlPlaneRoot, 'node-agent.cmd'),
     path.join(packagedControlPlaneRoot, 'recovery_identity_observer.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_approved_patch_bridge.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_file_read_bridge.cjs'),
     path.join(packagedControlPlaneRoot, 'recovery_read_only_bridge.cjs'),
     path.join(packagedControlPlaneRoot, 'recovery_runtime_adapter.cjs')
   ];

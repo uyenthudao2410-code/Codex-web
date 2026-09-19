@@ -52,6 +52,7 @@ WEB_UI_HTML = """<!doctype html>
             <dt>Service</dt><dd id="service-state">—</dd>
             <dt>SQLite</dt><dd id="sqlite-state">—</dd>
             <dt>Schema</dt><dd id="schema-version">—</dd>
+            <dt>Xác thực MCP</dt><dd id="mcp-authentication-mode">—</dd>
             <dt>Build source</dt><dd id="source-revision">—</dd>
             <dt>Gói đã nạp</dt><dd id="package-fingerprint">—</dd>
             <dt>Quan sát lúc</dt><dd id="observed-at">—</dd>
@@ -67,27 +68,24 @@ WEB_UI_HTML = """<!doctype html>
           <p class="muted">Đóng admission chỉ chặn intake/dispatch mới; không khẳng định mọi job đã dừng. Mở lại theo runbook sau khi đối soát, không có nút browser ở giai đoạn này.</p>
         </article>
         <article class="card">
-          <h2>Giới hạn pilot</h2>
-          <p>Read-only control surface. Trạng thái “ready” của node là heartbeat do node báo, không phải bằng chứng job đang chạy hoặc quyền ghi.</p>
-          <p class="muted">Browser có thể tạo binding/context hẹp và queue một canary `workspace_context` cố định. Policy cục bộ, admission và remote execution vẫn là các gate tách biệt.</p>
+          <h2>Đường điều khiển</h2>
+          <p>Console đang quan sát Control Plane. Trạng thái Tunnel/ChatGPT transport không được suy ra từ heartbeat Windows và chỉ được coi là có khi có receipt transport riêng.</p>
+          <p class="muted">Read-only control surface: heartbeat node, executor cục bộ, workspace đã chọn và quyền task là các trạng thái tách biệt. “ready” cũ không chứng minh máy còn sẵn sàng hôm nay.</p>
         </article>
       </div>
 
       <section class="panel">
         <h2>Windows nodes</h2>
-        <p class="muted">Ngưỡng stale heartbeat: 60 giây. Policy là quan sát do node báo, không phải quyền do browser cấp. Timestamp thiếu được hiển thị là chưa có quan sát.</p>
+        <p class="muted">Ngưỡng stale heartbeat: 60 giây. Policy là quan sát do node báo, không phải quyền do browser cấp. Timestamp thiếu hoặc stale không được hiển thị là executor sẵn sàng.</p>
         <div class="table-wrap"><table><thead><tr><th>Tên</th><th>Readiness</th><th>Heartbeat</th><th>Runtime / epoch</th><th>Contract</th><th>Local policy</th></tr></thead><tbody id="nodes-body"></tbody></table></div>
       </section>
       <section class="panel">
-        <h2>Workspace bindings và contexts</h2>
-        <p class="muted">Chỉ nhập workspace ID và generation đã được đối soát độc lập với máy node. Không nhập path Windows, nội dung file hoặc secret ở đây. Binding chưa cấp policy hay quyền chạy.</p>
+        <h2>Workspace đã đăng ký, bindings và contexts</h2>
+        <p class="muted">Chỉ chọn workspace generation do Windows node đăng ký. Console không nhận path Windows, nội dung file hoặc secret. Registration không cấp policy/quyền chạy; binding và context vẫn là hai bước riêng.</p>
         <div class="operator-forms">
           <form id="binding-form" class="operator-form">
             <h3>Tạo workspace binding</h3>
-            <label>Node đã duyệt <select id="binding-device-id" required></select></label>
-            <label>Workspace ID <input id="binding-workspace-id" maxlength="128" autocomplete="off" required></label>
-            <label>Workspace generation <input id="binding-workspace-generation" maxlength="128" autocomplete="off" required></label>
-            <label>Tên hiển thị <input id="binding-display-name" maxlength="120" autocomplete="off" required></label>
+            <label>Workspace node đã đăng ký <select id="binding-workspace-registration" required></select></label>
             <button type="submit">Tạo binding</button>
           </form>
           <form id="context-form" class="operator-form">
@@ -97,12 +95,25 @@ WEB_UI_HTML = """<!doctype html>
             <button type="submit">Cấp context</button>
           </form>
         </div>
+        <div class="table-wrap"><table><thead><tr><th>Node</th><th>Workspace</th><th>Generation</th><th>Capability</th><th>Trạng thái</th></tr></thead><tbody id="workspace-registrations-body"></tbody></table></div>
         <div class="table-wrap"><table><thead><tr><th>Binding / workspace</th><th>Node</th><th>Generation</th><th>Context / expiry</th><th>Canary</th><th>Control</th></tr></thead><tbody id="bindings-body"></tbody></table></div>
       </section>
       <section class="panel">
         <h2>Yêu cầu và enrollment</h2>
         <p class="muted">Duyệt enrollment chỉ tạo identity cho request đang chờ; không cài policy, binding, context hay thực thi trên node.</p>
         <div class="table-wrap"><table><thead><tr><th>Loại</th><th>ID</th><th>Target</th><th>Trạng thái</th><th>Thời gian</th><th>Thao tác</th></tr></thead><tbody id="requests-body"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <h2>Liên kết tài khoản OAuth</h2>
+        <p class="muted">Yêu cầu chỉ xuất hiện sau khi IdP đã xác thực tài khoản tại MCP. Console chỉ thấy ID opaque và thời gian; không hiện subject, email, issuer, token hoặc workspace. Duyệt chỉ cho tài khoản xem inventory được cấp, không tạo context, policy, action hay quyền ghi.</p>
+        <div class="table-wrap"><table><thead><tr><th>Yêu cầu</th><th>Trạng thái</th><th>Yêu cầu lúc</th><th>Quyết định lúc</th><th>Thao tác</th></tr></thead><tbody id="oauth-link-requests-body"></tbody></table></div>
+        <h3>Tài khoản đã liên kết</h3>
+        <div class="table-wrap"><table><thead><tr><th>Principal opaque</th><th>Trạng thái</th><th>Liên kết lúc</th><th>Thu hồi lúc</th><th>Thao tác</th></tr></thead><tbody id="oauth-principals-body"></tbody></table></div>
+      </section>
+      <section class="panel">
+        <h2>Yêu cầu quyền patch</h2>
+        <p class="muted">Đây là bản ghi duyệt scope cho một patch tương lai: node/workspace, đường dẫn tương đối, preimage, patch digest, profile kiểm tra và hạn dùng. Duyệt không queue action, không đổi policy Windows, không ghi file, không chạy lệnh và không cấp local authority. Bridge mutation sau này phải kiểm lại toàn bộ scope/policy trước effect.</p>
+        <div class="table-wrap"><table><thead><tr><th>Yêu cầu / principal</th><th>Target / scope</th><th>Trạng thái / hết hạn</th><th>Digest</th><th>Thao tác</th></tr></thead><tbody id="permission-requests-body"></tbody></table></div>
       </section>
       <section class="panel">
         <h2>Action và receipt</h2>
@@ -192,8 +203,19 @@ WEB_UI_JAVASCRIPT = """(() => {
     const age = Date.now() - value;
     return `${formatTime(value)} (${age > STALE_HEARTBEAT_MS ? 'stale' : 'fresh'})`;
   }
+  function nodeReadiness(node) {
+    if (node.revoked_at_ms) return 'revoked — không được dispatch';
+    if (!Number.isFinite(node.last_seen_at_ms)) return 'unobserved — chưa có heartbeat';
+    const age = Date.now() - node.last_seen_at_ms;
+    if (age > STALE_HEARTBEAT_MS) return `stale — node từng báo ${node.readiness || 'unknown'}; không coi executor sẵn sàng`;
+    return node.readiness || 'unknown';
+  }
   function policyState(node) {
     const state = node.policy_state || 'unobserved';
+    const observedAt = node.policy_observed_at_ms;
+    if (!Number.isFinite(observedAt)) return 'unobserved — chưa có policy observation';
+    if (Date.now() - observedAt > STALE_HEARTBEAT_MS) return `stale — policy từng báo ${state}; không cấp quyền task`;
+    if (state === 'enabled' && Number.isFinite(node.policy_expires_at_ms) && node.policy_expires_at_ms <= Date.now()) return `expired — ${formatTime(node.policy_expires_at_ms)}`;
     if (state === 'enabled') return `enabled / hết hạn ${formatTime(node.policy_expires_at_ms)}`;
     if (state === 'expired_or_disabled') return `expired_or_disabled / ${formatTime(node.policy_expires_at_ms)}`;
     if (state === 'unavailable') return `unavailable / ${node.policy_reason || 'không có lý do an toàn'}`;
@@ -226,6 +248,42 @@ WEB_UI_JAVASCRIPT = """(() => {
     const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Duyệt enrollment'; button.disabled = !csrfToken;
     button.addEventListener('click', () => approveEnrollment(enrollment.enrollment_id, button)); cell.appendChild(button); row.appendChild(cell);
   }
+  function appendOAuthLinkRequestControls(row, request) {
+    const cell = document.createElement('td');
+    if (request.state !== 'pending') { cell.textContent = '—'; row.appendChild(cell); return; }
+    const approve = document.createElement('button'); approve.type = 'button'; approve.textContent = 'Duyệt liên kết'; approve.disabled = !csrfToken;
+    approve.addEventListener('click', () => approveOAuthLinkRequest(request.link_request_id, approve)); cell.appendChild(approve);
+    const reject = document.createElement('button'); reject.type = 'button'; reject.className = 'secondary'; reject.textContent = 'Từ chối'; reject.disabled = !csrfToken;
+    reject.addEventListener('click', () => rejectOAuthLinkRequest(request.link_request_id, reject)); cell.appendChild(reject);
+    row.appendChild(cell);
+  }
+  function appendOAuthPrincipalControls(row, principal) {
+    const cell = document.createElement('td');
+    if (principal.state !== 'enabled') { cell.textContent = '—'; row.appendChild(cell); return; }
+    const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'secondary'; revoke.textContent = 'Thu hồi liên kết'; revoke.disabled = !csrfToken;
+    revoke.addEventListener('click', () => revokeOAuthPrincipal(principal.principal_id, revoke)); cell.appendChild(revoke);
+    row.appendChild(cell);
+  }
+  function appendPermissionRequestControls(row, request) {
+    const cell = document.createElement('td');
+    if (request.state !== 'pending') { cell.textContent = '—'; row.appendChild(cell); return; }
+    const approve = document.createElement('button'); approve.type = 'button'; approve.textContent = 'Duyệt scope'; approve.disabled = !csrfToken;
+    approve.addEventListener('click', () => approvePermissionRequest(request.permission_request_id, approve)); cell.appendChild(approve);
+    const reject = document.createElement('button'); reject.type = 'button'; reject.className = 'secondary'; reject.textContent = 'Từ chối'; reject.disabled = !csrfToken;
+    reject.addEventListener('click', () => rejectPermissionRequest(request.permission_request_id, reject)); cell.appendChild(reject);
+    row.appendChild(cell);
+  }
+  function selectedBindingWorkspaceRegistration() {
+    const value = byId('binding-workspace-registration').value;
+    let registration;
+    try { registration = JSON.parse(value); }
+    catch { throw new Error('Chọn workspace registration còn hiệu lực trước.'); }
+    if (!Array.isArray(registration) || registration.length !== 4 || registration.some((entry) => typeof entry !== 'string' || !entry)) {
+      throw new Error('Workspace registration đã chọn không hợp lệ.');
+    }
+    const [device_id, workspace_id, workspace_generation, display_name] = registration;
+    return { device_id, workspace_id, workspace_generation, display_name };
+  }
   function clearBody(id) { const body = byId(id); while (body.firstChild) body.removeChild(body.firstChild); return body; }
   function emptyRow(body, columns, value) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = columns; cell.textContent = value; row.appendChild(cell); body.appendChild(row); }
   async function api(path, options = {}) {
@@ -245,6 +303,12 @@ WEB_UI_JAVASCRIPT = """(() => {
     text('service-state', health.ok ? 'healthy (central only)' : 'unhealthy');
     text('sqlite-state', health.sqlite_integrity || null);
     text('schema-version', health.schema_version);
+    const mcpAuthenticationMode = health.mcp_authentication_mode;
+    text('mcp-authentication-mode', mcpAuthenticationMode === 'oauth_introspection'
+      ? 'OAuth account introspection'
+      : mcpAuthenticationMode === 'legacy_context_grant'
+        ? 'legacy context grant — không phải đăng nhập tài khoản'
+        : 'không xác định');
     text('source-revision', health.declared_source_revision || 'không khai báo');
     text('package-fingerprint', health.package_source_sha256 || null);
     text('observed-at', formatTime(data.observed_at_ms));
@@ -256,8 +320,29 @@ WEB_UI_JAVASCRIPT = """(() => {
 
     const nodes = clearBody('nodes-body');
     if (!data.nodes?.length) emptyRow(nodes, 6, 'Chưa có node được enrollment.');
-    for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, node.readiness); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
-    setSelectOptions('binding-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
+    for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, nodeReadiness(node)); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
+    const nodeById = new Map((data.nodes || []).map((node) => [node.device_id, node]));
+    const registrations = data.workspace_registrations || [];
+    const registrationRows = clearBody('workspace-registrations-body');
+    if (!registrations.length) emptyRow(registrationRows, 5, 'Chưa có workspace local nào được node đăng ký.');
+    for (const registration of registrations) {
+      const row = document.createElement('tr');
+      const node = nodeById.get(registration.device_id);
+      const capabilities = registration.capabilities || {};
+      const capabilityLabel = `read=${capabilities.read === true}; write=${capabilities.write === true}; exec=${capabilities.exec === true}`;
+      const registrationState = registration.retired_at_ms ? `retired / ${formatTime(registration.retired_at_ms)}` : 'current — inventory only';
+      appendCell(row, node?.display_name || registration.device_id);
+      appendCell(row, registration.display_name || registration.workspace_id);
+      appendCell(row, registration.workspace_generation);
+      appendCell(row, capabilityLabel);
+      appendCell(row, registrationState);
+      registrationRows.appendChild(row);
+    }
+    const selectableRegistrations = registrations.filter((registration) => !registration.retired_at_ms && !nodeById.get(registration.device_id)?.revoked_at_ms);
+    setSelectOptions('binding-workspace-registration', selectableRegistrations.map((registration) => ({
+      value: JSON.stringify([registration.device_id, registration.workspace_id, registration.workspace_generation, registration.display_name]),
+      label: `${registration.display_name} · ${registration.device_id} · ${registration.workspace_generation}`,
+    })), 'Chọn workspace node đã đăng ký', 'workspace registration');
     setSelectOptions('reconciliation-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
 
     const contextsByBinding = new Map();
@@ -274,6 +359,41 @@ WEB_UI_JAVASCRIPT = """(() => {
     for (const item of work) { const row = document.createElement('tr'); appendCell(row, 'Work request'); appendCell(row, item.request_id); appendCell(row, item.context_id); appendCell(row, item.canceled_at_ms ? 'đã hủy' : 'đã lưu; không suy ra đã thực thi'); appendCell(row, formatTime(item.created_at_ms)); appendCell(row, '—'); requests.appendChild(row); }
     for (const item of enrollments) { const row = document.createElement('tr'); appendCell(row, 'Enrollment'); appendCell(row, item.enrollment_id); appendCell(row, item.display_name || item.device_id); appendCell(row, item.approved_at_ms ? 'đã phê duyệt' : 'đợi phê duyệt'); appendCell(row, formatTime(item.requested_at_ms)); appendEnrollmentApproval(row, item); requests.appendChild(row); }
 
+    const oauthLinkRequests = clearBody('oauth-link-requests-body');
+    if (!data.oauth_link_requests?.length) emptyRow(oauthLinkRequests, 5, 'Chưa có yêu cầu liên kết OAuth.');
+    for (const request of data.oauth_link_requests || []) {
+      const row = document.createElement('tr');
+      appendCell(row, request.link_request_id);
+      appendCell(row, request.state === 'pending' ? 'đợi owner phê duyệt' : request.state === 'approved' ? 'đã liên kết' : request.state === 'rejected' ? 'đã từ chối' : 'trạng thái không xác định');
+      appendCell(row, formatTime(request.requested_at_ms));
+      appendCell(row, formatTime(request.decided_at_ms));
+      appendOAuthLinkRequestControls(row, request);
+      oauthLinkRequests.appendChild(row);
+    }
+    const oauthPrincipals = clearBody('oauth-principals-body');
+    if (!data.oauth_principals?.length) emptyRow(oauthPrincipals, 5, 'Chưa có tài khoản OAuth được liên kết.');
+    for (const principal of data.oauth_principals || []) {
+      const row = document.createElement('tr');
+      appendCell(row, principal.principal_id);
+      appendCell(row, principal.state === 'enabled' ? 'đang được cấp inventory' : principal.state === 'revoked' ? 'đã thu hồi' : 'trạng thái không xác định');
+      appendCell(row, formatTime(principal.created_at_ms));
+      appendCell(row, formatTime(principal.revoked_at_ms));
+      appendOAuthPrincipalControls(row, principal);
+      oauthPrincipals.appendChild(row);
+    }
+
+    const permissionRequests = clearBody('permission-requests-body');
+    if (!data.permission_requests?.length) emptyRow(permissionRequests, 5, 'Chưa có yêu cầu quyền patch.');
+    for (const request of data.permission_requests || []) {
+      const row = document.createElement('tr');
+      appendCell(row, `${request.permission_request_id} / ${request.principal_id || '—'}`);
+      appendCell(row, `${request.device_id || '—'} / ${request.workspace_id || '—'}\n${request.operation || '—'} ${request.path || '—'}\npreimage=${request.preimage_sha256 || '—'}\npatch=${request.patch_sha256 || '—'}\nvalidation=${request.validation_profile || '—'}`);
+      appendCell(row, `${request.state === 'pending' ? 'đợi owner duyệt' : request.state === 'approved' ? 'đã duyệt — chưa tạo effect' : request.state === 'rejected' ? 'đã từ chối' : 'trạng thái không xác định'} / hết hạn ${formatTime(request.expires_at_ms)}`);
+      appendCell(row, request.permission_digest || '—');
+      appendPermissionRequestControls(row, request);
+      permissionRequests.appendChild(row);
+    }
+
     const actions = clearBody('actions-body');
     if (!data.actions?.length) emptyRow(actions, 5, 'Chưa có action được niêm phong.');
     for (const action of data.actions || []) {
@@ -283,8 +403,10 @@ WEB_UI_JAVASCRIPT = """(() => {
       const delivery = action.delivery_state === 'queued' ? 'queued — chưa gửi node'
         : action.delivery_state === 'dispatch_unconfirmed' ? 'dispatch_unconfirmed — chưa rõ node đã nhận'
         : action.delivery_state === 'accepted' ? 'accepted — chờ receipt kết thúc'
+        : action.approved_patch_candidate === true && action.delivery_state === 'reconcile_required' ? 'unknown/reconcile_required — patch có thể đã áp tại Windows; phải đối soát local, không retry'
         : action.delivery_state === 'reconcile_required' && action.reconciliation_disposition === 'quarantined_unknown' ? 'quarantined_unknown — rủi ro unknown đã được operator cách ly; không retry'
         : action.delivery_state === 'reconcile_required' ? 'reconcile_required — không tự retry'
+        : action.approved_patch_candidate === true && action.delivery_state === 'settled' && action.latest_receipt_state === 'completed' ? 'effect đã áp — chờ proof/semantic acceptance local'
         : `${action.delivery_state || 'unknown'} — xem receipt`;
       appendCell(row, delivery);
       appendCell(row, action.latest_receipt_state ? `${action.latest_receipt_state} (${action.receipt_count || 0}) / ${formatTime(action.latest_receipt_at_ms)}` : 'chưa có receipt');
@@ -328,6 +450,51 @@ WEB_UI_JAVASCRIPT = """(() => {
       await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không duyệt enrollment: ${error.message}`; button.disabled = false; }
   }
+  async function approveOAuthLinkRequest(linkRequestId, button) {
+    if (!csrfToken || !linkRequestId || !confirm('Duyệt liên kết sẽ cho tài khoản OAuth này xem inventory thuộc owner hiện tại. Không cấp quyền task hoặc quyền ghi. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang duyệt liên kết OAuth…';
+    try {
+      await api(`/v1/ui/oauth-link-requests/${encodeURIComponent(linkRequestId)}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã liên kết tài khoản OAuth; context, policy và action vẫn chưa được tạo.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không duyệt liên kết OAuth: ${error.message}`; button.disabled = false; }
+  }
+  async function rejectOAuthLinkRequest(linkRequestId, button) {
+    if (!csrfToken || !linkRequestId || !confirm('Từ chối yêu cầu liên kết OAuth này? Tài khoản đó sẽ không thể tự gửi lại yêu cầu.')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang từ chối liên kết OAuth…';
+    try {
+      await api(`/v1/ui/oauth-link-requests/${encodeURIComponent(linkRequestId)}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã từ chối yêu cầu liên kết OAuth; không tạo account authority.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không từ chối liên kết OAuth: ${error.message}`; button.disabled = false; }
+  }
+  async function approvePermissionRequest(permissionRequestId, button) {
+    if (!csrfToken || !permissionRequestId || !confirm('Duyệt scope này chỉ tạo decision central. Nó không ghi file, chạy lệnh, queue action hoặc đổi policy Windows. Bridge mutation tương lai vẫn phải kiểm lại target, preimage, digest và policy local. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang duyệt scope patch…';
+    try {
+      await api(`/v1/ui/permission-requests/${encodeURIComponent(permissionRequestId)}/approve`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã duyệt scope central; chưa có action hay local effect.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không duyệt scope: ${error.message}`; button.disabled = false; }
+  }
+  async function rejectPermissionRequest(permissionRequestId, button) {
+    if (!csrfToken || !permissionRequestId || !confirm('Từ chối scope patch này? Không có local effect nào cần dừng vì request chưa tạo action.')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang từ chối scope patch…';
+    try {
+      await api(`/v1/ui/permission-requests/${encodeURIComponent(permissionRequestId)}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã từ chối scope central; không có action hay local effect.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không từ chối scope: ${error.message}`; button.disabled = false; }
+  }
+  async function revokeOAuthPrincipal(principalId, button) {
+    if (!csrfToken || !principalId || !confirm('Thu hồi sẽ chặn yêu cầu OAuth mới của principal này. Nó không dừng Job đã gửi; hãy dùng control Job riêng nếu có. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang thu hồi liên kết OAuth…';
+    try {
+      await api(`/v1/ui/oauth-principals/${encodeURIComponent(principalId)}/revoke`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) });
+      connectionStatus.textContent = 'Đã thu hồi liên kết OAuth; yêu cầu task mới của principal này sẽ bị chặn.';
+      await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không thu hồi liên kết OAuth: ${error.message}`; button.disabled = false; }
+  }
   async function revokeBinding(bindingId, button) {
     if (!csrfToken || !bindingId || !confirm('Thu hồi binding sẽ từ chối action chưa gửi của binding này. Tiếp tục?')) return;
     button.disabled = true; connectionStatus.textContent = 'Đang thu hồi binding…';
@@ -348,7 +515,8 @@ WEB_UI_JAVASCRIPT = """(() => {
   bindingForm.addEventListener('submit', async (event) => {
     event.preventDefault(); const button = bindingForm.querySelector('button[type="submit"]'); button.disabled = true; connectionStatus.textContent = 'Đang tạo workspace binding…';
     try {
-      const binding = await api('/v1/ui/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ device_id: byId('binding-device-id').value, workspace_id: byId('binding-workspace-id').value.trim(), workspace_generation: byId('binding-workspace-generation').value.trim(), display_name: byId('binding-display-name').value.trim() }) });
+      const registration = selectedBindingWorkspaceRegistration();
+      const binding = await api('/v1/ui/bindings', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify(registration) });
       connectionStatus.textContent = `Đã tạo ${binding.binding_id}; cấp context riêng khi cần.`; bindingForm.reset(); await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không tạo binding: ${error.message}`; } finally { button.disabled = !csrfToken; }
   });

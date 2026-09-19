@@ -19,9 +19,9 @@ Confirm `package.json` version and the verified `smart-v3` eight-tool surface: `
 Unless a separately accepted policy change says otherwise, `execution_route=auto` remains deterministic/evidence-gated, high-cost routes require acknowledgement, and provider availability does not silently expand write authority. Public schema changes require a connector-refresh/live-contract plan.
 
 Codex-web has one product version across the Electron package and Python MCP
-component. For the 1.0 release, root `package.json`,
+component. For the current 1.0.3 release, root `package.json`,
 `resources/coding-tools-mcp/pyproject.toml`, `coding_tools_mcp.__version__`, and
-product-facing version labels must agree on `1.0.0`. Protocol, schema,
+product-facing version labels must agree on `1.0.3`. Protocol, schema,
 tool-contract, ledger-format, and other compatibility identities remain
 independent and must not be rewritten to the product version.
 

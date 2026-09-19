@@ -89,7 +89,9 @@ function run(command, args = [], options = {}) {
         child.once('close', onTerminated);
         child.once('error', onCleanupError);
         cleanupTimeout = setTimeout(() => finishCleanup(false), cleanupBudgetMs);
-        cleanupTimeout.unref?.();
+        // Keep this deadline referenced until the command reaches a terminal
+        // outcome. Otherwise an unconfirmed child could outlive the caller
+        // without producing the typed uncertainty result below.
         try {
           const signalled = child.kill();
           if (!signalled && (child.exitCode !== null || child.signalCode !== null)) queueMicrotask(onTerminated);
@@ -97,7 +99,10 @@ function run(command, args = [], options = {}) {
           finishCleanup(false, error);
         }
       }, timeoutMs);
-      timeout.unref?.();
+      // A caller awaiting a bounded command needs this deadline to remain
+      // live even when a mocked, detached, or already-lost child exposes no
+      // other event-loop handle. The command must settle as success, failure,
+      // or typed timeout rather than silently disappearing.
     }
     child.on('error', (error) => {
       if (timedOut) return;

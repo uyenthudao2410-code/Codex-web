@@ -18,14 +18,35 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
+from urllib.parse import urlsplit
 
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 16
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
+MCP_BOUNDED_FILE_READ_MAX_BYTES = 16 * 1024
+MCP_BOUNDED_FILE_READ_MAX_LINES = 200
+MCP_BOUNDED_FILE_READ_MAX_TTL_MS = 5 * 60 * 1000
+# A permission request is deliberately shorter than a task/context window.
+# It proves that an owner reviewed one exact proposed future mutation; it does
+# not create a local policy or make an effect dispatchable by itself.
+MCP_PATCH_PERMISSION_MAX_TTL_MS = 5 * 60 * 1000
+MCP_PATCH_PERMISSION_TOOL_NAME = "agent_workflow"
+MCP_PATCH_PERMISSION_OPERATION = "apply_patch"
+MCP_PATCH_PERMISSION_VALIDATION_PROFILE = "targeted"
+# The first write relay is intentionally narrow: one exact existing UTF-8
+# file represented by Coding Tools' ``Write Exact File`` envelope.  The raw
+# envelope must be kept briefly in the protected central database so the
+# Windows node can receive a durable, idempotent action.  It is never copied
+# into generic action arguments, events, normal owner projections, or MCP
+# status results.  This explicit retention boundary is deliberately small
+# until an encrypted/blob-backed payload mechanism is designed.
+MCP_APPROVED_PATCH_MAX_BYTES = 32 * 1024
+MCP_APPROVED_PATCH_TOOL_NAME = "agent_workflow"
+MCP_APPROVED_PATCH_OPERATION = "apply_patch"
 TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
 QUARANTINE_UNKNOWN_DISPOSITION = "quarantined_unknown"
@@ -43,6 +64,179 @@ ALLOWED_TOOL_NAMES = {
     "request_permissions",
     "view_image",
 }
+WORKSPACE_CAPABILITY_KEYS = frozenset({"read", "write", "exec"})
+
+
+def _bounded_file_read_path(value: Any) -> str:
+    """Accept one exact, policy-friendly relative POSIX file path.
+
+    This is intentionally stricter than the local Coding MCP path resolver.
+    The root facade is never a general remote filesystem interface: Windows
+    will admit the exact result only when it also appears in a local allowlist.
+    """
+
+    if not isinstance(value, str):
+        raise ValidationError("bounded file path is invalid.")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValidationError("bounded file path is invalid.") from error
+    if (
+        not encoded
+        or len(encoded) > 512
+        or value.startswith("/")
+        or "\\" in value
+        or ":" in value
+        or any(ord(character) < 32 or ord(character) == 127 for character in value)
+    ):
+        raise ValidationError("bounded file path is invalid.")
+    parts = value.split("/")
+    if any(not part or part in {".", ".."} for part in parts):
+        raise ValidationError("bounded file path is invalid.")
+    lowered = [part.lower() for part in parts]
+    sensitive_directories = {".git", ".ssh", ".aws", ".gnupg", "secrets", "secret", "credentials", "credential"}
+    if any(part in sensitive_directories or part.startswith(".env") for part in lowered):
+        raise ValidationError("bounded file path is not permitted.")
+    basename = lowered[-1]
+    if (
+        basename in {"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials", "credential"}
+        or basename.endswith((".pem", ".key", ".p12", ".pfx"))
+    ):
+        raise ValidationError("bounded file path is not permitted.")
+    return value
+
+
+def _bounded_file_read_limits(*, start_line: Any, max_lines: Any, max_bytes: Any) -> tuple[int, int, int]:
+    values = (start_line, max_lines, max_bytes)
+    if any(not isinstance(value, int) or isinstance(value, bool) for value in values):
+        raise ValidationError("bounded file read limits are invalid.")
+    if not 1 <= start_line <= 1_000_000 or not 1 <= max_lines <= MCP_BOUNDED_FILE_READ_MAX_LINES or not 1 <= max_bytes <= MCP_BOUNDED_FILE_READ_MAX_BYTES:
+        raise ValidationError("bounded file read limits are invalid.")
+    return start_line, max_lines, max_bytes
+
+
+def _mcp_patch_permission_scope(
+    *,
+    path: Any,
+    preimage_sha256: Any,
+    patch_sha256: Any,
+    validation_profile: Any,
+) -> dict[str, str]:
+    """Validate the one non-executable C4 permission-request shape.
+
+    This is *not* a general argument bag and does not contain patch text,
+    command text, or a local filesystem path.  A later local mutation bridge
+    will have to receive an independently supplied patch, derive the same
+    digest, and revalidate its own policy before it can create an effect.
+    """
+
+    normalized_path = _bounded_file_read_path(path)
+    normalized_hashes: dict[str, str] = {}
+    for field, value in (("preimage_sha256", preimage_sha256), ("patch_sha256", patch_sha256)):
+        if not isinstance(value, str):
+            raise ValidationError(f"{field} is invalid.")
+        candidate = value.strip().lower()
+        if SHA256_PATTERN.fullmatch(candidate) is None:
+            raise ValidationError(f"{field} is invalid.")
+        normalized_hashes[field] = candidate
+    if validation_profile != MCP_PATCH_PERMISSION_VALIDATION_PROFILE:
+        raise ValidationError("validation_profile is invalid.")
+    return {
+        "path": normalized_path,
+        "preimage_sha256": normalized_hashes["preimage_sha256"],
+        "patch_sha256": normalized_hashes["patch_sha256"],
+        "validation_profile": MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
+    }
+
+
+def _mcp_approved_patch_envelope(
+    value: Any,
+    *,
+    expected_path: str,
+    expected_preimage_sha256: str,
+    expected_patch_sha256: str,
+) -> str:
+    """Validate the initial single-file, exact-write C4 payload.
+
+    ``request_permissions`` persists only digest-level approval evidence.  A
+    subsequent approved action necessarily carries the raw patch to the local
+    executor, but must prove that it is the exact bytes the owner reviewed.
+    Keep the grammar deliberately smaller than the local ``apply_patch``
+    grammar: no add/delete/move/multiple-file patch can accidentally enter the
+    first central write lane.
+    """
+
+    if not isinstance(value, str):
+        raise ValidationError("approved patch envelope is invalid.")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValidationError("approved patch envelope is invalid.") from error
+    if (
+        not encoded
+        or len(encoded) > MCP_APPROVED_PATCH_MAX_BYTES
+        or "\x00" in value
+        or any(ord(character) < 32 and character not in {"\n", "\r", "\t"} for character in value)
+    ):
+        raise ValidationError("approved patch envelope is invalid.")
+    actual_patch_sha256 = hashlib.sha256(encoded).hexdigest()
+    if actual_patch_sha256 != expected_patch_sha256:
+        raise ConflictError("approved patch bytes do not match the reviewed patch digest.")
+
+    normalized = value.replace("\r\n", "\n")
+    # The local parser only treats CRLF as transport framing.  An isolated CR
+    # would make the central and local interpretation needlessly ambiguous.
+    if "\r" in normalized:
+        raise ValidationError("approved patch envelope is invalid.")
+    lines = normalized.split("\n")
+    if lines and lines[-1] == "":
+        lines.pop()
+    if len(lines) < 5 or lines[0] != "*** Begin Patch" or lines[-1] != "*** End Patch":
+        raise ValidationError("approved patch envelope must use the exact Write Exact File format.")
+    if lines[1] != f"*** Write Exact File: {expected_path}":
+        raise ValidationError("approved patch envelope path does not match the reviewed scope.")
+    metadata_line = lines[2]
+    if not metadata_line.startswith("@@ "):
+        raise ValidationError("approved patch envelope is invalid.")
+    metadata: dict[str, str] = {}
+    for token in metadata_line.removeprefix("@@ ").split():
+        key, separator, candidate = token.partition("=")
+        if not separator or not key or key in metadata:
+            raise ValidationError("approved patch envelope is invalid.")
+        metadata[key] = candidate.lower()
+    if set(metadata) != {"encoding", "preimage_sha256", "postimage_sha256"}:
+        raise ValidationError("approved patch envelope is invalid.")
+    if (
+        metadata["encoding"] != "zlib-base64"
+        or metadata["preimage_sha256"] != expected_preimage_sha256
+        or SHA256_PATTERN.fullmatch(metadata["postimage_sha256"]) is None
+        or not all(line.startswith("+") for line in lines[3:-1])
+        or not lines[3:-1]
+    ):
+        raise ValidationError("approved patch envelope is invalid.")
+    return value
+
+
+def _workspace_capabilities(value: Any) -> dict[str, bool]:
+    """Validate one node-declared capability inventory.
+
+    This describes what the locally selected root *could* support.  It is not
+    a task grant, local policy, or permission to execute an operation.  Keeping
+    the shape small and exact lets a later central action bind to an immutable
+    inventory record without accepting caller-defined capability names.
+    """
+
+    if not isinstance(value, dict) or set(value) != WORKSPACE_CAPABILITY_KEYS:
+        raise ValidationError("workspace capabilities are invalid.")
+    normalized: dict[str, bool] = {}
+    for name in sorted(WORKSPACE_CAPABILITY_KEYS):
+        enabled = value.get(name)
+        if not isinstance(enabled, bool):
+            raise ValidationError("workspace capabilities are invalid.")
+        normalized[name] = enabled
+    if not normalized["read"]:
+        raise ValidationError("workspace read capability is required.")
+    return normalized
 
 
 def _mcp_access_token_digest(value: str) -> str:
@@ -55,6 +249,59 @@ def _mcp_access_token_digest(value: str) -> str:
 
     return hashlib.sha256(
         b"coding-tools-control-plane:mcp-access-grant:v1\0" + str(value or "").encode("utf-8")
+    ).hexdigest()
+
+
+def _oauth_issuer(value: Any) -> str:
+    """Validate one exact HTTPS issuer identity without normalizing it.
+
+    OAuth issuer matching is string-exact. The control plane therefore stores
+    the configured issuer value verbatim after rejecting URL forms that cannot
+    be a trusted OIDC/OAuth authorization-server identifier.
+    """
+
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise ValidationError("OAuth issuer is invalid.")
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as error:
+        raise ValidationError("OAuth issuer is invalid.") from error
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or port is not None and not 1 <= port <= 65535
+    ):
+        raise ValidationError("OAuth issuer is invalid.")
+    return value
+
+
+def _oauth_subject(value: Any) -> str:
+    """Keep the IdP's opaque subject only long enough to derive a digest."""
+
+    if not isinstance(value, str):
+        raise ValidationError("OAuth subject is invalid.")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValidationError("OAuth subject is invalid.") from error
+    if not encoded or len(encoded) > 1024 or any(ord(character) < 32 or ord(character) == 127 for character in value):
+        raise ValidationError("OAuth subject is invalid.")
+    return value
+
+
+def _oauth_subject_digest(*, issuer: str, subject: str) -> str:
+    """Store an opaque mapping key, not a raw IdP subject or email address."""
+
+    return hashlib.sha256(
+        b"coding-tools-control-plane:oauth-principal:v1\0"
+        + issuer.encode("utf-8")
+        + b"\0"
+        + subject.encode("utf-8")
     ).hexdigest()
 
 
@@ -604,6 +851,76 @@ class ControlPlaneStore:
                     UNIQUE(request_id),
                     UNIQUE(action_id)
                 );
+                CREATE TABLE IF NOT EXISTS mcp_file_read_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_permission_requests (
+                    permission_request_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    device_id TEXT NOT NULL,
+                    endpoint_id TEXT NOT NULL,
+                    workspace_id TEXT NOT NULL,
+                    workspace_generation TEXT NOT NULL,
+                    tool_name TEXT NOT NULL CHECK(tool_name = 'agent_workflow'),
+                    operation TEXT NOT NULL CHECK(operation = 'apply_patch'),
+                    relative_path TEXT NOT NULL,
+                    preimage_sha256 TEXT NOT NULL,
+                    patch_sha256 TEXT NOT NULL,
+                    validation_profile TEXT NOT NULL CHECK(validation_profile = 'targeted'),
+                    permission_digest TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('pending', 'approved', 'rejected')),
+                    decided_at_ms INTEGER,
+                    decided_by TEXT,
+                    UNIQUE(principal_id, idempotency_key),
+                    CHECK(
+                        (state = 'pending' AND decided_at_ms IS NULL AND decided_by IS NULL)
+                        OR (state IN ('approved', 'rejected') AND decided_at_ms IS NOT NULL AND decided_by IS NOT NULL)
+                    )
+                );
+                CREATE TABLE IF NOT EXISTS mcp_approved_patch_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    permission_request_id TEXT NOT NULL UNIQUE REFERENCES mcp_permission_requests(permission_request_id),
+                    permission_digest TEXT NOT NULL,
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    relative_path TEXT NOT NULL,
+                    preimage_sha256 TEXT NOT NULL,
+                    patch_sha256 TEXT NOT NULL,
+                    validation_profile TEXT NOT NULL CHECK(validation_profile = 'targeted'),
+                    patch_envelope TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
+                );
                 CREATE TABLE IF NOT EXISTS mcp_access_grants (
                     grant_id TEXT PRIMARY KEY,
                     owner_id TEXT NOT NULL,
@@ -613,6 +930,42 @@ class ControlPlaneStore:
                     created_at_ms INTEGER NOT NULL,
                     expires_at_ms INTEGER NOT NULL,
                     revoked_at_ms INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS oauth_principals (
+                    principal_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    issuer TEXT NOT NULL,
+                    subject_digest TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL,
+                    revoked_at_ms INTEGER,
+                    UNIQUE(issuer, subject_digest)
+                );
+                CREATE TABLE IF NOT EXISTS oauth_link_requests (
+                    link_request_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    issuer TEXT NOT NULL,
+                    subject_digest TEXT NOT NULL,
+                    requested_at_ms INTEGER NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('pending', 'approved', 'rejected')),
+                    decided_at_ms INTEGER,
+                    decided_by TEXT,
+                    principal_id TEXT REFERENCES oauth_principals(principal_id),
+                    UNIQUE(issuer, subject_digest),
+                    CHECK(
+                        (state = 'pending' AND decided_at_ms IS NULL AND decided_by IS NULL AND principal_id IS NULL)
+                        OR (state = 'approved' AND decided_at_ms IS NOT NULL AND decided_by IS NOT NULL AND principal_id IS NOT NULL)
+                        OR (state = 'rejected' AND decided_at_ms IS NOT NULL AND decided_by IS NOT NULL AND principal_id IS NULL)
+                    )
+                );
+                CREATE TABLE IF NOT EXISTS node_workspaces (
+                    device_id TEXT NOT NULL REFERENCES nodes(device_id),
+                    workspace_id TEXT NOT NULL,
+                    workspace_generation TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    capabilities_json TEXT NOT NULL,
+                    registered_at_ms INTEGER NOT NULL,
+                    retired_at_ms INTEGER,
+                    PRIMARY KEY(device_id, workspace_id, workspace_generation)
                 );
                 CREATE TABLE IF NOT EXISTS action_reconciliations (
                     action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
@@ -631,8 +984,26 @@ class ControlPlaneStore:
                 CREATE INDEX IF NOT EXISTS receipts_action_idx ON receipts(action_id, received_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_read_only_intents_action_idx
                     ON mcp_read_only_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_file_read_intents_action_idx
+                    ON mcp_file_read_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_file_read_intents_owner_principal_idx
+                    ON mcp_file_read_intents(owner_id, principal_id, created_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_permission_requests_owner_state_idx
+                    ON mcp_permission_requests(owner_id, state, created_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_permission_requests_binding_idx
+                    ON mcp_permission_requests(binding_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_approved_patch_intents_action_idx
+                    ON mcp_approved_patch_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_approved_patch_intents_owner_principal_idx
+                    ON mcp_approved_patch_intents(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_access_grants_context_idx
                     ON mcp_access_grants(context_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS oauth_principals_owner_idx
+                    ON oauth_principals(owner_id, revoked_at_ms, created_at_ms);
+                CREATE INDEX IF NOT EXISTS oauth_link_requests_owner_state_idx
+                    ON oauth_link_requests(owner_id, state, requested_at_ms);
+                CREATE INDEX IF NOT EXISTS node_workspaces_current_idx
+                    ON node_workspaces(device_id, workspace_id, retired_at_ms);
                 CREATE INDEX IF NOT EXISTS action_reconciliations_owner_device_idx
                     ON action_reconciliations(owner_id, device_id, reconciled_at_ms);
                     """.split(";"),
@@ -931,6 +1302,461 @@ class ControlPlaneStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    @staticmethod
+    def _oauth_principal_projection(row: sqlite3.Row) -> dict[str, Any]:
+        """Return no IdP subject, issuer, token, or credential material."""
+
+        return {
+            "principal_id": row["principal_id"],
+            "owner_id": row["owner_id"],
+            "created_at_ms": row["created_at_ms"],
+            "revoked_at_ms": row["revoked_at_ms"],
+            "state": "revoked" if row["revoked_at_ms"] is not None else "enabled",
+        }
+
+    @staticmethod
+    def _oauth_link_request_projection(row: sqlite3.Row) -> dict[str, Any]:
+        """Return an opaque account-link request for the owner Console.
+
+        The pending request proves only that a verified OAuth identity asked to
+        be linked to this control plane.  It intentionally omits its issuer,
+        subject, digest, token, client address and any workspace information.
+        The opaque request ID is sufficient for an authenticated owner to make
+        an explicit approval or rejection decision.
+        """
+
+        return {
+            "link_request_id": row["link_request_id"],
+            "state": row["state"],
+            "requested_at_ms": row["requested_at_ms"],
+            "decided_at_ms": row["decided_at_ms"],
+            "principal_id": row["principal_id"],
+        }
+
+    def _approve_pending_oauth_link_request(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        issuer: str,
+        subject_digest: str,
+        principal_id: str,
+        decided_at_ms: int,
+        allow_rejected: bool = False,
+    ) -> None:
+        """Attach a matching local request without projecting IdP identity.
+
+        ``link_oauth_principal`` is retained as a private recovery/bootstrap
+        route.  If it is used after the normal OAuth request was recorded, the
+        durable request must not remain falsely pending.  A direct operator
+        relink is an explicit decision, so it may supersede a prior rejection;
+        the ordinary Console approval path never does.
+        """
+
+        request = connection.execute(
+            """
+            SELECT link_request_id, state
+            FROM oauth_link_requests
+            WHERE owner_id = ? AND issuer = ? AND subject_digest = ?
+            """,
+            (owner_id, issuer, subject_digest),
+        ).fetchone()
+        if request is None or (
+            request["state"] != "pending"
+            and not (allow_rejected and request["state"] == "rejected")
+        ):
+            return
+        connection.execute(
+            """
+            UPDATE oauth_link_requests
+            SET state = 'approved', decided_at_ms = ?, decided_by = ?, principal_id = ?
+            WHERE link_request_id = ?
+            """,
+            (decided_at_ms, owner_id, principal_id, request["link_request_id"]),
+        )
+        self._event(
+            connection,
+            "oauth_link_request",
+            request["link_request_id"],
+            "oauth_link_request_approved",
+            {"principal_id": principal_id},
+        )
+
+    def link_oauth_principal(self, *, owner_id: str, issuer: str, subject: str) -> dict[str, Any]:
+        """Explicitly associate one verified IdP account with the current owner.
+
+        This is a private operator/bootstrap operation. An otherwise-valid
+        OAuth token can never infer this association or acquire the default
+        owner merely by presenting a matching-looking email/claim.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        issuer = _oauth_issuer(issuer)
+        subject = _oauth_subject(subject)
+        subject_digest = _oauth_subject_digest(issuer=issuer, subject=subject)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT * FROM oauth_principals WHERE issuer = ? AND subject_digest = ?",
+                (issuer, subject_digest),
+            ).fetchone()
+            if row is not None:
+                if row["owner_id"] != owner_id:
+                    connection.execute("ROLLBACK")
+                    raise PermissionError("OAuth principal is already owned by another account.")
+                if row["revoked_at_ms"] is not None:
+                    now = self.clock()
+                    connection.execute(
+                        "UPDATE oauth_principals SET revoked_at_ms = NULL WHERE principal_id = ?",
+                        (row["principal_id"],),
+                    )
+                    self._event(connection, "oauth_principal", row["principal_id"], "oauth_principal_relinked", {})
+                    row = connection.execute(
+                        "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                        (row["principal_id"],),
+                    ).fetchone()
+                else:
+                    now = self.clock()
+                self._approve_pending_oauth_link_request(
+                    connection,
+                    owner_id=owner_id,
+                    issuer=issuer,
+                    subject_digest=subject_digest,
+                    principal_id=str(row["principal_id"]),
+                    decided_at_ms=now,
+                    allow_rejected=True,
+                )
+                connection.execute("COMMIT")
+                return self._oauth_principal_projection(row)
+            principal_id = f"oauthprn_{uuid.uuid4().hex}"
+            now = self.clock()
+            connection.execute(
+                """
+                INSERT INTO oauth_principals(
+                    principal_id, owner_id, issuer, subject_digest, created_at_ms, revoked_at_ms
+                ) VALUES (?, ?, ?, ?, ?, NULL)
+                """,
+                (principal_id, owner_id, issuer, subject_digest, now),
+            )
+            self._event(connection, "oauth_principal", principal_id, "oauth_principal_linked", {})
+            row = connection.execute(
+                "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            self._approve_pending_oauth_link_request(
+                connection,
+                owner_id=owner_id,
+                issuer=issuer,
+                subject_digest=subject_digest,
+                principal_id=principal_id,
+                decided_at_ms=now,
+                allow_rejected=True,
+            )
+            connection.execute("COMMIT")
+        return self._oauth_principal_projection(row)
+
+    def resolve_or_request_oauth_principal(
+        self,
+        *,
+        owner_id: str,
+        issuer: str,
+        subject: str,
+    ) -> dict[str, Any]:
+        """Resolve an enabled OAuth principal or record one opaque link request.
+
+        The intended owner comes from the server's fixed control-plane scope,
+        never from an OAuth claim or MCP arguments.  A valid but unmapped
+        identity creates at most one durable pending request.  It receives no
+        workspace, context or principal authority until the owner explicitly
+        approves that request.  Rejected, revoked and foreign identities do
+        not recreate requests or disclose who owns a matching account.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        issuer = _oauth_issuer(issuer)
+        subject = _oauth_subject(subject)
+        subject_digest = _oauth_subject_digest(issuer=issuer, subject=subject)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    """
+                    SELECT principal_id, owner_id, revoked_at_ms
+                    FROM oauth_principals
+                    WHERE issuer = ? AND subject_digest = ?
+                    """,
+                    (issuer, subject_digest),
+                ).fetchone()
+                if principal is not None:
+                    if principal["owner_id"] == owner_id and principal["revoked_at_ms"] is None:
+                        result: dict[str, Any] = {
+                            "state": "linked",
+                            "principal_id": str(principal["principal_id"]),
+                            "owner_id": owner_id,
+                        }
+                    elif principal["owner_id"] == owner_id:
+                        result = {"state": "revoked"}
+                    else:
+                        result = {"state": "not_authorized"}
+                    connection.execute("COMMIT")
+                    return result
+
+                request = connection.execute(
+                    """
+                    SELECT * FROM oauth_link_requests
+                    WHERE issuer = ? AND subject_digest = ?
+                    """,
+                    (issuer, subject_digest),
+                ).fetchone()
+                if request is None:
+                    now = self.clock()
+                    link_request_id = f"oauthlink_{uuid.uuid4().hex}"
+                    connection.execute(
+                        """
+                        INSERT INTO oauth_link_requests(
+                            link_request_id, owner_id, issuer, subject_digest,
+                            requested_at_ms, state, decided_at_ms, decided_by, principal_id
+                        ) VALUES (?, ?, ?, ?, ?, 'pending', NULL, NULL, NULL)
+                        """,
+                        (link_request_id, owner_id, issuer, subject_digest, now),
+                    )
+                    self._event(connection, "oauth_link_request", link_request_id, "oauth_link_request_created", {})
+                    request = connection.execute(
+                        "SELECT * FROM oauth_link_requests WHERE link_request_id = ?",
+                        (link_request_id,),
+                    ).fetchone()
+                if request is None:
+                    raise RuntimeError("OAuth link request was not persisted.")
+                if request["owner_id"] != owner_id:
+                    result = {"state": "not_authorized"}
+                elif request["state"] == "pending":
+                    result = {"state": "pending", "link_request": self._oauth_link_request_projection(request)}
+                else:
+                    result = {"state": "not_authorized"}
+                connection.execute("COMMIT")
+                return result
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+
+    def list_oauth_link_requests(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """List the owner's opaque OAuth account-link requests only."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM oauth_link_requests
+                WHERE owner_id = ?
+                ORDER BY CASE state WHEN 'pending' THEN 0 ELSE 1 END, requested_at_ms DESC, link_request_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [self._oauth_link_request_projection(row) for row in rows]
+
+    def approve_oauth_link_request(self, *, owner_id: str, link_request_id: str) -> dict[str, Any]:
+        """Explicitly link one pending verified OAuth identity to this owner."""
+
+        owner_id = _text(owner_id, "owner_id")
+        link_request_id = _text(link_request_id, "link_request_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                request = connection.execute(
+                    "SELECT * FROM oauth_link_requests WHERE link_request_id = ?",
+                    (link_request_id,),
+                ).fetchone()
+                if request is None:
+                    raise NotFoundError("OAuth account-link request does not exist.")
+                if request["owner_id"] != owner_id:
+                    raise PermissionError("OAuth account-link request is not owned by this operator.")
+                if request["state"] == "rejected":
+                    raise ConflictError("OAuth account-link request was rejected.")
+                if request["state"] == "approved":
+                    # Approval is idempotent only for the link request.  A
+                    # later explicit principal revocation must never be
+                    # silently undone by clicking/retrying this endpoint.
+                    principal = connection.execute(
+                        "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                        (request["principal_id"],),
+                    ).fetchone()
+                    if principal is None:
+                        raise RuntimeError("approved OAuth link request has no principal.")
+                    if principal["owner_id"] != owner_id:
+                        raise PermissionError("OAuth principal is already owned by another account.")
+                    connection.execute("COMMIT")
+                    return {
+                        "link_request": self._oauth_link_request_projection(request),
+                        "principal": self._oauth_principal_projection(principal),
+                    }
+
+                principal = connection.execute(
+                    "SELECT * FROM oauth_principals WHERE issuer = ? AND subject_digest = ?",
+                    (request["issuer"], request["subject_digest"]),
+                ).fetchone()
+                now = self.clock()
+                if principal is None:
+                    principal_id = f"oauthprn_{uuid.uuid4().hex}"
+                    connection.execute(
+                        """
+                        INSERT INTO oauth_principals(
+                            principal_id, owner_id, issuer, subject_digest, created_at_ms, revoked_at_ms
+                        ) VALUES (?, ?, ?, ?, ?, NULL)
+                        """,
+                        (principal_id, owner_id, request["issuer"], request["subject_digest"], now),
+                    )
+                    self._event(connection, "oauth_principal", principal_id, "oauth_principal_linked", {})
+                    principal = connection.execute(
+                        "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                        (principal_id,),
+                    ).fetchone()
+                elif principal["owner_id"] != owner_id:
+                    raise PermissionError("OAuth principal is already owned by another account.")
+                elif principal["revoked_at_ms"] is not None:
+                    connection.execute(
+                        "UPDATE oauth_principals SET revoked_at_ms = NULL WHERE principal_id = ?",
+                        (principal["principal_id"],),
+                    )
+                    self._event(connection, "oauth_principal", principal["principal_id"], "oauth_principal_relinked", {})
+                    principal = connection.execute(
+                        "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                        (principal["principal_id"],),
+                    ).fetchone()
+                if principal is None:
+                    raise RuntimeError("OAuth principal was not persisted.")
+
+                self._approve_pending_oauth_link_request(
+                    connection,
+                    owner_id=owner_id,
+                    issuer=str(request["issuer"]),
+                    subject_digest=str(request["subject_digest"]),
+                    principal_id=str(principal["principal_id"]),
+                    decided_at_ms=now,
+                )
+                request = connection.execute(
+                    "SELECT * FROM oauth_link_requests WHERE link_request_id = ?",
+                    (link_request_id,),
+                ).fetchone()
+                if request is None:
+                    raise RuntimeError("OAuth link request disappeared during approval.")
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {
+            "link_request": self._oauth_link_request_projection(request),
+            "principal": self._oauth_principal_projection(principal),
+        }
+
+    def reject_oauth_link_request(self, *, owner_id: str, link_request_id: str) -> dict[str, Any]:
+        """Reject one pending OAuth link without creating any account authority."""
+
+        owner_id = _text(owner_id, "owner_id")
+        link_request_id = _text(link_request_id, "link_request_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                request = connection.execute(
+                    "SELECT * FROM oauth_link_requests WHERE link_request_id = ?",
+                    (link_request_id,),
+                ).fetchone()
+                if request is None:
+                    raise NotFoundError("OAuth account-link request does not exist.")
+                if request["owner_id"] != owner_id:
+                    raise PermissionError("OAuth account-link request is not owned by this operator.")
+                if request["state"] == "approved":
+                    raise ConflictError("OAuth account-link request was already approved.")
+                if request["state"] == "pending":
+                    now = self.clock()
+                    connection.execute(
+                        """
+                        UPDATE oauth_link_requests
+                        SET state = 'rejected', decided_at_ms = ?, decided_by = ?, principal_id = NULL
+                        WHERE link_request_id = ?
+                        """,
+                        (now, owner_id, link_request_id),
+                    )
+                    self._event(connection, "oauth_link_request", link_request_id, "oauth_link_request_rejected", {})
+                    request = connection.execute(
+                        "SELECT * FROM oauth_link_requests WHERE link_request_id = ?",
+                        (link_request_id,),
+                    ).fetchone()
+                if request is None:
+                    raise RuntimeError("OAuth link request disappeared during rejection.")
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return self._oauth_link_request_projection(request)
+
+    def resolve_oauth_principal(self, *, issuer: str, subject: str) -> dict[str, str]:
+        """Resolve an already-linked verified account without exposing its claims."""
+
+        issuer = _oauth_issuer(issuer)
+        subject = _oauth_subject(subject)
+        subject_digest = _oauth_subject_digest(issuer=issuer, subject=subject)
+        with self._connection() as connection:
+            row = connection.execute(
+                """
+                SELECT principal_id, owner_id, revoked_at_ms
+                FROM oauth_principals
+                WHERE issuer = ? AND subject_digest = ?
+                """,
+                (issuer, subject_digest),
+            ).fetchone()
+        if row is None or row["revoked_at_ms"] is not None:
+            # A valid identity that was never shared (or was revoked) is an
+            # authorization denial, not a reason to ask the client to login
+            # again with the same account.
+            raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+        return {"principal_id": str(row["principal_id"]), "owner_id": str(row["owner_id"])}
+
+    def list_oauth_principals(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """List the owner's redacted OAuth account links for revocation UI."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM oauth_principals
+                WHERE owner_id = ?
+                ORDER BY created_at_ms, principal_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [self._oauth_principal_projection(row) for row in rows]
+
+    def revoke_oauth_principal(self, *, owner_id: str, principal_id: str) -> dict[str, Any]:
+        """Block future OAuth requests without altering existing Job evidence."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("OAuth principal does not exist.")
+            if row["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("OAuth principal is not owned by this account.")
+            if row["revoked_at_ms"] is None:
+                now = self.clock()
+                connection.execute(
+                    "UPDATE oauth_principals SET revoked_at_ms = ? WHERE principal_id = ?",
+                    (now, principal_id),
+                )
+                self._event(connection, "oauth_principal", principal_id, "oauth_principal_revoked", {})
+            row = connection.execute(
+                "SELECT * FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._oauth_principal_projection(row)
+
     def _refuse_queued_actions(
         self,
         connection: sqlite3.Connection,
@@ -998,6 +1824,307 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return self.node(device_id=device_id)
 
+    @staticmethod
+    def _workspace_registration_projection(row: sqlite3.Row, *, replayed: bool | None = None) -> dict[str, Any]:
+        """Return credential-free registry metadata without any local path."""
+
+        try:
+            capabilities = _workspace_capabilities(json.loads(str(row["capabilities_json"])))
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise RuntimeError("stored workspace capabilities are invalid.") from error
+        result: dict[str, Any] = {
+            "device_id": row["device_id"],
+            "workspace_id": row["workspace_id"],
+            "workspace_generation": row["workspace_generation"],
+            "display_name": row["display_name"],
+            "capabilities": capabilities,
+            "registered_at_ms": row["registered_at_ms"],
+            "retired_at_ms": row["retired_at_ms"],
+        }
+        if replayed is not None:
+            result["replayed"] = replayed
+        return result
+
+    def _retire_workspace_generation(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+        reason: str,
+        now: int,
+    ) -> int:
+        """Fence an old locally registered root without rewriting its history.
+
+        A binding/context contains the workspace generation it was issued for.
+        Reusing a stable workspace id after a local root change must therefore
+        retire that generation, close its still-live contexts, and settle only
+        actions that were never sent.  Sent actions remain durable evidence for
+        the ordinary receipt/reconciliation path.
+        """
+
+        connection.execute(
+            """
+            UPDATE node_workspaces
+            SET retired_at_ms = ?
+            WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+              AND retired_at_ms IS NULL
+            """,
+            (now, device_id, workspace_id, workspace_generation),
+        )
+        binding_rows = connection.execute(
+            """
+            SELECT binding_id FROM bindings
+            WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+              AND revoked_at_ms IS NULL
+            """,
+            (device_id, workspace_id, workspace_generation),
+        ).fetchall()
+        refused = 0
+        for binding_row in binding_rows:
+            binding_id = str(binding_row["binding_id"])
+            connection.execute(
+                "UPDATE bindings SET revoked_at_ms = ? WHERE binding_id = ? AND revoked_at_ms IS NULL",
+                (now, binding_id),
+            )
+            connection.execute(
+                "UPDATE contexts SET closed_at_ms = ? WHERE binding_id = ? AND closed_at_ms IS NULL",
+                (now, binding_id),
+            )
+            refused += self._refuse_queued_actions(
+                connection,
+                action_column="binding_id",
+                subject_id=binding_id,
+                reason=reason,
+                now=now,
+            )
+        return refused
+
+    def register_node_workspace(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+        display_name: str,
+        capabilities: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Register one opaque, locally selected workspace from its node.
+
+        The central record has no filesystem path or path hash.  A node chooses
+        and canonicalizes the local directory before this boundary, then sends
+        only its opaque identity, generation, display label and capability
+        inventory.  This method does not create a binding, context, policy or
+        task authority.
+        """
+
+        device_id = _text(device_id, "device_id")
+        workspace_id = _text(workspace_id, "workspace_id")
+        workspace_generation = _text(workspace_generation, "workspace_generation")
+        display_name = str(display_name or "").strip()
+        if not 1 <= len(display_name) <= 120:
+            raise ValidationError("workspace display_name is invalid.")
+        normalized_capabilities = _workspace_capabilities(capabilities)
+        capabilities_json = _canonical_json(normalized_capabilities)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node = connection.execute(
+                "SELECT device_id, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("device is not enrolled.")
+            if node["revoked_at_ms"] is not None:
+                connection.execute("ROLLBACK")
+                raise ConflictError("node is revoked.")
+            exact = connection.execute(
+                """
+                SELECT * FROM node_workspaces
+                WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+                """,
+                (device_id, workspace_id, workspace_generation),
+            ).fetchone()
+            if exact is not None:
+                if exact["retired_at_ms"] is not None:
+                    connection.execute("ROLLBACK")
+                    raise ConflictError("workspace generation is retired.")
+                if exact["display_name"] != display_name or exact["capabilities_json"] != capabilities_json:
+                    connection.execute("ROLLBACK")
+                    raise ConflictError("workspace generation does not match registered inventory.")
+                connection.execute("COMMIT")
+                return self._workspace_registration_projection(exact, replayed=True)
+            now = self.clock()
+            current = connection.execute(
+                """
+                SELECT * FROM node_workspaces
+                WHERE device_id = ? AND workspace_id = ? AND retired_at_ms IS NULL
+                """,
+                (device_id, workspace_id),
+            ).fetchone()
+            refused = 0
+            if current is not None:
+                refused = self._retire_workspace_generation(
+                    connection,
+                    device_id=device_id,
+                    workspace_id=workspace_id,
+                    workspace_generation=str(current["workspace_generation"]),
+                    reason="workspace_generation_replaced",
+                    now=now,
+                )
+            connection.execute(
+                """
+                INSERT INTO node_workspaces(
+                    device_id, workspace_id, workspace_generation, display_name,
+                    capabilities_json, registered_at_ms, retired_at_ms
+                ) VALUES (?, ?, ?, ?, ?, ?, NULL)
+                """,
+                (device_id, workspace_id, workspace_generation, display_name, capabilities_json, now),
+            )
+            self._event(
+                connection,
+                "workspace",
+                f"{device_id}:{workspace_id}:{workspace_generation}",
+                "node_workspace_registered",
+                {
+                    "device_id": device_id,
+                    "workspace_id": workspace_id,
+                    "workspace_generation": workspace_generation,
+                    "queued_actions_refused": refused,
+                },
+            )
+            row = connection.execute(
+                """
+                SELECT * FROM node_workspaces
+                WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+                """,
+                (device_id, workspace_id, workspace_generation),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._workspace_registration_projection(row, replayed=False)
+
+    def retire_node_workspace(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> dict[str, Any]:
+        """Retire an exact node-owned workspace generation without deleting it."""
+
+        device_id = _text(device_id, "device_id")
+        workspace_id = _text(workspace_id, "workspace_id")
+        workspace_generation = _text(workspace_generation, "workspace_generation")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node = connection.execute(
+                "SELECT device_id, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("device is not enrolled.")
+            if node["revoked_at_ms"] is not None:
+                connection.execute("ROLLBACK")
+                raise ConflictError("node is revoked.")
+            row = connection.execute(
+                """
+                SELECT * FROM node_workspaces
+                WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+                """,
+                (device_id, workspace_id, workspace_generation),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("workspace registration does not exist.")
+            if row["retired_at_ms"] is not None:
+                connection.execute("COMMIT")
+                return self._workspace_registration_projection(row, replayed=True)
+            now = self.clock()
+            refused = self._retire_workspace_generation(
+                connection,
+                device_id=device_id,
+                workspace_id=workspace_id,
+                workspace_generation=workspace_generation,
+                reason="workspace_retired",
+                now=now,
+            )
+            self._event(
+                connection,
+                "workspace",
+                f"{device_id}:{workspace_id}:{workspace_generation}",
+                "node_workspace_retired",
+                {
+                    "device_id": device_id,
+                    "workspace_id": workspace_id,
+                    "workspace_generation": workspace_generation,
+                    "queued_actions_refused": refused,
+                },
+            )
+            row = connection.execute(
+                """
+                SELECT * FROM node_workspaces
+                WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+                """,
+                (device_id, workspace_id, workspace_generation),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._workspace_registration_projection(row, replayed=False)
+
+    def list_node_workspaces(self, *, owner_id: str, device_id: str) -> list[dict[str, Any]]:
+        """List the owner-scoped, path-free workspace inventory for one node."""
+
+        owner_id = _text(owner_id, "owner_id")
+        device_id = _text(device_id, "device_id")
+        with self._connection() as connection:
+            node = connection.execute(
+                "SELECT owner_id FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                raise NotFoundError("device is not enrolled.")
+            if node["owner_id"] != owner_id:
+                raise PermissionError("node is not owned by this principal.")
+            rows = connection.execute(
+                f"""
+                SELECT * FROM node_workspaces
+                WHERE device_id = ?
+                ORDER BY registered_at_ms, workspace_id, workspace_generation
+                """,
+                (device_id,),
+            ).fetchall()
+        return [self._workspace_registration_projection(row) for row in rows]
+
+    @staticmethod
+    def _require_current_workspace_registration(
+        connection: sqlite3.Connection,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> sqlite3.Row:
+        """Require the exact node-confirmed root generation for new authority.
+
+        Bindings and contexts are durable history, but they must not be a way
+        to recreate authority for an unregistered or retired local root.  The
+        registry is node-owned and path-free; this check compares only its
+        opaque identity/generation inside the same SQLite transaction that
+        creates the next authority record.
+        """
+
+        row = connection.execute(
+            """
+            SELECT * FROM node_workspaces
+            WHERE device_id = ? AND workspace_id = ? AND workspace_generation = ?
+              AND retired_at_ms IS NULL
+            """,
+            (device_id, workspace_id, workspace_generation),
+        ).fetchone()
+        if row is None:
+            raise ConflictError("workspace registration is not current.")
+        return row
+
     def create_binding(self, *, owner_id: str, device_id: str, workspace_id: str, workspace_generation: str, display_name: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
         device_id = _text(device_id, "device_id")
@@ -1010,6 +2137,12 @@ class ControlPlaneStore:
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             node = self._node_for_owner(connection, owner_id, device_id)
+            self._require_current_workspace_registration(
+                connection,
+                device_id=device_id,
+                workspace_id=workspace_id,
+                workspace_generation=workspace_generation,
+            )
             connection.execute(
                 "INSERT INTO bindings VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
                 (binding_id, owner_id, device_id, node["endpoint_id"], workspace_id, workspace_generation, display_name, self.clock()),
@@ -1039,6 +2172,70 @@ class ControlPlaneStore:
                 (owner_id,),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def list_account_targets(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """List only currently shared, path-free targets for an OAuth account.
+
+        An account connection is deliberately independent of a short-lived
+        task context. This inventory does not create a context, policy, grant,
+        or action and excludes bindings whose node/root generation is no longer
+        current.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    b.binding_id, b.device_id, b.endpoint_id, b.workspace_id,
+                    b.workspace_generation, b.display_name AS workspace_display_name,
+                    b.created_at_ms AS binding_created_at_ms,
+                    n.display_name AS node_display_name, n.last_seen_at_ms,
+                    n.readiness, n.contract_version, n.policy_state,
+                    n.policy_expires_at_ms, n.policy_observed_at_ms,
+                    nw.capabilities_json, nw.registered_at_ms
+                FROM bindings AS b
+                JOIN nodes AS n ON n.device_id = b.device_id
+                JOIN node_workspaces AS nw
+                  ON nw.device_id = b.device_id
+                 AND nw.workspace_id = b.workspace_id
+                 AND nw.workspace_generation = b.workspace_generation
+                 AND nw.retired_at_ms IS NULL
+                WHERE b.owner_id = ?
+                  AND b.revoked_at_ms IS NULL
+                  AND n.owner_id = ?
+                  AND n.revoked_at_ms IS NULL
+                ORDER BY b.created_at_ms, b.binding_id
+                """,
+                (owner_id, owner_id),
+            ).fetchall()
+        targets: list[dict[str, Any]] = []
+        for row in rows:
+            try:
+                capabilities = _workspace_capabilities(json.loads(str(row["capabilities_json"])))
+            except (TypeError, ValueError, json.JSONDecodeError) as error:
+                raise RuntimeError("stored workspace capabilities are invalid.") from error
+            targets.append(
+                {
+                    "binding_id": row["binding_id"],
+                    "device_id": row["device_id"],
+                    "endpoint_id": row["endpoint_id"],
+                    "node_display_name": row["node_display_name"],
+                    "workspace_id": row["workspace_id"],
+                    "workspace_generation": row["workspace_generation"],
+                    "workspace_display_name": row["workspace_display_name"],
+                    "capabilities": capabilities,
+                    "binding_created_at_ms": row["binding_created_at_ms"],
+                    "workspace_registered_at_ms": row["registered_at_ms"],
+                    "last_seen_at_ms": row["last_seen_at_ms"],
+                    "readiness": row["readiness"],
+                    "contract_version": row["contract_version"],
+                    "policy_state": row["policy_state"],
+                    "policy_expires_at_ms": row["policy_expires_at_ms"],
+                    "policy_observed_at_ms": row["policy_observed_at_ms"],
+                }
+            )
+        return targets
 
     def revoke_binding(self, *, owner_id: str, binding_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
@@ -1092,6 +2289,12 @@ class ControlPlaneStore:
             raise ConflictError("binding is revoked.")
         if row["node_revoked_at_ms"] is not None:
             raise ConflictError("node is revoked.")
+        self._require_current_workspace_registration(
+            connection,
+            device_id=str(row["device_id"]),
+            workspace_id=str(row["workspace_id"]),
+            workspace_generation=str(row["workspace_generation"]),
+        )
         return row
 
     def create_context(self, *, owner_id: str, binding_id: str, expires_at_ms: int) -> dict[str, Any]:
@@ -1180,6 +2383,12 @@ class ControlPlaneStore:
             if context["node_revoked_at_ms"] is not None:
                 connection.execute("ROLLBACK")
                 raise ConflictError("node is revoked.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(context["device_id"]),
+                workspace_id=str(context["workspace_id"]),
+                workspace_generation=str(context["workspace_generation"]),
+            )
             connection.execute(
                 "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
                 (request_id, owner_id, context["context_id"], objective, _canonical_json(criteria), _canonical_json(scope), transaction_now, expires_at_ms),
@@ -1371,6 +2580,12 @@ class ControlPlaneStore:
             ):
                 connection.execute("ROLLBACK")
                 raise ConflictError("sealed action identity is no longer current.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(context["device_id"]),
+                workspace_id=str(context["workspace_id"]),
+                workspace_generation=str(context["workspace_generation"]),
+            )
             if (
                 live["request_canceled_at_ms"] is not None
                 or live["request_expires_at_ms"] <= transaction_now
@@ -1427,6 +2642,7 @@ class ControlPlaneStore:
                 """
                 SELECT
                     c.context_id, c.owner_id AS context_owner_id,
+                    c.device_id, c.workspace_id, c.workspace_generation,
                     c.expires_at_ms AS context_expires_at_ms, c.closed_at_ms,
                     b.owner_id AS binding_owner_id, b.revoked_at_ms AS binding_revoked_at_ms,
                     n.owner_id AS node_owner_id, n.revoked_at_ms AS node_revoked_at_ms
@@ -1456,6 +2672,12 @@ class ControlPlaneStore:
             ):
                 connection.execute("ROLLBACK")
                 raise ConflictError("MCP access grant authority is not live.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(live["device_id"]),
+                workspace_id=str(live["workspace_id"]),
+                workspace_generation=str(live["workspace_generation"]),
+            )
             connection.execute(
                 """
                 INSERT INTO mcp_access_grants(
@@ -1495,13 +2717,19 @@ class ControlPlaneStore:
                     g.grant_id, g.owner_id, g.principal_id, g.context_id,
                     g.token_digest, g.expires_at_ms, g.revoked_at_ms,
                     c.owner_id AS context_owner_id, c.expires_at_ms AS context_expires_at_ms,
-                    c.closed_at_ms,
+                    c.closed_at_ms, c.device_id, c.workspace_id, c.workspace_generation,
                     b.owner_id AS binding_owner_id, b.revoked_at_ms AS binding_revoked_at_ms,
-                    n.owner_id AS node_owner_id, n.revoked_at_ms AS node_revoked_at_ms
+                    n.owner_id AS node_owner_id, n.revoked_at_ms AS node_revoked_at_ms,
+                    nw.registered_at_ms AS workspace_registered_at_ms,
+                    nw.retired_at_ms AS workspace_retired_at_ms
                 FROM mcp_access_grants g
                 JOIN contexts c ON c.context_id = g.context_id
                 JOIN bindings b ON b.binding_id = c.binding_id
                 JOIN nodes n ON n.device_id = c.device_id
+                LEFT JOIN node_workspaces nw
+                    ON nw.device_id = c.device_id
+                    AND nw.workspace_id = c.workspace_id
+                    AND nw.workspace_generation = c.workspace_generation
                 WHERE g.token_digest = ?
                 """,
                 (token_digest,),
@@ -1519,6 +2747,8 @@ class ControlPlaneStore:
             or row["context_owner_id"] != row["owner_id"]
             or row["binding_owner_id"] != row["owner_id"]
             or row["node_owner_id"] != row["owner_id"]
+            or row["workspace_registered_at_ms"] is None
+            or row["workspace_retired_at_ms"] is not None
         ):
             raise PermissionError("MCP client access grant is no longer live.")
         return {
@@ -1686,6 +2916,12 @@ class ControlPlaneStore:
             ):
                 connection.execute("ROLLBACK")
                 raise ConflictError("context identity is no longer current.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=str(live["device_id"]),
+                workspace_id=str(live["workspace_id"]),
+                workspace_generation=str(live["workspace_generation"]),
+            )
 
             action_immutable = {
                 "request_id": request_id,
@@ -1784,6 +3020,1016 @@ class ControlPlaneStore:
             "replayed": False,
         }
 
+    def request_mcp_bounded_file_read(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        path: str,
+        start_line: int,
+        max_lines: int,
+        max_bytes: int,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atomically queue one OAuth-principal-scoped bounded file read.
+
+        Unlike the historical compact-metadata lane, this creates a short-lived
+        internal context from an explicit account binding.  The caller can
+        neither select a path outside the local allowlist nor supply a target
+        by display name, a stale context, or a client-controlled expiry.  A
+        Windows policy/bridge remains the final local authority boundary.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        path = _bounded_file_read_path(path)
+        start_line, max_lines, max_bytes = _bounded_file_read_limits(
+            start_line=start_line,
+            max_lines=max_lines,
+            max_bytes=max_bytes,
+        )
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        facade_contract = _facade_contract(facade_contract)
+        intent = {
+            "kind": "mcp_facade_bounded_file_read_v1",
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "path": path,
+            "start_line": start_line,
+            "max_lines": max_lines,
+            "max_bytes": max_bytes,
+            "idempotency_key": idempotency_key,
+            "facade_contract": facade_contract,
+        }
+        intent_digest = _digest(intent)
+        # ``actions`` has an older owner/device idempotency uniqueness rule.
+        # Namespace the public key by principal so two linked accounts cannot
+        # conflict or observe each other's action merely by choosing the same
+        # caller-supplied key.
+        action_idempotency_key = "mcpfr_" + hashlib.sha256(
+            f"{principal_id}\0{idempotency_key}".encode("utf-8")
+        ).hexdigest()
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                # Resolve the OAuth mapping inside the write transaction, not
+                # only at HTTP ingress.  Revocation or reassignment between
+                # authentication and queue creation must fail closed.
+                principal = connection.execute(
+                    "SELECT principal_id, owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+
+                existing = connection.execute(
+                    "SELECT * FROM mcp_file_read_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different bounded file read.")
+                    connection.execute("COMMIT")
+                    return {
+                        "request_id": existing["request_id"],
+                        "action_id": existing["action_id"],
+                        "intent_digest": existing["intent_digest"],
+                        "facade_contract": {
+                            "schema_version": existing["facade_schema_version"],
+                            "profile": existing["facade_profile"],
+                            "sha256": existing["facade_contract_sha256"],
+                        },
+                        "replayed": True,
+                    }
+
+                now = self.clock()
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                live = connection.execute(
+                    """
+                    SELECT
+                        b.binding_id, b.owner_id AS binding_owner_id, b.device_id,
+                        b.endpoint_id, b.workspace_id, b.workspace_generation,
+                        b.revoked_at_ms AS binding_revoked_at_ms,
+                        n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                        n.revoked_at_ms AS node_revoked_at_ms,
+                        nw.capabilities_json, nw.retired_at_ms AS workspace_retired_at_ms
+                    FROM bindings AS b
+                    JOIN nodes AS n ON n.device_id = b.device_id
+                    JOIN node_workspaces AS nw
+                      ON nw.device_id = b.device_id
+                     AND nw.workspace_id = b.workspace_id
+                     AND nw.workspace_generation = b.workspace_generation
+                    WHERE b.binding_id = ?
+                    """,
+                    (binding_id,),
+                ).fetchone()
+                if live is None:
+                    raise NotFoundError("binding does not exist.")
+                if live["binding_owner_id"] != owner_id or live["node_owner_id"] != owner_id:
+                    raise PermissionError("binding is not owned by this OAuth account.")
+                if (
+                    live["binding_revoked_at_ms"] is not None
+                    or live["node_revoked_at_ms"] is not None
+                    or live["workspace_retired_at_ms"] is not None
+                    or live["node_endpoint_id"] != live["endpoint_id"]
+                ):
+                    raise ConflictError("selected binding is no longer dispatchable.")
+                try:
+                    capabilities = _workspace_capabilities(json.loads(str(live["capabilities_json"])))
+                except (TypeError, ValueError, json.JSONDecodeError) as error:
+                    raise RuntimeError("stored workspace capabilities are invalid.") from error
+                if capabilities["read"] is not True:
+                    raise PermissionError("selected binding does not permit read access.")
+                self._require_current_workspace_registration(
+                    connection,
+                    device_id=str(live["device_id"]),
+                    workspace_id=str(live["workspace_id"]),
+                    workspace_generation=str(live["workspace_generation"]),
+                )
+
+                expires_at_ms = now + MCP_BOUNDED_FILE_READ_MAX_TTL_MS
+                action_arguments = {
+                    "operation": "read_file",
+                    "path": path,
+                    "start_line": start_line,
+                    "max_lines": max_lines,
+                    "max_bytes": max_bytes,
+                }
+                action_immutable = {
+                    "request_id": request_id,
+                    "context_id": context_id,
+                    "binding_id": binding_id,
+                    "principal_id": principal_id,
+                    "device_id": live["device_id"],
+                    "endpoint_id": live["endpoint_id"],
+                    "workspace_id": live["workspace_id"],
+                    "workspace_generation": live["workspace_generation"],
+                    "tool_name": "workspace_context",
+                    "arguments": action_arguments,
+                    "idempotency_key": action_idempotency_key,
+                    "admission_reference": f"mcp_file_read:{intent_digest}",
+                    "expires_at_ms": expires_at_ms,
+                    "facade_contract": facade_contract,
+                }
+                action_digest = _digest(action_immutable)
+                conflicting_action = connection.execute(
+                    "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                    (owner_id, live["device_id"], action_idempotency_key),
+                ).fetchone()
+                if conflicting_action is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+
+                connection.execute(
+                    "INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        context_id,
+                        owner_id,
+                        binding_id,
+                        live["device_id"],
+                        live["endpoint_id"],
+                        live["workspace_id"],
+                        live["workspace_generation"],
+                        now,
+                        expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        request_id,
+                        owner_id,
+                        context_id,
+                        "Read one policy-bounded file through the local control-plane bridge.",
+                        _canonical_json({"kind": "bounded_file_read", "tool_name": "workspace_context"}),
+                        _canonical_json({"operation": "bounded_file_read", "binding_id": binding_id}),
+                        now,
+                        expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO actions(
+                        action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name,
+                        arguments_json, action_digest, idempotency_key, admission_reference,
+                        created_at_ms, expires_at_ms, delivery_state, settled_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)
+                    """,
+                    (
+                        action_id, owner_id, request_id, context_id, binding_id,
+                        live["device_id"], live["endpoint_id"], live["workspace_id"], live["workspace_generation"],
+                        "workspace_context", _canonical_json(action_arguments), action_digest,
+                        action_idempotency_key, f"mcp_file_read:{intent_digest}", now, expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO mcp_file_read_intents(
+                        owner_id, principal_id, idempotency_key, intent_digest,
+                        facade_schema_version, facade_profile, facade_contract_sha256,
+                        binding_id, request_id, action_id, created_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        owner_id, principal_id, idempotency_key, intent_digest,
+                        facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
+                        binding_id, request_id, action_id, now,
+                    ),
+                )
+                self._event(
+                    connection,
+                    "work_request",
+                    request_id,
+                    "mcp_bounded_file_read_request_created",
+                    {"binding_id": binding_id, "intent_digest": intent_digest},
+                )
+                self._event(connection, "action", action_id, "action_sealed", {"request_id": request_id, "digest": action_digest})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {
+            "request_id": request_id,
+            "action_id": action_id,
+            "intent_digest": intent_digest,
+            "facade_contract": facade_contract,
+            "replayed": False,
+        }
+
+    def mcp_file_read_action_observation(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        action_id: str,
+    ) -> dict[str, Any]:
+        """Observe only a current principal's own bounded-file action."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                """
+                SELECT action_id FROM mcp_file_read_intents
+                WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                """,
+                (owner_id, principal_id, action_id),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("bounded file read action does not exist.")
+        return self.action_observation(owner_id=owner_id, action_id=action_id)
+
+    @staticmethod
+    def _mcp_permission_request_projection(
+        row: sqlite3.Row,
+        *,
+        include_principal: bool,
+    ) -> dict[str, Any]:
+        """Return a precise but non-executable permission-request record.
+
+        The relative path and content digests are the reviewable scope; raw
+        patch content, a Windows root, node credentials and any future local
+        policy are intentionally not part of this central projection.
+        """
+
+        result: dict[str, Any] = {
+            "permission_request_id": row["permission_request_id"],
+            "binding_id": row["binding_id"],
+            "device_id": row["device_id"],
+            "endpoint_id": row["endpoint_id"],
+            "workspace_id": row["workspace_id"],
+            "workspace_generation": row["workspace_generation"],
+            "tool_name": row["tool_name"],
+            "operation": row["operation"],
+            "path": row["relative_path"],
+            "preimage_sha256": row["preimage_sha256"],
+            "patch_sha256": row["patch_sha256"],
+            "validation_profile": row["validation_profile"],
+            "permission_digest": row["permission_digest"],
+            "facade_contract": {
+                "schema_version": row["facade_schema_version"],
+                "profile": row["facade_profile"],
+                "sha256": row["facade_contract_sha256"],
+            },
+            "created_at_ms": row["created_at_ms"],
+            "expires_at_ms": row["expires_at_ms"],
+            "state": row["state"],
+            "decided_at_ms": row["decided_at_ms"],
+        }
+        if include_principal:
+            result["principal_id"] = row["principal_id"]
+        return result
+
+    def _mcp_patch_permission_binding(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        binding_id: str,
+        expected: sqlite3.Row | None = None,
+    ) -> sqlite3.Row:
+        """Validate the exact C4 target without treating it as local authority."""
+
+        live = connection.execute(
+            """
+            SELECT
+                b.binding_id, b.owner_id AS binding_owner_id, b.device_id,
+                b.endpoint_id, b.workspace_id, b.workspace_generation,
+                b.revoked_at_ms AS binding_revoked_at_ms,
+                n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                n.revoked_at_ms AS node_revoked_at_ms,
+                nw.capabilities_json, nw.retired_at_ms AS workspace_retired_at_ms
+            FROM bindings AS b
+            JOIN nodes AS n ON n.device_id = b.device_id
+            JOIN node_workspaces AS nw
+              ON nw.device_id = b.device_id
+             AND nw.workspace_id = b.workspace_id
+             AND nw.workspace_generation = b.workspace_generation
+            WHERE b.binding_id = ?
+            """,
+            (binding_id,),
+        ).fetchone()
+        if live is None:
+            raise NotFoundError("binding does not exist.")
+        if live["binding_owner_id"] != owner_id or live["node_owner_id"] != owner_id:
+            raise PermissionError("binding is not owned by this OAuth account.")
+        if (
+            live["binding_revoked_at_ms"] is not None
+            or live["node_revoked_at_ms"] is not None
+            or live["workspace_retired_at_ms"] is not None
+            or live["node_endpoint_id"] != live["endpoint_id"]
+        ):
+            raise ConflictError("selected binding is no longer dispatchable.")
+        try:
+            capabilities = _workspace_capabilities(json.loads(str(live["capabilities_json"])))
+        except (TypeError, ValueError, json.JSONDecodeError) as error:
+            raise RuntimeError("stored workspace capabilities are invalid.") from error
+        # This is an inventory ceiling only.  A future local bridge must still
+        # reject the request unless its own current policy permits this exact
+        # mutation; central approval never changes that policy.
+        if capabilities["write"] is not True:
+            raise PermissionError("selected binding does not advertise write capability.")
+        self._require_current_workspace_registration(
+            connection,
+            device_id=str(live["device_id"]),
+            workspace_id=str(live["workspace_id"]),
+            workspace_generation=str(live["workspace_generation"]),
+        )
+        if expected is not None and (
+            expected["binding_id"] != live["binding_id"]
+            or expected["device_id"] != live["device_id"]
+            or expected["endpoint_id"] != live["endpoint_id"]
+            or expected["workspace_id"] != live["workspace_id"]
+            or expected["workspace_generation"] != live["workspace_generation"]
+        ):
+            raise ConflictError("permission request target is no longer current.")
+        return live
+
+    def request_mcp_patch_permission(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        path: Any,
+        preimage_sha256: Any,
+        patch_sha256: Any,
+        validation_profile: Any,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Record one owner-reviewable C4 patch permission request.
+
+        The request intentionally has no action, delivery attempt, local
+        policy, execution descriptor or grant bearer.  Approval only records
+        a durable central decision that a later C4 local bridge must bind to
+        and revalidate before it can seal or execute a patch.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        scope = _mcp_patch_permission_scope(
+            path=path,
+            preimage_sha256=preimage_sha256,
+            patch_sha256=patch_sha256,
+            validation_profile=validation_profile,
+        )
+        facade_contract = _facade_contract(facade_contract)
+        now = self.clock()
+        expires_at_ms = now + MCP_PATCH_PERMISSION_MAX_TTL_MS
+        immutable = {
+            "owner_id": owner_id,
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "tool_name": MCP_PATCH_PERMISSION_TOOL_NAME,
+            "operation": MCP_PATCH_PERMISSION_OPERATION,
+            "scope": scope,
+            "idempotency_key": idempotency_key,
+            "expires_at_ms": expires_at_ms,
+            "facade_contract": facade_contract,
+        }
+        permission_digest = _digest(immutable)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing = connection.execute(
+                    """
+                    SELECT * FROM mcp_permission_requests
+                    WHERE principal_id = ? AND idempotency_key = ?
+                    """,
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["permission_digest"] != permission_digest:
+                        raise ConflictError("idempotency key is already bound to a different permission request.")
+                    connection.execute("COMMIT")
+                    return self._mcp_permission_request_projection(existing, include_principal=False) | {"replayed": True}
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                live = self._mcp_patch_permission_binding(
+                    connection,
+                    owner_id=owner_id,
+                    binding_id=binding_id,
+                )
+                permission_request_id = f"permreq_{uuid.uuid4().hex}"
+                connection.execute(
+                    """
+                    INSERT INTO mcp_permission_requests(
+                        permission_request_id, owner_id, principal_id, binding_id,
+                        device_id, endpoint_id, workspace_id, workspace_generation,
+                        tool_name, operation, relative_path, preimage_sha256,
+                        patch_sha256, validation_profile, permission_digest,
+                        idempotency_key, facade_schema_version, facade_profile,
+                        facade_contract_sha256, created_at_ms, expires_at_ms,
+                        state, decided_at_ms, decided_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL)
+                    """,
+                    (
+                        permission_request_id, owner_id, principal_id, binding_id,
+                        live["device_id"], live["endpoint_id"], live["workspace_id"], live["workspace_generation"],
+                        MCP_PATCH_PERMISSION_TOOL_NAME, MCP_PATCH_PERMISSION_OPERATION,
+                        scope["path"], scope["preimage_sha256"], scope["patch_sha256"], scope["validation_profile"],
+                        permission_digest, idempotency_key,
+                        facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
+                        now, expires_at_ms,
+                    ),
+                )
+                self._event(
+                    connection,
+                    "mcp_permission_request",
+                    permission_request_id,
+                    "mcp_patch_permission_requested",
+                    {"binding_id": binding_id, "permission_digest": permission_digest},
+                )
+                row = connection.execute(
+                    "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if row is None:
+                    raise RuntimeError("permission request was not persisted.")
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return self._mcp_permission_request_projection(row, include_principal=False) | {"replayed": False}
+
+    def mcp_permission_request_observation(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        permission_request_id: str,
+    ) -> dict[str, Any]:
+        """Observe only the requesting OAuth principal's non-executable request."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        permission_request_id = _text(permission_request_id, "permission_request_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            row = connection.execute(
+                """
+                SELECT * FROM mcp_permission_requests
+                WHERE permission_request_id = ? AND owner_id = ? AND principal_id = ?
+                """,
+                (permission_request_id, owner_id, principal_id),
+            ).fetchone()
+        if row is None:
+            raise NotFoundError("permission request does not exist.")
+        return self._mcp_permission_request_projection(row, include_principal=False)
+
+    def list_mcp_permission_requests(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """List exact pending/decided scopes for the private owner Console."""
+
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT * FROM mcp_permission_requests
+                WHERE owner_id = ?
+                ORDER BY CASE state WHEN 'pending' THEN 0 ELSE 1 END, created_at_ms DESC, permission_request_id
+                """,
+                (owner_id,),
+            ).fetchall()
+        return [self._mcp_permission_request_projection(row, include_principal=True) for row in rows]
+
+    def approve_mcp_permission_request(self, *, owner_id: str, permission_request_id: str) -> dict[str, Any]:
+        """Record owner approval without creating an action or local grant."""
+
+        owner_id = _text(owner_id, "owner_id")
+        permission_request_id = _text(permission_request_id, "permission_request_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if row is None:
+                    raise NotFoundError("permission request does not exist.")
+                if row["owner_id"] != owner_id:
+                    raise PermissionError("permission request is not owned by this operator.")
+                if row["state"] == "rejected":
+                    raise ConflictError("permission request was rejected.")
+                if row["state"] == "approved":
+                    connection.execute("COMMIT")
+                    return self._mcp_permission_request_projection(row, include_principal=True)
+                now = self.clock()
+                if row["expires_at_ms"] <= now:
+                    raise ConflictError("permission request is expired.")
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (row["principal_id"],),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise ConflictError("permission request principal is no longer active.")
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                self._mcp_patch_permission_binding(
+                    connection,
+                    owner_id=owner_id,
+                    binding_id=str(row["binding_id"]),
+                    expected=row,
+                )
+                connection.execute(
+                    """
+                    UPDATE mcp_permission_requests
+                    SET state = 'approved', decided_at_ms = ?, decided_by = ?
+                    WHERE permission_request_id = ?
+                    """,
+                    (now, owner_id, permission_request_id),
+                )
+                self._event(
+                    connection,
+                    "mcp_permission_request",
+                    permission_request_id,
+                    "mcp_patch_permission_approved",
+                    {"permission_digest": row["permission_digest"]},
+                )
+                row = connection.execute(
+                    "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if row is None:
+                    raise RuntimeError("permission request disappeared during approval.")
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return self._mcp_permission_request_projection(row, include_principal=True)
+
+    def reject_mcp_permission_request(self, *, owner_id: str, permission_request_id: str) -> dict[str, Any]:
+        """Record a terminal owner rejection without affecting any local process."""
+
+        owner_id = _text(owner_id, "owner_id")
+        permission_request_id = _text(permission_request_id, "permission_request_id")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute(
+                    "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if row is None:
+                    raise NotFoundError("permission request does not exist.")
+                if row["owner_id"] != owner_id:
+                    raise PermissionError("permission request is not owned by this operator.")
+                if row["state"] == "approved":
+                    raise ConflictError("permission request was already approved.")
+                if row["state"] == "pending":
+                    now = self.clock()
+                    connection.execute(
+                        """
+                        UPDATE mcp_permission_requests
+                        SET state = 'rejected', decided_at_ms = ?, decided_by = ?
+                        WHERE permission_request_id = ?
+                        """,
+                        (now, owner_id, permission_request_id),
+                    )
+                    self._event(
+                        connection,
+                        "mcp_permission_request",
+                        permission_request_id,
+                        "mcp_patch_permission_rejected",
+                        {"permission_digest": row["permission_digest"]},
+                    )
+                    row = connection.execute(
+                        "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                        (permission_request_id,),
+                    ).fetchone()
+                if row is None:
+                    raise RuntimeError("permission request disappeared during rejection.")
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return self._mcp_permission_request_projection(row, include_principal=True)
+
+    def request_mcp_approved_patch(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        permission_request_id: str,
+        patch_envelope: Any,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Atomically seal one approved exact-file patch for the patch lane.
+
+        The central approval row is necessary but not sufficient for an effect.
+        This method creates the normal context/work-request/action lineage only
+        after it has bound the exact approved principal, target generation,
+        digest and short expiry.  The raw patch is retained solely in the
+        dedicated intent table for delivery to the selected node; generic
+        action arguments and all event payloads retain digests only.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        permission_request_id = _text(permission_request_id, "permission_request_id")
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        facade_contract = _facade_contract(facade_contract)
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                permission = connection.execute(
+                    "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if permission is None:
+                    raise NotFoundError("permission request does not exist.")
+                if permission["owner_id"] != owner_id or permission["principal_id"] != principal_id:
+                    raise PermissionError("permission request is not owned by this OAuth account.")
+                approved_patch = _mcp_approved_patch_envelope(
+                    patch_envelope,
+                    expected_path=str(permission["relative_path"]),
+                    expected_preimage_sha256=str(permission["preimage_sha256"]),
+                    expected_patch_sha256=str(permission["patch_sha256"]),
+                )
+                immutable = {
+                    "kind": "mcp_facade_approved_patch_v1",
+                    "owner_id": owner_id,
+                    "principal_id": principal_id,
+                    "permission_request_id": permission_request_id,
+                    "permission_digest": permission["permission_digest"],
+                    "binding_id": permission["binding_id"],
+                    "path": permission["relative_path"],
+                    "preimage_sha256": permission["preimage_sha256"],
+                    "patch_sha256": permission["patch_sha256"],
+                    "validation_profile": permission["validation_profile"],
+                    "idempotency_key": idempotency_key,
+                    "facade_contract": facade_contract,
+                }
+                intent_digest = _digest(immutable)
+                existing = connection.execute(
+                    """
+                    SELECT * FROM mcp_approved_patch_intents
+                    WHERE principal_id = ? AND idempotency_key = ?
+                    """,
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different approved patch.")
+                    connection.execute("COMMIT")
+                    return {
+                        "request_id": existing["request_id"],
+                        "action_id": existing["action_id"],
+                        "intent_digest": existing["intent_digest"],
+                        "facade_contract": {
+                            "schema_version": existing["facade_schema_version"],
+                            "profile": existing["facade_profile"],
+                            "sha256": existing["facade_contract_sha256"],
+                        },
+                        "replayed": True,
+                    }
+                already_used = connection.execute(
+                    "SELECT action_id FROM mcp_approved_patch_intents WHERE permission_request_id = ?",
+                    (permission_request_id,),
+                ).fetchone()
+                if already_used is not None:
+                    raise ConflictError("approved permission request is already bound to an action.")
+                now = self.clock()
+                if permission["state"] != "approved":
+                    raise ConflictError("permission request is not approved.")
+                if permission["expires_at_ms"] <= now:
+                    raise ConflictError("permission request is expired.")
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                live = self._mcp_patch_permission_binding(
+                    connection,
+                    owner_id=owner_id,
+                    binding_id=str(permission["binding_id"]),
+                    expected=permission,
+                )
+                expires_at_ms = int(permission["expires_at_ms"])
+                action_arguments = {
+                    "operation": MCP_APPROVED_PATCH_OPERATION,
+                    "permission_request_id": permission_request_id,
+                    "path": str(permission["relative_path"]),
+                    "preimage_sha256": str(permission["preimage_sha256"]),
+                    "patch_sha256": str(permission["patch_sha256"]),
+                    "validation_profile": MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
+                }
+                action_idempotency_key = "mcpap_" + hashlib.sha256(
+                    f"{principal_id}\0{idempotency_key}".encode("utf-8")
+                ).hexdigest()
+                action_immutable = {
+                    "request_id": request_id,
+                    "context_id": context_id,
+                    "binding_id": permission["binding_id"],
+                    "principal_id": principal_id,
+                    "permission_request_id": permission_request_id,
+                    "permission_digest": permission["permission_digest"],
+                    "device_id": live["device_id"],
+                    "endpoint_id": live["endpoint_id"],
+                    "workspace_id": live["workspace_id"],
+                    "workspace_generation": live["workspace_generation"],
+                    "tool_name": MCP_APPROVED_PATCH_TOOL_NAME,
+                    "arguments": action_arguments,
+                    "idempotency_key": action_idempotency_key,
+                    "admission_reference": f"mcp_approved_patch:{intent_digest}",
+                    "expires_at_ms": expires_at_ms,
+                    "facade_contract": facade_contract,
+                }
+                action_digest = _digest(action_immutable)
+                conflicting_action = connection.execute(
+                    "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                    (owner_id, live["device_id"], action_idempotency_key),
+                ).fetchone()
+                if conflicting_action is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+                connection.execute(
+                    "INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        context_id,
+                        owner_id,
+                        permission["binding_id"],
+                        live["device_id"],
+                        live["endpoint_id"],
+                        live["workspace_id"],
+                        live["workspace_generation"],
+                        now,
+                        expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        request_id,
+                        owner_id,
+                        context_id,
+                        "Apply one owner-approved exact patch through the local control-plane bridge.",
+                        _canonical_json({"kind": "approved_patch", "tool_name": MCP_APPROVED_PATCH_TOOL_NAME}),
+                        _canonical_json({"operation": "approved_patch", "permission_request_id": permission_request_id}),
+                        now,
+                        expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO actions(
+                        action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name,
+                        arguments_json, action_digest, idempotency_key, admission_reference,
+                        created_at_ms, expires_at_ms, delivery_state, settled_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)
+                    """,
+                    (
+                        action_id,
+                        owner_id,
+                        request_id,
+                        context_id,
+                        permission["binding_id"],
+                        live["device_id"],
+                        live["endpoint_id"],
+                        live["workspace_id"],
+                        live["workspace_generation"],
+                        MCP_APPROVED_PATCH_TOOL_NAME,
+                        _canonical_json(action_arguments),
+                        action_digest,
+                        action_idempotency_key,
+                        f"mcp_approved_patch:{intent_digest}",
+                        now,
+                        expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO mcp_approved_patch_intents(
+                        owner_id, principal_id, permission_request_id, permission_digest,
+                        binding_id, idempotency_key, intent_digest, relative_path,
+                        preimage_sha256, patch_sha256, validation_profile, patch_envelope,
+                        facade_schema_version, facade_profile, facade_contract_sha256,
+                        request_id, action_id, created_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        owner_id,
+                        principal_id,
+                        permission_request_id,
+                        permission["permission_digest"],
+                        permission["binding_id"],
+                        idempotency_key,
+                        intent_digest,
+                        permission["relative_path"],
+                        permission["preimage_sha256"],
+                        permission["patch_sha256"],
+                        permission["validation_profile"],
+                        approved_patch,
+                        facade_contract["schema_version"],
+                        facade_contract["profile"],
+                        facade_contract["sha256"],
+                        request_id,
+                        action_id,
+                        now,
+                    ),
+                )
+                self._event(
+                    connection,
+                    "work_request",
+                    request_id,
+                    "mcp_approved_patch_request_created",
+                    {
+                        "permission_request_id": permission_request_id,
+                        "intent_digest": intent_digest,
+                    },
+                )
+                self._event(
+                    connection,
+                    "action",
+                    action_id,
+                    "action_sealed",
+                    {"request_id": request_id, "digest": action_digest},
+                )
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {
+            "request_id": request_id,
+            "action_id": action_id,
+            "intent_digest": intent_digest,
+            "facade_contract": facade_contract,
+            "replayed": False,
+        }
+
+    def mcp_approved_patch_action_observation(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        action_id: str,
+    ) -> dict[str, Any]:
+        """Observe an approved-patch lifecycle without returning its patch body."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                """
+                SELECT action_id FROM mcp_approved_patch_intents
+                WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                """,
+                (owner_id, principal_id, action_id),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("approved patch action does not exist.")
+        return self.action_observation(owner_id=owner_id, action_id=action_id)
+
+    def mcp_approved_patch_expected_file(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        action_id: str,
+    ) -> dict[str, Any]:
+        """Return only the sealed, non-patch result fields for one action.
+
+        The raw Write Exact File envelope is retained in the protected intent
+        table solely for delivery to the local node.  A client-facing receipt
+        projection still needs to prove its postimage against that sealed
+        intent, so this helper parses the already-authorized envelope inside
+        the central store and returns only digest-level fields.  It never
+        returns patch bytes, compressed data, or a local workspace path.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                """
+                SELECT relative_path, preimage_sha256, patch_sha256, patch_envelope,
+                       facade_schema_version, facade_profile, facade_contract_sha256
+                FROM mcp_approved_patch_intents
+                WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                """,
+                (owner_id, principal_id, action_id),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("approved patch action does not exist.")
+        try:
+            envelope = _mcp_approved_patch_envelope(
+                intent["patch_envelope"],
+                expected_path=str(intent["relative_path"]),
+                expected_preimage_sha256=str(intent["preimage_sha256"]),
+                expected_patch_sha256=str(intent["patch_sha256"]),
+            )
+            metadata = {
+                key: value.lower()
+                for key, _, value in (
+                    token.partition("=")
+                    for token in envelope.replace("\r\n", "\n").splitlines()[2].removeprefix("@@ ").split()
+                )
+            }
+            postimage_sha256 = metadata["postimage_sha256"]
+        except (KeyError, ValidationError, ConflictError) as error:
+            raise RuntimeError("stored approved patch intent is invalid.") from error
+        return {
+            "path": str(intent["relative_path"]),
+            "preimage_sha256": str(intent["preimage_sha256"]),
+            "postimage_sha256": postimage_sha256,
+            "patch_sha256": str(intent["patch_sha256"]),
+            "facade_contract": {
+                "schema_version": int(intent["facade_schema_version"]),
+                "profile": str(intent["facade_profile"]),
+                "sha256": str(intent["facade_contract_sha256"]),
+            },
+        }
+
     def action(self, *, owner_id: str, action_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
         action_id = _text(action_id, "action_id")
@@ -1809,6 +4055,8 @@ class ControlPlaneStore:
             return "node_revoked"
         if row["_binding_revoked_at_ms"] is not None:
             return "binding_revoked"
+        if row["_workspace_registered_at_ms"] is None or row["_workspace_retired_at_ms"] is not None:
+            return "workspace_registration_not_current"
         if row["_context_closed_at_ms"] is not None or row["_context_expires_at_ms"] <= now:
             return "context_not_live"
         if row["_request_canceled_at_ms"] is not None or row["_request_expires_at_ms"] <= now:
@@ -1839,9 +4087,37 @@ class ControlPlaneStore:
             and _reported_runtime_identity(row["_node_contract_version"])
         )
 
-    def poll_actions(self, *, device_id: str, limit: int = 10) -> list[dict[str, Any]]:
+    def poll_actions(
+        self,
+        *,
+        device_id: str,
+        limit: int = 10,
+        lane: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Allocate delivery attempts for one explicit local execution lane.
+
+        The historical callers that omit ``lane`` retain their prior behavior
+        except that they can never claim a bounded-file action.  This prevents
+        an old compact-metadata worker from dequeuing a new file payload before
+        its separate policy/bridge has been installed.
+        """
+
         device_id = _text(device_id, "device_id")
         limit = max(1, min(int(limit), 50))
+        if lane is not None and lane not in {
+            "generic",
+            "read_only_workspace_context",
+            "bounded_file_read",
+            "approved_patch",
+        }:
+            raise ValidationError("poll lane is invalid.")
+        lane_predicate = {
+            None: "f.action_id IS NULL AND p.action_id IS NULL",
+            "generic": "m.action_id IS NULL AND f.action_id IS NULL AND p.action_id IS NULL",
+            "read_only_workspace_context": "m.action_id IS NOT NULL AND f.action_id IS NULL AND p.action_id IS NULL",
+            "bounded_file_read": "f.action_id IS NOT NULL AND p.action_id IS NULL",
+            "approved_patch": "p.action_id IS NOT NULL",
+        }[lane]
         now = self.clock()
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -1849,7 +4125,7 @@ class ControlPlaneStore:
                 connection.execute("COMMIT")
                 return []
             rows = connection.execute(
-                """
+                f"""
                 SELECT
                     a.*,
                     n.endpoint_id AS _node_endpoint_id,
@@ -1873,17 +4149,40 @@ class ControlPlaneStore:
                     c.expires_at_ms AS _context_expires_at_ms,
                     w.canceled_at_ms AS _request_canceled_at_ms,
                     w.expires_at_ms AS _request_expires_at_ms,
+                    nw.registered_at_ms AS _workspace_registered_at_ms,
+                    nw.retired_at_ms AS _workspace_retired_at_ms,
                     m.intent_digest AS mcp_read_only_intent_digest,
                     m.facade_schema_version AS mcp_facade_schema_version,
                     m.facade_profile AS mcp_facade_profile,
-                    m.facade_contract_sha256 AS mcp_facade_contract_sha256
+                    m.facade_contract_sha256 AS mcp_facade_contract_sha256,
+                    f.intent_digest AS mcp_file_read_intent_digest,
+                    f.facade_schema_version AS mcp_file_read_facade_schema_version,
+                    f.facade_profile AS mcp_file_read_facade_profile,
+                    f.facade_contract_sha256 AS mcp_file_read_facade_contract_sha256,
+                    p.permission_request_id AS mcp_approved_patch_permission_request_id,
+                    p.permission_digest AS mcp_approved_patch_permission_digest,
+                    p.intent_digest AS mcp_approved_patch_intent_digest,
+                    p.relative_path AS mcp_approved_patch_relative_path,
+                    p.preimage_sha256 AS mcp_approved_patch_preimage_sha256,
+                    p.patch_sha256 AS mcp_approved_patch_sha256,
+                    p.validation_profile AS mcp_approved_patch_validation_profile,
+                    p.patch_envelope AS mcp_approved_patch_envelope,
+                    p.facade_schema_version AS mcp_approved_patch_facade_schema_version,
+                    p.facade_profile AS mcp_approved_patch_facade_profile,
+                    p.facade_contract_sha256 AS mcp_approved_patch_facade_contract_sha256
                 FROM actions a
                 JOIN nodes n ON n.device_id = a.device_id
                 JOIN bindings b ON b.binding_id = a.binding_id
                 JOIN contexts c ON c.context_id = a.context_id
                 JOIN work_requests w ON w.request_id = a.request_id
+                LEFT JOIN node_workspaces nw
+                    ON nw.device_id = a.device_id
+                    AND nw.workspace_id = a.workspace_id
+                    AND nw.workspace_generation = a.workspace_generation
                 LEFT JOIN mcp_read_only_intents m ON m.action_id = a.action_id
-                WHERE a.device_id = ? AND a.delivery_state = 'queued'
+                LEFT JOIN mcp_file_read_intents f ON f.action_id = a.action_id
+                LEFT JOIN mcp_approved_patch_intents p ON p.action_id = a.action_id
+                WHERE a.device_id = ? AND a.delivery_state = 'queued' AND {lane_predicate}
                 ORDER BY a.created_at_ms
                 LIMIT ?
                 """,
@@ -2215,11 +4514,14 @@ class ControlPlaneStore:
                 SELECT action.action_id, action.request_id, action.context_id,
                        action.device_id, action.tool_name, action.created_at_ms,
                        action.expires_at_ms, action.delivery_state, action.settled_at_ms,
+                       CASE WHEN approved_patch.action_id IS NULL THEN 0 ELSE 1 END AS approved_patch_candidate,
                        reconciliation.disposition AS reconciliation_disposition,
                        reconciliation.reconciled_at_ms
                 FROM actions AS action
                 LEFT JOIN action_reconciliations AS reconciliation
                   ON reconciliation.action_id = action.action_id
+                LEFT JOIN mcp_approved_patch_intents AS approved_patch
+                  ON approved_patch.action_id = action.action_id
                 WHERE action.owner_id = ?
                 ORDER BY action.created_at_ms DESC, action.action_id DESC
                 LIMIT ?
@@ -2245,6 +4547,11 @@ class ControlPlaneStore:
         result: list[dict[str, Any]] = []
         for action in actions:
             projection = dict(action)
+            # This is only a safe lifecycle classification. It deliberately
+            # reveals neither the exact patch envelope nor local acceptance
+            # correlation, but lets the Console avoid presenting a completed
+            # effect as semantic task acceptance.
+            projection["approved_patch_candidate"] = bool(projection.get("approved_patch_candidate"))
             receipts = receipts_by_action.get(str(action["action_id"]), [])
             projection["receipt_count"] = len(receipts)
             projection["latest_receipt_state"] = receipts[0]["receipt_state"] if receipts else None
@@ -2268,7 +4575,13 @@ class ControlPlaneStore:
                     "actions",
                     "receipts",
                     "mcp_read_only_intents",
+                    "mcp_file_read_intents",
+                    "mcp_permission_requests",
+                    "mcp_approved_patch_intents",
                     "mcp_access_grants",
+                    "oauth_principals",
+                    "oauth_link_requests",
+                    "node_workspaces",
                     "action_reconciliations",
                 )
             }

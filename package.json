@@ -1,6 +1,6 @@
 {
   "name": "coding-tools-mcp",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Windows Execution Hub để vận hành Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT.",
   "author": "3169657175",
   "license": "MIT",
@@ -104,6 +104,8 @@
           "node_agent.py",
           "node-agent.cmd",
           "recovery_identity_observer.cjs",
+          "recovery_approved_patch_bridge.cjs",
+          "recovery_file_read_bridge.cjs",
           "recovery_read_only_bridge.cjs",
           "recovery_runtime_adapter.cjs"
         ]

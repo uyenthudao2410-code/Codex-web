@@ -7,7 +7,7 @@ admit the action under its existing local authority, and return a receipt.
 
 ## Run locally
 
-Set a random operator token of at least 32 characters outside the repository,
+Set a random printable-ASCII operator token of 32–512 characters outside the repository,
 then run:
 
 ```powershell
@@ -37,8 +37,37 @@ The production launcher starts two listeners in one process:
 
 The OpenAI Tunnel service template receives the second listener only. This
 prevents an MCP tunnel profile from becoming a proxy for the private console
-or node control API. It does not grant the Tunnel client operator authority:
-`/mcp` still requires a short-lived, server-issued context-scoped grant.
+or node control API. It does not grant the Tunnel client operator authority.
+
+There are two explicit MCP authentication modes:
+
+- `legacy_context_grant` is the current transition/default mode. `/mcp`
+  requires one short-lived server-issued, context-scoped grant, and the Tunnel
+  launcher receives an owner-private header-file reference for that grant.
+- `oauth_introspection` is the account mode. The resource server validates
+  each client-provided OAuth **access token** using its configured,
+  authenticated introspection endpoint, then resolves a separately linked
+  `(issuer, subject)` principal. There is no fallback to a legacy `mcp_…`
+  bearer and the Tunnel launcher must not receive or inject an Authorization
+  header. The initial OAuth surface is deliberately inventory-only: it cannot
+  create a context, task, local policy, action, or local effect.
+
+In OAuth mode the dedicated MCP listener alone serves
+`GET /.well-known/oauth-protected-resource`; every other GET route remains
+404 there. A missing or invalid token receives both a standard
+`WWW-Authenticate` challenge and the MCP `mcp/www_authenticate` result
+metadata for `tools/call`. OpenAI clients need this metadata, per-tool
+`securitySchemes`, and the runtime challenge to start account linking. The
+authorization server is external to the private Tunnel: it must expose its
+own reachable HTTPS discovery, authorization, and token endpoints and support
+the exact callback shown by the OpenAI connection configuration. See the
+official [OpenAI Authentication guide](https://developers.openai.com/plugins/build/auth).
+
+The MCP OAuth ingress intentionally does not apply the private Console's
+cookie/CSRF same-origin rule. A remote client may send its own `Origin`; the
+resource server still requires a verified OAuth bearer and linked principal on
+every protected request, and it emits no CORS permission merely because an
+`Origin` header is present.
 
 Create the Linux `tunnel-client` profile manually using the current official
 [Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels).
@@ -77,6 +106,61 @@ explicitly transferred Ubuntu profile. A live `tunnel-client` health/ready
 surface and an actual supported OpenAI-product MCP call are required evidence;
 a Tailnet `curl` to `/mcp` or `/healthz` does not prove the Tunnel path.
 
+When the candidate switches to `oauth_introspection`, put the same nonsecret
+`CONTROL_PLANE_MCP_AUTH_MODE=oauth_introspection` in both protected service
+environment files, configure all `CONTROL_PLANE_MCP_OAUTH_*` values only in
+the control-plane service environment, and remove
+`CONTROL_PLANE_MCP_AUTH_HEADER_FILE` entirely from `mcp-tunnel.env`. The
+launcher fails closed if that old setting is even present. The introspection
+client file must be an absolute, owner-owned, non-symlink regular JSON file
+with mode `0400` or `0600` and exactly `client_id` and `client_secret`; it is
+not the Tunnel Runtime API Key and must not be loaded by the Tunnel unit.
+The selected IdP introspection response must identify an active `Bearer`
+**access token**; an ID token or another token type is rejected even if its
+other claims happen to look plausible. Its `exp` value must be finite and
+future-dated, and any `nbf` value must already be in effect.
+
+`CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED` is an optional **candidate** gate
+that is valid only in `oauth_introspection` mode. It defaults to false and
+must remain absent in `legacy_context_grant` mode. Setting it to true changes
+the discovered facade contract to add only the separately policy-bounded,
+read-only `workspace_context(read_file)` lane. It does not enable a write,
+shell, arbitrary path, context, or local policy; the exact Windows root,
+generation, allowed relative paths, byte/line caps, expiry and local approval
+are still checked independently at the node.
+
+`CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED` is a separate **C4
+candidate** gate. It is accepted only in `oauth_introspection` mode when the
+C3 file-read candidate is also explicitly enabled. It changes the discovered
+contract to expose only `request_permissions(request_patch/status)`: an OAuth
+caller can bind one proposed single-file patch to an opaque target, relative
+path, preimage digest, patch digest, validation profile and short expiry. The
+private Ubuntu Console may approve or reject that exact scope through its
+existing session, Origin and CSRF protection. Approval is durable central
+evidence only; it does not create an action, delivery attempt, local policy,
+write relay, shell/process permission or Windows effect. Any future local
+mutation bridge must independently compare the immutable scope and its own
+current local policy before it may execute anything.
+
+Do not change a live service just by switching the mode variable. Complete a
+candidate rollout first: configure an IdP that supports OAuth authorization
+code + PKCE `S256`, exact issuer/resource/audience/scope validation, create a
+private owner-only introspection-client JSON file, then prove discovery and
+empty/nonempty account inventory through a supported OpenAI client.
+
+For ordinary onboarding, a verified but unmapped OAuth account creates exactly
+one opaque pending account-link request. It gets neither inventory nor a
+context, policy, action, or local effect. The Ubuntu owner opens the private
+Console and explicitly approves or rejects that request using its existing
+session, Origin, and CSRF checks. The Console and its projections expose only
+opaque request/principal IDs, state, and timestamps: never issuer, subject,
+email, token, or workspace. Approval creates the owner mapping; it is
+idempotent for the request but must not silently re-enable a later revoked
+principal. The raw private OAuth-principal route remains only a controlled
+bootstrap/recovery path, not the normal user onboarding flow. Provider subjects
+are stored only as domain-separated digests; never put an access token or
+subject value in a ticket, terminal history, or Git artifact.
+
 `CONTROL_PLANE_HEALTH_EXPECTED_ADMISSION` is a required, observation-only
 healthcheck expectation. Set it to `recovery` while intake/dispatch is
 deliberately closed for migration or a canary; set it to `open` only after the
@@ -109,6 +193,12 @@ configuration, or service log. Login attempts are rate-limited in memory per
 direct peer address. A proxy that hides all clients behind one address will
 therefore share that small single-owner rate limit unless an approved trusted
 proxy design adds a separately validated client identity.
+
+The server validates a submitted operator credential's JSON type, ASCII
+encoding, and byte length before the constant-time comparison. Empty,
+oversize, Unicode, whitespace/control-character, and non-string values all
+receive the same generic authentication failure; no credential value or
+internal comparison exception is returned.
 
 The UI requires the configured exact `Origin` and session-bound
 `X-Control-Plane-CSRF` value for writes. It can approve an existing pending
@@ -311,9 +401,13 @@ session, backup, or real environment file. Creating it does not change the
   its ingress deployment gate, not a Windows node credential or a way to give
   an external client the operator token.
 
-  The façade declares exactly the eight public `smart-v3` tool names and an
-  explicit control-plane `context_id` envelope; this is not a byte claim about
-  the Windows tools' local input schemas. `workspace_context` defaults to
+  The façade declares exactly the eight public `smart-v3` tool names. Only
+  `workspace_context` currently has an explicit control-plane `context_id`
+  envelope and implemented operations; the other seven names deliberately
+  advertise an empty schema plus `capability_state=unavailable` and return the
+  typed `LOCAL_ADMISSION_BRIDGE_REQUIRED` result. This is not a byte claim
+  about the Windows tools' local input schemas and does not imply they can
+  queue work. `workspace_context` defaults to
   context-scoped **central** target/node status with
   `workspace_accessed=false`. An optional existing `action_id` under that
   context normally adds a redacted lifecycle projection (action/attempt/receipt
@@ -524,7 +618,8 @@ result.
 After the explicit policy has been installed and its local ACL reviewed, an
 operator may run a **bounded, logged-in** loop locally. It first verifies that
 the enabled, unexpired policy still matches this node configuration's central
-origin/device/endpoint; on failure it does not heartbeat or dequeue. Each
+origin/device/endpoint **and** an exact current local workspace
+ID/generation registry entry; on failure it does not heartbeat or dequeue. Each
 iteration then publishes a fresh strict runtime heartbeat before the one
 read-only poll. The process has no scheduler installer, cannot run longer than
 24 hours, and must be started deliberately again after logout/reboot.
@@ -534,6 +629,7 @@ read-only poll. The process has no scheduler installer, cannot run longer than
 # installation and Windows ACL gate above have been completed.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-loop `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
   --interval-seconds 60 `
   --max-iterations 60
 ```
@@ -549,17 +645,18 @@ After the packaged node has a reviewed, explicit policy, the named
 `run-read-only-agent` entrypoint is managed by the existing **same-user
 Recovery Supervisor** in a newly installed candidate. The Supervisor verifies
 the packaged Python and agent hashes from its manifest, then starts it only
-when the private node configuration and an enabled, unexpired, matching local
-policy exist. An older supervisor manifest has no agent fields and remains
+when the private node configuration, a matching current private workspace
+registry entry, and an enabled, unexpired matching local policy exist. An older supervisor manifest has no agent fields and remains
 `manifest_legacy`; it never guesses an agent path or starts one. Unlike the
 bounded diagnostic loop, the agent runs until the local operator stops it or
 its policy becomes unavailable. It is still only the allowlisted
 `workspace_context` bridge: it does not receive a Tunnel ID, Runtime API key,
 arbitrary command, patch, or write permission.
 
-Every iteration revalidates the locally stored policy *before* publishing a
-heartbeat or polling the central queue. A disabled, expired, malformed, or
-wrong-node policy therefore stops the agent rather than generating repeated
+Every iteration revalidates the locally stored policy and exact local workspace
+generation *before* publishing a heartbeat or polling the central queue. A
+disabled, expired, malformed, wrong-node, removed-root, or stale-generation
+policy therefore stops the agent rather than generating repeated
 rejections. Runtime and network failures use bounded exponential backoff; they
 never repeat a possible local bridge effect. One atomically-created lock next
 to the private node configuration prevents two same-profile agents from
@@ -574,6 +671,7 @@ operator review.
 # logged-out Windows or Session 0/SYSTEM execution.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-agent `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
   --interval-seconds 15 `
   --max-backoff-seconds 300
 ```
@@ -583,22 +681,56 @@ means the supervisor owns the process lifetime. Do not use the agent as proof
 of central mutation, unattended boot, or a complete Windows onboarding flow:
 those gates require the separate pairing, lifecycle and authority proof.
 
-### Explicit packaged read-only policy installation
+### Local workspace registration and retirement
 
-The normal candidate workflow is: Ubuntu operator approves the node, creates
-an opaque binding, issues a live context, then the same Windows user pastes the
-`ctx_…` value into Command Center and selects **Cài policy read-only**. Electron
-starts its packaged node agent only after that local click. The agent
-authenticates itself to Ubuntu; Ubuntu returns a template only for that exact
-live context, device and endpoint. It derives owner/workspace/generation/
-expiry/facade contract from the server response, rather than accepting them
-from the Windows UI. No OpenAI key, Tunnel ID, operator bearer, node secret,
-Windows path, or workspace content is put in the UI or receipt.
+Before Ubuntu can issue a usable binding/context, the same Windows user selects
+one local root in Command Center and registers it read-only. The node writes
+the canonical root only to its private `control-plane-workspaces.json`, then
+sends Ubuntu only an opaque workspace ID, generation, display label and
+`{read:true,write:false,exec:false}` capability. Registration alone does not
+create a binding, context, policy, grant or execution right.
 
-For break-glass diagnostics where Command Center cannot be used, the equivalent
-installed command accepts only the context ID and still requires local
-confirmation. It is not an auto-enrollment side effect. The launcher fixes
-bundled Python, installed Electron tree, packaged runtime mode and
+Removing a root is also a local Command Center action. The UI lists only the
+local display label and opaque identity; it sends the exact identity/generation
+to Ubuntu for retirement. Ubuntu closes matching live contexts and settles only
+actions that have not been dispatched. The node deletes its private registry
+entry **only after** it receives the matching central retirement receipt. If
+the response is lost, it keeps the entry and retries the same identity instead
+of creating a new target or guessing that a remote effect completed.
+
+For focused break-glass diagnostics only, the packaged agent supports the
+following path-free operations. Do not substitute a manually chosen path for
+an opaque identity during retirement.
+
+```powershell
+& '<installed>\resources\resources\control-plane\node-agent.cmd' list-workspaces `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json"
+
+& '<installed>\resources\resources\control-plane\node-agent.cmd' retire-workspace `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
+  --workspace-id 'workspace_<registered-id>' `
+  --workspace-generation 'generation_<registered-generation>'
+```
+
+### Retired context-paste policy pilot
+
+The earlier read-only pilot asked an Ubuntu operator to issue a `ctx_…` value
+and required the Windows user to paste it into Command Center. That is **not**
+the normal central-executor onboarding flow anymore: Command Center no longer
+exposes a context field or a policy-install IPC. The intended flow is account
+OAuth → authorized target selection → server-created binding/context/policy;
+the Windows owner only pairs the node and chooses the local root. An Operator
+Token, Tunnel credential, API key, or context identifier is never a substitute
+for that account binding.
+
+The installed command below remains an explicit break-glass diagnostic for an
+already-approved migration context while OAuth rollout is incomplete. It is not
+an auto-enrollment side effect, must not be documented to ordinary users as an
+onboarding step, and cannot establish an OAuth identity, grant write/exec, or
+make an expired context live again. The launcher fixes bundled Python,
+installed Electron tree, packaged runtime mode and
 `%APPDATA%\web-mcp-assistant`; it does not use a source checkout or global Node.
 Do not copy a policy between nodes. Omit `--replace` unless the logged-in user
 has deliberately selected a replacement context.
@@ -608,6 +740,7 @@ has deliberately selected a replacement context.
 # --runtime-mode packaged, --project-root and --node itself.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy-from-context `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
   --context-id 'ctx_<issued-by-ubuntu-console>' `
   --confirm-install
 
@@ -617,9 +750,10 @@ has deliberately selected a replacement context.
 ```
 
 The install command refuses a missing confirmation, closed/expired/wrong-node
-context, an over-24-hour policy, malformed server template, an already existing
-policy without `--replace`, or a caller-supplied packaged data root. It returns
-only a policy contract SHA, expiry, runtime mode and
+context, a missing/changed/removed local workspace registration, an over-24-hour
+policy, malformed server template, an already existing policy without
+`--replace`, or a caller-supplied packaged data root. It returns only a policy
+contract SHA, expiry, runtime mode and
 `windows_acl_verified=false`; that last field is intentional. Windows ACL
 ownership must be inspected during the install gate and cannot be inferred from
 Python `chmod`. Disabling writes a disabled policy instead of deleting it,

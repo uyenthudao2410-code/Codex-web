@@ -104,7 +104,8 @@ test('python discovery consumes one monotonic total budget across all probes', a
   const status = await pythonStatus(paths, {
     budgetMs: 100,
     monotonicNow: () => now,
-    runFn
+    runFn,
+    platform: 'win32'
   });
 
   assert.equal(status.installed, false);
@@ -137,7 +138,8 @@ test('python discovery maps child cleanup uncertainty to typed bounded discovery
   const status = await pythonStatus(paths, {
     budgetMs: 50,
     monotonicNow: () => 1,
-    runFn
+    runFn,
+    platform: 'win32'
   });
 
   assert.equal(status.installed, false);
@@ -145,4 +147,27 @@ test('python discovery maps child cleanup uncertainty to typed bounded discovery
   assert.equal(status.timedOut, true);
   assert.equal(status.cleanupConfirmed, false);
   assert.equal(status.budgetMs, 50);
+});
+
+test('Ubuntu Python discovery avoids Windows-only commands and accepts python3', async () => {
+  const { pythonStatus } = require('../electron/services/environmentService');
+  const calls = [];
+  const status = await pythonStatus({
+    portablePython: () => path.join(__dirname, 'definitely-missing-portable-python.exe')
+  }, {
+    platform: 'linux',
+    runFn: async (command, args) => {
+      calls.push([command, ...args]);
+      return { code: 0, stdout: 'Python 3.12.4', stderr: '' };
+    }
+  });
+
+  assert.deepEqual(calls, [['python3', '--version']]);
+  assert.deepEqual(status, {
+    installed: true,
+    command: 'python3',
+    launchCommand: 'python3',
+    prefixArgs: [],
+    version: 'Python 3.12.4'
+  });
 });

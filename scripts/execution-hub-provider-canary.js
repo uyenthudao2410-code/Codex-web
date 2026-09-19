@@ -2,6 +2,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
+const { joinUnderRoot } = require('../electron/services/pathSemantics');
 
 const CANARY_VERSION = 'opencode-flash-canary-v1';
 const FLASH_MODEL = 'opencode-go/deepseek-v4-flash';
@@ -40,7 +41,7 @@ function isElectronEntrypoint({ versions = process.versions, argv = process.argv
 function configureElectronAppContext(app, appData = process.env.APPDATA) {
   const root = safeText(appData, 2000);
   if (!root) throw new CanaryError('APPDATA_UNAVAILABLE', 'Windows APPDATA is unavailable.');
-  const dataRoot = path.join(root, 'web-mcp-assistant');
+  const dataRoot = joinUnderRoot(root, 'web-mcp-assistant');
   // Keep the legacy data root so version 1.0 reuses the managed runtime state.
   app.setName('Coding Tools MCP');
   app.setPath('userData', dataRoot);

@@ -1,7 +1,7 @@
 # Current Project State — Tools-Codex-web
 
-> **Status date:** 2026-09-06
-> **Desktop package:** `coding-tools-mcp 1.0.0`
+> **Status date:** 2026-09-17
+> **Desktop package:** `coding-tools-mcp 1.0.3`
 > **Purpose:** canonical operational snapshot for the current repository. This is not a release note and does not imply that every source change has been activated, packaged, or released.
 
 ### Ubuntu central-executor migration repair — 2026-09-16

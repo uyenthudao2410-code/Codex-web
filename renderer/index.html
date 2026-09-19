@@ -55,7 +55,7 @@
       </div>
 
       <div class="sidebar-footer">
-        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.0</button>
+        <button class="ghost-button full" data-open="coding-tools-source">Coding Tools MCP · 1.0.7</button>
         <small>Kiểm tra trạng thái cục bộ không gọi mô hình và không tiêu tốn hạn mức chat.</small>
       </div>
     </aside>
@@ -271,9 +271,7 @@
                 <p id="centralExecutorActivationStatus"></p>
                 <button id="retryCentralExecutorHandoff" type="button" hidden>Thử lại chuyển đổi sau khi pairing</button>
                 <label class="field"><span>Địa chỉ HTTPS của Ubuntu Control Plane</span><div class="input-action"><input id="controlPlaneServerUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://ubuntu-host.tailnet.ts.net"><button id="requestControlPlaneEnrollment" type="button">Gửi yêu cầu pairing</button></div><small id="controlPlaneEnrollmentStatus">Chỉ gửi định danh máy tới Ubuntu; không gửi Runtime API Key, Tunnel ID hoặc credential OpenAI.</small></label>
-                <label class="field"><span>Context read-only do Ubuntu cấp</span><input id="controlPlaneContextId" type="text" autocomplete="off" spellcheck="false" placeholder="ctx_…"><small>Trong Ubuntu Console: duyệt node → tạo binding opaque → cấp context. Máy này chỉ lấy template cho đúng context còn hiệu lực; không nhận đường dẫn workspace, OpenAI key hay operator token.</small></label>
-                <label class="choice"><input id="replaceControlPlanePolicy" type="checkbox"><span><b>Thay policy read-only cục bộ đang có</b><small>Chỉ chọn khi gia hạn hoặc đổi context; mỗi lần cài vẫn cần context Ubuntu còn hiệu lực.</small></span></label>
-                <div class="input-action"><button id="installControlPlaneReadOnlyPolicy" type="button">Cài policy read-only</button><small id="controlPlanePolicyStatus">Pairing, binding, context và policy là bốn bước độc lập. Policy này không cấp ghi hay thực thi lệnh.</small></div>
+                <div class="notice"><b>Quyền task sẽ đến từ liên kết tài khoản</b><p>Không dán <code>ctx_…</code>, Operator Token hoặc bearer vào Windows. Sau khi OAuth được liên kết, account sẽ chọn target được cấp và Ubuntu tạo binding/context/policy nội bộ. Trước đó máy này chỉ có thể pair và đăng ký inventory read-only; quyền ghi/chạy vẫn đóng.</p></div>
               </div>
               <div id="centralExecutorHandoff" class="notice warning" data-direct-only>
                 <b>Chuyển vai trò máy này sang executor Ubuntu</b>
@@ -313,18 +311,27 @@
 
         <section class="page" data-page-view="workspace">
           <div class="section-header"><div><span class="section-kicker">RANH GIỚI KHÔNG GIAN LÀM VIỆC</span><h2>Thư mục làm việc & Quyền</h2><p>Đây là ranh giới an toàn quan trọng nhất của MCP: trang web chỉ nhìn thấy thư mục bạn cho phép.</p></div></div>
-          <article class="panel workspace-picker">
+          <article class="panel workspace-picker" data-direct-only>
             <div class="folder-illustration">▱</div>
             <div class="folder-copy"><span>Đang cho phép truy cập</span><h3 id="selectedWorkspace">Chưa chọn thư mục</h3><p>Sau khi chuyển thư mục, trợ lý sẽ âm thầm khởi động lại MCP cục bộ ở chế độ nền và cập nhật ranh giới truy cập.</p></div>
             <button class="primary-button" id="chooseWorkspace">Chọn thư mục</button>
           </article>
 
-          <article class="panel authorized-roots-panel">
+          <article id="centralExecutorWorkspaceRegistration" class="panel notice blue-notice" hidden>
+            <b>Đăng ký root cục bộ với Ubuntu</b>
+            <p>Root này được chọn riêng cho registry, không đổi workspace chính của ứng dụng hoặc task đã bind. Node chỉ gửi định danh opaque, generation, tên hiển thị và capability read-only; đường dẫn local giữ lại tại Windows.</p>
+            <div class="input-action"><button id="chooseControlPlaneWorkspace" type="button">Chọn thư mục cục bộ để đăng ký</button><small id="controlPlaneWorkspaceCandidate">Chưa chọn thư mục cục bộ để đăng ký.</small></div>
+            <div class="input-action"><button id="registerControlPlaneWorkspace" type="button">Đăng ký read-only với Ubuntu</button><small id="controlPlaneWorkspaceRegistrationStatus">Chọn root riêng rồi đăng ký; thao tác không tạo quyền ghi hoặc chạy.</small></div>
+            <div class="input-action"><button id="refreshControlPlaneWorkspaces" type="button">Tải workspace đã đăng ký</button><small>Chọn một workspace local trong danh sách để thu hồi. Ubuntu chỉ nhận ID/generation; đường dẫn không rời Windows.</small></div>
+            <div id="controlPlaneWorkspaceRegistrations" class="authorized-root-list" aria-live="polite"><span class="task-muted">Chưa tải inventory workspace local</span></div>
+          </article>
+
+          <article class="panel authorized-roots-panel" data-direct-only>
             <div class="panel-title"><div><h3>Thư mục ủy quyền bổ sung</h3><p>Không cần chuyển vùng làm việc chính. Sau khi thêm, ChatGPT có thể trực tiếp đọc và sửa đổi các đường dẫn tuyệt đối trong các thư mục này; thư mục chưa ủy quyền vẫn sẽ bị từ chối.</p></div><button class="secondary-button" id="addAuthorizedRoot">Thêm thư mục ủy quyền</button></div>
             <div class="authorized-root-list" id="authorizedRootsList"><span class="task-muted">Chưa thêm thư mục ủy quyền bổ sung</span></div>
           </article>
 
-          <div class="two-column">
+          <div class="two-column" data-direct-only>
             <article class="panel">
               <div class="panel-title"><div><h3>Chế độ quyền lệnh</h3><p>Khuyến nghị người dùng thông thường giữ Chế độ an toàn.</p></div></div>
               <div class="choice-stack">
@@ -338,12 +345,12 @@
               <div class="notice blue-notice"><b>Chỉ lắng nghe trên máy cục bộ</b><p>Cả hai cổng đều gắn vào 127.0.0.1, không lộ trực tiếp ra mạng nội bộ.</p></div>
             </article>
           </div>
-          <div class="page-footer-actions"><button class="secondary-button" id="saveWorkspace">Lưu cài đặt không gian làm việc</button><button class="primary-button" id="saveWorkspaceRestart">Lưu và tái triển khai</button></div>
+          <div class="page-footer-actions" data-direct-only><button class="secondary-button" id="saveWorkspace">Lưu cài đặt không gian làm việc</button><button class="primary-button" id="saveWorkspaceRestart">Lưu và tái triển khai</button></div>
         </section>
 
         <section class="page" data-page-view="guide">
           <div class="section-header"><div><span class="section-kicker">HƯỚNG DẪN CẤU HÌNH CHATGPT</span><h2>Tạo MCP trong giao diện Web</h2><p>Hoàn thành theo đúng thứ tự. Tên lối vào có thể hơi khác tùy gói tài khoản hoặc workspace.</p></div><button class="primary-button" data-direct-only data-open="chatgpt-connectors">Mở Cài đặt Trình kết nối ChatGPT</button></div>
-          <article id="centralExecutorGuide" class="panel notice blue-notice" hidden><b>Central executor: không tạo Tunnel hoặc Runtime API Key tại Windows</b><p>Ubuntu là nơi giữ root MCP, Tunnel và credential OpenAI. Hoàn tất pairing/policy với Ubuntu, chọn workspace cục bộ được cấp và chờ route evidence xác nhận trước khi chạy action. Không dùng trang này để tạo connector OpenAI trên máy executor.</p></article>
+          <article id="centralExecutorGuide" class="panel notice blue-notice" hidden><b>Central executor: không tạo Tunnel hoặc Runtime API Key tại Windows</b><p>Ubuntu là nơi giữ root MCP, Tunnel và credential OpenAI. Hoàn tất pairing, liên kết tài khoản OAuth và chọn root cục bộ được cấp; chờ route evidence xác nhận trước khi chạy action. Không dùng trang này để tạo connector OpenAI trên máy executor.</p></article>
           <div class="guide-layout" data-direct-only>
             <div class="guide-steps">
               <article class="guide-step" data-guide-step="tunnel"><div class="step-number">1</div><div class="step-content"><div class="step-heading"><h3>Tạo Tunnel trên OpenAI Platform</h3><label><input type="checkbox" data-guide-check="tunnel">Đã hoàn thành</label></div><p>Mở trang quản lý Tunnels, tạo Tunnel dành riêng cho Coding Tools MCP, sau đó sao chép mã định danh <code>tunnel_...</code>.</p><div class="mock-browser"><div class="mock-bar"><i></i><i></i><i></i><span>platform.openai.com / Tunnels</span></div><div class="mock-content"><span class="mock-label">Tunnel name</span><div class="mock-row"><b>Coding Tools MCP</b><em>Active</em></div><span class="mock-label">Tunnel ID</span><code>tunnel_••••••••••••</code></div></div><button class="secondary-button" data-open="openai-tunnels">Mở trang Tunnels</button></div></article>
@@ -403,7 +410,7 @@
             <article class="panel settings-list"><div class="panel-title"><h3>Giao diện & Hành vi vận hành</h3></div><label class="setting-row"><span><b>Chủ đề giao diện</b><small>Trung tâm quản lý mặc định sử dụng phong cách sáng hài hòa hơn với giao diện chat chính.</small></span><select id="themeSelect"><option value="light">Sáng</option><option value="dark">Tối</option></select></label><div class="setting-row"><span><b>Chế độ công cụ thông minh</b><small>Cố định sử dụng 8 công cụ tổng hợp đã rút gọn, công cụ cũ chỉ giữ tương thích ẩn.</small></span><span class="security-chip">Tự động</span></div><label class="setting-row"><span><b>Tự khởi động Coding Tools MCP cùng Windows</b><small>Tự động khởi động ứng dụng sau khi đăng nhập Windows.</small></span><input id="startWithWindowsToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Tự động khởi động dịch vụ khi mở ứng dụng</b><small>Tự động khởi động MCP và Tunnel khi đã cấu hình đầy đủ.</small></span><input id="autoStartToggle" class="toggle" type="checkbox"></label><label class="setting-row"><span><b>Duy trì dịch vụ chạy ngầm khi đóng cửa sổ</b><small>Đóng giao diện chính chỉ ẩn xuống khay hệ thống, không dừng MCP và Tunnel.</small></span><input id="keepRunningToggle" class="toggle" type="checkbox" checked></label><label class="setting-row"><span><b>Khoảng thời gian báo cáo chủ động nhiệm vụ dài</b><small>Khi vượt quá thời gian này mà chưa hoàn thành, công cụ sẽ trả lại quyền cho ChatGPT để báo cáo tiến độ trước.</small></span><select id="progressReportSelect"><option value="60">60 giây</option><option value="90">90 giây</option><option value="120">2 phút</option><option value="180">3 phút</option></select></label></article>
             <article class="panel settings-list"><div class="panel-title"><h3>Bảo mật & Bảo trì</h3></div><div class="setting-row" data-direct-only><span><b>Runtime API Key</b><small id="settingsKeyState">Chưa lưu</small></span><button class="danger-button" id="removeRuntimeKey">Xóa khóa</button></div><div class="setting-row"><span><b>Token xác thực cục bộ MCP</b><small>Cần khởi động lại dịch vụ sau khi tạo lại.</small></span><button class="secondary-button" id="regenerateToken">Tạo lại</button></div><div class="setting-row"><span><b>Dữ liệu đăng nhập ChatGPT</b><small>Xóa Cookie, bộ nhớ đệm và trạng thái đăng nhập của trang web tích hợp.</small></span><button class="danger-button" id="clearChatSession">Xóa và đăng nhập lại</button></div><div class="setting-row"><span><b>Thu thập dữ liệu từ xa ẩn danh</b><small>Coding Tools MCP được thiết lập tắt.</small></span><span class="security-chip">Đã tắt</span></div></article>
           </div>
-          <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.0</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
+          <article class="panel about-panel"><div class="brand-mark large"><span></span><span></span><span></span></div><div><h3>Coding Tools MCP <span>v1.0.7</span></h3><p>Execution Hub để quản lý Coding Tools MCP và OpenAI Tunnel. Nền tảng Coding Tools MCP tuân theo Apache License 2.0.</p></div><button class="secondary-button" data-open="coding-tools-source">Xem nguồn Coding Tools MCP</button></article>
         </section>
       </div>
     </main>

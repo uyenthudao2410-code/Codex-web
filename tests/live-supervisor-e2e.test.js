@@ -23,9 +23,10 @@ test.after(() => {
 });
 const { RuntimeOrchestrator, readMcpHealth, loopbackListenerPid } = require('../electron/services/runtimeOrchestrator');
 const { installTunnelProcessFixture, withWorkingDirectory } = require('./helpers/tunnel-process-fixture');
+const { resolvePythonExecutable } = require('./helpers/python-executable');
 
 const MCP_ROOT = path.resolve(__dirname, '..', 'resources', 'coding-tools-mcp');
-const PYTHON = process.env.PYTHON || 'python';
+const PYTHON = resolvePythonExecutable();
 
 const transientTempCleanupCodes = new Set(['EACCES', 'EBUSY', 'ENOTEMPTY', 'EPERM']);
 

@@ -39,6 +39,10 @@ test('portable Python does not contain a second stale coding_tools_mcp implement
 });
 
 test('portable Python isolated path loads the single bundled coding_tools_mcp source', (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('the bundled python.exe is exercised by the Windows package lane');
+    return;
+  }
   const pthFile = path.join(root, 'resources/native-python/python312._pth');
   if (!fs.existsSync(pthFile)) {
     t.skip('resources/native-python not present in dev checkout');
@@ -56,4 +60,3 @@ test('portable Python isolated path loads the single bundled coding_tools_mcp so
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.match(result.stdout, /Serve workspace-confined coding tools over MCP/);
 });
-

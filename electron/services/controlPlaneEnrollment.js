@@ -6,6 +6,7 @@
 // every later authority record independently.
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { URL } = require('node:url');
 const { normalizeDeviceIdentity } = require('./deviceIdentity');
 const { run } = require('./commandRunner');
@@ -16,6 +17,8 @@ const ENROLLMENT_ID_PATTERN = /^enroll_[a-z0-9][a-z0-9_-]{7,127}$/;
 const CONTEXT_ID_PATTERN = /^ctx_[a-f0-9]{32}$/;
 const NODE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$/;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
+const WORKSPACE_ID_PATTERN = /^workspace_[a-f0-9]{32}$/;
+const WORKSPACE_GENERATION_PATTERN = /^generation_[a-f0-9]{32}$/;
 const SAFE_ENVIRONMENT_NAMES = new Set([
   'PATH', 'SystemRoot', 'WINDIR', 'ComSpec', 'APPDATA', 'LOCALAPPDATA',
   'USERPROFILE', 'HOMEDRIVE', 'HOMEPATH', 'TEMP', 'TMP', 'LANG', 'LC_ALL',
@@ -52,6 +55,48 @@ function centralContextId(value) {
     throw enrollmentError('CONTROL_PLANE_CONTEXT_ID_INVALID', 'Context ID từ Ubuntu không hợp lệ.');
   }
   return contextId;
+}
+
+function centralWorkspaceId(value) {
+  const workspaceId = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!WORKSPACE_ID_PATTERN.test(workspaceId)) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_ID_INVALID', 'Workspace ID từ node không hợp lệ.');
+  }
+  return workspaceId;
+}
+
+function centralWorkspaceGeneration(value) {
+  const workspaceGeneration = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!WORKSPACE_GENERATION_PATTERN.test(workspaceGeneration)) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_GENERATION_INVALID', 'Workspace generation từ node không hợp lệ.');
+  }
+  return workspaceGeneration;
+}
+
+function canonicalWorkspacePath(value) {
+  const selected = typeof value === 'string' ? value.trim() : '';
+  if (!selected || selected.includes('\0')) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_PATH_INVALID', 'Thư mục local không hợp lệ.');
+  }
+  let canonical;
+  try {
+    canonical = fs.realpathSync.native(selected);
+    if (!fs.statSync(canonical).isDirectory()) throw new Error('not-directory');
+  } catch {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_PATH_INVALID', 'Thư mục local không tồn tại hoặc không còn truy cập được.');
+  }
+  if (!path.isAbsolute(canonical)) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_PATH_INVALID', 'Thư mục local phải là đường dẫn tuyệt đối.');
+  }
+  return canonical;
+}
+
+function workspaceDisplayName(canonicalPath) {
+  const basename = path.basename(canonicalPath) || canonicalPath;
+  if (!basename || basename.length > 120 || /[\x00-\x1f]/.test(basename)) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_DISPLAY_NAME_INVALID', 'Tên hiển thị thư mục local không hợp lệ.');
+  }
+  return basename;
 }
 
 function safeEnrollmentEnvironment(source = process.env) {
@@ -119,10 +164,119 @@ function parseReadOnlyPolicyInstallResult(stdout) {
   });
 }
 
+function parseWorkspaceRegistrationResult(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_OUTPUT_INVALID', 'Node workspace trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_OUTPUT_INVALID', 'Node workspace không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_WORKSPACE_OUTPUT_INVALID', 'Node workspace trả về receipt không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'capabilities,display_name,replayed,state,workspace_generation,workspace_id'
+    || !WORKSPACE_ID_PATTERN.test(String(payload.workspace_id || ''))
+    || !WORKSPACE_GENERATION_PATTERN.test(String(payload.workspace_generation || ''))
+    || typeof payload.display_name !== 'string' || !payload.display_name || payload.display_name.length > 120
+    || payload.state !== 'registered' || typeof payload.replayed !== 'boolean'
+    || !payload.capabilities || typeof payload.capabilities !== 'object' || Array.isArray(payload.capabilities)
+    || Object.keys(payload.capabilities).sort().join(',') !== 'exec,read,write'
+    || payload.capabilities.read !== true || payload.capabilities.write !== false || payload.capabilities.exec !== false) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_OUTPUT_INVALID', 'Node workspace receipt không đúng target hoặc capability read-only.');
+  }
+  return Object.freeze({
+    workspace_id: payload.workspace_id,
+    workspace_generation: payload.workspace_generation,
+    display_name: payload.display_name,
+    capabilities: Object.freeze({ read: true, write: false, exec: false }),
+    replayed: payload.replayed,
+    state: 'registered'
+  });
+}
+
+function parseWorkspaceListResult(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace trả về receipt không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).join(',') !== 'workspaces'
+    || !Array.isArray(payload.workspaces) || payload.workspaces.length > 64) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace inventory không hợp lệ.');
+  }
+  const seen = new Set();
+  const workspaces = payload.workspaces.map((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+      || Object.keys(entry).sort().join(',') !== 'capabilities,display_name,workspace_generation,workspace_id'
+      || typeof entry.display_name !== 'string' || !entry.display_name || entry.display_name.length > 120
+      || !entry.capabilities || typeof entry.capabilities !== 'object' || Array.isArray(entry.capabilities)
+      || Object.keys(entry.capabilities).sort().join(',') !== 'exec,read,write'
+      || entry.capabilities.read !== true || entry.capabilities.write !== false || entry.capabilities.exec !== false) {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace inventory không đúng capability read-only.');
+    }
+    const workspace_id = centralWorkspaceId(entry.workspace_id);
+    const workspace_generation = centralWorkspaceGeneration(entry.workspace_generation);
+    const identity = `${workspace_id}:${workspace_generation}`;
+    if (seen.has(identity)) {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID', 'Node workspace inventory có target trùng.');
+    }
+    seen.add(identity);
+    return Object.freeze({
+      workspace_id,
+      workspace_generation,
+      display_name: entry.display_name,
+      capabilities: Object.freeze({ read: true, write: false, exec: false })
+    });
+  });
+  return Object.freeze(workspaces);
+}
+
+function parseWorkspaceRetirementResult(stdout) {
+  const output = String(stdout || '');
+  if (Buffer.byteLength(output, 'utf8') > MAX_AGENT_OUTPUT_BYTES) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_RETIRE_OUTPUT_INVALID', 'Node workspace trả về dữ liệu vượt giới hạn.');
+  }
+  const lines = output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length !== 1) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_RETIRE_OUTPUT_INVALID', 'Node workspace không trả về đúng một receipt.');
+  }
+  let payload;
+  try { payload = JSON.parse(lines[0]); }
+  catch { throw enrollmentError('CONTROL_PLANE_WORKSPACE_RETIRE_OUTPUT_INVALID', 'Node workspace trả về receipt không hợp lệ.'); }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)
+    || Object.keys(payload).sort().join(',') !== 'capabilities,display_name,replayed,state,workspace_generation,workspace_id'
+    || payload.state !== 'retired' || typeof payload.replayed !== 'boolean'
+    || typeof payload.display_name !== 'string' || !payload.display_name || payload.display_name.length > 120
+    || !payload.capabilities || typeof payload.capabilities !== 'object' || Array.isArray(payload.capabilities)
+    || Object.keys(payload.capabilities).sort().join(',') !== 'exec,read,write'
+    || payload.capabilities.read !== true || payload.capabilities.write !== false || payload.capabilities.exec !== false) {
+    throw enrollmentError('CONTROL_PLANE_WORKSPACE_RETIRE_OUTPUT_INVALID', 'Node workspace retirement receipt không hợp lệ.');
+  }
+  return Object.freeze({
+    workspace_id: centralWorkspaceId(payload.workspace_id),
+    workspace_generation: centralWorkspaceGeneration(payload.workspace_generation),
+    display_name: payload.display_name,
+    capabilities: Object.freeze({ read: true, write: false, exec: false }),
+    replayed: payload.replayed,
+    state: 'retired'
+  });
+}
+
 class ControlPlaneEnrollmentService {
   constructor({ paths, runner = run, environment = process.env } = {}) {
     if (!paths || typeof paths.runtimeMode !== 'function' || typeof paths.portablePython !== 'function'
       || typeof paths.controlPlaneNodeAgent !== 'function' || typeof paths.controlPlaneNodeConfigFile !== 'function'
+      || typeof paths.controlPlaneWorkspaceRegistryFile !== 'function'
       || typeof paths.appRoot !== 'function' || typeof paths.executablePath !== 'function') {
       throw new TypeError('ControlPlaneEnrollmentService requires complete runtime paths.');
     }
@@ -199,6 +353,7 @@ class ControlPlaneEnrollmentService {
     const args = [
       '-I', agent, 'install-read-only-policy-from-context',
       '--config', config,
+      '--workspace-registry', this.paths.controlPlaneWorkspaceRegistryFile(),
       '--context-id', normalizedContextId,
       '--confirm-install',
       '--project-root', this.paths.appRoot(),
@@ -219,6 +374,123 @@ class ControlPlaneEnrollmentService {
     }
     return parseReadOnlyPolicyInstallResult(result?.stdout);
   }
+
+  async registerWorkspace({ workspacePath } = {}) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Đăng ký workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
+    }
+    const canonicalPath = canonicalWorkspacePath(workspacePath);
+    const displayName = workspaceDisplayName(canonicalPath);
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    const config = this.paths.controlPlaneNodeConfigFile();
+    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_WORKSPACE_RUNTIME_MISSING', `${label} đóng gói cho workspace registration không sẵn sàng.`);
+      }
+    }
+    let result;
+    try {
+      result = await this.runner(python, [
+        '-I', agent, 'register-workspace',
+        '--config', config,
+        '--workspace-registry', registry,
+        '--workspace-path', canonicalPath,
+        '--display-name', displayName,
+        '--capability-read',
+        '--project-root', this.paths.appRoot(),
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ], {
+        cwd: this.paths.appRoot(),
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: ENROLLMENT_TIMEOUT_MS
+      });
+    } catch (error) {
+      const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_REGISTRATION_FAILED');
+      throw enrollmentError(code, 'Không thể đăng ký workspace local với Ubuntu.');
+    }
+    return parseWorkspaceRegistrationResult(result?.stdout);
+  }
+
+  async listWorkspaces() {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Danh sách workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
+    }
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    const config = this.paths.controlPlaneNodeConfigFile();
+    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_WORKSPACE_RUNTIME_MISSING', `${label} đóng gói cho workspace inventory không sẵn sàng.`);
+      }
+    }
+    let result;
+    try {
+      result = await this.runner(python, [
+        '-I', agent, 'list-workspaces',
+        '--config', config,
+        '--workspace-registry', registry,
+        '--project-root', this.paths.appRoot(),
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ], {
+        cwd: this.paths.appRoot(),
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: ENROLLMENT_TIMEOUT_MS
+      });
+    } catch (error) {
+      const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_LIST_FAILED');
+      throw enrollmentError(code, 'Không thể đọc inventory workspace local.');
+    }
+    return parseWorkspaceListResult(result?.stdout);
+  }
+
+  async retireWorkspace({ workspaceId, workspaceGeneration } = {}) {
+    if (this.paths.runtimeMode() !== 'packaged') {
+      throw enrollmentError('CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED', 'Thu hồi workspace Ubuntu chỉ chạy từ candidate packaged đã được xác minh.');
+    }
+    const normalizedWorkspaceId = centralWorkspaceId(workspaceId);
+    const normalizedWorkspaceGeneration = centralWorkspaceGeneration(workspaceGeneration);
+    const python = this.paths.portablePython();
+    const agent = this.paths.controlPlaneNodeAgent();
+    const config = this.paths.controlPlaneNodeConfigFile();
+    const registry = this.paths.controlPlaneWorkspaceRegistryFile();
+    for (const [label, file] of [['Python', python], ['node agent', agent]]) {
+      try {
+        if (!fs.statSync(file).isFile()) throw new Error('missing');
+      } catch {
+        throw enrollmentError('CONTROL_PLANE_WORKSPACE_RUNTIME_MISSING', `${label} đóng gói cho workspace retirement không sẵn sàng.`);
+      }
+    }
+    let result;
+    try {
+      result = await this.runner(python, [
+        '-I', agent, 'retire-workspace',
+        '--config', config,
+        '--workspace-registry', registry,
+        '--workspace-id', normalizedWorkspaceId,
+        '--workspace-generation', normalizedWorkspaceGeneration,
+        '--project-root', this.paths.appRoot(),
+        '--node', this.paths.executablePath(),
+        '--runtime-mode', 'packaged'
+      ], {
+        cwd: this.paths.appRoot(),
+        env: safeEnrollmentEnvironment(this.environment),
+        timeoutMs: ENROLLMENT_TIMEOUT_MS
+      });
+    } catch (error) {
+      const code = String(error?.code || 'CONTROL_PLANE_WORKSPACE_RETIRE_FAILED');
+      throw enrollmentError(code, 'Không thể thu hồi workspace local tại Ubuntu.');
+    }
+    return parseWorkspaceRetirementResult(result?.stdout);
+  }
 }
 
 module.exports = {
@@ -226,9 +498,16 @@ module.exports = {
   MAX_AGENT_OUTPUT_BYTES,
   centralServerOrigin,
   centralContextId,
+  centralWorkspaceId,
+  centralWorkspaceGeneration,
+  canonicalWorkspacePath,
+  workspaceDisplayName,
   endpointId,
   safeEnrollmentEnvironment,
   parseEnrollmentResult,
   parseReadOnlyPolicyInstallResult,
+  parseWorkspaceRegistrationResult,
+  parseWorkspaceListResult,
+  parseWorkspaceRetirementResult,
   ControlPlaneEnrollmentService
 };

@@ -26,7 +26,7 @@ from control_plane.http_api import (
 from control_plane.web_ui import WEB_UI_HTML, WEB_UI_JAVASCRIPT
 from control_plane.mcp_facade import _central_lifecycle_state
 from control_plane.node_agent import poll_read_only_once
-from control_plane.store import ControlPlaneStore, SCHEMA_VERSION
+from control_plane.store import ControlPlaneStore, PermissionError, SCHEMA_VERSION
 
 
 class _CommitFailingConnection:
@@ -137,6 +137,30 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertTrue(cookie.startswith(f"{SESSION_COOKIE_NAME}="))
         return cookie, response["csrf_token"]
 
+    def _registered_binding(
+        self,
+        *,
+        owner_id: str,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+        display_name: str,
+    ) -> dict:
+        self.server.store.register_node_workspace(
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+            display_name=display_name,
+            capabilities={"read": True, "write": False, "exec": False},
+        )
+        return self.server.store.create_binding(
+            owner_id=owner_id,
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+            display_name=display_name,
+        )
+
     def test_two_step_enrollment_never_exposes_node_secret_to_operator(self) -> None:
         node_secret = "n" * 40
         credential_hash = hashlib.sha256(
@@ -185,6 +209,67 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(heartbeat["readiness"], "unknown")
         self.assertEqual(heartbeat["mcp_server_instance_id"], "mcp-server-http-0001")
+
+    def test_node_workspace_retirement_requires_node_auth_and_closes_exact_context(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-http-retire-0001",
+            endpoint_id="endpoint-http-retire-0001",
+            display_name="HTTP retire node",
+        )
+        registration_payload = {
+            "workspace_id": "workspace-http-retire-0001",
+            "workspace_generation": "generation-http-retire-0001",
+            "display_name": "HTTP retire workspace",
+            "capabilities": {"read": True, "write": False, "exec": False},
+        }
+        status, registration = self._post(
+            "/v1/nodes/device-http-retire-0001/workspace-registrations",
+            registration_payload,
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 201)
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id=registration_payload["workspace_id"],
+            workspace_generation=registration_payload["workspace_generation"],
+            display_name=registration_payload["display_name"],
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        retirement_payload = {
+            "workspace_id": registration_payload["workspace_id"],
+            "workspace_generation": registration_payload["workspace_generation"],
+        }
+        status, forbidden = self._post(
+            "/v1/nodes/device-http-retire-0001/workspace-registrations/retire",
+            retirement_payload,
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        status, retired = self._post(
+            "/v1/nodes/device-http-retire-0001/workspace-registrations/retire",
+            retirement_payload,
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(retired["workspace_id"], registration["workspace_id"])
+        self.assertIsInstance(retired["retired_at_ms"], int)
+        self.assertFalse(retired["replayed"])
+        self.assertNotIn("path", json.dumps(retired))
+        closed = self.server.store.context(owner_id="owner_default", context_id=context["context_id"])
+        self.assertIsNotNone(closed["closed_at_ms"])
+        status, replayed = self._post(
+            "/v1/nodes/device-http-retire-0001/workspace-registrations/retire",
+            retirement_payload,
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(replayed["replayed"])
 
     def test_browser_ui_approves_only_selected_pending_enrollment_with_csrf(self) -> None:
         node_secret = "b" * 40
@@ -238,6 +323,177 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(self.server.store.health()["counts"]["contexts"], 0)
         self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
 
+    def test_browser_ui_decides_opaque_oauth_link_requests_with_csrf(self) -> None:
+        issuer = "https://identity.example.test/tenant-browser"
+        alice_subject = "alice-browser@example.test"
+        bob_subject = "bob-browser@example.test"
+        alice = self.server.store.resolve_or_request_oauth_principal(
+            owner_id="owner_default",
+            issuer=issuer,
+            subject=alice_subject,
+        )["link_request"]
+        bob = self.server.store.resolve_or_request_oauth_principal(
+            owner_id="owner_default",
+            issuer=issuer,
+            subject=bob_subject,
+        )["link_request"]
+        cookie, csrf_token = self._ui_login()
+
+        status, overview, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            {item["link_request_id"] for item in overview["oauth_link_requests"]},
+            {alice["link_request_id"], bob["link_request_id"]},
+        )
+        overview_text = json.dumps(overview)
+        self.assertNotIn(issuer, overview_text)
+        self.assertNotIn(alice_subject, overview_text)
+        self.assertNotIn(bob_subject, overview_text)
+
+        status, forbidden, _headers = self._request_with_headers(
+            f"/v1/ui/oauth-link-requests/{alice['link_request_id']}/approve",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+
+        headers = {"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token}
+        status, approved, _headers = self._request_with_headers(
+            f"/v1/ui/oauth-link-requests/{alice['link_request_id']}/approve",
+            method="POST",
+            payload={},
+            headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(approved["link_request"]["state"], "approved")
+        self.assertEqual(approved["principal"]["state"], "enabled")
+        self.assertEqual(
+            self.server.store.resolve_oauth_principal(issuer=issuer, subject=alice_subject),
+            {"principal_id": approved["principal"]["principal_id"], "owner_id": "owner_default"},
+        )
+
+        status, rejected, _headers = self._request_with_headers(
+            f"/v1/ui/oauth-link-requests/{bob['link_request_id']}/reject",
+            method="POST",
+            payload={},
+            headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(rejected["state"], "rejected")
+        self.assertIsNone(rejected["principal_id"])
+        self.assertNotIn(issuer, json.dumps(rejected))
+        status, after, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        principal = after["oauth_principals"][0]
+        self.assertEqual(principal["principal_id"], approved["principal"]["principal_id"])
+        self.assertEqual(principal["state"], "enabled")
+        status, forbidden_revoke, _headers = self._request_with_headers(
+            f"/v1/ui/oauth-principals/{principal['principal_id']}/revoke",
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden_revoke["error"]["code"], "FORBIDDEN")
+        status, revoked, _headers = self._request_with_headers(
+            f"/v1/ui/oauth-principals/{principal['principal_id']}/revoke",
+            method="POST",
+            payload={},
+            headers=headers,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(revoked["state"], "revoked")
+        with self.assertRaises(PermissionError):
+            self.server.store.resolve_oauth_principal(issuer=issuer, subject=alice_subject)
+        self.assertIn("oauth-link-requests", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("oauth-principals", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("Liên kết tài khoản OAuth", WEB_UI_HTML.decode("utf-8"))
+
+    def test_browser_ui_decides_patch_permission_request_with_origin_and_csrf(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-browser-permission-0001",
+            endpoint_id="endpoint-browser-permission-0001",
+            display_name="Browser permission node",
+        )
+        self.server.store.register_node_workspace(
+            device_id=node["device_id"],
+            workspace_id="workspace-browser-permission-0001",
+            workspace_generation="generation-browser-permission-0001",
+            display_name="Browser permission workspace",
+            capabilities={"read": True, "write": True, "exec": False},
+        )
+        binding = self.server.store.create_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-browser-permission-0001",
+            workspace_generation="generation-browser-permission-0001",
+            display_name="Browser permission workspace",
+        )
+        principal = self.server.store.link_oauth_principal(
+            owner_id="owner_default",
+            issuer="https://identity.example.test/tenant-browser-permission",
+            subject="browser-permission-subject",
+        )
+        request = self.server.store.request_mcp_patch_permission(
+            owner_id="owner_default",
+            principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"],
+            path="src/fixture.txt",
+            preimage_sha256="a" * 64,
+            patch_sha256="b" * 64,
+            validation_profile="targeted",
+            idempotency_key="browser-permission-request-key-0001",
+            facade_contract={
+                key: self.server.mcp_facade.contract[key]
+                for key in ("schema_version", "profile", "sha256")
+            },
+        )
+        cookie, csrf_token = self._ui_login()
+
+        status, overview, _headers = self._request_with_headers(
+            "/v1/ui/overview",
+            method="GET",
+            headers={"Cookie": cookie},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(overview["permission_requests"][0]["permission_request_id"], request["permission_request_id"])
+        self.assertEqual(overview["permission_requests"][0]["path"], "src/fixture.txt")
+        self.assertNotIn("action_id", json.dumps(overview["permission_requests"][0]))
+
+        url = f"/v1/ui/permission-requests/{request['permission_request_id']}/approve"
+        status, forbidden, _headers = self._request_with_headers(
+            url,
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        self.assertEqual(self.server.store.list_mcp_permission_requests(owner_id="owner_default")[0]["state"], "pending")
+
+        status, approved, _headers = self._request_with_headers(
+            url,
+            method="POST",
+            payload={},
+            headers={"Cookie": cookie, "Origin": self.web_origin, CSRF_HEADER_NAME: csrf_token},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(approved["state"], "approved")
+        self.assertEqual(self.server.store.health()["counts"]["actions"], 0)
+        self.assertIn("permission-requests", WEB_UI_JAVASCRIPT.decode("utf-8"))
+        self.assertIn("Yêu cầu quyền patch", WEB_UI_HTML.decode("utf-8"))
+
     def test_browser_operator_can_create_and_revoke_bounded_binding_context_with_csrf(self) -> None:
         node = self.server.store.enroll_node(
             owner_id="owner_default",
@@ -245,6 +501,39 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-browser-binding-0001",
             display_name="Browser binding node",
         )
+        registration_payload = {
+            "workspace_id": "workspace-browser-binding-0001",
+            "workspace_generation": "generation-browser-binding-0001",
+            "display_name": "Browser binding workspace",
+            "capabilities": {"read": True, "write": False, "exec": False},
+        }
+        status, unauthenticated_registration = self._post(
+            f"/v1/nodes/{node['device_id']}/workspace-registrations",
+            registration_payload,
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(unauthenticated_registration["error"]["code"], "FORBIDDEN")
+        status, registration = self._post(
+            f"/v1/nodes/{node['device_id']}/workspace-registrations",
+            registration_payload,
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(registration["workspace_id"], registration_payload["workspace_id"])
+        self.assertEqual(registration["capabilities"], registration_payload["capabilities"])
+        self.assertNotIn("path", json.dumps(registration))
+        status, registrations = self._get(
+            f"/v1/nodes/{node['device_id']}/workspace-registrations",
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(registrations["workspace_registrations"], [{
+            **{key: registration[key] for key in (
+                "device_id", "workspace_id", "workspace_generation", "display_name", "capabilities",
+                "registered_at_ms", "retired_at_ms",
+            )},
+        }])
+        self.assertNotIn(node["node_secret"], json.dumps(registrations))
         cookie, csrf_token = self._ui_login()
         payload = {
             "device_id": node["device_id"],
@@ -321,7 +610,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-http-quarantine-0001",
             display_name="HTTP quarantine node",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-http-quarantine-0001",
@@ -418,7 +707,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-policy-template-0002",
             display_name="Other policy template node",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=first["device_id"],
             workspace_id="workspace-policy-template-0001",
@@ -467,6 +756,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertTrue(health["ok"])
         self.assertEqual(health["sqlite_integrity"], "ok")
         self.assertEqual(health["schema_version"], SCHEMA_VERSION)
+        self.assertEqual(health["mcp_authentication_mode"], "legacy_context_grant")
         self.assertEqual(health["admission_mode"], "open")
         self.assertEqual(health["declared_source_revision"], "a" * 40)
         self.assertEqual(health["service_instance_id"], self.server.service_instance_id)
@@ -486,7 +776,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-mcp-ingress-001",
             display_name="MCP ingress fixture",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-mcp-ingress-001",
@@ -607,6 +897,13 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             self.assertIn("textContent", javascript)
             self.assertNotIn("localStorage", javascript)
             self.assertNotIn("sessionStorage", javascript)
+            self.assertIn("function nodeReadiness", javascript)
+            self.assertIn("không coi executor sẵn sàng", javascript)
+            self.assertIn("không cấp quyền task", javascript)
+        self.assertIn("binding-workspace-registration", javascript)
+        self.assertIn("workspace-registrations-body", javascript)
+        self.assertIn("mcp-authentication-mode", javascript)
+        self.assertNotIn("binding-workspace-id", javascript)
         self.assertNotIn(self.operator_token, WEB_UI_JAVASCRIPT.decode("utf-8"))
         status, missing_asset = self._get("/assets/not-allowed.js")
         self.assertEqual(status, 404)
@@ -629,6 +926,8 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(wrong_origin["error"]["code"], "FORBIDDEN")
 
     def test_embedded_operator_ui_javascript_parses_before_it_is_served(self) -> None:
+        self.assertIn("effect đã áp — chờ proof/semantic acceptance local".encode("utf-8"), WEB_UI_JAVASCRIPT)
+        self.assertIn("patch có thể đã áp tại Windows; phải đối soát local, không retry".encode("utf-8"), WEB_UI_JAVASCRIPT)
         completed = subprocess.run(
             ["node", "--check", "-"],
             input=WEB_UI_JAVASCRIPT,
@@ -645,7 +944,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-web-ui-0001",
             display_name="Web UI Windows node",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-web-ui-0001",
@@ -711,6 +1010,19 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(headers["Cache-Control"], "no-store")
         self.assertEqual(overview["observation_kind"], "central_control_plane_read_model")
         self.assertEqual([item["device_id"] for item in overview["nodes"]], [node["device_id"]])
+        self.assertEqual(len(overview["workspace_registrations"]), 1)
+        registration = overview["workspace_registrations"][0]
+        self.assertEqual({key: registration[key] for key in (
+            "device_id", "workspace_id", "workspace_generation", "display_name", "capabilities", "retired_at_ms",
+        )}, {
+            "device_id": node["device_id"],
+            "workspace_id": "workspace-web-ui-0001",
+            "workspace_generation": "generation-web-ui-0001",
+            "display_name": "Web UI workspace",
+            "capabilities": {"read": True, "write": False, "exec": False},
+            "retired_at_ms": None,
+        })
+        self.assertIsInstance(registration["registered_at_ms"], int)
         self.assertEqual(overview["work_requests"][0]["context_id"], context["context_id"])
         self.assertEqual([item["action_id"] for item in overview["actions"]], [action["action_id"]])
         self.assertEqual(overview["actions"][0]["delivery_state"], "settled")
@@ -725,6 +1037,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertNotIn("private local handle", overview_text)
         self.assertNotIn("receipt payload", overview_text)
         self.assertNotIn(self.operator_token, overview_text)
+        self.assertNotIn(node["node_secret"], overview_text)
 
         status, rejected, _headers = self._request_with_headers(
             "/v1/maintenance/admission",
@@ -826,7 +1139,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-browser-canary-0001",
             display_name="Browser canary node",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-browser-canary-0001",
@@ -898,7 +1211,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-browser-flow-0001",
             display_name="Browser flow node",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-browser-flow-0001",
@@ -1038,6 +1351,42 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 429)
         self.assertEqual(response["error"]["code"], "RATE_LIMITED")
 
+    def test_operator_login_rejects_non_ascii_wrong_type_and_invalid_length_without_internal_error(self) -> None:
+        # Login throttling is covered independently above. Reset the
+        # in-memory fixture between malformed credential shapes so this test
+        # proves all validation branches instead of treating its own earlier
+        # failures as a rate-limit result.
+        invalid_values = (
+            "",
+            "x" * 513,
+            "đ" * 32,
+            ["x" * 40],
+            {"token": "x" * 40},
+            None,
+        )
+        for value in invalid_values:
+            with self.subTest(value_type=type(value).__name__):
+                status, response, _headers = self._request_with_headers(
+                    "/v1/ui/login",
+                    method="POST",
+                    payload={"operator_token": value},
+                    headers={"Origin": self.web_origin},
+                )
+                self.assertEqual(status, 403)
+                self.assertEqual(response["error"]["code"], "FORBIDDEN")
+                self.assertEqual(response["error"]["message"], "operator authentication failed.")
+                self.assertNotIn("đ", json.dumps(response, ensure_ascii=False))
+                assert self.server.operator_sessions is not None
+                self.server.operator_sessions._login_attempts.clear()
+
+    def test_server_refuses_non_ascii_operator_token_at_startup(self) -> None:
+        with self.assertRaisesRegex(ValueError, "printable ASCII"):
+            ControlPlaneHttpServer(
+                ("127.0.0.1", 0),
+                ControlPlaneStore(Path(self.tempdir.name) / "unicode-operator.sqlite3"),
+                "đ" * 32,
+            )
+
     def test_package_source_fingerprint_binds_names_and_file_bytes_without_paths(self) -> None:
         package_root = Path(self.tempdir.name) / "fingerprint-package"
         package_root.mkdir()
@@ -1087,7 +1436,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-mcp-commit-failure-0001",
             display_name="MCP commit failure fixture",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-mcp-commit-failure-0001",
@@ -1191,7 +1540,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-mcp-wire-001",
             display_name="MCP wire fixture",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-mcp-wire-001",
@@ -1470,7 +1819,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         status, rejected, _ = self._modern_mcp_post(grant, call)
         self.assertEqual(status, 400)
         self.assertEqual(rejected["error"]["data"]["code"], "FORBIDDEN")
-        call["params"]["arguments"]["context_id"] = grant["context_id"]
+        call["params"]["arguments"] = {}
         call["params"]["name"] = "exec_command"
         status, unavailable, _ = self._modern_mcp_post(grant, call)
         self.assertEqual(status, 200)
@@ -1522,7 +1871,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-mcp-facade-001",
             display_name="MCP facade canary",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-mcp-facade-001",
@@ -1582,6 +1931,17 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             ],
         )
         self.assertTrue(all(tool["inputSchema"]["additionalProperties"] is False for tool in tools))
+        workspace_tool = next(tool for tool in tools if tool["name"] == "workspace_context")
+        self.assertEqual(workspace_tool["_meta"]["control_plane"]["capability_state"], "implemented")
+        self.assertEqual(
+            workspace_tool["_meta"]["control_plane"]["implemented_operations"],
+            ["status", "request_read_only"],
+        )
+        for tool in tools:
+            if tool["name"] == "workspace_context":
+                continue
+            self.assertEqual(tool["inputSchema"], {"type": "object", "additionalProperties": False, "properties": {}})
+            self.assertEqual(tool["_meta"]["control_plane"]["capability_state"], "unavailable")
 
         discover = {
             "jsonrpc": "2.0",
@@ -1767,7 +2127,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(wrong_context["error"]["data"]["code"], "FORBIDDEN")
 
         call["id"] = "call-002"
-        call["params"]["arguments"]["context_id"] = context["context_id"]
+        call["params"]["arguments"] = {}
         call["params"]["name"] = "exec_command"
         status, rejected = self._post("/mcp", call, mcp_authorization)
         self.assertEqual(status, 200)
@@ -1799,7 +2159,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-mcp-grant-http-001",
             display_name="MCP grant HTTP canary",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-mcp-grant-http-001",
@@ -1898,7 +2258,7 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
             endpoint_id="endpoint-observation-canary",
             display_name="Observation Canary",
         )
-        binding = self.server.store.create_binding(
+        binding = self._registered_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
             workspace_id="workspace-observation-canary",

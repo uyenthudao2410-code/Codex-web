@@ -30,6 +30,28 @@ const {
   digest: controlPlaneBridgeDigest,
   workspaceSummaryDigest
 } = require('./controlPlaneReadOnlyBridge');
+const {
+  BRIDGE_CLIENT_ID: FILE_READ_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: FILE_READ_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: FILE_READ_ACTION_TOOL_NAME,
+  LOCAL_TOOL_NAME: FILE_READ_LOCAL_TOOL_NAME,
+  OPERATION_KIND: FILE_READ_OPERATION_KIND,
+  digest: fileReadProjectionDigest,
+  normaliseFileReadResult,
+  fileContentDigest
+} = require('./controlPlaneFileReadBridge');
+const {
+  BRIDGE_CLIENT_ID: APPROVED_PATCH_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: APPROVED_PATCH_ACTION_TOOL_NAME,
+  LOCAL_TOOL_NAME: APPROVED_PATCH_LOCAL_TOOL_NAME,
+  OPERATION_KIND: APPROVED_PATCH_OPERATION_KIND,
+  digest: approvedPatchProjectionDigest,
+  resolveExactRegisteredPatchTarget,
+  verifyExactRegisteredPatchPostimage,
+  normaliseApprovedPatchWorkflowResult,
+  normaliseApprovedPatchResult
+} = require('./controlPlaneApprovedPatchBridge');
 const { readControlPlaneRouteEvidence } = require('./controlPlaneRouteEvidence');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -114,6 +136,19 @@ const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
 const EXACT_STALE_RUN_ID_PATTERN = /^[a-f0-9]{32}$/;
 const EXACT_STALE_RUN_MAX_IDS = 64;
 const CONTROL_PLANE_READ_ONLY_TIMEOUT_MS = 15_000;
+// A bounded file read seeds an internal, task-scoped local workspace binding
+// and then performs the exact read. Keep each local request below the Python
+// bridge's default 20-second subprocess window; neither timeout is an
+// invitation to retry a prepared action.
+const CONTROL_PLANE_FILE_READ_TIMEOUT_MS = 8_000;
+// JSON escaping plus envelope metadata can exceed the 16 KiB file-content
+// cap, but a local Coding MCP response for this lane must remain small.
+const MAX_FILE_READ_RESPONSE_BYTES = 96 * 1024;
+// A write stays below the node-agent subprocess deadline and carries a
+// durable prepared marker before this local request begins.  Timeout is never
+// a reason to repeat a patch; its caller must settle UNKNOWN and reconcile.
+const CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS = 12_000;
+const MAX_APPROVED_PATCH_RESPONSE_BYTES = 96 * 1024;
 
 function exactStaleRunMaintenanceReason(value) {
   if (typeof value !== 'string' || !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return false;
@@ -213,10 +248,12 @@ const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
   'invalid_json'
 ]);
 // A retained canonical ledger census is intentionally stronger than a cheap
-// liveness probe and can exceed three seconds on a healthy workspace. Keep the
-// activation observation bounded without turning a valid census into a false
-// MCP timeout. The separate health probe remains short and independently live.
-const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 15_000;
+// liveness probe. A real Windows workspace with retained orchestration evidence
+// took almost 19 seconds while still producing an immutable, integrity-clean
+// census. Keep the observation bounded below the 60-second activation fence,
+// without turning that valid census into a false MCP timeout. The separate
+// health probe remains short and independently live.
+const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 30_000;
 // The MCP health endpoint is intentionally lock-light, but it still runs in
 // the same Python process as workspace tools.  Under a real connector load the
 // interpreter may not get scheduled within a 1.2s probe window even though the
@@ -1466,6 +1503,523 @@ class RuntimeOrchestrator {
       })));
       request.end(body);
     });
+  }
+
+  async controlPlaneBoundedFileRead(admission = {}) {
+    // This local method owns the Coding MCP token and connector attestation.
+    // The central action supplies only an already-sealed relative path/range;
+    // it never receives this token, the absolute workspace root, or raw MCP
+    // response fields that are not in the bounded receipt projection.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(actionId)
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(attemptId)
+      || !/^[a-f0-9]{64}$/.test(policySha256)
+      || admission.tool_name !== FILE_READ_ACTION_TOOL_NAME
+      || admission.operation !== 'read_file'
+      || !expectedWorkspace
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_id || '').trim())
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_generation || '').trim())
+      || !facadeContract
+      || typeof facadeContract !== 'object'
+      || Array.isArray(facadeContract)
+      || Object.keys(facadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || !Number.isSafeInteger(facadeContract.schema_version)
+      || facadeContract.schema_version < 1
+      || typeof facadeContract.profile !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      || typeof facadeContract.sha256 !== 'string'
+      || !/^[a-f0-9]{64}$/.test(facadeContract.sha256)
+      || typeof admission.path !== 'string'
+      || !Number.isSafeInteger(admission.start_line)
+      || !Number.isSafeInteger(admission.max_lines)
+      || !Number.isSafeInteger(admission.max_bytes)) {
+      throw Object.assign(new Error('Control-plane bounded file-read admission is invalid.'), {
+        code: 'CONTROL_PLANE_FILE_READ_ADMISSION_INVALID'
+      });
+    }
+    const settings = this.settingsStore.load();
+    // Do not use settings.workspace as the authority for a remote task. The
+    // current UI selection is global and can change while another task is in
+    // flight. Instead, seed an opaque, action-specific MCP-2026 task context
+    // with the locally resolved registered root, then reuse that same binding
+    // for the read. The absolute root remains inside this local request only.
+    const localTaskContextId = `cpfr_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_READ_ONLY_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane file-read bridge.'), {
+        code: 'CONTROL_PLANE_FILE_READ_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: FILE_READ_BRIDGE_CLIENT_ID,
+      clientType: FILE_READ_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      path: admission.path,
+      start_line: admission.start_line,
+      max_lines: admission.max_lines,
+      max_bytes: admission.max_bytes,
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-file-read-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-file-read-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': FILE_READ_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': FILE_READ_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_FILE_READ_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_FILE_READ_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP file-read response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_FILE_READ_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the file-read bridge.'), {
+              code: 'CONTROL_PLANE_FILE_READ_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the file-read bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_FILE_READ_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane file-read bridge timed out.'),
+        { code: 'CONTROL_PLANE_FILE_READ_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_FILE_READ_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrapArguments = {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    };
+    const readArguments = {
+      task_context_id: localTaskContextId,
+      path: admission.path,
+      start_line: admission.start_line,
+      max_lines: admission.max_lines,
+      max_bytes: admission.max_bytes,
+      encoding: 'utf-8'
+    };
+    const bootstrap = await callLocalTool(FILE_READ_ACTION_TOOL_NAME, bootstrapArguments, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested local workspace.'), {
+        code: 'CONTROL_PLANE_FILE_READ_WORKSPACE_MISMATCH'
+      });
+    }
+    const structured = await callLocalTool(FILE_READ_LOCAL_TOOL_NAME, readArguments, 'read');
+    const localHandle = `cp_fr_${controlPlaneBridgeDigest({
+      policy_sha256: policySha256,
+      action_id: actionId,
+      attempt_id: attemptId,
+      process_instance_id: attestation.processInstanceId,
+      server_instance_id: attestation.serverInstanceId,
+      contract_sha256: attestation.contractSha256,
+      path: admission.path,
+      facade_contract: facadeContract
+    }).slice(0, 48)}`;
+    const fileProjection = {
+      path: structured.path,
+      content: structured.content,
+      content_sha256: typeof structured.content === 'string' ? fileContentDigest(structured.content) : '',
+      encoding: structured.encoding,
+      start_line: structured.start_line,
+      end_line: structured.end_line,
+      total_lines: structured.total_lines,
+      total_bytes: structured.total_bytes,
+      bytes_read: structured.bytes_read,
+      truncated: structured.truncated,
+      next_start_line: structured.next_start_line == null ? null : structured.next_start_line
+    };
+    const candidate = {
+      schema_version: 1,
+      operation_kind: FILE_READ_OPERATION_KIND,
+      local_handle: localHandle,
+      action_id: actionId,
+      attempt_id: attemptId,
+      file_accessed: true,
+      actor: { client_id: FILE_READ_BRIDGE_CLIENT_ID, client_type: FILE_READ_BRIDGE_CLIENT_TYPE },
+      policy_sha256: policySha256,
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      file: fileProjection,
+      response_sha256: fileReadProjectionDigest(fileProjection)
+    };
+    try {
+      // Run content/path/identity validation before any bytes leave the local
+      // MCP process boundary. In particular, detected secrets are rejected
+      // without becoming a node receipt or a central payload.
+      return normaliseFileReadResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_FILE_READ_RESULT_INVALID' });
+    }
+  }
+
+  async controlPlaneApprovedPatch(admission = {}) {
+    // This method owns the local Coding MCP credential and connector
+    // attestation.  The central payload can name one reviewed exact patch but
+    // cannot choose an absolute root, a local task context, or a general
+    // command.  Revalidate every identity/digest again even though Recovery
+    // Host has already admitted the request.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    const hash = (value) => String(value || '').trim().toLowerCase();
+    const validHash = (value) => /^[a-f0-9]{64}$/.test(value);
+    const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(value);
+    if (!validActionIdentifier(actionId)
+      || !validActionIdentifier(attemptId)
+      || !validHash(policySha256)
+      || admission.tool_name !== APPROVED_PATCH_ACTION_TOOL_NAME
+      || admission.operation !== APPROVED_PATCH_LOCAL_TOOL_NAME
+      || admission.validation_profile !== 'targeted'
+      || !expectedWorkspace
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_id || '').trim())
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_generation || '').trim())
+      || !validActionIdentifier(String(admission.permission_request_id || '').trim())
+      || !validHash(hash(admission.permission_digest))
+      || !validHash(hash(admission.intent_digest))
+      || !validHash(hash(admission.preimage_sha256))
+      || !validHash(hash(admission.patch_sha256))
+      || !validHash(hash(admission.postimage_sha256))
+      || !Number.isSafeInteger(admission.postimage_bytes) || admission.postimage_bytes < 0
+      || !Number.isSafeInteger(admission.max_file_bytes) || admission.max_file_bytes < 1
+      || admission.postimage_bytes > admission.max_file_bytes
+      || typeof admission.patch_envelope !== 'string'
+      || Buffer.byteLength(admission.patch_envelope, 'utf8') < 1
+      || Buffer.byteLength(admission.patch_envelope, 'utf8') > 32 * 1024
+      || !facadeContract
+      || typeof facadeContract !== 'object'
+      || Array.isArray(facadeContract)
+      || Object.keys(facadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || !Number.isSafeInteger(facadeContract.schema_version)
+      || facadeContract.schema_version < 1
+      || typeof facadeContract.profile !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      || !validHash(hash(facadeContract.sha256))
+      || typeof admission.path !== 'string') {
+      throw Object.assign(new Error('Control-plane approved-patch admission is invalid.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_ADMISSION_INVALID'
+      });
+    }
+
+    // Verify the existing file's exact bytes and its non-reparse location
+    // before a request crosses into the local MCP server. The local parser
+    // repeats the preimage check at commit time; this first check classifies a
+    // stale user edit as a typed pre-effect rejection.
+    resolveExactRegisteredPatchTarget(expectedWorkspace, admission);
+
+    const settings = this.settingsStore.load();
+    const localTaskContextId = `cpap_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const localIdempotencyKey = `cpap_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      patch_sha256: hash(admission.patch_sha256),
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane approved-patch bridge.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: APPROVED_PATCH_BRIDGE_CLIENT_ID,
+      clientType: APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      path: admission.path,
+      preimage_sha256: hash(admission.preimage_sha256),
+      patch_sha256: hash(admission.patch_sha256),
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-approved-patch-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-approved-patch-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': APPROVED_PATCH_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_APPROVED_PATCH_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP approved-patch response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the approved-patch bridge.'), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the approved-patch bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane approved-patch bridge timed out.'),
+        { code: 'CONTROL_PLANE_APPROVED_PATCH_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_APPROVED_PATCH_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrap = await callLocalTool('workspace_context', {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    }, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested local workspace.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_WORKSPACE_MISMATCH'
+      });
+    }
+    // Route the exact central mutation through the existing local workflow
+    // primitive.  This produces canonical RUN/WAVE/idempotency evidence in
+    // the local ledger.  An exact file patch does not spawn an OS process, so
+    // do not invent a managed-process Job or treat a PID as authorization.
+    const structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {
+      task_context_id: localTaskContextId,
+      idempotency_key: localIdempotencyKey,
+      workflow: 'custom',
+      phase: 'execute',
+      execution_mode: 'mcp_only',
+      execution_route: 'deterministic',
+      objective: 'Apply one owner-approved exact local patch.',
+      path: expectedWorkspace,
+      patch: admission.patch_envelope,
+      dry_run: false,
+      verification: 'none',
+      include_diff: false
+    }, 'workflow');
+    const localWorkflow = normaliseApprovedPatchWorkflowResult(structured, {
+      path: admission.path,
+      idempotency_key: localIdempotencyKey
+    });
+    const postimage = verifyExactRegisteredPatchPostimage(expectedWorkspace, admission);
+    const file = {
+      path: admission.path,
+      preimage_sha256: hash(admission.preimage_sha256),
+      postimage_sha256: postimage.postimage_sha256,
+      bytes_written: postimage.postimage_bytes
+    };
+    const candidate = {
+      schema_version: 1,
+      operation_kind: APPROVED_PATCH_OPERATION_KIND,
+      local_handle: `cp_ap_${controlPlaneBridgeDigest({
+        policy_sha256: policySha256,
+        action_id: actionId,
+        attempt_id: attemptId,
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        contract_sha256: attestation.contractSha256,
+        local_task_context_id: localTaskContextId,
+        orchestration_run_id: localWorkflow.run_id,
+        orchestration_wave_id: localWorkflow.wave_id,
+        idempotency_request_hash: localWorkflow.idempotency_request_hash,
+        preimage_sha256: file.preimage_sha256,
+        postimage_sha256: file.postimage_sha256,
+        facade_contract: facadeContract
+      }).slice(0, 48)}`,
+      action_id: actionId,
+      attempt_id: attemptId,
+      patch_applied: true,
+      // The local workflow is intentionally still ACCEPTING here. The
+      // central approval permitted this exact effect, but cannot serve as the
+      // local semantic proof or controller acceptance for the RUN/WAVE.
+      local_semantic_acceptance: localWorkflow.local_semantic_acceptance,
+      actor: { client_id: APPROVED_PATCH_BRIDGE_CLIENT_ID, client_type: APPROVED_PATCH_BRIDGE_CLIENT_TYPE },
+      policy_sha256: policySha256,
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      file,
+      response_sha256: approvedPatchProjectionDigest(file)
+    };
+    try {
+      // This final allowlist deliberately omits the raw patch, local root,
+      // Coding MCP response, and local idempotency key from any node receipt.
+      return normaliseApprovedPatchResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_APPROVED_PATCH_RESULT_INVALID' });
+    }
   }
 
   async recordExecutionControlCenterProgress(observation = {}) {

@@ -983,19 +983,46 @@ function registerIpc() {
       deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
     });
   }));
-  secureHandle('control-plane:install-read-only-policy', (event, request) => invokeSafely(async () => {
-    // The node agent re-authenticates directly to Ubuntu with its local node
-    // credential. The renderer never receives that credential or an operator
-    // bearer, and a local click is still required for every install/replace.
+  secureHandle('control-plane:register-workspace', (event, request) => invokeSafely(async () => {
+    // This records only an opaque workspace identity/generation and a
+    // read-only capability inventory with Ubuntu.  The selected local path is
+    // canonicalized by the node agent and never sent to Ubuntu, while this
+    // action neither changes the global active workspace nor creates a task
+    // binding, context, policy, or write/exec authority.
     assertManagerIpc(event);
     if (settings.load().executionRole !== 'central_executor') {
-      throw Object.assign(new Error('Read-only policy Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
-        code: 'CONTROL_PLANE_POLICY_ROLE_REQUIRED'
+      throw Object.assign(new Error('Đăng ký workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
       });
     }
-    return controlPlaneEnrollment.installReadOnlyPolicy({
-      contextId: request?.contextId,
-      replaceExisting: request?.replaceExisting === true
+    return controlPlaneEnrollment.registerWorkspace({ workspacePath: request?.workspacePath });
+  }));
+  secureHandle('control-plane:list-workspaces', (event) => invokeSafely(async () => {
+    // This reads the node-private, path-free inventory through the packaged
+    // agent. It does not call Ubuntu, create a binding, or imply task
+    // authority; it only lets the local owner select a registered root to
+    // retire deliberately.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Danh sách workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.listWorkspaces();
+  }));
+  secureHandle('control-plane:retire-workspace', (event, request) => invokeSafely(async () => {
+    // Retirement is an exact opaque identity/generation operation. The node
+    // retains its local registry until the central service confirms the
+    // retirement receipt, so a lost response can be retried safely.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Thu hồi workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.retireWorkspace({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration
     });
   }));
   secureHandle('workspace:switch', (_event, workspace) => invokeSafely(() => orchestrator.switchWorkspace(workspace)));
