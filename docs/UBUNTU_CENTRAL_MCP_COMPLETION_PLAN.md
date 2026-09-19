@@ -2297,3 +2297,29 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   `mcp_exec_intents`, `mcp_exec_stop_requests`, `mcp_artifact_intents`) và cột
   `mcp_permission_requests.task_id`. Đây là proof migration trên bản sao, không
   phải rollout live.
+
+### Receipt rollout live — 19-09-2026, central lên 528035f (node canary còn chờ)
+
+- Quyền owner đầy đủ đã được cho; triển khai theo C7, admission `open` →
+  `recovery` trước migration, backup verified
+  `backups/control-plane-pre19-rollback.sqlite3` (sha256 `4ae0bfa6...`, schema 10).
+- Release `codex-control-plane-528035f...` build từ HEAD sạch, verify pass, cài vào
+  `releases/`, symlink `current` + drop-in revision/hash trỏ candidate.
+- Sự cố đã gặp và sửa đúng: service crash-loop vì `control-plane.env` còn giữ
+  `EXPECTED_PACKAGE_SOURCE_SHA256` cũ và **env file thắng drop-in** lúc runtime
+  (đã chứng minh bằng probe). Sửa 2 dòng revision/hash trong env file (giữ token),
+  service lên ngay. Bài học: `systemctl show` hiện giá trị drop-in nhưng process
+  nhận giá trị env file — phải verify bằng probe runtime.
+- Sau restart: `active`, `/healthz` ok, integrity `ok`, **schema 19**, counts giữ
+  nguyên (2 nodes, 1 binding, 19 contexts, 16 actions, 13 receipts, 10 unknown đã
+  quarantine), fingerprint == manifest, revision `528035f`, legacy grant mode.
+  Migration live 10 → 19 thành công, không mất dữ liệu.
+- Tunnel restart xong, `active`, đăng ký tunnel `Ubuntu-Central-MCP` bình thường;
+  `readyz` 503 vì probe MCP bị `Forbidden` — không phải hồi quy: 0 grant/context
+  sống từ trước rollout nên probe pilot hết hạn vẫn fail như cũ. Cần grant/discovery
+  mới từ ChatGPT để xanh lại.
+- Admission đã mở lại theo quyết định owner (không còn inflight work, health xanh).
+  Legacy contract đổi 5/v4 → 6/v5 theo nhánh quarantine nên client cần discovery lại.
+- Còn chờ phía client/node: node dispatch canary (cả hai node offline — heartbeat
+  cũ nhất 31h/4.8 ngày), strict rediscovery từ ChatGPT, OAuth khi có IdP (D1/D2),
+  soak 24h trên build này.
