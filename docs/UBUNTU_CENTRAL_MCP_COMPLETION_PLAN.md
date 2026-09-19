@@ -2412,3 +2412,22 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   candidate về `E:\Github` (repo private, anonymous bị từ chối); (2) quyết định
   acceptance trên mã nguồn exact có proof thật, sau đó full-clean activation →
   strict_ready → canary đọc/sửa/test/stop.
+
+### Receipt acceptance + census fix — 20-09-2026, intent activation đang chạy
+
+- Owner đã duyệt ("đồng ý nghiệm thu", rồi "đồng ý mở rộng" cho 4 file runtime).
+  Checkpoint `4f823a40` (10 files) rồi `f3e93eff` (14 files, giữ dòng cũ) rồi
+  `bc1e3e84` (14 files + ledger schema chuẩn) được ghi vào ledger workspace
+  `E:\Candidate`, principal quyết định là owner, proof là evidence thật
+  (pytest Windows 1153 passed, suites Ubuntu, release verify, đối chiếu byte).
+- Sửa 3 gốc rễ: (1) app thiếu git trên PATH → `setx` user PATH; (2) repo
+  Administrators-owned, app non-elevated bị từ chối → `safe.directory` đúng
+  phạm vi (chứng minh bằng probe: schtasks-context fail trước, pass sau);
+  (3) census `ORCHESTRATION_STATE_UNCERTAIN` vì ledger tự tạo thiếu schema →
+  dựng ledger chuẩn bằng đúng module `orchestration_ledger`, giữ nguyên các dòng
+  cũ, census sạch (0 active/unexplained/unbound/drift, tự kiểm chứng).
+- Controller đã nhận closure `bc1e3e84` ACTIVATABLE, 3 component affected, intent
+  mới `awaiting/pending` (các intent blocked cũ giữ làm lịch sử). Cảnh báo
+  GIT_UNAVAILABLE đã hết từ 02:10.
+- Còn lại: một cú restart từ UI để activation chạy hết (mọi gate đã xanh) rồi
+  canary thực thi.
