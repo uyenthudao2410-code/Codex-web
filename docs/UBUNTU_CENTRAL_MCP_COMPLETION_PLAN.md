@@ -2361,7 +2361,28 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
 - Observer packaged chạy được nhưng `strict_ready=false` (`packaged_runtime_unready`):
   epoch `activation-mu1nooyz` từ 14/09 đã failed, log yêu cầu full-clean activation.
   Observer từ chối đúng — không forge identity.
+- Observer từ chối đúng — không forge identity.
 - Việc duy nhất còn lại cần tay owner trên màn hình máy đó: mở app
   (Coding Tools MCP) → Command Center → full-clean activation/refresh để cấp epoch
   mới (và pair central_executor nếu muốn lane điều phối). Sau đó chạy tiếp canary
   đọc file marker → patch → exec từ đây, không cần build lại.
+
+### Receipt gate activation — 20-09-2026, restart đòi accepted closure (chưa xong)
+
+- User bấm start lặp lại chỉ tạo `runtime.start` UPDATE_INCOMPLETE (đúng thiết kế:
+  epoch terminal không replace tại chỗ). Đã dọn 2 instance chạy chồng (9 process)
+  về 1 instance duy nhất.
+- Lần restart có epoch mới (`activation-mu8mt5v0`) nhưng FAILED:
+  `CENTRAL_ROUTE_EVIDENCE_STALE`, `LOCAL_EXECUTOR_NOT_READY`, census hết hạn
+  60s. Credential app đã được đặt đúng chỗ (heartbeat qua app-profile thành công)
+  nên route evidence đã tươi trở lại.
+- Lỗi hiện tại khi restart: `ACTIVATION_SOURCE_CHECKPOINT_NOT_ELIGIBLE` — restart
+  đòi durable accepted-code closure checkpoint (EOCL: checkpoint_id/run_id/wave_id/
+  proof_fingerprint/git_head, ACTIVATABLE cho đúng component) từ Recovery Host mà
+  máy này không có. KhôngDrivers, không bypass: checkpoint này chỉ sinh ra từ
+  ceremony acceptance mã nguồn đúng quy trình (M1), không forge, không sửa file
+  epoch tay, không weaken gate để lấy xanh.
+- Đường đúng: owner chạy ceremony acceptance + full-clean activation trên UI theo
+  luồng sản phẩm chuẩn (closure → epoch mới → strict_ready), rồi mới tới canary
+  thực thi. Central (schema 19, healthy) và transport node (heartbeat/đăng ký/
+  binding/dispatch đã chứng minh) đứng yên chờ gate này.
