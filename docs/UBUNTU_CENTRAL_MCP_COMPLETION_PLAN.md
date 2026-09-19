@@ -2323,3 +2323,27 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
 - Còn chờ phía client/node: node dispatch canary (cả hai node offline — heartbeat
   cũ nhất 31h/4.8 ngày), strict rediscovery từ ChatGPT, OAuth khi có IdP (D1/D2),
   soak 24h trên build này.
+
+### Receipt canary node — 19-09-2026, DaoChienThang online + dispatch thật
+
+- SSH (`daochienthang`, key có sẵn, không in secret): Windows 10, có Git/node/Python
+  3.11, chưa từng cài agent hay checkout — máy sạch.
+- Release `528035f` chuyển qua scp tarball, giải nén tại `C:\control-plane-canary`,
+  `verify-release` pass ngay trên Windows (schema 19, 31 files, đúng fingerprint).
+- Credential node xoay 2 lần bằng operator (lần đầu pipe vào lệnh `cat` không tồn
+  tại trên cmd nên secret mất theo pipe — xoay lại và ghi `node.json` qua stdin
+  bằng python Windows, secret không lên command line).
+- Heartbeat `ready` được central nhận (age 6s); workspace fixture
+  `C:\control-plane-fixture` + marker `CANARY-MARKER-daochienthang.txt` đăng ký
+  central thành công (`workspace_4b0a57...`, read-only).
+- Binding + context + intent read-only tạo qua operator; node poll lane
+  `read_only_workspace_context` nhận đúng action, central ghi attempt
+  `try_37f7a4...` cho đúng device — **dispatch thật tới đúng máy**.
+- Giới hạn ghi nhận trung thực: lane thực thi (read/file/patch/exec) đòi packaged Recovery Host
+  (`strict_ready`) mà máy chưa cài Desktop Execution Hub — poll báo
+  `runtime_lifecycle_missing` đúng thiết kế fail-closed. Không forge identity để
+  vượt gate. Transport + dispatch đã chứng minh; execution canary chờ cài runtime.
+- Public key owner đưa chưa cần dùng (scp thay git clone); khi nào muốn clone trên
+  máy test mới cần add key vào GitHub.
+- Hai intent canary sẽ hết hạn/settle tự nhiên; binding/context/task thử nghiệm giữ
+  nguyên để dùng tiếp, không retry mù.
