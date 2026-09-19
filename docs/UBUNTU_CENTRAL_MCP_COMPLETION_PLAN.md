@@ -2180,3 +2180,90 @@ tài khoản cần thử sớm, không phải blocker mơ hồ hoặc điều đ
 Sau C0, ước lượng từng batch theo phạm vi được khóa; tách thời gian kỹ thuật,
 chờ quyền/provider/hardware và **ít nhất 24h** soak cuối. Không cộng thời gian
 monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate mở.
+
+### Receipt source/test — 19-09-2026, task bền vững + nghiệm thu patch (chưa live)
+
+- Schema central **16 → 17**: thêm `mcp_task_sessions` (handle `task_*` ghim
+  immutable device/endpoint/workspace/generation), `mcp_task_action_links` và
+  `mcp_patch_acceptances`; `mcp_permission_requests.task_id` nullable + migration.
+  Task hết hạn/đóng/revoke/retire thì chặn action mới nhưng giữ lịch sử quan sát/dừng.
+- `request_mcp_bounded_file_read`, `request_mcp_patch_permission`,
+  `request_mcp_approved_patch` nhận `task_id` optional, revalidate live task trong
+  cùng transaction, bind digest theo task và link action; permission khác task với
+  cùng idempotency key thì conflict, không retarget ngầm.
+- MCP facade contract OAuth bump **8/9/10 → 11/12/13 (profile v2)**:
+  `workspace_context` thêm `task_open/task_list/task_close` + `task_id` optional cho
+  `read_file`; `request_permissions` và `agent_workflow` nhận `task_id` optional.
+  `patch_status` trả `local_semantic_acceptance` từ bảng nghiệm thu
+  (`pending/accepted/rejected/unknown`); unknown vẫn `reconcile_required`, không retry.
+- Console: overview thêm `task_sessions` + `patch_acceptances`; endpoint
+  `POST /v1/ui/task-sessions`, `POST /v1/ui/task-sessions/{id}/close`,
+  `POST /v1/ui/patch-acceptances/{action_id}` (accepted/rejected, reject không hoàn tác).
+  UI có panel task, form mở task, nút đóng task và nút nghiệm thu/từ chối trên action
+  patch completed.
+- Proof: `PYTHONPATH=control-plane python3 -m unittest
+  control-plane.tests.test_mcp_task_sessions` — **7 passed** (pin 2 target, close fence,
+  revoke invalidate, acceptance cần completed receipt, unknown chặn, facade open/list/close/read,
+  wiring Console). Full `discover -s control-plane/tests`: **189 tests, 1 failure cũ**
+  `test_archive_launcher_runs_from_extracted_release_with_external_state` (409 != 201,
+  đã fail trước batch, không do thay đổi này).
+- Đây là SOURCE/FOCUSED_PROOF, không phải live: chưa IdP/account mapping thật, chưa
+  Windows package/policy rollout, chưa Tunnel rediscovery, chưa exec/command_control/
+  document/view_image relay, chưa 2–4 máy, chưa soak 24h. C1 live vẫn cần D1/D2; C3–C5
+  live vẫn cần D3/D4.
+
+### Receipt source/test — 19-09-2026, exec bounded + stop xác minh + artifact (chưa live)
+
+- Schema central **17 → 19**: thêm `mcp_exec_intents` (argv structured không shell,
+  cwd root-relative, timeout/output caps, task pin), `mcp_exec_stop_requests`
+  (pending → acknowledged, offline giữ pending) và `mcp_artifact_intents`
+  (document/image task-pinned). Poll lanes mới `bounded_exec`, `bounded_artifact`;
+  lane cũ loại trừ exec/artifact để worker cũ không dequeue nhầm.
+- Facade contract OAuth **11/12/13 → 15/16/17/18**: `exec_command` (`exec_run`/
+  `exec_status`) và `command_control` (`exec_output` phân trang/`exec_stop` chờ
+  quiescence) dưới write scope + flag `CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED`;
+  `document_workflow`/`view_image` (`doc_read`/`image_read` + status) dưới flag
+  file-read, MIME png/jpeg/webp theo magic bytes, doc UTF-8 chặn secret pattern.
+  Cwd chỉ là thư mục bắt đầu, không phải sandbox; shell metachar luôn bị chặn.
+- Node: policy exec riêng (`allowed_argv_prefixes`, caps, TTL 24h) + khóa ghi
+  theo workspace (cùng root serialize, khác root/khác máy chồng thời gian) +
+  runner `shell=False`, timeout có `TIMEOUT_CLEANUP_UNCERTAIN`, stop kiểm tra
+  verified request rồi kill tree; heartbeat/worker độc lập task/policy expiry.
+  Artifact tái dùng allowlist file-read, doc/image bridge kiểm magic/MIME/size.
+  CLI mới `poll-exec-once`, `run-exec-loop`, `install/inspect/disable-exec-policy`,
+  `poll-artifact-once`; node endpoints `exec-stops` + acknowledge.
+- Console: overview thêm `exec_stops`; `POST /v1/ui/exec-stops/{action_id}` và nút
+  Stop trên action exec chưa terminal (pending tới khi node chứng minh).
+- Proof: `test_mcp_exec` **6 passed** (contract 18, chặn shell/cwd, task link,
+  stop pending sau close, thiếu exec capability, artifact pin, 2 node cô lập +
+  stop B không fence A); `test_exec_node_agent` **7 passed** (allowlist, caps,
+  runner success/timeout/stop/không shell). Full `discover`: **203 tests, 1 failure
+  cũ** `test_archive_launcher...` (đã fail trước batch).
+- Vẫn SOURCE/FOCUSED_PROOF: chưa IdP live, chưa Windows package/policy rollout,
+  chưa Tunnel rediscovery, chưa soak 24h täg. Muốn Mốc A live cần D1/D2 (OAuth +
+  mobile gate), D3 (fixture office + policy exec/artifact canary) và D4 (cửa sổ
+  rollout/rollback).
+
+### Receipt source/test — 19-09-2026, wizard + fault matrix + bàn giao (chưa live)
+
+- Console thêm panel **Kết nối một lần (wizard)** 5 bước từ overview hiện hành
+  (enrollment → root → binding → task → policy tại máy + giao việc), không endpoint
+  mới, không tự approve máy lạ, không nhận path Windows.
+- Fault matrix `test_mcp_faults` **5 passed**: revoke giữa queue/dispatch thì
+  refused-settled không effect; repeat cùng key replay đúng receipt, khác args thì
+  conflict; stop đua completed báo terminal/pending đúng; task hết hạn chặn action
+  mới nhưng stop cũ vẫn được; unknown không bao giờ poll lại thành completed.
+- Bàn giao: release builder copy toàn bộ `control_plane/*.py/.cjs/.cmd` + manifest
+  bind `source_revision`, `control_plane_schema_version` (=19), package fingerprint
+  và hash từng file; `test_deployment_verifier` 4 passed; backup/restore snapshot
+  tests vẫn pass với schema mới. Build thật phải từ source sạch đã commit theo
+  `RELEASE_CHECKLIST` (worktree hiện dirty nên chưa build).
+- Heartbeat tách quyền task: node heartbeat/`last_seen`/readiness quyết dispatch,
+  task/context/policy expiry chỉ chặn intake mới; stop/observe action cũ luôn mở
+  theo owner/handle/policy stop. Khóa ghi local: exec cùng workspace serialize bằng
+  lock file riêng, khác workspace/máy chồng thời gian; patch xung đột bằng preimage.
+- Full `discover`: **208 tests, 1 failure cũ** `test_archive_launcher...` (có sẵn).
+- Còn lại để tuyên bố Mốc A live: D1/D2 OAuth + mobile gate trên client thật,
+  D3 fixture/policy canary Windows, D4 cửa sổ + rollback đã thử, Tunnel rediscovery,
+  soak 24h trên final build. C6 controller AI là luồng B riêng, cần D5 (provider,
+  budget, consent) và không chặn pilot A.

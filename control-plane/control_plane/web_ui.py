@@ -75,6 +75,11 @@ WEB_UI_HTML = """<!doctype html>
       </div>
 
       <section class="panel">
+        <h2>Kết nối một lần (wizard)</h2>
+        <p class="muted">Một luồng duy nhất, không chép token/context mỗi lần làm việc: duyệt enrollment → chọn root local tại máy → tạo binding → mở task ghim đích → cài policy local tại máy (owner xác nhận) → giao việc từ ChatGPT/Console. Wizard không tự approve máy lạ, không nhận path Windows và không biến đổi UI thành quyền remote.</p>
+        <div class="table-wrap"><table><thead><tr><th>Bước</th><th>Trạng thái hiện tại</th><th>Đi tới</th></tr></thead><tbody id="onboarding-wizard-body"></tbody></table></div>
+      </section>
+      <section class="panel">
         <h2>Windows nodes</h2>
         <p class="muted">Ngưỡng stale heartbeat: 60 giây. Policy là quan sát do node báo, không phải quyền do browser cấp. Timestamp thiếu hoặc stale không được hiển thị là executor sẵn sàng.</p>
         <div class="table-wrap"><table><thead><tr><th>Tên</th><th>Readiness</th><th>Heartbeat</th><th>Runtime / epoch</th><th>Contract</th><th>Local policy</th></tr></thead><tbody id="nodes-body"></tbody></table></div>
@@ -116,6 +121,21 @@ WEB_UI_HTML = """<!doctype html>
         <div class="table-wrap"><table><thead><tr><th>Yêu cầu / principal</th><th>Target / scope</th><th>Trạng thái / hết hạn</th><th>Digest</th><th>Thao tác</th></tr></thead><tbody id="permission-requests-body"></tbody></table></div>
       </section>
       <section class="panel">
+        <h2>Phiên công việc đa đích (task)</h2>
+        <p class="muted">Mỗi task ghim một máy/workspace/generation bất biến cho nhiều lần đọc, xin quyền, patch và quan sát. Hai chat dùng hai task không đổi đích của nhau. Đóng task chỉ chặn action mới; action đã gửi vẫn quan sát/dừng được. ChatGPT không được chọn đích bằng tên hiển thị hay chat_id.</p>
+        <form id="task-session-form" class="operator-form">
+          <h3>Mở task mới</h3>
+          <label>Tài khoản (principal opaque) <select id="task-principal-id" required></select></label>
+          <label>Binding đích <select id="task-binding-id" required></select></label>
+          <label>Nhãn task <input id="task-label" maxlength="120" autocomplete="off" spellcheck="false" required></label>
+          <button type="submit">Mở task ghim đích</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>Task / nhãn</th><th>Target bất biến</th><th>Hạn / trạng thái</th><th>Thao tác</th></tr></thead><tbody id="task-sessions-body"></tbody></table></div>
+        <h3>Nghiệm thu patch local</h3>
+        <p class="muted">Receipt completed mới chứng minh file đã đổi ở Windows; nghiệm thu mới đóng vòng task. Từ chối không hoàn tác file — phải mở patch sửa mới.</p>
+        <div class="table-wrap"><table><thead><tr><th>Action</th><th>Quyết định</th><th>Lúc / bởi</th><th>Thao tác</th></tr></thead><tbody id="patch-acceptances-body"></tbody></table></div>
+      </section>
+      <section class="panel">
         <h2>Action và receipt</h2>
         <p class="muted">“Đã gửi” không phải là “đã thực thi”. Payload, local handle và nội dung workspace không được hiển thị ở đây. Một action lịch sử có receipt <code>unknown</code> chỉ được cách ly sau khi operator gõ xác nhận; cách ly không nói rằng Windows chưa đọc hoặc đã hoàn tất.</p>
         <form id="action-reconciliation-form" class="operator-form reconciliation-form">
@@ -125,7 +145,7 @@ WEB_UI_HTML = """<!doctype html>
           <label>Gõ chính xác <code>HISTORICAL_READ_ONLY_UNKNOWN_EFFECT</code> để chấp nhận rủi ro kiểm toán <input id="reconciliation-declaration" maxlength="128" autocomplete="off" spellcheck="false" required></label>
           <button type="submit">Cách ly, không retry</button>
         </form>
-        <div class="table-wrap"><table><thead><tr><th>Action / tool</th><th>Context / node</th><th>Delivery</th><th>Receipt mới nhất</th><th>Thời gian</th></tr></thead><tbody id="actions-body"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Action / tool</th><th>Context / node</th><th>Delivery</th><th>Receipt mới nhất</th><th>Thời gian</th><th>Nghiệm thu</th></tr></thead><tbody id="actions-body"></tbody></table></div>
       </section>
     </section>
   </main>
@@ -322,6 +342,27 @@ WEB_UI_JAVASCRIPT = """(() => {
     if (!data.nodes?.length) emptyRow(nodes, 6, 'Chưa có node được enrollment.');
     for (const node of data.nodes || []) { const row = document.createElement('tr'); appendCell(row, node.display_name || node.device_id); appendCell(row, nodeReadiness(node)); appendCell(row, heartbeat(node.last_seen_at_ms)); appendCell(row, `${node.runtime_instance_id || '—'} / ${node.activation_epoch || '—'}`); appendCell(row, node.contract_version); appendCell(row, policyState(node)); nodes.appendChild(row); }
     const nodeById = new Map((data.nodes || []).map((node) => [node.device_id, node]));
+    const wizard = clearBody('onboarding-wizard-body');
+    {
+      const pendingEnrollments = (data.enrollment_requests || []).filter((item) => item.enrollment_id && !item.approved_at_ms);
+      const currentRegistrations = (data.workspace_registrations || []).filter((registration) => !registration.retired_at_ms);
+      const openTasks = (data.task_sessions || []).filter((task) => !task.closed_at_ms && !(Number.isFinite(task.expires_at_ms) && task.expires_at_ms <= Date.now()));
+      const steps = [
+        { name: '1. Duyệt enrollment máy', state: (data.nodes || []).length ? 'đã có node' : pendingEnrollments.length ? `đợi duyệt (${pendingEnrollments.length})` : 'chưa có yêu cầu', target: 'Yêu cầu và enrollment' },
+        { name: '2. Node đăng ký root local', state: currentRegistrations.length ? `${currentRegistrations.length} root current` : 'chưa có root', target: 'Workspace đã đăng ký' },
+        { name: '3. Tạo binding (chọn root)', state: (data.bindings || []).length ? `${data.bindings.length} binding` : 'chưa có binding', target: 'Workspace đã đăng ký' },
+        { name: '4. Mở task ghim đích', state: openTasks.length ? `${openTasks.length} task mở` : 'chưa có task mở', target: 'Phiên công việc đa đích' },
+        { name: '5. Cài policy tại máy + giao việc', state: 'policy cài bằng CLI tại máy sau khi owner xác nhận; ChatGPT/Console giao việc theo task', target: 'Action và receipt' },
+      ];
+      for (const step of steps) {
+        const row = document.createElement('tr');
+        appendCell(row, step.name);
+        appendCell(row, step.state);
+        appendCell(row, step.target);
+        wizard.appendChild(row);
+      }
+      if (!wizard.childNodes.length) emptyRow(wizard, 3, 'Chưa có dữ liệu onboarding.');
+    }
     const registrations = data.workspace_registrations || [];
     const registrationRows = clearBody('workspace-registrations-body');
     if (!registrations.length) emptyRow(registrationRows, 5, 'Chưa có workspace local nào được node đăng ký.');
@@ -351,6 +392,8 @@ WEB_UI_JAVASCRIPT = """(() => {
     if (!data.bindings?.length) emptyRow(bindings, 5, 'Chưa có workspace binding.');
     for (const binding of data.bindings || []) { const row = document.createElement('tr'); const matchingContexts = (data.contexts || []).filter((context) => context.binding_id === binding.binding_id); const activeContext = matchingContexts.find((context) => !context.closed_at_ms && Number.isFinite(context.expires_at_ms) && context.expires_at_ms > Date.now()) || null; appendCell(row, `${binding.display_name || binding.binding_id} / ${binding.workspace_id || '—'}`); appendCell(row, binding.device_id); appendCell(row, binding.workspace_generation); appendCell(row, (contextsByBinding.get(binding.binding_id) || []).join('\\n') || 'chưa có context'); appendReadOnlyButton(row, activeContext); appendBindingControls(row, binding, activeContext); bindings.appendChild(row); }
     setSelectOptions('context-binding-id', (data.bindings || []).map((binding) => ({ value: binding.binding_id, label: `${binding.display_name || binding.binding_id} (${binding.workspace_id})` })), 'Chọn binding', 'binding');
+    setSelectOptions('task-binding-id', (data.bindings || []).filter((binding) => !binding.revoked_at_ms).map((binding) => ({ value: binding.binding_id, label: `${binding.display_name || binding.binding_id} · ${binding.device_id} · ${binding.workspace_generation}` })), 'Chọn binding đích', 'binding');
+    setSelectOptions('task-principal-id', (data.oauth_principals || []).map((principal) => ({ value: principal.principal_id, label: principal.principal_id })), 'Chọn principal', 'principal');
 
     const requests = clearBody('requests-body');
     const work = data.work_requests || [];
@@ -395,7 +438,29 @@ WEB_UI_JAVASCRIPT = """(() => {
     }
 
     const actions = clearBody('actions-body');
-    if (!data.actions?.length) emptyRow(actions, 5, 'Chưa có action được niêm phong.');
+    if (!data.actions?.length) emptyRow(actions, 6, 'Chưa có action được niêm phong.');
+    const acceptancesByAction = new Map((data.patch_acceptances || []).map((entry) => [entry.action_id, entry]));
+    const taskSessions = clearBody('task-sessions-body');
+    if (!data.task_sessions?.length) emptyRow(taskSessions, 4, 'Chưa có task bền vững.');
+    for (const task of data.task_sessions || []) {
+      const row = document.createElement('tr');
+      appendCell(row, `${task.task_id}\n${task.label || '—'} / principal ${task.principal_id || '—'}`);
+      appendCell(row, `${task.device_id || '—'} / ${task.workspace_id || '—'}\ngen ${task.workspace_generation || '—'}\nbinding ${task.binding_id || '—'}`);
+      const state = task.closed_at_ms ? `đã đóng (${task.close_reason || 'closed'}) / ${formatTime(task.closed_at_ms)}` : Number.isFinite(task.expires_at_ms) && task.expires_at_ms <= Date.now() ? `hết hạn / ${formatTime(task.expires_at_ms)}` : `mở / hết hạn ${formatTime(task.expires_at_ms)}`;
+      appendCell(row, state);
+      appendTaskControls(row, task);
+      taskSessions.appendChild(row);
+    }
+    const patchAcceptances = clearBody('patch-acceptances-body');
+    if (!data.patch_acceptances?.length) emptyRow(patchAcceptances, 4, 'Chưa có nghiệm thu patch local.');
+    for (const entry of data.patch_acceptances || []) {
+      const row = document.createElement('tr');
+      appendCell(row, entry.action_id);
+      appendCell(row, entry.decision === 'accepted' ? 'đã nghiệm thu' : 'đã từ chối — cần patch sửa mới, không tự hoàn tác');
+      appendCell(row, `${formatTime(entry.decided_at_ms)} / ${entry.decided_by || '—'}`);
+      const cell = document.createElement('td'); cell.textContent = '—'; row.appendChild(cell);
+      patchAcceptances.appendChild(row);
+    }
     for (const action of data.actions || []) {
       const row = document.createElement('tr');
       appendCell(row, `${action.action_id} / ${action.tool_name || '—'}`);
@@ -411,6 +476,21 @@ WEB_UI_JAVASCRIPT = """(() => {
       appendCell(row, delivery);
       appendCell(row, action.latest_receipt_state ? `${action.latest_receipt_state} (${action.receipt_count || 0}) / ${formatTime(action.latest_receipt_at_ms)}` : 'chưa có receipt');
       appendCell(row, formatTime(action.created_at_ms));
+      const control = document.createElement('td');
+      const needsAcceptance = action.tool_name === 'agent_workflow' && action.latest_receipt_state === 'completed' && !acceptancesByAction.has(action.action_id);
+      const needsExecStop = action.tool_name === 'exec_command' && (!action.latest_receipt_state || !['completed', 'failed', 'stopped'].includes(action.latest_receipt_state));
+      if (needsAcceptance) {
+        const accept = document.createElement('button'); accept.type = 'button'; accept.textContent = 'Nghiệm thu';
+        accept.addEventListener('click', () => recordPatchAcceptance(action.action_id, 'accepted', accept));
+        const reject = document.createElement('button'); reject.type = 'button'; reject.className = 'secondary'; reject.textContent = 'Từ chối';
+        reject.addEventListener('click', () => recordPatchAcceptance(action.action_id, 'rejected', reject));
+        control.appendChild(accept); control.appendChild(reject);
+      } else if (needsExecStop) {
+        const stop = document.createElement('button'); stop.type = 'button'; stop.textContent = 'Stop';
+        stop.addEventListener('click', () => requestExecStop(action.action_id, stop));
+        control.appendChild(stop);
+      } else { control.textContent = acceptancesByAction.has(action.action_id) ? acceptancesByAction.get(action.action_id).decision : '—'; }
+      row.appendChild(control);
       actions.appendChild(row);
     }
   }
@@ -507,6 +587,33 @@ WEB_UI_JAVASCRIPT = """(() => {
     try { await api(`/v1/ui/contexts/${encodeURIComponent(contextId)}/close`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); connectionStatus.textContent = 'Context đã đóng; action đã gửi vẫn cần reconciliation riêng.'; await loadOverview(); }
     catch (error) { connectionStatus.textContent = `Không đóng context: ${error.message}`; button.disabled = false; }
   }
+  function appendTaskControls(row, task) {
+    const cell = document.createElement('td');
+    if (!task.closed_at_ms) {
+      const button = document.createElement('button'); button.type = 'button'; button.className = 'secondary'; button.textContent = 'Đóng task';
+      button.addEventListener('click', () => closeTaskSession(task.task_id, button));
+      cell.appendChild(button);
+    } else { cell.textContent = '—'; }
+    row.appendChild(cell);
+  }
+  async function closeTaskSession(taskId, button) {
+    if (!csrfToken || !taskId || !confirm('Đóng task sẽ chặn action mới của task này. Action đã gửi vẫn quan sát/dừng được. Tiếp tục?')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang đóng task…';
+    try { await api(`/v1/ui/task-sessions/${encodeURIComponent(taskId)}/close`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); connectionStatus.textContent = 'Task đã đóng cho intake mới.'; await loadOverview(); }
+    catch (error) { connectionStatus.textContent = `Không đóng task: ${error.message}`; button.disabled = false; }
+  }
+  async function recordPatchAcceptance(actionId, decision, button) {
+    if (!csrfToken || !actionId || !confirm(decision === 'accepted' ? 'Nghiệm thu kết quả patch này? Chỉ xác nhận khi đã đối chiếu diff/test độc lập.' : 'Từ chối kết quả patch này? File sẽ không tự hoàn tác; cần patch sửa mới.')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang ghi nghiệm thu patch…';
+    try { await api(`/v1/ui/patch-acceptances/${encodeURIComponent(actionId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ decision }) }); connectionStatus.textContent = decision === 'accepted' ? 'Đã nghiệm thu patch.' : 'Đã từ chối patch; file giữ nguyên.'; await loadOverview(); }
+    catch (error) { connectionStatus.textContent = `Không ghi nghiệm thu: ${error.message}`; button.disabled = false; }
+  }
+  async function requestExecStop(actionId, button) {
+    if (!csrfToken || !actionId || !confirm('Yêu cầu dừng Job này? Sẽ báo pending cho tới khi node chứng minh cây process đã quiescent. Node offline không báo success.')) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang yêu cầu dừng exec…';
+    try { await api(`/v1/ui/exec-stops/${encodeURIComponent(actionId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({}) }); connectionStatus.textContent = 'Đã gửi yêu cầu dừng; chờ node xác minh.'; await loadOverview(); }
+    catch (error) { connectionStatus.textContent = `Không gửi stop: ${error.message}`; button.disabled = false; }
+  }
   byId('login-form').addEventListener('submit', async (event) => {
     event.preventDefault(); const input = byId('operator-token'); const error = byId('login-error'); error.textContent = '';
     try { const result = await api('/v1/ui/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operator_token: input.value }) }); input.value = ''; csrfToken = result.csrf_token; setSessionVisible(true); await loadOverview(); }
@@ -526,6 +633,13 @@ WEB_UI_JAVASCRIPT = """(() => {
       const context = await api('/v1/ui/contexts', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ binding_id: byId('context-binding-id').value, duration_minutes: Number(byId('context-duration-minutes').value) }) });
       connectionStatus.textContent = `Đã cấp ${context.context_id} đến ${formatTime(context.expires_at_ms)}.`; await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không cấp context: ${error.message}`; } finally { button.disabled = !csrfToken; }
+  });
+  byId('task-session-form').addEventListener('submit', async (event) => {
+    event.preventDefault(); const form = byId('task-session-form'); const button = form.querySelector('button[type="submit"]'); button.disabled = true; connectionStatus.textContent = 'Đang mở task ghim đích…';
+    try {
+      const task = await api('/v1/ui/task-sessions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken }, body: JSON.stringify({ principal_id: byId('task-principal-id').value, binding_id: byId('task-binding-id').value, label: byId('task-label').value }) });
+      connectionStatus.textContent = `Đã mở task ${task.task_id} ghim ${task.device_id}/${task.workspace_id}.`; form.reset(); await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không mở task: ${error.message}`; } finally { button.disabled = !csrfToken; }
   });
   actionReconciliationForm.addEventListener('submit', async (event) => {
     event.preventDefault();

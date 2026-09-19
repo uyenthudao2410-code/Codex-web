@@ -351,6 +351,7 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
             oauth_approved_patch_enabled=bool(
                 mcp_oauth is not None and mcp_oauth.approved_patch_enabled
             ),
+            oauth_exec_enabled=bool(mcp_oauth is not None and mcp_oauth.exec_enabled),
         )
         # Keep only bytes so every later constant-time comparison has the
         # same representation. No route needs the raw text token.
@@ -793,6 +794,73 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             context_id=context_id,
         )
 
+    def _create_ui_task_session(self, body: dict[str, Any]) -> dict[str, Any]:
+        """Open one Console task pinned to an explicit binding.
+
+        The Console selects only an opaque binding already registered by the
+        node; it never submits a Windows path. Principals are opaque IDs from
+        the linked-account list so one owner can open tasks for any linked
+        account without copying tokens.
+        """
+        if set(body) != {"principal_id", "binding_id", "label"}:
+            raise ValidationError("browser task payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True)
+        principal_id = self._field(body, "principal_id")
+        binding_id = self._field(body, "binding_id")
+        label = self._field(body, "label")
+        if not isinstance(principal_id, str) or not isinstance(binding_id, str) or not isinstance(label, str):
+            raise ValidationError("browser task fields are invalid.")
+        return self.server.store.create_mcp_task_session(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            binding_id=binding_id,
+            label=label,
+        )
+
+    def _ui_close_task_session(self, task_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if body:
+            raise ValidationError("browser task close payload is invalid.")
+        return self.server.store.close_owner_mcp_task_session(
+            owner_id=self._ui_operator(require_csrf=True),
+            task_id=task_id,
+        )
+
+    def _ui_record_patch_acceptance(self, action_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        if set(body) != {"decision"} and set(body) != {"decision", "note"}:
+            raise ValidationError("browser patch acceptance payload is invalid.")
+        decision = self._field(body, "decision")
+        note = body.get("note", "")
+        if decision not in ("accepted", "rejected") or not isinstance(note, str):
+            raise ValidationError("browser patch acceptance fields are invalid.")
+        return self.server.store.record_owner_mcp_patch_acceptance(
+            owner_id=self._ui_operator(require_csrf=True),
+            action_id=action_id,
+            decision=decision,
+            note=note,
+        )
+
+    def _ui_exec_stop(self, action_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Owner Console stop: fence dispatch and request verified stop.
+
+        Like the MCP path this never claims success for an offline node; the
+        actions table stays pending until a terminal stopped receipt arrives.
+        """
+        if body:
+            raise ValidationError("browser exec stop payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True)
+        with self.server.store._connection() as connection:
+            intent = connection.execute(
+                "SELECT principal_id FROM mcp_exec_intents WHERE action_id = ?", (action_id,)
+            ).fetchone()
+        if intent is None:
+            from .store import NotFoundError as _NotFound
+
+            raise _NotFound("exec action does not exist.")
+        return self.server.store.request_mcp_exec_stop(
+            owner_id=owner_id, principal_id=str(intent["principal_id"]),
+            action_id=action_id, requested_by="owner_console",
+        )
+
     def _quarantine_historical_unknown_actions(self, body: dict[str, Any], *, browser: bool) -> dict[str, Any]:
         """Persist a deliberate operator disposition without changing the receipt.
 
@@ -964,6 +1032,14 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             # Console needs its exact bounded scope to decide it, but it never
             # receives patch text, a Windows absolute root or a local policy.
             "permission_requests": self.server.store.list_mcp_permission_requests(owner_id=owner_id),
+            # Durable tasks pin one immutable target across many MCP calls so
+            # two chats never retarget each other. Acceptance closes the
+            # patch loop without reverting files; rejection needs a new patch.
+            "task_sessions": self.server.store.list_owner_mcp_task_sessions(owner_id=owner_id),
+            "patch_acceptances": self.server.store.list_mcp_patch_acceptances(owner_id=owner_id),
+            # Exec stops stay pending until the node proves quiescence; the
+            # Console stop button never claims success for an offline node.
+            "exec_stops": self.server.store.list_owner_exec_stops(owner_id=owner_id),
         }
 
     def _login(self, body: dict[str, Any]) -> tuple[str, _OperatorSession]:
@@ -1384,6 +1460,21 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if ui_context_close_match:
                 self._json(HTTPStatus.OK, self._ui_close_context(ui_context_close_match.group(1), body))
                 return
+            if self.path == "/v1/ui/task-sessions":
+                self._json(HTTPStatus.CREATED, self._create_ui_task_session(body))
+                return
+            ui_task_close_match = re.fullmatch(r"/v1/ui/task-sessions/([^/]+)/close", self.path)
+            if ui_task_close_match:
+                self._json(HTTPStatus.OK, self._ui_close_task_session(ui_task_close_match.group(1), body))
+                return
+            ui_patch_acceptance_match = re.fullmatch(r"/v1/ui/patch-acceptances/([^/]+)", self.path)
+            if ui_patch_acceptance_match:
+                self._json(HTTPStatus.OK, self._ui_record_patch_acceptance(ui_patch_acceptance_match.group(1), body))
+                return
+            ui_exec_stop_match = re.fullmatch(r"/v1/ui/exec-stops/([^/]+)", self.path)
+            if ui_exec_stop_match:
+                self._json(HTTPStatus.OK, self._ui_exec_stop(ui_exec_stop_match.group(1), body))
+                return
             binding_match = re.fullmatch(r"/v1/bindings/([^/]+)/revoke", self.path)
             if binding_match:
                 result = self.server.store.revoke_binding(owner_id=self._operator(), binding_id=binding_match.group(1))
@@ -1519,6 +1610,26 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                     payload=body.get("payload", {}),
                 )
                 self._json(HTTPStatus.OK if result["replayed"] else HTTPStatus.CREATED, result)
+                return
+            node_match = re.fullmatch(r"/v1/nodes/([^/]+)/exec-stops", self.path)
+            if node_match:
+                device_id = node_match.group(1)
+                self._node(device_id)
+                if body:
+                    raise ValidationError("node exec-stop poll payload is invalid.")
+                self._json(
+                    HTTPStatus.OK,
+                    {"stop_requests": self.server.store.list_mcp_exec_stop_requests(device_id=device_id)},
+                )
+                return
+            node_match = re.fullmatch(r"/v1/nodes/([^/]+)/exec-stops/([^/]+)/acknowledge", self.path)
+            if node_match:
+                device_id, action_id = node_match.group(1), node_match.group(2)
+                self._node(device_id)
+                if body:
+                    raise ValidationError("node exec-stop acknowledge payload is invalid.")
+                result = self.server.store.acknowledge_mcp_exec_stop(action_id=action_id, device_id=device_id)
+                self._json(HTTPStatus.OK, {"stop_request": result})
                 return
             self._json(HTTPStatus.NOT_FOUND, {"error": {"code": "NOT_FOUND", "message": "route does not exist."}})
         except ControlPlaneError as error:

@@ -183,6 +183,9 @@ class OAuthIntrospectionConfiguration:
     # This remains off until the independent Windows patch policy/bridge is
     # packaged and intentionally enabled for a canary.
     approved_patch_enabled: bool = False
+    # Bounded exec reuses the patch write scope but needs its own explicit
+    # flag: argv execution is a new authority even after patch relay exists.
+    exec_enabled: bool = False
 
     @property
     def resource_metadata_url(self) -> str:
@@ -255,6 +258,7 @@ def oauth_configuration_from_environment(
         "CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED",
         "CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE",
         "CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED",
+        "CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED",
     )
     if mode == MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT:
         if any(str(source.get(name, "") or "").strip() for name in oauth_names):
@@ -293,6 +297,11 @@ def oauth_configuration_from_environment(
         raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED must be true or false.")
     if raw_approved_patch == "true" and raw_permission_requests != "true":
         raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED requires CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED=true.")
+    raw_exec = source.get("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED", "")
+    if not isinstance(raw_exec, str) or raw_exec not in {"", "false", "true"}:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED must be true or false.")
+    if raw_exec == "true" and raw_approved_patch != "true":
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED requires CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED=true.")
     credentials = _read_client_credentials(_required_environment(source, "CONTROL_PLANE_MCP_OAUTH_CREDENTIAL_FILE"))
     return OAuthIntrospectionConfiguration(
         issuer=issuer,
@@ -304,6 +313,7 @@ def oauth_configuration_from_environment(
         permission_requests_enabled=raw_permission_requests == "true",
         patch_write_scope=patch_write_scope,
         approved_patch_enabled=raw_approved_patch == "true",
+        exec_enabled=raw_exec == "true",
     )
 
 

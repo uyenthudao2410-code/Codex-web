@@ -50,18 +50,23 @@ OAUTH_FACADE_PROFILE = "control-plane-oauth-account-inventory-v1"
 # the candidate-only bounded-file relay changes authority and must force a
 # client to rediscover the exact tool surface rather than silently treating an
 # inventory contract as a file-access contract.
-OAUTH_FILE_READ_FACADE_SCHEMA_VERSION = 8
-OAUTH_FILE_READ_FACADE_PROFILE = "control-plane-oauth-bounded-file-read-v1"
+OAUTH_FILE_READ_FACADE_SCHEMA_VERSION = 15
+OAUTH_FILE_READ_FACADE_PROFILE = "control-plane-oauth-bounded-file-read-v3"
 # Permission requests are a separate candidate profile.  They do not make a
 # write relay available: they only record an exact owner-reviewed patch scope
 # for a future local bridge to revalidate.
-OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION = 9
-OAUTH_PERMISSION_REQUEST_FACADE_PROFILE = "control-plane-oauth-permission-request-v1"
+OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION = 16
+OAUTH_PERMISSION_REQUEST_FACADE_PROFILE = "control-plane-oauth-permission-request-v3"
 # An approved patch is a distinct public surface from permission review.  A
 # client must rediscover it and obtain the dedicated OAuth write scope before
 # it can queue any local mutation candidate.
-OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION = 10
-OAUTH_APPROVED_PATCH_FACADE_PROFILE = "control-plane-oauth-approved-patch-v1"
+OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION = 17
+OAUTH_APPROVED_PATCH_FACADE_PROFILE = "control-plane-oauth-approved-patch-v3"
+# Bounded exec is a separate candidate on top of the patch lane. It reuses the
+# same write scope and task pinning but requires its own rediscovery because
+# argv execution changes authority again.
+OAUTH_EXEC_FACADE_SCHEMA_VERSION = 18
+OAUTH_EXEC_FACADE_PROFILE = "control-plane-oauth-bounded-exec-v2"
 FILE_READ_MAX_BYTES = 16 * 1024
 FILE_READ_MAX_LINES = 200
 PUBLIC_TOOL_NAMES = (
@@ -119,14 +124,25 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
             "properties": {
                 "operation": {
                     "type": "string",
-                    "enum": ["inventory", "read_file", "read_status"],
-                    "description": "inventory lists account targets only. read_file queues one bounded local file read for an explicit binding. read_status observes only that OAuth principal's own bounded-file action.",
+                    "enum": ["inventory", "task_open", "task_list", "task_close", "read_file", "read_status"],
+                    "description": "inventory lists account targets only. task_open/task_list/task_close manage one durable server-issued task handle pinned to an explicit binding. read_file queues one bounded local file read for an explicit binding, optionally linked to a task. read_status observes only that OAuth principal's own bounded-file action.",
                 },
                 "binding_id": {
                     "type": "string",
                     "minLength": 3,
                     "maxLength": 128,
-                    "description": "Required for read_file. Exact opaque target from inventory; display names and last-used targets are never accepted.",
+                    "description": "Required for read_file and task_open. Exact opaque target from inventory; display names and last-used targets are never accepted.",
+                },
+                "task_id": {
+                    "type": "string",
+                    "pattern": "^task_[a-f0-9]{32}$",
+                    "description": "Optional for read_file; required for task_close. Server-issued durable task handle. It never changes target: a second chat/task gets its own handle.",
+                },
+                "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120,
+                    "description": "Required for task_open. Short human label for the Console task list; never a target selector.",
                 },
                 "path": {
                     "type": "string",
@@ -224,6 +240,11 @@ def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
                 "enum": ["request_patch", "status"],
                 "description": "request_patch records one immutable proposed patch scope for owner review. It never queues, writes, runs, or locally approves anything. status observes only the caller's own request.",
             },
+            "task_id": {
+                "type": "string",
+                "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Optional for request_patch. When present it must be a live task pinned to the same binding so later reads/patches stay on one target.",
+            },
             "binding_id": {
                 "type": "string",
                 "minLength": 3,
@@ -292,6 +313,11 @@ def _approved_patch_input_schema(*, enabled: bool) -> dict[str, Any]:
                 "enum": ["apply_patch", "patch_status"],
                 "description": "apply_patch queues exactly one owner-approved Write Exact File envelope for local Windows policy admission. patch_status observes only the caller's own action. Neither operation accepts command text or a filesystem root.",
             },
+            "task_id": {
+                "type": "string",
+                "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Optional for apply_patch. When the permission request was opened under a task, the same handle must be presented so the action stays on that task's target.",
+            },
             "permission_request_id": {
                 "type": "string",
                 "minLength": 3,
@@ -346,6 +372,125 @@ def _unavailable_tool_input_schema() -> dict[str, Any]:
     }
 
 
+def _exec_input_schema(*, enabled: bool) -> dict[str, Any]:
+    """Describe one bounded structured exec; never a shell string."""
+
+    if not enabled:
+        return _unavailable_tool_input_schema()
+    return {
+        "type": "object",
+        "required": ["operation"],
+        "additionalProperties": False,
+        "properties": {
+            "operation": {
+                "type": "string",
+                "enum": ["exec_run", "exec_status"],
+                "description": "exec_run queues one structured argv for local allowlist admission. exec_status observes only the caller's own action. No shell, command string, environment map or network target is accepted.",
+            },
+            "binding_id": {
+                "type": "string", "minLength": 3, "maxLength": 128,
+                "description": "Required for exec_run. Exact opaque target from inventory.",
+            },
+            "task_id": {
+                "type": "string", "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Optional for exec_run. When present it must be a live task pinned to the same binding.",
+            },
+            "argv": {
+                "type": "array", "minItems": 1, "maxItems": 8,
+                "items": {"type": "string", "minLength": 1, "maxLength": 256},
+                "description": "Required for exec_run. Structured argv without shell; the node revalidates against its local allowlist.",
+            },
+            "cwd": {
+                "type": "string", "maxLength": 512,
+                "description": "Optional root-relative working directory; empty means workspace root. It is a start directory, never a sandbox proof.",
+            },
+            "timeout_ms": {"type": "integer", "minimum": 5000, "maximum": 300000},
+            "max_output_bytes": {"type": "integer", "minimum": 1024, "maximum": 65536},
+            "idempotency_key": {
+                "type": "string", "minLength": 8, "maxLength": 256,
+                "description": "Required for exec_run; replays only the exact same argv/cwd/limits.",
+            },
+            "expected_facade_contract": {
+                "type": "object",
+                "required": ["schema_version", "profile", "sha256"],
+                "additionalProperties": False,
+                "properties": {
+                    "schema_version": {"type": "integer", "minimum": 1},
+                    "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                },
+            },
+            "action_id": {
+                "type": "string", "minLength": 3, "maxLength": 128,
+                "description": "Required for exec_status. Only an action created by the authenticated OAuth principal may be observed.",
+            },
+        },
+    }
+
+
+def _exec_control_input_schema(*, enabled: bool) -> dict[str, Any]:
+    """Observe bounded exec output or request verified stop."""
+
+    if not enabled:
+        return _unavailable_tool_input_schema()
+    return {
+        "type": "object",
+        "required": ["operation"],
+        "additionalProperties": False,
+        "properties": {
+            "operation": {
+                "type": "string",
+                "enum": ["exec_output", "exec_stop"],
+                "description": "exec_output returns a paged output cursor. exec_stop fences dispatch and requests process-tree stop; it reports pending until the node proves quiescence.",
+            },
+            "action_id": {
+                "type": "string", "minLength": 3, "maxLength": 128,
+                "description": "Exact exec action owned by the authenticated OAuth principal.",
+            },
+            "cursor": {"type": "integer", "minimum": 0, "maximum": 10000000},
+            "max_bytes": {"type": "integer", "minimum": 1, "maximum": 65536},
+        },
+    }
+
+
+def _artifact_input_schema(*, enabled: bool, kind: str) -> dict[str, Any]:
+    """One scoped document/image read; bytes stay bounded and task-pinned."""
+
+    if not enabled:
+        return _unavailable_tool_input_schema()
+    read_op = "doc_read" if kind == "document" else "image_read"
+    status_op = "doc_status" if kind == "document" else "image_status"
+    return {
+        "type": "object",
+        "required": ["operation"],
+        "additionalProperties": False,
+        "properties": {
+            "operation": {
+                "type": "string", "enum": [read_op, status_op],
+                "description": f"{read_op} queues one allowlisted {kind} read for an explicit binding. {status_op} observes only the caller's own action. Document bytes are data, never policy.",
+            },
+            "binding_id": {"type": "string", "minLength": 3, "maxLength": 128,
+                           "description": "Required for read. Exact opaque target from inventory."},
+            "task_id": {"type": "string", "pattern": "^task_[a-f0-9]{32}$",
+                        "description": "Optional for read; pins the artifact to one durable task."},
+            "path": {"type": "string", "minLength": 1, "maxLength": 512,
+                     "description": "Required for read. Root-relative path admitted by the local allowlist."},
+            "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 256},
+            "expected_facade_contract": {
+                "type": "object", "required": ["schema_version", "profile", "sha256"],
+                "additionalProperties": False,
+                "properties": {
+                    "schema_version": {"type": "integer", "minimum": 1},
+                    "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                },
+            },
+            "action_id": {"type": "string", "minLength": 3, "maxLength": 128,
+                          "description": "Required for status. Only the caller's own action may be observed."},
+        },
+    }
+
+
 def _tool_description(
     name: str,
     *,
@@ -353,10 +498,11 @@ def _tool_description(
     oauth_file_read_enabled: bool = False,
     oauth_permission_requests_enabled: bool = False,
     oauth_approved_patch_enabled: bool = False,
+    oauth_exec_enabled: bool = False,
 ) -> str:
     if name == "workspace_context":
         if oauth_enabled and oauth_file_read_enabled:
-            return "List the authenticated account's path-free targets, queue one policy-bounded read of an explicitly selected Windows workspace file, or observe its verified receipt. This never grants write, shell, arbitrary path, or local authority."
+            return "List the authenticated account's path-free targets, open one durable server-issued task pinned to an explicit Windows workspace, queue one policy-bounded read linked to that task, or observe its verified receipt. A task handle never retargets: a second chat gets its own handle. This never grants write, shell, arbitrary path, or local authority."
         if oauth_enabled:
             return "Return the authenticated account's authorized, path-free node/workspace inventory. Context selection and local execution remain unavailable until a separate relay is accepted."
         return "Return central status, queue only the fixed read-only workspace_context action, or show its verified compact completed receipt; this facade never directly accesses a local workspace."
@@ -370,6 +516,23 @@ def _tool_description(
             "Queue or observe one exact owner-approved Write Exact File patch for an explicitly selected Windows workspace. "
             "It requires a distinct OAuth write scope and an independent local patch policy; it is not remote shell or arbitrary workspace access."
         )
+    if name == "exec_command" and oauth_exec_enabled:
+        return (
+            "Queue or observe one bounded structured command for an explicitly selected Windows workspace. "
+            "Argv without shell, root-relative cwd, timeout and output caps are recorded centrally; the node revalidates "
+            "argv against its local allowlist, enforces the workspace write lock and resource limits. cwd is not a sandbox."
+        )
+    if name == "command_control" and oauth_exec_enabled:
+        return (
+            "Observe paged output of one owned exec action or request verified process-tree stop. "
+            "Stop reports pending until the node proves quiescence; offline nodes never report success."
+        )
+    if name in ("document_workflow", "view_image") and oauth_file_read_enabled:
+        kind = "document" if name == "document_workflow" else "image"
+        return (
+            f"Queue or observe one scoped {kind} read for an explicitly selected Windows workspace. "
+            "Path allowlist, size and MIME caps are enforced locally; bytes are task-pinned data, never policy."
+        )
     return "Declared public tool name. Relay is unavailable until a separate local admission bridge is accepted."
 
 
@@ -381,6 +544,7 @@ def _tool_contract_entry(
     oauth_permission_requests_enabled: bool = False,
     oauth_patch_write_scope: str | None = None,
     oauth_approved_patch_enabled: bool = False,
+    oauth_exec_enabled: bool = False,
 ) -> dict[str, Any]:
     oauth_enabled = bool(oauth_scopes)
     if name == "workspace_context":
@@ -392,6 +556,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _workspace_context_input_schema(
                 oauth_enabled=oauth_enabled,
@@ -407,7 +572,7 @@ def _tool_contract_entry(
                     ),
                     "implemented_operations": (
                         ["status", "request_read_only"] if not oauth_enabled
-                        else ["inventory", "read_file", "read_status"] if oauth_file_read_enabled
+                        else ["inventory", "task_open", "task_list", "task_close", "read_file", "read_status"] if oauth_file_read_enabled
                         else ["inventory"]
                     ),
                     "target_binding": "context_id" if not oauth_enabled else "explicit_binding_id" if oauth_file_read_enabled else "account_owner",
@@ -424,6 +589,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _permission_request_input_schema(enabled=True),
             "annotations": {"readOnlyHint": False},
@@ -445,6 +611,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _approved_patch_input_schema(enabled=True),
             "annotations": {"readOnlyHint": False},
@@ -457,6 +624,74 @@ def _tool_contract_entry(
                 }
             },
         }
+    elif name == "exec_command" and oauth_exec_enabled:
+        entry = {
+            "name": name,
+            "description": _tool_description(
+                name,
+                oauth_enabled=oauth_enabled,
+                oauth_file_read_enabled=oauth_file_read_enabled,
+                oauth_permission_requests_enabled=oauth_permission_requests_enabled,
+                oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
+            ),
+            "inputSchema": _exec_input_schema(enabled=True),
+            "annotations": {"readOnlyHint": False},
+            "_meta": {
+                "control_plane": {
+                    "capability_state": "bounded_exec_candidate",
+                    "implemented_operations": ["exec_run", "exec_status"],
+                    "execution": "local_exec_policy_required",
+                    "reason": "WINDOWS_EXEC_BRIDGE_REQUIRED",
+                }
+            },
+        }
+    elif name == "command_control" and oauth_exec_enabled:
+        entry = {
+            "name": name,
+            "description": _tool_description(
+                name,
+                oauth_enabled=oauth_enabled,
+                oauth_file_read_enabled=oauth_file_read_enabled,
+                oauth_permission_requests_enabled=oauth_permission_requests_enabled,
+                oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
+            ),
+            "inputSchema": _exec_control_input_schema(enabled=True),
+            "annotations": {"readOnlyHint": False},
+            "_meta": {
+                "control_plane": {
+                    "capability_state": "bounded_exec_candidate",
+                    "implemented_operations": ["exec_output", "exec_stop"],
+                    "execution": "local_exec_policy_required",
+                    "reason": "WINDOWS_EXEC_BRIDGE_REQUIRED",
+                }
+            },
+        }
+    elif name in ("document_workflow", "view_image") and oauth_file_read_enabled:
+        kind = "document" if name == "document_workflow" else "image"
+        entry = {
+            "name": name,
+            "description": _tool_description(
+                name,
+                oauth_enabled=oauth_enabled,
+                oauth_file_read_enabled=oauth_file_read_enabled,
+                oauth_permission_requests_enabled=oauth_permission_requests_enabled,
+                oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
+            ),
+            "inputSchema": _artifact_input_schema(enabled=True, kind=kind),
+            "annotations": {"readOnlyHint": True},
+            "_meta": {
+                "control_plane": {
+                    "capability_state": "bounded_artifact_candidate",
+                    "implemented_operations": [f"{'doc' if kind == 'document' else 'image'}_read",
+                                               f"{'doc' if kind == 'document' else 'image'}_status"],
+                    "execution": "local_admission_required",
+                    "reason": "WINDOWS_ARTIFACT_BRIDGE_REQUIRED",
+                }
+            },
+        }
     else:
         entry = {
             "name": name,
@@ -466,6 +701,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _unavailable_tool_input_schema(),
             "annotations": {"readOnlyHint": False},
@@ -486,6 +722,8 @@ def _tool_contract_entry(
         if name == "request_permissions" and oauth_permission_requests_enabled:
             required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
         elif name == "agent_workflow" and oauth_approved_patch_enabled:
+            required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
+        elif name in ("exec_command", "command_control") and oauth_exec_enabled:
             required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
         security_schemes = [{"type": "oauth2", "scopes": list(required_scopes)}]
         entry["securitySchemes"] = security_schemes
@@ -957,6 +1195,164 @@ def _completed_approved_patch_relay(
     return None
 
 
+def _completed_exec_relay(action: dict[str, Any], contract: dict[str, int | str]) -> dict[str, Any] | None:
+    """Return one verified bounded exec result without trusting raw output blindly.
+
+    The node revalidates argv/policy/limits before spawn; this boundary checks
+    the terminal receipt shape, contract pin and output caps again. Output is
+    returned bounded and paged by the caller; it is workspace data, never a
+    policy or instruction. Unknown receipts never produce a result.
+    """
+    if action.get("tool_name") != "exec_command":
+        return None
+    receipts = action.get("receipts")
+    if not isinstance(receipts, list):
+        return None
+    for receipt in reversed(receipts):
+        if not isinstance(receipt, dict) or receipt.get("receipt_state") not in ("completed", "failed", "stopped"):
+            continue
+        raw_payload = receipt.get("payload_json")
+        if not isinstance(raw_payload, str) or len(raw_payload.encode("utf-8")) > 96 * 1024:
+            continue
+        try:
+            payload = json.loads(raw_payload)
+        except (TypeError, ValueError):
+            continue
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != 1
+            or payload.get("operation_kind") != "control_plane_exec"
+            or payload.get("facade_contract") != contract
+            or payload.get("actor") != {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"}
+            or not isinstance(payload.get("local_handle"), str)
+            or re.fullmatch(r"cp_exec_[a-f0-9]{48}", str(payload.get("local_handle"))) is None
+            or not isinstance(payload.get("exit_code"), int)
+            or isinstance(payload.get("exit_code"), bool)
+            or not -256 <= payload.get("exit_code") <= 256
+            or not isinstance(payload.get("stdout"), str)
+            or not isinstance(payload.get("stderr"), str)
+            or not isinstance(payload.get("truncated"), bool)
+            or not isinstance(payload.get("output_bytes"), int)
+            or isinstance(payload.get("output_bytes"), bool)
+            or not 0 <= payload.get("output_bytes") <= 65536
+            or not isinstance(payload.get("response_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", str(payload.get("response_sha256")).lower()) is None
+        ):
+            continue
+        stdout = str(payload.get("stdout"))
+        stderr = str(payload.get("stderr"))
+        if len(stdout.encode("utf-8")) + len(stderr.encode("utf-8")) > 65536:
+            continue
+        expected = hashlib.sha256(
+            _canonical_json({"exit_code": payload.get("exit_code"), "stdout": stdout, "stderr": stderr,
+                             "truncated": payload.get("truncated")}).encode("utf-8")
+        ).hexdigest()
+        if str(payload.get("response_sha256")).lower() != expected:
+            continue
+        return {
+            "receipt_id": receipt.get("receipt_id"),
+            "receipt_state": receipt.get("receipt_state"),
+            "received_at_ms": receipt.get("received_at_ms"),
+            "local_handle": str(payload.get("local_handle")),
+            "exit_code": payload.get("exit_code"),
+            "stdout": stdout,
+            "stderr": stderr,
+            "truncated": payload.get("truncated"),
+            "output_bytes": payload.get("output_bytes"),
+            "response_sha256": expected,
+        }
+    return None
+
+
+def _paged_exec_output(stdout: str, stderr: str, *, cursor: int, max_bytes: int) -> dict[str, Any]:
+    combined = f"[stdout]\n{stdout}\n[stderr]\n{stderr}"
+    encoded = combined.encode("utf-8")
+    total = len(encoded)
+    start = max(0, min(cursor, total))
+    end = min(total, start + max_bytes)
+    return {
+        "cursor": start,
+        "next_cursor": end,
+        "total_bytes": total,
+        "truncated": end < total,
+        "output": encoded[start:end].decode("utf-8", errors="replace"),
+    }
+
+
+def _completed_artifact_relay(action: dict[str, Any], contract: dict[str, int | str],
+                              *, kind: str) -> dict[str, Any] | None:
+    expected_tool = "document_workflow" if kind == "document" else "view_image"
+    if action.get("tool_name") != expected_tool:
+        return None
+    receipts = action.get("receipts")
+    if not isinstance(receipts, list):
+        return None
+    for receipt in reversed(receipts):
+        if not isinstance(receipt, dict) or receipt.get("receipt_state") != "completed":
+            continue
+        raw_payload = receipt.get("payload_json")
+        if not isinstance(raw_payload, str) or len(raw_payload.encode("utf-8")) > 1536 * 1024:
+            continue
+        try:
+            payload = json.loads(raw_payload)
+        except (TypeError, ValueError):
+            continue
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != 1
+            or payload.get("operation_kind") != f"control_plane_artifact_{kind}"
+            or payload.get("facade_contract") != contract
+            or payload.get("actor") != {"client_id": "electron-control-plane-artifact-bridge", "client_type": "electron"}
+            or not isinstance(payload.get("local_handle"), str)
+            or re.fullmatch(r"cp_artifact_[a-f0-9]{48}", str(payload.get("local_handle"))) is None
+            or not isinstance(payload.get("response_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", str(payload.get("response_sha256")).lower()) is None
+        ):
+            continue
+        if kind == "document":
+            content = payload.get("content")
+            if not isinstance(content, str) or len(content.encode("utf-8")) > 256 * 1024:
+                continue
+            if any(pattern.search(content) for pattern in _SENSITIVE_FILE_CONTENT_PATTERNS):
+                continue
+            expected = hashlib.sha256(_canonical_json(
+                {"path": payload.get("path"), "content": content}).encode()).hexdigest()
+            if str(payload.get("response_sha256")).lower() != expected:
+                continue
+            if not isinstance(payload.get("path"), str) or _safe_bounded_relative_path(payload.get("path")) is None:
+                continue
+            return {"receipt_id": receipt.get("receipt_id"), "received_at_ms": receipt.get("received_at_ms"),
+                    "local_handle": str(payload.get("local_handle")), "path": payload.get("path"),
+                    "content": content, "response_sha256": expected}
+        else:
+            mime = payload.get("mime")
+            data_b64 = payload.get("data_base64")
+            if mime not in ("image/png", "image/jpeg", "image/webp"):
+                continue
+            if not isinstance(data_b64, str) or len(data_b64.encode()) > 1400 * 1024:
+                continue
+            try:
+                raw = __import__("base64").b64decode(data_b64.encode(), validate=True)
+            except Exception:
+                continue
+            if not raw or len(raw) > 1024 * 1024:
+                continue
+            if mime == "image/png" and not raw.startswith(b"\x89PNG\r\n\x1a\n"):
+                continue
+            if mime == "image/jpeg" and not raw.startswith(b"\xff\xd8\xff"):
+                continue
+            expected = hashlib.sha256(_canonical_json(
+                {"path": payload.get("path"), "mime": mime, "data_base64": data_b64}).encode()).hexdigest()
+            if str(payload.get("response_sha256")).lower() != expected:
+                continue
+            if not isinstance(payload.get("path"), str) or _safe_bounded_relative_path(payload.get("path")) is None:
+                continue
+            return {"receipt_id": receipt.get("receipt_id"), "received_at_ms": receipt.get("received_at_ms"),
+                    "local_handle": str(payload.get("local_handle")), "path": payload.get("path"),
+                    "mime": mime, "data_base64": data_b64, "bytes": len(raw), "response_sha256": expected}
+    return None
+
+
 def tool_contract(
     *,
     oauth_scopes: tuple[str, ...] = (),
@@ -964,6 +1360,7 @@ def tool_contract(
     oauth_permission_requests_enabled: bool = False,
     oauth_patch_write_scope: str | None = None,
     oauth_approved_patch_enabled: bool = False,
+    oauth_exec_enabled: bool = False,
 ) -> dict[str, Any]:
     if any(not isinstance(scope, str) or not scope for scope in oauth_scopes):
         raise ValueError("OAuth tool scopes are invalid.")
@@ -983,6 +1380,8 @@ def tool_contract(
         raise ValueError("OAuth write scope requires the permission-request candidate contract.")
     if oauth_approved_patch_enabled and not oauth_permission_requests_enabled:
         raise ValueError("OAuth approved patches require the permission-request candidate contract.")
+    if oauth_exec_enabled and not oauth_approved_patch_enabled:
+        raise ValueError("OAuth bounded exec requires the approved-patch candidate contract.")
     tools = [
         _tool_contract_entry(
             name,
@@ -991,18 +1390,21 @@ def tool_contract(
             oauth_permission_requests_enabled=oauth_permission_requests_enabled,
             oauth_patch_write_scope=oauth_patch_write_scope,
             oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+            oauth_exec_enabled=oauth_exec_enabled,
         )
         for name in PUBLIC_TOOL_NAMES
     ]
     schema_version = (
-        OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION if oauth_approved_patch_enabled
+        OAUTH_EXEC_FACADE_SCHEMA_VERSION if oauth_exec_enabled
+        else OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION if oauth_permission_requests_enabled
         else OAUTH_FILE_READ_FACADE_SCHEMA_VERSION if oauth_file_read_enabled
         else OAUTH_FACADE_SCHEMA_VERSION if oauth_enabled
         else FACADE_SCHEMA_VERSION
     )
     profile = (
-        OAUTH_APPROVED_PATCH_FACADE_PROFILE if oauth_approved_patch_enabled
+        OAUTH_EXEC_FACADE_PROFILE if oauth_exec_enabled
+        else OAUTH_APPROVED_PATCH_FACADE_PROFILE if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_PROFILE if oauth_permission_requests_enabled
         else OAUTH_FILE_READ_FACADE_PROFILE if oauth_file_read_enabled
         else OAUTH_FACADE_PROFILE if oauth_enabled
@@ -1060,6 +1462,7 @@ class ControlPlaneMcpFacade:
         oauth_permission_requests_enabled: bool = False,
         oauth_patch_write_scope: str | None = None,
         oauth_approved_patch_enabled: bool = False,
+        oauth_exec_enabled: bool = False,
     ) -> None:
         self.store = store
         self.oauth_scopes = oauth_scopes
@@ -1079,16 +1482,20 @@ class ControlPlaneMcpFacade:
             raise ValueError("OAuth write scope requires the permission-request candidate contract.")
         if oauth_approved_patch_enabled and not oauth_permission_requests_enabled:
             raise ValueError("OAuth approved patches require the permission-request candidate contract.")
+        if oauth_exec_enabled and not oauth_approved_patch_enabled:
+            raise ValueError("OAuth bounded exec requires the approved-patch candidate contract.")
         self.oauth_file_read_enabled = bool(oauth_file_read_enabled)
         self.oauth_permission_requests_enabled = bool(oauth_permission_requests_enabled)
         self.oauth_patch_write_scope = oauth_patch_write_scope
         self.oauth_approved_patch_enabled = bool(oauth_approved_patch_enabled)
+        self.oauth_exec_enabled = bool(oauth_exec_enabled)
         self.contract = tool_contract(
             oauth_scopes=oauth_scopes,
             oauth_file_read_enabled=self.oauth_file_read_enabled,
             oauth_permission_requests_enabled=self.oauth_permission_requests_enabled,
             oauth_patch_write_scope=self.oauth_patch_write_scope,
             oauth_approved_patch_enabled=self.oauth_approved_patch_enabled,
+            oauth_exec_enabled=self.oauth_exec_enabled,
         )
 
     @property
@@ -1097,6 +1504,8 @@ class ControlPlaneMcpFacade:
 
     @property
     def _execution_mode(self) -> str:
+        if self.oauth_exec_enabled:
+            return "bounded_exec_local_policy_required"
         if self.oauth_approved_patch_enabled:
             return "bounded_file_read_plus_approved_patch_local_policy_required"
         if self.oauth_permission_requests_enabled:
@@ -1120,7 +1529,10 @@ class ControlPlaneMcpFacade:
             "serverInfo": {"name": "coding-tools-control-plane", "version": "0.1.0"},
             "capabilities": {"tools": {"listChanged": False}},
             "instructions": (
-                "This facade returns account inventory, can queue one explicitly approved exact-file patch only under a distinct OAuth write scope and an "
+                "This facade returns account inventory, can queue one bounded structured exec or one approved exact-file patch only under a distinct OAuth write scope and "
+                "independent local Windows policies, and can observe paged output or request verified stop. cwd is a start directory, never a sandbox; shell is never accepted."
+                if self.oauth_exec_enabled
+                else "This facade returns account inventory, can queue one explicitly approved exact-file patch only under a distinct OAuth write scope and an "
                 "independent local Windows patch policy, and can record owner-reviewed patch permission scopes. It cannot launch processes, select a last-used "
                 "target, use remote shell, or access a workspace directly."
                 if self.oauth_approved_patch_enabled
@@ -1211,7 +1623,8 @@ class ControlPlaneMcpFacade:
                     "operation", "binding_id", "path", "preimage_sha256", "patch_sha256",
                     "validation_profile", "idempotency_key", "expected_facade_contract",
                 }
-                if set(arguments) != required:
+                allowed = required | {"task_id"}
+                if not required <= set(arguments) or not set(arguments) <= allowed:
                     raise ValidationError("request_patch requires one exact target, patch digests, validation profile, idempotency key and expected facade contract.")
                 binding_id = arguments.get("binding_id")
                 path = arguments.get("path")
@@ -1237,6 +1650,11 @@ class ControlPlaneMcpFacade:
                     raise ValidationError("patch scope digest is invalid.")
                 if arguments.get("validation_profile") != MCP_PATCH_PERMISSION_VALIDATION_PROFILE:
                     raise ValidationError("validation_profile is invalid.")
+                task_id = arguments.get("task_id")
+                if task_id is not None and (
+                    not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None
+                ):
+                    raise ValidationError("task_id is invalid.")
                 return name, {
                     "operation": "request_patch",
                     "binding_id": binding_id.strip(),
@@ -1245,6 +1663,7 @@ class ControlPlaneMcpFacade:
                     "patch_sha256": str(hashes["patch_sha256"]).strip().lower(),
                     "validation_profile": MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
                     "idempotency_key": key.strip(),
+                    "task_id": task_id,
                     "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
                 }
             if operation == "status":
@@ -1262,7 +1681,8 @@ class ControlPlaneMcpFacade:
                     "operation", "permission_request_id", "patch_envelope",
                     "idempotency_key", "expected_facade_contract",
                 }
-                if set(arguments) != required:
+                allowed = required | {"task_id"}
+                if not required <= set(arguments) or not set(arguments) <= allowed:
                     raise ValidationError("apply_patch requires one approved permission request, exact patch envelope, idempotency key and expected facade contract.")
                 permission_request_id = arguments.get("permission_request_id")
                 patch_envelope = arguments.get("patch_envelope")
@@ -1277,11 +1697,17 @@ class ControlPlaneMcpFacade:
                     patch_bytes = b""
                 if not patch_bytes or len(patch_bytes) > MCP_APPROVED_PATCH_MAX_BYTES:
                     raise ValidationError("patch_envelope is invalid.")
+                task_id = arguments.get("task_id")
+                if task_id is not None and (
+                    not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None
+                ):
+                    raise ValidationError("task_id is invalid.")
                 return name, {
                     "operation": "apply_patch",
                     "permission_request_id": permission_request_id.strip(),
                     "patch_envelope": patch_envelope,
                     "idempotency_key": key.strip(),
+                    "task_id": task_id,
                     "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
                 }
             if operation == "patch_status":
@@ -1292,6 +1718,115 @@ class ControlPlaneMcpFacade:
                     raise ValidationError("action_id is invalid.")
                 return name, {"operation": "patch_status", "action_id": action_id.strip()}
             raise ValidationError("agent_workflow operation is unsupported.")
+        if name == "exec_command" and self.oauth_exec_enabled:
+            operation = arguments.get("operation")
+            if operation == "exec_run":
+                required = {"operation", "binding_id", "argv", "idempotency_key", "expected_facade_contract"}
+                allowed = required | {"task_id", "cwd", "timeout_ms", "max_output_bytes"}
+                if not required <= set(arguments) or not set(arguments) <= allowed:
+                    raise ValidationError("exec_run requires an exact binding, structured argv, idempotency key and expected facade contract.")
+                binding_id = arguments.get("binding_id")
+                argv = arguments.get("argv")
+                key = arguments.get("idempotency_key")
+                if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
+                    raise ValidationError("binding_id is invalid.")
+                if not isinstance(argv, list) or not 1 <= len(argv) <= 8:
+                    raise ValidationError("argv is invalid.")
+                for item in argv:
+                    if not isinstance(item, str) or not item or len(item.encode("utf-8", "ignore")) > 256:
+                        raise ValidationError("argv is invalid.")
+                    if any(token in item for token in (";", "&&", "||", "`", "$(", "|", ">", "<", "\n", "\r")):
+                        raise ValidationError("argv must not contain shell metacharacters.")
+                if not isinstance(key, str) or not 8 <= len(key.strip()) <= 256:
+                    raise ValidationError("idempotency_key is invalid.")
+                task_id = arguments.get("task_id")
+                if task_id is not None and (not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None):
+                    raise ValidationError("task_id is invalid.")
+                cwd = arguments.get("cwd", "")
+                if cwd is None:
+                    cwd = ""
+                if not isinstance(cwd, str) or len(cwd.encode("utf-8")) > 512:
+                    raise ValidationError("cwd is invalid.")
+                if cwd and (cwd.startswith("/") or "\\" in cwd or ":" in cwd):
+                    raise ValidationError("cwd is invalid.")
+                if cwd and any(not part or part in {".", ".."} for part in cwd.split("/")):
+                    raise ValidationError("cwd is invalid.")
+                timeout_ms = arguments.get("timeout_ms", 60000)
+                max_output_bytes = arguments.get("max_output_bytes", 32768)
+                if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool) or not 5000 <= timeout_ms <= 300000:
+                    raise ValidationError("timeout_ms is invalid.")
+                if not isinstance(max_output_bytes, int) or isinstance(max_output_bytes, bool) or not 1024 <= max_output_bytes <= 65536:
+                    raise ValidationError("max_output_bytes is invalid.")
+                return name, {
+                    "operation": "exec_run", "binding_id": binding_id.strip(), "argv": list(argv),
+                    "cwd": cwd, "timeout_ms": timeout_ms, "max_output_bytes": max_output_bytes,
+                    "idempotency_key": key.strip(), "task_id": task_id,
+                    "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                }
+            if operation == "exec_status":
+                if set(arguments) != {"operation", "action_id"}:
+                    raise ValidationError("exec_status requires an exact action_id and no other arguments.")
+                action_id = arguments.get("action_id")
+                if not isinstance(action_id, str) or not 3 <= len(action_id.strip()) <= 128:
+                    raise ValidationError("action_id is invalid.")
+                return name, {"operation": "exec_status", "action_id": action_id.strip()}
+            raise ValidationError("exec_command operation is unsupported.")
+        if name == "command_control" and self.oauth_exec_enabled:
+            operation = arguments.get("operation")
+            if operation in ("exec_output", "exec_stop"):
+                allowed = {"operation", "action_id", "cursor", "max_bytes"}
+                if operation == "exec_stop":
+                    allowed = {"operation", "action_id"}
+                if not {"operation", "action_id"} <= set(arguments) <= allowed:
+                    raise ValidationError(f"{operation} requires an exact action_id.")
+                action_id = arguments.get("action_id")
+                if not isinstance(action_id, str) or not 3 <= len(action_id.strip()) <= 128:
+                    raise ValidationError("action_id is invalid.")
+                result: dict[str, Any] = {"operation": operation, "action_id": action_id.strip()}
+                if operation == "exec_output":
+                    cursor = arguments.get("cursor", 0)
+                    max_bytes = arguments.get("max_bytes", 16384)
+                    if not isinstance(cursor, int) or isinstance(cursor, bool) or not 0 <= cursor <= 10_000_000:
+                        raise ValidationError("cursor is invalid.")
+                    if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 1 <= max_bytes <= 65536:
+                        raise ValidationError("max_bytes is invalid.")
+                    result["cursor"] = cursor
+                    result["max_bytes"] = max_bytes
+                return name, result
+            raise ValidationError("command_control operation is unsupported.")
+        if name in ("document_workflow", "view_image") and self.oauth_file_read_enabled:
+            kind = "document" if name == "document_workflow" else "image"
+            read_op = "doc_read" if kind == "document" else "image_read"
+            status_op = "doc_status" if kind == "document" else "image_status"
+            operation = arguments.get("operation")
+            if operation == read_op:
+                required = {"operation", "binding_id", "path", "idempotency_key", "expected_facade_contract"}
+                allowed = required | {"task_id"}
+                if not required <= set(arguments) or not set(arguments) <= allowed:
+                    raise ValidationError(f"{read_op} requires an exact binding, path, idempotency key and expected facade contract.")
+                binding_id = arguments.get("binding_id")
+                path = arguments.get("path")
+                key = arguments.get("idempotency_key")
+                if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
+                    raise ValidationError("binding_id is invalid.")
+                if not isinstance(path, str) or not 1 <= len(path.encode("utf-8", "ignore")) <= 512:
+                    raise ValidationError("path is invalid.")
+                if not isinstance(key, str) or not 8 <= len(key.strip()) <= 256:
+                    raise ValidationError("idempotency_key is invalid.")
+                task_id = arguments.get("task_id")
+                if task_id is not None and (not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None):
+                    raise ValidationError("task_id is invalid.")
+                return name, {"operation": read_op, "kind": kind, "binding_id": binding_id.strip(),
+                              "path": path, "idempotency_key": key.strip(), "task_id": task_id,
+                              "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract"))}
+            if operation == status_op:
+                if set(arguments) != {"operation", "action_id"}:
+                    raise ValidationError(f"{status_op} requires an exact action_id and no other arguments.")
+                action_id = arguments.get("action_id")
+                if not isinstance(action_id, str) or not 3 <= len(action_id.strip()) <= 128:
+                    raise ValidationError("action_id is invalid.")
+                return name, {"operation": status_op, "kind": kind, "action_id": action_id.strip()}
+            raise ValidationError(f"{name} operation is unsupported.")
         if name != "workspace_context":
             if arguments:
                 raise ValidationError(f"{name} does not accept arguments while its relay is unavailable.")
@@ -1304,10 +1839,32 @@ class ControlPlaneMcpFacade:
                 return name, {"operation": "inventory"}
             if not self.oauth_file_read_enabled:
                 raise ValidationError("OAuth account inventory requires operation=inventory and no target arguments.")
+            if operation == "task_open":
+                allowed = {"operation", "binding_id", "label"}
+                if set(arguments) != allowed:
+                    raise ValidationError("task_open requires one exact binding and a short label.")
+                binding_id = arguments.get("binding_id")
+                label = arguments.get("label")
+                if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
+                    raise ValidationError("binding_id is invalid.")
+                if not isinstance(label, str) or not 1 <= len(label.strip()) <= 120:
+                    raise ValidationError("label is invalid.")
+                return name, {"operation": "task_open", "binding_id": binding_id.strip(), "label": label.strip()}
+            if operation == "task_list":
+                if set(arguments) != {"operation"}:
+                    raise ValidationError("task_list requires no target arguments.")
+                return name, {"operation": "task_list"}
+            if operation == "task_close":
+                if set(arguments) != {"operation", "task_id"}:
+                    raise ValidationError("task_close requires one exact task handle.")
+                task_id = arguments.get("task_id")
+                if not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None:
+                    raise ValidationError("task_id is invalid.")
+                return name, {"operation": "task_close", "task_id": task_id}
             if operation == "read_file":
                 allowed = {
                     "operation", "binding_id", "path", "start_line", "max_lines", "max_bytes",
-                    "idempotency_key", "expected_facade_contract",
+                    "idempotency_key", "expected_facade_contract", "task_id",
                 }
                 required = {"operation", "binding_id", "path", "idempotency_key", "expected_facade_contract"}
                 if not required <= set(arguments) or not set(arguments) <= allowed:
@@ -1333,8 +1890,15 @@ class ControlPlaneMcpFacade:
                     "max_lines": arguments.get("max_lines", FILE_READ_MAX_LINES),
                     "max_bytes": arguments.get("max_bytes", FILE_READ_MAX_BYTES),
                     "idempotency_key": key.strip(),
+                    "task_id": None,
                     "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
                 }
+                task_id = arguments.get("task_id")
+                if task_id is not None and (
+                    not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None
+                ):
+                    raise ValidationError("task_id is invalid.")
+                result["task_id"] = task_id
                 for field, maximum in (("start_line", 1_000_000), ("max_lines", FILE_READ_MAX_LINES), ("max_bytes", FILE_READ_MAX_BYTES)):
                     value = result[field]
                     if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= maximum:
@@ -1596,6 +2160,7 @@ class ControlPlaneMcpFacade:
             max_bytes=arguments["max_bytes"],
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
+            task_id=arguments.get("task_id"),
         )
         action = self.store.mcp_file_read_action_observation(
             owner_id=owner_id,
@@ -1612,10 +2177,69 @@ class ControlPlaneMcpFacade:
                 "local_admission": "required",
                 "request_id": intent["request_id"],
                 "action_id": intent["action_id"],
+                "task_id": arguments.get("task_id"),
                 "intent_digest": intent["intent_digest"],
                 "facade_contract": intent["facade_contract"],
                 "replayed": intent["replayed"],
                 "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _open_task(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        task = self.store.create_mcp_task_session(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            binding_id=arguments["binding_id"],
+            label=arguments["label"],
+        )
+        return {
+            "content": [{"type": "text", "text": "Durable task opened and pinned to the selected binding. Use this task_id for later reads, permission requests and patches so two chats never retarget each other."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_task_session",
+                "task": task,
+            },
+            "isError": False,
+        }
+
+    def _list_tasks(self, *, owner_id: str, principal_id: str) -> dict[str, Any]:
+        tasks = self.store.list_mcp_task_sessions(owner_id=owner_id, principal_id=principal_id)
+        return {
+            "content": [{"type": "text", "text": "Durable task handles for this OAuth account; each pins one immutable node/workspace target."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_task_session_list",
+                "tasks": tasks,
+            },
+            "isError": False,
+        }
+
+    def _close_task(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        task = self.store.close_mcp_task_session(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            task_id=arguments["task_id"],
+            reason="mcp_task_close",
+        )
+        return {
+            "content": [{"type": "text", "text": "Task closed for new actions. Existing queued/running actions stay observable and stoppable under their own authority."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_task_session",
+                "task": task,
             },
             "isError": False,
         }
@@ -1673,6 +2297,7 @@ class ControlPlaneMcpFacade:
             validation_profile=arguments["validation_profile"],
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
+            task_id=arguments.get("task_id"),
         )
         return {
             "content": [{
@@ -1737,6 +2362,7 @@ class ControlPlaneMcpFacade:
             patch_envelope=arguments["patch_envelope"],
             idempotency_key=arguments["idempotency_key"],
             facade_contract=current_contract,
+            task_id=arguments.get("task_id"),
         )
         action = self.store.mcp_approved_patch_action_observation(
             owner_id=owner_id,
@@ -1828,16 +2454,32 @@ class ControlPlaneMcpFacade:
             "patch_applied": relay is not None,
             "patch_effect_state": "verified_applied" if relay is not None else "not_verified",
             "local_admission": "effect_applied_local_acceptance_pending" if relay is not None else "required_or_pending",
+            "local_semantic_acceptance": "pending",
             "action": self._action_lifecycle_projection(action),
         }
         content = "Approved patch action has no verified completed local receipt yet."
         if relay is not None:
             observation["patch"] = relay
-            observation["local_semantic_acceptance"] = relay["local_semantic_acceptance"]
-            content = (
-                "The selected local Windows node applied the exact approved patch and relayed a verified receipt. "
-                "Its local Coding Tools RUN still requires separate proof and semantic acceptance."
-            )
+            try:
+                acceptance = self.store.get_mcp_patch_acceptance(owner_id=owner_id, action_id=action["action_id"])
+            except Exception:
+                acceptance = None
+            if acceptance is None:
+                observation["local_semantic_acceptance"] = relay.get("local_semantic_acceptance", "pending")
+                content = (
+                    "The selected local Windows node applied the exact approved patch and relayed a verified receipt. "
+                    "Its local Coding Tools RUN still requires separate proof and semantic acceptance. "
+                    "Record acceptance via the owner Console; rejection never reverts the file."
+                )
+            else:
+                observation["local_semantic_acceptance"] = acceptance["decision"]
+                observation["acceptance"] = acceptance
+                if acceptance["decision"] == "accepted":
+                    observation["execution"] = "effect_applied_local_accepted"
+                    content = "Patch effect was verified and the owner recorded semantic acceptance."
+                else:
+                    observation["execution"] = "effect_applied_local_rejected_needs_correction"
+                    content = "Patch effect was verified but the owner rejected the result. The file was not reverted; queue a corrective patch instead."
         return {
             "content": [{"type": "text", "text": content}],
             "structuredContent": observation,
@@ -1848,6 +2490,163 @@ class ControlPlaneMcpFacade:
         if not self.oauth_permission_requests_enabled or not isinstance(self.oauth_patch_write_scope, str):
             return False
         return set(self.oauth_scopes) <= set(oauth_scopes) and self.oauth_patch_write_scope in oauth_scopes
+
+    def _request_exec(self, *, owner_id: str, principal_id: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        current_contract = _contract_metadata(self.contract)
+        if arguments["expected_facade_contract"] != current_contract:
+            raise ContractMismatchError("expected facade contract does not match this control-plane surface.")
+        intent = self.store.request_mcp_exec(
+            owner_id=owner_id, principal_id=principal_id, binding_id=arguments["binding_id"],
+            argv=arguments["argv"], cwd=arguments.get("cwd", ""), timeout_ms=arguments.get("timeout_ms", 60000),
+            max_output_bytes=arguments.get("max_output_bytes", 32768),
+            idempotency_key=arguments["idempotency_key"], facade_contract=current_contract,
+            task_id=arguments.get("task_id"),
+        )
+        action = self.store.mcp_exec_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=intent["action_id"])
+        return {
+            "content": [{"type": "text", "text": "Bounded exec intent is queued for local Windows exec-policy admission; no process was spawned by the facade."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_bounded_exec_intent",
+                "execution": "queued_for_local_admission", "local_admission": "required",
+                "request_id": intent["request_id"], "action_id": intent["action_id"],
+                "task_id": arguments.get("task_id"), "intent_digest": intent["intent_digest"],
+                "facade_contract": intent["facade_contract"], "replayed": intent["replayed"],
+                "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _exec_status(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        action = self.store.mcp_exec_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
+        relay = _completed_exec_relay(action, _contract_metadata(self.contract))
+        if action["delivery_state"] == "reconcile_required":
+            return {
+                "content": [{"type": "text", "text": "Exec effect is unknown; do not retry automatically. Reconcile locally before any new mutation."}],
+                "structuredContent": {
+                    "schema_version": self.contract["schema_version"],
+                    "observation_kind": "control_plane_exec_status",
+                    "execution": "local_exec_effect_unknown_reconcile_required",
+                    "exit_code": None, "process_state": "unknown",
+                    "local_admission": "unknown_effect_do_not_retry", "reconciliation_required": True,
+                    "action": self._action_lifecycle_projection(action),
+                },
+                "isError": False,
+            }
+        observation: dict[str, Any] = {
+            "schema_version": self.contract["schema_version"],
+            "observation_kind": "control_plane_exec_status",
+            "execution": "completed_exec_relay" if relay is not None else "local_admission_pending_or_running",
+            "exit_code": relay["exit_code"] if relay is not None else None,
+            "process_state": relay["receipt_state"] if relay is not None else "pending_or_running",
+            "local_admission": "completed" if relay is not None else "required_or_pending",
+            "action": self._action_lifecycle_projection(action),
+        }
+        content = "Bounded exec has no verified terminal receipt yet."
+        if relay is not None:
+            observation["exec"] = {k: relay[k] for k in ("receipt_id", "received_at_ms", "local_handle", "exit_code", "truncated", "output_bytes", "response_sha256")}
+            content = f"Exec finished with exit {relay['exit_code']}. Use command_control exec_output for paged output."
+        return {"content": [{"type": "text", "text": content}], "structuredContent": observation, "isError": False}
+
+    def _exec_output(self, *, owner_id: str, principal_id: str, action_id: str, cursor: int, max_bytes: int) -> dict[str, Any]:
+        action = self.store.mcp_exec_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
+        relay = _completed_exec_relay(action, _contract_metadata(self.contract))
+        if relay is None:
+            # Running jobs may have no terminal receipt yet; expose lifecycle without fabricating output.
+            return {
+                "content": [{"type": "text", "text": "No verified exec output yet; the job is queued, running, or its receipt is unverified."}],
+                "structuredContent": {
+                    "schema_version": self.contract["schema_version"],
+                    "observation_kind": "control_plane_exec_output",
+                    "has_output": False, "cursor": cursor, "next_cursor": cursor, "total_bytes": 0,
+                    "action": self._action_lifecycle_projection(action),
+                },
+                "isError": False,
+            }
+        page = _paged_exec_output(relay["stdout"], relay["stderr"], cursor=cursor, max_bytes=max_bytes)
+        return {
+            "content": [{"type": "text", "text": f"Verified exec output bytes {page['cursor']}..{page['next_cursor']} of {page['total_bytes']}."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_exec_output",
+                "has_output": True, "exit_code": relay["exit_code"], **page,
+                "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _exec_stop(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        stop = self.store.request_mcp_exec_stop(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
+        action = self.store.mcp_exec_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
+        relay = _completed_exec_relay(action, _contract_metadata(self.contract))
+        if relay is not None and relay["receipt_state"] in ("completed", "failed", "stopped"):
+            state, execution = "stopped_or_finished", "stop_confirmed_already_terminal"
+        elif action["delivery_state"] == "reconcile_required":
+            state, execution = "unknown", "stop_requested_effect_unknown_do_not_retry"
+        else:
+            state, execution = "pending", "stop_pending_awaiting_node_quiescence"
+        return {
+            "content": [{"type": "text", "text": "Stop requested. It reports pending until the node proves process-tree quiescence; offline nodes never report success."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_exec_stop",
+                "stop_state": state, "execution": execution,
+                "stop_request": stop, "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _request_artifact(self, *, owner_id: str, principal_id: str, kind: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        current_contract = _contract_metadata(self.contract)
+        if arguments["expected_facade_contract"] != current_contract:
+            raise ContractMismatchError("expected facade contract does not match this control-plane surface.")
+        intent = self.store.request_mcp_artifact(
+            owner_id=owner_id, principal_id=principal_id, binding_id=arguments["binding_id"], kind=kind,
+            path=arguments["path"], idempotency_key=arguments["idempotency_key"],
+            facade_contract=current_contract, task_id=arguments.get("task_id"),
+        )
+        action = self.store.mcp_artifact_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=intent["action_id"])
+        return {
+            "content": [{"type": "text", "text": f"Scoped {kind} read is queued for local allowlist admission; no byte was accessed by the facade."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": f"control_plane_artifact_{kind}_intent",
+                "execution": "queued_for_local_admission", "local_admission": "required",
+                "request_id": intent["request_id"], "action_id": intent["action_id"],
+                "task_id": arguments.get("task_id"), "intent_digest": intent["intent_digest"],
+                "facade_contract": intent["facade_contract"], "replayed": intent["replayed"],
+                "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _artifact_status(self, *, owner_id: str, principal_id: str, kind: str, action_id: str) -> dict[str, Any]:
+        action = self.store.mcp_artifact_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
+        relay = _completed_artifact_relay(action, _contract_metadata(self.contract), kind=kind)
+        if action["delivery_state"] == "reconcile_required":
+            return {
+                "content": [{"type": "text", "text": "Artifact effect is unknown; do not retry automatically."}],
+                "structuredContent": {
+                    "schema_version": self.contract["schema_version"],
+                    "observation_kind": f"control_plane_artifact_{kind}_status",
+                    "execution": "local_artifact_effect_unknown_reconcile_required",
+                    "local_admission": "unknown_effect_do_not_retry", "reconciliation_required": True,
+                    "action": self._action_lifecycle_projection(action),
+                },
+                "isError": False,
+            }
+        observation: dict[str, Any] = {
+            "schema_version": self.contract["schema_version"],
+            "observation_kind": f"control_plane_artifact_{kind}_status",
+            "execution": "completed_artifact_relay" if relay is not None else "local_admission_pending_or_unverified",
+            "local_admission": "completed" if relay is not None else "required_or_pending",
+            "action": self._action_lifecycle_projection(action),
+        }
+        content = f"Scoped {kind} has no verified completed receipt yet."
+        if relay is not None:
+            observation["artifact"] = {k: v for k, v in relay.items() if k != "content" or True}
+            content = f"The node relayed one verified {kind} artifact."
+        return {"content": [{"type": "text", "text": content}], "structuredContent": observation, "isError": False}
 
     @staticmethod
     def _require_granted_context(*, requested_context_id: str, granted_context_id: str | None) -> None:
@@ -1900,6 +2699,30 @@ class ControlPlaneMcpFacade:
                 principal_id=principal_id,
                 action_id=arguments["action_id"],
             )
+        if name == "exec_command" and self.oauth_exec_enabled:
+            if not self._has_patch_write_scope(oauth_scopes):
+                return self._call_error(
+                    code="OAUTH_WRITE_SCOPE_REQUIRED",
+                    message="This mutation candidate requires the dedicated OAuth write scope.",
+                    tool_name=name,
+                )
+            if arguments["operation"] == "exec_run":
+                return self._request_exec(owner_id=owner_id, principal_id=principal_id, arguments=arguments)
+            return self._exec_status(owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"])
+        if name == "command_control" and self.oauth_exec_enabled:
+            if arguments["operation"] == "exec_output":
+                return self._exec_output(
+                    owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"],
+                    cursor=arguments.get("cursor", 0), max_bytes=arguments.get("max_bytes", 16384),
+                )
+            # Stop stays available even when the task grant expired: it never creates a new effect.
+            return self._exec_stop(owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"])
+        if name in ("document_workflow", "view_image") and self.oauth_file_read_enabled:
+            kind = "document" if name == "document_workflow" else "image"
+            read_op = "doc_read" if kind == "document" else "image_read"
+            if arguments["operation"] == read_op:
+                return self._request_artifact(owner_id=owner_id, principal_id=principal_id, kind=kind, arguments=arguments)
+            return self._artifact_status(owner_id=owner_id, principal_id=principal_id, kind=kind, action_id=arguments["action_id"])
         if name != "workspace_context":
             return self._call_error(
                 code="LOCAL_ADMISSION_BRIDGE_REQUIRED",
@@ -1909,6 +2732,12 @@ class ControlPlaneMcpFacade:
         if self.oauth_enabled:
             if arguments["operation"] == "inventory":
                 return self._account_inventory(owner_id=owner_id, principal_id=principal_id)
+            if arguments["operation"] == "task_open":
+                return self._open_task(owner_id=owner_id, principal_id=principal_id, arguments=arguments)
+            if arguments["operation"] == "task_list":
+                return self._list_tasks(owner_id=owner_id, principal_id=principal_id)
+            if arguments["operation"] == "task_close":
+                return self._close_task(owner_id=owner_id, principal_id=principal_id, arguments=arguments)
             if arguments["operation"] == "read_file":
                 return self._request_bounded_file_read(
                     owner_id=owner_id,

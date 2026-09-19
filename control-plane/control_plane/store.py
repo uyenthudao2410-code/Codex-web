@@ -23,8 +23,10 @@ from urllib.parse import urlsplit
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
+TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 19
+MCP_TASK_SESSION_MAX_TTL_MS = 24 * 60 * 60 * 1000
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 MCP_BOUNDED_FILE_READ_MAX_BYTES = 16 * 1024
@@ -47,6 +49,27 @@ MCP_PATCH_PERMISSION_VALIDATION_PROFILE = "targeted"
 MCP_APPROVED_PATCH_MAX_BYTES = 32 * 1024
 MCP_APPROVED_PATCH_TOOL_NAME = "agent_workflow"
 MCP_APPROVED_PATCH_OPERATION = "apply_patch"
+# Bounded exec is intentionally narrow: argv array without shell, cwd confined
+# to the task workspace, explicit timeout/output caps. Central records the
+# request; the Windows node revalidates argv against its local allowlist and
+# enforces process/tree limits. cwd never implies filesystem confinement by
+# itself: the bridge must enforce root containment and the local write lock.
+MCP_EXEC_MAX_ARGV_ITEMS = 8
+MCP_EXEC_MAX_ARGV_ITEM_BYTES = 256
+MCP_EXEC_MAX_TIMEOUT_MS = 5 * 60 * 1000
+MCP_EXEC_MIN_TIMEOUT_MS = 5_000
+MCP_EXEC_MAX_OUTPUT_BYTES = 64 * 1024
+MCP_EXEC_MAX_TTL_MS = 10 * 60 * 1000
+MCP_EXEC_TOOL_NAME = "exec_command"
+MCP_EXEC_OPERATION = "exec_run"
+MCP_EXEC_CONTROL_TOOL_NAME = "command_control"
+# Scoped artifacts reuse the file-read allowlist: docs are bounded UTF-8 text,
+# images are bounded binary with an explicit MIME allowlist. Both are
+# task-pinned reads; document bytes are never policy or instructions.
+MCP_ARTIFACT_MAX_BYTES = 256 * 1024
+MCP_ARTIFACT_IMAGE_MAX_BYTES = 1024 * 1024
+MCP_ARTIFACT_MAX_TTL_MS = 5 * 60 * 1000
+MCP_ARTIFACT_ALLOWED_MIME = ("image/png", "image/jpeg", "image/webp")
 TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
 QUARANTINE_UNKNOWN_DISPOSITION = "quarantined_unknown"
@@ -113,6 +136,79 @@ def _bounded_file_read_limits(*, start_line: Any, max_lines: Any, max_bytes: Any
     if not 1 <= start_line <= 1_000_000 or not 1 <= max_lines <= MCP_BOUNDED_FILE_READ_MAX_LINES or not 1 <= max_bytes <= MCP_BOUNDED_FILE_READ_MAX_BYTES:
         raise ValidationError("bounded file read limits are invalid.")
     return start_line, max_lines, max_bytes
+
+
+def _mcp_exec_argv(value: Any) -> list[str]:
+    """Validate structured argv without shell interpretation.
+
+    The facade never accepts a command string, shell flag, environment map,
+    or network addresses. Each item is a short printable token; the Windows
+    node must additionally match the full argv against its local allowlist
+    before spawn. An empty list, shell metacharacters and oversized items fail.
+    """
+    if not isinstance(value, list) or not 1 <= len(value) <= MCP_EXEC_MAX_ARGV_ITEMS:
+        raise ValidationError("exec argv is invalid.")
+    normalized: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            raise ValidationError("exec argv is invalid.")
+        try:
+            encoded = item.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise ValidationError("exec argv is invalid.") from error
+        if not encoded or len(encoded) > MCP_EXEC_MAX_ARGV_ITEM_BYTES:
+            raise ValidationError("exec argv is invalid.")
+        if any(ord(c) < 32 or ord(c) == 127 for c in item):
+            raise ValidationError("exec argv is invalid.")
+        # Reject shell indirection at the central boundary; the bridge runs
+        # with shell:false and must never reinterpret these tokens.
+        if any(token in item for token in (";", "&&", "||", "`", "$(", "|", ">", "<", "\n", "\r")):
+            raise ValidationError("exec argv must not contain shell metacharacters.")
+        if item != item.strip() or not item:
+            raise ValidationError("exec argv is invalid.")
+        normalized.append(item)
+    first = normalized[0].lower()
+    if "/" in first or "\\" in first or ":" in first:
+        raise ValidationError("exec command must be a bare executable name.")
+    return normalized
+
+
+def _mcp_exec_cwd(value: Any) -> str:
+    """Validate a root-relative working directory, never a sandbox claim.
+
+    An empty value means the workspace root. A relative POSIX path keeps the
+    process start directory inside the selected root, but test/build steps can
+    still write outside via absolute paths, symlinks or network calls. The
+    bridge must enforce containment, the exec policy and the local write lock.
+    """
+    if value is None or value == "":
+        return ""
+    if not isinstance(value, str):
+        raise ValidationError("exec cwd is invalid.")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise ValidationError("exec cwd is invalid.") from error
+    if not encoded or len(encoded) > 512 or value.startswith("/") or "\\" in value or ":" in value:
+        raise ValidationError("exec cwd is invalid.")
+    if any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise ValidationError("exec cwd is invalid.")
+    parts = value.split("/")
+    if any(not part or part in {".", ".."} for part in parts):
+        raise ValidationError("exec cwd is invalid.")
+    return value
+
+
+def _mcp_exec_limits(*, timeout_ms: Any, max_output_bytes: Any) -> tuple[int, int]:
+    if not isinstance(timeout_ms, int) or isinstance(timeout_ms, bool):
+        raise ValidationError("exec timeout is invalid.")
+    if not isinstance(max_output_bytes, int) or isinstance(max_output_bytes, bool):
+        raise ValidationError("exec output limit is invalid.")
+    if not MCP_EXEC_MIN_TIMEOUT_MS <= timeout_ms <= MCP_EXEC_MAX_TIMEOUT_MS:
+        raise ValidationError("exec timeout is invalid.")
+    if not 1024 <= max_output_bytes <= MCP_EXEC_MAX_OUTPUT_BYTES:
+        raise ValidationError("exec output limit is invalid.")
+    return timeout_ms, max_output_bytes
 
 
 def _mcp_patch_permission_scope(
@@ -884,6 +980,7 @@ class ControlPlaneStore:
                     validation_profile TEXT NOT NULL CHECK(validation_profile = 'targeted'),
                     permission_digest TEXT NOT NULL,
                     idempotency_key TEXT NOT NULL,
+                    task_id TEXT,
                     facade_schema_version INTEGER NOT NULL,
                     facade_profile TEXT NOT NULL,
                     facade_contract_sha256 TEXT NOT NULL,
@@ -930,6 +1027,56 @@ class ControlPlaneStore:
                     created_at_ms INTEGER NOT NULL,
                     expires_at_ms INTEGER NOT NULL,
                     revoked_at_ms INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS mcp_exec_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    task_id TEXT REFERENCES mcp_task_sessions(task_id),
+                    argv_json TEXT NOT NULL,
+                    argv_digest TEXT NOT NULL,
+                    cwd TEXT NOT NULL DEFAULT '',
+                    timeout_ms INTEGER NOT NULL,
+                    max_output_bytes INTEGER NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_exec_stop_requests (
+                    action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    requested_at_ms INTEGER NOT NULL,
+                    requested_by TEXT NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('pending', 'acknowledged')) DEFAULT 'pending',
+                    acknowledged_at_ms INTEGER
+                );
+                CREATE TABLE IF NOT EXISTS mcp_artifact_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    task_id TEXT REFERENCES mcp_task_sessions(task_id),
+                    kind TEXT NOT NULL CHECK(kind IN ('document', 'image')),
+                    path TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
                 );
                 CREATE TABLE IF NOT EXISTS oauth_principals (
                     principal_id TEXT PRIMARY KEY,
@@ -979,6 +1126,37 @@ class ControlPlaneStore:
                     evidence_digest TEXT NOT NULL,
                     reconciled_at_ms INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS mcp_task_sessions (
+                    task_id TEXT PRIMARY KEY,
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    device_id TEXT NOT NULL,
+                    endpoint_id TEXT NOT NULL,
+                    workspace_id TEXT NOT NULL,
+                    workspace_generation TEXT NOT NULL,
+                    label TEXT NOT NULL,
+                    created_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    closed_at_ms INTEGER,
+                    close_reason TEXT
+                );
+                CREATE TABLE IF NOT EXISTS mcp_task_action_links (
+                    task_id TEXT NOT NULL REFERENCES mcp_task_sessions(task_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    added_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(task_id, action_id),
+                    UNIQUE(action_id)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_patch_acceptances (
+                    action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    decision TEXT NOT NULL CHECK(decision IN ('accepted', 'rejected')),
+                    decided_by TEXT NOT NULL,
+                    decided_at_ms INTEGER NOT NULL,
+                    note TEXT NOT NULL DEFAULT ''
+                );
                 CREATE INDEX IF NOT EXISTS actions_node_delivery_idx
                     ON actions(device_id, delivery_state, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS receipts_action_idx ON receipts(action_id, received_at_ms);
@@ -1006,6 +1184,18 @@ class ControlPlaneStore:
                     ON node_workspaces(device_id, workspace_id, retired_at_ms);
                 CREATE INDEX IF NOT EXISTS action_reconciliations_owner_device_idx
                     ON action_reconciliations(owner_id, device_id, reconciled_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_task_sessions_owner_principal_idx
+                    ON mcp_task_sessions(owner_id, principal_id, created_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_task_sessions_binding_idx
+                    ON mcp_task_sessions(binding_id, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_task_action_links_action_idx
+                    ON mcp_task_action_links(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_exec_intents_action_idx
+                    ON mcp_exec_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_exec_intents_owner_principal_idx
+                    ON mcp_exec_intents(owner_id, principal_id, created_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_artifact_intents_action_idx
+                    ON mcp_artifact_intents(action_id);
                     """.split(";"),
                 ):
                     connection.execute(statement)
@@ -1051,6 +1241,12 @@ class ControlPlaneStore:
                     connection.execute(
                         "ALTER TABLE mcp_read_only_intents ADD COLUMN principal_id TEXT NOT NULL DEFAULT 'legacy_unscoped'"
                     )
+                permission_columns = {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(mcp_permission_requests)").fetchall()
+                }
+                if "task_id" not in permission_columns:
+                    connection.execute("ALTER TABLE mcp_permission_requests ADD COLUMN task_id TEXT")
                 # A pre-v2 receipt did not persist an attempt binding. Retain it as
                 # historical evidence but never infer that a new receipt replays it.
                 connection.execute(
@@ -2264,6 +2460,331 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return _row(row) or {}
 
+    def _task_label(self, value: Any) -> str:
+        if not isinstance(value, str):
+            raise ValidationError("task label is invalid.")
+        label = value.strip()
+        if not 1 <= len(label.encode("utf-8")) <= 240 or any(ord(c) < 32 or ord(c) == 127 for c in label):
+            raise ValidationError("task label is invalid.")
+        return label
+
+    def _require_live_mcp_task(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+        binding_id: str | None = None,
+    ) -> sqlite3.Row:
+        """Validate one durable task handle inside a write transaction.
+
+        The task pins an immutable node/workspace/generation snapshot at
+        creation. Every follow-up read/patch/exec call must present the same
+        task handle; the store revalidates owner/principal, open state,
+        expiry, binding revocation and workspace-generation currency. A
+        caller-supplied chat_id is never trusted as a task selector.
+        """
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        task = connection.execute(
+            "SELECT * FROM mcp_task_sessions WHERE task_id = ?",
+            (task_id,),
+        ).fetchone()
+        if task is None:
+            raise NotFoundError("task does not exist.")
+        if task["owner_id"] != owner_id or task["principal_id"] != principal_id:
+            raise PermissionError("task is not owned by this OAuth account.")
+        if task["closed_at_ms"] is not None:
+            raise ConflictError("task is closed.")
+        now = self.clock()
+        if int(task["expires_at_ms"]) <= now:
+            raise ConflictError("task is expired.")
+        if binding_id is not None and binding_id != task["binding_id"]:
+            raise ConflictError("task is bound to a different workspace target.")
+        live = connection.execute(
+            """
+            SELECT b.revoked_at_ms AS binding_revoked_at_ms,
+                   n.revoked_at_ms AS node_revoked_at_ms,
+                   n.endpoint_id AS node_endpoint_id,
+                   nw.retired_at_ms AS workspace_retired_at_ms
+            FROM bindings AS b
+            JOIN nodes AS n ON n.device_id = b.device_id
+            JOIN node_workspaces AS nw
+              ON nw.device_id = b.device_id
+             AND nw.workspace_id = b.workspace_id
+             AND nw.workspace_generation = b.workspace_generation
+            WHERE b.binding_id = ?
+            """,
+            (task["binding_id"],),
+        ).fetchone()
+        if live is None:
+            raise ConflictError("task target is no longer registered.")
+        if (
+            live["binding_revoked_at_ms"] is not None
+            or live["node_revoked_at_ms"] is not None
+            or live["workspace_retired_at_ms"] is not None
+        ):
+            raise ConflictError("task target was revoked or retired.")
+        if str(task["endpoint_id"]) != str(live["node_endpoint_id"]):
+            raise ConflictError("task target endpoint changed.")
+        self._require_current_workspace_registration(
+            connection,
+            device_id=str(task["device_id"]),
+            workspace_id=str(task["workspace_id"]),
+            workspace_generation=str(task["workspace_generation"]),
+        )
+        return task
+
+    def create_mcp_task_session(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        label: Any,
+        ttl_ms: int | None = None,
+    ) -> dict[str, Any]:
+        """Open one durable multi-call task pinned to an explicit binding.
+
+        The task handle is server-issued and opaque. It survives individual
+        context/action expiry so a task can span read -> patch -> test ->
+        observe calls. The target triple is immutable: closing the UI
+        selection or opening a second chat/task never retargets this task.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        label = self._task_label(label)
+        if ttl_ms is None:
+            ttl_ms = MCP_TASK_SESSION_MAX_TTL_MS
+        if not isinstance(ttl_ms, int) or isinstance(ttl_ms, bool) or not 60_000 <= ttl_ms <= MCP_TASK_SESSION_MAX_TTL_MS:
+            raise ValidationError("task ttl is invalid.")
+        task_id = f"task_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                live = connection.execute(
+                    """
+                    SELECT b.*, n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                           n.revoked_at_ms AS node_revoked_at_ms,
+                           nw.capabilities_json, nw.retired_at_ms AS workspace_retired_at_ms
+                    FROM bindings AS b
+                    JOIN nodes AS n ON n.device_id = b.device_id
+                    JOIN node_workspaces AS nw
+                      ON nw.device_id = b.device_id
+                     AND nw.workspace_id = b.workspace_id
+                     AND nw.workspace_generation = b.workspace_generation
+                    WHERE b.binding_id = ?
+                    """,
+                    (binding_id,),
+                ).fetchone()
+                if live is None:
+                    raise NotFoundError("binding does not exist.")
+                if live["owner_id"] != owner_id or live["node_owner_id"] != owner_id:
+                    raise PermissionError("binding is not owned by this OAuth account.")
+                if (
+                    live["revoked_at_ms"] is not None
+                    or live["node_revoked_at_ms"] is not None
+                    or live["workspace_retired_at_ms"] is not None
+                    or live["node_endpoint_id"] != live["endpoint_id"]
+                ):
+                    raise ConflictError("selected binding is no longer dispatchable.")
+                self._require_current_workspace_registration(
+                    connection,
+                    device_id=str(live["device_id"]),
+                    workspace_id=str(live["workspace_id"]),
+                    workspace_generation=str(live["workspace_generation"]),
+                )
+                now = self.clock()
+                connection.execute(
+                    """
+                    INSERT INTO mcp_task_sessions(
+                        task_id, owner_id, principal_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, label,
+                        created_at_ms, expires_at_ms, closed_at_ms, close_reason
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+                    """,
+                    (
+                        task_id, owner_id, principal_id, binding_id,
+                        live["device_id"], live["endpoint_id"],
+                        live["workspace_id"], live["workspace_generation"],
+                        label, now, now + ttl_ms,
+                    ),
+                )
+                self._event(connection, "mcp_task_session", task_id, "mcp_task_session_created", {"binding_id": binding_id})
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return self.mcp_task_session(owner_id=owner_id, principal_id=principal_id, task_id=task_id)
+
+    def mcp_task_session(self, *, owner_id: str, principal_id: str, task_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM mcp_task_sessions WHERE task_id = ?", (task_id,)).fetchone()
+        if row is None:
+            raise NotFoundError("task does not exist.")
+        if row["owner_id"] != owner_id or row["principal_id"] != principal_id:
+            raise PermissionError("task is not owned by this OAuth account.")
+        return _row(row) or {}
+
+    def list_mcp_task_sessions(self, *, owner_id: str, principal_id: str | None = None) -> list[dict[str, Any]]:
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            if principal_id is None:
+                rows = connection.execute(
+                    "SELECT * FROM mcp_task_sessions WHERE owner_id = ? ORDER BY created_at_ms, task_id",
+                    (owner_id,),
+                ).fetchall()
+            else:
+                principal_id = _text(principal_id, "principal_id")
+                rows = connection.execute(
+                    "SELECT * FROM mcp_task_sessions WHERE owner_id = ? AND principal_id = ? ORDER BY created_at_ms, task_id",
+                    (owner_id, principal_id),
+                ).fetchall()
+        return [dict(row) for row in rows]
+
+    def close_mcp_task_session(
+        self, *, owner_id: str, principal_id: str, task_id: str, reason: Any = "owner_closed"
+    ) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValidationError("close reason is invalid.")
+        reason = reason.strip()[:64]
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute("SELECT * FROM mcp_task_sessions WHERE task_id = ?", (task_id,)).fetchone()
+                if row is None:
+                    raise NotFoundError("task does not exist.")
+                if row["owner_id"] != owner_id or row["principal_id"] != principal_id:
+                    raise PermissionError("task is not owned by this OAuth account.")
+                if row["closed_at_ms"] is None:
+                    now = self.clock()
+                    connection.execute(
+                        "UPDATE mcp_task_sessions SET closed_at_ms = ?, close_reason = ? WHERE task_id = ?",
+                        (now, reason, task_id),
+                    )
+                    self._event(connection, "mcp_task_session", task_id, "mcp_task_session_closed", {"reason": reason})
+                row = connection.execute("SELECT * FROM mcp_task_sessions WHERE task_id = ?", (task_id,)).fetchone()
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return _row(row) or {}
+
+    def link_mcp_task_action(self, connection: sqlite3.Connection, *, task_id: str, action_id: str) -> None:
+        connection.execute(
+            "INSERT OR IGNORE INTO mcp_task_action_links(task_id, action_id, added_at_ms) VALUES (?, ?, ?)",
+            (task_id, action_id, self.clock()),
+        )
+
+    def list_mcp_task_actions(self, *, owner_id: str, principal_id: str, task_id: str) -> list[dict[str, Any]]:
+        task = self.mcp_task_session(owner_id=owner_id, principal_id=principal_id, task_id=task_id)
+        with self._connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT a.* FROM mcp_task_action_links AS l
+                JOIN actions AS a ON a.action_id = l.action_id
+                WHERE l.task_id = ? AND a.owner_id = ?
+                ORDER BY a.created_at_ms, a.action_id
+                """,
+                (task["task_id"], owner_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def record_mcp_patch_acceptance(
+        self, *, owner_id: str, principal_id: str, action_id: str, decision: Any, note: Any = "", decided_by: Any = "owner_console"
+    ) -> dict[str, Any]:
+        """Record local semantic acceptance for one verified applied patch.
+
+        Acceptance is a human/controller verdict that the relayed postimage
+        is satisfactory. Rejecting never reverts the Windows file; the owner
+        must queue a corrective patch instead. Unknown-effect actions cannot
+        be accepted until local reconciliation replaces UNKNOWN with a
+        verified receipt.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        if decision not in ("accepted", "rejected"):
+            raise ValidationError("acceptance decision is invalid.")
+        if not isinstance(note, str):
+            raise ValidationError("acceptance note is invalid.")
+        note = note.strip()[:500]
+        if not isinstance(decided_by, str) or not 1 <= len(decided_by.strip()) <= 120:
+            raise ValidationError("decided_by is invalid.")
+        decided_by = decided_by.strip()
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                action = connection.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,)).fetchone()
+                if action is None or action["owner_id"] != owner_id:
+                    raise NotFoundError("action does not exist.")
+                if action["tool_name"] != MCP_APPROVED_PATCH_TOOL_NAME:
+                    raise ConflictError("only approved-patch actions carry local acceptance.")
+                if action["delivery_state"] == "reconcile_required":
+                    raise ConflictError("unknown-effect action requires local reconciliation before acceptance.")
+                receipts = connection.execute(
+                    "SELECT * FROM receipts WHERE action_id = ? ORDER BY received_at_ms DESC",
+                    (action_id,),
+                ).fetchall()
+                if not any(r["receipt_state"] == "completed" for r in receipts):
+                    raise ConflictError("patch has no verified completed receipt yet.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_patch_acceptances WHERE action_id = ?",
+                    (action_id,),
+                ).fetchone()
+                if existing is not None:
+                    if existing["decision"] != decision:
+                        raise ConflictError("patch acceptance is already recorded.")
+                    connection.execute("COMMIT")
+                    return dict(existing)
+                now = self.clock()
+                connection.execute(
+                    "INSERT INTO mcp_patch_acceptances(action_id, owner_id, principal_id, decision, decided_by, decided_at_ms, note) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (action_id, owner_id, principal_id, decision, decided_by, now, note),
+                )
+                self._event(connection, "action", action_id, f"mcp_patch_{decision}", {"decided_by": decided_by})
+                row = connection.execute("SELECT * FROM mcp_patch_acceptances WHERE action_id = ?", (action_id,)).fetchone()
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return dict(row)
+
+    def get_mcp_patch_acceptance(self, *, owner_id: str, action_id: str) -> dict[str, Any] | None:
+        owner_id = _text(owner_id, "owner_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM mcp_patch_acceptances WHERE action_id = ?", (action_id,)).fetchone()
+        if row is None:
+            return None
+        if row["owner_id"] != owner_id:
+            raise PermissionError("acceptance is not owned by this principal.")
+        return dict(row)
+
     def _live_binding_for_new_context(self, connection: sqlite3.Connection, owner_id: str, binding_id: str) -> sqlite3.Row:
         """Return the binding only while its node can admit a fresh context.
 
@@ -3032,6 +3553,7 @@ class ControlPlaneStore:
         max_bytes: int,
         idempotency_key: str,
         facade_contract: dict[str, Any],
+        task_id: str | None = None,
     ) -> dict[str, Any]:
         """Atomically queue one OAuth-principal-scoped bounded file read.
 
@@ -3040,6 +3562,9 @@ class ControlPlaneStore:
         neither select a path outside the local allowlist nor supply a target
         by display name, a stale context, or a client-controlled expiry.  A
         Windows policy/bridge remains the final local authority boundary.
+        When ``task_id`` is supplied it must be a live server-issued task
+        handle pinned to the same binding; the action is linked to that task
+        so later patch/test/observe calls stay on the same target.
         """
 
         owner_id = _text(owner_id, "owner_id")
@@ -3053,10 +3578,13 @@ class ControlPlaneStore:
         )
         idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
         facade_contract = _facade_contract(facade_contract)
+        if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
+            raise ValidationError("task_id is invalid.")
         intent = {
             "kind": "mcp_facade_bounded_file_read_v1",
             "principal_id": principal_id,
             "binding_id": binding_id,
+            "task_id": task_id,
             "path": path,
             "start_line": start_line,
             "max_lines": max_lines,
@@ -3112,6 +3640,14 @@ class ControlPlaneStore:
                 now = self.clock()
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
+                if task_id is not None:
+                    self._require_live_mcp_task(
+                        connection,
+                        owner_id=owner_id,
+                        principal_id=principal_id,
+                        task_id=task_id,
+                        binding_id=binding_id,
+                    )
                 live = connection.execute(
                     """
                     SELECT
@@ -3252,6 +3788,8 @@ class ControlPlaneStore:
                     {"binding_id": binding_id, "intent_digest": intent_digest},
                 )
                 self._event(connection, "action", action_id, "action_sealed", {"request_id": request_id, "digest": action_digest})
+                if task_id is not None:
+                    self.link_mcp_task_action(connection, task_id=task_id, action_id=action_id)
                 connection.execute("COMMIT")
             except Exception:
                 connection.execute("ROLLBACK")
@@ -3321,6 +3859,7 @@ class ControlPlaneStore:
             "patch_sha256": row["patch_sha256"],
             "validation_profile": row["validation_profile"],
             "permission_digest": row["permission_digest"],
+            "task_id": row["task_id"] if "task_id" in row.keys() else None,
             "facade_contract": {
                 "schema_version": row["facade_schema_version"],
                 "profile": row["facade_profile"],
@@ -3412,6 +3951,7 @@ class ControlPlaneStore:
         validation_profile: Any,
         idempotency_key: str,
         facade_contract: dict[str, Any],
+        task_id: str | None = None,
     ) -> dict[str, Any]:
         """Record one owner-reviewable C4 patch permission request.
 
@@ -3432,12 +3972,15 @@ class ControlPlaneStore:
             validation_profile=validation_profile,
         )
         facade_contract = _facade_contract(facade_contract)
+        if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
+            raise ValidationError("task_id is invalid.")
         now = self.clock()
         expires_at_ms = now + MCP_PATCH_PERMISSION_MAX_TTL_MS
         immutable = {
             "owner_id": owner_id,
             "principal_id": principal_id,
             "binding_id": binding_id,
+            "task_id": task_id,
             "tool_name": MCP_PATCH_PERMISSION_TOOL_NAME,
             "operation": MCP_PATCH_PERMISSION_OPERATION,
             "scope": scope,
@@ -3469,6 +4012,14 @@ class ControlPlaneStore:
                     return self._mcp_permission_request_projection(existing, include_principal=False) | {"replayed": True}
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
+                if task_id is not None:
+                    self._require_live_mcp_task(
+                        connection,
+                        owner_id=owner_id,
+                        principal_id=principal_id,
+                        task_id=task_id,
+                        binding_id=binding_id,
+                    )
                 live = self._mcp_patch_permission_binding(
                     connection,
                     owner_id=owner_id,
@@ -3482,17 +4033,17 @@ class ControlPlaneStore:
                         device_id, endpoint_id, workspace_id, workspace_generation,
                         tool_name, operation, relative_path, preimage_sha256,
                         patch_sha256, validation_profile, permission_digest,
-                        idempotency_key, facade_schema_version, facade_profile,
+                        idempotency_key, task_id, facade_schema_version, facade_profile,
                         facade_contract_sha256, created_at_ms, expires_at_ms,
                         state, decided_at_ms, decided_by
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL)
                     """,
                     (
                         permission_request_id, owner_id, principal_id, binding_id,
                         live["device_id"], live["endpoint_id"], live["workspace_id"], live["workspace_generation"],
                         MCP_PATCH_PERMISSION_TOOL_NAME, MCP_PATCH_PERMISSION_OPERATION,
                         scope["path"], scope["preimage_sha256"], scope["patch_sha256"], scope["validation_profile"],
-                        permission_digest, idempotency_key,
+                        permission_digest, idempotency_key, task_id,
                         facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
                         now, expires_at_ms,
                     ),
@@ -3502,7 +4053,7 @@ class ControlPlaneStore:
                     "mcp_permission_request",
                     permission_request_id,
                     "mcp_patch_permission_requested",
-                    {"binding_id": binding_id, "permission_digest": permission_digest},
+                    {"binding_id": binding_id, "permission_digest": permission_digest, "task_id": task_id},
                 )
                 row = connection.execute(
                     "SELECT * FROM mcp_permission_requests WHERE permission_request_id = ?",
@@ -3560,6 +4111,75 @@ class ControlPlaneStore:
                 (owner_id,),
             ).fetchall()
         return [self._mcp_permission_request_projection(row, include_principal=True) for row in rows]
+
+    def list_mcp_patch_acceptances(self, *, owner_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        owner_id = _text(owner_id, "owner_id")
+        if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 500:
+            raise ValidationError("limit is invalid.")
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM mcp_patch_acceptances WHERE owner_id = ? ORDER BY decided_at_ms DESC, action_id LIMIT ?",
+                (owner_id, limit),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_owner_mcp_task_sessions(self, *, owner_id: str) -> list[dict[str, Any]]:
+        """Owner Console view across all linked OAuth principals."""
+
+        return self.list_mcp_task_sessions(owner_id=owner_id, principal_id=None)
+
+    def close_owner_mcp_task_session(self, *, owner_id: str, task_id: str, reason: str = "owner_console_closed") -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute("SELECT * FROM mcp_task_sessions WHERE task_id = ?", (task_id,)).fetchone()
+                if row is None:
+                    raise NotFoundError("task does not exist.")
+                if row["owner_id"] != owner_id:
+                    raise PermissionError("task is not owned by this principal.")
+                if row["closed_at_ms"] is None:
+                    now = self.clock()
+                    connection.execute(
+                        "UPDATE mcp_task_sessions SET closed_at_ms = ?, close_reason = ? WHERE task_id = ?",
+                        (now, reason[:64], task_id),
+                    )
+                    self._event(connection, "mcp_task_session", task_id, "mcp_task_session_closed", {"reason": reason[:64]})
+                row = connection.execute("SELECT * FROM mcp_task_sessions WHERE task_id = ?", (task_id,)).fetchone()
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return _row(row) or {}
+
+    def record_owner_mcp_patch_acceptance(
+        self, *, owner_id: str, action_id: str, decision: str, note: str = "", decided_by: str = "owner_console"
+    ) -> dict[str, Any]:
+        """Owner Console acceptance without requiring the OAuth principal handle.
+
+        The principal is resolved from the sealed approved-patch intent so the
+        Console never needs to copy a principal token. Owner, target and
+        receipt gates are identical to the principal path.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            intent = connection.execute(
+                "SELECT principal_id FROM mcp_approved_patch_intents WHERE action_id = ?",
+                (action_id,),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("approved-patch action does not exist.")
+        return self.record_mcp_patch_acceptance(
+            owner_id=owner_id,
+            principal_id=str(intent["principal_id"]),
+            action_id=action_id,
+            decision=decision,
+            note=note,
+            decided_by=decided_by,
+        )
 
     def approve_mcp_permission_request(self, *, owner_id: str, permission_request_id: str) -> dict[str, Any]:
         """Record owner approval without creating an action or local grant."""
@@ -3682,6 +4302,7 @@ class ControlPlaneStore:
         patch_envelope: Any,
         idempotency_key: str,
         facade_contract: dict[str, Any],
+        task_id: str | None = None,
     ) -> dict[str, Any]:
         """Atomically seal one approved exact-file patch for the patch lane.
 
@@ -3691,6 +4312,8 @@ class ControlPlaneStore:
         digest and short expiry.  The raw patch is retained solely in the
         dedicated intent table for delivery to the selected node; generic
         action arguments and all event payloads retain digests only.
+        When the permission request was opened under a task, the same task
+        handle must be presented here; the sealed action is linked to it.
         """
 
         owner_id = _text(owner_id, "owner_id")
@@ -3698,6 +4321,8 @@ class ControlPlaneStore:
         permission_request_id = _text(permission_request_id, "permission_request_id")
         idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
         facade_contract = _facade_contract(facade_contract)
+        if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
+            raise ValidationError("task_id is invalid.")
         request_id = f"req_{uuid.uuid4().hex}"
         action_id = f"act_{uuid.uuid4().hex}"
         context_id = f"ctx_{uuid.uuid4().hex}"
@@ -3725,6 +4350,10 @@ class ControlPlaneStore:
                     expected_preimage_sha256=str(permission["preimage_sha256"]),
                     expected_patch_sha256=str(permission["patch_sha256"]),
                 )
+                permission_task_id = permission["task_id"] if "task_id" in permission.keys() else None
+                effective_task_id = task_id if task_id is not None else permission_task_id
+                if permission_task_id is not None and task_id is not None and task_id != permission_task_id:
+                    raise ConflictError("approved patch task does not match its permission request task.")
                 immutable = {
                     "kind": "mcp_facade_approved_patch_v1",
                     "owner_id": owner_id,
@@ -3732,6 +4361,7 @@ class ControlPlaneStore:
                     "permission_request_id": permission_request_id,
                     "permission_digest": permission["permission_digest"],
                     "binding_id": permission["binding_id"],
+                    "task_id": effective_task_id,
                     "path": permission["relative_path"],
                     "preimage_sha256": permission["preimage_sha256"],
                     "patch_sha256": permission["patch_sha256"],
@@ -3775,6 +4405,14 @@ class ControlPlaneStore:
                     raise ConflictError("permission request is expired.")
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
+                if effective_task_id is not None:
+                    self._require_live_mcp_task(
+                        connection,
+                        owner_id=owner_id,
+                        principal_id=principal_id,
+                        task_id=str(effective_task_id),
+                        binding_id=str(permission["binding_id"]),
+                    )
                 live = self._mcp_patch_permission_binding(
                     connection,
                     owner_id=owner_id,
@@ -3921,6 +4559,8 @@ class ControlPlaneStore:
                     "action_sealed",
                     {"request_id": request_id, "digest": action_digest},
                 )
+                if effective_task_id is not None:
+                    self.link_mcp_task_action(connection, task_id=str(effective_task_id), action_id=action_id)
                 connection.execute("COMMIT")
             except Exception:
                 connection.execute("ROLLBACK")
@@ -4030,6 +4670,449 @@ class ControlPlaneStore:
             },
         }
 
+    def request_mcp_exec(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        argv: Any,
+        cwd: Any = "",
+        timeout_ms: int = 60_000,
+        max_output_bytes: int = 32 * 1024,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+        task_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Queue one bounded structured exec for local policy admission.
+
+        Central validation is syntactic only: argv array without shell, cwd
+        confined to a root-relative path, explicit timeout/output caps. The
+        Windows node must match argv against its local allowlist, enforce the
+        workspace write lock, resource limits and process-tree stop before any
+        spawn. cwd is a start directory, never a confinement proof.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        argv = _mcp_exec_argv(argv)
+        cwd = _mcp_exec_cwd(cwd)
+        timeout_ms, max_output_bytes = _mcp_exec_limits(timeout_ms=timeout_ms, max_output_bytes=max_output_bytes)
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        facade_contract = _facade_contract(facade_contract)
+        if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
+            raise ValidationError("task_id is invalid.")
+        argv_digest = _digest({"argv": argv})
+        intent = {
+            "kind": "mcp_facade_exec_v1",
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "task_id": task_id,
+            "argv_digest": argv_digest,
+            "cwd": cwd,
+            "timeout_ms": timeout_ms,
+            "max_output_bytes": max_output_bytes,
+            "idempotency_key": idempotency_key,
+            "facade_contract": facade_contract,
+        }
+        intent_digest = _digest(intent)
+        action_idempotency_key = "mcpExec_" + hashlib.sha256(f"{principal_id}\0{idempotency_key}".encode()).hexdigest()
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_exec_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different exec.")
+                    connection.execute("COMMIT")
+                    return {
+                        "request_id": existing["request_id"],
+                        "action_id": existing["action_id"],
+                        "intent_digest": existing["intent_digest"],
+                        "facade_contract": {
+                            "schema_version": existing["facade_schema_version"],
+                            "profile": existing["facade_profile"],
+                            "sha256": existing["facade_contract_sha256"],
+                        },
+                        "replayed": True,
+                    }
+                now = self.clock()
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                if task_id is not None:
+                    self._require_live_mcp_task(connection, owner_id=owner_id, principal_id=principal_id, task_id=task_id, binding_id=binding_id)
+                live = connection.execute(
+                    """
+                    SELECT b.binding_id, b.owner_id AS binding_owner_id, b.device_id,
+                           b.endpoint_id, b.workspace_id, b.workspace_generation,
+                           b.revoked_at_ms AS binding_revoked_at_ms,
+                           n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                           n.revoked_at_ms AS node_revoked_at_ms,
+                           nw.capabilities_json, nw.retired_at_ms AS workspace_retired_at_ms
+                    FROM bindings AS b
+                    JOIN nodes AS n ON n.device_id = b.device_id
+                    JOIN node_workspaces AS nw
+                      ON nw.device_id = b.device_id
+                     AND nw.workspace_id = b.workspace_id
+                     AND nw.workspace_generation = b.workspace_generation
+                    WHERE b.binding_id = ?
+                    """,
+                    (binding_id,),
+                ).fetchone()
+                if live is None:
+                    raise NotFoundError("binding does not exist.")
+                if live["binding_owner_id"] != owner_id or live["node_owner_id"] != owner_id:
+                    raise PermissionError("binding is not owned by this OAuth account.")
+                if (
+                    live["binding_revoked_at_ms"] is not None
+                    or live["node_revoked_at_ms"] is not None
+                    or live["workspace_retired_at_ms"] is not None
+                    or live["node_endpoint_id"] != live["endpoint_id"]
+                ):
+                    raise ConflictError("selected binding is no longer dispatchable.")
+                try:
+                    capabilities = _workspace_capabilities(json.loads(str(live["capabilities_json"])))
+                except (TypeError, ValueError, json.JSONDecodeError) as error:
+                    raise RuntimeError("stored workspace capabilities are invalid.") from error
+                if capabilities["exec"] is not True:
+                    raise PermissionError("selected binding does not permit exec access.")
+                self._require_current_workspace_registration(
+                    connection,
+                    device_id=str(live["device_id"]),
+                    workspace_id=str(live["workspace_id"]),
+                    workspace_generation=str(live["workspace_generation"]),
+                )
+                expires_at_ms = now + MCP_EXEC_MAX_TTL_MS
+                action_arguments = {"operation": MCP_EXEC_OPERATION, "argv_digest": argv_digest, "cwd": cwd,
+                                    "timeout_ms": timeout_ms, "max_output_bytes": max_output_bytes}
+                action_immutable = {"request_id": request_id, "context_id": context_id, "binding_id": binding_id,
+                                    "principal_id": principal_id, "device_id": live["device_id"],
+                                    "endpoint_id": live["endpoint_id"], "workspace_id": live["workspace_id"],
+                                    "workspace_generation": live["workspace_generation"], "tool_name": MCP_EXEC_TOOL_NAME,
+                                    "arguments": action_arguments, "idempotency_key": action_idempotency_key,
+                                    "admission_reference": f"mcp_exec:{intent_digest}", "expires_at_ms": expires_at_ms,
+                                    "facade_contract": facade_contract}
+                action_digest = _digest(action_immutable)
+                conflicting = connection.execute(
+                    "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                    (owner_id, live["device_id"], action_idempotency_key),
+                ).fetchone()
+                if conflicting is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+                connection.execute(
+                    "INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (context_id, owner_id, binding_id, live["device_id"], live["endpoint_id"],
+                     live["workspace_id"], live["workspace_generation"], now, expires_at_ms),
+                )
+                connection.execute(
+                    "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (request_id, owner_id, context_id, "Run one bounded structured command through the local bridge.",
+                     _canonical_json({"kind": "bounded_exec", "tool_name": MCP_EXEC_TOOL_NAME}),
+                     _canonical_json({"operation": "bounded_exec", "binding_id": binding_id}), now, expires_at_ms),
+                )
+                connection.execute(
+                    """INSERT INTO actions(action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name, arguments_json, action_digest,
+                        idempotency_key, admission_reference, created_at_ms, expires_at_ms, delivery_state, settled_at_ms)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)""",
+                    (action_id, owner_id, request_id, context_id, binding_id, live["device_id"], live["endpoint_id"],
+                     live["workspace_id"], live["workspace_generation"], MCP_EXEC_TOOL_NAME,
+                     _canonical_json(action_arguments), action_digest, action_idempotency_key,
+                     f"mcp_exec:{intent_digest}", now, expires_at_ms),
+                )
+                connection.execute(
+                    """INSERT INTO mcp_exec_intents(owner_id, principal_id, binding_id, task_id, argv_json, argv_digest,
+                        cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest, facade_schema_version,
+                        facade_profile, facade_contract_sha256, request_id, action_id, created_at_ms)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (owner_id, principal_id, binding_id, task_id, _canonical_json({"argv": argv}), argv_digest,
+                     cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest,
+                     facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
+                     request_id, action_id, now),
+                )
+                self._event(connection, "work_request", request_id, "mcp_exec_request_created",
+                            {"binding_id": binding_id, "intent_digest": intent_digest, "task_id": task_id})
+                self._event(connection, "action", action_id, "action_sealed", {"request_id": request_id, "digest": action_digest})
+                if task_id is not None:
+                    self.link_mcp_task_action(connection, task_id=task_id, action_id=action_id)
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {"request_id": request_id, "action_id": action_id, "intent_digest": intent_digest,
+                "facade_contract": facade_contract, "replayed": False}
+
+    def mcp_exec_action_observation(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?", (principal_id,)
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                "SELECT action_id FROM mcp_exec_intents WHERE owner_id = ? AND principal_id = ? AND action_id = ?",
+                (owner_id, principal_id, action_id),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("exec action does not exist.")
+        return self.action_observation(owner_id=owner_id, action_id=action_id)
+
+    def mcp_exec_intent_for_delivery(self, *, action_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            row = connection.execute("SELECT * FROM mcp_exec_intents WHERE action_id = ?", (action_id,)).fetchone()
+        return dict(row) if row is not None else None
+
+    def request_mcp_exec_stop(self, *, owner_id: str, principal_id: str, action_id: str, requested_by: str = "mcp") -> dict[str, Any]:
+        """Fence new dispatch and request stop for a running exec.
+
+        Stop is a verified request, not a proof: the facade reports
+        stop_pending until the node relays a terminal stopped receipt proving
+        process-tree quiescence. Offline nodes stay pending, never success.
+        Task expiry never blocks observing or stopping an existing action.
+        """
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        if not isinstance(requested_by, str) or not 1 <= len(requested_by.strip()) <= 64:
+            raise ValidationError("requested_by is invalid.")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?", (principal_id,)
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                intent = connection.execute(
+                    "SELECT * FROM mcp_exec_intents WHERE owner_id = ? AND principal_id = ? AND action_id = ?",
+                    (owner_id, principal_id, action_id),
+                ).fetchone()
+                if intent is None:
+                    raise NotFoundError("exec action does not exist.")
+                action = connection.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,)).fetchone()
+                if action is None:
+                    raise NotFoundError("action does not exist.")
+                if action["tool_name"] != MCP_EXEC_TOOL_NAME:
+                    raise ConflictError("only exec actions support stop.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_exec_stop_requests WHERE action_id = ?", (action_id,)
+                ).fetchone()
+                now = self.clock()
+                if existing is None:
+                    connection.execute(
+                        "INSERT INTO mcp_exec_stop_requests(action_id, owner_id, principal_id, requested_at_ms, requested_by, state)"
+                        " VALUES (?, ?, ?, ?, ?, 'pending')",
+                        (action_id, owner_id, principal_id, now, requested_by.strip()),
+                    )
+                    self._event(connection, "action", action_id, "mcp_exec_stop_requested", {})
+                row = connection.execute("SELECT * FROM mcp_exec_stop_requests WHERE action_id = ?", (action_id,)).fetchone()
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return dict(row)
+
+    def acknowledge_mcp_exec_stop(self, *, action_id: str, device_id: str) -> dict[str, Any] | None:
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                row = connection.execute("SELECT * FROM mcp_exec_stop_requests WHERE action_id = ?", (action_id,)).fetchone()
+                if row is None:
+                    connection.execute("COMMIT")
+                    return None
+                action = connection.execute("SELECT device_id FROM actions WHERE action_id = ?", (action_id,)).fetchone()
+                if action is None or action["device_id"] != device_id:
+                    raise PermissionError("stop request belongs to another device.")
+                if row["state"] == "pending":
+                    now = self.clock()
+                    connection.execute(
+                        "UPDATE mcp_exec_stop_requests SET state = 'acknowledged', acknowledged_at_ms = ? WHERE action_id = ?",
+                        (now, action_id),
+                    )
+                row = connection.execute("SELECT * FROM mcp_exec_stop_requests WHERE action_id = ?", (action_id,)).fetchone()
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return dict(row)
+
+    def list_mcp_exec_stop_requests(self, *, device_id: str) -> list[dict[str, Any]]:
+        with self._connection() as connection:
+            rows = connection.execute(
+                """SELECT s.* FROM mcp_exec_stop_requests AS s JOIN actions AS a ON a.action_id = s.action_id
+                   WHERE a.device_id = ? AND s.state = 'pending' ORDER BY s.requested_at_ms""",
+                (device_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_owner_exec_stops(self, *, owner_id: str, limit: int = 100) -> list[dict[str, Any]]:
+        owner_id = _text(owner_id, "owner_id")
+        with self._connection() as connection:
+            rows = connection.execute(
+                "SELECT * FROM mcp_exec_stop_requests WHERE owner_id = ? ORDER BY requested_at_ms DESC LIMIT ?",
+                (owner_id, limit),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def request_mcp_artifact(
+        self, *, owner_id: str, principal_id: str, binding_id: str, kind: str,
+        path: str, idempotency_key: str, facade_contract: dict[str, Any],
+        task_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Queue one scoped document/image read for local allowlist admission.
+
+        Docs are bounded UTF-8 text; images are bounded binary with MIME
+        allowlisted at the node. Central checks path shape and capability;
+        the Windows bridge revalidates the exact allowlist, size, MIME and
+        target generation before any byte leaves the workspace.
+        """
+        if kind not in ("document", "image"):
+            raise ValidationError("artifact kind is invalid.")
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        path = _bounded_file_read_path(path)
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        facade_contract = _facade_contract(facade_contract)
+        if task_id is not None and (not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None):
+            raise ValidationError("task_id is invalid.")
+        tool_name = "document_workflow" if kind == "document" else "view_image"
+        intent = {"kind": f"mcp_facade_artifact_{kind}_v1", "principal_id": principal_id,
+                  "binding_id": binding_id, "task_id": task_id, "path": path,
+                  "idempotency_key": idempotency_key, "facade_contract": facade_contract}
+        intent_digest = _digest(intent)
+        action_idempotency_key = "mcpArtifact_" + hashlib.sha256(f"{principal_id}\0{kind}\0{idempotency_key}".encode()).hexdigest()
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?", (principal_id,)
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_artifact_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest or existing["binding_id"] != binding_id:
+                        raise ConflictError("idempotency key is already bound to a different artifact read.")
+                    connection.execute("COMMIT")
+                    return {"request_id": existing["request_id"], "action_id": existing["action_id"],
+                            "intent_digest": existing["intent_digest"],
+                            "facade_contract": {"schema_version": existing["facade_schema_version"],
+                                                "profile": existing["facade_profile"],
+                                                "sha256": existing["facade_contract_sha256"]}, "replayed": True}
+                now = self.clock()
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                if task_id is not None:
+                    self._require_live_mcp_task(connection, owner_id=owner_id, principal_id=principal_id,
+                                                task_id=task_id, binding_id=binding_id)
+                live = connection.execute(
+                    """SELECT b.binding_id, b.owner_id AS binding_owner_id, b.device_id, b.endpoint_id,
+                              b.workspace_id, b.workspace_generation, b.revoked_at_ms AS binding_revoked_at_ms,
+                              n.owner_id AS node_owner_id, n.endpoint_id AS node_endpoint_id,
+                              n.revoked_at_ms AS node_revoked_at_ms, nw.capabilities_json,
+                              nw.retired_at_ms AS workspace_retired_at_ms
+                       FROM bindings AS b JOIN nodes AS n ON n.device_id = b.device_id
+                       JOIN node_workspaces AS nw ON nw.device_id = b.device_id
+                        AND nw.workspace_id = b.workspace_id AND nw.workspace_generation = b.workspace_generation
+                       WHERE b.binding_id = ?""", (binding_id,)).fetchone()
+                if live is None:
+                    raise NotFoundError("binding does not exist.")
+                if live["binding_owner_id"] != owner_id or live["node_owner_id"] != owner_id:
+                    raise PermissionError("binding is not owned by this OAuth account.")
+                if (live["binding_revoked_at_ms"] is not None or live["node_revoked_at_ms"] is not None
+                        or live["workspace_retired_at_ms"] is not None or live["node_endpoint_id"] != live["endpoint_id"]):
+                    raise ConflictError("selected binding is no longer dispatchable.")
+                try:
+                    capabilities = _workspace_capabilities(json.loads(str(live["capabilities_json"])))
+                except (TypeError, ValueError, json.JSONDecodeError) as error:
+                    raise RuntimeError("stored workspace capabilities are invalid.") from error
+                if capabilities["read"] is not True:
+                    raise PermissionError("selected binding does not permit read access.")
+                self._require_current_workspace_registration(
+                    connection, device_id=str(live["device_id"]), workspace_id=str(live["workspace_id"]),
+                    workspace_generation=str(live["workspace_generation"]))
+                expires_at_ms = now + MCP_ARTIFACT_MAX_TTL_MS
+                action_arguments = {"operation": f"{kind}_read", "path": path}
+                action_digest = _digest({"request_id": request_id, "context_id": context_id, "binding_id": binding_id,
+                                         "principal_id": principal_id, "device_id": live["device_id"],
+                                         "tool_name": tool_name, "arguments": action_arguments,
+                                         "idempotency_key": action_idempotency_key, "expires_at_ms": expires_at_ms,
+                                         "facade_contract": facade_contract})
+                if connection.execute("SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                                      (owner_id, live["device_id"], action_idempotency_key)).fetchone() is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+                connection.execute("INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                                   (context_id, owner_id, binding_id, live["device_id"], live["endpoint_id"],
+                                    live["workspace_id"], live["workspace_generation"], now, expires_at_ms))
+                connection.execute("INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                                   (request_id, owner_id, context_id, f"Read one scoped {kind} through the local bridge.",
+                                    _canonical_json({"kind": f"artifact_{kind}", "tool_name": tool_name}),
+                                    _canonical_json({"operation": f"{kind}_read", "binding_id": binding_id}), now, expires_at_ms))
+                connection.execute(
+                    """INSERT INTO actions(action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name, arguments_json, action_digest,
+                        idempotency_key, admission_reference, created_at_ms, expires_at_ms, delivery_state, settled_at_ms)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)""",
+                    (action_id, owner_id, request_id, context_id, binding_id, live["device_id"], live["endpoint_id"],
+                     live["workspace_id"], live["workspace_generation"], tool_name, _canonical_json(action_arguments),
+                     action_digest, action_idempotency_key, f"mcp_artifact_{kind}:{intent_digest}", now, expires_at_ms))
+                connection.execute(
+                    """INSERT INTO mcp_artifact_intents(owner_id, principal_id, binding_id, task_id, kind, path,
+                        idempotency_key, intent_digest, facade_schema_version, facade_profile, facade_contract_sha256,
+                        request_id, action_id, created_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (owner_id, principal_id, binding_id, task_id, kind, path, idempotency_key, intent_digest,
+                     facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
+                     request_id, action_id, now))
+                self._event(connection, "work_request", request_id, f"mcp_artifact_{kind}_request_created",
+                            {"binding_id": binding_id, "intent_digest": intent_digest, "task_id": task_id})
+                self._event(connection, "action", action_id, "action_sealed", {"request_id": request_id, "digest": action_digest})
+                if task_id is not None:
+                    self.link_mcp_task_action(connection, task_id=task_id, action_id=action_id)
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {"request_id": request_id, "action_id": action_id, "intent_digest": intent_digest,
+                "facade_contract": facade_contract, "replayed": False}
+
+    def mcp_artifact_action_observation(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?", (principal_id,)).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                "SELECT action_id FROM mcp_artifact_intents WHERE owner_id = ? AND principal_id = ? AND action_id = ?",
+                (owner_id, principal_id, action_id)).fetchone()
+        if intent is None:
+            raise NotFoundError("artifact action does not exist.")
+        return self.action_observation(owner_id=owner_id, action_id=action_id)
+
     def action(self, *, owner_id: str, action_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
         action_id = _text(action_id, "action_id")
@@ -4109,14 +5192,18 @@ class ControlPlaneStore:
             "read_only_workspace_context",
             "bounded_file_read",
             "approved_patch",
+            "bounded_exec",
+            "bounded_artifact",
         }:
             raise ValidationError("poll lane is invalid.")
         lane_predicate = {
-            None: "f.action_id IS NULL AND p.action_id IS NULL",
-            "generic": "m.action_id IS NULL AND f.action_id IS NULL AND p.action_id IS NULL",
-            "read_only_workspace_context": "m.action_id IS NOT NULL AND f.action_id IS NULL AND p.action_id IS NULL",
-            "bounded_file_read": "f.action_id IS NOT NULL AND p.action_id IS NULL",
+            None: "f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
+            "generic": "m.action_id IS NULL AND f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
+            "read_only_workspace_context": "m.action_id IS NOT NULL AND f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
+            "bounded_file_read": "f.action_id IS NOT NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
             "approved_patch": "p.action_id IS NOT NULL",
+            "bounded_exec": "e.action_id IS NOT NULL",
+            "bounded_artifact": "a2.action_id IS NOT NULL",
         }[lane]
         now = self.clock()
         with self._connection() as connection:
@@ -4169,7 +5256,22 @@ class ControlPlaneStore:
                     p.patch_envelope AS mcp_approved_patch_envelope,
                     p.facade_schema_version AS mcp_approved_patch_facade_schema_version,
                     p.facade_profile AS mcp_approved_patch_facade_profile,
-                    p.facade_contract_sha256 AS mcp_approved_patch_facade_contract_sha256
+                    p.facade_contract_sha256 AS mcp_approved_patch_facade_contract_sha256,
+                    e.argv_json AS mcp_exec_argv_json,
+                    e.argv_digest AS mcp_exec_argv_digest,
+                    e.cwd AS mcp_exec_cwd,
+                    e.timeout_ms AS mcp_exec_timeout_ms,
+                    e.max_output_bytes AS mcp_exec_max_output_bytes,
+                    e.intent_digest AS mcp_exec_intent_digest,
+                    e.facade_schema_version AS mcp_exec_facade_schema_version,
+                    e.facade_profile AS mcp_exec_facade_profile,
+                    e.facade_contract_sha256 AS mcp_exec_facade_contract_sha256,
+                    a2.kind AS mcp_artifact_kind,
+                    a2.path AS mcp_artifact_path,
+                    a2.intent_digest AS mcp_artifact_intent_digest,
+                    a2.facade_schema_version AS mcp_artifact_facade_schema_version,
+                    a2.facade_profile AS mcp_artifact_facade_profile,
+                    a2.facade_contract_sha256 AS mcp_artifact_facade_contract_sha256
                 FROM actions a
                 JOIN nodes n ON n.device_id = a.device_id
                 JOIN bindings b ON b.binding_id = a.binding_id
@@ -4182,6 +5284,8 @@ class ControlPlaneStore:
                 LEFT JOIN mcp_read_only_intents m ON m.action_id = a.action_id
                 LEFT JOIN mcp_file_read_intents f ON f.action_id = a.action_id
                 LEFT JOIN mcp_approved_patch_intents p ON p.action_id = a.action_id
+                LEFT JOIN mcp_exec_intents e ON e.action_id = a.action_id
+                LEFT JOIN mcp_artifact_intents a2 ON a2.action_id = a.action_id
                 WHERE a.device_id = ? AND a.delivery_state = 'queued' AND {lane_predicate}
                 ORDER BY a.created_at_ms
                 LIMIT ?

@@ -77,6 +77,23 @@ APPROVED_PATCH_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 APPROVED_PATCH_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
 APPROVED_PATCH_LOOP_LOCK_SCHEMA_VERSION = 1
 APPROVED_PATCH_ACTION_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
+EXEC_TOOL_NAME = "exec_command"
+EXEC_OPERATION = "exec_run"
+EXEC_JOURNAL_SCHEMA_VERSION = 1
+EXEC_POLICY_SCHEMA_VERSION = 1
+EXEC_POLICY_MAX_BYTES = 16 * 1024
+EXEC_POLICY_MAX_TTL_MS = 24 * 60 * 60 * 1000
+EXEC_POLICY_FILE_NAME = "control-plane-exec-policy.json"
+EXEC_MAX_ARGV_ITEMS = 8
+EXEC_MAX_ARGV_ITEM_BYTES = 256
+EXEC_MAX_TIMEOUT_MS = 5 * 60 * 1000
+EXEC_MIN_TIMEOUT_MS = 5_000
+EXEC_MAX_OUTPUT_BYTES = 64 * 1024
+EXEC_MAX_ALLOWED_PREFIXES = 16
+EXEC_LOOP_MIN_INTERVAL_SECONDS = 15
+EXEC_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
+EXEC_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
+EXEC_LOOP_LOCK_SCHEMA_VERSION = 1
 NODE_CONFIG_SCHEMA_VERSION = 1
 MAX_HTTP_RESPONSE_BYTES = 256 * 1024
 POLICY_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
@@ -4914,6 +4931,874 @@ def run_read_only_agent(args: argparse.Namespace) -> int:
     return 0
 
 
+EXEC_POLICY_STOP_CODES = frozenset({
+    "CONTROL_PLANE_EXEC_POLICY_MISSING",
+    "CONTROL_PLANE_EXEC_POLICY_INVALID",
+    "CONTROL_PLANE_EXEC_POLICY_EXPIRED",
+    "CONTROL_PLANE_EXEC_DISABLED",
+    "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH",
+})
+EXEC_PRE_EFFECT_REJECTION_CODES = EXEC_POLICY_STOP_CODES | frozenset({
+    "CONTROL_PLANE_EXEC_ACTION_DENIED",
+    "CONTROL_PLANE_EXEC_REQUEST_INVALID",
+    "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED",
+    "CONTROL_PLANE_EXEC_WORKSPACE_BUSY",
+    "CONTROL_PLANE_EXEC_RUNTIME_UNREADY",
+    "CONTROL_PLANE_EXEC_IDENTITY_UNPROVEN",
+})
+
+
+def _exec_policy_path(args: argparse.Namespace) -> Path:
+    return _policy_data_root(args) / EXEC_POLICY_FILE_NAME
+
+
+def _exec_journal_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.exec-journal.json")
+
+
+def _exec_poll_lock_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.exec-poll.lock")
+
+
+def _exec_loop_lock_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.exec-loop.lock")
+
+
+def _exec_workspace_lock_path(config_path: Path, workspace_id: str, workspace_generation: str) -> Path:
+    safe_ws = re.sub(r"[^A-Za-z0-9_.-]", "_", workspace_id)[:64]
+    safe_gen = re.sub(r"[^A-Za-z0-9_.-]", "_", workspace_generation)[:64]
+    return config_path.with_name(f"{config_path.name}.exec-ws-{safe_ws}-{safe_gen}.lock")
+
+
+def _stale_exec_lock(lock_path: Path) -> bool:
+    try:
+        value = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema_version", "instance_id", "pid"}
+        or value.get("schema_version") != EXEC_LOOP_LOCK_SCHEMA_VERSION
+        or not isinstance(value.get("instance_id"), str)
+        or not value["instance_id"]
+        or not isinstance(value.get("pid"), int)
+        or isinstance(value.get("pid"), bool)
+    ):
+        return False
+    return not _pid_is_live(value["pid"])
+
+
+@contextmanager
+def _exclusive_exec_lock(lock_path: Path, *, already_running_code: str) -> Iterator[None]:
+    instance_id = uuid.uuid4().hex
+    descriptor = {"schema_version": EXEC_LOOP_LOCK_SCHEMA_VERSION, "instance_id": instance_id, "pid": os.getpid()}
+    acquired = False
+    for _attempt in range(2):
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            fd = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            if not _stale_exec_lock(lock_path):
+                raise RuntimeError(already_running_code)
+            try:
+                lock_path.unlink()
+            except (FileNotFoundError, OSError) as error:
+                raise RuntimeError(already_running_code) from error
+            continue
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(descriptor, separators=(",", ":")) + "\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+        except OSError:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+            raise
+        acquired = True
+        break
+    if not acquired:
+        raise RuntimeError(already_running_code)
+    try:
+        yield
+    finally:
+        try:
+            value = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            value = None
+        if isinstance(value, dict) and value.get("instance_id") == instance_id:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+
+
+def _exec_argv_item(value: Any) -> str:
+    if not isinstance(value, str):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    try:
+        encoded = value.encode("utf-8")
+    except UnicodeEncodeError as error:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID") from error
+    if not encoded or len(encoded) > EXEC_MAX_ARGV_ITEM_BYTES:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if any(token in value for token in (";", "&&", "||", "`", "$(", "|", ">", "<", "\n", "\r")):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if value != value.strip() or not value:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    return value
+
+
+def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_enabled: bool = False) -> dict[str, Any]:
+    expected = {"schema_version", "enabled", "server_origin", "owner_id", "device_id", "endpoint_id",
+                "workspace_id", "workspace_generation", "expires_at_ms", "facade_contract",
+                "allowed_argv_prefixes", "max_timeout_ms", "max_output_bytes", "max_concurrent"}
+    if not isinstance(policy, dict) or set(policy) != expected:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if policy.get("schema_version") != EXEC_POLICY_SCHEMA_VERSION or not isinstance(policy.get("enabled"), bool):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if require_enabled and policy["enabled"] is not True:
+        raise RuntimeError("CONTROL_PLANE_EXEC_DISABLED")
+    expires_at_ms = policy.get("expires_at_ms")
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if now_ms is not None and expires_at_ms <= now_ms:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+    facade = policy.get("facade_contract")
+    if not isinstance(facade, dict):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    _policy_facade_contract(facade.get("schema_version"), facade.get("profile"), facade.get("sha256"))
+    prefixes = policy.get("allowed_argv_prefixes")
+    if not isinstance(prefixes, list) or not 1 <= len(prefixes) <= EXEC_MAX_ALLOWED_PREFIXES:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    normalised_prefixes: list[list[str]] = []
+    for prefix in prefixes:
+        if not isinstance(prefix, list) or not 1 <= len(prefix) <= EXEC_MAX_ARGV_ITEMS:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        normalised_prefixes.append([_exec_argv_item(item) for item in prefix])
+    max_timeout = policy.get("max_timeout_ms")
+    max_output = policy.get("max_output_bytes")
+    max_concurrent = policy.get("max_concurrent")
+    if not isinstance(max_timeout, int) or isinstance(max_timeout, bool) or not EXEC_MIN_TIMEOUT_MS <= max_timeout <= EXEC_MAX_TIMEOUT_MS:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if not isinstance(max_output, int) or isinstance(max_output, bool) or not 1024 <= max_output <= EXEC_MAX_OUTPUT_BYTES:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    if not isinstance(max_concurrent, int) or isinstance(max_concurrent, bool) or not 1 <= max_concurrent <= 4:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    return {
+        "schema_version": EXEC_POLICY_SCHEMA_VERSION,
+        "enabled": policy["enabled"],
+        "server_origin": _server_origin(policy.get("server_origin")),
+        "owner_id": _policy_identifier(policy.get("owner_id"), "owner_id"),
+        "device_id": _policy_identifier(policy.get("device_id"), "device_id"),
+        "endpoint_id": _policy_identifier(policy.get("endpoint_id"), "endpoint_id"),
+        "workspace_id": _policy_identifier(policy.get("workspace_id"), "workspace_id"),
+        "workspace_generation": _policy_identifier(policy.get("workspace_generation"), "workspace_generation"),
+        "expires_at_ms": expires_at_ms,
+        "facade_contract": _policy_facade_contract(facade.get("schema_version"), facade.get("profile"), facade.get("sha256")),
+        "allowed_argv_prefixes": normalised_prefixes,
+        "max_timeout_ms": max_timeout,
+        "max_output_bytes": max_output,
+        "max_concurrent": max_concurrent,
+    }
+
+
+def _read_exec_policy(policy_path: Path) -> dict[str, Any]:
+    try:
+        stat = policy_path.stat()
+        if not policy_path.is_file() or stat.st_size <= 0 or stat.st_size > EXEC_POLICY_MAX_BYTES:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        value = json.loads(policy_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_MISSING") from error
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID") from error
+    return _normalise_exec_policy(value)
+
+
+def _install_exec_policy_values(*, owner_id: str, device_id: str, endpoint_id: str, workspace_id: str,
+                                workspace_generation: str, server_origin: str, facade_contract: dict[str, Any],
+                                allowed_argv_prefixes: list[list[str]], max_timeout_ms: int,
+                                max_output_bytes: int, ttl_ms: int = 24 * 60 * 60 * 1000) -> dict[str, Any]:
+    now_ms = int(time.time() * 1000)
+    return _normalise_exec_policy({
+        "schema_version": EXEC_POLICY_SCHEMA_VERSION, "enabled": True, "server_origin": server_origin,
+        "owner_id": owner_id, "device_id": device_id, "endpoint_id": endpoint_id,
+        "workspace_id": workspace_id, "workspace_generation": workspace_generation,
+        "expires_at_ms": now_ms + ttl_ms, "facade_contract": facade_contract,
+        "allowed_argv_prefixes": allowed_argv_prefixes, "max_timeout_ms": max_timeout_ms,
+        "max_output_bytes": max_output_bytes, "max_concurrent": 2,
+    }, now_ms=now_ms, require_enabled=True)
+
+
+def _exec_allowlist_match(argv: list[str], prefixes: list[list[str]]) -> bool:
+    for prefix in prefixes:
+        if len(argv) >= len(prefix) and argv[:len(prefix)] == prefix:
+            return True
+    return False
+
+
+def _exec_bridge_request(action: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    for field in ("action_id", "attempt_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
+        value = action.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    if action.get("device_id") != config["device_id"] or action.get("endpoint_id") != config["endpoint_id"]:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    argv_json = action.get("mcp_exec_argv_json")
+    try:
+        argv_obj = json.loads(argv_json) if isinstance(argv_json, str) else None
+    except (TypeError, ValueError) as error:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED") from error
+    argv = argv_obj.get("argv") if isinstance(argv_obj, dict) else None
+    if not isinstance(argv, list) or not argv:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    argv = [_exec_argv_item(item) for item in argv]
+    cwd = action.get("mcp_exec_cwd", "")
+    if cwd not in ("", None) and not isinstance(cwd, str):
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    cwd = cwd or ""
+    if cwd and (cwd.startswith("/") or "\\" in cwd or ":" in cwd or any(not p or p in {".", ".."} for p in cwd.split("/"))):
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    timeout_ms = action.get("mcp_exec_timeout_ms")
+    max_output = action.get("mcp_exec_max_output_bytes")
+    if not isinstance(timeout_ms, int) or not EXEC_MIN_TIMEOUT_MS <= timeout_ms <= EXEC_MAX_TIMEOUT_MS:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    if not isinstance(max_output, int) or not 1024 <= max_output <= EXEC_MAX_OUTPUT_BYTES:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    return {"action_id": action["action_id"], "attempt_id": action["attempt_id"],
+            "device_id": action["device_id"], "endpoint_id": action["endpoint_id"],
+            "workspace_id": action["workspace_id"], "workspace_generation": action["workspace_generation"],
+            "argv": argv, "cwd": cwd, "timeout_ms": timeout_ms, "max_output_bytes": max_output,
+            "facade_contract": {"schema_version": action.get("mcp_exec_facade_schema_version"),
+                                "profile": action.get("mcp_exec_facade_profile"),
+                                "sha256": action.get("mcp_exec_facade_contract_sha256")}}
+
+
+def _admit_exec_policy_request(args: argparse.Namespace, *, config_path: Path, config: dict[str, Any],
+                               request: dict[str, Any]) -> dict[str, Any]:
+    policy = _read_exec_policy(_exec_policy_path(args))
+    if policy["enabled"] is not True:
+        raise RuntimeError("CONTROL_PLANE_EXEC_DISABLED")
+    now_ms = int(time.time() * 1000)
+    if policy["expires_at_ms"] <= now_ms:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+    for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
+        if policy[field] != request[field] and field != "owner_id":
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
+    if policy["server_origin"] != _server_origin(config.get("server_url")):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
+    if policy["facade_contract"] != request["facade_contract"]:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
+    if not _exec_allowlist_match(request["argv"], policy["allowed_argv_prefixes"]):
+        raise RuntimeError("CONTROL_PLANE_EXEC_ALLOWLIST_DENIED")
+    if request["timeout_ms"] > policy["max_timeout_ms"] or request["max_output_bytes"] > policy["max_output_bytes"]:
+        raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_TOO_LARGE")
+    return policy
+
+
+def _run_bounded_exec(*, argv: list[str], cwd_path: Path, timeout_ms: int, max_output_bytes: int,
+                      stop_check=None) -> tuple[dict[str, Any] | None, str | None]:
+    """Run argv with shell=False inside cwd_path; poll stop_check for verified stop.
+
+    Returns (result, error_code). result holds exit_code/stdout/stderr/truncated.
+    stop_check is a zero-arg callable returning True when a verified stop was
+    requested. On stop the tree is killed and the caller reports stopped.
+    """
+    try:
+        proc = subprocess.Popen([str(a) for a in argv], cwd=str(cwd_path), shell=False,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except (OSError, ValueError):
+        return None, "CONTROL_PLANE_EXEC_SPAWN_FAILED"
+    stdout_b, stderr_b = b"", b""
+    deadline = time.monotonic() + timeout_ms / 1000.0
+    stopped = False
+    try:
+        while True:
+            if stop_check is not None and stop_check():
+                stopped = True
+                break
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                proc.wait(timeout=min(0.2, remaining))
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        if stopped:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                return None, "CONTROL_PLANE_EXEC_STOP_UNCONFIRMED"
+            try:
+                out, err = proc.communicate(timeout=5)
+            except Exception:
+                out, err = b"", b""
+            stdout_b, stderr_b = (out or b"")[:max_output_bytes], (err or b"")[:max_output_bytes]
+            return {"exit_code": 143, "stdout": stdout_b.decode("utf-8", "replace"),
+                    "stderr": stderr_b.decode("utf-8", "replace"), "truncated": True, "stopped": True}, None
+        try:
+            out, err = proc.communicate(timeout=max(0, deadline - time.monotonic()))
+        except subprocess.TimeoutExpired:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            try:
+                out, err = proc.communicate(timeout=5)
+            except Exception:
+                return None, "CONTROL_PLANE_EXEC_TIMEOUT_CLEANUP_UNCERTAIN"
+            stdout_b, stderr_b = (out or b"")[:max_output_bytes], (err or b"")[:max_output_bytes]
+            return {"exit_code": proc.returncode if proc.returncode is not None else 124,
+                    "stdout": stdout_b.decode("utf-8", "replace"), "stderr": stderr_b.decode("utf-8", "replace"),
+                    "truncated": True, "timed_out": True}, None
+        stdout_b, stderr_b = (out or b"")[:max_output_bytes], (err or b"")[:max_output_bytes]
+        truncated = len(out or b"") > max_output_bytes or len(err or b"") > max_output_bytes
+        return {"exit_code": proc.returncode if proc.returncode is not None else 1,
+                "stdout": stdout_b.decode("utf-8", "replace"), "stderr": stderr_b.decode("utf-8", "replace"),
+                "truncated": truncated}, None
+    finally:
+        if proc.poll() is None:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+
+
+def _exec_journal_key(action_id: str, attempt_id: str) -> str:
+    return f"{action_id}\0{attempt_id}"
+
+
+def _read_exec_journal(journal_path: Path) -> dict[str, Any]:
+    try:
+        value = json.loads(journal_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {"schema_version": EXEC_JOURNAL_SCHEMA_VERSION, "entries": {}}
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID") from error
+    if not isinstance(value, dict) or value.get("schema_version") != EXEC_JOURNAL_SCHEMA_VERSION or not isinstance(value.get("entries"), dict):
+        raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
+    return value
+
+
+def _record_exec_receipt(journal_path: Path, journal: dict[str, Any], *, state: str, action_id: str,
+                         attempt_id: str, receipt_state: str, local_handle: str, payload: dict[str, Any]) -> dict[str, Any]:
+    entry = {"state": state, "action_id": action_id, "attempt_id": attempt_id,
+             "receipt_state": receipt_state, "local_handle": local_handle, "payload": payload}
+    journal["entries"][_exec_journal_key(action_id, attempt_id)] = entry
+    return entry
+
+
+def _flush_exec_journal(config: dict[str, Any], journal_path: Path, journal: dict[str, Any]) -> int:
+    submitted = 0
+    for key in list(journal["entries"]):
+        entry = journal["entries"][key]
+        if not isinstance(entry, dict) or entry.get("state") != "prepared":
+            continue
+        _submit_receipt(config, entry)
+        submitted += 1
+    _write_json_atomic(journal_path, journal)
+    return submitted
+
+
+def _poll_exec_once(args: argparse.Namespace) -> int:
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    journal_path = _exec_journal_path(config_path)
+    journal = _read_exec_journal(journal_path)
+    submitted_receipts = _flush_exec_journal(config, journal_path, journal)
+    project_root = Path(args.project_root).expanduser().resolve() if getattr(args, "project_root", "") else Path.cwd()
+    status = _runtime_status(args, project_root)
+    readiness, reason = runtime_readiness(status)
+    if readiness != "ready":
+        print(json.dumps({"execution": "exec_not_started", "reason": reason, "received_action_ids": [],
+                          "submitted_receipts": submitted_receipts}, separators=(",", ":")))
+        return 0
+    identity = observed_runtime_identity(recovery_identity_observation(args, project_root))
+    if identity is None:
+        print(json.dumps({"execution": "exec_not_started", "reason": "runtime_identity_unproven",
+                          "received_action_ids": [], "submitted_receipts": submitted_receipts}, separators=(",", ":")))
+        return 0
+    response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/poll",
+                        {"limit": 1, "lane": "bounded_exec"}, f"Node {config['node_secret']}")
+    actions = response.get("actions")
+    if not isinstance(actions, list) or len(actions) > 1:
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    completed: list[str] = []
+    failed: list[str] = []
+    stopped: list[str] = []
+    rejected: list[str] = []
+    unknown: list[str] = []
+    received: list[str] = []
+    for action in actions:
+        if not isinstance(action, dict):
+            raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+        action_id = str(action.get("action_id") or "")
+        attempt_id = str(action.get("attempt_id") or "")
+        if not action_id or not attempt_id:
+            raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+        received.append(action_id)
+        key = _exec_journal_key(action_id, attempt_id)
+        if key in journal["entries"]:
+            submitted_receipts += _flush_exec_journal(config, journal_path, journal)
+            continue
+        try:
+            request = _exec_bridge_request(action, config)
+            policy = _admit_exec_policy_request(args, config_path=config_path, config=config, request=request)
+            expected_policy_sha256 = _policy_digest(policy)
+        except RuntimeError as error:
+            code = _safe_error_code(error, "CONTROL_PLANE_EXEC_ACTION_DENIED")
+            entry = _record_exec_receipt(journal_path, journal, state="rejected", action_id=action_id,
+                                         attempt_id=attempt_id, receipt_state="rejected", local_handle="",
+                                         payload={"schema_version": 1, "operation_kind": "control_plane_exec", "code": code})
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            rejected.append(action_id)
+            continue
+        registry = _read_workspace_registry(_workspace_registry_path(args, config_path))
+        entry = _registered_workspace_entry(
+            registry, workspace_id=request["workspace_id"], workspace_generation=request["workspace_generation"])
+        root = Path(entry["canonical_path"]).resolve()
+        cwd_path = (root / request["cwd"]).resolve() if request["cwd"] else root.resolve()
+        try:
+            cwd_path.relative_to(root.resolve())
+        except ValueError:
+            entry = _record_exec_receipt(journal_path, journal, state="rejected", action_id=action_id,
+                                         attempt_id=attempt_id, receipt_state="rejected", local_handle="",
+                                         payload={"schema_version": 1, "operation_kind": "control_plane_exec",
+                                                   "code": "CONTROL_PLANE_EXEC_REQUEST_INVALID"})
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            rejected.append(action_id)
+            continue
+        ws_lock = _exec_workspace_lock_path(config_path, request["workspace_id"], request["workspace_generation"])
+        try:
+            ws_file = os.open(str(ws_lock), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            os.close(ws_file)
+            ws_locked = True
+        except FileExistsError:
+            entry = _record_exec_receipt(journal_path, journal, state="rejected", action_id=action_id,
+                                         attempt_id=attempt_id, receipt_state="rejected", local_handle="",
+                                         payload={"schema_version": 1, "operation_kind": "control_plane_exec",
+                                                   "code": "CONTROL_PLANE_EXEC_WORKSPACE_BUSY"})
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            rejected.append(action_id)
+            continue
+        try:
+            journal["entries"][key] = {"state": "prepared", "action_id": action_id, "attempt_id": attempt_id}
+            _write_json_atomic(journal_path, journal)
+            stop_state = {"requested": False}
+            def _stop_check() -> bool:
+                try:
+                    stops = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/exec-stops",
+                                     {}, f"Node {config['node_secret']}")
+                    for item in stops.get("stop_requests", []):
+                        if isinstance(item, dict) and item.get("action_id") == action_id:
+                            stop_state["requested"] = True
+                            return True
+                except Exception:
+                    return False
+                return False
+            result, error_code = _run_bounded_exec(argv=request["argv"], cwd_path=cwd_path,
+                                                   timeout_ms=request["timeout_ms"],
+                                                   max_output_bytes=request["max_output_bytes"],
+                                                   stop_check=_stop_check)
+            local_handle = f"cp_exec_{secrets.token_hex(24)}"
+            if result is not None and result.get("stopped"):
+                try:
+                    _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/exec-stops/{action_id}/acknowledge",
+                             {}, f"Node {config['node_secret']}")
+                except Exception:
+                    pass
+                output_bytes = len(result["stdout"].encode()) + len(result["stderr"].encode())
+                response_sha = hashlib.sha256(json.dumps(
+                    {"exit_code": result["exit_code"], "stdout": result["stdout"],
+                     "stderr": result["stderr"], "truncated": result["truncated"]},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                payload = {"schema_version": 1, "operation_kind": "control_plane_exec",
+                           "local_handle": local_handle, "policy_sha256": expected_policy_sha256,
+                           "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
+                           "facade_contract": request["facade_contract"], "exit_code": result["exit_code"],
+                           "stdout": result["stdout"], "stderr": result["stderr"], "truncated": result["truncated"],
+                           "output_bytes": output_bytes, "response_sha256": response_sha,
+                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
+                                                "process_instance_id": identity.get("process_instance_id", "proc"),
+                                                "server_instance_id": identity.get("server_instance_id", "srv"),
+                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
+                entry = _record_exec_receipt(journal_path, journal, state="stopped", action_id=action_id,
+                                             attempt_id=attempt_id, receipt_state="stopped",
+                                             local_handle=local_handle, payload=payload)
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted_receipts += 1
+                stopped.append(action_id)
+                continue
+            if result is not None:
+                output_bytes = len(result["stdout"].encode()) + len(result["stderr"].encode())
+                response_sha = hashlib.sha256(json.dumps(
+                    {"exit_code": result["exit_code"], "stdout": result["stdout"],
+                     "stderr": result["stderr"], "truncated": result["truncated"]},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                payload = {"schema_version": 1, "operation_kind": "control_plane_exec",
+                           "local_handle": local_handle, "policy_sha256": expected_policy_sha256,
+                           "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
+                           "facade_contract": request["facade_contract"], "exit_code": result["exit_code"],
+                           "stdout": result["stdout"], "stderr": result["stderr"], "truncated": result["truncated"],
+                           "output_bytes": output_bytes, "response_sha256": response_sha,
+                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
+                                                "process_instance_id": identity.get("process_instance_id", "proc"),
+                                                "server_instance_id": identity.get("server_instance_id", "srv"),
+                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
+                terminal = "completed" if result["exit_code"] == 0 else "failed"
+                entry = _record_exec_receipt(journal_path, journal, state=terminal, action_id=action_id,
+                                             attempt_id=attempt_id, receipt_state=terminal,
+                                             local_handle=local_handle, payload=payload)
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted_receipts += 1
+                (completed if terminal == "completed" else failed).append(action_id)
+                continue
+            code = _safe_error_code(error_code, "CONTROL_PLANE_EXEC_FAILED")
+            pre_effect = code in EXEC_PRE_EFFECT_REJECTION_CODES or code in {
+                "CONTROL_PLANE_EXEC_SPAWN_FAILED", "CONTROL_PLANE_EXEC_REQUEST_INVALID",
+                "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED", "CONTROL_PLANE_EXEC_WORKSPACE_BUSY"}
+            entry = _record_exec_receipt(journal_path, journal, state="rejected" if pre_effect else "unknown",
+                                         action_id=action_id, attempt_id=attempt_id,
+                                         receipt_state="rejected" if pre_effect else "unknown",
+                                         local_handle="", payload={"schema_version": 1,
+                                                                    "operation_kind": "control_plane_exec", "code": code})
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            (rejected if pre_effect else unknown).append(action_id)
+        finally:
+            try:
+                ws_lock.unlink()
+            except OSError:
+                pass
+    print(json.dumps({"execution": "exec_once", "runtime_identity": "reported", "received_action_ids": received,
+                      "completed_action_ids": completed, "failed_action_ids": failed,
+                      "stopped_action_ids": stopped, "rejected_action_ids": rejected,
+                      "unknown_action_ids": unknown, "submitted_receipts": submitted_receipts},
+                     separators=(",", ":")))
+    return 0
+
+
+def poll_exec_once(args: argparse.Namespace) -> int:
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    with _exclusive_exec_lock(_exec_poll_lock_path(config_path),
+                              already_running_code="CONTROL_PLANE_EXEC_POLL_ALREADY_RUNNING"):
+        return _poll_exec_once(args)
+
+
+def run_exec_loop(args: argparse.Namespace) -> int:
+    interval_seconds = getattr(args, "interval_seconds", 60)
+    if not isinstance(interval_seconds, int) or isinstance(interval_seconds, bool) or not 15 <= interval_seconds <= 3600:
+        raise RuntimeError("CONTROL_PLANE_EXEC_LOOP_INTERVAL_INVALID")
+    max_iterations = args.max_iterations
+    if not isinstance(max_iterations, int) or isinstance(max_iterations, bool) or max_iterations < 1:
+        raise RuntimeError("CONTROL_PLANE_EXEC_LOOP_ITERATIONS_INVALID")
+    if interval_seconds * max_iterations > EXEC_LOOP_MAX_DURATION_SECONDS:
+        raise RuntimeError("CONTROL_PLANE_EXEC_LOOP_DURATION_EXCEEDED")
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    completed_iterations = 0
+    try:
+        with _exclusive_exec_lock(_exec_loop_lock_path(config_path),
+                                  already_running_code="CONTROL_PLANE_EXEC_LOOP_ALREADY_RUNNING"):
+            for iteration in range(1, max_iterations + 1):
+                try:
+                    runtime_heartbeat(args)
+                    poll_exec_once(args)
+                    state, reason = "completed", None
+                except RuntimeError as error:
+                    reason = _safe_error_code(error)
+                    if reason in EXEC_POLICY_STOP_CODES:
+                        print(json.dumps({"execution": "exec_loop_stopped", "reason": reason,
+                                          "completed_iterations": completed_iterations}, separators=(",", ":")))
+                        return 0
+                    state = "degraded"
+                completed_iterations = iteration
+                print(json.dumps({"execution": "exec_loop_iteration", "iteration": iteration,
+                                  "state": state, "reason": reason}, separators=(",", ":")))
+                if iteration < max_iterations:
+                    time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        print(json.dumps({"execution": "exec_loop_interrupted",
+                          "completed_iterations": completed_iterations}, separators=(",", ":")))
+        return 130
+    return 0
+
+
+def install_exec_policy(args: argparse.Namespace) -> int:
+    if getattr(args, "confirm_install", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIRMATION_REQUIRED")
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    raw_prefixes = getattr(args, "allowed_argv_prefix", None) or []
+    prefixes: list[list[str]] = []
+    for raw in raw_prefixes:
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError) as error:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID") from error
+        if not isinstance(parsed, list) or not parsed:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        prefixes.append([_exec_argv_item(item) for item in parsed])
+    now_ms = int(time.time() * 1000)
+    expires_at_ms = getattr(args, "expires_at_ms", None)
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool) or expires_at_ms <= now_ms or expires_at_ms > now_ms + EXEC_POLICY_MAX_TTL_MS:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRY_INVALID")
+    workspace_id = _policy_identifier(getattr(args, "workspace_id", ""), "workspace_id")
+    workspace_generation = _policy_identifier(getattr(args, "workspace_generation", ""), "workspace_generation")
+    entry = _require_current_local_workspace_registration(
+        args, config_path=config_path, workspace_id=workspace_id, workspace_generation=workspace_generation)
+    if entry["capabilities"].get("exec") is not True:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
+    policy = _normalise_exec_policy({
+        "schema_version": EXEC_POLICY_SCHEMA_VERSION, "enabled": True,
+        "server_origin": _server_origin(config.get("server_url")),
+        "owner_id": _policy_identifier(getattr(args, "owner_id", ""), "owner_id"),
+        "device_id": _policy_identifier(config.get("device_id"), "device_id"),
+        "endpoint_id": _policy_identifier(config.get("endpoint_id"), "endpoint_id"),
+        "workspace_id": workspace_id, "workspace_generation": workspace_generation,
+        "expires_at_ms": expires_at_ms,
+        "facade_contract": _policy_facade_contract(
+            getattr(args, "facade_schema_version", None), getattr(args, "facade_profile", None),
+            getattr(args, "facade_sha256", None)),
+        "allowed_argv_prefixes": prefixes,
+        "max_timeout_ms": getattr(args, "max_timeout_ms", None),
+        "max_output_bytes": getattr(args, "max_output_bytes", None),
+        "max_concurrent": 2,
+    }, now_ms=now_ms, require_enabled=True)
+    _write_local_policy(_exec_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
+    print(json.dumps({"execution": "exec_policy_installed", "policy_sha256": _policy_digest(policy),
+                      "expires_at_ms": policy["expires_at_ms"]}, separators=(",", ":")))
+    return 0
+
+
+def inspect_exec_policy(args: argparse.Namespace) -> int:
+    policy = _read_exec_policy(_exec_policy_path(args))
+    print(json.dumps({"execution": "exec_policy_inspected", "policy_sha256": _policy_digest(policy),
+                      "expires_at_ms": policy["expires_at_ms"], "enabled": policy["enabled"]},
+                     separators=(",", ":")))
+    return 0
+
+
+def disable_exec_policy(args: argparse.Namespace) -> int:
+    path = _exec_policy_path(args)
+    try:
+        policy = _read_exec_policy(path)
+    except RuntimeError as error:
+        if _safe_error_code(error) == "CONTROL_PLANE_EXEC_POLICY_MISSING":
+            print(json.dumps({"execution": "exec_policy_disabled", "reason": "already_missing"},
+                             separators=(",", ":")))
+            return 0
+        raise
+    policy["enabled"] = False
+    _write_json_atomic(path, policy)
+    print(json.dumps({"execution": "exec_policy_disabled"}, separators=(",", ":")))
+    return 0
+
+
+def _artifact_action_text(action: dict[str, Any], field: str) -> str:
+    value = action.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+    return value
+
+
+def _poll_artifact_once(args: argparse.Namespace) -> int:
+    """Poll one scoped document/image read under the file-read allowlist.
+
+    Artifacts reuse the C3 file-read policy allowlist so no second path
+    universe is introduced. Docs must decode as UTF-8 within caps; images
+    must match the MIME allowlist by magic bytes and size caps. Every
+    rejection is a durable receipt, never a silent skip.
+    """
+    import base64 as _b64
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    journal_path = _file_read_journal_path(config_path)
+    journal = _read_file_read_journal(journal_path)
+    submitted_receipts = _flush_file_read_journal(config, journal_path, journal)
+    project_root = Path(args.project_root).expanduser().resolve() if getattr(args, "project_root", "") else Path.cwd()
+    status = _runtime_status(args, project_root)
+    readiness, reason = runtime_readiness(status)
+    if readiness != "ready":
+        print(json.dumps({"execution": "artifact_not_started", "reason": reason,
+                          "received_action_ids": [], "submitted_receipts": submitted_receipts},
+                         separators=(",", ":")))
+        return 0
+    identity = observed_runtime_identity(recovery_identity_observation(args, project_root))
+    if identity is None:
+        print(json.dumps({"execution": "artifact_not_started", "reason": "runtime_identity_unproven",
+                          "received_action_ids": [], "submitted_receipts": submitted_receipts},
+                         separators=(",", ":")))
+        return 0
+    response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/poll",
+                        {"limit": 1, "lane": "bounded_artifact"}, f"Node {config['node_secret']}")
+    actions = response.get("actions")
+    if not isinstance(actions, list) or len(actions) > 1:
+        raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+    completed: list[str] = []
+    rejected: list[str] = []
+    unknown: list[str] = []
+    received: list[str] = []
+    for action in actions:
+        if not isinstance(action, dict):
+            raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+        action_id = _artifact_action_text(action, "action_id")
+        attempt_id = _artifact_action_text(action, "attempt_id")
+        received.append(action_id)
+        key = _file_read_journal_key(action_id, attempt_id)
+        if key in journal["entries"]:
+            submitted_receipts += _flush_file_read_journal(config, journal_path, journal)
+            continue
+        try:
+            kind = action.get("mcp_artifact_kind")
+            rel = action.get("mcp_artifact_path")
+            if kind not in ("document", "image"):
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            if not isinstance(rel, str) or not rel:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            if action.get("device_id") != config["device_id"] or action.get("endpoint_id") != config["endpoint_id"]:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            policy = _read_file_read_policy(_file_read_policy_path(args))
+            now_ms = int(time.time() * 1000)
+            if policy.get("enabled") is not True or policy.get("expires_at_ms", 0) <= now_ms:
+                raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
+            allowed = policy.get("allowed_relative_paths", [])
+            if rel not in allowed:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED")
+            registry = _read_workspace_registry(_workspace_registry_path(args, config_path))
+            entry = _registered_workspace_entry(
+                registry, workspace_id=action.get("workspace_id"), workspace_generation=action.get("workspace_generation"))
+            root = Path(entry["canonical_path"]).resolve()
+            target = (root / rel).resolve()
+            try:
+                target.relative_to(root)
+            except ValueError as error:
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED") from error
+            if not target.is_file():
+                raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            contract = {"schema_version": action.get("mcp_artifact_facade_schema_version"),
+                        "profile": action.get("mcp_artifact_facade_profile"),
+                        "sha256": action.get("mcp_artifact_facade_contract_sha256")}
+            _policy_facade_contract(contract["schema_version"], contract["profile"], contract["sha256"])
+            local_handle = f"cp_artifact_{secrets.token_hex(24)}"
+            if kind == "document":
+                raw = target.read_bytes()
+                if len(raw) > 256 * 1024:
+                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
+                try:
+                    content = raw.decode("utf-8")
+                except UnicodeDecodeError as error:
+                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED") from error
+                for pattern in FILE_READ_SENSITIVE_CONTENT_PATTERNS:
+                    if pattern.search(content):
+                        raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+                response_sha = hashlib.sha256(json.dumps(
+                    {"path": rel, "content": content},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                payload = {"schema_version": 1, "operation_kind": "control_plane_artifact_document",
+                           "local_handle": local_handle, "policy_sha256": _policy_digest(policy),
+                           "actor": {"client_id": "electron-control-plane-artifact-bridge", "client_type": "electron"},
+                           "facade_contract": contract, "path": rel, "content": content,
+                           "response_sha256": response_sha,
+                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
+                                                "process_instance_id": identity.get("process_instance_id", "proc"),
+                                                "server_instance_id": identity.get("server_instance_id", "srv"),
+                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
+            else:
+                raw = target.read_bytes()
+                if len(raw) > 1024 * 1024:
+                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_TOO_LARGE")
+                if raw.startswith(b"\x89PNG\r\n\x1a\n"):
+                    mime = "image/png"
+                elif raw.startswith(b"\xff\xd8\xff"):
+                    mime = "image/jpeg"
+                elif raw.startswith(b"RIFF") and b"WEBP" in raw[:16]:
+                    mime = "image/webp"
+                else:
+                    raise RuntimeError("CONTROL_PLANE_ARTIFACT_MIME_DENIED")
+                data_b64 = _b64.b64encode(raw).decode("ascii")
+                response_sha = hashlib.sha256(json.dumps(
+                    {"path": rel, "mime": mime, "data_base64": data_b64},
+                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                payload = {"schema_version": 1, "operation_kind": "control_plane_artifact_image",
+                           "local_handle": local_handle, "policy_sha256": _policy_digest(policy),
+                           "actor": {"client_id": "electron-control-plane-artifact-bridge", "client_type": "electron"},
+                           "facade_contract": contract, "path": rel, "mime": mime, "data_base64": data_b64,
+                           "response_sha256": response_sha,
+                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
+                                                "process_instance_id": identity.get("process_instance_id", "proc"),
+                                                "server_instance_id": identity.get("server_instance_id", "srv"),
+                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
+        except RuntimeError as error:
+            code = _safe_error_code(error, "CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
+            pre_effect = code in FILE_READ_PRE_EFFECT_REJECTION_CODES | {
+                "CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED", "CONTROL_PLANE_ARTIFACT_MIME_DENIED",
+                "CONTROL_PLANE_ARTIFACT_TOO_LARGE"}
+            entry = _record_file_read_receipt(
+                journal_path, journal, state="rejected" if pre_effect else "unknown",
+                action_id=action_id, attempt_id=attempt_id,
+                receipt_state="rejected" if pre_effect else "unknown", local_handle="",
+                payload={"schema_version": 1, "operation_kind": "control_plane_artifact_document"
+                         if action.get("mcp_artifact_kind") == "document" else "control_plane_artifact_image",
+                         "code": code})
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            (rejected if pre_effect else unknown).append(action_id)
+            continue
+        journal["entries"][key] = {"state": "prepared", "action_id": action_id, "attempt_id": attempt_id}
+        _write_json_atomic(journal_path, journal)
+        try:
+            entry = _record_file_read_receipt(
+                journal_path, journal, state="completed", action_id=action_id, attempt_id=attempt_id,
+                receipt_state="completed", local_handle=local_handle, payload=payload)
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            completed.append(action_id)
+        except Exception:
+            prepared = journal["entries"].get(key)
+            if isinstance(prepared, dict) and prepared.get("state") == "prepared":
+                journal["entries"][key] = {**prepared, "state": "unknown"}
+                _write_json_atomic(journal_path, journal)
+                unknown.append(action_id)
+            else:
+                raise
+    print(json.dumps({"execution": "artifact_once", "runtime_identity": "reported",
+                      "received_action_ids": received, "completed_action_ids": completed,
+                      "rejected_action_ids": rejected, "unknown_action_ids": unknown,
+                      "submitted_receipts": submitted_receipts}, separators=(",", ":")))
+    return 0
+
+
+def poll_artifact_once(args: argparse.Namespace) -> int:
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    with _exclusive_file_read_lock(_file_read_poll_lock_path(config_path),
+                                   already_running_code="CONTROL_PLANE_ARTIFACT_POLL_ALREADY_RUNNING"):
+        return _poll_artifact_once(args)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -5111,6 +5996,62 @@ def main(argv: list[str] | None = None) -> int:
     disable_approved_patch_policy_parser.add_argument("--project-root", default="")
     disable_approved_patch_policy_parser.add_argument("--node", default="node")
     disable_approved_patch_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    exec_poll = subcommands.add_parser("poll-exec-once")
+    exec_poll.add_argument("--config", required=True)
+    exec_poll.add_argument("--workspace-registry", required=True)
+    exec_poll.add_argument("--project-root", required=True)
+    exec_poll.add_argument("--node", default="node")
+    exec_poll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    exec_poll.add_argument("--timeout-seconds", type=int, default=20)
+    exec_poll.add_argument("--data-root", default="")
+    exec_loop = subcommands.add_parser("run-exec-loop")
+    exec_loop.add_argument("--config", required=True)
+    exec_loop.add_argument("--workspace-registry", required=True)
+    exec_loop.add_argument("--project-root", required=True)
+    exec_loop.add_argument("--node", default="node")
+    exec_loop.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    exec_loop.add_argument("--timeout-seconds", type=int, default=20)
+    exec_loop.add_argument("--interval-seconds", type=int, default=60)
+    exec_loop.add_argument("--max-iterations", type=int, default=1)
+    exec_loop.add_argument("--data-root", default="")
+    install_exec_policy_parser = subcommands.add_parser("install-exec-policy")
+    install_exec_policy_parser.add_argument("--config", required=True)
+    install_exec_policy_parser.add_argument("--workspace-registry", required=True)
+    install_exec_policy_parser.add_argument("--owner-id", required=True)
+    install_exec_policy_parser.add_argument("--workspace-id", required=True)
+    install_exec_policy_parser.add_argument("--workspace-generation", required=True)
+    install_exec_policy_parser.add_argument("--facade-schema-version", type=int, required=True)
+    install_exec_policy_parser.add_argument("--facade-profile", required=True)
+    install_exec_policy_parser.add_argument("--facade-sha256", required=True)
+    install_exec_policy_parser.add_argument("--allowed-argv-prefix", action="append", required=True)
+    install_exec_policy_parser.add_argument("--max-timeout-ms", type=int, required=True)
+    install_exec_policy_parser.add_argument("--max-output-bytes", type=int, required=True)
+    install_exec_policy_parser.add_argument("--expires-at-ms", type=int, required=True)
+    install_exec_policy_parser.add_argument("--confirm-install", action="store_true")
+    install_exec_policy_parser.add_argument("--replace", action="store_true")
+    install_exec_policy_parser.add_argument("--data-root", default="")
+    install_exec_policy_parser.add_argument("--project-root", default="")
+    install_exec_policy_parser.add_argument("--node", default="node")
+    install_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    inspect_exec_policy_parser = subcommands.add_parser("inspect-exec-policy")
+    inspect_exec_policy_parser.add_argument("--data-root", default="")
+    inspect_exec_policy_parser.add_argument("--project-root", default="")
+    inspect_exec_policy_parser.add_argument("--node", default="node")
+    inspect_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    disable_exec_policy_parser = subcommands.add_parser("disable-exec-policy")
+    disable_exec_policy_parser.add_argument("--confirm-disable", action="store_true")
+    disable_exec_policy_parser.add_argument("--data-root", default="")
+    disable_exec_policy_parser.add_argument("--project-root", default="")
+    disable_exec_policy_parser.add_argument("--node", default="node")
+    disable_exec_policy_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    artifact_poll = subcommands.add_parser("poll-artifact-once")
+    artifact_poll.add_argument("--config", required=True)
+    artifact_poll.add_argument("--workspace-registry", required=True)
+    artifact_poll.add_argument("--project-root", required=True)
+    artifact_poll.add_argument("--node", default="node")
+    artifact_poll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    artifact_poll.add_argument("--timeout-seconds", type=int, default=20)
+    artifact_poll.add_argument("--data-root", default="")
     install_policy = subcommands.add_parser("install-read-only-policy")
     install_policy.add_argument("--config", required=True)
     install_policy.add_argument("--owner-id", required=True)
@@ -5170,6 +6111,12 @@ def main(argv: list[str] | None = None) -> int:
             "install-approved-patch-policy": install_approved_patch_policy,
             "inspect-approved-patch-policy": inspect_approved_patch_policy,
             "disable-approved-patch-policy": disable_approved_patch_policy,
+            "poll-exec-once": poll_exec_once,
+            "run-exec-loop": run_exec_loop,
+            "install-exec-policy": install_exec_policy,
+            "inspect-exec-policy": inspect_exec_policy,
+            "disable-exec-policy": disable_exec_policy,
+            "poll-artifact-once": poll_artifact_once,
             "install-read-only-policy": install_read_only_policy,
             "install-read-only-policy-from-context": install_read_only_policy_from_context,
             "inspect-read-only-policy": inspect_read_only_policy,
