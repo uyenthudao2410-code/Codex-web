@@ -2838,6 +2838,71 @@ class ControlPlaneStore:
             connection.execute("COMMIT")
         return self.context(owner_id=owner_id, context_id=context_id)
 
+    def assigned_read_only_policy_context(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> dict[str, Any]:
+        """Resolve the one locally installable policy assignment for a node root.
+
+        A Windows executor never receives a context identifier from its UI.
+        The owner creates a normal short-lived context for an explicitly bound
+        workspace in the Ubuntu Console; this lookup lets that exact node
+        retrieve the resulting read-only policy template only after its local
+        owner has selected the matching registered root.  Multiple live
+        contexts are intentionally ambiguous rather than silently picking a
+        "latest" authority window.
+
+        The returned record is an internal server result.  HTTP callers must
+        derive a policy template from it and must not expose ``context_id`` to
+        the executor UI or a ChatGPT client.
+        """
+
+        device_id = _text(device_id, "device_id")
+        workspace_id = _text(workspace_id, "workspace_id")
+        workspace_generation = _text(workspace_generation, "workspace_generation")
+        with self._connection() as connection:
+            node = connection.execute(
+                "SELECT device_id, owner_id, endpoint_id, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                raise NotFoundError("device is not enrolled.")
+            if node["revoked_at_ms"] is not None:
+                raise ConflictError("node is revoked.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=device_id,
+                workspace_id=workspace_id,
+                workspace_generation=workspace_generation,
+            )
+            rows = connection.execute(
+                """
+                SELECT c.*
+                FROM contexts AS c
+                JOIN bindings AS b ON b.binding_id = c.binding_id
+                JOIN nodes AS n ON n.device_id = c.device_id
+                WHERE c.device_id = ?
+                  AND c.workspace_id = ?
+                  AND c.workspace_generation = ?
+                  AND c.closed_at_ms IS NULL
+                  AND c.expires_at_ms > ?
+                  AND b.revoked_at_ms IS NULL
+                  AND n.revoked_at_ms IS NULL
+                  AND c.owner_id = b.owner_id
+                  AND b.owner_id = n.owner_id
+                ORDER BY c.created_at_ms, c.context_id
+                """,
+                (device_id, workspace_id, workspace_generation, self.clock()),
+            ).fetchall()
+        if not rows:
+            raise NotFoundError("no live read-only policy assignment exists for this workspace.")
+        if len(rows) != 1:
+            raise ConflictError("read-only policy assignment is ambiguous; close older contexts first.")
+        return _row(rows[0]) or {}
+
     def context(self, *, owner_id: str, context_id: str, require_live: bool = False) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
         context_id = _text(context_id, "context_id")

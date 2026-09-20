@@ -898,20 +898,47 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         )
         if context["device_id"] != device_id or context["endpoint_id"] != node["endpoint_id"]:
             raise PermissionError("context is not assigned to this node.")
+        return {"policy_template": self._read_only_policy_template(context)}
+
+    def _read_only_policy_template(self, context: dict[str, Any]) -> dict[str, Any]:
+        """Project the sole local-policy fields from an already-live context."""
+
         return {
-            "policy_template": {
-                "owner_id": context["owner_id"],
-                "device_id": context["device_id"],
-                "endpoint_id": context["endpoint_id"],
-                "workspace_id": context["workspace_id"],
-                "workspace_generation": context["workspace_generation"],
-                "expires_at_ms": context["expires_at_ms"],
-                "facade_contract": {
-                    key: self.server.mcp_facade.contract[key]
-                    for key in ("schema_version", "profile", "sha256")
-                },
-            }
+            "owner_id": context["owner_id"],
+            "device_id": context["device_id"],
+            "endpoint_id": context["endpoint_id"],
+            "workspace_id": context["workspace_id"],
+            "workspace_generation": context["workspace_generation"],
+            "expires_at_ms": context["expires_at_ms"],
+            "facade_contract": {
+                key: self.server.mcp_facade.contract[key]
+                for key in ("schema_version", "profile", "sha256")
+            },
         }
+
+    def _node_assigned_read_only_policy_template(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Return a node's single owner-issued policy assignment without a context ID.
+
+        The local owner chooses an already registered root in the Windows UI.
+        The authenticated node then asks for the one live context exactly bound
+        to that root.  This replaces copying a ``ctx_…`` value into Windows;
+        it does not create a context, choose a workspace by display name, or
+        grant policy for an unregistered root.
+        """
+
+        if set(body) != {"workspace_id", "workspace_generation"}:
+            raise ValidationError("node assigned policy payload is invalid.")
+        workspace_id = self._field(body, "workspace_id")
+        workspace_generation = self._field(body, "workspace_generation")
+        if not isinstance(workspace_id, str) or not isinstance(workspace_generation, str):
+            raise ValidationError("node assigned policy fields are invalid.")
+        self._node(device_id)
+        context = self.server.store.assigned_read_only_policy_context(
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+        )
+        return {"policy_template": self._read_only_policy_template(context)}
 
     def _register_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """Accept a path-free workspace inventory only from its own node.
@@ -1575,6 +1602,13 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 self._json(
                     HTTPStatus.OK,
                     self._node_read_only_policy_template(node_policy_template_match.group(1), body),
+                )
+                return
+            node_assigned_policy_match = re.fullmatch(r"/v1/nodes/([^/]+)/read-only-policy-assignment", self.path)
+            if node_assigned_policy_match:
+                self._json(
+                    HTTPStatus.OK,
+                    self._node_assigned_read_only_policy_template(node_assigned_policy_match.group(1), body),
                 )
                 return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/poll", self.path)

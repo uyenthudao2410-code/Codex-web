@@ -742,6 +742,66 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 409)
         self.assertEqual(closed["error"]["code"], "CONFLICT")
 
+    def test_node_can_fetch_only_one_live_policy_assignment_for_its_registered_root(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-policy-assignment-0001",
+            endpoint_id="endpoint-policy-assignment-0001",
+            display_name="Policy assignment node",
+        )
+        binding = self._registered_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-policy-assignment-0001",
+            workspace_generation="generation-policy-assignment-0001",
+            display_name="Policy assignment workspace",
+        )
+        path = f"/v1/nodes/{node['device_id']}/read-only-policy-assignment"
+        request = {
+            "workspace_id": binding["workspace_id"],
+            "workspace_generation": binding["workspace_generation"],
+        }
+
+        status, missing = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 404)
+        self.assertEqual(missing["error"]["code"], "NOT_FOUND")
+
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        status, assignment = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 200)
+        template = assignment["policy_template"]
+        self.assertEqual(template["workspace_id"], request["workspace_id"])
+        self.assertEqual(template["workspace_generation"], request["workspace_generation"])
+        self.assertNotIn("context_id", json.dumps(assignment))
+        self.assertNotIn("node_secret", json.dumps(assignment))
+
+        duplicate = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        status, ambiguous = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 409)
+        self.assertEqual(ambiguous["error"]["code"], "CONFLICT")
+
+        self.server.store.close_context(owner_id="owner_default", context_id=duplicate["context_id"])
+        status, restored = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 200)
+        self.assertEqual(restored["policy_template"]["owner_id"], "owner_default")
+
+        status, malformed = self._post(
+            path,
+            {**request, "unexpected": True},
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(malformed["error"]["code"], "VALIDATION_ERROR")
+        self.server.store.close_context(owner_id="owner_default", context_id=context["context_id"])
+
     def test_action_observation_route_requires_operator_authority(self) -> None:
         status, forbidden = self._get("/v1/actions/action-does-not-exist")
         self.assertEqual(status, 403)
