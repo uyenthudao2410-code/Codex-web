@@ -4,10 +4,21 @@ Runbook này dành cho owner hoặc Windows runner đã được ủy quyền đ
 `PACKAGED_PROOF`/`LIVE_ACCEPTED` của Execution Hub + Coding Tools MCP. Nó không
 tự cấp credential, không tự deploy và không thay thế owner acceptance.
 
-### Cửa sổ test hiện tại — 21-09-2026, 20:05 +07
+### Cửa sổ test hiện tại — 21-09-2026, 21:35 +07
 
-Exact checkout hiện tại là `E:\DEV\Codex-web`; runtime code lineage đã build là
-`7f26754657c5a1e933dea000fb75a0624e72f152`. Windows worktree sạch, không còn
+Wave 43 đã đưa commit tài liệu/evidence `fa055951d912997d75c9de5d7d18ee42f72b3094`
+vào exact checkout Windows `E:\DEV\Codex-web`; worktree sạch. Vì commit này
+không đổi package-relevant source, artifact `1.0.7` từ build `bb4522c` vẫn là
+candidate hiện hành với SHA-256
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+Read-only recheck: `dev:status` là `MISSING/RECOVERY_DESCRIPTOR_STALE`,
+`full-clean-activation --preflight` cũng trả `RECOVERY_DESCRIPTOR_STALE`.
+Không chạy `--execute`, không forge closure/epoch. Owner vẫn phải mở app từ
+desktop interactive và tạo closure năm trường cho đúng HEAD trước activation.
+
+Exact checkout hiện tại là `E:\DEV\Codex-web` ở `fa055951d912997d75c9de5d7d18ee42f72b3094`;
+runtime package lineage đã build là `bb4522cdc5f011942cce89f98c415df930f3f359`.
+Windows worktree sạch, không còn
 candidate path/branch rác; đọc lại `git rev-parse HEAD` ngay trước activation.
 `npm ci` và `npm run dist` đã chạy trên checkout
 exact: Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**, source-root/secret

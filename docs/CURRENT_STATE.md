@@ -6,12 +6,29 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **21-09-2026, 20:05 +07** đã đối chiếu Linux,
+> trước: checkpoint mới nhất **21-09-2026, 21:35 +07** đã đối chiếu Linux,
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> 7f26754657c5a1e933dea000fb75a0624e72f152`. Exact Windows build đạt Node/Electron
+> fa055951d912997d75c9de5d7d18ee42f72b3094`. Exact Windows build đạt Node/Electron
 > `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
 > Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
 > nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 43 — GitHub/Windows exact source đồng bộ; live gate vẫn đóng — 21-09-2026, 21:35 +07
+
+Linux `main`, GitHub `origin/main` và Windows `E:\DEV\Codex-web` đã cùng ở
+`fa055951d912997d75c9de5d7d18ee42f72b3094`; worktree Windows sạch. Commit này
+chỉ bổ sung tài liệu/evidence sau build `bb4522c`, nên installer `1.0.7` và
+packaged proof hiện hành vẫn giữ hash
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e` và không
+cần rebuild package cho riêng delta tài liệu.
+
+Read-only Windows recheck trả `DEV_UI STATUS state=MISSING` với
+`error_code=RECOVERY_DESCRIPTOR_STALE`; `full-clean-activation --preflight`
+trả `RECOVERY_DESCRIPTOR_STALE` (Recovery Host owner không sống). Vì vậy mức
+bằng chứng vẫn là `SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`, chưa
+`LIVE_ACCEPTED`. Không forge closure/epoch, không mở admission, binding/task
+hay deploy; bước kế tiếp vẫn là owner desktop interactive tạo closure đủ năm
+trường cho đúng HEAD rồi mới preflight/activation.
 
 ## Checkpoint Wave 41 — activation owner attempt stopped; central package drift — 21-09-2026, 20:05 +07
 

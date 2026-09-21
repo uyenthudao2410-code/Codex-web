@@ -6,7 +6,19 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 20:05 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 21:35 +07
+
+Wave 43 đã đồng bộ exact source giữa Linux/GitHub và Windows `E:\DEV\Codex-web`
+ở `main @ fa055951d912997d75c9de5d7d18ee42f72b3094`; Windows worktree sạch.
+Delta này chỉ là tài liệu/evidence sau build `bb4522c`, không làm thay đổi package
+runtime; installer `1.0.7` vẫn có SHA-256
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+
+Read-only status vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE` và preflight vẫn
+fail-closed vì Recovery Host owner không sống. Mức proof là
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`.
+Không tự tạo closure/epoch hoặc mở admission; gate kế tiếp là owner desktop
+interactive tạo closure đủ năm trường cho đúng HEAD, rồi preflight/activation.
 
 Wave 41 đã đối chiếu Linux, GitHub `origin/main` và checkout exact Windows
 `E:\DEV\Codex-web` ở `main @

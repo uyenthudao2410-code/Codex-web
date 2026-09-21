@@ -1,12 +1,26 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 21-09-2026, 20:05 +07
+**Ngày cập nhật:** 21-09-2026, 21:35 +07
 **Branch:** `main`
-**HEAD đã kiểm tra:** `7f26754657c5a1e933dea000fb75a0624e72f152`
+**HEAD đã kiểm tra:** `fa055951d912997d75c9de5d7d18ee42f72b3094`
 **Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
 Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 43 — exact source đã đồng bộ sang Windows; activation vẫn chờ owner — 21-09-2026, 21:35 +07
+
+Linux/GitHub và Windows `E:\DEV\Codex-web` đều ở `main @
+fa055951d912997d75c9de5d7d18ee42f72b3094`; worktree Windows sạch. Delta từ
+`bb4522c` chỉ là tài liệu/evidence, nên artifact `1.0.7` hiện hành vẫn giữ
+SHA-256 `61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+
+Windows read-only check vẫn là `MISSING/RECOVERY_DESCRIPTOR_STALE`, còn
+`full-clean-activation --preflight` fail-closed vì Recovery Host descriptor
+owner không sống. Chưa có closure exact source, workspace/connector/authority,
+binding/task hoặc Ubuntu deploy; mức proof chưa vượt `PACKAGED_PROOF`. Owner
+cần mở UI từ desktop interactive và tạo closure năm trường cho đúng HEAD trước
+khi activation.
 
 ## Checkpoint Wave 41 — activation incomplete; Ubuntu release chưa đồng bộ — 21-09-2026, 20:05 +07
 
