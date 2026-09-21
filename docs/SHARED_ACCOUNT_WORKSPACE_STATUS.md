@@ -27,6 +27,21 @@ admission, không tạo binding/task hay deploy. Next action vẫn là owner
 acceptance exact source + full-clean activation, sau đó mới enrollment,
 workspace/binding/task và T01–T16/soak.
 
+## Checkpoint Wave 40 — cài artifact ổn định, GUI chưa khởi động qua SSH — 21-09-2026, 19:31 +07
+
+Sau installed smoke, installer exact `1.0.7` đã được cài per-user vào
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP`; registry uninstall
+ghi đúng `Coding Tools MCP 1.0.7`. Hash executable installed
+`a57ced0d185472d5c5e234a1177bf13ca35f14d2661300fc80e92c6daa7ecbd2` trùng
+hash executable unpacked từ cùng artifact. Không có Supervisor Scheduled Task.
+
+Khởi chạy từ SSH thường và SSH có TTY đều không tạo GUI process; profile
+`%APPDATA%\web-mcp-assistant` và `recovery-host.json` vẫn chưa có. Vì vậy
+`dev-ui status` còn `MISSING/ENOENT` và full-clean preflight còn `ENOENT`.
+Đây là installed artifact proof, chưa live acceptance; bước tiếp theo phải
+được chạy từ phiên desktop `Admin` tương tác để tạo closure/activation chính
+thức, không tự forge context hoặc epoch.
+
 ## Trạng thái mới nhất — Windows `DESKTOP-63643J4`
 
 Tailscale/SSH đã kết nối tới `100.72.186.41`; Wave 33 vừa đối chiếu read-only

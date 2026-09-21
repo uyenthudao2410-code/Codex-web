@@ -22,6 +22,17 @@ này. Gate còn lại là owner acceptance exact source + supported full-clean
 activation, sau đó mới enrollment/workspace generation/binding/task, T01–T16,
 restore và soak.
 
+## Checkpoint Wave 40 — installed artifact hiện diện, GUI SSH không khởi động — 21-09-2026, 19:31 +07
+
+Installer exact `1.0.7` đã cài per-user tại
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP`; registry và
+executable installed khớp unpacked artifact. Không có process Electron,
+Recovery Host hoặc Supervisor Task sau khi thử launch qua SSH (kể cả TTY),
+`recovery-host.json` chưa tồn tại và preflight trả `ENOENT`. Không có
+credential/context/admission/binding/task mutation. Gate tiếp theo là owner mở
+ứng dụng từ desktop interactive, tạo acceptance closure exact source, rồi mới
+full-clean activation và strict heartbeat.
+
 Tailscale/SSH tới `100.72.186.41` đã mở; Wave 26 xác thực node và Wave 27
 đã xác thực packaged candidate.
 Candidate cô lập trên máy Windows đã

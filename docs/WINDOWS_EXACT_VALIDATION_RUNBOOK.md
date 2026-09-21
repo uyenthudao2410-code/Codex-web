@@ -20,6 +20,14 @@ profile/process. Vì vậy bằng chứng hiện tại là exact candidate
 `MISSING/ENOENT` và full-clean preflight thiếu `recovery-host.json`. Không tự
 forge acceptance, credential/context, admission, binding/task hoặc deploy.
 
+Wave 40 đã cài installer exact `1.0.7` per-user tại
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP`; registry và
+executable installed hash khớp unpacked artifact. Launch qua SSH (có và không
+có TTY) không tạo GUI/Recovery Host process, không tạo Supervisor Task và
+không tạo `recovery-host.json`. Vì vậy bước tiếp theo phải chạy từ desktop
+interactive của `Admin`; SSH chỉ dùng để kiểm tra, không được xem là GUI
+acceptance.
+
 `DESKTOP-63643J4` (`100.72.186.41`) hiện reachable qua Tailscale/SSH. Exact
 checkout `E:\DEV\Codex-web` là nguồn Git dùng cho build/receipt; không dùng
 candidate directory đã retire. Focused recheck lịch sử vẫn giữ: **18/18**

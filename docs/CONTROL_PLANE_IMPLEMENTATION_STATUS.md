@@ -34,6 +34,15 @@ SSH/Tailscale tới `100.72.186.41` vẫn reachable. Wave này chỉ cập nhậ
 exact-source/build evidence và tài liệu; không mở Ubuntu admission, không
 dispatch action, không đổi OAuth/credential, không restart/deploy production.
 
+## Checkpoint Wave 40 — installed candidate có mặt, chưa có interactive runtime — 21-09-2026, 19:31 +07
+
+NSIS `1.0.7` đã cài per-user đúng artifact; executable installed hash khớp
+unpacked build. SSH launch không tạo Electron/Recovery Host process, không có
+Supervisor Task và không có `recovery-host.json`; `dev-ui` vẫn `MISSING/ENOENT`.
+Đây là installed artifact proof, chưa `LIVE_ACCEPTED`. Owner cần mở app từ
+desktop interactive và tạo closure/activation chính thức trước khi pairing,
+workspace binding hoặc task.
+
 ## Checkpoint Wave 36 — BLOCKED chờ external owner activation — 21-09-2026, 12:41 +07
 
 Authoritative recheck vẫn `DEV_UI STATUS state=MISSING` với

@@ -27,6 +27,17 @@ installed smoke đã uninstall để không giữ profile giả; `dev-ui status`
 owner acceptance exact source, full-clean activation được hỗ trợ, rồi strict
 heartbeat/enrollment/workspace binding/task và T01–T16.
 
+## Checkpoint Wave 40 — installed artifact đã có, chưa có GUI/runtime live — 21-09-2026, 19:31 +07
+
+NSIS exact `1.0.7` hiện đã cài per-user tại
+`C:\Users\Admin\AppData\Local\Programs\Coding Tools MCP`; registry và hash
+executable installed khớp unpacked artifact. SSH launch (có và không có TTY)
+không tạo process Electron/Recovery Host, không tạo
+`%APPDATA%\web-mcp-assistant\recovery-host.json`, và không tạo Supervisor
+Task. `dev-ui` vẫn `MISSING/ENOENT`; đây là installed proof chứ chưa phải
+`LIVE_ACCEPTED`. Cần owner mở executable từ desktop `Admin`, tạo closure chính
+thức và chạy preflight/activation theo runbook.
+
 ## Checkpoint Wave 36 — BLOCKED chờ Windows owner activation — 21-09-2026, 12:41 +07
 
 Recheck `dev:status` vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; Supervisor vẫn
