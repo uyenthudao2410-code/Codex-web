@@ -160,9 +160,9 @@ npm run dev:status
 ```
 
 Ghi lại `HEAD`, version và trạng thái dirty trong receipt nội bộ. Checkout thật
-hiện đang ở HEAD `3779096a9156bf2827e3164d09bcc1ef647a2c01` và còn thay đổi;
-candidate `E:\DEV\Codex-web-candidate-502ffb8` là package `1.0.7` nhưng không
-có `.git`. Vì vậy:
+hiện đang ở commit tài liệu `ebc972481952f053186a0cb966b11360d324b494` (runtime
+component exact code lineage là `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`)
+và sạch; candidate `E:\DEV\Codex-web-candidate-502ffb8` đã retire. Vì vậy:
 
 - dùng candidate chỉ để nói `PACKAGED_PROOF`/installed smoke;
 - muốn activation code phải dùng đúng checkout/artifact mà owner vừa review và
@@ -217,8 +217,8 @@ Khi code activation là cần thiết, `affected_components` phải liệt kê �
 component có byte thay đổi (`recovery_host`, `coding_mcp`, `electron_ui` theo
 thứ tự canonical) và mỗi component phải có accepted receipt + postflight
 receipt. `affected_components=[]` chỉ phù hợp khi không có code activation;
-trạng thái hiện tại của máy có list rỗng, `components_current=false` và
-`lifecycle_clean=false`, nên **chưa đủ**.
+Windows profile hiện chưa có Recovery Host/closure sau installed-smoke
+cleanup, nên **chưa đủ** và không được tự tạo payload thay owner.
 
 Payload checkpoint mà CLI nhận chỉ gồm đúng năm trường sau, lấy từ closure
 chính thức; không tự đặt ID/fingerprint:
