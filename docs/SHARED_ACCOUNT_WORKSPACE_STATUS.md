@@ -1,12 +1,24 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 22-09-2026, 06:27 +07
+**Ngày cập nhật:** 22-09-2026, 06:34 +07
 **Branch:** `main`
-**HEAD đã kiểm tra:** `eab25528ffb070e2de6732574ca2599d89b8d08b`
+**HEAD đã kiểm tra:** `99fbdd95b5bceb901c80e8d4b63582d0266bb456`
 **Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
 Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 47 — ba checkout đã cùng `main@99fbdd9` — 22-09-2026, 06:34 +07
+
+Windows `E:\DEV\Codex-web` đã fast-forward an toàn lên cùng commit với Linux và
+GitHub bằng bundle tạm qua SSH; không reset/rebase, không đổi remote, không
+restart runtime. Chỉ hai projection `.coding-tools` runtime còn dirty trên
+Windows; source/package files sạch và bundle tạm đã xoá. Delta là docs/evidence,
+không thay installer hay code runtime.
+
+Wave 46 vẫn là trạng thái vận hành: enrollment `pending_operator_approval`,
+epoch `ACTIVATION_REQUEST_EXPIRED`, admission đóng, chưa route evidence,
+workspace registry/policy hoặc `LIVE_ACCEPTED`.
 
 ## Checkpoint Wave 46 — central handoff sống, enrollment Ubuntu chờ duyệt — 22-09-2026, 06:27 +07
 

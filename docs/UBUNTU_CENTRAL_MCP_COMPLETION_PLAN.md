@@ -19,6 +19,14 @@ Trạng thái: **kế hoạch triển khai; các gate mới bên dưới chưa �
 > chưa là Windows/live acceptance.
 > Không receipt lịch sử nào bị sửa; tài liệu không tự cấp quyền triển khai.
 
+### Cập nhật Wave 47 — exact source đã đồng bộ, Ubuntu vẫn recovery — 22-09-2026, 06:34 +07
+
+Checkout Linux/GitHub/Windows hiện cùng `main@99fbdd95b5bceb901c80e8d4b63582d0266bb456`;
+Windows được fast-forward qua bundle tạm, không restart app hoặc đổi remote.
+Commit chỉ là docs/delivery receipt. Enrollment Wave 46 vẫn
+`pending_operator_approval`; Ubuntu service vẫn package cũ, chưa có route
+evidence/workspace policy và admission vẫn `recovery`.
+
 ### Cập nhật Wave 46 — Windows enrollment đang chờ operator, Ubuntu giữ recovery — 22-09-2026, 06:27 +07
 
 Windows exact `main @ eab25528ffb070e2de6732574ca2599d89b8d08b` đã chuyển role

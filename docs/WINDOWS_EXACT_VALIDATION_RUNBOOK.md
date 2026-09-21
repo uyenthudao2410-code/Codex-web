@@ -6,6 +6,12 @@ tự cấp credential, không tự deploy và không thay thế owner acceptance
 
 ### Cửa sổ test hiện tại — 22-09-2026, 06:27 +07
 
+Wave 47 lúc 06:34 +07 đã đồng bộ checkout Windows lên
+`main@99fbdd95b5bceb901c80e8d4b63582d0266bb456` bằng fast-forward bundle qua SSH;
+Linux/GitHub cùng HEAD. Không restart runtime; source/package files sạch, chỉ
+ledger/performance runtime projections dirty; bundle tạm đã xoá. Đây là docs/
+evidence delivery, không thay artifact hay mở gate.
+
 Wave 46 read-only SSH xác nhận exact checkout `E:\DEV\Codex-web` ở `main @
 eab25528ffb070e2de6732574ca2599d89b8d08b`, version `1.0.7`; source không đổi
 ngoài các projection `.coding-tools` runtime. Packaged Recovery Host/MCP đang

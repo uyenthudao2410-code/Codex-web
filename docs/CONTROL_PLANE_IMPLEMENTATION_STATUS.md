@@ -8,9 +8,22 @@
 > Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
 > nhiều client và `binding_id` nằm ở
 > [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
-> checkpoint mới nhất **22-09-2026, 06:27 +07, Windows `DESKTOP-63643J4` Wave 46**.
+> checkpoint mới nhất **22-09-2026, 06:34 +07, Windows `DESKTOP-63643J4` Wave 47**.
 > Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
 > nâng thành package/live proof.
+
+## Checkpoint Wave 47 — exact checkout đã đồng bộ sau enrollment — 22-09-2026, 06:34 +07
+
+Linux, GitHub và Windows `E:\DEV\Codex-web` hiện cùng ở
+`main @ 99fbdd95b5bceb901c80e8d4b63582d0266bb456`. Windows được fast-forward
+bằng bundle tạm qua SSH; không reset/rebase, không restart runtime, không đổi
+remote; bundle đã xoá. Chỉ ledger/performance projection `.coding-tools` dirty
+do runtime evidence. Commit chỉ là docs/delivery receipt, không đổi package
+runtime.
+
+Các gate central của Wave 46 giữ nguyên: enrollment chờ operator approve, epoch
+đã `FAILED/ACTIVATION_REQUEST_EXPIRED`, admission đóng, route/workspace policy
+chưa có; Ubuntu vẫn recovery và service chưa nạp exact package.
 
 ## Checkpoint Wave 46 — enrollment Windows đã gửi, Control Plane vẫn recovery — 22-09-2026, 06:27 +07
 

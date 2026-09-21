@@ -6,7 +6,13 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 22-09-2026, 06:27 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 22-09-2026, 06:34 +07
+
+Wave 47 đã fast-forward checkout Windows `E:\DEV\Codex-web` từ `eab2552` lên
+`99fbdd95b5bceb901c80e8d4b63582d0266bb456`, cùng Linux/GitHub, bằng bundle tạm
+qua SSH. Không reset/rebase/force-push hoặc restart runtime; bundle đã xoá.
+Windows chỉ còn `.coding-tools` runtime projections dirty; package/source sạch.
+Delta chỉ là docs/delivery receipt, nên installer và các gate Wave 46 không đổi.
 
 Wave 46 đã xác nhận Windows exact `main @
 eab25528ffb070e2de6732574ca2599d89b8d08b` và packaged Recovery Host/MCP đang

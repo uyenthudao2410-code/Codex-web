@@ -6,12 +6,26 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **22-09-2026, 06:27 +07** đã đối chiếu Linux,
+> trước: checkpoint mới nhất **22-09-2026, 06:34 +07** đã đối chiếu Linux,
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> eab25528ffb070e2de6732574ca2599d89b8d08b`. Exact Windows package 1.0.7 đang
+> 99fbdd95b5bceb901c80e8d4b63582d0266bb456`. Exact Windows package 1.0.7 đang
 > chạy packaged Recovery Host/MCP, nhưng full-clean epoch đã hết hạn và
 > admission vẫn đóng; central enrollment mới chỉ `pending_operator_approval`.
 > Mức proof chưa vượt `PACKAGED_PROOF`, chưa có `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 47 — Windows fast-forward đã đồng bộ, runtime không restart — 22-09-2026, 06:34 +07
+
+Sau Wave 46, checkout Windows `E:\DEV\Codex-web` đã được fast-forward an toàn
+từ `eab2552` lên `99fbdd95b5bceb901c80e8d4b63582d0266bb456` bằng Git bundle tạm
+qua SSH; Linux và `origin/main` đã ở commit này. Không reset/rebase/force-push,
+không đổi remote, không restart packaged app. Windows worktree chỉ còn
+`.coding-tools/orchestration/ledger.sqlite3` và `.coding-tools/performance.json`
+dirty do runtime evidence; source/package files sạch. Bundle tạm đã được xoá.
+
+Commit này chỉ cập nhật docs/delivery receipt, không thay package-relevant code
+hoặc installer. Các blocker Wave 46 giữ nguyên: epoch đã hết hạn, admission
+đóng, enrollment chờ operator approve, Ubuntu service vẫn package cũ và chưa có
+route evidence/workspace policy; chưa `LIVE_ACCEPTED`.
 
 ## Checkpoint Wave 46 — central handoff sống nhưng onboarding Ubuntu còn chờ duyệt — 22-09-2026, 06:27 +07
 
