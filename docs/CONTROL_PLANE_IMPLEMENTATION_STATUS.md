@@ -8,17 +8,31 @@
 > Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
 > nhiều client và `binding_id` nằm ở
 > [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
-> checkpoint mới nhất **21-09-2026, 12:41 +07, Windows `DESKTOP-63643J4` Wave 36**. Các số liệu bên dưới vẫn giữ nguyên
-> bằng chứng theo từng checkpoint, không tự nâng thành package/live proof.
+> checkpoint mới nhất **21-09-2026, 19:02 +07, Windows `DESKTOP-63643J4` Wave 39**.
+> Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
+> nâng thành package/live proof.
 
-## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 12:29 +07
+## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 19:02 +07
 
-SSH/Tailscale tới `100.72.186.41` đã được kiểm chứng bằng candidate riêng.
-Shared-account two-client route, HTTP→node **22/22**, Recovery **3/3** và
-packaged/installed smoke pass. Mức hiện tại là source/focused proof cộng
-candidate `PACKAGED_PROOF`; Wave 33 đã xác nhận target reachable nhưng
-data root thật rồi dọn sạch; DPAPI/ACL, reboot/reconnect/rotation, live UI
-acceptance và owner acceptance vẫn mở.
+Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub ở
+`main @ abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0` (commit tài liệu hiện tại
+`9a9ba1266f178558d6a37ab293869d43190c7a2d`), worktree Windows sạch. `npm ci`
+và `npm run dist` đạt Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**;
+packaged và installed smoke đều pass. Installer `1.0.7` có SHA-256
+`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+
+Installed smoke đã uninstall và cleanup nên runtime hiện `DEV_UI STATUS
+state=MISSING`, `host=unavailable`, `error_code=ENOENT`; full-clean preflight
+thiếu `recovery-host.json`. Mức proof là exact candidate `PACKAGED_PROOF`, chưa
+`LIVE_ACCEPTED`; chưa có credential/context/admission/binding/task/deploy
+mutation. Gate tiếp theo là owner acceptance exact source + supported full-clean
+activation, rồi mới enrollment/workspace/binding/task và T01–T16.
+
+## Checkpoint Wave 39 — exact Windows build/installed proof, live gate còn mở — 21-09-2026, 19:02 +07
+
+SSH/Tailscale tới `100.72.186.41` vẫn reachable. Wave này chỉ cập nhật
+exact-source/build evidence và tài liệu; không mở Ubuntu admission, không
+dispatch action, không đổi OAuth/credential, không restart/deploy production.
 
 ## Checkpoint Wave 36 — BLOCKED chờ external owner activation — 21-09-2026, 12:41 +07
 

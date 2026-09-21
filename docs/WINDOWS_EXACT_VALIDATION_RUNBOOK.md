@@ -4,14 +4,27 @@ Runbook này dành cho owner hoặc Windows runner đã được ủy quyền đ
 `PACKAGED_PROOF`/`LIVE_ACCEPTED` của Execution Hub + Coding Tools MCP. Nó không
 tự cấp credential, không tự deploy và không thay thế owner acceptance.
 
-### Cửa sổ test hiện tại — 21-09-2026, 13:36 +07
+### Cửa sổ test hiện tại — 21-09-2026, 19:02 +07
 
-`DESKTOP-63643J4` (`100.72.186.41`) hiện reachable qua Tailscale/SSH. Candidate
-được cô lập tại `E:\DEV\Codex-web-candidate-502ffb8`, version `1.0.7`, đã có
-unpacked package và NSIS installer; candidate không có `.git`, vì vậy mọi receipt
-phải gọi là candidate proof, không phải Git checkout/release proof. Focused
-recheck hiện hành: **18/18** secret/rotation/workspace, **3/3** same-account
-OAuth, **1/1** two-client exec, **1/1** document-write, **1/1** standing patch.
+Exact checkout hiện tại là `E:\DEV\Codex-web` ở `main @
+abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`; commit tài liệu mới nhất là
+`9a9ba1266f178558d6a37ab293869d43190c7a2d`. Windows worktree sạch, không còn
+candidate path/branch rác. `npm ci` và `npm run dist` đã chạy trên checkout
+exact: Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**, source-root/secret
+gates PASS. Installer `1.0.7` SHA-256 là
+`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+
+Packaged và installed smoke đều pass; installed smoke đã uninstall và cleanup
+profile/process. Vì vậy bằng chứng hiện tại là exact candidate
+`PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`: `dev-ui status` hiện
+`MISSING/ENOENT` và full-clean preflight thiếu `recovery-host.json`. Không tự
+forge acceptance, credential/context, admission, binding/task hoặc deploy.
+
+`DESKTOP-63643J4` (`100.72.186.41`) hiện reachable qua Tailscale/SSH. Exact
+checkout `E:\DEV\Codex-web` là nguồn Git dùng cho build/receipt; không dùng
+candidate directory đã retire. Focused recheck lịch sử vẫn giữ: **18/18**
+secret/rotation/workspace, **3/3** same-account OAuth, **1/1** two-client exec,
+**1/1** document-write, **1/1** standing patch.
 Focused structured workflow parity cũng đạt **1/1** `git/build/test/deploy` và
 **1/1** journal/terminal receipt; đây là fixture deterministic, không phải
 toolchain/deploy thật. Các lane này không dùng credential thật và chưa thay cho
