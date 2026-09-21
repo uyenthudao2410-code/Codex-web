@@ -1,12 +1,33 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 21-09-2026, 21:42 +07
+**Ngày cập nhật:** 22-09-2026, 06:27 +07
 **Branch:** `main`
-**HEAD đã kiểm tra:** `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`
+**HEAD đã kiểm tra:** `eab25528ffb070e2de6732574ca2599d89b8d08b`
 **Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
 Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 46 — central handoff sống, enrollment Ubuntu chờ duyệt — 22-09-2026, 06:27 +07
+
+Windows exact `main @ eab25528ffb070e2de6732574ca2599d89b8d08b` đang chạy
+packaged Recovery Host/MCP đúng installation và workspace `E:\DEV\Codex-web`.
+Epoch handoff đã hết hạn (`ACTIVATION_REQUEST_EXPIRED`), admission đóng,
+`central_connected=false`, `authority_ready=false`,
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`, `fully_ready=false`; chưa có
+binding/task live.
+
+Đã gửi đúng một enrollment request tới `https://svhome.tail0e4032.ts.net`;
+receipt `pending_operator_approval` với enrollment
+`enroll_31e46b3ad4714738b27707c7b7b8e6a8`. Node config đã được tạo cục bộ nhưng
+route evidence, workspace registry và policy chưa có; không đọc/hiển thị node
+credential. Ubuntu health vẫn HTTP 200/schema 19 nhưng admission `recovery`,
+`oauth_principals=0`, package đang chạy revision cũ `0843ece334e07dd29f03cbd4c67fa97fc885ea1c`.
+
+Next action là operator Ubuntu approve enrollment và cấp quyền deploy exact
+Control Plane package; sau đó reconcile credential/heartbeat, đăng ký workspace,
+cài policy và retry full-clean bằng epoch mới. Mức proof vẫn
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`.
 
 ## Checkpoint Wave 44 — receipt HEAD đã đồng bộ sang Windows; live gate giữ nguyên — 21-09-2026, 21:42 +07
 

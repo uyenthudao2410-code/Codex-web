@@ -19,6 +19,25 @@ Trạng thái: **kế hoạch triển khai; các gate mới bên dưới chưa �
 > chưa là Windows/live acceptance.
 > Không receipt lịch sử nào bị sửa; tài liệu không tự cấp quyền triển khai.
 
+### Cập nhật Wave 46 — Windows enrollment đang chờ operator, Ubuntu giữ recovery — 22-09-2026, 06:27 +07
+
+Windows exact `main @ eab25528ffb070e2de6732574ca2599d89b8d08b` đã chuyển role
+`central_executor` và đang có packaged Recovery Host/MCP sống, nhưng epoch
+handoff hết hạn (`ACTIVATION_REQUEST_EXPIRED`), strict route chưa sẵn sàng và
+admission local đóng. Đã gửi một enrollment request tới HTTPS origin
+`https://svhome.tail0e4032.ts.net`; receipt là `pending_operator_approval`
+(`enroll_31e46b3ad4714738b27707c7b7b8e6a8`). Node credential không được đưa vào
+receipt/chat. Route evidence, workspace registry và policy local chưa có.
+
+Ubuntu `/healthz` read-only hiện `ok=true`, schema 19, admission `recovery`,
+`enrollment_requests=5`, `oauth_principals=0`, package fingerprint
+`sha256:3a151842840530206acf90cdeb0731476af555a46601a357d750ce2105a5b773`
+và declared revision `0843ece334e07dd29f03cbd4c67fa97fc885ea1c`; fingerprint này
+không khớp package source local hiện tại. Cần operator approve enrollment và
+quyền deploy exact release trước khi reconcile heartbeat, register workspace,
+install policy hoặc mở admission/binding/task. Mức proof chưa vượt
+`PACKAGED_PROOF`.
+
 ### Cập nhật Wave 36 — BLOCKED, Ubuntu giữ recovery chờ owner Windows — 21-09-2026, 12:41 +07
 
 `dev:status` vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; Supervisor vẫn

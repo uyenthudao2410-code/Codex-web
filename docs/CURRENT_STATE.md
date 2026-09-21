@@ -6,12 +6,46 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **21-09-2026, 21:42 +07** đã đối chiếu Linux,
+> trước: checkpoint mới nhất **22-09-2026, 06:27 +07** đã đối chiếu Linux,
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`. Exact Windows build đạt Node/Electron
-> `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
-> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
-> nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
+> eab25528ffb070e2de6732574ca2599d89b8d08b`. Exact Windows package 1.0.7 đang
+> chạy packaged Recovery Host/MCP, nhưng full-clean epoch đã hết hạn và
+> admission vẫn đóng; central enrollment mới chỉ `pending_operator_approval`.
+> Mức proof chưa vượt `PACKAGED_PROOF`, chưa có `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 46 — central handoff sống nhưng onboarding Ubuntu còn chờ duyệt — 22-09-2026, 06:27 +07
+
+Read-only SSH tới `DESKTOP-63643J4` xác nhận checkout `E:\DEV\Codex-web` ở
+`main @ eab25528ffb070e2de6732574ca2599d89b8d08b`, version `1.0.7`; source
+không có delta ngoài các projection `.coding-tools` runtime. Packaged Recovery
+Host `PID 8744` và MCP `PID 30552` đang sống đúng installation, workspace là
+`E:\DEV\Codex-web`, role `central_executor`; Recovery MCP `PID 5688` cũng có
+identity cùng epoch. Đây là liveness/identity proof, không phải authority proof.
+
+Durable epoch `activation-mubv1t1y-40a4b64c4f26a7529be3ed94d8e2a8ce` đã chuyển
+`VERIFYING` → `FAILED` với `ACTIVATION_REQUEST_EXPIRED`; `admission_open=false`,
+`update_incomplete=true`. Strict snapshot vẫn
+`central_connected=false`, `authority_ready=false`,
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`, `fully_ready=false`; connector
+đang `CHANGED_NEEDS_DISCOVERY`. Không gọi `runtime.start`/dequeue/execute để
+tránh dùng epoch cũ và không sửa epoch thủ công.
+
+Vì profile central trước đó thiếu node config, đã gửi **một** request enrollment
+qua HTTPS origin `https://svhome.tail0e4032.ts.net`; receipt ở Windows là
+`pending_operator_approval` (enrollment `enroll_31e46b3ad4714738b27707c7b7b8e6a8`).
+Credential DPAPI không được đọc ra hoặc đưa vào log/chat. `control-plane-node.json`
+đã có, nhưng route evidence, workspace registry và các policy local vẫn chưa
+tồn tại. Ubuntu `/healthz` trả HTTP 200, schema 19, admission `recovery`,
+`enrollment_requests=5`, `oauth_principals=0`, còn 1 unresolved action chưa
+quarantine; service vẫn nạp package cũ `sha256:3a151842840530206acf90cdeb0731476af555a46601a357d750ce2105a5b773`
+(`0843ece334e07dd29f03cbd4c67fa97fc885ea1c`), khác fingerprint local hiện tại.
+
+**Blocker hiện tại:** Ubuntu operator phải approve enrollment; đồng thời cần
+quyền deploy/verify package Control Plane exact HEAD (SSH quản trị Ubuntu chưa
+có). Sau approval mới reconcile credential/heartbeat, đăng ký workspace
+`E:\DEV\Codex-web`, cài policy read-only phù hợp và tạo route evidence; sau đó
+retry full-clean activation bằng epoch mới. Chỉ khi strict route/local policy,
+admission mở và binding/task live mới được nâng mức proof.
 
 ## Checkpoint Wave 44 — delivery receipt HEAD đã đồng bộ; package/runtime không đổi — 21-09-2026, 21:42 +07
 

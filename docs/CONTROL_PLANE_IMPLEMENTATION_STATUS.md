@@ -8,9 +8,32 @@
 > Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
 > nhiều client và `binding_id` nằm ở
 > [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
-> checkpoint mới nhất **21-09-2026, 21:42 +07, Windows `DESKTOP-63643J4` Wave 44**.
+> checkpoint mới nhất **22-09-2026, 06:27 +07, Windows `DESKTOP-63643J4` Wave 46**.
 > Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
 > nâng thành package/live proof.
+
+## Checkpoint Wave 46 — enrollment Windows đã gửi, Control Plane vẫn recovery — 22-09-2026, 06:27 +07
+
+Windows exact checkout và Linux/GitHub cùng ở `main @
+eab25528ffb070e2de6732574ca2599d89b8d08b`; source Windows chỉ có projection
+`.coding-tools` runtime dirty. Packaged Recovery Host/MCP đang sống, nhưng epoch
+central handoff đã `FAILED/ACTIVATION_REQUEST_EXPIRED`; admission đóng,
+`central_connected=false`, `authority_ready=false`,
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`, `fully_ready=false` và
+connector `CHANGED_NEEDS_DISCOVERY`.
+
+Hồ sơ node chưa tồn tại trước wave này, nên đã gửi một enrollment request qua
+`https://svhome.tail0e4032.ts.net`; receipt là `pending_operator_approval`
+(`enroll_31e46b3ad4714738b27707c7b7b8e6a8`). Không hiển thị credential và chưa
+cài policy/workspace registry. Ubuntu `/healthz` vẫn `ok=true`, schema 19,
+admission `recovery`, `enrollment_requests=5`, `oauth_principals=0`, còn 1
+unquarantined unresolved action; service đang nạp package cũ
+`sha256:3a151842840530206acf90cdeb0731476af555a46601a357d750ce2105a5b773`
+(`0843ece334e07dd29f03cbd4c67fa97fc885ea1c`), chưa phải exact local package.
+
+Blocker là operator Ubuntu approval và quyền deploy/verify package exact; sau đó
+mới reconcile node credential/heartbeat, đăng ký workspace, cài policy read-only,
+retry full-clean epoch mới và xét binding/task. Chưa `LIVE_ACCEPTED`.
 
 ## Checkpoint Wave 44 — receipt HEAD đã đồng bộ; Control Plane chưa deploy — 21-09-2026, 21:42 +07
 

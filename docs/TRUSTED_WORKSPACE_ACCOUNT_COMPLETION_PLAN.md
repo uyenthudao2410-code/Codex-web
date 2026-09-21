@@ -6,7 +6,21 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 21:42 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 22-09-2026, 06:27 +07
+
+Wave 46 đã xác nhận Windows exact `main @
+eab25528ffb070e2de6732574ca2599d89b8d08b` và packaged Recovery Host/MCP đang
+sống đúng installation/workspace. Central handoff epoch đã hết hạn với
+`ACTIVATION_REQUEST_EXPIRED`; admission đóng, `central_connected=false`,
+`authority_ready=false`, `fully_ready=false`, connector cần discovery. Vì
+profile central thiếu node config, đã gửi một enrollment request HTTPS tới
+`https://svhome.tail0e4032.ts.net`; receipt `pending_operator_approval`
+(`enroll_31e46b3ad4714738b27707c7b7b8e6a8`). Không đọc hoặc ghi credential vào
+chat. Route evidence, workspace registry và policy local vẫn thiếu; Ubuntu đang
+ở admission `recovery` và chạy package cũ. Gate tiếp theo là operator approve
+enrollment + deploy exact Control Plane, rồi reconcile/heartbeat, workspace
+registration/policy và full-clean activation epoch mới. Mức proof vẫn
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`.
 
 Wave 44 đã đồng bộ commit delivery receipt `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`
 giữa Linux/GitHub và Windows. Đây là `.coding-tools` evidence-only delta, không

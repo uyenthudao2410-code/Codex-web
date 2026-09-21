@@ -4,7 +4,23 @@ Runbook này dành cho owner hoặc Windows runner đã được ủy quyền đ
 `PACKAGED_PROOF`/`LIVE_ACCEPTED` của Execution Hub + Coding Tools MCP. Nó không
 tự cấp credential, không tự deploy và không thay thế owner acceptance.
 
-### Cửa sổ test hiện tại — 21-09-2026, 21:42 +07
+### Cửa sổ test hiện tại — 22-09-2026, 06:27 +07
+
+Wave 46 read-only SSH xác nhận exact checkout `E:\DEV\Codex-web` ở `main @
+eab25528ffb070e2de6732574ca2599d89b8d08b`, version `1.0.7`; source không đổi
+ngoài các projection `.coding-tools` runtime. Packaged Recovery Host/MCP đang
+sống đúng installation, nhưng central handoff epoch đã hết hạn với
+`ACTIVATION_REQUEST_EXPIRED`; snapshot vẫn `central_connected=false`,
+`authority_ready=false`, `central_status_reason=LOCAL_EXECUTOR_NOT_READY`,
+`fully_ready=false`, admission đóng và connector `CHANGED_NEEDS_DISCOVERY`.
+
+Windows trước đó chưa có node config, route evidence, workspace registry hoặc
+policy. Đã gửi một request enrollment qua HTTPS origin
+`https://svhome.tail0e4032.ts.net`, receipt `pending_operator_approval`
+(`enroll_31e46b3ad4714738b27707c7b7b8e6a8`). Không đọc/hiển thị credential.
+Operator Ubuntu phải approve request; sau đó mới reconcile credential/heartbeat,
+đăng ký `E:\DEV\Codex-web`, cài policy và retry full-clean bằng epoch mới. Đây
+chưa phải `LIVE_ACCEPTED`.
 
 Wave 43 đã đưa commit tài liệu/evidence `fa055951d912997d75c9de5d7d18ee42f72b3094`
 vào exact checkout Windows `E:\DEV\Codex-web`; worktree sạch. Vì commit này
