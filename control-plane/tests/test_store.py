@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import errno
 import io
 import hashlib
@@ -24,17 +25,22 @@ from control_plane.node_agent import (
     READ_ONLY_JOURNAL_SCHEMA_VERSION,
     _journal_path,
     _pid_is_live,
+    _read_only_poll_lock_path,
     _request,
     _read_journal,
     _read_only_bridge_request,
+    _read_only_loop_policy_admission,
+    _safe_bridge_result,
     _write_json_atomic,
     parse_dev_ui_status,
     poll,
     poll_read_only_once,
     read_only_policy_observation,
+    run_connected_agent,
     run_read_only_agent,
     run_read_only_loop,
     recovery_identity_observation,
+    recovery_read_only_bridge,
     recovery_runtime_status,
     runtime_heartbeat,
     observed_runtime_identity,
@@ -85,9 +91,31 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.store = ControlPlaneStore(Path(self.tempdir.name) / "control.sqlite3", clock=lambda: self.now)
         enrolled = self.store.enroll_node(owner_id="owner_default", device_id="device-alpha", endpoint_id="endpoint-alpha", display_name="Windows Canary")
         self.node_secret = enrolled["node_secret"]
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+            display_name="Canary workspace",
+        )
 
     def tearDown(self) -> None:
         self.tempdir.cleanup()
+
+    def _register_workspace(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+        display_name: str,
+    ) -> dict:
+        return self.store.register_node_workspace(
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+            display_name=display_name,
+            capabilities={"read": True, "write": False, "exec": False},
+        )
 
     def _request(self) -> tuple[dict, dict]:
         binding = self.store.create_binding(owner_id="owner_default", device_id="device-alpha", workspace_id="workspace-alpha", workspace_generation="generation-1", display_name="Canary workspace")
@@ -181,12 +209,158 @@ class ControlPlaneStoreTests(unittest.TestCase):
                 },
             )
 
+    def test_workspace_registration_is_path_free_current_and_fences_replaced_generation(self) -> None:
+        with self.assertRaisesRegex(ConflictError, "workspace registration is not current"):
+            self.store.create_binding(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                workspace_id="workspace-rotation",
+                workspace_generation="generation-rotation-0001",
+                display_name="Rotating workspace",
+            )
+
+        registered = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Rotating workspace",
+        )
+        self.assertFalse(registered["replayed"])
+        self.assertEqual(registered["capabilities"], {"read": True, "write": False, "exec": False})
+        self.assertNotIn("path", registered)
+        replayed = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Rotating workspace",
+        )
+        self.assertTrue(replayed["replayed"])
+
+        binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0001",
+            display_name="Owner label may be different from node label",
+        )
+        context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Fence old root before it is delivered",
+            criteria={"kind": "read_only"},
+            scope={"root": "rotation"},
+            expires_at_ms=self.now + 30_000,
+        )
+        queued = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-rotation-action-0001",
+            admission_reference="workspace-rotation-admission-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+
+        replaced = self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-rotation",
+            workspace_generation="generation-rotation-0002",
+            display_name="Rotating workspace v2",
+        )
+        self.assertFalse(replaced["replayed"])
+        inventory = self.store.list_node_workspaces(owner_id="owner_default", device_id="device-alpha")
+        old = next(item for item in inventory if item["workspace_generation"] == "generation-rotation-0001")
+        current = next(item for item in inventory if item["workspace_generation"] == "generation-rotation-0002")
+        self.assertEqual(old["retired_at_ms"], self.now)
+        self.assertIsNone(current["retired_at_ms"])
+        with self.assertRaises(ConflictError):
+            self.store.binding(owner_id="owner_default", binding_id=binding["binding_id"])
+        self.assertEqual(self.store.context(owner_id="owner_default", context_id=context["context_id"])["closed_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "settled")
+        with self.assertRaisesRegex(ConflictError, "workspace registration is not current"):
+            self.store.create_binding(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                workspace_id="workspace-rotation",
+                workspace_generation="generation-rotation-0001",
+                display_name="Old generation",
+            )
+        with self.assertRaises(PermissionError):
+            self.store.list_node_workspaces(owner_id="another_owner", device_id="device-alpha")
+
     def test_context_is_owner_and_binding_scoped(self) -> None:
         context, _ = self._request()
         with self.assertRaises(PermissionError):
             self.store.context(owner_id="another_owner", context_id=context["context_id"])
         self.assertEqual(context["device_id"], "device-alpha")
         self.assertEqual(context["workspace_id"], "workspace-alpha")
+
+    def test_explicit_workspace_retirement_closes_context_and_only_settles_queued_actions(self) -> None:
+        binding = self.store.create_binding(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+            display_name="Canary workspace",
+        )
+        context = self.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.now + 60_000,
+        )
+        request = self.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Prove retirement never rewrites a dispatched action",
+            criteria={"kind": "read_only"},
+            scope={"root": "canary"},
+            expires_at_ms=self.now + 30_000,
+        )
+        dispatched = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-retire-dispatched-0001",
+            admission_reference="workspace-retire-dispatched-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        queued = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="workspace-retire-queued-0001",
+            admission_reference="workspace-retire-queued-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        delivered = self.store.poll_actions(device_id="device-alpha", limit=1)
+        self.assertEqual([item["action_id"] for item in delivered], [dispatched["action_id"]])
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=dispatched["action_id"])["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "queued")
+
+        retired = self.store.retire_node_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+        )
+        self.assertFalse(retired["replayed"])
+        self.assertEqual(retired["retired_at_ms"], self.now)
+        self.assertEqual(self.store.context(owner_id="owner_default", context_id=context["context_id"])["closed_at_ms"], self.now)
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=queued["action_id"])["delivery_state"], "settled")
+        self.assertEqual(self.store.action(owner_id="owner_default", action_id=dispatched["action_id"])["delivery_state"], "dispatch_unconfirmed")
+        replayed = self.store.retire_node_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-alpha",
+            workspace_generation="generation-1",
+        )
+        self.assertTrue(replayed["replayed"])
 
     def test_mcp_access_grant_is_context_bound_expiring_and_revocable(self) -> None:
         context, _request = self._request()
@@ -238,6 +412,18 @@ class ControlPlaneStoreTests(unittest.TestCase):
             device_id="device-bravo",
             endpoint_id="endpoint-bravo",
             display_name="Bravo node",
+        )
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Alpha shared path",
+        )
+        self._register_workspace(
+            device_id=bravo["device_id"],
+            workspace_id="workspace-shared-path",
+            workspace_generation="generation-shared-0001",
+            display_name="Bravo shared path",
         )
         alpha_binding = self.store.create_binding(
             owner_id="owner_default",
@@ -345,6 +531,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
         lifecycle = self.store.list_action_lifecycle(owner_id="owner_default")
         self.assertEqual([item["action_id"] for item in lifecycle], [action["action_id"]])
         self.assertEqual(lifecycle[0]["delivery_state"], "queued")
+        self.assertFalse(lifecycle[0]["approved_patch_candidate"])
         self.assertEqual(lifecycle[0]["receipt_count"], 0)
         self.assertIsNone(lifecycle[0]["latest_receipt_state"])
         self.assertNotIn("arguments_json", lifecycle[0])
@@ -538,14 +725,77 @@ class ControlPlaneStoreTests(unittest.TestCase):
         terminal = self.store.record_receipt(device_id="device-alpha", action_id=action["action_id"], attempt_id=attempt, receipt_state="failed", local_handle="", payload={"reason": "confirmed_not_executed"})
         self.assertEqual(terminal["delivery_state"], "settled")
 
-    def test_rotate_credential_invalidates_old_secret_and_increments_generation(self) -> None:
-        original = self.store.node(device_id="device-alpha")
-        rotated = self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")
-        self.assertEqual(rotated["credential_generation"], original["credential_generation"] + 1)
-        with self.assertRaises(PermissionError):
-            self.store.authenticate_node(device_id="device-alpha", node_secret=self.node_secret)
-        authenticated = self.store.authenticate_node(device_id="device-alpha", node_secret=rotated["node_secret"])
-        self.assertEqual(authenticated["credential_generation"], rotated["credential_generation"])
+    def test_operator_can_quarantine_exact_historical_unknown_without_settling_or_retrying(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-quarantine-unknown-0001",
+            admission_reference="admission-quarantine-unknown-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]["attempt_id"]
+        self.store.record_receipt(
+            device_id="device-alpha",
+            action_id=action["action_id"],
+            attempt_id=attempt,
+            receipt_state="unknown",
+            local_handle="",
+            payload={"reason": "historic_read_effect_unknown"},
+        )
+
+        quarantined = self.store.quarantine_historical_unknown_actions(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            action_ids=[action["action_id"]],
+            declaration="HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+        )
+        self.assertEqual(quarantined["actions"], [{
+            "action_id": action["action_id"],
+            "disposition": "quarantined_unknown",
+            "reconciled_at_ms": self.now,
+        }])
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "reconcile_required")
+        self.assertEqual([receipt["receipt_state"] for receipt in observation["receipts"]], ["unknown"])
+        self.assertEqual(observation["reconciliation"]["disposition"], "quarantined_unknown")
+        self.assertEqual(observation["reconciliation"]["declaration"], "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        lifecycle = self.store.list_action_lifecycle(owner_id="owner_default")
+        self.assertEqual(lifecycle[0]["reconciliation_disposition"], "quarantined_unknown")
+        health = self.store.health()
+        self.assertEqual(health["unresolved_action_count"], 1)
+        self.assertEqual(health["quarantined_unknown_action_count"], 1)
+        self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
+
+        snapshot_path = Path(self.tempdir.name) / "quarantined-unknown.sqlite3"
+        snapshot = self.store.backup_to(snapshot_path)
+        inspected = inspect_verified_snapshot(snapshot_path, expected_sha256=str(snapshot["snapshot_sha256"]))
+        self.assertEqual(inspected["unresolved_action_count"], 1)
+        self.assertEqual(inspected["quarantined_unknown_action_count"], 1)
+        self.assertEqual(inspected["unquarantined_unresolved_action_count"], 0)
+
+        with self.assertRaises(ConflictError):
+            self.store.quarantine_historical_unknown_actions(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="HISTORICAL_READ_ONLY_UNKNOWN_EFFECT",
+            )
+        with self.assertRaises(ValidationError):
+            self.store.quarantine_historical_unknown_actions(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="a different declaration",
+            )
+
+    def test_legacy_rotate_credential_path_fails_closed(self) -> None:
+        with self.assertRaises(ConflictError):
+            self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")
 
     def test_cancel_or_revoke_refuses_never_sent_action_without_settling_sent_action(self) -> None:
         _, request = self._request()
@@ -583,6 +833,12 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(self.store.action(owner_id="owner_default", action_id=action["action_id"])["delivery_state"], "settled")
 
     def test_revoked_node_blocks_fresh_context_and_work_request_admission(self) -> None:
+        self._register_workspace(
+            device_id="device-alpha",
+            workspace_id="workspace-revoked-node",
+            workspace_generation="generation-revoked-node",
+            display_name="Revoked-node workspace",
+        )
         binding = self.store.create_binding(
             owner_id="owner_default",
             device_id="device-alpha",
@@ -1160,6 +1416,40 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_node(device_id="device-beta", node_secret="not-the-requested-secret")
 
+    def test_node_enrollment_status_is_authenticated_and_request_retry_replays_after_approval(self) -> None:
+        node_secret = "s" * 40
+        credential_hash = hashlib.sha256(
+            json.dumps({"node_secret": node_secret}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        request = self.store.request_enrollment(
+            device_id="device-status-0001",
+            endpoint_id="endpoint-status-0001",
+            display_name="Status node",
+            credential_hash=credential_hash,
+        )
+        pending = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(pending["state"], "pending_operator_approval")
+        self.assertEqual(pending["enrollment_id"], request["enrollment_id"])
+        with self.assertRaises(PermissionError):
+            self.store.node_enrollment_status(device_id="device-status-0001", node_secret="wrong-secret-000000")
+
+        approved = self.store.approve_enrollment(owner_id="owner_default", enrollment_id=request["enrollment_id"])
+        self.assertEqual(approved["device_id"], "device-status-0001")
+        replayed = self.store.request_enrollment(
+            device_id="device-status-0001",
+            endpoint_id="endpoint-status-0001",
+            display_name="Status node",
+            credential_hash=credential_hash,
+        )
+        self.assertEqual(replayed["enrollment_id"], request["enrollment_id"])
+        self.assertIsNotNone(replayed["approved_at_ms"])
+        status = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(status["state"], "approved")
+        self.assertEqual(status["credential_generation"], 1)
+        self.store.revoke_node(owner_id="owner_default", device_id="device-status-0001")
+        revoked = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(revoked["state"], "revoked")
+
     def test_node_enrollment_persists_one_https_target_and_requires_explicit_replacement(self) -> None:
         config_path = Path(self.tempdir.name) / "node.json"
         calls: list[tuple[str, str, dict]] = []
@@ -1178,6 +1468,8 @@ class ControlPlaneStoreTests(unittest.TestCase):
             original = json.loads(config_path.read_text(encoding="utf-8"))
             self.assertEqual(original["schema_version"], 1)
             self.assertEqual(original["server_url"], "https://control.example.test")
+            self.assertEqual(original["enrollment_id"], "enroll-node-target-0001")
+            self.assertEqual(original["enrollment_state"], "pending_operator_approval")
             self.assertEqual(node_agent_main([
                 "request-enrollment", "--config", str(config_path), "--server-url", "https://other.example.test",
                 "--device-id", "device-target-0001", "--endpoint-id", "endpoint-target-0001", "--display-name", "Office executor",
@@ -1198,6 +1490,57 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertNotIn(original["node_secret"], output.getvalue())
         self.assertNotIn(replaced["node_secret"], output.getvalue())
 
+    def test_node_enrollment_reconcile_persists_approved_state_and_keeps_stale_state_on_transport_loss(self) -> None:
+        config_path = Path(self.tempdir.name) / "reconcile-node.json"
+        request_calls: list[tuple[str, str, dict, str | None]] = []
+        pending_response = {
+            "enrollment_id": "enroll-reconcile-0001",
+            "device_id": "device-reconcile-0001",
+            "approved_at_ms": None,
+        }
+
+        def request(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            request_calls.append((server_url, route, payload, authorization))
+            if route == "/v1/enrollment-requests":
+                return pending_response
+            return {
+                "enrollment_id": "enroll-reconcile-0001",
+                "device_id": "device-reconcile-0001",
+                "state": "approved",
+                "credential_generation": 2,
+                "requested_at_ms": 1_700_000_000_000,
+                "approved_at_ms": 1_700_000_000_100,
+                "observed_at_ms": 1_700_000_000_200,
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request), redirect_stdout(io.StringIO()):
+            self.assertEqual(node_agent_main([
+                "request-enrollment", "--config", str(config_path), "--server-url", "https://control.example.test",
+                "--device-id", "device-reconcile-0001", "--endpoint-id", "endpoint-reconcile-0001", "--display-name", "Reconcile executor",
+            ]), 0)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(node_agent_main(["reconcile-enrollment", "--config", str(config_path), "--device-id", "device-reconcile-0001"]), 0)
+            receipt = json.loads(output.getvalue())
+            self.assertEqual(receipt["state"], "approved")
+            self.assertTrue(receipt["fresh"])
+            persisted = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["enrollment_state"], "approved")
+            self.assertEqual(persisted["credential_generation"], 2)
+
+        def unavailable(*_args: object, **_kwargs: object) -> dict:
+            raise RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+
+        with mock.patch("control_plane.node_agent._request", side_effect=unavailable):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(node_agent_main(["reconcile-enrollment", "--config", str(config_path), "--device-id", "device-reconcile-0001"]), 0)
+            stale = json.loads(output.getvalue())
+            self.assertEqual(stale["state"], "approved")
+            self.assertFalse(stale["fresh"])
+            self.assertEqual(stale["error_code"], "CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+        self.assertGreaterEqual(len(request_calls), 2)
+
     def test_node_enrollment_refuses_non_loopback_http_before_writing_a_config(self) -> None:
         config_path = Path(self.tempdir.name) / "node-invalid.json"
         errors = io.StringIO()
@@ -1209,9 +1552,205 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertFalse(config_path.exists())
         self.assertIn("CONTROL_PLANE_SERVER_HTTPS_REQUIRED", errors.getvalue())
 
+    def test_node_workspace_registration_persists_opaque_identity_before_network_retry(self) -> None:
+        config_path = Path(self.tempdir.name) / "workspace-node.json"
+        registry_path = Path(self.tempdir.name) / "workspace-registry.json"
+        workspace_path = Path(self.tempdir.name) / "selected-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-workspace-0001",
+            "endpoint_id": "endpoint-workspace-0001",
+            "display_name": "Workspace executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        command = [
+            "register-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-path", str(workspace_path),
+            "--display-name", "selected-root", "--capability-read",
+        ]
+        output = io.StringIO()
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=RuntimeError("CONTROL_PLANE_NETWORK_UNAVAILABLE")) as request, \
+             redirect_stdout(output), redirect_stderr(errors):
+            self.assertEqual(node_agent_main(command), 1)
+        self.assertEqual(request.call_count, 1)
+        self.assertTrue(registry_path.exists())
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+        self.assertEqual(registry["schema_version"], 1)
+        self.assertEqual(len(registry["entries"]), 1)
+        entry = registry["entries"][0]
+        self.assertEqual(entry["canonical_path"], str(workspace_path.resolve()))
+        self.assertTrue(entry["capabilities"]["read"])
+        self.assertFalse(entry["capabilities"]["write"])
+        self.assertFalse(entry["capabilities"]["exec"])
+        self.assertNotIn(str(workspace_path), output.getvalue())
+        self.assertNotIn("n" * 40, output.getvalue())
+
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def retry(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "device_id": "device-workspace-0001",
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "selected-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": None,
+                "replayed": True,
+            }
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=retry), redirect_stdout(output):
+            self.assertEqual(node_agent_main(command), 0)
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-workspace-0001/workspace-registrations",
+            {
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "selected-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+            },
+            "Node " + "n" * 40,
+        )])
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["workspace_id"], entry["workspace_id"])
+        self.assertTrue(receipt["replayed"])
+        self.assertNotIn("canonical_path", receipt)
+        self.assertNotIn(str(workspace_path), output.getvalue())
+
+        invalid = Path(self.tempdir.name) / "does-not-exist"
+        with mock.patch("control_plane.node_agent._request") as request, redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "register-workspace", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-path", str(invalid),
+                "--display-name", "does-not-exist", "--capability-read",
+            ]), 1)
+        request.assert_not_called()
+
+    def test_node_workspace_retirement_keeps_local_entry_until_exact_central_receipt(self) -> None:
+        config_path = Path(self.tempdir.name) / "workspace-retire-node.json"
+        registry_path = Path(self.tempdir.name) / "workspace-retire-registry.json"
+        workspace_path = Path(self.tempdir.name) / "workspace-retire-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-retire-0001",
+            "endpoint_id": "endpoint-retire-0001",
+            "display_name": "Retire executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        register_command = [
+            "register-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-path", str(workspace_path),
+            "--display-name", "workspace-retire-root", "--capability-read",
+        ]
+
+        def register_request(_server_url: str, route: str, payload: dict, _authorization: str | None = None) -> dict:
+            self.assertEqual(route, "/v1/nodes/device-retire-0001/workspace-registrations")
+            return {
+                "device_id": "device-retire-0001",
+                "workspace_id": payload["workspace_id"],
+                "workspace_generation": payload["workspace_generation"],
+                "display_name": "workspace-retire-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": None,
+                "replayed": False,
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=register_request):
+            self.assertEqual(node_agent_main(register_command), 0)
+        entry = json.loads(registry_path.read_text(encoding="utf-8"))["entries"][0]
+        data_root = Path(self.tempdir.name) / "workspace-retire-data"
+        data_root.mkdir()
+        policy_path = data_root / "control-plane-read-only-policy.json"
+        policy_path.write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": "device-retire-0001",
+            "endpoint_id": "endpoint-retire-0001",
+            "workspace_id": entry["workspace_id"],
+            "workspace_generation": entry["workspace_generation"],
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": {
+                "schema_version": 6,
+                "profile": "control-plane-scoped-read-only-relay-v5",
+                "sha256": "a" * 64,
+            },
+        }), encoding="utf-8")
+        retire_command = [
+            "retire-workspace", "--config", str(config_path),
+            "--workspace-registry", str(registry_path),
+            "--workspace-id", entry["workspace_id"],
+            "--workspace-generation", entry["workspace_generation"],
+            "--data-root", str(data_root),
+        ]
+
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")) as request, redirect_stderr(errors):
+            self.assertEqual(node_agent_main(retire_command), 1)
+        request.assert_called_once()
+        self.assertEqual(len(json.loads(registry_path.read_text(encoding="utf-8"))["entries"]), 1)
+        self.assertTrue(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+        self.assertIn("CONTROL_PLANE_TRANSPORT_UNAVAILABLE", errors.getvalue())
+
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def replay_retirement(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "device_id": "device-retire-0001",
+                "workspace_id": entry["workspace_id"],
+                "workspace_generation": entry["workspace_generation"],
+                "display_name": "workspace-retire-root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "registered_at_ms": 1,
+                "retired_at_ms": 2,
+                "replayed": True,
+            }
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=replay_retirement), redirect_stdout(output):
+            self.assertEqual(node_agent_main(retire_command), 0)
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-retire-0001/workspace-registrations/retire",
+            {"workspace_id": entry["workspace_id"], "workspace_generation": entry["workspace_generation"]},
+            "Node " + "n" * 40,
+        )])
+        self.assertEqual(json.loads(registry_path.read_text(encoding="utf-8"))["entries"], [])
+        self.assertFalse(json.loads(policy_path.read_text(encoding="utf-8"))["enabled"])
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["state"], "retired")
+        self.assertTrue(receipt["replayed"])
+        self.assertNotIn(str(workspace_path), output.getvalue())
+        self.assertNotIn("n" * 40, output.getvalue())
+
+        list_output = io.StringIO()
+        with redirect_stdout(list_output):
+            self.assertEqual(node_agent_main([
+                "list-workspaces", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+            ]), 0)
+        self.assertEqual(json.loads(list_output.getvalue()), {"workspaces": []})
+
     def test_node_installs_only_its_authenticated_context_policy_template(self) -> None:
         config_path = Path(self.tempdir.name) / "node-template.json"
+        registry_path = Path(self.tempdir.name) / "node-template-workspaces.json"
         data_root = Path(self.tempdir.name) / "node-template-data"
+        workspace_path = Path(self.tempdir.name) / "node-template-root"
+        workspace_path.mkdir()
         config_path.write_text(json.dumps({
             "schema_version": 1,
             "server_url": "https://control.example.test",
@@ -1219,6 +1758,17 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "endpoint_id": "endpoint-template-0001",
             "display_name": "Template executor",
             "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-template-0001",
+                "workspace_generation": "generation-template-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Template root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
         }), encoding="utf-8")
         calls: list[tuple[str, str, dict, str | None]] = []
 
@@ -1232,13 +1782,14 @@ class ControlPlaneStoreTests(unittest.TestCase):
                     "workspace_id": "workspace-template-0001",
                     "workspace_generation": "generation-template-0001",
                     "expires_at_ms": int(time.time() * 1000) + 60_000,
-                    "facade_contract": {"schema_version": 5, "profile": "control-plane-scoped-read-only-relay-v4", "sha256": "a" * 64},
+                    "facade_contract": {"schema_version": 6, "profile": "control-plane-scoped-read-only-relay-v5", "sha256": "a" * 64},
                 }
             }
 
         with mock.patch("control_plane.node_agent._request", side_effect=request):
             self.assertEqual(node_agent_main([
                 "install-read-only-policy-from-context", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
                 "--context-id", "ctx-template-0001", "--confirm-install", "--data-root", str(data_root),
             ]), 0)
         policy = json.loads((data_root / "control-plane-read-only-policy.json").read_text(encoding="utf-8"))
@@ -1247,6 +1798,149 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(calls, [
             ("https://control.example.test", "/v1/nodes/device-template-0001/read-only-policy-template", {"context_id": "ctx-template-0001"}, "Node " + "n" * 40),
         ])
+
+        registry_path.write_text(json.dumps({"schema_version": 1, "entries": []}), encoding="utf-8")
+        rejected_data_root = Path(self.tempdir.name) / "node-template-rejected"
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=request), redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-context", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--context-id", "ctx-template-0001", "--confirm-install", "--data-root", str(rejected_data_root),
+            ]), 1)
+        self.assertIn("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", errors.getvalue())
+        self.assertFalse((rejected_data_root / "control-plane-read-only-policy.json").exists())
+
+    def test_node_installs_only_the_assigned_policy_for_its_selected_registered_root(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-assignment.json"
+        registry_path = Path(self.tempdir.name) / "node-assignment-workspaces.json"
+        data_root = Path(self.tempdir.name) / "node-assignment-data"
+        workspace_path = Path(self.tempdir.name) / "node-assignment-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-assignment-0001",
+            "endpoint_id": "endpoint-assignment-0001",
+            "display_name": "Assignment executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-assignment-0001",
+                "workspace_generation": "generation-assignment-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Assignment root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
+        }), encoding="utf-8")
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def request(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "policy_template": {
+                    "owner_id": "owner_default",
+                    "device_id": "device-assignment-0001",
+                    "endpoint_id": "endpoint-assignment-0001",
+                    "workspace_id": "workspace-assignment-0001",
+                    "workspace_generation": "generation-assignment-0001",
+                    "expires_at_ms": int(time.time() * 1000) + 60_000,
+                    "facade_contract": {"schema_version": 6, "profile": "control-plane-scoped-read-only-relay-v5", "sha256": "a" * 64},
+                }
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-assignment", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-id", "workspace-assignment-0001",
+                "--workspace-generation", "generation-assignment-0001",
+                "--confirm-install", "--data-root", str(data_root),
+            ]), 0)
+        policy = json.loads((data_root / "control-plane-read-only-policy.json").read_text(encoding="utf-8"))
+        self.assertEqual(policy["workspace_id"], "workspace-assignment-0001")
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-assignment-0001/read-only-policy-assignment",
+            {"workspace_id": "workspace-assignment-0001", "workspace_generation": "generation-assignment-0001"},
+            "Node " + "n" * 40,
+        )])
+        self.assertNotIn("ctx_", json.dumps(calls))
+
+        wrong_template_root = Path(self.tempdir.name) / "node-assignment-wrong-template"
+
+        def wrong_template(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            response = request(server_url, route, payload, authorization)
+            response["policy_template"]["workspace_generation"] = "generation-assignment-other"
+            return response
+
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=wrong_template), redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-assignment", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-id", "workspace-assignment-0001",
+                "--workspace-generation", "generation-assignment-0001",
+                "--confirm-install", "--data-root", str(wrong_template_root),
+            ]), 1)
+        self.assertIn("CONTROL_PLANE_POLICY_TEMPLATE_TARGET_MISMATCH", errors.getvalue())
+        self.assertFalse((wrong_template_root / "control-plane-read-only-policy.json").exists())
+
+    def test_read_only_loop_admission_requires_current_local_workspace_generation(self) -> None:
+        config_path = Path(self.tempdir.name) / "loop-workspace-node.json"
+        registry_path = Path(self.tempdir.name) / "loop-workspace-registry.json"
+        data_root = Path(self.tempdir.name) / "loop-workspace-data"
+        workspace_path = Path(self.tempdir.name) / "loop-workspace-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-loop-workspace-0001",
+            "endpoint_id": "endpoint-loop-workspace-0001",
+            "display_name": "Loop executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-loop-workspace-0001",
+                "workspace_generation": "generation-loop-workspace-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Loop root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
+        }), encoding="utf-8")
+        data_root.mkdir()
+        (data_root / "control-plane-read-only-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "server_origin": "https://control.example.test",
+            "owner_id": "owner_default",
+            "device_id": "device-loop-workspace-0001",
+            "endpoint_id": "endpoint-loop-workspace-0001",
+            "workspace_id": "workspace-loop-workspace-0001",
+            "workspace_generation": "generation-loop-workspace-0001",
+            "expires_at_ms": int(time.time() * 1000) + 60_000,
+            "facade_contract": {
+                "schema_version": 6,
+                "profile": "control-plane-scoped-read-only-relay-v5",
+                "sha256": "a" * 64,
+            },
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path),
+            workspace_registry=str(registry_path),
+            data_root=str(data_root),
+            runtime_mode="development",
+        )
+        _read_only_loop_policy_admission(args)
+        workspace_path.rmdir()
+        with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT"):
+            _read_only_loop_policy_admission(args)
 
     def test_installed_launcher_arguments_are_accepted_for_enrollment_heartbeat_and_safe_poll(self) -> None:
         """All commands must accept the fixed packaged ``node-agent.cmd`` tail."""
@@ -1284,6 +1978,7 @@ class ControlPlaneStoreTests(unittest.TestCase):
             ]), 0)
             self.assertEqual(node_agent_main([
                 "run-read-only-loop", "--config", str(config_path), "--interval-seconds", "15", "--max-iterations", "1",
+                "--workspace-registry", str(config_path.with_name("control-plane-workspaces.json")),
                 *fixed_runtime_args,
             ]), 0)
         self.assertEqual(calls, [
@@ -1345,6 +2040,115 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "completed_iterations": 3,
         })
 
+    def test_connected_agent_sends_heartbeat_without_read_only_policy(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0001",
+            "endpoint_id": "endpoint-connected-agent-0001",
+            "node_secret": "connected-agent-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), workspace_registry=str(Path(self.tempdir.name) / "registry.json"),
+            project_root=str(Path.cwd()), node="node", runtime_mode="development", timeout_seconds=20,
+            data_root=self.tempdir.name, interval_seconds=15, max_backoff_seconds=60, max_iterations=1,
+        )
+        stop_codes = {
+            "file_read": "CONTROL_PLANE_FILE_READ_POLICY_MISSING",
+            "artifact": "CONTROL_PLANE_FILE_READ_POLICY_MISSING",
+            "approved_patch": "CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING",
+            "document_write": "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_MISSING",
+            "exec": "CONTROL_PLANE_EXEC_POLICY_MISSING",
+        }
+
+        def skip_lane(_args: argparse.Namespace, lane: str) -> None:
+            raise RuntimeError(stop_codes[lane])
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent._connected_agent_lane_admission", side_effect=skip_lane), \
+             mock.patch("control_plane.node_agent.poll_file_read_once") as file_read, \
+             mock.patch("control_plane.node_agent.poll_artifact_once") as artifact, \
+             mock.patch("control_plane.node_agent.poll_approved_patch_once") as patch_once, \
+             mock.patch("control_plane.node_agent.poll_document_write_once") as document_write, \
+             mock.patch("control_plane.node_agent.poll_exec_once") as exec_once, \
+             redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        heartbeat_call.assert_called_once_with(args)
+        file_read.assert_not_called()
+        artifact.assert_not_called()
+        patch_once.assert_not_called()
+        document_write.assert_not_called()
+        exec_once.assert_not_called()
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(records[0]["execution"], "connected_agent_started")
+        self.assertEqual(records[1]["state"], "completed")
+        self.assertEqual([lane["state"] for lane in records[1]["lanes"]], ["disabled"] * 5)
+        self.assertEqual(records[-1]["execution"], "connected_agent_stopped")
+        self.assertFalse((Path(self.tempdir.name) / "connected-agent-node.json.connected-agent.lock").exists())
+
+    def test_connected_agent_polls_each_enabled_standing_lane_after_heartbeat(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-enabled-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0002",
+            "endpoint_id": "endpoint-connected-agent-0002",
+            "node_secret": "connected-agent-enabled-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), workspace_registry=str(Path(self.tempdir.name) / "registry.json"),
+            project_root=str(Path.cwd()), node="node", runtime_mode="development", timeout_seconds=20,
+            data_root=self.tempdir.name, interval_seconds=15, max_backoff_seconds=60, max_iterations=1,
+        )
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent._connected_agent_lane_admission"), \
+             mock.patch("control_plane.node_agent.poll_file_read_once") as file_read, \
+             mock.patch("control_plane.node_agent.poll_artifact_once") as artifact, \
+             mock.patch("control_plane.node_agent.poll_approved_patch_once") as patch_once, \
+             mock.patch("control_plane.node_agent.poll_document_write_once") as document_write, \
+             mock.patch("control_plane.node_agent.poll_exec_once") as exec_once, \
+             redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        heartbeat_call.assert_called_once_with(args)
+        file_read.assert_called_once_with(args)
+        artifact.assert_called_once_with(args)
+        patch_once.assert_called_once_with(args)
+        document_write.assert_called_once_with(args)
+        exec_once.assert_called_once_with(args)
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([lane["state"] for lane in records[1]["lanes"]], ["polled"] * 5)
+
+    def test_connected_agent_reconnects_with_bounded_backoff(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-reconnect-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0003",
+            "endpoint_id": "endpoint-connected-agent-0003",
+            "node_secret": "connected-agent-reconnect-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), interval_seconds=15, max_backoff_seconds=60, max_iterations=3,
+        )
+        output = io.StringIO()
+        with mock.patch(
+            "control_plane.node_agent._connected_agent_iteration",
+            side_effect=[
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                [],
+            ],
+        ) as iterate, mock.patch("control_plane.node_agent.time.sleep") as sleep, redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        self.assertEqual(iterate.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [mock.call(15), mock.call(30)])
+        self.assertFalse((Path(self.tempdir.name) / "connected-agent-reconnect-node.json.connected-agent.lock").exists())
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(
+            [(record["state"], record["next_delay_seconds"]) for record in records[1:4]],
+            [("degraded", 15), ("degraded", 30), ("completed", 15)],
+        )
+
     def test_read_only_agent_stops_before_heartbeat_or_poll_when_local_policy_is_disabled(self) -> None:
         config_path = Path(self.tempdir.name) / "agent-policy-node.json"
         config_path.write_text(json.dumps({
@@ -1391,6 +2195,29 @@ class ControlPlaneStoreTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_READ_ONLY_AGENT_ALREADY_RUNNING"):
             run_read_only_agent(args)
+        self.assertTrue(lock_path.exists())
+
+    def test_read_only_poll_refuses_a_live_queue_drain_lock_before_journal_access(self) -> None:
+        config_path = Path(self.tempdir.name) / "poll-lock-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-poll-lock-0001",
+            "endpoint_id": "endpoint-poll-lock-0001",
+            "node_secret": "poll-lock-secret-not-reported",
+        }), encoding="utf-8")
+        lock_path = _read_only_poll_lock_path(config_path)
+        lock_path.write_text(json.dumps({
+            "schema_version": 1,
+            "instance_id": "another-local-poll-instance",
+            "pid": os.getpid(),
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1,
+        )
+        with mock.patch("control_plane.node_agent._request") as request:
+            with self.assertRaisesRegex(RuntimeError, "CONTROL_PLANE_READ_ONLY_POLL_ALREADY_RUNNING"):
+                poll_read_only_once(args)
+        request.assert_not_called()
         self.assertTrue(lock_path.exists())
 
     def test_windows_invalid_parameter_process_probe_is_confirmed_dead(self) -> None:
@@ -2020,6 +2847,96 @@ process.stdout.write(JSON.stringify(observation));
         self.assertTrue(entry["receipt"]["receipt_submitted"])
         self.assertNotIn("must-never-reach-central", json.dumps(entry))
 
+    def test_read_only_bridge_defers_projection_until_request_binding(self) -> None:
+        """The bridge must preserve IDs until the only final Python verifier."""
+        request = {
+            "action_id": "act-node-bridge-0001",
+            "attempt_id": "try-node-bridge-0001",
+            "facade_contract": dict(FACADE_CONTRACT),
+        }
+        raw_result = {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "action_id": request["action_id"],
+            "attempt_id": request["attempt_id"],
+            "local_handle": "cp_ro_" + "b" * 48,
+            "workspace_accessed": True,
+            "policy_sha256": "c" * 64,
+            "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+            "runtime_identity": {
+                "activation_epoch_id": "activation-node-bridge-0001",
+                "process_instance_id": "mcp-process-node-bridge-0001",
+                "server_instance_id": "mcp-server-node-bridge-0001",
+                "tool_contract_sha256": "d" * 64,
+            },
+            "facade_contract": dict(FACADE_CONTRACT),
+            "workspace_summary": {
+                "schema_version": 1,
+                "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+                "entries": [],
+                "entries_truncated": False,
+                "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+            },
+            "workspace_summary_sha256": "f" * 64,
+            "response_sha256": "e" * 64,
+        }
+        args = SimpleNamespace(timeout_seconds=20)
+        completed = SimpleNamespace(returncode=0, stdout=json.dumps({"ok": True, "result": raw_result}))
+        with mock.patch("control_plane.node_agent._adapter_command", return_value=(["node"], {})), \
+             mock.patch("control_plane.node_agent.subprocess.run", return_value=completed):
+            result, error = recovery_read_only_bridge(args, Path.cwd(), request)
+
+        self.assertIsNone(error)
+        self.assertEqual(result, raw_result)
+        self.assertEqual(_safe_bridge_result(result, request)["workspace_accessed"], True)
+
+    def test_read_only_bridge_result_emits_typed_safe_diagnostic_categories(self) -> None:
+        request = {
+            "action_id": "act-node-bridge-0001",
+            "attempt_id": "try-node-bridge-0001",
+            "facade_contract": dict(FACADE_CONTRACT),
+        }
+        result = {
+            "schema_version": 1,
+            "operation_kind": "control_plane_read_only_workspace_context",
+            "action_id": request["action_id"],
+            "attempt_id": request["attempt_id"],
+            "local_handle": "cp_ro_" + "b" * 48,
+            "workspace_accessed": True,
+            "policy_sha256": "c" * 64,
+            "actor": {"client_id": "electron-control-plane-bridge", "client_type": "electron"},
+            "runtime_identity": {
+                "activation_epoch_id": "activation-node-bridge-0001",
+                "process_instance_id": "mcp-process-node-bridge-0001",
+                "server_instance_id": "mcp-server-node-bridge-0001",
+                "tool_contract_sha256": "d" * 64,
+            },
+            "facade_contract": dict(FACADE_CONTRACT),
+            "workspace_summary": {
+                "schema_version": 1,
+                "project": {"type": "node", "name": "office-fixture", "version": "1.0.0"},
+                "entries": [],
+                "entries_truncated": False,
+                "git": {"is_repo": True, "branch": "main", "changed_count": 0, "truncated": False},
+            },
+            "workspace_summary_sha256": "f" * 64,
+            "response_sha256": "e" * 64,
+        }
+        mutations = {
+            "CONTROL_PLANE_BRIDGE_RESULT_ACTION_INVALID": lambda value: value.__setitem__("action_id", "wrong-action-id"),
+            "CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_INVALID": lambda value: value.__setitem__("workspace_summary", {"schema_version": 1}),
+            "CONTROL_PLANE_BRIDGE_RESULT_IDENTITY_INVALID": lambda value: value.__setitem__("runtime_identity", {}),
+            "CONTROL_PLANE_BRIDGE_RESULT_CONTRACT_INVALID": lambda value: value.__setitem__("facade_contract", {}),
+            "CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_DIGEST_INVALID": lambda value: value.__setitem__("workspace_summary_sha256", "not-a-digest"),
+            "CONTROL_PLANE_BRIDGE_RESULT_DIGEST_INVALID": lambda value: value.__setitem__("response_sha256", "not-a-digest"),
+        }
+        for code, mutate in mutations.items():
+            with self.subTest(code=code):
+                invalid = json.loads(json.dumps(result))
+                mutate(invalid)
+                with self.assertRaisesRegex(RuntimeError, f"^{code}$"):
+                    _safe_bridge_result(invalid, request)
+
     def test_read_only_bridge_requires_canonical_facade_intent_provenance(self) -> None:
         config = {
             "server_url": "https://control.example.test",
@@ -2151,9 +3068,72 @@ process.stdout.write(JSON.stringify(observation));
             "schema_version": 1,
             "operation_kind": "control_plane_read_only_workspace_context",
             "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+            "diagnostic_code": "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
         })
         journal = _read_journal(journal_path)
         entry = journal["entries"]["act-node-bridge-0002|try-node-bridge-0002"]
+        self.assertEqual(entry["state"], "unknown")
+        self.assertTrue(entry["receipt"]["receipt_submitted"])
+
+    def test_read_only_node_lane_terminalizes_an_unexpected_post_prepare_failure(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-post-prepare-failure.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "node_secret": "node-secret-not-printed",
+        }), encoding="utf-8")
+        action = {
+            "action_id": "act-node-bridge-post-prepare-0001",
+            "attempt_id": "try-node-bridge-post-prepare-0001",
+            "owner_id": "owner-node-bridge-0001",
+            "device_id": "device-node-bridge-0001",
+            "endpoint_id": "endpoint-node-bridge-0001",
+            "workspace_id": "workspace-node-bridge-0001",
+            "workspace_generation": "generation-node-bridge-0001",
+            "context_id": "ctx-node-bridge-0001",
+            "binding_id": "bind-node-bridge-0001",
+            "tool_name": "workspace_context",
+            "arguments_json": json.dumps({"detail": "compact", "max_entries": 1}),
+            "mcp_read_only_intent_digest": "f" * 64,
+            "admission_reference": "mcp_facade:" + "f" * 64,
+            "mcp_facade_schema_version": FACADE_CONTRACT["schema_version"],
+            "mcp_facade_profile": FACADE_CONTRACT["profile"],
+            "mcp_facade_contract_sha256": FACADE_CONTRACT["sha256"],
+            "expires_at_ms": 2_000_000_000_000,
+        }
+        receipts: list[dict[str, object]] = []
+
+        def request(_url: str, path: str, payload: dict[str, object], _authorization: str | None = None) -> dict[str, object]:
+            if path.endswith("/poll"):
+                return {"actions": [action]}
+            self.assertTrue(path.endswith("/receipts"))
+            receipts.append(payload)
+            return {"receipt_id": "receipt-node-bridge-post-prepare-0001"}
+
+        args = SimpleNamespace(config=str(config_path), project_root=str(Path.cwd()), node="node", timeout_seconds=20, limit=1)
+        with mock.patch("control_plane.node_agent._request", side_effect=request), \
+             mock.patch("control_plane.node_agent._runtime_status", return_value=self._strict_runtime_status()), \
+             mock.patch("control_plane.node_agent.recovery_identity_observation", return_value=self._strict_identity_observation()), \
+             mock.patch("control_plane.node_agent.recovery_read_only_bridge", return_value=(None, "CONTROL_PLANE_BRIDGE_RESULT_INVALID")) as bridge, \
+             mock.patch("control_plane.node_agent._record_local_receipt", side_effect=RuntimeError("CONTROL_PLANE_BRIDGE_RESULT_INVALID")):
+            self.assertEqual(poll_read_only_once(args), 0)
+
+        bridge.assert_called_once()
+        self.assertEqual(receipts, [{
+            "action_id": action["action_id"],
+            "attempt_id": action["attempt_id"],
+            "receipt_state": "unknown",
+            "local_handle": "",
+            "payload": {
+                "schema_version": 1,
+                "operation_kind": "control_plane_read_only_workspace_context",
+                "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                "diagnostic_code": "CONTROL_PLANE_BRIDGE_RESULT_INVALID",
+            },
+        }])
+        journal = _read_journal(_journal_path(config_path))
+        entry = journal["entries"][f"{action['action_id']}|{action['attempt_id']}"]
         self.assertEqual(entry["state"], "unknown")
         self.assertTrue(entry["receipt"]["receipt_submitted"])
 
@@ -2274,6 +3254,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
                 "schema_version": 1,
                 "operation_kind": "control_plane_read_only_workspace_context",
                 "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                "diagnostic_code": "CONTROL_PLANE_BRIDGE_PREPARED_RECOVERED",
             },
         }])
         journal = _read_journal(journal_path)
@@ -2324,6 +3305,7 @@ with mock.patch('control_plane.node_agent._request', side_effect=request), \
                     "schema_version": 1,
                     "operation_kind": "control_plane_read_only_workspace_context",
                     "code": "CONTROL_PLANE_BRIDGE_EFFECT_UNKNOWN",
+                    "diagnostic_code": "CONTROL_PLANE_BRIDGE_TIMEOUT",
                 },
             })
             return {"receipt_id": "receipt-node-bridge-timeout-0001"}

@@ -1,6 +1,6 @@
 {
   "name": "coding-tools-mcp",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Windows Execution Hub để vận hành Coding Tools MCP, OpenAI Tunnel và kết nối ChatGPT.",
   "author": "3169657175",
   "license": "MIT",
@@ -22,7 +22,7 @@
     "recovery:supervisor:status": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Status",
     "recovery:supervisor:once": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Once",
     "recovery:supervisor:uninstall": "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File resources/recovery-supervisor/recovery-supervisor.ps1 -Action Uninstall",
-    "test:mcp": "cd resources/coding-tools-mcp && python -m pytest tests",
+    "test:mcp": "cd resources/coding-tools-mcp && node ../../scripts/run-python.js --module pytest tests",
     "test:all": "npm test && npm run test:mcp",
     "check:repository-secrets": "node scripts/check-sensitive-tracked.js",
     "test:repository-secrets": "node --test tests/check-sensitive-tracked.test.js",
@@ -104,6 +104,10 @@
           "node_agent.py",
           "node-agent.cmd",
           "recovery_identity_observer.cjs",
+          "recovery_approved_patch_bridge.cjs",
+          "recovery_document_write_bridge.cjs",
+          "recovery_exec_bridge.cjs",
+          "recovery_file_read_bridge.cjs",
           "recovery_read_only_bridge.cjs",
           "recovery_runtime_adapter.cjs"
         ]

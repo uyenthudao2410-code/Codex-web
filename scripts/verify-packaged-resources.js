@@ -23,6 +23,10 @@ const CONTROL_PLANE_ADAPTER_FILES = Object.freeze([
   "node_agent.py",
   "node-agent.cmd",
   "recovery_identity_observer.cjs",
+  "recovery_approved_patch_bridge.cjs",
+  "recovery_document_write_bridge.cjs",
+  "recovery_exec_bridge.cjs",
+  "recovery_file_read_bridge.cjs",
   "recovery_read_only_bridge.cjs",
   "recovery_runtime_adapter.cjs",
 ]);

@@ -29,6 +29,10 @@ const RPC_ACTIONS = Object.freeze([
   'runtime.lightweight_snapshot',
   'runtime.identity_observation',
   'runtime.control_plane_read_only_workspace_context',
+  'runtime.control_plane_bounded_file_read',
+  'runtime.control_plane_approved_patch',
+  'runtime.control_plane_document_write',
+  'runtime.control_plane_exec',
   'runtime.record_execution_control_center_progress',
   'runtime.start',
   'runtime.stop',
@@ -52,6 +56,9 @@ const MUTATING_ACTIONS = new Set([
   'runtime.stop',
   'runtime.restart',
   'runtime.record_execution_control_center_progress',
+  'runtime.control_plane_approved_patch',
+  'runtime.control_plane_document_write',
+  'runtime.control_plane_exec',
   'runtime.complete_activation_epoch',
   'runtime.switch_workspace',
   'runtime.update_authorized_roots',
@@ -440,6 +447,15 @@ class RecoveryIpcClient {
   identityObservation(options = {}) { return this.call('runtime.identity_observation', [], options); }
   controlPlaneReadOnlyWorkspaceContext(request, options = {}) {
     return this.call('runtime.control_plane_read_only_workspace_context', [request], options);
+  }
+  controlPlaneBoundedFileRead(request, options = {}) {
+    return this.call('runtime.control_plane_bounded_file_read', [request], options);
+  }
+  controlPlaneApprovedPatch(request, options = {}) {
+    return this.call('runtime.control_plane_approved_patch', [request], options);
+  }
+  controlPlaneDocumentWrite(request, options = {}) {
+    return this.call('runtime.control_plane_document_write', [request], options);
   }
   recordExecutionControlCenterProgress(observation) { return this.call('runtime.record_execution_control_center_progress', [observation]); }
   supervise() { return this.lightweightSnapshot(); }

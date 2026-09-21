@@ -140,17 +140,29 @@ function readRequest(input = process.stdin) {
 }
 
 function normalisedResult(descriptor, result) {
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_ENVELOPE_INVALID');
+  }
   const identity = result?.runtime_identity;
   const actor = result?.actor;
-  const contract = facadeContract(result?.facade_contract);
+  let contract;
+  try {
+    contract = facadeContract(result.facade_contract);
+  } catch {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_CONTRACT_INVALID');
+  }
   const processInstanceId = text(identity?.process_instance_id);
   const serverInstanceId = text(identity?.server_instance_id);
   const activationEpochId = text(identity?.activation_epoch_id);
   const contractSha256 = text(identity?.tool_contract_sha256).toLowerCase();
-  const summary = workspaceSummary(result?.workspace_summary);
+  let summary;
+  try {
+    summary = workspaceSummary(result.workspace_summary);
+  } catch {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_INVALID');
+  }
   const summarySha256 = text(result?.workspace_summary_sha256).toLowerCase();
-  if (!result || typeof result !== 'object' || Array.isArray(result)
-    || Number(result.schema_version) !== 1
+  if (Number(result.schema_version) !== 1
     || text(result.operation_kind) !== 'control_plane_read_only_workspace_context'
     || result.workspace_accessed !== true
     || !LOCAL_HANDLE_PATTERN.test(text(result.local_handle))
@@ -161,9 +173,11 @@ function normalisedResult(descriptor, result) {
     || text(actor?.client_id) !== 'electron-control-plane-bridge'
     || text(actor?.client_type) !== 'electron'
     || !processInstanceId || !serverInstanceId || !activationEpochId || !SHA256_PATTERN.test(contractSha256)
-    || !SHA256_PATTERN.test(text(result.response_sha256).toLowerCase())
-    || !SHA256_PATTERN.test(summarySha256) || summarySha256 !== digest(summary)) {
-    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_INVALID');
+    || !SHA256_PATTERN.test(text(result.response_sha256).toLowerCase())) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_ENVELOPE_INVALID');
+  }
+  if (!SHA256_PATTERN.test(summarySha256) || summarySha256 !== digest(summary)) {
+    throw bridgeError('CONTROL_PLANE_BRIDGE_RESULT_SUMMARY_DIGEST_INVALID');
   }
   return {
     schema_version: 1,

@@ -442,6 +442,15 @@ body[data-theme="light"] .hero-card {
 .authorized-root-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
 .authorized-root-row code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
 .authorized-root-row button { flex: 0 0 auto; }
+.capability-picker { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin: 12px 0; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.capability-picker legend { grid-column: 1 / -1; padding: 0 4px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.capability-picker label { display: flex; align-items: flex-start; gap: 8px; min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.capability-picker input { margin-top: 2px; accent-color: var(--blue-2); }
+.capability-picker span, .capability-picker b, .capability-picker small { display: block; }
+.capability-picker span { min-width: 0; }
+.capability-picker b { font-size: 11px; }
+.capability-picker small { margin-top: 3px; color: var(--muted-2); font-size: 9px; line-height: 1.35; }
+@media (max-width: 700px) { .capability-picker { grid-template-columns: 1fr; } }
 
 .choice-stack { display: grid; gap: 10px; }
 .choice { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); cursor: pointer; transition: border-color 0.2s ease, background 0.2s ease; }

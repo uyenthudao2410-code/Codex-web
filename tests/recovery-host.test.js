@@ -1691,6 +1691,43 @@ test('Recovery Host admits a control-plane read-only context only from explicit 
     { code: 'CONTROL_PLANE_BRIDGE_CONTRACT_CHANGED' }
   );
 
+  const validReadOnlyResult = (admission, overrides = {}) => ({
+    schema_version: 1,
+    operation_kind: 'control_plane_read_only_workspace_context',
+    action_id: admission.action_id,
+    attempt_id: admission.attempt_id,
+    local_handle: `cp_ro_${'b'.repeat(48)}`,
+    workspace_accessed: true,
+    policy_sha256: admission.policy_sha256,
+    actor: admission.actor,
+    runtime_identity: {
+      activation_epoch_id: 'activation-ready-adoption-0001',
+      process_instance_id: 'mcp-process-control-plane-0001',
+      server_instance_id: 'mcp-server-control-plane-0001',
+      tool_contract_sha256: 'a'.repeat(64)
+    },
+    facade_contract: { ...admission.facade_contract },
+    workspace_summary: controlPlaneWorkspaceSummary(),
+    workspace_summary_sha256: workspaceSummaryDigest(controlPlaneWorkspaceSummary()),
+    response_sha256: 'c'.repeat(64),
+    ...overrides
+  });
+  host.orchestrator.controlPlaneReadOnlyWorkspaceContext = async (admission) => validReadOnlyResult(admission, {
+    workspace_summary: {}
+  });
+  await assert.rejects(
+    host.handlers()['runtime.control_plane_read_only_workspace_context']({ ...request, attempt_id: 'attempt-control-plane-summary-invalid-0001' }),
+    { code: 'CONTROL_PLANE_BRIDGE_WORKSPACE_SUMMARY_INVALID' }
+  );
+
+  host.orchestrator.controlPlaneReadOnlyWorkspaceContext = async (admission) => validReadOnlyResult(admission, {
+    workspace_summary_sha256: 'd'.repeat(64)
+  });
+  await assert.rejects(
+    host.handlers()['runtime.control_plane_read_only_workspace_context']({ ...request, attempt_id: 'attempt-control-plane-summary-digest-0001' }),
+    { code: 'CONTROL_PLANE_BRIDGE_WORKSPACE_SUMMARY_DIGEST_INVALID' }
+  );
+
   const foreignPolicy = { ...policy, device_id: 'device-control-plane-foreign-0001' };
   fs.writeFileSync(host.paths.controlPlaneReadOnlyPolicyFile(), `${JSON.stringify(foreignPolicy)}\n`, 'utf8');
   await assert.rejects(

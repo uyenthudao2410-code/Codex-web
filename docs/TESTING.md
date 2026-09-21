@@ -1,6 +1,8 @@
 # Testing Strategy
 
 > **Current product scope:** the top-level product is now the Windows Electron Execution Hub + Coding Tools MCP. The WebCodex Cargo lanes below remain component-specific coverage. Use [`CURRENT_STATE.md`](CURRENT_STATE.md) for precedence.
+>
+> Exact Windows/package/live sequence: [`WINDOWS_EXACT_VALIDATION_RUNBOOK.md`](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 
 ## Current Desktop product entry points
 
@@ -9,7 +11,7 @@ Run only the lane relevant to the changed boundary; documentation-only changes d
 | Boundary | Current command | Notes |
 |---|---|---|
 | Electron/Desktop source tests | `npm test` | Node test suite plus source-root cleanliness check. |
-| Coding Tools MCP | `npm run test:mcp` | Runs the Python MCP pytest suite from its correct package root. |
+| Coding Tools MCP | `npm run test:mcp` | Runs the Python MCP pytest suite from its correct package root. Install the package development extras first (`python3 -m pip install -e 'resources/coding-tools-mcp[dev]'` on Ubuntu, or the equivalent `python -m pip` command on Windows). |
 | Desktop + MCP | `npm run test:all` | Use for cross-boundary changes or release readiness, not every edit. |
 | Recovery process boundary | `npm run test:recovery:e2e` | Required when Recovery Host/process ownership behavior changes. |
 | Packaged Recovery boundary | `npm run test:recovery:packaged` | Builds `win-unpacked`, runs packaged Recovery Host/Supervisor in isolated user data, proves fail-closed fault cases, and never installs a Scheduled Task. |
@@ -17,6 +19,35 @@ Run only the lane relevant to the changed boundary; documentation-only changes d
 | Windows package | `npm run dist` | Runs current NSIS packaging path; package proof is separate from source tests. |
 
 `npm run canary:opencode-flash` performs a real provider dispatch and may incur external cost. Run it only when the user/operator explicitly authorizes that external-cost canary. Do not substitute it for the no-dispatch preflight.
+
+Wave 20 target/evidence check (21-09-2026) found the known Windows SSH target
+unreachable within a 5-second read-only timeout; no external mutation was made.
+`npm run check:coding-tools-history` passed for **4,873 files** and the
+repository-secret check passed. Obtain an authorized reachable Windows runner
+before attempting the Windows-only lanes.
+
+Wave 19 platform gate (21-09-2026) confirmed `npm run test:recovery:e2e` has
+**3 SKIP, 0 FAIL** on Linux and `npm run test:recovery:packaged` returns
+`{ok:true, skipped:true, reason:"windows_only"}` after a successful Linux
+`dist:dir` preflight. These are explicit Windows-only skips, not packaged/live
+proof. Run the same commands on a Windows candidate before claiming Recovery or
+installer acceptance.
+
+Wave 18 full local gate (21-09-2026) reached **1.153 PASS, 7 SKIP, 0 FAIL /
+1.160** for MCP and **858 PASS, 16 SKIP, 0 FAIL / 874** for Electron/Desktop.
+The run used the bundled workspace interpreter Python 3.12.14 with
+`pytest 8.4.2`, source-first `PYTHONPATH`, and proxy variables unset. The
+dependency-only Wave 17 failure disappeared when child commands resolved the
+same interpreter with the MCP development extras. Keep the runtime's
+core-environment filtering intact—do not add an untrusted `PYTHONPATH` to
+production merely to force a green result. Control Plane remains a separate
+lane with the latest **295/295 PASS** receipt.
+
+This is a source/local regression gate, not Windows package/live acceptance.
+The next required lanes are `npm run test:recovery:e2e`,
+`npm run test:recovery:packaged` on Windows, exact DPAPI/ACL/startup/reconnect/
+rotation checks, two-client same-account acceptance, and the real toolchain/
+T01–T16/soak gates.
 
 For Electron, Recovery Host, Coding MCP or runtime-contract changes, source tests are only the first boundary. If the running process must load new code, perform the controlled activation/restart allowed by the task and verify the new process/runtime identity plus the relevant revision/contract before claiming a live pass. Do not reuse proof from an older process instance as acceptance for new source.
 

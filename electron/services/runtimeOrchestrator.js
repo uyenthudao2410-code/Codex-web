@@ -30,6 +30,46 @@ const {
   digest: controlPlaneBridgeDigest,
   workspaceSummaryDigest
 } = require('./controlPlaneReadOnlyBridge');
+const {
+  BRIDGE_CLIENT_ID: FILE_READ_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: FILE_READ_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: FILE_READ_ACTION_TOOL_NAME,
+  LOCAL_TOOL_NAME: FILE_READ_LOCAL_TOOL_NAME,
+  OPERATION_KIND: FILE_READ_OPERATION_KIND,
+  digest: fileReadProjectionDigest,
+  normaliseFileReadResult,
+  fileContentDigest
+} = require('./controlPlaneFileReadBridge');
+const {
+  BRIDGE_CLIENT_ID: APPROVED_PATCH_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: APPROVED_PATCH_ACTION_TOOL_NAME,
+  LOCAL_TOOL_NAME: APPROVED_PATCH_LOCAL_TOOL_NAME,
+  OPERATION_KIND: APPROVED_PATCH_OPERATION_KIND,
+  digest: approvedPatchProjectionDigest,
+  resolveExactRegisteredPatchTarget,
+  verifyExactRegisteredPatchPostimage,
+  normaliseApprovedPatchWorkflowResult,
+  normaliseApprovedPatchResult
+} = require('./controlPlaneApprovedPatchBridge');
+const {
+  BRIDGE_CLIENT_ID: DOCUMENT_WRITE_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: DOCUMENT_WRITE_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: DOCUMENT_WRITE_ACTION_TOOL_NAME,
+  LOCAL_TOOL_NAME: DOCUMENT_WRITE_LOCAL_TOOL_NAME,
+  OPERATION_KIND: DOCUMENT_WRITE_OPERATION_KIND,
+  digest: documentWriteProjectionDigest,
+  verifyDocumentTarget,
+  normaliseDocumentWriteResult
+} = require('./controlPlaneDocumentWriteBridge');
+const {
+  BRIDGE_CLIENT_ID: EXEC_BRIDGE_CLIENT_ID,
+  BRIDGE_CLIENT_TYPE: EXEC_BRIDGE_CLIENT_TYPE,
+  ACTION_TOOL_NAME: EXEC_ACTION_TOOL_NAME,
+  OPERATION_KIND: EXEC_OPERATION_KIND,
+  digest: execProjectionDigest,
+  normaliseExecResult
+} = require('./controlPlaneExecBridge');
 const { readControlPlaneRouteEvidence } = require('./controlPlaneRouteEvidence');
 
 function wait(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -114,6 +154,26 @@ const EXACT_STALE_RUN_REASON_PREFIX = 'exact_stale_runs:';
 const EXACT_STALE_RUN_ID_PATTERN = /^[a-f0-9]{32}$/;
 const EXACT_STALE_RUN_MAX_IDS = 64;
 const CONTROL_PLANE_READ_ONLY_TIMEOUT_MS = 15_000;
+// A bounded file read seeds an internal, task-scoped local workspace binding
+// and then performs the exact read. Keep each local request below the Python
+// bridge's default 20-second subprocess window; neither timeout is an
+// invitation to retry a prepared action.
+const CONTROL_PLANE_FILE_READ_TIMEOUT_MS = 8_000;
+// JSON escaping plus envelope metadata can exceed the 16 KiB file-content
+// cap, but a local Coding MCP response for this lane must remain small.
+const MAX_FILE_READ_RESPONSE_BYTES = 96 * 1024;
+// A write stays below the node-agent subprocess deadline and carries a
+// durable prepared marker before this local request begins.  Timeout is never
+// a reason to repeat a patch; its caller must settle UNKNOWN and reconcile.
+const CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS = 12_000;
+const MAX_APPROVED_PATCH_RESPONSE_BYTES = 96 * 1024;
+const CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT_MS = 20_000;
+const MAX_DOCUMENT_WRITE_RESPONSE_BYTES = 96 * 1024;
+// exec_command may legitimately return a running handle after its bounded
+// initial yield. Keep the HTTP envelope above the MCP 30-second yield cap but
+// below the Recovery IPC request ceiling.
+const CONTROL_PLANE_EXEC_TIMEOUT_MS = 35_000;
+const MAX_EXEC_RESPONSE_BYTES = 96 * 1024;
 
 function exactStaleRunMaintenanceReason(value) {
   if (typeof value !== 'string' || !value.startsWith(EXACT_STALE_RUN_REASON_PREFIX)) return false;
@@ -213,10 +273,12 @@ const DETERMINISTIC_MCP_HEALTH_FAILURES = new Set([
   'invalid_json'
 ]);
 // A retained canonical ledger census is intentionally stronger than a cheap
-// liveness probe and can exceed three seconds on a healthy workspace. Keep the
-// activation observation bounded without turning a valid census into a false
-// MCP timeout. The separate health probe remains short and independently live.
-const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 15_000;
+// liveness probe. A real Windows workspace with retained orchestration evidence
+// took almost 19 seconds while still producing an immutable, integrity-clean
+// census. Keep the observation bounded below the 60-second activation fence,
+// without turning that valid census into a false MCP timeout. The separate
+// health probe remains short and independently live.
+const MCP_ACTIVATION_OBSERVATION_TIMEOUT_MS = 30_000;
 // The MCP health endpoint is intentionally lock-light, but it still runs in
 // the same Python process as workspace tools.  Under a real connector load the
 // interpreter may not get scheduled within a 1.2s probe window even though the
@@ -1466,6 +1528,1212 @@ class RuntimeOrchestrator {
       })));
       request.end(body);
     });
+  }
+
+  async controlPlaneBoundedFileRead(admission = {}) {
+    // This local method owns the Coding MCP token and connector attestation.
+    // The central action supplies only an already-sealed relative path/range;
+    // it never receives this token, the absolute workspace root, or raw MCP
+    // response fields that are not in the bounded receipt projection.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(actionId)
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(attemptId)
+      || !/^[a-f0-9]{64}$/.test(policySha256)
+      || admission.tool_name !== FILE_READ_ACTION_TOOL_NAME
+      || admission.operation !== 'read_file'
+      || !expectedWorkspace
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_id || '').trim())
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_generation || '').trim())
+      || !facadeContract
+      || typeof facadeContract !== 'object'
+      || Array.isArray(facadeContract)
+      || Object.keys(facadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || !Number.isSafeInteger(facadeContract.schema_version)
+      || facadeContract.schema_version < 1
+      || typeof facadeContract.profile !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      || typeof facadeContract.sha256 !== 'string'
+      || !/^[a-f0-9]{64}$/.test(facadeContract.sha256)
+      || typeof admission.path !== 'string'
+      || !Number.isSafeInteger(admission.start_line)
+      || !Number.isSafeInteger(admission.max_lines)
+      || !Number.isSafeInteger(admission.max_bytes)) {
+      throw Object.assign(new Error('Control-plane bounded file-read admission is invalid.'), {
+        code: 'CONTROL_PLANE_FILE_READ_ADMISSION_INVALID'
+      });
+    }
+    const settings = this.settingsStore.load();
+    // Do not use settings.workspace as the authority for a remote task. The
+    // current UI selection is global and can change while another task is in
+    // flight. Instead, seed an opaque, action-specific MCP-2026 task context
+    // with the locally resolved registered root, then reuse that same binding
+    // for the read. The absolute root remains inside this local request only.
+    const localTaskContextId = `cpfr_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_READ_ONLY_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane file-read bridge.'), {
+        code: 'CONTROL_PLANE_FILE_READ_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: FILE_READ_BRIDGE_CLIENT_ID,
+      clientType: FILE_READ_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      path: admission.path,
+      start_line: admission.start_line,
+      max_lines: admission.max_lines,
+      max_bytes: admission.max_bytes,
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-file-read-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-file-read-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': FILE_READ_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': FILE_READ_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_FILE_READ_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_FILE_READ_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP file-read response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_FILE_READ_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the file-read bridge.'), {
+              code: 'CONTROL_PLANE_FILE_READ_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the file-read bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_FILE_READ_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane file-read bridge timed out.'),
+        { code: 'CONTROL_PLANE_FILE_READ_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_FILE_READ_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrapArguments = {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    };
+    const readArguments = {
+      task_context_id: localTaskContextId,
+      path: admission.path,
+      start_line: admission.start_line,
+      max_lines: admission.max_lines,
+      max_bytes: admission.max_bytes,
+      encoding: 'utf-8'
+    };
+    const bootstrap = await callLocalTool(FILE_READ_ACTION_TOOL_NAME, bootstrapArguments, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested local workspace.'), {
+        code: 'CONTROL_PLANE_FILE_READ_WORKSPACE_MISMATCH'
+      });
+    }
+    const structured = await callLocalTool(FILE_READ_LOCAL_TOOL_NAME, readArguments, 'read');
+    const localHandle = `cp_fr_${controlPlaneBridgeDigest({
+      policy_sha256: policySha256,
+      action_id: actionId,
+      attempt_id: attemptId,
+      process_instance_id: attestation.processInstanceId,
+      server_instance_id: attestation.serverInstanceId,
+      contract_sha256: attestation.contractSha256,
+      path: admission.path,
+      facade_contract: facadeContract
+    }).slice(0, 48)}`;
+    const fileProjection = {
+      path: structured.path,
+      content: structured.content,
+      content_sha256: typeof structured.content === 'string' ? fileContentDigest(structured.content) : '',
+      encoding: structured.encoding,
+      start_line: structured.start_line,
+      end_line: structured.end_line,
+      total_lines: structured.total_lines,
+      total_bytes: structured.total_bytes,
+      bytes_read: structured.bytes_read,
+      truncated: structured.truncated,
+      next_start_line: structured.next_start_line == null ? null : structured.next_start_line
+    };
+    const candidate = {
+      schema_version: 1,
+      operation_kind: FILE_READ_OPERATION_KIND,
+      local_handle: localHandle,
+      action_id: actionId,
+      attempt_id: attemptId,
+      file_accessed: true,
+      actor: { client_id: FILE_READ_BRIDGE_CLIENT_ID, client_type: FILE_READ_BRIDGE_CLIENT_TYPE },
+      policy_sha256: policySha256,
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      file: fileProjection,
+      response_sha256: fileReadProjectionDigest(fileProjection)
+    };
+    try {
+      // Run content/path/identity validation before any bytes leave the local
+      // MCP process boundary. In particular, detected secrets are rejected
+      // without becoming a node receipt or a central payload.
+      return normaliseFileReadResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_FILE_READ_RESULT_INVALID' });
+    }
+  }
+
+  async controlPlaneApprovedPatch(admission = {}) {
+    // This method owns the local Coding MCP credential and connector
+    // attestation.  The central payload can name one reviewed exact patch but
+    // cannot choose an absolute root, a local task context, or a general
+    // command.  Revalidate every identity/digest again even though Recovery
+    // Host has already admitted the request.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    const hash = (value) => String(value || '').trim().toLowerCase();
+    const validHash = (value) => /^[a-f0-9]{64}$/.test(value);
+    const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(value);
+    const validTaskId = (value) => /^task_[a-f0-9]{32}$/.test(String(value || '').trim());
+    if (!validActionIdentifier(actionId)
+      || !validActionIdentifier(attemptId)
+      || !validHash(policySha256)
+      || admission.tool_name !== APPROVED_PATCH_ACTION_TOOL_NAME
+      || admission.operation !== APPROVED_PATCH_LOCAL_TOOL_NAME
+      || admission.validation_profile !== 'targeted'
+      || !expectedWorkspace
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_id || '').trim())
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(admission.workspace_generation || '').trim())
+      || !validTaskId(admission.task_id)
+      || !Number.isSafeInteger(admission.writer_lease_generation)
+      || admission.writer_lease_generation < 1
+      || admission.writer_lease_generation > 1_000_000_000
+      || !validActionIdentifier(String(admission.permission_request_id || '').trim())
+      || !validHash(hash(admission.permission_digest))
+      || !validHash(hash(admission.intent_digest))
+      || !validHash(hash(admission.preimage_sha256))
+      || !validHash(hash(admission.patch_sha256))
+      || !validHash(hash(admission.postimage_sha256))
+      || !Number.isSafeInteger(admission.postimage_bytes) || admission.postimage_bytes < 0
+      || !Number.isSafeInteger(admission.max_file_bytes) || admission.max_file_bytes < 1
+      || admission.postimage_bytes > admission.max_file_bytes
+      || typeof admission.patch_envelope !== 'string'
+      || Buffer.byteLength(admission.patch_envelope, 'utf8') < 1
+      || Buffer.byteLength(admission.patch_envelope, 'utf8') > 32 * 1024
+      || !facadeContract
+      || typeof facadeContract !== 'object'
+      || Array.isArray(facadeContract)
+      || Object.keys(facadeContract).sort().join(',') !== 'profile,schema_version,sha256'
+      || !Number.isSafeInteger(facadeContract.schema_version)
+      || facadeContract.schema_version < 1
+      || typeof facadeContract.profile !== 'string'
+      || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      || !validHash(hash(facadeContract.sha256))
+      || typeof admission.path !== 'string') {
+      throw Object.assign(new Error('Control-plane approved-patch admission is invalid.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_ADMISSION_INVALID'
+      });
+    }
+
+    // Verify the existing file's exact bytes and its non-reparse location
+    // before a request crosses into the local MCP server. The local parser
+    // repeats the preimage check at commit time; this first check classifies a
+    // stale user edit as a typed pre-effect rejection.
+    resolveExactRegisteredPatchTarget(expectedWorkspace, admission);
+
+    const settings = this.settingsStore.load();
+    const localTaskContextId = `cpap_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const authorityFingerprint = controlPlaneBridgeDigest({
+      schema_version: 1,
+      source: 'ubuntu_control_plane_writer_lease',
+      binding_id: String(admission.binding_id).trim(),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      action_id: actionId
+    });
+    const localIdempotencyKey = `cpap_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      patch_sha256: hash(admission.patch_sha256),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane approved-patch bridge.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: APPROVED_PATCH_BRIDGE_CLIENT_ID,
+      clientType: APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      path: admission.path,
+      preimage_sha256: hash(admission.preimage_sha256),
+      patch_sha256: hash(admission.patch_sha256),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-approved-patch-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-approved-patch-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': APPROVED_PATCH_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': APPROVED_PATCH_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_APPROVED_PATCH_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_APPROVED_PATCH_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP approved-patch response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the approved-patch bridge.'), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the approved-patch bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_APPROVED_PATCH_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane approved-patch bridge timed out.'),
+        { code: 'CONTROL_PLANE_APPROVED_PATCH_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_APPROVED_PATCH_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrap = await callLocalTool('workspace_context', {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    }, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested local workspace.'), {
+        code: 'CONTROL_PLANE_APPROVED_PATCH_WORKSPACE_MISMATCH'
+      });
+    }
+    // Route the exact central mutation through the existing local workflow
+    // primitive.  This produces canonical RUN/WAVE/idempotency evidence in
+    // the local ledger.  An exact file patch does not spawn an OS process, so
+    // do not invent a managed-process Job or treat a PID as authorization.
+    const structured = await callLocalTool(APPROVED_PATCH_ACTION_TOOL_NAME, {
+      task_context_id: localTaskContextId,
+      idempotency_key: localIdempotencyKey,
+      workflow: 'custom',
+      phase: 'execute',
+      execution_mode: 'mcp_only',
+      execution_route: 'deterministic',
+      contract_fingerprint: authorityFingerprint,
+      objective: 'Apply one owner-approved exact local patch.',
+      path: expectedWorkspace,
+      patch: admission.patch_envelope,
+      dry_run: false,
+      verification: 'none',
+      include_diff: false
+    }, 'workflow');
+    const localWorkflow = normaliseApprovedPatchWorkflowResult(structured, {
+      path: admission.path,
+      idempotency_key: localIdempotencyKey
+    });
+    const postimage = verifyExactRegisteredPatchPostimage(expectedWorkspace, admission);
+    const file = {
+      path: admission.path,
+      preimage_sha256: hash(admission.preimage_sha256),
+      postimage_sha256: postimage.postimage_sha256,
+      bytes_written: postimage.postimage_bytes
+    };
+    const candidate = {
+      schema_version: 1,
+      operation_kind: APPROVED_PATCH_OPERATION_KIND,
+      local_handle: `cp_ap_${controlPlaneBridgeDigest({
+        policy_sha256: policySha256,
+        action_id: actionId,
+        attempt_id: attemptId,
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        contract_sha256: attestation.contractSha256,
+        local_task_context_id: localTaskContextId,
+        task_id: String(admission.task_id).trim(),
+        writer_lease_generation: admission.writer_lease_generation,
+        orchestration_run_id: localWorkflow.run_id,
+        orchestration_wave_id: localWorkflow.wave_id,
+        idempotency_request_hash: localWorkflow.idempotency_request_hash,
+        preimage_sha256: file.preimage_sha256,
+        postimage_sha256: file.postimage_sha256,
+        facade_contract: facadeContract
+      }).slice(0, 48)}`,
+      action_id: actionId,
+      attempt_id: attemptId,
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      run_id: localWorkflow.run_id,
+      wave_id: localWorkflow.wave_id,
+      patch_applied: true,
+      // The local workflow is intentionally still ACCEPTING here. The
+      // central approval permitted this exact effect, but cannot serve as the
+      // local semantic proof or controller acceptance for the RUN/WAVE.
+      local_semantic_acceptance: localWorkflow.local_semantic_acceptance,
+      actor: { client_id: APPROVED_PATCH_BRIDGE_CLIENT_ID, client_type: APPROVED_PATCH_BRIDGE_CLIENT_TYPE },
+      policy_sha256: policySha256,
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      file,
+      response_sha256: approvedPatchProjectionDigest(file)
+    };
+    try {
+      // This final allowlist deliberately omits the raw patch, local root,
+      // Coding MCP response, and local idempotency key from any node receipt.
+      return normaliseApprovedPatchResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_APPROVED_PATCH_RESULT_INVALID' });
+    }
+  }
+
+  async controlPlaneDocumentWrite(admission = {}) {
+    // Document create/convert is a structured local workflow, not a generic
+    // shell or patch escape hatch.  The node supplies only bounded relative
+    // paths and content; this method owns the local MCP credential, exact
+    // workspace binding and Recovery-process runtime identity.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const operation = String(admission.operation || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(String(value || '').trim());
+    const validIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(value || '').trim());
+    const validTaskId = (value) => /^task_[a-f0-9]{32}$/.test(String(value || '').trim());
+    const validHash = (value) => /^[a-f0-9]{64}$/.test(String(value || '').trim().toLowerCase());
+    const validRelativePath = (value) => typeof value === 'string'
+      && value && !value.startsWith('/') && !value.includes('\\') && !value.includes(':')
+      && !value.split('/').some((part) => !part || part === '.' || part === '..')
+      && !/[\u0000-\u001f\u007f]/.test(value);
+    const validContent = typeof admission.content === 'string'
+      && Buffer.byteLength(admission.content, 'utf8') <= 256 * 1024
+      && !admission.content.includes('\0');
+    const validTitle = typeof admission.title === 'string'
+      && Buffer.byteLength(admission.title, 'utf8') <= 256
+      && !/[\u0000-\u001f\u007f]/.test(admission.title);
+    const validFacade = facadeContract
+      && typeof facadeContract === 'object'
+      && !Array.isArray(facadeContract)
+      && Object.keys(facadeContract).sort().join(',') === 'profile,schema_version,sha256'
+      && Number.isSafeInteger(facadeContract.schema_version)
+      && facadeContract.schema_version >= 1
+      && typeof facadeContract.profile === 'string'
+      && /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      && validHash(facadeContract.sha256);
+    const expectedAction = operation === 'document_create' ? 'create' : 'convert';
+    const validSource = operation === 'document_create'
+      ? admission.source == null
+      : validRelativePath(admission.source);
+    const validOperation = operation === 'document_create' || operation === 'document_convert';
+    if (!validActionIdentifier(actionId)
+      || !validActionIdentifier(attemptId)
+      || !validHash(policySha256)
+      || admission.authority_mode !== 'standing'
+      || admission.tool_name !== DOCUMENT_WRITE_ACTION_TOOL_NAME
+      || !validOperation
+      || !expectedWorkspace
+      || !validIdentifier(admission.workspace_id)
+      || !validIdentifier(admission.workspace_generation)
+      || !validTaskId(admission.task_id)
+      || !Number.isSafeInteger(admission.writer_lease_generation)
+      || admission.writer_lease_generation < 1
+      || admission.writer_lease_generation > 1_000_000_000
+      || !validRelativePath(admission.target)
+      || !validSource
+      || !validTitle
+      || !validContent
+      || !validHash(admission.content_sha256)
+      || crypto.createHash('sha256').update(admission.content, 'utf8').digest('hex') !== String(admission.content_sha256).toLowerCase()
+      || typeof admission.overwrite !== 'boolean'
+      || !validHash(admission.intent_digest)
+      || !Number.isSafeInteger(admission.expires_at_ms)
+      || admission.expires_at_ms <= Date.now()
+      || !validFacade) {
+      throw Object.assign(new Error('Control-plane document-write admission is invalid.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_ADMISSION_INVALID'
+      });
+    }
+    if (operation === 'document_convert'
+      && (String(admission.target).toLowerCase().endsWith('.docx') !== true
+        || String(admission.source).trim() === String(admission.target).trim())) {
+      throw Object.assign(new Error('Control-plane document conversion target is invalid.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID'
+      });
+    }
+
+    const settings = this.settingsStore.load();
+    const localTaskContextId = `cpdw_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      operation,
+      target: admission.target,
+      source: admission.source,
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const localIdempotencyKey = `cpdw_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      operation,
+      target: admission.target,
+      source: admission.source,
+      content_sha256: admission.content_sha256,
+      title: admission.title,
+      overwrite: admission.overwrite,
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), { code: 'MCP_AUTH_UNAVAILABLE' });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane document-write bridge.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: DOCUMENT_WRITE_BRIDGE_CLIENT_ID,
+      clientType: DOCUMENT_WRITE_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      operation,
+      target: admission.target,
+      source: admission.source,
+      content_sha256: admission.content_sha256,
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-document-write-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-document-write-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': DOCUMENT_WRITE_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': DOCUMENT_WRITE_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_DOCUMENT_WRITE_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP document response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_DOCUMENT_WRITE_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for document write.'), {
+              code: 'CONTROL_PLANE_DOCUMENT_WRITE_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected document write (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_DOCUMENT_WRITE_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(new Error('Control-plane document-write bridge timed out.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT'
+      })));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_DOCUMENT_WRITE_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrap = await callLocalTool('workspace_context', {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    }, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested document workspace.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_WORKSPACE_MISMATCH'
+      });
+    }
+
+    const localArguments = {
+      task_context_id: localTaskContextId,
+      action: expectedAction,
+      target: admission.target,
+      overwrite: admission.overwrite,
+      ...(operation === 'document_create'
+        ? { title: admission.title, content: admission.content }
+        : { source: admission.source })
+    };
+    const structured = await callLocalTool(DOCUMENT_WRITE_LOCAL_TOOL_NAME, localArguments, 'workflow');
+    if (!structured || structured.action !== expectedAction
+      || !structured.result || typeof structured.result !== 'object' || Array.isArray(structured.result)) {
+      throw Object.assign(new Error('Coding Tools MCP returned an invalid document workflow result.'), {
+        code: 'CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID'
+      });
+    }
+    const verified = verifyDocumentTarget(expectedWorkspace, admission);
+    const candidate = {
+      schema_version: 1,
+      operation_kind: DOCUMENT_WRITE_OPERATION_KIND,
+      local_handle: `cp_doc_${controlPlaneBridgeDigest({
+        policy_sha256: policySha256,
+        action_id: actionId,
+        attempt_id: attemptId,
+        operation,
+        target: admission.target,
+        source: admission.source,
+        content_sha256: admission.content_sha256,
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        contract_sha256: attestation.contractSha256,
+        local_task_context_id: localTaskContextId,
+        local_idempotency_key: localIdempotencyKey,
+        result: verified,
+        facade_contract: facadeContract
+      }).slice(0, 48)}`,
+      action_id: actionId,
+      attempt_id: attemptId,
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      operation,
+      target: admission.target,
+      source: admission.source,
+      result: verified,
+      actor: { client_id: DOCUMENT_WRITE_BRIDGE_CLIENT_ID, client_type: DOCUMENT_WRITE_BRIDGE_CLIENT_TYPE },
+      policy_sha256: policySha256,
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      response_sha256: documentWriteProjectionDigest({
+        operation,
+        target: admission.target,
+        source: admission.source,
+        size: verified.size,
+        sha256: verified.sha256,
+        format: verified.format
+      })
+    };
+    try {
+      return normaliseDocumentWriteResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID' });
+    }
+  }
+
+  async controlPlaneExec(admission = {}) {
+    // This method is the only place where the local MCP credential and
+    // connector attestation enter the central exec lane. The control plane
+    // supplies an opaque, already-admitted request; it never supplies a
+    // local absolute path, token, shell string, or process handle.
+    const actionId = String(admission.action_id || '').trim();
+    const attemptId = String(admission.attempt_id || '').trim();
+    const operation = String(admission.operation || '').trim();
+    const policySha256 = String(admission.policy_sha256 || '').trim().toLowerCase();
+    const facadeContract = admission.facade_contract;
+    const expectedWorkspace = normalizeWorkspacePath(admission.workspace_root);
+    const validActionIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$/.test(String(value || '').trim());
+    const validIdentifier = (value) => /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(String(value || '').trim());
+    const validTaskId = (value) => /^task_[a-f0-9]{32}$/.test(String(value || '').trim());
+    const validHash = (value) => /^[a-f0-9]{64}$/.test(String(value || '').trim().toLowerCase());
+    const validLocalHandle = (value) => /^cp_exec_[a-f0-9]{48}$/.test(String(value || '').trim());
+    const validArgv = Array.isArray(admission.argv)
+      && admission.argv.length >= 1
+      && admission.argv.length <= 32
+      && admission.argv.every((item) => typeof item === 'string' && item && item === item.trim()
+        && !/[\u0000-\u001f\u007f]/.test(item)
+        && ![';', '&&', '||', '`', '$(', '|', '>', '<'].some((token) => item.includes(token)))
+      && !/[\\/:]/.test(String(admission.argv[0] || ''));
+    const validCwd = admission.cwd == null || (typeof admission.cwd === 'string'
+      && (!admission.cwd || (!admission.cwd.startsWith('/') && !admission.cwd.includes('\\')
+        && !admission.cwd.includes(':') && !admission.cwd.split('/').some((part) => !part || part === '.' || part === '..'))));
+    const validLimits = Number.isSafeInteger(admission.timeout_ms)
+      && admission.timeout_ms >= 1 && admission.timeout_ms <= 5 * 60 * 1000
+      && Number.isSafeInteger(admission.max_output_bytes)
+      && admission.max_output_bytes >= 1024 && admission.max_output_bytes <= 64 * 1024;
+    const validFacade = facadeContract
+      && typeof facadeContract === 'object'
+      && !Array.isArray(facadeContract)
+      && Object.keys(facadeContract).sort().join(',') === 'profile,schema_version,sha256'
+      && Number.isSafeInteger(facadeContract.schema_version)
+      && facadeContract.schema_version >= 1
+      && typeof facadeContract.profile === 'string'
+      && /^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$/.test(facadeContract.profile)
+      && validHash(facadeContract.sha256);
+    const controlHandleValid = operation !== 'exec_run'
+      && validIdentifier(admission.command_id)
+      && validIdentifier(admission.job_id)
+      && validLocalHandle(admission.local_handle)
+      && typeof admission.consumer_id === 'string'
+      && admission.consumer_id.trim().length >= 1
+      && admission.consumer_id.trim().length <= 128
+      && Number.isSafeInteger(admission.yield_time_ms)
+      && admission.yield_time_ms >= 0 && admission.yield_time_ms <= 30_000
+      && typeof admission.run_id === 'string' && admission.run_id.length <= 128
+      && typeof admission.wave_id === 'string' && admission.wave_id.length <= 128
+      && (operation === 'exec_poll'
+        ? admission.signal == null && admission.wait_ms == null
+        : (operation === 'exec_stop'
+          && ['TERM', 'KILL', 'INT'].includes(String(admission.signal || '').toUpperCase())
+          && Number.isSafeInteger(admission.wait_ms)
+          && admission.wait_ms >= 0 && admission.wait_ms <= 30_000));
+    const runHandleAbsent = operation === 'exec_run'
+      && admission.command_id == null && admission.job_id == null && admission.local_handle == null
+      && admission.consumer_id == null && admission.yield_time_ms == null
+      && admission.signal == null && admission.wait_ms == null
+      && admission.run_id == null && admission.wave_id == null;
+    if (!validActionIdentifier(actionId)
+      || !validActionIdentifier(attemptId)
+      || !validHash(policySha256)
+      || admission.tool_name !== EXEC_ACTION_TOOL_NAME
+      || !['exec_run', 'exec_poll', 'exec_stop'].includes(operation)
+      || !expectedWorkspace
+      || !validIdentifier(admission.workspace_id)
+      || !validIdentifier(admission.workspace_generation)
+      || !validTaskId(admission.task_id)
+      || !Number.isSafeInteger(admission.writer_lease_generation)
+      || admission.writer_lease_generation < 1
+      || admission.writer_lease_generation > 1_000_000_000
+      || !validArgv
+      || !validCwd
+      || !validLimits
+      || !validFacade
+      || (operation === 'exec_run' ? !runHandleAbsent : !controlHandleValid)) {
+      throw Object.assign(new Error('Control-plane exec admission is invalid.'), {
+        code: 'CONTROL_PLANE_EXEC_ADMISSION_INVALID'
+      });
+    }
+
+    const settings = this.settingsStore.load();
+    const localTaskContextId = `cpex_${controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+      workspace_id: String(admission.workspace_id).trim(),
+      workspace_generation: String(admission.workspace_generation).trim(),
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      operation,
+      command_id: admission.command_id || '',
+      job_id: admission.job_id || '',
+      local_handle: admission.local_handle || '',
+      consumer_id: admission.consumer_id || '',
+      yield_time_ms: admission.yield_time_ms,
+      signal: admission.signal || '',
+      wait_ms: admission.wait_ms,
+      run_id: admission.run_id || '',
+      wave_id: admission.wave_id || '',
+      argv: admission.argv,
+      cwd: admission.cwd || '',
+      facade_contract: facadeContract
+    }).slice(0, 56)}`;
+    const localIdempotencyKey = operation === 'exec_run'
+      ? `cpex_${controlPlaneBridgeDigest({
+        action_id: actionId,
+        attempt_id: attemptId,
+        task_id: String(admission.task_id).trim(),
+        writer_lease_generation: admission.writer_lease_generation,
+        operation,
+        command_id: admission.command_id || '',
+        job_id: admission.job_id || '',
+        local_handle: admission.local_handle || '',
+        consumer_id: admission.consumer_id || '',
+        yield_time_ms: admission.yield_time_ms,
+        signal: admission.signal || '',
+        wait_ms: admission.wait_ms,
+        run_id: admission.run_id || '',
+        wave_id: admission.wave_id || '',
+        argv: admission.argv,
+        cwd: admission.cwd || '',
+        timeout_ms: admission.timeout_ms,
+        max_output_bytes: admission.max_output_bytes,
+        facade_contract: facadeContract
+      }).slice(0, 56)}`
+      : null;
+    const controlConsumerId = admission.consumer_id || `control-plane-exec:${String(admission.task_id).trim()}`;
+    const token = this.secrets.get('mcpAuthToken');
+    if (!token) {
+      throw Object.assign(new Error('Coding Tools MCP authentication is unavailable.'), {
+        code: 'MCP_AUTH_UNAVAILABLE'
+      });
+    }
+    const health = await this.currentMcpHealth({ timeoutMs: CONTROL_PLANE_EXEC_TIMEOUT_MS });
+    if (!health?.ready || !health?.tool_contract?.sha256) {
+      throw Object.assign(new Error('Coding Tools MCP is not ready for the control-plane exec bridge.'), {
+        code: 'CONTROL_PLANE_EXEC_RUNTIME_UNREADY'
+      });
+    }
+    const attestation = this.connectorAttestationForHealth(health);
+    const attestationValue = connectorAttestationHeader({
+      secret: attestation.secret,
+      clientId: EXEC_BRIDGE_CLIENT_ID,
+      clientType: EXEC_BRIDGE_CLIENT_TYPE,
+      activationEpochId: attestation.activationEpochId,
+      processInstanceId: attestation.processInstanceId,
+      serverInstanceId: attestation.serverInstanceId,
+      contractSha256: attestation.contractSha256
+    });
+    const requestFingerprint = controlPlaneBridgeDigest({
+      action_id: actionId,
+      attempt_id: attemptId,
+      policy_sha256: policySha256,
+    task_id: String(admission.task_id).trim(),
+    writer_lease_generation: admission.writer_lease_generation,
+      operation,
+      command_id: admission.command_id || '',
+      job_id: admission.job_id || '',
+      local_handle: admission.local_handle || '',
+      consumer_id: admission.consumer_id || '',
+      yield_time_ms: admission.yield_time_ms,
+      signal: admission.signal || '',
+      wait_ms: admission.wait_ms,
+      run_id: admission.run_id || '',
+      wave_id: admission.wave_id || '',
+    argv: admission.argv,
+      cwd: admission.cwd || '',
+      facade_contract: facadeContract
+    });
+    const callLocalTool = (name, toolArguments, idSuffix) => new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        jsonrpc: '2.0',
+        id: `control-plane-exec-${idSuffix}-${requestFingerprint.slice(0, 24)}`,
+        method: 'tools/call',
+        params: {
+          name,
+          arguments: toolArguments,
+          _meta: {
+            'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+            'io.modelcontextprotocol/clientCapabilities': {},
+            'io.modelcontextprotocol/clientInfo': {
+              name: 'coding-tools-control-plane-exec-bridge',
+              version: '1'
+            }
+          }
+        }
+      });
+      const request = http.request({
+        host: '127.0.0.1',
+        port: settings.mcpPort,
+        path: '/mcp',
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+          'MCP-Protocol-Version': '2026-07-28',
+          'Mcp-Method': 'tools/call',
+          'Mcp-Name': name,
+          'X-Coding-Tools-Client-Id': EXEC_BRIDGE_CLIENT_ID,
+          'X-Coding-Tools-Client-Type': EXEC_BRIDGE_CLIENT_TYPE,
+          [CONNECTOR_ATTESTATION_HEADER]: attestationValue
+        },
+        timeout: CONTROL_PLANE_EXEC_TIMEOUT_MS
+      }, (response) => {
+        let responseBody = '';
+        let responseBytes = 0;
+        let responseTooLarge = false;
+        response.setEncoding('utf8');
+        response.on('data', (chunk) => {
+          responseBytes += Buffer.byteLength(chunk, 'utf8');
+          if (responseBytes <= MAX_EXEC_RESPONSE_BYTES) responseBody += chunk;
+          else responseTooLarge = true;
+        });
+        response.on('end', () => {
+          if (responseTooLarge) {
+            reject(Object.assign(new Error('Coding Tools MCP exec response exceeded its local cap.'), {
+              code: 'CONTROL_PLANE_EXEC_RESPONSE_TOO_LARGE'
+            }));
+            return;
+          }
+          let parsed;
+          try { parsed = responseBody ? JSON.parse(responseBody) : {}; }
+          catch {
+            reject(Object.assign(new Error('Coding Tools MCP returned invalid JSON for the exec bridge.'), {
+              code: 'CONTROL_PLANE_EXEC_RESPONSE_INVALID'
+            }));
+            return;
+          }
+          const structured = parsed?.result?.structuredContent || parsed?.result || null;
+          const errorMessage = parsed?.error?.message
+            || (parsed?.result?.isError ? structured?.error?.message || parsed?.result?.content?.[0]?.text : '');
+          if (Number(response.statusCode || 0) !== 200 || errorMessage || !structured || typeof structured !== 'object') {
+            reject(Object.assign(new Error(String(errorMessage || `Coding Tools MCP rejected the exec bridge (HTTP ${response.statusCode}).`)), {
+              code: 'CONTROL_PLANE_EXEC_MCP_REJECTED'
+            }));
+            return;
+          }
+          resolve(structured);
+        });
+      });
+      request.on('timeout', () => request.destroy(Object.assign(
+        new Error('Control-plane exec bridge timed out.'),
+        { code: 'CONTROL_PLANE_EXEC_TIMEOUT' }
+      )));
+      request.on('error', (error) => reject(Object.assign(error, {
+        code: error.code || 'CONTROL_PLANE_EXEC_TRANSPORT_FAILED'
+      })));
+      request.end(body);
+    });
+
+    const bootstrap = await callLocalTool('workspace_context', {
+      task_context_id: localTaskContextId,
+      path: expectedWorkspace,
+      detail: 'compact',
+      max_entries: 1
+    }, 'bind');
+    const boundWorkspace = normalizeWorkspacePath(bootstrap.workspace);
+    if (!boundWorkspace || workspaceKey(boundWorkspace) !== workspaceKey(expectedWorkspace)) {
+      throw Object.assign(new Error('Coding Tools MCP did not bind the requested local workspace.'), {
+        code: 'CONTROL_PLANE_EXEC_WORKSPACE_MISMATCH'
+      });
+    }
+    const structured = operation === 'exec_run'
+      ? await callLocalTool(EXEC_ACTION_TOOL_NAME, {
+        task_context_id: localTaskContextId,
+        idempotency_key: localIdempotencyKey,
+        cmd: admission.argv[0],
+        argv: admission.argv,
+        workdir: admission.cwd || '.',
+        timeout_ms: admission.timeout_ms,
+        yield_time_ms: Math.min(30_000, admission.timeout_ms),
+        max_output_bytes: admission.max_output_bytes,
+        verbosity: 'full',
+        principal_id: 'control-plane-exec-bridge'
+      }, 'run')
+      : await callLocalTool('command_control', {
+        action: operation === 'exec_poll' ? 'poll' : 'kill',
+        command_id: admission.command_id,
+        consumer_id: controlConsumerId,
+        yield_time_ms: admission.yield_time_ms,
+        max_output_bytes: admission.max_output_bytes,
+        verbosity: 'full',
+        ...(operation === 'exec_stop' ? {
+          signal: String(admission.signal).toUpperCase(),
+          wait_ms: admission.wait_ms
+        } : {})
+      }, operation === 'exec_poll' ? 'poll' : 'stop');
+    const owner = structured.execution_owner && typeof structured.execution_owner === 'object'
+      ? structured.execution_owner : {};
+    const commandId = String(structured.command_id || structured.session_id || admission.command_id || '').trim();
+    const managedJob = structured.managed_job && typeof structured.managed_job === 'object'
+      ? structured.managed_job : {};
+    const jobId = String(owner.job_id || structured.job_id || managedJob.job_id || admission.job_id || '').trim();
+    const rawStatus = String(structured.status || '').trim().toLowerCase();
+    const status = rawStatus === 'killed' || (operation === 'exec_stop' && rawStatus === 'terminated')
+      ? 'stopped'
+      : rawStatus === 'timed_out' ? 'timeout'
+        : rawStatus === 'terminating' ? 'running'
+          : rawStatus;
+    if (!commandId || !jobId || !['running', 'exited', 'terminated', 'timeout', 'stopped', 'reconciled_terminal'].includes(status)) {
+      throw Object.assign(new Error('Coding Tools MCP returned an invalid exec lifecycle result.'), {
+        code: 'CONTROL_PLANE_EXEC_RESULT_INVALID'
+      });
+    }
+    const output = {
+      status,
+      exit_code: structured.exit_code == null ? null : Number(structured.exit_code),
+      stdout: typeof structured.stdout === 'string' ? structured.stdout : '',
+      stderr: typeof structured.stderr === 'string' ? structured.stderr : '',
+      truncated: structured.truncated === true,
+      timed_out: structured.timed_out === true,
+      command_id: commandId,
+      job_id: jobId,
+      run_id: String(owner.run_id || structured.run_id || managedJob.run_id || admission.run_id || '').trim(),
+      wave_id: String(owner.wave_id || structured.wave_id || managedJob.wave_id || admission.wave_id || '').trim(),
+      output_refs: structured.output_refs && typeof structured.output_refs === 'object'
+        ? structured.output_refs : null
+    };
+    const candidate = {
+      schema_version: 1,
+      operation_kind: EXEC_OPERATION_KIND,
+      local_handle: admission.local_handle || `cp_exec_${controlPlaneBridgeDigest({
+        policy_sha256: policySha256,
+        action_id: actionId,
+        attempt_id: attemptId,
+        task_id: String(admission.task_id).trim(),
+        writer_lease_generation: admission.writer_lease_generation,
+        command_id: commandId,
+        job_id: jobId,
+        run_id: output.run_id,
+        wave_id: output.wave_id,
+        facade_contract: facadeContract
+      }).slice(0, 48)}`,
+      action_id: actionId,
+      attempt_id: attemptId,
+      task_id: String(admission.task_id).trim(),
+      writer_lease_generation: admission.writer_lease_generation,
+      policy_sha256: policySha256,
+      actor: { client_id: EXEC_BRIDGE_CLIENT_ID, client_type: EXEC_BRIDGE_CLIENT_TYPE },
+      facade_contract: {
+        schema_version: facadeContract.schema_version,
+        profile: facadeContract.profile,
+        sha256: facadeContract.sha256
+      },
+      runtime_identity: {
+        process_instance_id: attestation.processInstanceId,
+        server_instance_id: attestation.serverInstanceId,
+        activation_epoch_id: attestation.activationEpochId,
+        tool_contract_sha256: attestation.contractSha256
+      },
+      ...output,
+      response_sha256: execProjectionDigest(output)
+    };
+    try {
+      return normaliseExecResult(candidate, admission);
+    } catch (error) {
+      throw Object.assign(error, { code: error?.code || 'CONTROL_PLANE_EXEC_RESULT_INVALID' });
+    }
   }
 
   async recordExecutionControlCenterProgress(observation = {}) {

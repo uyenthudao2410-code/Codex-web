@@ -241,6 +241,18 @@ class ControlPlaneReleaseArtifactTests(unittest.TestCase):
                     authorization=f"Bearer {operator}",
                 )
                 self.assertEqual(status, 201)
+                status, workspace_registration = post_json(
+                    f"{primary_url}/v1/nodes/{node['device_id']}/workspace-registrations",
+                    {
+                        "workspace_id": "workspace-release-ingress-001",
+                        "workspace_generation": "generation-release-ingress-001",
+                        "display_name": "Release ingress workspace",
+                        "capabilities": {"read": True, "write": True, "exec": True},
+                    },
+                    authorization=f"Node {node['node_secret']}",
+                )
+                self.assertEqual(status, 201)
+                self.assertEqual(workspace_registration["workspace_id"], "workspace-release-ingress-001")
                 status, binding = post_json(
                     f"{primary_url}/v1/bindings",
                     {

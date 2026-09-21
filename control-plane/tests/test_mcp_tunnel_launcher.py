@@ -84,6 +84,34 @@ class McpTunnelLauncherTests(unittest.TestCase):
             json.loads(result.stdout)["argv"],
         )
 
+    def test_oauth_mode_never_injects_the_legacy_authorization_header(self) -> None:
+        self.environment.pop("CONTROL_PLANE_MCP_AUTH_HEADER_FILE")
+        result = self.run_launcher(CONTROL_PLANE_MCP_AUTH_MODE="oauth_introspection")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            json.loads(result.stdout),
+            {
+                "argv": [
+                    "run",
+                    "--profile", "ubuntu-root-mcp-fixture",
+                    "--control-plane.tunnel-id", "tunnel_fixture_12345",
+                    "--mcp.server-url", "url=http://127.0.0.1:8766/mcp,channel=main",
+                ],
+                "operator_token_present": False,
+            },
+        )
+
+    def test_oauth_mode_refuses_an_accidental_static_header_or_unknown_auth_mode(self) -> None:
+        result = self.run_launcher(CONTROL_PLANE_MCP_AUTH_MODE="oauth_introspection")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("must be unset", result.stderr)
+
+        result = self.run_launcher(CONTROL_PLANE_MCP_AUTH_MODE="not-a-mode")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("CONTROL_PLANE_MCP_AUTH_MODE", result.stderr)
+
     def test_refuses_invalid_routing_before_starting_client(self) -> None:
         for name, value in (
             ("CONTROL_PLANE_MCP_BIND", "0.0.0.0"),
@@ -157,7 +185,7 @@ class McpTunnelDeploymentTemplateTests(unittest.TestCase):
             {
                 "CONTROL_PLANE_TUNNEL_CLIENT", "CONTROL_PLANE_TUNNEL_PROFILE",
                 "CONTROL_PLANE_TUNNEL_ID", "CONTROL_PLANE_MCP_BIND", "CONTROL_PLANE_MCP_PORT",
-                "CONTROL_PLANE_MCP_AUTH_HEADER_FILE",
+                "CONTROL_PLANE_MCP_AUTH_MODE", "CONTROL_PLANE_MCP_AUTH_HEADER_FILE",
             },
         )
 

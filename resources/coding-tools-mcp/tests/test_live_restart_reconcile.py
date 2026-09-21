@@ -180,15 +180,30 @@ class LiveRestartReconcileTests(unittest.TestCase):
                 )
                 self.assertEqual(status, 200)
                 polled = body.get("result", {}).get("structuredContent", {})
-                self.assertTrue(polled.get("ok"))
-                self.assertEqual(polled.get("status"), "reconciled_terminal")
-                self.assertTrue(polled.get("reconciled"))
-                self.assertEqual(polled.get("reconciled_sources"), ["managed_process_job"])
-                managed_job = polled.get("managed_job") or {}
-                self.assertTrue(managed_job.get("terminal"))
-                self.assertNotEqual(managed_job.get("result_status"), "succeeded")
-                completion_report = polled.get("completion_report") or {}
-                self.assertEqual(completion_report.get("accepted_or_not"), "COMMAND_FAILED")
+                if IS_WINDOWS:
+                    # The Windows Job Object is owned by the killed MCP
+                    # process and has kill-on-close semantics, so startup can
+                    # prove that the exact process tree is gone and safely
+                    # terminalize the durable row.
+                    self.assertTrue(polled.get("ok"))
+                    self.assertEqual(polled.get("status"), "reconciled_terminal")
+                    self.assertTrue(polled.get("reconciled"))
+                    self.assertEqual(polled.get("reconciled_sources"), ["managed_process_job"])
+                    managed_job = polled.get("managed_job") or {}
+                    self.assertTrue(managed_job.get("terminal"))
+                    self.assertNotEqual(managed_job.get("result_status"), "succeeded")
+                    completion_report = polled.get("completion_report") or {}
+                    self.assertEqual(completion_report.get("accepted_or_not"), "COMMAND_FAILED")
+                else:
+                    # POSIX has no equivalent owner handle in this fixture.
+                    # The child intentionally survives the MCP parent, so the
+                    # replacement runtime must fail closed rather than adopt
+                    # or terminalize a live process by PID alone.
+                    self.assertFalse(polled.get("ok"))
+                    self.assertIn(
+                        (polled.get("error") or {}).get("code"),
+                        {"COMMAND_NOT_FOUND", "COMMAND_COMPLETION_CONFLICT"},
+                    )
             finally:
                 if process_b is not None and process_b.poll() is None:
                     process_b.kill()

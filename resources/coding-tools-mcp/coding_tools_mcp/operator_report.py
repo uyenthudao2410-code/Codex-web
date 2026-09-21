@@ -177,6 +177,13 @@ def _canonical_event_time(value: Any) -> str | None:
     match = _EVENT_TIME_RE.fullmatch(value)
     if match is None:
         return None
+    # `datetime.fromisoformat` in newer Python versions accepts the ISO
+    # midnight spelling `24:00:00`.  The ledger contract uses a canonical
+    # clock representation with an explicit 00..23 hour range, so validate the
+    # wall-clock fields before delegating date/offset validation to datetime.
+    hour, minute, second = (int(item) for item in match.group("time").split(":"))
+    if hour > 23 or minute > 59 or second > 59:
+        return None
     if match.group("zone") != "Z":
         if int(match.group("offset_hour")) > 23 or int(match.group("offset_minute")) > 59:
             return None

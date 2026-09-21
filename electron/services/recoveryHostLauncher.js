@@ -3,6 +3,7 @@ const path = require('node:path');
 const { spawn } = require('node:child_process');
 const { RecoveryIpcClient, loadRecoveryDescriptor, isProcessAlive } = require('./recoveryIpc');
 const { sameInstallationIdentity } = require('./runtimeIdentity');
+const { sameAbsolutePath } = require('./pathSemantics');
 const {
   normalizeProcessStartToken,
   observeLifecycleProcessIdentity,
@@ -154,13 +155,6 @@ async function spawnElectronUi(app, spawnProcess = spawn, options = {}) {
   });
   child.unref();
   return child.pid;
-}
-
-function sameAbsolutePath(left, right) {
-  const lhs = String(left || '').trim();
-  const rhs = String(right || '').trim();
-  if (!lhs || !rhs || !path.isAbsolute(lhs) || !path.isAbsolute(rhs)) return false;
-  return path.resolve(lhs).toLowerCase() === path.resolve(rhs).toLowerCase();
 }
 
 function suppressDevelopmentRecoverySupervisor({

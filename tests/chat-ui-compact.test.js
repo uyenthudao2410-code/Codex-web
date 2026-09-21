@@ -44,21 +44,29 @@ test('workspace manager exposes extra authorized roots without changing the chat
   assert.match(app, /updateAuthorizedRoots/);
 });
 
-test('package and manager identify the Coding Tools MCP 1.0 release', () => {
+test('central workspace receipts remain successful when a later UI refresh is unavailable', () => {
+  const app = read('renderer/app.js');
+  assert.match(app, /async function refreshCentralWorkspaceUiAfterCommit\(\)/);
+  assert.match(app, /await refreshCentralWorkspaceUiAfterCommit\(\);/);
+  assert.match(app, /Thay đổi đã được ghi nhận/);
+  assert.match(app, /state\.centralWorkspaces = null/);
+});
+
+test('package and manager identify the Coding Tools MCP 1.0.7 release', () => {
   const pkg = JSON.parse(read('package.json'));
   const manager = read('renderer/index.html');
   const pyproject = read('resources/coding-tools-mcp/pyproject.toml');
   const pythonPackage = read('resources/coding-tools-mcp/coding_tools_mcp/__init__.py');
   const pythonMetadata = read('resources/coding-tools-mcp/coding_tools_mcp.egg-info/PKG-INFO');
   assert.equal(pkg.name, 'coding-tools-mcp');
-  assert.equal(pkg.version, '1.0.0');
+  assert.equal(pkg.version, '1.0.7');
   assert.equal(pkg.build.productName, 'Coding Tools MCP');
   assert.equal(pkg.build.artifactName, 'coding-tools-mcp-setup-${version}.${ext}');
-  assert.match(manager, /Coding Tools MCP <span>v1\.0\.0<\/span>/);
-  assert.match(manager, /Coding Tools MCP · 1\.0\.0/);
-  assert.match(pyproject, /^version = "1\.0\.0"$/m);
-  assert.match(pythonPackage, /^__version__ = "1\.0\.0"$/m);
-  assert.match(pythonMetadata, /^Version: 1\.0\.0\r?$/m);
+  assert.match(manager, /Coding Tools MCP <span>v1\.0\.7<\/span>/);
+  assert.match(manager, /Coding Tools MCP · 1\.0\.7/);
+  assert.match(pyproject, /^version = "1\.0\.7"$/m);
+  assert.match(pythonPackage, /^__version__ = "1\.0\.7"$/m);
+  assert.match(pythonMetadata, /^Version: 1\.0\.7\r?$/m);
 });
 
 test('settings window hides independently and reveals its shell before runtime inspection finishes', () => {

@@ -983,19 +983,128 @@ function registerIpc() {
       deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
     });
   }));
-  secureHandle('control-plane:install-read-only-policy', (event, request) => invokeSafely(async () => {
-    // The node agent re-authenticates directly to Ubuntu with its local node
-    // credential. The renderer never receives that credential or an operator
-    // bearer, and a local click is still required for every install/replace.
+  secureHandle('control-plane:enrollment-status', (event) => invokeSafely(async () => {
+    // Reconcile the durable node enrollment after UI reload/restart.  The
+    // node agent owns the secret and returns only a redacted state receipt.
     assertManagerIpc(event);
     if (settings.load().executionRole !== 'central_executor') {
-      throw Object.assign(new Error('Read-only policy Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+      throw Object.assign(new Error('Kiểm tra pairing Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_ENROLLMENT_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.reconcileEnrollment({
+      deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
+    });
+  }));
+  secureHandle('control-plane:rotate-credential', (event, request) => invokeSafely(async () => {
+    // Rotation is an owner-only local action.  The node agent creates and
+    // persists the candidate; renderer/IPC never receives either credential.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Đổi credential Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_CREDENTIAL_ROTATION_ROLE_REQUIRED'
+      });
+    }
+    if (request?.confirmRotation !== true) {
+      throw Object.assign(new Error('Chủ máy phải xác nhận trước khi đổi credential node.'), {
+        code: 'CONTROL_PLANE_CREDENTIAL_ROTATION_CONFIRMATION_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.rotateCredential({
+      deviceIdentity: loadOrCreateDeviceIdentity(runtimePaths)
+    });
+  }));
+  secureHandle('control-plane:register-workspace', (event, request) => invokeSafely(async () => {
+    // This records only an opaque workspace identity/generation and the
+    // owner-selected local capability inventory with Ubuntu.  The selected
+    // local path is canonicalized by the node agent and never sent to Ubuntu,
+    // while this action neither changes the global active workspace nor
+    // creates a task binding, context, policy, or per-task authority.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Đăng ký workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.registerWorkspace({
+      workspacePath: request?.workspacePath,
+      capabilities: request?.capabilities
+    });
+  }));
+  secureHandle('control-plane:replace-workspace', (event, request) => invokeSafely(async () => {
+    // Replacement is deliberately separate from registration.  It requires
+    // an explicit local confirmation and the packaged node-agent journals the
+    // retire/register generation transition so a lost ACK cannot overwrite a
+    // previously trusted root silently.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Thay capability workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    if (request?.confirmReplace !== true) {
+      throw Object.assign(new Error('Chủ máy phải xác nhận trước khi thay capability workspace cục bộ.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_REPLACEMENT_CONFIRMATION_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.replaceWorkspace({
+      workspacePath: request?.workspacePath,
+      capabilities: request?.capabilities
+    });
+  }));
+  secureHandle('control-plane:list-workspaces', (event) => invokeSafely(async () => {
+    // This reads the node-private, path-free inventory through the packaged
+    // agent. It does not call Ubuntu, create a binding, or imply task
+    // authority; it only lets the local owner select a registered root to
+    // retire deliberately.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Danh sách workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.listWorkspaces();
+  }));
+  secureHandle('control-plane:install-read-only-policy-assignment', (event, request) => invokeSafely(async () => {
+    // The local owner must explicitly approve this effect for one already
+    // registered opaque workspace.  This IPC neither accepts a context ID nor
+    // creates a binding/context; Ubuntu may return a policy only for an
+    // existing, live internal assignment that exactly matches the node root.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Đồng bộ policy read-only chỉ khả dụng cho central executor đã được kích hoạt.'), {
         code: 'CONTROL_PLANE_POLICY_ROLE_REQUIRED'
       });
     }
-    return controlPlaneEnrollment.installReadOnlyPolicy({
-      contextId: request?.contextId,
-      replaceExisting: request?.replaceExisting === true
+    if (request?.confirmInstall !== true) {
+      throw Object.assign(new Error('Chủ máy phải xác nhận trước khi ghi read-only policy cục bộ.'), {
+        code: 'CONTROL_PLANE_POLICY_CONFIRMATION_REQUIRED'
+      });
+    }
+    if (typeof request?.replaceExisting !== 'boolean') {
+      throw Object.assign(new Error('Lựa chọn thay thế policy cục bộ không hợp lệ.'), {
+        code: 'CONTROL_PLANE_POLICY_REPLACE_INVALID'
+      });
+    }
+    return controlPlaneEnrollment.installReadOnlyPolicyAssignment({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration,
+      replaceExisting: request.replaceExisting
+    });
+  }));
+  secureHandle('control-plane:retire-workspace', (event, request) => invokeSafely(async () => {
+    // Retirement is an exact opaque identity/generation operation. The node
+    // retains its local registry until the central service confirms the
+    // retirement receipt, so a lost response can be retried safely.
+    assertManagerIpc(event);
+    if (settings.load().executionRole !== 'central_executor') {
+      throw Object.assign(new Error('Thu hồi workspace Ubuntu chỉ khả dụng cho central executor đã được kích hoạt.'), {
+        code: 'CONTROL_PLANE_WORKSPACE_ROLE_REQUIRED'
+      });
+    }
+    return controlPlaneEnrollment.retireWorkspace({
+      workspaceId: request?.workspaceId,
+      workspaceGeneration: request?.workspaceGeneration
     });
   }));
   secureHandle('workspace:switch', (_event, workspace) => invokeSafely(() => orchestrator.switchWorkspace(workspace)));

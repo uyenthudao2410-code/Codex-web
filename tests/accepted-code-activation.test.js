@@ -8,6 +8,7 @@ const { execFileSync } = require('node:child_process');
 const { DatabaseSync } = require('node:sqlite');
 const { createRuntimePaths } = require('../electron/services/runtimePaths');
 const { componentOwnsPath, componentOwners } = require('../electron/services/componentRevision');
+const { resolvePythonExecutable } = require('./helpers/python-executable');
 const {
   AcceptedCodeActivationController,
   acceptedReceipts,
@@ -19,6 +20,7 @@ const {
 } = require('../electron/services/recoveryActionStore');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
+const PYTHON = resolvePythonExecutable();
 
 function lifecycleCounts() {
   return {
@@ -42,7 +44,7 @@ function canonicalPythonFingerprint(workspace, identity) {
     'value=json.loads(sys.stdin.read())',
     "print(fingerprint_paths(Path(value['root']), value['paths'], extra=value['extra']))"
   ].join(';');
-  return execFileSync('python', ['-c', python], {
+  return execFileSync(PYTHON, ['-c', python], {
     input: JSON.stringify({
       root: workspace,
       paths: identity.entries.map((item) => item.path),
@@ -128,7 +130,7 @@ function canonicalPythonIdentity(workspace) {
     'finally:',
     '    runtime.close()'
   ].join('\n');
-  return JSON.parse(execFileSync('python', ['-c', python, workspace], {
+  return JSON.parse(execFileSync(PYTHON, ['-c', python, workspace], {
     encoding: 'utf8',
     windowsHide: true,
     env: {

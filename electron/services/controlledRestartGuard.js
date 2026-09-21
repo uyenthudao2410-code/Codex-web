@@ -1,15 +1,4 @@
-const path = require('node:path');
-
-function normalizedPath(value) {
-  const text = String(value || '').trim();
-  return text ? path.resolve(text).toLowerCase() : '';
-}
-
-function samePath(left, right) {
-  const normalizedLeft = normalizedPath(left);
-  const normalizedRight = normalizedPath(right);
-  return Boolean(normalizedLeft && normalizedRight && normalizedLeft === normalizedRight);
-}
+const { sameAbsolutePath, joinUnderRoot } = require('./pathSemantics');
 
 function controlledRestartGuard({
   expectedWorkspace,
@@ -34,10 +23,10 @@ function controlledRestartGuard({
   if (!actualUserDataText) {
     return { ok: false, code: 'ACTUAL_USER_DATA_MISSING' };
   }
-  if (!samePath(configuredWorkspaceText, expectedWorkspaceText)) {
+  if (!sameAbsolutePath(configuredWorkspaceText, expectedWorkspaceText)) {
     return { ok: false, code: 'CONFIGURED_WORKSPACE_MISMATCH' };
   }
-  if (!samePath(actualUserDataText, expectedUserDataText)) {
+  if (!sameAbsolutePath(actualUserDataText, expectedUserDataText)) {
     return { ok: false, code: 'USER_DATA_MISMATCH' };
   }
   return { ok: true, code: 'MATCHED' };
@@ -56,10 +45,10 @@ function controlledRestartAppRootGuard({ expectedAppRoot, actualAppRoot, resourc
   if (!resourcesRootText) {
     return { ok: false, code: 'RESOURCES_ROOT_MISSING' };
   }
-  if (!samePath(expectedAppRootText, actualAppRootText)) {
+  if (!sameAbsolutePath(expectedAppRootText, actualAppRootText)) {
     return { ok: false, code: 'APP_ROOT_MISMATCH' };
   }
-  if (!samePath(resourcesRootText, path.join(actualAppRootText, 'resources'))) {
+  if (!sameAbsolutePath(resourcesRootText, joinUnderRoot(actualAppRootText, 'resources'))) {
     return { ok: false, code: 'RESOURCES_ROOT_MISMATCH' };
   }
   return { ok: true, code: 'APP_ROOT_MATCHED' };
@@ -90,4 +79,4 @@ function controlledRestartOwnerGuard({ state, device } = {}) {
   return { ok: true, code: 'OWNED' };
 }
 
-module.exports = { controlledRestartGuard, controlledRestartAppRootGuard, controlledRestartOwnerGuard, samePath };
+module.exports = { controlledRestartGuard, controlledRestartAppRootGuard, controlledRestartOwnerGuard, samePath: sameAbsolutePath };

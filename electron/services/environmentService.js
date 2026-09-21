@@ -9,8 +9,15 @@ const PYTHON_DISCOVERY_TIMEOUT_MS = 5_000;
 
 async function commandExists(name, options = {}) {
   const runner = options.runFn || run;
-  const result = await runner('where.exe', [name], { allowFailure: true, ...options.runOptions });
-  return result.code === 0;
+  const platform = String(options.platform || process.platform);
+  const locator = platform === 'win32' ? 'where.exe' : 'which';
+  try {
+    const result = await runner(locator, [name], { allowFailure: true, ...options.runOptions });
+    return result.code === 0;
+  } catch (error) {
+    if (String(error?.code || '') === 'ENOENT') return false;
+    throw error;
+  }
 }
 
 function canConnect(host, port, timeout = 800) {
@@ -25,6 +32,8 @@ function canConnect(host, port, timeout = 800) {
 }
 
 async function pythonStatus(paths = defaultPaths, options = {}) {
+  const platform = String(options.platform || process.platform);
+  const windows = platform === 'win32';
   const now = typeof options.monotonicNow === 'function' ? options.monotonicNow : () => performance.now();
   const startedAt = now();
   const explicitDeadline = Number(options.deadlineMs);
@@ -73,14 +82,30 @@ async function pythonStatus(paths = defaultPaths, options = {}) {
   const exists = async (name) => (await runProbe('where.exe', [name])).code === 0;
   const candidates = [];
   try {
-    if (fs.existsSync(paths.portablePython())) {
-      const pythonw = pathForPythonw(paths.portablePython());
-      candidates.push({ command: paths.portablePython(), launchCommand: fs.existsSync(pythonw) ? pythonw : paths.portablePython(), args: [] });
+    if (windows) {
+      if (fs.existsSync(paths.portablePython())) {
+        const pythonw = pathForPythonw(paths.portablePython());
+        candidates.push({ command: paths.portablePython(), launchCommand: fs.existsSync(pythonw) ? pythonw : paths.portablePython(), args: [] });
+      }
+      if (await exists('py.exe')) candidates.push({ command: 'py.exe', launchCommand: await exists('pyw.exe') ? 'pyw.exe' : 'py.exe', args: ['-3'] });
+      if (await exists('python.exe')) candidates.push({ command: 'python.exe', launchCommand: await exists('pythonw.exe') ? 'pythonw.exe' : 'python.exe', args: [] });
+    } else {
+      // The Windows portable interpreter is not executable on Ubuntu. Source
+      // and control-plane checks instead use the host's normal Python 3
+      // command and never invoke Windows-only where.exe.
+      candidates.push(
+        { command: 'python3', launchCommand: 'python3', args: [] },
+        { command: 'python', launchCommand: 'python', args: [] }
+      );
     }
-    if (await exists('py.exe')) candidates.push({ command: 'py.exe', launchCommand: await exists('pyw.exe') ? 'pyw.exe' : 'py.exe', args: ['-3'] });
-    if (await exists('python.exe')) candidates.push({ command: 'python.exe', launchCommand: await exists('pythonw.exe') ? 'pythonw.exe' : 'python.exe', args: [] });
     for (const candidate of candidates) {
-      const result = await runProbe(candidate.command, [...candidate.args, '--version']);
+      let result;
+      try {
+        result = await runProbe(candidate.command, [...candidate.args, '--version']);
+      } catch (error) {
+        if (!windows && String(error?.code || '') === 'ENOENT') continue;
+        throw error;
+      }
       const output = `${result.stdout} ${result.stderr}`.trim();
       const match = output.match(/Python\s+(\d+)\.(\d+)\.(\d+)/i);
       const major = match ? Number(match[1]) : 0;

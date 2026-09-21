@@ -139,7 +139,11 @@ class RoutingMatrixTests(unittest.TestCase):
 class ContextBudgetTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
-        self.runtime = Runtime(Path(self.temp.name))
+        # These cases exercise output/exit-code accounting with an inline
+        # Python child.  `safe` mode intentionally rejects inline scripts, so
+        # use the explicit trusted fixture mode rather than weakening the
+        # production safe-policy gate.
+        self.runtime = Runtime(Path(self.temp.name), permission_mode="trusted")
 
     def tearDown(self) -> None:
         self.runtime.close()

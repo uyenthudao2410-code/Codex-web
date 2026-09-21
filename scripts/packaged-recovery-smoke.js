@@ -85,6 +85,31 @@ async function callRecoveryHost(descriptor, action) {
   });
 }
 function pingRecoveryHost(descriptor) { return callRecoveryHost(descriptor, 'recovery.ping'); }
+
+async function waitForRecoveryHostReady(descriptor, options = {}) {
+  const pingFn = options.pingFn || pingRecoveryHost;
+  const waitFn = options.waitFn || wait;
+  const nowFn = options.nowFn || Date.now;
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 12_000;
+  const retryDelayMs = Number.isFinite(options.retryDelayMs) ? options.retryDelayMs : 150;
+  const deadline = nowFn() + timeoutMs;
+  let lastError = null;
+
+  do {
+    try {
+      const ping = await pingFn(descriptor);
+      if (ping?.ok === true && ping?.data?.ready === true) return ping;
+      lastError = new Error('PACKAGED_RECOVERY_HOST_NOT_READY');
+    } catch (error) {
+      lastError = error;
+    }
+    if (nowFn() >= deadline) break;
+    await waitFn(Math.min(retryDelayMs, Math.max(1, deadline - nowFn())));
+  } while (true);
+
+  throw lastError || new Error('PACKAGED_RECOVERY_HOST_NOT_READY');
+}
+
 function runSupervisor(manifestPath, statusPath) {
   const result = spawnSync('powershell.exe', [
     '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', supervisorScript,
@@ -105,7 +130,7 @@ function inspectPackagedToolContract() {
     'keys = ("workspace_context", "agent_workflow", "task_control")',
     'print(json.dumps({"profile": SMART_TOOL_PROFILE, "tools": sorted(TOOL_MODE_ALLOWLISTS["smart"]), "task_context_id": {name: "task_context_id" in schemas[name]["properties"] for name in keys}}, sort_keys=True))'
   ].join('; ');
-  const result = spawnSync(packagedPython, ['-I', '-c', probe, packagedMcpRoot], {
+  const result = spawnSync(packagedPython, ['-I', '-B', '-c', probe, packagedMcpRoot], {
     cwd: packagedMcpRoot,
     windowsHide: true,
     encoding: 'utf8'
@@ -161,6 +186,10 @@ async function main() {
     path.join(packagedControlPlaneRoot, 'node_agent.py'),
     path.join(packagedControlPlaneRoot, 'node-agent.cmd'),
     path.join(packagedControlPlaneRoot, 'recovery_identity_observer.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_approved_patch_bridge.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_document_write_bridge.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_exec_bridge.cjs'),
+    path.join(packagedControlPlaneRoot, 'recovery_file_read_bridge.cjs'),
     path.join(packagedControlPlaneRoot, 'recovery_read_only_bridge.cjs'),
     path.join(packagedControlPlaneRoot, 'recovery_runtime_adapter.cjs')
   ];
@@ -190,7 +219,7 @@ async function main() {
     descriptor = await waitJson(path.join(dataRoot, 'recovery-host.json'), 12000);
     assert(descriptor, `PACKAGED_USER_DATA_ISOLATION_FAILED:child_alive=${isAlive(child.pid)}`);
 
-    const ping = await pingRecoveryHost(descriptor);
+    const ping = await waitForRecoveryHostReady(descriptor);
     assert(ping?.ok === true && ping?.data?.ready === true, 'PACKAGED_RECOVERY_HOST_NOT_READY');
     assert(Number(ping.data.pid) === Number(descriptor.owner_pid), 'PACKAGED_RECOVERY_HOST_IDENTITY_MISMATCH');
     assert(Boolean(ping.data.device_id), 'PACKAGED_DEVICE_IDENTITY_MISSING');
@@ -260,7 +289,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error?.stack || String(error));
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error?.stack || String(error));
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { waitForRecoveryHostReady };

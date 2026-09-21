@@ -527,7 +527,7 @@ test('Coding MCP activation preflight requires workspace identity even for a ref
   assert.equal(result.workspace, 'C:\\work\\one');
 });
 
-test('Coding MCP activation observation allows a bounded multi-second ledger census', { timeout: 10_000 }, async (t) => {
+test('Coding MCP activation observation allows a retained ledger census beyond the former 15-second window', { timeout: 25_000 }, async (t) => {
   const token = 'token';
   const server = http.createServer((request, response) => {
     assert.equal(request.url, '/__control/activation');
@@ -535,7 +535,7 @@ test('Coding MCP activation observation allows a bounded multi-second ledger cen
       const body = JSON.stringify({ safe: true, code: 'READY', workspace: 'C:\\work\\one' });
       response.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
       response.end(body);
-    }, 3_250);
+    }, 15_250);
   });
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
