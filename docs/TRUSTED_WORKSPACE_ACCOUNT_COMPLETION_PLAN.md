@@ -6,7 +6,21 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 13:36 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 19:02 +07
+
+Wave 39 đã đối chiếu Linux, GitHub `origin/main` và checkout exact Windows
+`E:\DEV\Codex-web` ở `main @
+abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. `npm ci` và `npm run dist` đạt
+Node/Electron **922/922 PASS** và MCP **1160/1160 PASS**; packaged/installed
+smoke đều pass, installer `1.0.7` có SHA-256
+`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+Installed smoke đã cleanup nên runtime hiện không chạy (`dev-ui
+state=MISSING`, full-clean preflight `ENOENT` thiếu `recovery-host.json`).
+Mức bằng chứng là exact candidate `PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`.
+Không có credential/context/admission/binding/task/deploy mutation trong wave
+này. Gate còn lại là owner acceptance exact source + supported full-clean
+activation, sau đó mới enrollment/workspace generation/binding/task, T01–T16,
+restore và soak.
 
 Tailscale/SSH tới `100.72.186.41` đã mở; Wave 26 xác thực node và Wave 27
 đã xác thực packaged candidate.

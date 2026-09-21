@@ -6,13 +6,26 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **21-09-2026, 12:41 +07, Windows `DESKTOP-63643J4`** đã xác
-> nhận một account dùng chung `principal_id`, chọn `binding_id` theo task và
-> thực thi tại đúng node đã bind; candidate packaged/installed smoke đã pass.
-> Wave 26 xác nhận reachable-for-test, credential heartbeat và local registry;
-> Wave 27 xác nhận packaged smoke cô lập; chưa chứng minh live workspace binding.
-> Trạng thái là `SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`
-> (candidate), chưa phải `LIVE_ACCEPTED`.
+> trước: checkpoint mới nhất **21-09-2026, 19:02 +07** đã đối chiếu Linux,
+> GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
+> abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. Exact Windows build đạt Node/Electron
+> `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
+> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
+> nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 39 — exact source/build đã đồng bộ, live activation còn mở — 21-09-2026, 19:02 +07
+
+Checkout Windows `E:\DEV\Codex-web` sạch ở đúng `abc1a63`; `npm ci`, NSIS
+build, packaged smoke và installed smoke đều pass. Artifact local là
+`dist\coding-tools-mcp-setup-1.0.7.exe`, SHA-256
+`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+
+Đây là bằng chứng candidate `PACKAGED_PROOF`, không phải `LIVE_ACCEPTED`:
+installed smoke đã uninstall để không giữ profile giả; `dev-ui status` trả
+`MISSING/ENOENT` và full-clean preflight không có `recovery-host.json`. Không
+được forge checkpoint hoặc suy ra readiness từ artifact. Gate tiếp theo là
+owner acceptance exact source, full-clean activation được hỗ trợ, rồi strict
+heartbeat/enrollment/workspace binding/task và T01–T16.
 
 ## Checkpoint Wave 36 — BLOCKED chờ Windows owner activation — 21-09-2026, 12:41 +07
 

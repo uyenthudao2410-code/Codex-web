@@ -1,13 +1,31 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 21-09-2026, 13:36 +07
-**Branch:** `codex/control-plane-quarantine`
-**HEAD đã kiểm tra:** `502ffb8cf8b541ee74af30194aff2dce08c3b649`
-**Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + Windows
-unpacked/shared-account proof + candidate `PACKAGED_PROOF`; chưa phải
-`LIVE_ACCEPTED`
+**Ngày cập nhật:** 21-09-2026, 19:02 +07
+**Branch:** `main`
+**HEAD đã kiểm tra:** `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`
+**Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
+Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 39 — exact main Windows build và installed smoke — 21-09-2026, 19:02 +07
+
+Linux, GitHub `origin/main` và checkout Windows `E:\DEV\Codex-web` đã được
+đối chiếu cùng HEAD `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`; Windows chỉ
+còn branch `main` và worktree sạch. Trên checkout exact đã chạy `npm ci` và
+`npm run dist`: Node/Electron **922/922 PASS**, MCP Python **1160/1160 PASS**,
+resource/source/secret gates PASS. Installer `1.0.7` có SHA-256
+`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+
+`packaged-recovery-smoke.js` và `installed-recovery-smoke.js` đều trả `ok=true`;
+installer/register/uninstall, Recovery Host, MCP, Supervisor và cleanup đều
+pass. Installed smoke đã dọn profile/process sau khi chạy. Vì vậy đây là
+`PACKAGED_PROOF` mạnh hơn, không phải runtime live: `dev-ui status` hiện
+`state=MISSING`, `host=unavailable`, `error_code=ENOENT`, và full-clean
+preflight thiếu `recovery-host.json`. Không tạo credential/context, không mở
+admission, không tạo binding/task hay deploy. Next action vẫn là owner
+acceptance exact source + full-clean activation, sau đó mới enrollment,
+workspace/binding/task và T01–T16/soak.
 
 ## Trạng thái mới nhất — Windows `DESKTOP-63643J4`
 
