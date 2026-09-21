@@ -22,6 +22,20 @@ Ubuntu `/healthz` hiện vẫn nạp release cũ, admission `recovery`, chưa c�
 principal và SSH quản trị bị từ chối. Cần closure exact source + quyền deploy
 Ubuntu trước khi mở admission, binding hoặc task.
 
+## Checkpoint Wave 42 — exact Windows rebuild/install proof — 21-09-2026, 21:25 +07
+
+Windows exact `bb4522c` đã chạy `npm run dist`: Node/Electron **922/922 PASS**,
+MCP **1160/1160 PASS**; installer `1.0.7` mới SHA-256
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`. Installed
+executable khớp unpacked artifact (`a57ced0d…a7ecbd2`). Packaged recovery smoke
+PASS (17 resources, 8 tools, Recovery/MCP/Supervisor isolation); source/worktree
+Windows sạch sau khi trả icon build về HEAD.
+
+Đây là packaged/installed proof, chưa `LIVE_ACCEPTED`: activation cũ vẫn
+`STOPPING/CLOSED`, app hiện không chạy, chưa workspace/connector/central
+authority/binding/task. Control Plane release cùng HEAD đã build/verify cục bộ
+nhưng Ubuntu chưa deploy vì SSH bị từ chối; admission vẫn `recovery`.
+
 ## Checkpoint Wave 39 — exact main Windows build và installed smoke — 21-09-2026, 19:02 +07
 
 Linux, GitHub `origin/main` và checkout Windows `E:\DEV\Codex-web` đã được

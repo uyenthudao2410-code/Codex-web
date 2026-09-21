@@ -44,6 +44,30 @@ năm trường cho đúng HEAD hiện tại; sau đó preflight/activation và s
 heartbeat. Cần quyền SSH hợp lệ để build/verify/deploy Control Plane release
 đúng HEAD; không mở admission hoặc tạo binding/task trước hai gate này.
 
+## Checkpoint Wave 42 — exact Windows rebuild/install passed; live gate remains closed — 21-09-2026, 21:25 +07
+
+Từ checkout Windows exact `main@bb4522cdc5f011942cce89f98c415df930f3f359`,
+`npm run dist` đã chạy trọn gate Node/Electron **922/922 PASS** và MCP
+**1160/1160 PASS trong 2764,26s**. `verify-packaged-resources` PASS. NSIS
+installer `1.0.7` mới có SHA-256
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`; sau khi
+cài, executable installed khớp unpacked artifact ở
+`a57ced0d185472d5c5e234a1177bf13ca35f14d2661300fc80e92c6daa7ecbd2`.
+
+Packaged recovery smoke PASS với 17 resources, 8 smart-v3 tools, Recovery/MCP
+device identity, Supervisor health và live-owner/hash-mismatch fail-closed;
+production descriptor/task không bị mutate. Build đã tạo lại icon tạm trên
+Windows nhưng hai file source icon đã được trả về đúng HEAD; Windows worktree
+vẫn sạch. Đây là **exact packaged/installed proof**, không phải live acceptance:
+app không được tự mở, activation epoch cũ vẫn `STOPPING/CLOSED`, chưa có
+workspace/connector/central authority và chưa có binding/task.
+
+Control Plane release exact HEAD đã build/verify cục bộ (schema 24, package
+fingerprint `sha256:52889093c453e4b5fbbf82ddb593fb150ebe73e8d32a307d04cae81b59af3bc6`,
+archive SHA-256 `b97e511007298dcf2df0a5e58cbbcf41d17bab5a5e8f4920db32fcd1a479d876`)
+nhưng chưa deploy do SSH Ubuntu bị từ chối. Live Ubuntu vẫn release cũ,
+admission `recovery`; không mở admission hoặc tạo binding/task.
+
 ## Checkpoint Wave 39 — exact source/build đã đồng bộ, live activation còn mở — 21-09-2026, 19:02 +07
 
 Checkout Windows `E:\DEV\Codex-web` sạch ở đúng `abc1a63`; `npm ci`, NSIS

@@ -40,6 +40,21 @@ Task cũ `CodingTools-StageA-Deferred-Worker` (09-03) trỏ tới file tạm đ�
 workspace hay activation evidence. Khi owner mở lại UI, phải đọc `HEAD` hiện
 tại và tạo closure năm trường mới trước `--preflight`/`--execute`.
 
+### Wave 42 — exact rebuild/install proof — 21-09-2026, 21:25 +07
+
+Từ `main@bb4522cdc5f011942cce89f98c415df930f3f359`, `npm run dist` đã pass
+Node/Electron **922/922** và MCP **1160/1160**; `verify-packaged-resources`
+pass. Installer `1.0.7` SHA-256:
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+Executable installed khớp unpacked artifact:
+`a57ced0d185472d5c5e234a1177bf13ca35f14d2661300fc80e92c6daa7ecbd2`.
+`packaged-recovery-smoke.js` trả `ok=true` với 17 resources, 8 tools,
+Recovery/MCP/Supervisor healthy và production descriptor/task stable.
+
+Artifact mới chỉ chứng minh packaged/installed boundary. App production vẫn
+chưa mở lại sau epoch `STOPPING/CLOSED`; do đó chưa chạy `--preflight` hoặc
+`--execute`, chưa tạo workspace/binding/task và chưa nâng `LIVE_ACCEPTED`.
+
 `DESKTOP-63643J4` (`100.72.186.41`) hiện reachable qua Tailscale/SSH. Exact
 checkout `E:\DEV\Codex-web` là nguồn Git dùng cho build/receipt; không dùng
 candidate directory đã retire. Focused recheck lịch sử vẫn giữ: **18/18**

@@ -675,6 +675,22 @@ helper tests **3/3 PASS**; smoke runtime trả `windows_only` đúng contract. �
 là Linux preflight, chưa phải Windows fuse/Recovery/DPAPI/ACL hoặc
 `PACKAGED_PROOF`.
 
+## Checkpoint Wave 42 — Windows exact rebuild/install passed; Ubuntu deploy blocked — 21-09-2026, 21:25 +07
+
+Windows `main@bb4522c` đã chạy trọn build gate: Node/Electron **922/922 PASS**,
+MCP **1160/1160 PASS trong 2764,26s**, resource verification PASS. Installer
+`1.0.7` SHA-256 `61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`;
+executable installed khớp unpacked `a57ced0d185472d5c5e234a1177bf13ca35f14d2661300fc80e92c6daa7ecbd2`.
+Packaged recovery smoke PASS (17 resources, 8 tools, Recovery/MCP/Supervisor
+isolation). Windows worktree sạch sau khi hoàn tác icon build-only.
+
+Đây vẫn là `PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`: activation epoch production
+đang `STOPPING/CLOSED`, không có workspace/connector/authority live. Ubuntu
+release exact HEAD đã build/verify cục bộ với schema 24 và fingerprint
+`sha256:52889093c453e4b5fbbf82ddb593fb150ebe73e8d32a307d04cae81b59af3bc6`,
+nhưng SSH quản trị bị từ chối nên service chưa nạp artifact mới; admission vẫn
+`recovery`, chưa mở binding/task.
+
 ## Checkpoint W2 focused execution parity — 21-09-2026, 04:08 +07
 
 Đường `exec_command` structured argv hiện đã có focused parity proof cho bốn

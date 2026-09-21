@@ -42,6 +42,20 @@ chối nên chưa thể deploy release mới. Next action vẫn là owner closur
 source → preflight/activation Windows → strict heartbeat/workspace binding;
 đồng thời cần quyền SSH hợp lệ để verify/deploy Ubuntu release cùng HEAD.
 
+## Checkpoint Wave 42 — exact Windows package rebuilt and installed — 21-09-2026, 21:25 +07
+
+Exact checkout `bb4522c` trên Windows đã hoàn tất `npm run dist`: Node/Electron
+**922/922 PASS**, MCP **1160/1160 PASS trong 2764,26s**, resource verification
+PASS. Installer `1.0.7` SHA-256 là
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`; executable
+installed/unpacked khớp SHA-256 `a57ced0d185472d5c5e234a1177bf13ca35f14d2661300fc80e92c6daa7ecbd2`.
+Packaged recovery smoke PASS với 17 resources/8 tools và production isolation.
+
+Không có source runtime mutation; icon build tạm đã được trả về HEAD. Runtime
+production chưa mở lại sau activation `STOPPING/CLOSED`, nên chưa tạo closure,
+workspace, connector ACK, binding/task hay admission. Ubuntu release exact đã
+verify cục bộ nhưng chưa deploy vì SSH bị từ chối.
+
 ## Checkpoint Wave 40 — installed artifact hiện diện, GUI SSH không khởi động — 21-09-2026, 19:31 +07
 
 Installer exact `1.0.7` đã cài per-user tại
