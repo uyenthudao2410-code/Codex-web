@@ -14,9 +14,9 @@
 
 ## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 19:02 +07
 
-Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub ở
-`main @ abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0` (commit tài liệu hiện tại
-`9a9ba1266f178558d6a37ab293869d43190c7a2d`), worktree Windows sạch. `npm ci`
+Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub; runtime code
+lineage là `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0` và worktree Windows sạch.
+Runbook phải đọc lại `git rev-parse HEAD` ngay trước activation. `npm ci`
 và `npm run dist` đạt Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**;
 packaged và installed smoke đều pass. Installer `1.0.7` có SHA-256
 `dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.

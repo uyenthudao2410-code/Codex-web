@@ -6,10 +6,10 @@ tự cấp credential, không tự deploy và không thay thế owner acceptance
 
 ### Cửa sổ test hiện tại — 21-09-2026, 19:02 +07
 
-Exact checkout hiện tại là `E:\DEV\Codex-web` ở `main @
-abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`; commit tài liệu mới nhất là
-`9a9ba1266f178558d6a37ab293869d43190c7a2d`. Windows worktree sạch, không còn
-candidate path/branch rác. `npm ci` và `npm run dist` đã chạy trên checkout
+Exact checkout hiện tại là `E:\DEV\Codex-web`; runtime code lineage đã build là
+`abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. Windows worktree sạch, không còn
+candidate path/branch rác; đọc lại `git rev-parse HEAD` ngay trước activation.
+`npm ci` và `npm run dist` đã chạy trên checkout
 exact: Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**, source-root/secret
 gates PASS. Installer `1.0.7` SHA-256 là
 `dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
@@ -160,9 +160,9 @@ npm run dev:status
 ```
 
 Ghi lại `HEAD`, version và trạng thái dirty trong receipt nội bộ. Checkout thật
-hiện đang ở commit tài liệu `ebc972481952f053186a0cb966b11360d324b494` (runtime
-component exact code lineage là `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`)
-và sạch; candidate `E:\DEV\Codex-web-candidate-502ffb8` đã retire. Vì vậy:
+đã sạch và runtime component exact code lineage là
+`abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`; candidate
+`E:\DEV\Codex-web-candidate-502ffb8` đã retire. Vì vậy:
 
 - dùng candidate chỉ để nói `PACKAGED_PROOF`/installed smoke;
 - muốn activation code phải dùng đúng checkout/artifact mà owner vừa review và
