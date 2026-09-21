@@ -4,10 +4,10 @@ Runbook này dành cho owner hoặc Windows runner đã được ủy quyền đ
 `PACKAGED_PROOF`/`LIVE_ACCEPTED` của Execution Hub + Coding Tools MCP. Nó không
 tự cấp credential, không tự deploy và không thay thế owner acceptance.
 
-### Cửa sổ test hiện tại — 21-09-2026, 19:02 +07
+### Cửa sổ test hiện tại — 21-09-2026, 20:05 +07
 
 Exact checkout hiện tại là `E:\DEV\Codex-web`; runtime code lineage đã build là
-`abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. Windows worktree sạch, không còn
+`7f26754657c5a1e933dea000fb75a0624e72f152`. Windows worktree sạch, không còn
 candidate path/branch rác; đọc lại `git rev-parse HEAD` ngay trước activation.
 `npm ci` và `npm run dist` đã chạy trên checkout
 exact: Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**, source-root/secret
@@ -27,6 +27,18 @@ có TTY) không tạo GUI/Recovery Host process, không tạo Supervisor Task v�
 không tạo `recovery-host.json`. Vì vậy bước tiếp theo phải chạy từ desktop
 interactive của `Admin`; SSH chỉ dùng để kiểm tra, không được xem là GUI
 acceptance.
+
+Wave 41 recheck cho thấy UI packaged/Recovery Host/MCP đã từng chạy đúng
+installation và owner identity khớp, nhưng strict snapshot vẫn chưa có
+workspace, MCP execution, central authority hoặc connector ACK. Một activation
+owner attempt đã dừng ở `STOPPING` với admission đóng, không có replacement
+process; descriptor stale và Supervisor task không tồn tại. Không được gọi đây
+là activation thành công hoặc `LIVE_ACCEPTED`.
+
+Task cũ `CodingTools-StageA-Deferred-Worker` (09-03) trỏ tới file tạm đã mất
+đã được gỡ đúng mục tiêu. Không xoá `%APPDATA%\\web-mcp-assistant`, credential,
+workspace hay activation evidence. Khi owner mở lại UI, phải đọc `HEAD` hiện
+tại và tạo closure năm trường mới trước `--preflight`/`--execute`.
 
 `DESKTOP-63643J4` (`100.72.186.41`) hiện reachable qua Tailscale/SSH. Exact
 checkout `E:\DEV\Codex-web` là nguồn Git dùng cho build/receipt; không dùng

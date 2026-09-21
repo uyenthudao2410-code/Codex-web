@@ -6,12 +6,43 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **21-09-2026, 19:02 +07** đã đối chiếu Linux,
+> trước: checkpoint mới nhất **21-09-2026, 20:05 +07** đã đối chiếu Linux,
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. Exact Windows build đạt Node/Electron
+> 7f26754657c5a1e933dea000fb75a0624e72f152`. Exact Windows build đạt Node/Electron
 > `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
 > Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
 > nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 41 — activation owner attempt stopped; central package drift — 21-09-2026, 20:05 +07
+
+Đối chiếu mới nhất cho thấy Linux, GitHub và checkout Windows
+`E:\DEV\Codex-web` đều ở `main @ 7f26754657c5a1e933dea000fb75a0624e72f152`;
+Windows worktree sạch. Installer `1.0.7` hiện diện và UI packaged đã từng
+chạy đúng installation; Recovery Host/MCP/UI process được quan sát với owner
+identity khớp. Strict snapshot vẫn có `workspace=""`, `mcpRunning=false`,
+`centralConnected=false`, `authorityReady=false`, `componentsReady=false`,
+`fullyReady=false`, `updateIncomplete=true`, closure trống và connector
+`UNAVAILABLE`.
+
+Trong lúc kiểm tra, một activation epoch owner chuyển sang
+`STOPPING`/`admission=CLOSED` nhưng không tạo replacement process; descriptor
+hiện stale và không có Supervisor task. Đây là **activation incomplete**, không
+phải `LIVE_ACCEPTED`; không sửa epoch hay forge closure. Scheduled Task cũ
+`CodingTools-StageA-Deferred-Worker` trỏ tới file tạm đã mất được gỡ đúng mục
+tiêu; profile `%APPDATA%\\web-mcp-assistant`, credential và workspace không bị
+xoá.
+
+Ubuntu `/healthz` vẫn `ok=true`, nhưng service đang nạp release cũ
+`0843ece334e07dd29f03cbd4c67fa97fc885ea1c` với package fingerprint khác source
+HEAD hiện tại; admission vẫn `recovery`, `oauth_principals=0` và còn một action
+unquarantined. SSH quản trị Ubuntu bị từ chối, nên chưa thể đưa release
+`7f267546` lên service. Mức bằng chứng giữ nguyên
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate PACKAGED_PROOF`.
+
+Next action: owner mở app từ desktop interactive, tạo closure exact source đủ
+năm trường cho đúng HEAD hiện tại; sau đó preflight/activation và strict
+heartbeat. Cần quyền SSH hợp lệ để build/verify/deploy Control Plane release
+đúng HEAD; không mở admission hoặc tạo binding/task trước hai gate này.
 
 ## Checkpoint Wave 39 — exact source/build đã đồng bộ, live activation còn mở — 21-09-2026, 19:02 +07
 

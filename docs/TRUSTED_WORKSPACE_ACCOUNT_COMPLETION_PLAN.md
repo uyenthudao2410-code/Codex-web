@@ -6,11 +6,11 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 19:02 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 20:05 +07
 
-Wave 39 đã đối chiếu Linux, GitHub `origin/main` và checkout exact Windows
+Wave 41 đã đối chiếu Linux, GitHub `origin/main` và checkout exact Windows
 `E:\DEV\Codex-web` ở `main @
-abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`. `npm ci` và `npm run dist` đạt
+7f26754657c5a1e933dea000fb75a0624e72f152`. `npm ci` và `npm run dist` đạt
 Node/Electron **922/922 PASS** và MCP **1160/1160 PASS**; packaged/installed
 smoke đều pass, installer `1.0.7` có SHA-256
 `dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
@@ -21,6 +21,26 @@ Không có credential/context/admission/binding/task/deploy mutation trong wave
 này. Gate còn lại là owner acceptance exact source + supported full-clean
 activation, sau đó mới enrollment/workspace generation/binding/task, T01–T16,
 restore và soak.
+
+## Checkpoint Wave 41 — activation incomplete và Ubuntu package drift — 21-09-2026, 20:05 +07
+
+Runtime packaged trên Windows đã được quan sát với Recovery Host/MCP/UI owner
+identity hợp lệ, nhưng strict snapshot vẫn là `workspace=""`,
+`mcpRunning=false`, `centralConnected=false`, `authorityReady=false`,
+`componentsReady=false`, `fullyReady=false`, `updateIncomplete=true`, closure
+trống và connector `UNAVAILABLE`.
+
+Một activation owner attempt đã tạo epoch nhưng dừng ở
+`STOPPING`/`admission=CLOSED`; không có replacement process và descriptor trở
+thành stale. Đây là failure/incomplete state, không được tự sửa epoch hoặc
+forge checkpoint. Task `CodingTools-StageA-Deferred-Worker` cũ trỏ tới file tạm
+đã mất đã được gỡ; profile và credential giữ nguyên.
+
+Control Plane Ubuntu vẫn chạy release cũ, package fingerprint không khớp source
+HEAD `7f267546`, admission `recovery`, `oauth_principals=0`; SSH quản trị bị từ
+chối nên chưa thể deploy release mới. Next action vẫn là owner closure exact
+source → preflight/activation Windows → strict heartbeat/workspace binding;
+đồng thời cần quyền SSH hợp lệ để verify/deploy Ubuntu release cùng HEAD.
 
 ## Checkpoint Wave 40 — installed artifact hiện diện, GUI SSH không khởi động — 21-09-2026, 19:31 +07
 

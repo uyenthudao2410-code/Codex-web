@@ -8,14 +8,14 @@
 > Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
 > nhiều client và `binding_id` nằm ở
 > [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
-> checkpoint mới nhất **21-09-2026, 19:02 +07, Windows `DESKTOP-63643J4` Wave 39**.
+> checkpoint mới nhất **21-09-2026, 20:05 +07, Windows `DESKTOP-63643J4` Wave 41**.
 > Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
 > nâng thành package/live proof.
 
-## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 19:02 +07
+## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 20:05 +07
 
-Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub; runtime code
-lineage là `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0` và worktree Windows sạch.
+Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub; checkout
+HEAD là `7f26754657c5a1e933dea000fb75a0624e72f152` và worktree Windows sạch.
 Runbook phải đọc lại `git rev-parse HEAD` ngay trước activation. `npm ci`
 và `npm run dist` đạt Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**;
 packaged và installed smoke đều pass. Installer `1.0.7` có SHA-256
@@ -42,6 +42,27 @@ Supervisor Task và không có `recovery-host.json`; `dev-ui` vẫn `MISSING/ENO
 Đây là installed artifact proof, chưa `LIVE_ACCEPTED`. Owner cần mở app từ
 desktop interactive và tạo closure/activation chính thức trước khi pairing,
 workspace binding hoặc task.
+
+## Checkpoint Wave 41 — activation incomplete và Ubuntu release chưa nạp HEAD hiện tại — 21-09-2026, 20:05 +07
+
+Read-only SSH recheck quan sát được packaged UI/Recovery Host/MCP với identity
+đúng installation, nhưng strict snapshot vẫn `workspace=""`,
+`mcpRunning=false`, `centralConnected=false`, `authorityReady=false`,
+`componentsReady=false`, `fullyReady=false`, `updateIncomplete=true`, closure
+trống và connector `UNAVAILABLE`.
+
+Một activation owner attempt đã chuyển durable epoch sang
+`STOPPING`/`admission=CLOSED` rồi mất replacement process; descriptor stale và
+không có Supervisor task. Đây là **activation incomplete**, không phải live
+acceptance. Task tạm cũ trỏ tới file đã mất đã được gỡ; profile/credential/
+workspace không bị xoá và epoch không bị sửa bằng tay.
+
+Ubuntu `/healthz` vẫn `ok=true` nhưng đang nạp release
+`0843ece334e07dd29f03cbd4c67fa97fc885ea1c`, package fingerprint không khớp
+source HEAD hiện tại, admission `recovery`, `oauth_principals=0`; SSH quản trị
+Ubuntu bị từ chối. Vì vậy chưa thể deploy release mới, mở admission hoặc tạo
+binding/task. Mức proof vẫn `SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate
+PACKAGED_PROOF`.
 
 ## Checkpoint Wave 36 — BLOCKED chờ external owner activation — 21-09-2026, 12:41 +07
 

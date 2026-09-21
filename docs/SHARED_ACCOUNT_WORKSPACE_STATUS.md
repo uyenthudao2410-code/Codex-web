@@ -1,12 +1,26 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 21-09-2026, 19:02 +07
+**Ngày cập nhật:** 21-09-2026, 20:05 +07
 **Branch:** `main`
-**HEAD đã kiểm tra:** `abc1a639a2bfd48a7f8c7c212bc26bb7724c9fc0`
+**HEAD đã kiểm tra:** `7f26754657c5a1e933dea000fb75a0624e72f152`
 **Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
 Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 41 — activation incomplete; Ubuntu release chưa đồng bộ — 21-09-2026, 20:05 +07
+
+Linux, GitHub và Windows đều ở `main @ 7f26754657c5a1e933dea000fb75a0624e72f152`,
+Windows worktree sạch. Packaged UI/Recovery Host đã được quan sát sống đúng
+installation, nhưng strict snapshot vẫn chưa có workspace, MCP execution,
+central authority hoặc connector ACK; closure exact source vẫn trống.
+
+Một activation owner attempt đã dừng ở `STOPPING` với admission đóng và không
+có replacement process, nên chưa được nâng thành `LIVE_ACCEPTED`. Task tạm cũ
+trỏ tới file đã mất đã được gỡ; không xoá profile, credential hay workspace.
+Ubuntu `/healthz` hiện vẫn nạp release cũ, admission `recovery`, chưa có OAuth
+principal và SSH quản trị bị từ chối. Cần closure exact source + quyền deploy
+Ubuntu trước khi mở admission, binding hoặc task.
 
 ## Checkpoint Wave 39 — exact main Windows build và installed smoke — 21-09-2026, 19:02 +07
 
