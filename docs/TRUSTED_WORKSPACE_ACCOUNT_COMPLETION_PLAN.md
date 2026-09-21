@@ -6,7 +6,13 @@
 > [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
 > Tài liệu này tiếp tục giữ chronology, receipt và các gate chi tiết.
 
-## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 21:35 +07
+## Trạng thái điều hành mới nhất — `DESKTOP-63643J4` — 21-09-2026, 21:42 +07
+
+Wave 44 đã đồng bộ commit delivery receipt `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`
+giữa Linux/GitHub và Windows. Đây là `.coding-tools` evidence-only delta, không
+đổi package-relevant source; Windows worktree sạch, installer hash vẫn
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+Runtime vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`, nên chưa có `LIVE_ACCEPTED`.
 
 Wave 43 đã đồng bộ exact source giữa Linux/GitHub và Windows `E:\DEV\Codex-web`
 ở `main @ fa055951d912997d75c9de5d7d18ee42f72b3094`; Windows worktree sạch.

@@ -4,7 +4,7 @@ Runbook này dành cho owner hoặc Windows runner đã được ủy quyền đ
 `PACKAGED_PROOF`/`LIVE_ACCEPTED` của Execution Hub + Coding Tools MCP. Nó không
 tự cấp credential, không tự deploy và không thay thế owner acceptance.
 
-### Cửa sổ test hiện tại — 21-09-2026, 21:35 +07
+### Cửa sổ test hiện tại — 21-09-2026, 21:42 +07
 
 Wave 43 đã đưa commit tài liệu/evidence `fa055951d912997d75c9de5d7d18ee42f72b3094`
 vào exact checkout Windows `E:\DEV\Codex-web`; worktree sạch. Vì commit này
@@ -16,19 +16,24 @@ Read-only recheck: `dev:status` là `MISSING/RECOVERY_DESCRIPTOR_STALE`,
 Không chạy `--execute`, không forge closure/epoch. Owner vẫn phải mở app từ
 desktop interactive và tạo closure năm trường cho đúng HEAD trước activation.
 
-Exact checkout hiện tại là `E:\DEV\Codex-web` ở `fa055951d912997d75c9de5d7d18ee42f72b3094`;
+Wave 44 đồng bộ tiếp delivery receipt `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`;
+đây là evidence-only delta, không cần rebuild package. Exact checkout hiện tại
+đã được kiểm tra lại ở HEAD này, worktree sạch.
+
+Exact checkout hiện tại là `E:\DEV\Codex-web` ở `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`;
 runtime package lineage đã build là `bb4522cdc5f011942cce89f98c415df930f3f359`.
 Windows worktree sạch, không còn
 candidate path/branch rác; đọc lại `git rev-parse HEAD` ngay trước activation.
 `npm ci` và `npm run dist` đã chạy trên checkout
 exact: Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**, source-root/secret
 gates PASS. Installer `1.0.7` SHA-256 là
-`dcf1f5535eacb3e5c66d3a246503bec5dbcf949833b6e476b83576574a68351b`.
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
 
 Packaged và installed smoke đều pass; installed smoke đã uninstall và cleanup
 profile/process. Vì vậy bằng chứng hiện tại là exact candidate
 `PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`: `dev-ui status` hiện
-`MISSING/ENOENT` và full-clean preflight thiếu `recovery-host.json`. Không tự
+`MISSING/RECOVERY_DESCRIPTOR_STALE` và full-clean preflight cũng trả
+`RECOVERY_DESCRIPTOR_STALE`. Không tự
 forge acceptance, credential/context, admission, binding/task hoặc deploy.
 
 Wave 40 đã cài installer exact `1.0.7` per-user tại

@@ -1,12 +1,21 @@
 # Kế hoạch hoàn thiện và hiện trạng — một tài khoản ChatGPT, nhiều máy, workspace dùng chung
 
-**Ngày cập nhật:** 21-09-2026, 21:35 +07
+**Ngày cập nhật:** 21-09-2026, 21:42 +07
 **Branch:** `main`
-**HEAD đã kiểm tra:** `fa055951d912997d75c9de5d7d18ee42f72b3094`
+**HEAD đã kiểm tra:** `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`
 **Mức bằng chứng hiện tại:** `SOURCE_PRESENT + FOCUSED_TEST_PROOF` + exact
 Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 
 Đây là bản đọc nhanh dành cho việc điều hành. [Kế hoạch chi tiết theo chronology](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md), [runbook Windows exact](WINDOWS_EXACT_VALIDATION_RUNBOOK.md), [trạng thái Control Plane](CONTROL_PLANE_IMPLEMENTATION_STATUS.md) và [current state](CURRENT_STATE.md) vẫn giữ toàn bộ receipt lịch sử; tài liệu này chỉ gom lại contract hiện hành, phần đã tận dụng và việc còn phải đóng.
+
+## Checkpoint Wave 44 — receipt HEAD đã đồng bộ sang Windows; live gate giữ nguyên — 21-09-2026, 21:42 +07
+
+`dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0` chỉ là delivery receipt
+`.coding-tools`, không đổi package-relevant source. Linux/GitHub và Windows
+`E:\DEV\Codex-web` cùng ở HEAD này, worktree Windows sạch; installer hash vẫn
+`61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+Runtime vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`, chưa `LIVE_ACCEPTED`; owner
+closure/activation là gate kế tiếp.
 
 ## Checkpoint Wave 43 — exact source đã đồng bộ sang Windows; activation vẫn chờ owner — 21-09-2026, 21:35 +07
 

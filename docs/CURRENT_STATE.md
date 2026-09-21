@@ -6,12 +6,24 @@
 > triển khai, đọc bản tóm tắt trước rồi đối chiếu receipt ở đây.
 
 > Đọc [kế hoạch điều hành hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
-> trước: checkpoint mới nhất **21-09-2026, 21:35 +07** đã đối chiếu Linux,
+> trước: checkpoint mới nhất **21-09-2026, 21:42 +07** đã đối chiếu Linux,
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
-> fa055951d912997d75c9de5d7d18ee42f72b3094`. Exact Windows build đạt Node/Electron
+> dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`. Exact Windows build đạt Node/Electron
 > `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
-> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
+> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`,
+> `RECOVERY_DESCRIPTOR_STALE`),
 > nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
+
+## Checkpoint Wave 44 — delivery receipt HEAD đã đồng bộ; package/runtime không đổi — 21-09-2026, 21:42 +07
+
+Commit `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0` chỉ cập nhật delivery receipt
+`.coding-tools`; package-relevant source và installer không đổi. Linux/GitHub và
+Windows `E:\DEV\Codex-web` đều đã ở HEAD này, worktree Windows sạch. Installer
+candidate vẫn giữ SHA-256 `61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
+
+Runtime Windows vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; preflight fail-closed
+vì Recovery Host owner không sống. Mức proof không đổi và chưa được tạo
+closure/epoch/binding/task.
 
 ## Checkpoint Wave 43 — GitHub/Windows exact source đồng bộ; live gate vẫn đóng — 21-09-2026, 21:35 +07
 

@@ -8,25 +8,25 @@
 > Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
 > nhiều client và `binding_id` nằm ở
 > [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
-> checkpoint mới nhất **21-09-2026, 21:35 +07, Windows `DESKTOP-63643J4` Wave 43**.
+> checkpoint mới nhất **21-09-2026, 21:42 +07, Windows `DESKTOP-63643J4` Wave 44**.
 > Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
 > nâng thành package/live proof.
 
-## Checkpoint Wave 43 — source Windows đã đồng bộ; Control Plane chưa deploy — 21-09-2026, 21:35 +07
+## Checkpoint Wave 44 — receipt HEAD đã đồng bộ; Control Plane chưa deploy — 21-09-2026, 21:42 +07
 
 Linux/GitHub và Windows exact checkout đều ở `main @
-fa055951d912997d75c9de5d7d18ee42f72b3094`; Windows worktree sạch. Đây là delta
-tài liệu/evidence sau artifact build `bb4522c`, không thay đổi package runtime.
+dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`; Windows worktree sạch. Đây là
+delivery receipt `.coding-tools` sau artifact build `bb4522c`, không thay đổi package runtime.
 Windows vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; Ubuntu chưa có quyền SSH quản
 trị để deploy release exact, nên không mở admission hoặc tạo binding/task.
 Mức bằng chứng giữ nguyên `SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAGED_PROOF`,
 chưa `LIVE_ACCEPTED`. Next action là owner closure/activation Windows trước,
 sau đó mới verify/deploy Control Plane khi có SSH authority hợp lệ.
 
-## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 21:35 +07
+## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 21:42 +07
 
 Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub; checkout
-HEAD là `fa055951d912997d75c9de5d7d18ee42f72b3094` và worktree Windows sạch.
+HEAD là `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0` và worktree Windows sạch.
 Runbook phải đọc lại `git rev-parse HEAD` ngay trước activation. `npm ci`
 và `npm run dist` đạt Node/Electron **922/922 PASS**, MCP **1160/1160 PASS**;
 packaged và installed smoke đều pass trên package lineage `bb4522c`. Installer
