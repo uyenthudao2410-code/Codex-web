@@ -10,8 +10,7 @@
 > GitHub và Windows `DESKTOP-63643J4` ở cùng `main @
 > dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`. Exact Windows build đạt Node/Electron
 > `922/922`, MCP `1160/1160`, packaged/installed smoke pass và cleanup pass.
-> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`,
-> `RECOVERY_DESCRIPTOR_STALE`),
+> Runtime sau cleanup hiện không có Recovery Host (`state=MISSING`, `ENOENT`),
 > nên chưa chứng minh live workspace binding hay `LIVE_ACCEPTED`.
 
 ## Checkpoint Wave 44 — delivery receipt HEAD đã đồng bộ; package/runtime không đổi — 21-09-2026, 21:42 +07
@@ -24,6 +23,20 @@ candidate vẫn giữ SHA-256 `61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854
 Runtime Windows vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; preflight fail-closed
 vì Recovery Host owner không sống. Mức proof không đổi và chưa được tạo
 closure/epoch/binding/task.
+
+## Checkpoint Wave 45 — refresh tương tác đã bootstrap nhưng thiếu Runtime API Key — 21-09-2026, 22:06 +07
+
+Trong phiên `Admin` console tương tác, lệnh refresh được hỗ trợ đã bootstrap
+Recovery Host và tạo operation/epoch refresh mới, nhưng dừng có kiểm soát khi
+runtime preflight phát hiện profile local chưa có `Runtime API Key`.
+Epoch kết thúc `FAILED` với `ACTIVATION_EPOCH_FAILED`; không có UI/MCP/Tunnel
+process sống. Task, script và log tạm của lần thử đã được xoá; profile,
+credential và workspace không bị xoá.
+
+Windows hiện lại `DEV_UI STATUS state=MISSING`/`ENOENT`. Không forge key,
+closure hoặc epoch. Owner phải lưu key qua UI trên Windows nếu chọn local
+executor, hoặc hoàn tất central pairing/config nếu chọn central executor; sau
+đó mới chạy refresh/preflight lại.
 
 ## Checkpoint Wave 43 — GitHub/Windows exact source đồng bộ; live gate vẫn đóng — 21-09-2026, 21:35 +07
 

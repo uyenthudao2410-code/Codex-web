@@ -14,6 +14,13 @@ giữa Linux/GitHub và Windows. Đây là `.coding-tools` evidence-only delta, 
 `61fb7fa5785c3861fcd4c8371f54172894472c9a0b7d48854c5cb05126d7c14e`.
 Runtime vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`, nên chưa có `LIVE_ACCEPTED`.
 
+Wave 45 đã thử `dev-ui-lifecycle.js refresh` từ phiên `Admin` tương tác. Host
+bootstrap thành công và tạo refresh epoch, nhưng runtime dừng trước postflight
+vì thiếu Runtime API Key trong profile local; epoch kết thúc `FAILED` với
+`ACTIVATION_EPOCH_FAILED`. Đã dọn task/PID/script/log tạm, không xoá profile,
+credential hoặc workspace. Owner cần chọn local-key qua UI hoặc central pairing
+đúng contract trước khi thử refresh/preflight lại.
+
 Wave 43 đã đồng bộ exact source giữa Linux/GitHub và Windows `E:\DEV\Codex-web`
 ở `main @ fa055951d912997d75c9de5d7d18ee42f72b3094`; Windows worktree sạch.
 Delta này chỉ là tài liệu/evidence sau build `bb4522c`, không làm thay đổi package

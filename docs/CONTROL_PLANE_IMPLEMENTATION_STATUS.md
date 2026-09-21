@@ -23,6 +23,15 @@ Mức bằng chứng giữ nguyên `SOURCE_PRESENT + FOCUSED_TEST_PROOF + PACKAG
 chưa `LIVE_ACCEPTED`. Next action là owner closure/activation Windows trước,
 sau đó mới verify/deploy Control Plane khi có SSH authority hợp lệ.
 
+## Checkpoint Wave 45 — Windows refresh thiếu local Runtime API Key — 21-09-2026, 22:06 +07
+
+Refresh tương tác đã bootstrap được Recovery Host nhưng failed-closed ở runtime
+preflight vì profile local chưa có Runtime API Key; epoch refresh kết thúc
+`FAILED/ACTIVATION_EPOCH_FAILED`. Không có binding/task/admission hoặc Ubuntu
+deploy mutation; task/PID/script/log tạm đã được dọn. Cần owner chọn local-key
+qua UI hoặc central pairing/config hợp lệ trước khi tiếp tục Windows activation;
+Control Plane Ubuntu vẫn chưa deploy do thiếu SSH authority.
+
 ## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 21:42 +07
 
 Exact checkout `E:\DEV\Codex-web` đã đồng bộ với Linux và GitHub; checkout
@@ -35,7 +44,7 @@ packaged và installed smoke đều pass trên package lineage `bb4522c`. Instal
 
 Installed smoke đã uninstall và cleanup nên runtime hiện `DEV_UI STATUS
 state=MISSING`, `host=unavailable`, `error_code=ENOENT`; full-clean preflight
-thiếu `recovery-host.json`. Mức proof là exact candidate `PACKAGED_PROOF`, chưa
+cũng trả `ENOENT`. Mức proof là exact candidate `PACKAGED_PROOF`, chưa
 `LIVE_ACCEPTED`; chưa có credential/context/admission/binding/task/deploy
 mutation. Gate tiếp theo là owner acceptance exact source + supported full-clean
 activation, rồi mới enrollment/workspace/binding/task và T01–T16.

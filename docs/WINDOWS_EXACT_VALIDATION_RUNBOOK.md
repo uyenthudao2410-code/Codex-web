@@ -20,6 +20,13 @@ Wave 44 đồng bộ tiếp delivery receipt `dcb3fc492b22d1b04547f3eae1c595b4ee
 đây là evidence-only delta, không cần rebuild package. Exact checkout hiện tại
 đã được kiểm tra lại ở HEAD này, worktree sạch.
 
+Wave 45 đã thử refresh từ phiên `Admin` tương tác. Recovery Host bootstrap và
+refresh epoch bắt đầu được, nhưng runtime dừng với `ACTIVATION_EPOCH_FAILED`
+do chưa có Runtime API Key trong profile local. Task/PID/script/log tạm đã dọn;
+không chạy `--execute` của full-clean activation và không forge closure. Owner
+cần lưu key cục bộ qua UI nếu chọn local executor, hoặc hoàn tất central pairing
+trước khi thử refresh/preflight lại.
+
 Exact checkout hiện tại là `E:\DEV\Codex-web` ở `dcb3fc492b22d1b04547f3eae1c595b4ee6e4ce0`;
 runtime package lineage đã build là `bb4522cdc5f011942cce89f98c415df930f3f359`.
 Windows worktree sạch, không còn
@@ -32,8 +39,7 @@ gates PASS. Installer `1.0.7` SHA-256 là
 Packaged và installed smoke đều pass; installed smoke đã uninstall và cleanup
 profile/process. Vì vậy bằng chứng hiện tại là exact candidate
 `PACKAGED_PROOF`, chưa `LIVE_ACCEPTED`: `dev-ui status` hiện
-`MISSING/RECOVERY_DESCRIPTOR_STALE` và full-clean preflight cũng trả
-`RECOVERY_DESCRIPTOR_STALE`. Không tự
+`MISSING/ENOENT` và full-clean preflight cũng trả `ENOENT`. Không tự
 forge acceptance, credential/context, admission, binding/task hoặc deploy.
 
 Wave 40 đã cài installer exact `1.0.7` per-user tại

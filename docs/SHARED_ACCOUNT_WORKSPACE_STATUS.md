@@ -17,6 +17,18 @@ Windows build/installed candidate `PACKAGED_PROOF`; chưa phải `LIVE_ACCEPTED`
 Runtime vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`, chưa `LIVE_ACCEPTED`; owner
 closure/activation là gate kế tiếp.
 
+## Checkpoint Wave 45 — refresh Windows dừng đúng vì thiếu Runtime API Key — 21-09-2026, 22:06 +07
+
+Refresh được chạy trong phiên `Admin` tương tác và đã bootstrap Recovery Host,
+nhưng runtime local không có `Runtime API Key`, nên epoch refresh kết thúc
+`FAILED` với `ACTIVATION_EPOCH_FAILED`. Không còn process/task/script/log tạm;
+profile, credential và workspace được giữ nguyên. Runtime trở lại
+`MISSING/ENOENT`, chưa `LIVE_ACCEPTED`.
+
+Gate tiếp theo là owner nhập key trong UI Windows (không gửi key vào chat) nếu
+dùng local executor, hoặc hoàn tất pairing/config central executor nếu không
+muốn giữ key trên Windows; sau đó mới refresh/preflight lại.
+
 ## Checkpoint Wave 43 — exact source đã đồng bộ sang Windows; activation vẫn chờ owner — 21-09-2026, 21:35 +07
 
 Linux/GitHub và Windows `E:\DEV\Codex-web` đều ở `main @
