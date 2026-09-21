@@ -78,6 +78,7 @@ test('electron packaging excludes volatile resource evidence and validates the p
   assert.match(packagedSmoke, /CODEX_PACKAGED_APP_ROOT/);
   assert.match(packagedSmoke, /reconcile_exact_stale_run\.py/);
   assert.match(packagedSmoke, /recovery_approved_patch_bridge\.cjs/);
+  assert.match(packagedSmoke, /recovery_exec_bridge\.cjs/);
   assert.match(packagedSmoke, /assertExactControlPlaneAdapter/);
   assert.equal(fs.existsSync(path.join(__dirname, '..', 'scripts', 'installed-recovery-smoke.js')), true);
 });

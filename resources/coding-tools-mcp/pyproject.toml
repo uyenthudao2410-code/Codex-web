@@ -28,6 +28,7 @@ dev = [
   "mcp>=1.26,<2",
   "mypy>=2.1,<2.2",
   "PyYAML>=6.0",
+  "pytest>=8,<9",
   "ruff>=0.15,<0.16",
   "typing_extensions>=4.12",
 ]

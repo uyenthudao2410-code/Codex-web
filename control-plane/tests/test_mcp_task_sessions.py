@@ -8,13 +8,16 @@ reverting files.
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from control_plane.store import (
     ConflictError,
     ControlPlaneStore,
+    MCP_TASK_WRITER_LEASE_TTL_MS,
 )
 from control_plane.mcp_facade import ControlPlaneMcpFacade
 
@@ -109,6 +112,81 @@ class McpTaskSessionTests(unittest.TestCase):
                 facade_contract=self._facade(),
                 task_id=task_a["task_id"],
             )
+
+    def test_task_open_idempotency_replays_exact_task_and_conflicts_on_changed_intent(self) -> None:
+        owner = "owner-default"
+        principal = self._principal(owner_id=owner, subject="idempotent-task")['principal_id']
+        binding = self._target(owner_id=owner, suffix="idempotent")
+        first = self.store.create_mcp_task_session(
+            owner_id=owner, principal_id=principal, binding_id=binding["binding_id"],
+            label="Same task", idempotency_key="task-open-idempotent-001",
+        )
+        replayed = self.store.create_mcp_task_session(
+            owner_id=owner, principal_id=principal, binding_id=binding["binding_id"],
+            label="Same task", idempotency_key="task-open-idempotent-001",
+        )
+        self.assertEqual(replayed["task_id"], first["task_id"])
+        with self.assertRaises(ConflictError):
+            self.store.create_mcp_task_session(
+                owner_id=owner, principal_id=principal, binding_id=binding["binding_id"],
+                label="Changed label", idempotency_key="task-open-idempotent-001",
+            )
+
+    def test_writer_lease_serializes_same_binding_and_allows_handoff_after_release_or_expiry(self) -> None:
+        owner = "owner-default"
+        principal = self._principal(owner_id=owner, subject="writer-lease")['principal_id']
+        binding = self._target(owner_id=owner, suffix="writer")
+        task_a = self.store.create_mcp_task_session(
+            owner_id=owner, principal_id=principal, binding_id=binding["binding_id"], label="Writer A",
+            idempotency_key="writer-task-a-0001",
+        )
+        task_b = self.store.create_mcp_task_session(
+            owner_id=owner, principal_id=principal, binding_id=binding["binding_id"], label="Writer B",
+            idempotency_key="writer-task-b-0001",
+        )
+
+        first = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner, principal_id=principal, task_id=task_a["task_id"]
+        )
+        self.assertEqual(first["state"], "held")
+        self.assertEqual(first["lease_generation"], 1)
+        renewed = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner, principal_id=principal, task_id=task_a["task_id"]
+        )
+        self.assertTrue(renewed["replayed"])
+        self.assertEqual(renewed["lease_generation"], first["lease_generation"])
+        with self.assertRaises(ConflictError):
+            self.store.claim_mcp_task_writer_lease(
+                owner_id=owner, principal_id=principal, task_id=task_b["task_id"]
+            )
+
+        observed = self.store.observe_mcp_task(
+            owner_id=owner, principal_id=principal, task_id=task_b["task_id"]
+        )
+        self.assertEqual(observed["writer_lease"]["task_id"], task_a["task_id"])
+        self.assertEqual(observed["writer_lease"]["state"], "held")
+        self.assertNotIn("arguments_json", json.dumps(observed))
+
+        released = self.store.release_mcp_task_writer_lease(
+            owner_id=owner, principal_id=principal, task_id=task_a["task_id"], reason="chat_handoff"
+        )
+        self.assertEqual(released["state"], "released")
+        second = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner, principal_id=principal, task_id=task_b["task_id"]
+        )
+        self.assertEqual(second["state"], "held")
+
+        self.now += MCP_TASK_WRITER_LEASE_TTL_MS + 1
+        third = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner, principal_id=principal, task_id=task_a["task_id"]
+        )
+        self.assertEqual(third["state"], "held")
+        self.assertEqual(third["lease_generation"], 2)
+        final = self.store.observe_mcp_task(
+            owner_id=owner, principal_id=principal, task_id=task_b["task_id"]
+        )
+        self.assertEqual(final["writer_lease"]["state"], "held")
+        self.assertEqual(final["writer_lease"]["task_id"], task_a["task_id"])
 
     def test_closing_task_fences_new_actions_but_keeps_history(self) -> None:
         owner = "owner-default"
@@ -230,7 +308,7 @@ class McpTaskSessionTests(unittest.TestCase):
         # Inject one verified completed receipt + settled delivery directly.
         # The acceptance gate only checks for a completed receipt and a
         # non-unknown delivery; payload shape is validated by the facade relay.
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             connection.execute(
                 "INSERT INTO receipts(receipt_id, action_id, device_id, local_handle, receipt_state, payload_json, receipt_digest, received_at_ms)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -290,7 +368,7 @@ class McpTaskSessionTests(unittest.TestCase):
             facade_contract=self._facade(),
             task_id=task["task_id"],
         )
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             connection.execute("UPDATE actions SET delivery_state = 'reconcile_required' WHERE action_id = ?", (intent["action_id"],))
             connection.execute(
                 "INSERT INTO receipts(receipt_id, action_id, device_id, local_handle, receipt_state, payload_json, receipt_digest, received_at_ms)"
@@ -360,9 +438,11 @@ class McpTaskFacadeTests(unittest.TestCase):
 
     def test_task_open_list_close_span_read_without_retarget(self) -> None:
         self.assertEqual(self.facade.contract["schema_version"], 17)
-        opened = self._call({"operation": "task_open", "binding_id": self.binding["binding_id"], "label": "Chat A"})
+        opened = self._call({"operation": "task_open", "binding_id": self.binding["binding_id"], "label": "Chat A", "idempotency_key": "task-open-chat-a-0001"})
         task_id = opened["result"]["structuredContent"]["task"]["task_id"]
         self.assertTrue(task_id.startswith("task_"))
+        replayed = self._call({"operation": "task_open", "binding_id": self.binding["binding_id"], "label": "Chat A", "idempotency_key": "task-open-chat-a-0001"})
+        self.assertEqual(replayed["result"]["structuredContent"]["task"]["task_id"], task_id)
         listed = self._call({"operation": "task_list"})
         self.assertEqual([t["task_id"] for t in listed["result"]["structuredContent"]["tasks"]], [task_id])
         read = self._call({
@@ -388,6 +468,261 @@ class McpTaskFacadeTests(unittest.TestCase):
             "task_id": task_id,
         })
         self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+
+    def test_task_control_observes_and_handoffs_writer_lease(self) -> None:
+        by_name = {tool["name"]: tool for tool in self.facade.contract["tools"]}
+        self.assertEqual(
+            by_name["task_control"]["_meta"]["control_plane"]["implemented_operations"],
+            ["task_observe", "writer_claim", "writer_release"],
+        )
+        opened = self._call({
+            "operation": "task_open",
+            "binding_id": self.binding["binding_id"],
+            "label": "handoff",
+            "idempotency_key": "task-control-open-0001",
+        })
+        task_id = opened["result"]["structuredContent"]["task"]["task_id"]
+        claimed = self._call(
+            {"operation": "writer_claim", "task_id": task_id},
+            tool="task_control",
+        )
+        self.assertEqual(
+            claimed["result"]["structuredContent"]["writer_lease"]["state"],
+            "held",
+        )
+        observed = self._call(
+            {"operation": "task_observe", "task_id": task_id},
+            tool="task_control",
+        )
+        observation = observed["result"]["structuredContent"]
+        self.assertEqual(observation["task"]["task_id"], task_id)
+        self.assertEqual(observation["writer_lease"]["state"], "held")
+        self.assertNotIn("arguments_json", json.dumps(observation))
+        released = self._call(
+            {"operation": "writer_release", "task_id": task_id, "reason": "handoff"},
+            tool="task_control",
+        )
+        self.assertEqual(
+            released["result"]["structuredContent"]["writer_lease"]["state"],
+            "released",
+        )
+
+    def test_standing_write_queues_without_per_patch_permission_and_replays(self) -> None:
+        """The shared-account standing lane is task/lease bound, not approval bound."""
+
+        import base64
+        import hashlib
+        import zlib
+
+        owner = self.owner_id
+        principal = self.principal
+        binding = self.binding
+        task = self.store.create_mcp_task_session(
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"],
+            label="Standing write",
+        )
+        lease = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            task_id=task["task_id"],
+        )
+        self.assertEqual(lease["state"], "held")
+
+        old_content = b"old\n"
+        new_content = b"new\n"
+        preimage = hashlib.sha256(old_content).hexdigest()
+        postimage = hashlib.sha256(new_content).hexdigest()
+        payload = base64.b64encode(zlib.compress(new_content)).decode("ascii")
+        envelope = "\n".join((
+            "*** Begin Patch",
+            "*** Write Exact File: notes/app.txt",
+            f"@@ encoding=zlib-base64 preimage_sha256={preimage} postimage_sha256={postimage}",
+            f"+{payload}",
+            "*** End Patch",
+            "",
+        ))
+        facade = ControlPlaneMcpFacade(
+            self.store,
+            oauth_scopes=("control-plane.inventory",),
+            oauth_file_read_enabled=True,
+            oauth_patch_write_scope="control-plane.patch",
+            oauth_approved_patch_enabled=True,
+            oauth_standing_write_enabled=True,
+        )
+        contract = {
+            key: facade.contract[key]
+            for key in ("schema_version", "profile", "sha256")
+        }
+        self.assertEqual(contract["schema_version"], 19)
+        self.assertEqual(contract["profile"], "control-plane-oauth-standing-write-v1")
+        listed = facade.handle(
+            {"jsonrpc": "2.0", "id": "standing-tools-001", "method": "tools/list", "params": {}},
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            granted_context_id=None,
+            oauth_scopes=frozenset({"control-plane.inventory", "control-plane.patch"}),
+        )
+        listed_tools = {tool["name"]: tool for tool in listed["result"]["tools"]}
+        self.assertEqual(
+            listed_tools["agent_workflow"]["_meta"]["control_plane"]["capability_state"],
+            "standing_write",
+        )
+        request = {
+            "jsonrpc": "2.0",
+            "id": "standing-write-001",
+            "method": "tools/call",
+            "params": {
+                "name": "agent_workflow",
+                "arguments": {
+                    "operation": "apply_patch",
+                    "binding_id": binding["binding_id"],
+                    "task_id": task["task_id"],
+                    "path": "notes/app.txt",
+                    "preimage_sha256": preimage,
+                    "patch_sha256": hashlib.sha256(envelope.encode("utf-8")).hexdigest(),
+                    "validation_profile": "targeted",
+                    "patch_envelope": envelope,
+                    "idempotency_key": "standing-patch-key-001",
+                    "expected_facade_contract": contract,
+                },
+            },
+        }
+        first = facade.handle(
+            request,
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            granted_context_id=None,
+            oauth_scopes=frozenset({"control-plane.inventory", "control-plane.patch"}),
+        )
+        self.assertIsNotNone(first)
+        first_content = first["result"]["structuredContent"]
+        self.assertEqual(first_content["authority_mode"], "standing")
+        self.assertEqual(first_content["execution"], "queued_for_standing_local_policy")
+        self.assertFalse(first_content["replayed"])
+        self.assertNotIn("permission_request_id", request["params"]["arguments"])
+
+        replay = facade.handle(
+            request,
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            granted_context_id=None,
+            oauth_scopes=frozenset({"control-plane.inventory", "control-plane.patch"}),
+        )
+        replay_content = replay["result"]["structuredContent"]
+        self.assertTrue(replay_content["replayed"])
+        self.assertEqual(replay_content["action_id"], first_content["action_id"])
+
+        competing_task = self.store.create_mcp_task_session(
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            binding_id=binding["binding_id"],
+            label="Competing standing write",
+        )
+        denied_request = {
+            **request,
+            "id": "standing-write-002",
+            "params": {
+                **request["params"],
+                "arguments": {
+                    **request["params"]["arguments"],
+                    "task_id": competing_task["task_id"],
+                    "idempotency_key": "standing-patch-key-002",
+                },
+            },
+        }
+        denied = facade.handle(
+            denied_request,
+            owner_id=owner,
+            principal_id=principal["principal_id"],
+            granted_context_id=None,
+            oauth_scopes=frozenset({"control-plane.inventory", "control-plane.patch"}),
+        )
+        self.assertEqual(denied["error"]["data"]["code"], "CONFLICT")
+
+    def test_standing_document_create_is_durable_and_does_not_put_content_in_action_payload(self) -> None:
+        """Central admission pins document writes without making the facade a file writer."""
+
+        owner = self.owner_id
+        principal_id = self.principal["principal_id"]
+        task = self.store.create_mcp_task_session(
+            owner_id=owner,
+            principal_id=principal_id,
+            binding_id=self.binding["binding_id"],
+            label="Document create",
+        )
+        lease = self.store.claim_mcp_task_writer_lease(
+            owner_id=owner,
+            principal_id=principal_id,
+            task_id=task["task_id"],
+        )
+        self.assertEqual(lease["state"], "held")
+        facade = ControlPlaneMcpFacade(
+            self.store,
+            oauth_scopes=("control-plane.inventory",),
+            oauth_file_read_enabled=True,
+            oauth_patch_write_scope="control-plane.patch",
+            oauth_approved_patch_enabled=True,
+            oauth_standing_write_enabled=True,
+        )
+        contract = {key: facade.contract[key] for key in ("schema_version", "profile", "sha256")}
+        request = {
+            "jsonrpc": "2.0",
+            "id": "document-create-001",
+            "method": "tools/call",
+            "params": {
+                "name": "document_workflow",
+                "arguments": {
+                    "operation": "doc_create",
+                    "binding_id": self.binding["binding_id"],
+                    "task_id": task["task_id"],
+                    "target": "docs/report.md",
+                    "title": "Report",
+                    "content": "# Report\n\nCreated by the local node.",
+                    "overwrite": False,
+                    "idempotency_key": "document-create-key-001",
+                    "expected_facade_contract": contract,
+                },
+            },
+        }
+        scopes = frozenset({"control-plane.inventory", "control-plane.patch"})
+        first = facade.handle(
+            request,
+            owner_id=owner,
+            principal_id=principal_id,
+            granted_context_id=None,
+            oauth_scopes=scopes,
+        )
+        self.assertIsNotNone(first)
+        first_content = first["result"]["structuredContent"]
+        self.assertEqual(first_content["operation"], "document_create")
+        self.assertEqual(first_content["task_id"], task["task_id"])
+        self.assertFalse(first_content["replayed"])
+        self.assertNotIn("content", json.dumps(first_content))
+
+        replay = facade.handle(
+            request,
+            owner_id=owner,
+            principal_id=principal_id,
+            granted_context_id=None,
+            oauth_scopes=scopes,
+        )
+        self.assertTrue(replay["result"]["structuredContent"]["replayed"])
+        self.assertEqual(
+            replay["result"]["structuredContent"]["action_id"],
+            first_content["action_id"],
+        )
+        action = self.store.action(owner_id=owner, action_id=first_content["action_id"])
+        self.assertNotIn('"content":', action["arguments_json"])
+        with self.store._connection() as connection:
+            row = connection.execute(
+                "SELECT content, target_path, task_id FROM mcp_document_write_intents WHERE action_id = ?",
+                (first_content["action_id"],),
+            ).fetchone()
+        self.assertEqual(row["content"], "# Report\n\nCreated by the local node.")
+        self.assertEqual(row["target_path"], "docs/report.md")
+        self.assertEqual(row["task_id"], task["task_id"])
 
     def test_console_wiring_exposes_tasks_and_acceptance(self) -> None:
         from control_plane.http_api import ControlPlaneHandler

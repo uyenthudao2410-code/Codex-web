@@ -3,11 +3,345 @@
 Ngày lập: **16-09-2026**. Source kiểm tra: `main@61cd80eb35dc0bbf5bd48d7f52d665b801190d7b`.
 Trạng thái: **kế hoạch triển khai; các gate mới bên dưới chưa đạt**.
 
-> **Điểm bắt đầu hiện hành — 19-09-2026:** xem
-> [§11 — Kế hoạch đóng dự án theo tài khoản, máy và workspace](#delivery-20260919).
-> Phần này dùng audit mới để chốt thứ tự C0–C8, phạm vi bàn giao, quyền cần
-> xác nhận và tiêu chí nghiệm thu. Các receipt cũ bên dưới vẫn là lịch sử,
-> không phải trạng thái live ngày hôm nay. Kế hoạch không tự cấp quyền triển khai.
+> **Điểm bắt đầu hiện hành — 21-09-2026:** xem
+> [Kế hoạch máy tin cậy và workspace dùng chung theo tài khoản ChatGPT](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+> Quy trình Windows exact khi target sẵn sàng: [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
+> Người dùng đã làm rõ: mọi máy mở cùng tài khoản đã liên kết có thể điều khiển
+> workspace qua ID (máy A bind W1 thành B1 thì máy B/C cùng account chọn B1 và
+> lệnh chạy ở A/W1); execution ở đúng host, quyền theo cấu hình local, không
+> duyệt context/lệnh hằng ngày ở Ubuntu. Kế hoạch mới thay thế những yêu cầu
+> pilot và server-AI-controller bắt buộc mâu thuẫn bên dưới; model gateway là
+> nhánh tùy chọn. [§11](#delivery-20260919) và các receipt ngày 16–20/09 vẫn là
+> chronology/bằng chứng theo thời điểm, không phải xác minh live hôm nay. Wave 4–9
+> đã bổ sung proof node/principal revoke, retired-generation inventory, public
+> `task_open` fail-closed, Node/Electron regression recheck và standing-authority
+> configuration proof; trạng thái vẫn
+> chưa là Windows/live acceptance.
+> Không receipt lịch sử nào bị sửa; tài liệu không tự cấp quyền triển khai.
+
+### Cập nhật Wave 36 — BLOCKED, Ubuntu giữ recovery chờ owner Windows — 21-09-2026, 12:41 +07
+
+`dev:status` vẫn `MISSING/RECOVERY_DESCRIPTOR_STALE`; Supervisor vẫn
+`spawn_failed/SPAWN_FAILED` với executable thiếu. Đây là cùng blocker đã được
+kiểm chứng qua Waves 33–36; source lifecycle đã pass nhưng không còn read-only
+action nào có thể tạo current-process proof.
+
+Ubuntu giữ admission `recovery`, không dispatch/reconcile. Chờ owner chạy
+acceptance ceremony + full-clean activation trên exact Windows source/artifact;
+không sửa epoch/closure thủ công.
+
+### Cập nhật Wave 35 — source lifecycle proof pass, Ubuntu vẫn recovery — 21-09-2026, 12:39 +07
+
+Focused Node suite `dev-ui-lifecycle + full-clean-activation +
+recovery-supervisor` đạt **133 pass, 0 fail, 1 skip** (skip Windows-only).
+Đây là proof source của fail-closed lifecycle, không phải Windows live proof.
+Ubuntu giữ admission `recovery`, không reconcile action, không tạo binding/task
+và không dispatch.
+
+Target vẫn chờ owner acceptance/full-clean activation; `RECOVERY_DESCRIPTOR_STALE`
+và `SPAWN_FAILED` chưa đổi.
+
+### Cập nhật Wave 34 — lifecycle preflight fail-closed, Ubuntu không mở admission — 21-09-2026, 12:36 +07
+
+Read-only `dev:status` trên checkout và candidate đều trả
+`state=MISSING/host=unavailable/error_code=RECOVERY_DESCRIPTOR_STALE`.
+`full-clean-activation --preflight` trả exit 1 với cùng mã; Supervisor Task còn
+`Running` nhưng status `spawn_failed` vì executable bị thiếu.
+
+Ubuntu không thay admission, không reconcile action, không tạo principal/binding/
+task và không dispatch. Đây là lifecycle blocker đã được xác nhận bằng CLI
+chính thức; không thể giải quyết bằng heartbeat. Next action là owner acceptance
+trên exact source → full-clean activation → Supervisor install hỗ trợ → strict
+runtime, rồi mới test workspace thật.
+
+### Cập nhật Wave 33 — target mở để test, central vẫn giữ fail-closed — 21-09-2026, 12:29 +07
+
+Đối chiếu qua Tailscale/SSH và một heartbeat chẩn đoán bounded xác nhận
+`DESKTOP-63643J4` reachable. Máy
+đích có checkout HEAD `3779096a9156bf2827e3164d09bcc1ef647a2c01` (23 thay đổi)
+và candidate `1.0.7` không có `.git`; closure profile lại bind checkpoint/HEAD
+cũ (`8d10f27638e2498cba80edf0bcbe77ce`/`cffd2acee24a4f38f4a83ddfea4c40f766de7a63`).
+Closure chỉ còn `activation_eligible=true`, nhưng `affected_components=[]`,
+`components_current=false`, `lifecycle_clean=false`.
+
+Heartbeat trả `readiness=blocked`, `reason=runtime_unavailable`,
+`runtime_state=MISSING`, `fully_ready=unknown`, `policy_state=expired_or_disabled`;
+chỉ làm mới route evidence, không dequeue/execute action. Record epoch `READY/OPEN`
+không được xem là liveness: Recovery Host owner PID
+không còn sống, runtime PID/revision stale, Supervisor Task đang
+`spawn_failed` với `SPAWN_FAILED`. Ubuntu không mở admission, không reconcile
+action, không tạo principal/binding/task và không dispatch model/tool. Blocker
+là source/closure mismatch + Supervisor manifest stale, không phải Tailscale.
+
+Next action: owner chạy ceremony acceptance và full-clean activation được hỗ trợ
+trên exact source/artifact; chỉ sau khi strict MCP/Tunnel/UI heartbeat đạt mới
+tiếp tục binding/task, Git/build/test/deploy thật và T01–T16.
+
+### Cập nhật Wave 32 — Tailscale live test, central giữ recovery — 21-09-2026, 12:10 +07
+
+SSH/Tailscale tới `DESKTOP-63643J4` (`100.72.186.41`) xác nhận đúng node.
+Installed supervisor manifest vẫn trỏ tới executable đã bị uninstall; candidate
+unpacked `1.0.7` còn executable/installer nên được mở tạm trên data root cho
+phép thử. `recovery.ping` trả `ok=true/ready=true`, nhưng strict observation
+vẫn `mcp_ready=false`, `identity_current=false` và runtime
+`central_connected=false`, `authority_ready=false`,
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`, `fully_ready=false`,
+`update_incomplete=true`, `recovery_blocked=true`.
+
+RPC `runtime.start` bị từ chối HTTP 409 `UPDATE_INCOMPLETE`: epoch cũ không cho
+thay Coding MCP tại chỗ; cần full-clean activation epoch mới do owner chấp thuận.
+`runtime-heartbeat` exit 0 ở mức `degraded/packaged_runtime_unready`, route
+evidence `fresh`, không dequeue action/receipt và không gọi model/provider.
+Candidate process đã được dừng sau test; hiện không có process live, descriptor
+stale và supervisor retry `SPAWN_FAILED` do executable trong manifest thiếu.
+
+Ubuntu giữ nguyên `/healthz` read-only (`ok=true`, schema 19, SQLite `ok`,
+`admission_mode=recovery`, `oauth_principals=0`, `node_workspaces=3`, unresolved
+11). Wave này chỉ chứng minh reachability + Recovery IPC; không mở admission,
+không reconcile action, không tạo `principal_id`/`binding_id`/task live. Gate kế
+tiếp là owner-authorized full-clean activation trên exact artifact/source rồi
+strict MCP/Tunnel/UI identity/heartbeat.
+
+### Cập nhật Wave 26 — Tailscale node recheck, central không mở dispatch — 21-09-2026, 11:27 +07
+
+`DESKTOP-63643J4` (`100.72.186.41`) reachable qua Tailscale/SSH và candidate
+đã chạy lại lifecycle/binding/route focused proof: **18/18 + 3/3 + 1/1 + 1/1 +
+1/1 PASS**. Credential node heartbeat `degraded` xác thực được với Ubuntu;
+local registry hiện có một workspace opaque, generation và capability
+`{read,write,exec}`. Đây là node registration/presence evidence, không phải
+OAuth principal/binding/task live.
+
+Probe runtime trả `blocked/runtime_unavailable`, identity `unreported`, state
+`MISSING`; connected-agent bounded một vòng không dequeue và không gửi receipt.
+Ubuntu vẫn giữ admission `recovery`, không tạo action mới, không mở provider
+dispatch, không reconcile unresolved action, restart/deploy hoặc thay đổi
+credential. Gate kế tiếp vẫn là owner mở đúng Electron/Recovery packaged
+runtime, rồi mới nghiệm thu binding/task pin, toolchain thật, fault/restore và
+soak theo runbook Windows.
+
+### Cập nhật Wave 27 — packaged smoke cô lập trên node Windows — 21-09-2026, 11:38 +07
+
+Official packaged recovery smoke trên candidate Windows trả **exit 0** với 17
+resources, 8 smart-v3 tools, Recovery Host/MCP/device identity healthy,
+Supervisor healthy, owner/hash fail-closed pass, production descriptor stable và
+Scheduled Task không mutate. User-data chạy trong TEMP cô lập và cleanup pass.
+
+Đây chỉ là candidate package/isolation evidence; không làm Ubuntu chuyển khỏi
+`admission=recovery`, không tạo OAuth principal/binding/task, không mở provider
+dispatch và không thay thế runtime heartbeat/owner acceptance.
+
+### Cập nhật Wave 28 — health read-only và source recheck — 21-09-2026, 11:41 +07
+
+Ubuntu `/healthz` sau heartbeat vẫn `ok=true`, SQLite `ok`, schema **19**,
+`admission_mode=recovery`, actual/expected package SHA khớp,
+`oauth_principals=0`, `node_workspaces=3`, unresolved actions **11**. Source
+targeted `unittest` đạt **7/7 PASS** cho account/binding/writer và local
+exec/document/standing patch. Không reconcile action, mở admission hoặc gọi
+model/provider; runtime Windows live vẫn là gate còn thiếu.
+
+### Cập nhật Wave 29 — full Control Plane source discovery — 21-09-2026, 11:44 +07
+
+`unittest discover` toàn bộ `control-plane/tests` đạt **298/298 PASS trong
+96,772s**. Các receipt lifecycle/unknown-state là coverage fixture expected;
+không có action live, không đổi admission và không gọi model/provider. Đây là
+source regression proof, không phải Windows runtime/owner acceptance.
+
+### Cập nhật Wave 30 — installed NSIS smoke trên candidate Windows — 21-09-2026, 11:49 +07
+
+Installed smoke `1.0.7` trả **exit 0**: install/register, packaged Recovery
+smoke, uninstall và user-install cleanup pass; production Recovery descriptor
+và Scheduled Task definition stable. Ubuntu không đổi admission `recovery`,
+không tạo OAuth principal/binding/task, không mở dispatch; reboot/reconnect và
+owner acceptance vẫn là gate riêng.
+
+### Cập nhật Wave 31 — post-smoke read-only state — 21-09-2026, 11:51 +07
+
+Target không còn process candidate sau installed smoke; descriptor còn metadata
+nhưng owner process đã mất, nên chỉ là stale observation. `/healthz` Ubuntu vẫn
+SQLite `ok`, schema 19, `admission_mode=recovery`, `oauth_principals=0`,
+`node_workspaces=3`, unresolved **11**. Không mở dispatch, reconcile hoặc
+restart production.
+
+### Cập nhật Wave 24 — Tailscale candidate recheck, chưa có live binding — 21-09-2026, 10:59 +07
+
+SSH/Tailscale tới `DESKTOP-63643J4` đã xác thực lại. Candidate Windows
+`1.0.7` chạy focused proof mới: secret/rotation/workspace **18/18**, same-account
+OAuth **3/3**, two-client exec **1/1**, document-write **1/1**, standing patch
+**1/1**. Các lane đều là fixture/candidate, không dùng credential thật.
+
+Read-only probe cho thấy Electron/Recovery không chạy, workspace registry chưa
+có và `list-workspaces` rỗng; Supervisor `spawn_failed`, connected agent
+`integrity_unproven`. Packaged policy inspection trên dev data root bị từ chối
+`CONTROL_PLANE_POLICY_PACKAGED_DATA_ROOT_FORBIDDEN`. Ubuntu vẫn không được mở
+admission hay nhận action live. Đây là **reachable-for-test + candidate proof**,
+chưa phải live node/workspace binding.
+
+Next action: chỉ sau khi owner cung cấp test account/data root được phép mới
+pair/enroll, register workspace, heartbeat/connected-agent, reboot/reconnect và
+rotation/revoke; giữ nguyên nguyên tắc một `principal_id` chọn `binding_id`,
+local node thực thi, Ubuntu chỉ auth/queue/receipt.
+
+### Cập nhật Wave 23 — packaged/installed smoke recheck — 21-09-2026, 10:48 +07
+
+Windows candidate packaged smoke pass với 17 resources, smart-v3 8 tools,
+Recovery/MCP/Supervisor healthy và fail-closed owner/hash. Installed smoke
+installer `1.0.7` install/register/uninstall pass, production descriptor và
+Scheduled Task definition không đổi. Đây là package/isolation proof; Ubuntu
+vẫn không mở dispatch và chưa có live account/reconnect acceptance.
+
+### Cập nhật Wave 22 — structured exec parity candidate — 21-09-2026, 10:45 +07
+
+Candidate Windows đã pass **1/1** workflow structured `git/build/test/deploy`
+trên một local lane trong **6,38s** và **1/1** HTTP→node journal/terminal
+receipt trong **4,30s**. Đây là deterministic fixture evidence cho central
+route/task/receipt, không phải workspace production hay model/deploy live.
+Ubuntu vẫn `recovery`, OAuth principals `0`; không mở dispatch. Gate tiếp theo
+là installed rotation/reconnect, hai client thật, toolchain thật, T01–T16,
+restore/soak và owner acceptance.
+
+### Cập nhật Wave 21 — Windows target reachable, central health read-only — 21-09-2026, 10:31 +07
+
+Tailscale/SSH tới `DESKTOP-63643J4` (`100.72.186.41`) đã thành công. Candidate
+cô lập `E:\DEV\Codex-web-candidate-502ffb8` version `1.0.7` có unpacked package
+và NSIS installer, không có `.git`. Focused recheck không dùng credential thật
+đạt **18/18** secret/rotation/workspace, **3/3** same-account OAuth,
+**1/1** two-client exec, **1/1** document-write và **1/1** standing patch;
+receipt trước đó của candidate là full MCP **1.160/1.160 PASS** và Node/Electron
+**922/922 PASS**. Bốn OAuth config assertion POSIX-mode trên NTFS vẫn là fixture
+riêng, không nới ACL/secret policy.
+
+Ubuntu `/healthz` chỉ đọc hiện trả `ok=true`, schema **19**, SQLite `ok`,
+`admission_mode=recovery`, counts `3 nodes / 4 enrollments / 4 bindings /
+24 contexts / 18 requests / 18 actions / 13 receipts`, `oauth_principals=0`,
+unresolved actions **11** (10 quarantined, 1 unquarantined), auth mode
+`legacy_context_grant`, package SHA khớp expected. Wave này gỡ blocker
+reachability, không mở dispatch/account live. Còn thiếu installed
+rotation/revoke + reboot/reconnect, hai ChatGPT client thật, toolchain thật,
+T01–T16, restore/soak và owner acceptance.
+
+### Cập nhật Wave 20 — target Windows và evidence guard — 21-09-2026, 08:18 +07
+
+Read-only SSH tới alias Windows `daochienthang` timeout sau 5 giây; không có
+copy source, cài đặt, restart hoặc test ngoài nào được thực hiện. Workspace
+Linux không có Windows installer/`win-unpacked` hiện hành.
+
+`npm run check:coding-tools-history` đạt **PASS (4.873 files)** và repository
+secret check đạt **PASS**. Vì vậy blocker là target Windows chưa reachable;
+không được dùng SSH timeout hoặc Linux preflight để tuyên bố live.
+
+### Cập nhật Wave 19 — phân loại Recovery/packaged gate Windows — 21-09-2026, 08:14 +07
+
+Hai lane cần Windows exact đã được chạy trên Linux để phân loại blocker:
+
+- `npm run test:recovery:e2e`: **3 SKIP, 0 FAIL**, skip có chủ đích vì
+  `process.platform !== "win32"`.
+- `npm run test:recovery:packaged`: `dist:dir` dựng Linux candidate thành công;
+  packaged smoke trả `{ok:true, skipped:true, reason:"windows_only"}`.
+
+Không dùng các skip này để tuyên bố packaged/live. Bước còn thiếu là Windows
+runner cùng HEAD để chạy Recovery/installer/DPAPI/ACL/startup/reconnect/rotation,
+rồi mới nghiệm thu hai client cùng principal và T01–T16.
+
+### Cập nhật Wave 18 — full local gate xanh bằng runtime dependency chuẩn — 21-09-2026, 08:06 +07
+
+Đã chạy `npm run test:all` trên source tree với bundled workspace Python
+**3.12.14** và `pytest 8.4.2`, source-first `PYTHONPATH`, proxy variables unset:
+
+- Electron/Desktop: **874 tests, 858 PASS, 16 SKIP, 0 FAIL**; source-root và
+  repository-secret checks PASS.
+- Coding Tools MCP: **1.160 collected, 1.153 PASS, 7 SKIP, 0 FAIL** trong
+  **159,98s**.
+- Control Plane lane riêng: **295/295 PASS** bằng Python 3.14.4.
+
+Wave 18 đã giải quyết failure dependency-only của Wave 17 bằng đúng
+interpreter có dev extra; không nới runtime policy. Warning resource/cleanup
+còn lại không làm test fail. Mức bằng chứng hiện là **full source/local
+regression xanh**, chưa phải Windows `PACKAGED_PROOF` hoặc `LIVE_ACCEPTED`.
+
+Các phần tiếp tục tận dụng: principal/account inventory, opaque `binding_id`,
+task pin và writer/generation fence; enrollment/credential/rotation/heartbeat;
+SecretStore/DPAPI path; Recovery/RuntimeOrchestrator; standing read/write/
+document/exec bridges; journal/receipt/idempotency; Coding Tools MCP,
+Supervisor, resource verifier và `.coding-tools` evidence. Không thêm executor
+Ubuntu thứ hai hoặc cơ chế copy token/context/per-command approval.
+
+Next action: Windows exact package → RunAsNode/Recovery/DPAPI/ACL/startup/
+reconnect/rotation → hai ChatGPT client cùng `principal_id` chọn `binding_id`
+→ read/write/exec/Git/build/test/deploy thật → T01–T16, backup/restore, soak 24
+giờ và owner acceptance.
+
+### Cập nhật Wave 17 — full MCP source-first rerun — 21-09-2026
+
+Rerun với source-first `PYTHONPATH`, proxy variables unset và child executable
+`python` thật đạt **1.160 collected: 1.152 PASS, 1 FAIL, 7 SKIP, 37 warnings
+trong 161.53s**. SDK/operator focused **19/19 PASS** và multi-workspace/
+authorized workspace **2/2 PASS**. Failure còn lại chỉ là continuous-check
+bookkeeping vì system Python của host không có pytest; dependency-aware child
+và cùng logic với `ShellEnvPolicy(inherit="all")` đã pass. Đây là
+environment/dependency harness gap, không phải lỗi account/binding/local
+authority. Chưa nâng Windows/live proof.
+
+### Cập nhật Wave 16 — full MCP recheck và current truth — 21-09-2026
+
+Kế hoạch account/workspace dùng chung ở
+[TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md)
+là current truth: một `principal_id` dùng chung, client chọn `binding_id`, task
+pin target và node đã bind thực thi local. Wave 16 (lịch sử) thu được
+**1.160 collected: 1.145 PASS, 8 FAIL, 7 SKIP, 35 warnings**; receipt hiện
+hành là Wave 17 **1.152 PASS, 1 FAIL, 7 SKIP**.
+
+Các failure đang chờ retry được phân loại là SDK HTTP/proxy (`httpx.InvalidURL`),
+child process thiếu lệnh `python` trên host và operator-report cần xác minh
+timestamp `24:00:00Z`. Receipt trực tiếp vẫn xanh là Node/Electron **858 PASS,
+16 SKIP, 0 FAIL / 874** và Control Plane **295/295 PASS**. Windows exact/live,
+two-client ChatGPT thật, DPAPI/ACL, toolchain thật, T01–T16 và soak vẫn mở.
+
+### Cập nhật Wave 15 — full source regression gate — 21-09-2026
+
+Full regression sau Wave 14 đạt Node/Electron **874 tests: 858 PASS, 16 SKIP,
+0 FAIL trong 43,45s**, source-root clean và repository-secret check PASS; toàn
+bộ Control Plane Python suite đạt **295/295 PASS trong 96,37s** với
+`PYTHONWARNINGS=error::ResourceWarning`. Không có failure mới. Đây chỉ là
+source/focused/integrated local proof; Windows exact/live, two-client thật,
+toolchain thật, T01–T16 và soak vẫn mở.
+
+### Cập nhật Wave 14 — focused account → node validation — 21-09-2026
+
+Re-run trên worktree hiện tại củng cố source path cho semantics một account
+ChatGPT dùng chung: **71/71 PASS** cho OAuth/account, task session, writer/exec
+và HTTP → node document/exec/patch; **146/146 PASS** cho store/node
+authority, file-read, patch, document, exec, credential/secret và workspace
+replacement; Node/Electron bridge/enrollment/recovery **34 PASS, 1 SKIP, 0
+FAIL**. Lần gọi Python đầu thiếu `control-plane` trong `PYTHONPATH`, retry đúng
+runtime đã xanh và được phân loại là lỗi harness, không phải lỗi source.
+
+Wave này chỉ nâng độ tin cậy của source/focused/integrated local proof. Nó không
+đóng Windows exact package, DPAPI/ACL, reboot/reconnect, two-client live,
+toolchain thật, T01–T16, backup/restore, soak hoặc owner acceptance. Kế hoạch
+điều hành chuẩn và reuse map vẫn ở
+[TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+
+### Cập nhật Wave 9 — Supervisor standing authority và cách đọc hiện trạng — 21-09-2026
+
+Đã sửa một blocker source ở phía Windows node: Recovery Supervisor không còn
+dùng read-only/context pilot TTL để quyết định có khởi động connected agent hay
+không. Nó kiểm tra các policy standing v2 file-read, approved-patch/document-write
+và exec; chỉ cần một lane enabled hợp lệ để giữ heartbeat và poll các lane còn
+lại theo policy riêng. Config credential đã DPAPI hóa được nhận diện qua marker
+an toàn, không giải mã ở PowerShell. Registry/workspace generation, identity
+device/endpoint/origin và hash resource vẫn là boundary fail-closed.
+
+Điều này củng cố đúng kiến trúc trung tâm: Ubuntu giữ account/auth/inventory/
+queue/receipt, còn file/process/toolchain và quyền OS nằm ở node đã bind. Nó
+không biến `binding_id` thành token, không tạo `active_workspace` toàn account,
+không cấp quyền theo từng context/lệnh và không tự failover sang máy khác.
+
+Focused receipt của wave: Supervisor helper **1/1 PASS**, connected-agent/store
+**83/83 PASS**, Node Supervisor test **1 PASS, 1 SKIP**. Chưa có Windows exact
+package/live receipt, nên các mục G/P bên dưới chỉ được nâng khi chạy artifact
+thật với reboot/reconnect, hai client cùng `principal_id`, full local
+read/write/exec và fault/soak. Xem kế hoạch chuẩn và reuse map tại
+[TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
 
 ## 1. Đích người dùng đã làm rõ — không đổi thành pilot Windows độc lập
 
@@ -2431,3 +2765,47 @@ monitoring cũ vào soak mới hoặc dùng phần trăm tùy ý để che gate 
   GIT_UNAVAILABLE đã hết từ 02:10.
 - Còn lại: một cú restart từ UI để activation chạy hết (mọi gate đã xanh) rồi
   canary thực thi.
+
+### Checkpoint giám sát Ubuntu — 20-09-2026, 19:23 +07
+
+Phạm vi: heartbeat vận hành Ubuntu, không phải canary Windows hay triển khai
+standing permission. Git vẫn `codex/control-plane-quarantine@502ffb8`; giữ
+nguyên các thay đổi source/docs đang diễn ra, không commit/push. Đích sản phẩm
+mới theo `TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md` không được suy thành
+quyền sửa runtime live trong lượt giám sát này.
+
+- Runtime thật dùng release immutable `0843ece334e07dd29f03cbd4c67fa97fc885ea1c`,
+  không phải schema-21 source đang sửa. Control Plane active; health HTTP 200,
+  SQLite integrity `ok`, schema **19**, admission **recovery**, authentication
+  **legacy_context_grant**. Fingerprint thực tế khớp manifest/expectation:
+  `sha256:3a151842840530206acf90cdeb0731476af555a46601a357d750ce2105a5b773`.
+- Tunnel active từ 17:58:32 +07; Control Plane active từ 17:58:38 +07.
+  Tunnel `healthz=200/live`, nhưng **readyz=503**. CLI health có kiểm PID và
+  `--require-control-plane-poll` xác nhận OpenAI poll thành công mới khoảng
+  **25 giây**, đồng thời vẫn trả exit 2 vì readiness. Diagnostic readiness
+  chứa `connection refused` tới `127.0.0.1:8766`; probe MCP không credential
+  tại listener này hiện trả **403**, chứng minh listener có phản hồi và giữ
+  authentication, không chứng minh grant hay tool call đã thành công.
+  Chênh lệch này cần kiểm tra readiness/reprobe của Tunnel; chưa kết luận là
+  expiry, Windows hoặc lỗi schema. Không restart Tunnel/main service.
+- Hai timer backup/healthcheck active. Backup gần nhất **19:00:54 +07**,
+  SQLite `ok`; có 11 unresolved action, 10 đã quarantine và **1 còn
+  unquarantined**, giống blocker đã được báo. Không retry, reconcile,
+  quarantine thêm hay sửa action/receipt để làm xanh trạng thái.
+- Sửa đúng phạm vi healthcheck: drop-in
+  `~/.config/systemd/user/codex-control-plane-healthcheck.service.d/20-expected-recovery.conf`
+  còn kỳ vọng `open` và pin fingerprint cũ. Chuyển **expectation** sang
+  `recovery`, bỏ pin cũ thừa; healthcheck vẫn lấy fingerprint từ release
+  immutable đang chọn. `daemon-reload` và chạy lại riêng oneshot healthcheck.
+  Deployment verifier nay **PASS** với đúng schema/fingerprint/admission;
+  oneshot vẫn **FAIL exit 1** tại independent backup/reconciliation gate vì
+  action chưa đối soát. Không đổi admission hoặc hạ điều kiện kiểm tra.
+- Đã cập nhật nội dung automation hiện có, giữ nhịp sáu giờ và trạng thái
+  active, để theo hướng máy tin cậy/account hiện hành và không lặp các blocker
+  đã biết. Không nâng cấp source, tạo/gia hạn grant/context/policy, liên hệ
+  Windows, gọi model, tạo OpenAI resource hoặc đụng job của hệ thống khác.
+
+Bước kế tiếp cần quyền vận hành phù hợp: kiểm tra/reprobe Tunnel có kiểm soát
+và xử lý action chưa rõ kết quả theo evidence. Chỉ sau readiness, xác thực
+đúng account/đích và receipt thực thi thật mới nâng mức nghiệm thu. Heartbeat
+tiếp tục theo dõi Ubuntu, giữ nguyên các giới hạn trên.

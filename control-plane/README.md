@@ -5,6 +5,28 @@ single-owner, SQLite-backed intake and dispatch service. It deliberately does
 not execute local Coding Tools calls itself: a registered node must authenticate,
 admit the action under its existing local authority, and return a receipt.
 
+## Shared ChatGPT account and workspace binding
+
+One bind creates an opaque `binding_id` that selects a registered device,
+endpoint, workspace and generation. ChatGPT clients using the same verified
+OAuth principal may select that ID; the client is only the controller and does
+not become the execution host. Each task pins
+`{binding_id, device_id, endpoint_id, workspace_id, workspace_generation}` and
+the Windows runtime keeps the files, Git, processes and OS-local permissions.
+Ubuntu authenticates, routes and records receipts; it does not ask for a new
+context or per-command approval inside the standing local scope.
+
+The OAuth inventory is lifecycle-aware. Each opaque target includes
+`binding_state`, `node_state`, `workspace_state`, `dispatch_state`, and the
+content-free `dispatch_blockers` list. A revoked binding or retired workspace
+generation remains visible to the same linked account so another client can
+show the real state; `task_open` and action admission still reject it. The
+inventory never contains an absolute path, node secret, OAuth subject, or
+context, and it never silently fails over to another binding.
+
+The current implementation status and reuse/gap matrix are maintained in
+[`docs/TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md`](../docs/TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+
 ## Run locally
 
 Set a random printable-ASCII operator token of 32–512 characters outside the repository,
@@ -49,8 +71,9 @@ There are two explicit MCP authentication modes:
   authenticated introspection endpoint, then resolves a separately linked
   `(issuer, subject)` principal. There is no fallback to a legacy `mcp_…`
   bearer and the Tunnel launcher must not receive or inject an Authorization
-  header. The initial OAuth surface is deliberately inventory-only: it cannot
-  create a context, task, local policy, action, or local effect.
+  header. The default OAuth surface is inventory/task discovery only; the
+  trusted-workspace profile below explicitly opts into standing local write and
+  structured exec after its distinct scope, node policy and package gates pass.
 
 In OAuth mode the dedicated MCP listener alone serves
 `GET /.well-known/oauth-protected-resource`; every other GET route remains
@@ -141,6 +164,31 @@ evidence only; it does not create an action, delivery attempt, local policy,
 write relay, shell/process permission or Windows effect. Any future local
 mutation bridge must independently compare the immutable scope and its own
 current local policy before it may execute anything.
+
+For the trusted-workspace account contract, the central source also supports a
+separate standing-write candidate. Enable it only together with OAuth file-read
+and a distinct write scope:
+
+```text
+CONTROL_PLANE_MCP_AUTH_MODE=oauth_introspection
+CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED=true
+CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED=true
+CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE=control-plane.patch
+CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED=false
+CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED=true
+```
+
+With this profile `agent_workflow.apply_patch` does not require a
+`permission_request_id`. It still requires the authenticated account's
+dedicated write scope, an explicit `binding_id` and `task_id`, current writer
+lease/generation, exact relative path and preimage/patch digests, the sealed
+Write Exact File envelope, and the current facade contract. The central store
+only queues the action; the enrolled node must admit it under its standing local
+workspace policy and operating-system permissions before writing. The action
+TTL protects the queue from replay and is not a replacement for the node's
+long-lived local policy. The HTTP→node completed/status and stale-generation
+fixture is source/focused proof; standing lost-ACK/duplicate-effect/reconcile
+proof, the exact Windows package, and live multi-client acceptance remain open.
 
 Do not change a live service just by switching the mode variable. Complete a
 candidate rollout first: configure an IdP that supports OAuth authorization
@@ -565,11 +613,14 @@ python -m control_plane.node_agent request-enrollment `
 ```
 
 Approve the returned enrollment ID on the server under the operator token. The
-agent can then send a heartbeat. Its ordinary `poll` mode is deliberately
-non-executing **and does not call the central dequeue endpoint**; this prevents
-an unsupported client from allocating a `dispatch_unconfirmed` attempt without
-a receipt. Only the separately named read-only lane below may receive an
-action after its local admission checks pass.
+enrolled node can then keep a long-lived authenticated connection. Its ordinary
+`poll` mode is deliberately non-executing **and does not call the central
+dequeue endpoint**; this prevents an unsupported client from allocating a
+`dispatch_unconfirmed` attempt without a receipt. The packaged Supervisor uses
+`run-connected-agent`: it sends heartbeat/reconnect independently of any
+short-lived context or read-only policy, then polls only the standing local
+capability lanes that the owner has installed (`file-read`, `approved-patch`,
+`exec`, and bounded artifacts).
 
 To publish the Hub's *actual*, fail-closed status after the Windows user has
 logged in, use the one-shot adapter below. It reports `ready` only when
@@ -639,37 +690,35 @@ transport error is recorded for that iteration and never authorizes a retry of
 a possible local effect; an interrupted prepared bridge entry remains an
 `unknown` receipt as with the one-shot lane.
 
-### Long-lived same-user read-only agent
+### Long-lived same-user connected agent
 
-After the packaged node has a reviewed, explicit policy, the named
-`run-read-only-agent` entrypoint is managed by the existing **same-user
-Recovery Supervisor** in a newly installed candidate. The Supervisor verifies
-the packaged Python and agent hashes from its manifest, then starts it only
-when the private node configuration, a matching current private workspace
-registry entry, and an enabled, unexpired matching local policy exist. An older supervisor manifest has no agent fields and remains
-`manifest_legacy`; it never guesses an agent path or starts one. Unlike the
-bounded diagnostic loop, the agent runs until the local operator stops it or
-its policy becomes unavailable. It is still only the allowlisted
-`workspace_context` bridge: it does not receive a Tunnel ID, Runtime API key,
-arbitrary command, patch, or write permission.
+After the packaged node has a reviewed enrollment and local workspace
+capabilities, the named `run-connected-agent` entrypoint is managed by the
+existing **same-user Recovery Supervisor** in a newly installed candidate. The
+Supervisor verifies the packaged Python and agent hashes from its manifest,
+then starts it when the private node configuration and workspace registry are
+valid. An older supervisor manifest has no agent fields and remains
+`manifest_legacy`; it never guesses an agent path or starts one.
 
-Every iteration revalidates the locally stored policy and exact local workspace
-generation *before* publishing a heartbeat or polling the central queue. A
-disabled, expired, malformed, wrong-node, removed-root, or stale-generation
-policy therefore stops the agent rather than generating repeated
-rejections. Runtime and network failures use bounded exponential backoff; they
-never repeat a possible local bridge effect. One atomically-created lock next
-to the private node configuration prevents two same-profile agents from
-dequeueing concurrently. A lock is reclaimed only when its recorded PID is
-confirmed dead; malformed or uncertain locks remain fail-closed for local
-operator review.
+Every iteration sends an authenticated runtime heartbeat first, even when no
+read-only policy exists. It then revalidates each installed standing policy
+and exact local workspace generation before polling that lane. Missing or
+disabled `file-read`, `approved-patch`, `exec`, or artifact authority is
+reported as a disabled lane and skipped; it never broadens authority or
+dequeues work for that lane. Runtime, transport, or authentication failures
+use bounded exponential backoff and retry the heartbeat; a local journal and
+the existing per-lane locks prevent duplicate effects. One atomically-created
+connected-agent lock next to the private node configuration prevents two
+same-profile connected agents from polling concurrently. A lock is reclaimed
+only when its recorded PID is confirmed dead; malformed or uncertain locks
+remain fail-closed for local operator review.
 
 ```powershell
-# The packaged same-user Supervisor starts this exact command after local
-# policy onboarding. Running it manually is only for focused diagnostics. The
-# command does not install another Scheduled Task and does not support
-# logged-out Windows or Session 0/SYSTEM execution.
-& '<installed>\resources\resources\control-plane\node-agent.cmd' run-read-only-agent `
+# The packaged same-user Supervisor starts this exact command after enrollment.
+# Running it manually is only for focused diagnostics. The command does not
+# install another Scheduled Task and does not support logged-out Windows or
+# Session 0/SYSTEM execution.
+& '<installed>\resources\resources\control-plane\node-agent.cmd' run-connected-agent `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
   --interval-seconds 15 `
@@ -677,18 +726,31 @@ operator review.
 ```
 
 `--max-iterations` is a focused diagnostic/test bound only; the default `0`
-means the supervisor owns the process lifetime. Do not use the agent as proof
+means the supervisor owns the process lifetime. The older
+`run-read-only-agent` command remains available for explicit bounded pilot
+diagnostics, but it is no longer the Supervisor's product path. Do not use the agent as proof
 of central mutation, unattended boot, or a complete Windows onboarding flow:
 those gates require the separate pairing, lifecycle and authority proof.
 
-### Local workspace registration and retirement
+### Local workspace registration, capability replacement and retirement
 
-Before Ubuntu can issue a usable binding/context, the same Windows user selects
-one local root in Command Center and registers it read-only. The node writes
-the canonical root only to its private `control-plane-workspaces.json`, then
-sends Ubuntu only an opaque workspace ID, generation, display label and
-`{read:true,write:false,exec:false}` capability. Registration alone does not
-create a binding, context, policy, grant or execution right.
+Before Ubuntu can issue a usable binding, the same Windows user selects one
+local root in Command Center and registers it. `read` is mandatory; `write`
+and `exec` are explicit local capability choices and remain a local ceiling,
+not an OS Administrator elevation or an Ubuntu per-command approval. The node
+writes the canonical root only to its private `control-plane-workspaces.json`,
+then sends Ubuntu only an opaque workspace ID, generation, display label and
+capability inventory. Registration alone does not create a binding, context,
+policy, grant or task authority.
+
+Changing a label or capability is never an in-place overwrite. The owner must
+confirm a separate `replace-workspace` operation. The agent persists a
+phase-only journal, retires the old generation at Ubuntu, disables local
+policies bound to that generation, registers a new generation with the same
+workspace ID, and updates the private registry only after the new central
+receipt is valid. A lost response or crash resumes the same phase; it does not
+create a duplicate workspace. Existing bindings/tasks are fenced by the
+central generation change and must be bound again.
 
 Removing a root is also a local Command Center action. The UI lists only the
 local display label and opaque identity; it sends the exact identity/generation
@@ -707,6 +769,14 @@ an opaque identity during retirement.
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json"
 
+& '<installed>\resources\resources\control-plane\node-agent.cmd' replace-workspace `
+  --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
+  --workspace-path 'C:\path\to\same-root' `
+  --display-name 'same-root' `
+  --capability-read --capability-write --capability-exec `
+  --confirm-replace
+
 & '<installed>\resources\resources\control-plane\node-agent.cmd' retire-workspace `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
@@ -714,34 +784,42 @@ an opaque identity during retirement.
   --workspace-generation 'generation_<registered-generation>'
 ```
 
-### Retired context-paste policy pilot
+### Legacy read-only policy assignment (compatibility only)
 
-The earlier read-only pilot asked an Ubuntu operator to issue a `ctx_…` value
-and required the Windows user to paste it into Command Center. That is **not**
-the normal central-executor onboarding flow anymore: Command Center no longer
-exposes a context field or a policy-install IPC. The intended flow is account
-OAuth → authorized target selection → server-created binding/context/policy;
-the Windows owner only pairs the node and chooses the local root. An Operator
-Token, Tunnel credential, API key, or context identifier is never a substitute
-for that account binding.
+The earlier pilot asked an Ubuntu operator to issue a `ctx_…` value and made
+the Windows user paste it into Command Center. That path is retired from the
+normal trusted-workspace flow. The supported sequence is account OAuth →
+authorized target selection → Ubuntu creates one opaque `binding_id` for the
+already-registered node/workspace generation → the node keeps standing
+`file-read`, `approved-patch`/document-write and structured `exec` policies
+locally. Every task pins the binding and the node reconnects after reboot
+without a context copy or per-command approval. The public Windows path never
+accepts or displays a context ID. An Operator Token, Tunnel credential, API
+key, or context identifier is never a substitute for that account binding.
 
-The installed command below remains an explicit break-glass diagnostic for an
-already-approved migration context while OAuth rollout is incomplete. It is not
-an auto-enrollment side effect, must not be documented to ordinary users as an
-onboarding step, and cannot establish an OAuth identity, grant write/exec, or
-make an expired context live again. The launcher fixes bundled Python,
-installed Electron tree, packaged runtime mode and
-`%APPDATA%\web-mcp-assistant`; it does not use a source checkout or global Node.
-Do not copy a policy between nodes. Omit `--replace` unless the logged-in user
-has deliberately selected a replacement context.
+The packaged Command Center exposes workspace registration, capability changes,
+credential rotation and binding status. The agent sends only opaque workspace
+ID, generation and selected capability; the canonical path and credential stay
+local to the node. It is not an auto-enrollment side effect, does not change
+the Windows user's OS role, and does not create a global active workspace.
+The launcher fixes bundled Python, installed Electron tree, packaged runtime
+mode and `%APPDATA%\web-mcp-assistant`; it does not use a source checkout or
+global Node. Do not copy a policy or credential between nodes.
+
+The `install-read-only-policy-*` commands below remain for **legacy pilot and
+compatibility evidence only**. They are not the final trusted-workspace
+onboarding path, do not grant standing write/exec, and must not be described as
+the normal daily approval flow. The standing profile is enabled only after its
+separate OAuth scope, node-local policy and Windows package/live gates pass.
 
 ```powershell
 # Run only on the logged-in Windows pilot node. The installed launcher supplies
 # --runtime-mode packaged, --project-root and --node itself.
-& '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy-from-context `
+& '<installed>\resources\resources\control-plane\node-agent.cmd' install-read-only-policy-from-assignment `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
   --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
-  --context-id 'ctx_<issued-by-ubuntu-console>' `
+  --workspace-id 'workspace_<registered-id>' `
+  --workspace-generation 'generation_<registered-generation>' `
   --confirm-install
 
 # Credential-free local observation, then an explicit local fail-closed stop.
@@ -749,9 +827,9 @@ has deliberately selected a replacement context.
 & '<installed>\resources\resources\control-plane\node-agent.cmd' disable-read-only-policy --confirm-disable
 ```
 
-The install command refuses a missing confirmation, closed/expired/wrong-node
-context, a missing/changed/removed local workspace registration, an over-24-hour
-policy, malformed server template, an already existing policy without
+The install command refuses a missing confirmation, absent/ambiguous/expired
+internal assignment, a missing/changed/removed local workspace registration, an
+over-24-hour policy, malformed server template, an already existing policy without
 `--replace`, or a caller-supplied packaged data root. It returns only a policy
 contract SHA, expiry, runtime mode and
 `windows_acl_verified=false`; that last field is intentional. Windows ACL

@@ -75,6 +75,10 @@ class RuntimePaths {
   // policy.  This operator-installed, expiring file is a separate default-deny
   // boundary for the one exact approved-patch lane.
   controlPlaneApprovedPatchPolicyFile() { return path.join(this.dataRootPath, 'control-plane-approved-patch-policy.json'); }
+  // Process execution has its own operator-installed policy. It remains
+  // separate from file-read and patch authority so a workspace binding cannot
+  // silently grant a command allowlist.
+  controlPlaneExecPolicyFile() { return path.join(this.dataRootPath, 'control-plane-exec-policy.json'); }
   // This private node enrollment configuration belongs to this installed
   // executor profile. Keeping it beneath dataRoot makes the Supervisor and
   // Electron UI agree on one target without an APPDATA-wide side channel.

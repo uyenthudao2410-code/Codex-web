@@ -39,6 +39,14 @@ def _stable_code_constant(value: Any) -> Any:
                 ),
             )
         }
+    if isinstance(value, slice):
+        return {
+            "slice": {
+                "start": _stable_code_constant(value.start),
+                "stop": _stable_code_constant(value.stop),
+                "step": _stable_code_constant(value.step),
+            }
+        }
     if value is Ellipsis:
         return {"ellipsis": True}
     raise TypeError(

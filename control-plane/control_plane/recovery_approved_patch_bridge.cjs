@@ -66,7 +66,16 @@ function normalisedResult(descriptor, result, request, bridge) {
   }
   let normalized;
   try {
-    normalized = bridge.normaliseApprovedPatchResult(result, request);
+    // The sealed node request intentionally carries only central digests and
+    // the compressed envelope.  RecoveryHost derives the postimage digest and
+    // byte count after local admission; bind those verified fields into the
+    // adapter-only validator before returning the allowlisted receipt.
+    const admission = {
+      ...request,
+      postimage_sha256: result?.file?.postimage_sha256,
+      postimage_bytes: result?.file?.bytes_written
+    };
+    normalized = bridge.normaliseApprovedPatchResult(result, admission);
   } catch (error) {
     throw bridgeError(text(error?.code) || 'CONTROL_PLANE_APPROVED_PATCH_RESULT_INVALID');
   }
@@ -77,7 +86,11 @@ function normalisedResult(descriptor, result, request, bridge) {
     runtime_mode: text(descriptor.runtime_mode) || null,
     action_id: normalized.action_id,
     attempt_id: normalized.attempt_id,
+    task_id: normalized.task_id,
+    writer_lease_generation: normalized.writer_lease_generation,
     local_handle: normalized.local_handle,
+    run_id: normalized.run_id,
+    wave_id: normalized.wave_id,
     patch_applied: true,
     local_semantic_acceptance: normalized.local_semantic_acceptance,
     policy_sha256: normalized.policy_sha256,

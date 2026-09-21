@@ -25,7 +25,7 @@ from control_plane.http_api import (
 )
 from control_plane.web_ui import WEB_UI_HTML, WEB_UI_JAVASCRIPT
 from control_plane.mcp_facade import _central_lifecycle_state
-from control_plane.node_agent import poll_read_only_once
+from control_plane.node_agent import _credential_hash, poll_read_only_once
 from control_plane.store import ControlPlaneStore, PermissionError, SCHEMA_VERSION
 
 
@@ -209,6 +209,58 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(heartbeat["readiness"], "unknown")
         self.assertEqual(heartbeat["mcp_server_instance_id"], "mcp-server-http-0001")
+
+    def test_node_enrollment_status_reconciles_pending_approved_and_revoked_without_operator_auth(self) -> None:
+        node_secret = "status-node-secret-0001"
+        credential_hash = hashlib.sha256(
+            json.dumps({"node_secret": node_secret}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        status, request = self._post(
+            "/v1/enrollment-requests",
+            {
+                "device_id": "device-http-status-0001",
+                "endpoint_id": "endpoint-http-status-0001",
+                "display_name": "HTTP status node",
+                "credential_hash": credential_hash,
+            },
+        )
+        self.assertEqual(status, 201)
+        status, pending = self._post(
+            "/v1/nodes/device-http-status-0001/enrollment-status",
+            {"enrollment_id": request["enrollment_id"]},
+            f"Node {node_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(pending["state"], "pending_operator_approval")
+        status, forbidden = self._post(
+            "/v1/nodes/device-http-status-0001/enrollment-status",
+            {},
+            "Node wrong-status-secret-0001",
+        )
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        status, _approved = self._post(
+            f"/v1/enrollment-requests/{request['enrollment_id']}/approve",
+            {},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 200)
+        status, approved = self._post(
+            "/v1/nodes/device-http-status-0001/enrollment-status",
+            {},
+            f"Node {node_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(approved["state"], "approved")
+        self.assertEqual(approved["credential_generation"], 1)
+        self.server.store.revoke_node(owner_id="owner_default", device_id="device-http-status-0001")
+        status, revoked = self._post(
+            "/v1/nodes/device-http-status-0001/enrollment-status",
+            {},
+            f"Node {node_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(revoked["state"], "revoked")
 
     def test_node_workspace_retirement_requires_node_auth_and_closes_exact_context(self) -> None:
         node = self.server.store.enroll_node(
@@ -741,6 +793,66 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         status, closed = self._post(path, {"context_id": context["context_id"]}, f"Node {first['node_secret']}")
         self.assertEqual(status, 409)
         self.assertEqual(closed["error"]["code"], "CONFLICT")
+
+    def test_node_can_fetch_only_one_live_policy_assignment_for_its_registered_root(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-policy-assignment-0001",
+            endpoint_id="endpoint-policy-assignment-0001",
+            display_name="Policy assignment node",
+        )
+        binding = self._registered_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-policy-assignment-0001",
+            workspace_generation="generation-policy-assignment-0001",
+            display_name="Policy assignment workspace",
+        )
+        path = f"/v1/nodes/{node['device_id']}/read-only-policy-assignment"
+        request = {
+            "workspace_id": binding["workspace_id"],
+            "workspace_generation": binding["workspace_generation"],
+        }
+
+        status, missing = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 404)
+        self.assertEqual(missing["error"]["code"], "NOT_FOUND")
+
+        context = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        status, assignment = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 200)
+        template = assignment["policy_template"]
+        self.assertEqual(template["workspace_id"], request["workspace_id"])
+        self.assertEqual(template["workspace_generation"], request["workspace_generation"])
+        self.assertNotIn("context_id", json.dumps(assignment))
+        self.assertNotIn("node_secret", json.dumps(assignment))
+
+        duplicate = self.server.store.create_context(
+            owner_id="owner_default",
+            binding_id=binding["binding_id"],
+            expires_at_ms=self.server.store.clock() + 60_000,
+        )
+        status, ambiguous = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 409)
+        self.assertEqual(ambiguous["error"]["code"], "CONFLICT")
+
+        self.server.store.close_context(owner_id="owner_default", context_id=duplicate["context_id"])
+        status, restored = self._post(path, request, f"Node {node['node_secret']}")
+        self.assertEqual(status, 200)
+        self.assertEqual(restored["policy_template"]["owner_id"], "owner_default")
+
+        status, malformed = self._post(
+            path,
+            {**request, "unexpected": True},
+            f"Node {node['node_secret']}",
+        )
+        self.assertEqual(status, 400)
+        self.assertEqual(malformed["error"]["code"], "VALIDATION_ERROR")
+        self.server.store.close_context(owner_id="owner_default", context_id=context["context_id"])
 
     def test_action_observation_route_requires_operator_authority(self) -> None:
         status, forbidden = self._get("/v1/actions/action-does-not-exist")
@@ -2327,3 +2439,88 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         status, forbidden = self._get("/v1/maintenance/admission")
         self.assertEqual(status, 403)
         self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+
+    def test_node_credential_rotation_is_node_mediated_and_replay_safe(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-http-rotation",
+            endpoint_id="endpoint-http-rotation",
+            display_name="HTTP rotation fixture",
+        )
+        current_secret = node["node_secret"]
+        next_secret = "next-http-node-credential-000001"
+        rotation_id = "rotate_" + "e" * 32
+        node_auth = f"Node {current_secret}"
+        status, prepared = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/prepare",
+            {
+                "rotation_id": rotation_id,
+                "current_generation": 1,
+                "next_credential_hash": _credential_hash(next_secret),
+            },
+            node_auth,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(prepared["state"], "prepared")
+        status, replayed = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/prepare",
+            {
+                "rotation_id": rotation_id,
+                "current_generation": 1,
+                "next_credential_hash": _credential_hash(next_secret),
+            },
+            node_auth,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(replayed, prepared)
+
+        status, activated = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/activate",
+            {"rotation_id": rotation_id},
+            node_auth,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(activated["state"], "activated")
+        status, activated_replay = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/activate",
+            {"rotation_id": rotation_id},
+            node_auth,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(activated_replay, activated)
+
+        status, completed = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/ack",
+            {"rotation_id": rotation_id},
+            f"Node {next_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(completed["state"], "completed")
+        status, completed_replay = self._post(
+            f"/v1/nodes/{node['device_id']}/credential-rotation/ack",
+            {"rotation_id": rotation_id},
+            f"Node {next_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(completed_replay, completed)
+        status, old_status = self._post(
+            f"/v1/nodes/{node['device_id']}/enrollment-status",
+            {},
+            node_auth,
+        )
+        self.assertEqual(status, 403)
+        status, new_status = self._post(
+            f"/v1/nodes/{node['device_id']}/enrollment-status",
+            {},
+            f"Node {next_secret}",
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(new_status["credential_generation"], 2)
+
+        status, refused = self._post(
+            f"/v1/nodes/{node['device_id']}/rotate-credential",
+            {},
+            f"Bearer {self.operator_token}",
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(refused["error"]["code"], "CONFLICT")

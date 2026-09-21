@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import errno
 import io
 import hashlib
@@ -35,6 +36,7 @@ from control_plane.node_agent import (
     poll,
     poll_read_only_once,
     read_only_policy_observation,
+    run_connected_agent,
     run_read_only_agent,
     run_read_only_loop,
     recovery_identity_observation,
@@ -791,14 +793,9 @@ class ControlPlaneStoreTests(unittest.TestCase):
                 declaration="a different declaration",
             )
 
-    def test_rotate_credential_invalidates_old_secret_and_increments_generation(self) -> None:
-        original = self.store.node(device_id="device-alpha")
-        rotated = self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")
-        self.assertEqual(rotated["credential_generation"], original["credential_generation"] + 1)
-        with self.assertRaises(PermissionError):
-            self.store.authenticate_node(device_id="device-alpha", node_secret=self.node_secret)
-        authenticated = self.store.authenticate_node(device_id="device-alpha", node_secret=rotated["node_secret"])
-        self.assertEqual(authenticated["credential_generation"], rotated["credential_generation"])
+    def test_legacy_rotate_credential_path_fails_closed(self) -> None:
+        with self.assertRaises(ConflictError):
+            self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")
 
     def test_cancel_or_revoke_refuses_never_sent_action_without_settling_sent_action(self) -> None:
         _, request = self._request()
@@ -1419,6 +1416,40 @@ class ControlPlaneStoreTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             self.store.authenticate_node(device_id="device-beta", node_secret="not-the-requested-secret")
 
+    def test_node_enrollment_status_is_authenticated_and_request_retry_replays_after_approval(self) -> None:
+        node_secret = "s" * 40
+        credential_hash = hashlib.sha256(
+            json.dumps({"node_secret": node_secret}, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        ).hexdigest()
+        request = self.store.request_enrollment(
+            device_id="device-status-0001",
+            endpoint_id="endpoint-status-0001",
+            display_name="Status node",
+            credential_hash=credential_hash,
+        )
+        pending = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(pending["state"], "pending_operator_approval")
+        self.assertEqual(pending["enrollment_id"], request["enrollment_id"])
+        with self.assertRaises(PermissionError):
+            self.store.node_enrollment_status(device_id="device-status-0001", node_secret="wrong-secret-000000")
+
+        approved = self.store.approve_enrollment(owner_id="owner_default", enrollment_id=request["enrollment_id"])
+        self.assertEqual(approved["device_id"], "device-status-0001")
+        replayed = self.store.request_enrollment(
+            device_id="device-status-0001",
+            endpoint_id="endpoint-status-0001",
+            display_name="Status node",
+            credential_hash=credential_hash,
+        )
+        self.assertEqual(replayed["enrollment_id"], request["enrollment_id"])
+        self.assertIsNotNone(replayed["approved_at_ms"])
+        status = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(status["state"], "approved")
+        self.assertEqual(status["credential_generation"], 1)
+        self.store.revoke_node(owner_id="owner_default", device_id="device-status-0001")
+        revoked = self.store.node_enrollment_status(device_id="device-status-0001", node_secret=node_secret)
+        self.assertEqual(revoked["state"], "revoked")
+
     def test_node_enrollment_persists_one_https_target_and_requires_explicit_replacement(self) -> None:
         config_path = Path(self.tempdir.name) / "node.json"
         calls: list[tuple[str, str, dict]] = []
@@ -1437,6 +1468,8 @@ class ControlPlaneStoreTests(unittest.TestCase):
             original = json.loads(config_path.read_text(encoding="utf-8"))
             self.assertEqual(original["schema_version"], 1)
             self.assertEqual(original["server_url"], "https://control.example.test")
+            self.assertEqual(original["enrollment_id"], "enroll-node-target-0001")
+            self.assertEqual(original["enrollment_state"], "pending_operator_approval")
             self.assertEqual(node_agent_main([
                 "request-enrollment", "--config", str(config_path), "--server-url", "https://other.example.test",
                 "--device-id", "device-target-0001", "--endpoint-id", "endpoint-target-0001", "--display-name", "Office executor",
@@ -1456,6 +1489,57 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertIn("CONTROL_PLANE_ENROLLMENT_CONFIG_REPLACEMENT_REQUIRED", errors.getvalue())
         self.assertNotIn(original["node_secret"], output.getvalue())
         self.assertNotIn(replaced["node_secret"], output.getvalue())
+
+    def test_node_enrollment_reconcile_persists_approved_state_and_keeps_stale_state_on_transport_loss(self) -> None:
+        config_path = Path(self.tempdir.name) / "reconcile-node.json"
+        request_calls: list[tuple[str, str, dict, str | None]] = []
+        pending_response = {
+            "enrollment_id": "enroll-reconcile-0001",
+            "device_id": "device-reconcile-0001",
+            "approved_at_ms": None,
+        }
+
+        def request(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            request_calls.append((server_url, route, payload, authorization))
+            if route == "/v1/enrollment-requests":
+                return pending_response
+            return {
+                "enrollment_id": "enroll-reconcile-0001",
+                "device_id": "device-reconcile-0001",
+                "state": "approved",
+                "credential_generation": 2,
+                "requested_at_ms": 1_700_000_000_000,
+                "approved_at_ms": 1_700_000_000_100,
+                "observed_at_ms": 1_700_000_000_200,
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request), redirect_stdout(io.StringIO()):
+            self.assertEqual(node_agent_main([
+                "request-enrollment", "--config", str(config_path), "--server-url", "https://control.example.test",
+                "--device-id", "device-reconcile-0001", "--endpoint-id", "endpoint-reconcile-0001", "--display-name", "Reconcile executor",
+            ]), 0)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(node_agent_main(["reconcile-enrollment", "--config", str(config_path), "--device-id", "device-reconcile-0001"]), 0)
+            receipt = json.loads(output.getvalue())
+            self.assertEqual(receipt["state"], "approved")
+            self.assertTrue(receipt["fresh"])
+            persisted = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(persisted["enrollment_state"], "approved")
+            self.assertEqual(persisted["credential_generation"], 2)
+
+        def unavailable(*_args: object, **_kwargs: object) -> dict:
+            raise RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+
+        with mock.patch("control_plane.node_agent._request", side_effect=unavailable):
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(node_agent_main(["reconcile-enrollment", "--config", str(config_path), "--device-id", "device-reconcile-0001"]), 0)
+            stale = json.loads(output.getvalue())
+            self.assertEqual(stale["state"], "approved")
+            self.assertFalse(stale["fresh"])
+            self.assertEqual(stale["error_code"], "CONTROL_PLANE_TRANSPORT_UNAVAILABLE")
+        self.assertGreaterEqual(len(request_calls), 2)
 
     def test_node_enrollment_refuses_non_loopback_http_before_writing_a_config(self) -> None:
         config_path = Path(self.tempdir.name) / "node-invalid.json"
@@ -1727,6 +1811,84 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertIn("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", errors.getvalue())
         self.assertFalse((rejected_data_root / "control-plane-read-only-policy.json").exists())
 
+    def test_node_installs_only_the_assigned_policy_for_its_selected_registered_root(self) -> None:
+        config_path = Path(self.tempdir.name) / "node-assignment.json"
+        registry_path = Path(self.tempdir.name) / "node-assignment-workspaces.json"
+        data_root = Path(self.tempdir.name) / "node-assignment-data"
+        workspace_path = Path(self.tempdir.name) / "node-assignment-root"
+        workspace_path.mkdir()
+        config_path.write_text(json.dumps({
+            "schema_version": 1,
+            "server_url": "https://control.example.test",
+            "device_id": "device-assignment-0001",
+            "endpoint_id": "endpoint-assignment-0001",
+            "display_name": "Assignment executor",
+            "node_secret": "n" * 40,
+        }), encoding="utf-8")
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-assignment-0001",
+                "workspace_generation": "generation-assignment-0001",
+                "canonical_path": str(workspace_path.resolve()),
+                "display_name": "Assignment root",
+                "capabilities": {"read": True, "write": False, "exec": False},
+                "created_at_ms": 1,
+            }],
+        }), encoding="utf-8")
+        calls: list[tuple[str, str, dict, str | None]] = []
+
+        def request(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            calls.append((server_url, route, payload, authorization))
+            return {
+                "policy_template": {
+                    "owner_id": "owner_default",
+                    "device_id": "device-assignment-0001",
+                    "endpoint_id": "endpoint-assignment-0001",
+                    "workspace_id": "workspace-assignment-0001",
+                    "workspace_generation": "generation-assignment-0001",
+                    "expires_at_ms": int(time.time() * 1000) + 60_000,
+                    "facade_contract": {"schema_version": 6, "profile": "control-plane-scoped-read-only-relay-v5", "sha256": "a" * 64},
+                }
+            }
+
+        with mock.patch("control_plane.node_agent._request", side_effect=request):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-assignment", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-id", "workspace-assignment-0001",
+                "--workspace-generation", "generation-assignment-0001",
+                "--confirm-install", "--data-root", str(data_root),
+            ]), 0)
+        policy = json.loads((data_root / "control-plane-read-only-policy.json").read_text(encoding="utf-8"))
+        self.assertEqual(policy["workspace_id"], "workspace-assignment-0001")
+        self.assertEqual(calls, [(
+            "https://control.example.test",
+            "/v1/nodes/device-assignment-0001/read-only-policy-assignment",
+            {"workspace_id": "workspace-assignment-0001", "workspace_generation": "generation-assignment-0001"},
+            "Node " + "n" * 40,
+        )])
+        self.assertNotIn("ctx_", json.dumps(calls))
+
+        wrong_template_root = Path(self.tempdir.name) / "node-assignment-wrong-template"
+
+        def wrong_template(server_url: str, route: str, payload: dict, authorization: str | None = None) -> dict:
+            response = request(server_url, route, payload, authorization)
+            response["policy_template"]["workspace_generation"] = "generation-assignment-other"
+            return response
+
+        errors = io.StringIO()
+        with mock.patch("control_plane.node_agent._request", side_effect=wrong_template), redirect_stderr(errors):
+            self.assertEqual(node_agent_main([
+                "install-read-only-policy-from-assignment", "--config", str(config_path),
+                "--workspace-registry", str(registry_path),
+                "--workspace-id", "workspace-assignment-0001",
+                "--workspace-generation", "generation-assignment-0001",
+                "--confirm-install", "--data-root", str(wrong_template_root),
+            ]), 1)
+        self.assertIn("CONTROL_PLANE_POLICY_TEMPLATE_TARGET_MISMATCH", errors.getvalue())
+        self.assertFalse((wrong_template_root / "control-plane-read-only-policy.json").exists())
+
     def test_read_only_loop_admission_requires_current_local_workspace_generation(self) -> None:
         config_path = Path(self.tempdir.name) / "loop-workspace-node.json"
         registry_path = Path(self.tempdir.name) / "loop-workspace-registry.json"
@@ -1877,6 +2039,115 @@ class ControlPlaneStoreTests(unittest.TestCase):
             "reason": "MAX_ITERATIONS_REACHED",
             "completed_iterations": 3,
         })
+
+    def test_connected_agent_sends_heartbeat_without_read_only_policy(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0001",
+            "endpoint_id": "endpoint-connected-agent-0001",
+            "node_secret": "connected-agent-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), workspace_registry=str(Path(self.tempdir.name) / "registry.json"),
+            project_root=str(Path.cwd()), node="node", runtime_mode="development", timeout_seconds=20,
+            data_root=self.tempdir.name, interval_seconds=15, max_backoff_seconds=60, max_iterations=1,
+        )
+        stop_codes = {
+            "file_read": "CONTROL_PLANE_FILE_READ_POLICY_MISSING",
+            "artifact": "CONTROL_PLANE_FILE_READ_POLICY_MISSING",
+            "approved_patch": "CONTROL_PLANE_APPROVED_PATCH_POLICY_MISSING",
+            "document_write": "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_MISSING",
+            "exec": "CONTROL_PLANE_EXEC_POLICY_MISSING",
+        }
+
+        def skip_lane(_args: argparse.Namespace, lane: str) -> None:
+            raise RuntimeError(stop_codes[lane])
+
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent._connected_agent_lane_admission", side_effect=skip_lane), \
+             mock.patch("control_plane.node_agent.poll_file_read_once") as file_read, \
+             mock.patch("control_plane.node_agent.poll_artifact_once") as artifact, \
+             mock.patch("control_plane.node_agent.poll_approved_patch_once") as patch_once, \
+             mock.patch("control_plane.node_agent.poll_document_write_once") as document_write, \
+             mock.patch("control_plane.node_agent.poll_exec_once") as exec_once, \
+             redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        heartbeat_call.assert_called_once_with(args)
+        file_read.assert_not_called()
+        artifact.assert_not_called()
+        patch_once.assert_not_called()
+        document_write.assert_not_called()
+        exec_once.assert_not_called()
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(records[0]["execution"], "connected_agent_started")
+        self.assertEqual(records[1]["state"], "completed")
+        self.assertEqual([lane["state"] for lane in records[1]["lanes"]], ["disabled"] * 5)
+        self.assertEqual(records[-1]["execution"], "connected_agent_stopped")
+        self.assertFalse((Path(self.tempdir.name) / "connected-agent-node.json.connected-agent.lock").exists())
+
+    def test_connected_agent_polls_each_enabled_standing_lane_after_heartbeat(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-enabled-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0002",
+            "endpoint_id": "endpoint-connected-agent-0002",
+            "node_secret": "connected-agent-enabled-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), workspace_registry=str(Path(self.tempdir.name) / "registry.json"),
+            project_root=str(Path.cwd()), node="node", runtime_mode="development", timeout_seconds=20,
+            data_root=self.tempdir.name, interval_seconds=15, max_backoff_seconds=60, max_iterations=1,
+        )
+        output = io.StringIO()
+        with mock.patch("control_plane.node_agent.runtime_heartbeat") as heartbeat_call, \
+             mock.patch("control_plane.node_agent._connected_agent_lane_admission"), \
+             mock.patch("control_plane.node_agent.poll_file_read_once") as file_read, \
+             mock.patch("control_plane.node_agent.poll_artifact_once") as artifact, \
+             mock.patch("control_plane.node_agent.poll_approved_patch_once") as patch_once, \
+             mock.patch("control_plane.node_agent.poll_document_write_once") as document_write, \
+             mock.patch("control_plane.node_agent.poll_exec_once") as exec_once, \
+             redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        heartbeat_call.assert_called_once_with(args)
+        file_read.assert_called_once_with(args)
+        artifact.assert_called_once_with(args)
+        patch_once.assert_called_once_with(args)
+        document_write.assert_called_once_with(args)
+        exec_once.assert_called_once_with(args)
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual([lane["state"] for lane in records[1]["lanes"]], ["polled"] * 5)
+
+    def test_connected_agent_reconnects_with_bounded_backoff(self) -> None:
+        config_path = Path(self.tempdir.name) / "connected-agent-reconnect-node.json"
+        config_path.write_text(json.dumps({
+            "server_url": "https://control.example.test",
+            "device_id": "device-connected-agent-0003",
+            "endpoint_id": "endpoint-connected-agent-0003",
+            "node_secret": "connected-agent-reconnect-secret-not-reported",
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), interval_seconds=15, max_backoff_seconds=60, max_iterations=3,
+        )
+        output = io.StringIO()
+        with mock.patch(
+            "control_plane.node_agent._connected_agent_iteration",
+            side_effect=[
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                RuntimeError("CONTROL_PLANE_TRANSPORT_UNAVAILABLE"),
+                [],
+            ],
+        ) as iterate, mock.patch("control_plane.node_agent.time.sleep") as sleep, redirect_stdout(output):
+            self.assertEqual(run_connected_agent(args), 0)
+        self.assertEqual(iterate.call_count, 3)
+        self.assertEqual(sleep.call_args_list, [mock.call(15), mock.call(30)])
+        self.assertFalse((Path(self.tempdir.name) / "connected-agent-reconnect-node.json.connected-agent.lock").exists())
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(
+            [(record["state"], record["next_delay_seconds"]) for record in records[1:4]],
+            [("degraded", 15), ("degraded", 30), ("completed", 15)],
+        )
 
     def test_read_only_agent_stops_before_heartbeat_or_poll_when_local_policy_is_disabled(self) -> None:
         config_path = Path(self.tempdir.name) / "agent-policy-node.json"

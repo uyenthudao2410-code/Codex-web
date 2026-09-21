@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -157,6 +158,45 @@ class ProtocolRegressionTests(unittest.TestCase):
 
 
 class CommandHandleMigrationTests(unittest.TestCase):
+    def test_control_plane_structured_argv_requires_attested_bridge_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            # The admission assertion is platform-neutral; use the explicit
+            # dangerous fixture mode so Linux's standalone Landlock helper is
+            # not part of this bridge-identity test.
+            runtime = Runtime(Path(temp), permission_mode="dangerous")
+            try:
+                with self.assertRaises(Exception) as denied:
+                    runtime.exec_command({
+                        "cmd": "echo",
+                        "argv": ["echo", "must-not-run"],
+                        "yield_time_ms": 1000,
+                    })
+                self.assertEqual(
+                    getattr(denied.exception, "code", ""),
+                    "CONTROL_PLANE_STRUCTURED_ARGV_DENIED",
+                )
+
+                runtime.request_context.hub_client = {
+                    "client_id": "electron-control-plane-exec-bridge",
+                    "client_type": "electron",
+                    "attestation_verified": True,
+                }
+                # ``echo`` is a shell builtin on Windows, not an executable
+                # accepted by the structured argv lane with shell=False.
+                portable_python = sys.executable
+                payload = runtime.exec_command({
+                    "cmd": portable_python,
+                    "argv": [portable_python, "-c", "print('bridge-argv-ok')"],
+                    "yield_time_ms": 1000,
+                    "max_output_bytes": 4096,
+                    "verbosity": "full",
+                })
+                self.assertEqual(payload["status"], "exited")
+                self.assertEqual(payload["exit_code"], 0)
+                self.assertIn("bridge-argv-ok", payload["stdout"])
+            finally:
+                runtime.close()
+
     def test_exec_returns_command_id_and_canonical_command_output_refs(self) -> None:
         with tempfile.TemporaryDirectory() as temp, patch.dict(
             "os.environ", {"CODING_TOOLS_MCP_TOOL_MODE": "smart"}

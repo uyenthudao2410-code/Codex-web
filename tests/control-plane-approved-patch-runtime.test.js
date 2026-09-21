@@ -55,6 +55,8 @@ function admission(workspaceRoot, before = 'before\n', after = 'after\n') {
   return {
     action_id: 'action-control-plane-0001',
     attempt_id: 'attempt-control-plane-0001',
+    task_id: `task_${'a'.repeat(32)}`,
+    writer_lease_generation: 1,
     policy_sha256: 'a'.repeat(64),
     tool_name: 'agent_workflow',
     operation: 'apply_patch',
@@ -176,9 +178,12 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
       }
       assert.equal(calls.length, 2, 'the bridge must only bind then run one exact local workflow');
       assert.equal(body.params.name, 'agent_workflow');
-      assert.deepEqual(body.params.arguments, {
+      const workflowArguments = body.params.arguments;
+      const { contract_fingerprint: contractFingerprint, ...workflowWithoutFingerprint } = workflowArguments;
+      assert.match(contractFingerprint, /^[a-f0-9]{64}$/);
+      assert.deepEqual(workflowWithoutFingerprint, {
         task_context_id: calls[0].params.arguments.task_context_id,
-        idempotency_key: body.params.arguments.idempotency_key,
+        idempotency_key: workflowArguments.idempotency_key,
         workflow: 'custom',
         phase: 'execute',
         execution_mode: 'mcp_only',
@@ -190,9 +195,9 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
         verification: 'none',
         include_diff: false
       });
-      assert.match(body.params.arguments.idempotency_key, /^cpap_[a-f0-9]{56}$/);
+      assert.match(workflowArguments.idempotency_key, /^cpap_[a-f0-9]{56}$/);
       fs.writeFileSync(item.target, action._after, 'utf8');
-      send(response, body.id, approvedPatchWorkflowResult(action, body.params.arguments.idempotency_key));
+      send(response, body.id, approvedPatchWorkflowResult(action, workflowArguments.idempotency_key));
     });
   });
   await listen(server);
@@ -214,9 +219,10 @@ test('approved patch binds the registered root, creates a local RUN/WAVE, and re
   assert.equal(Object.hasOwn(result, 'patch_envelope'), false);
   assert.equal(JSON.stringify(result).includes(action.patch_envelope), false);
   assert.match(result.local_handle, /^cp_ap_[a-f0-9]{48}$/);
-  assert.equal(Object.hasOwn(result, 'run_id'), false);
-  assert.equal(JSON.stringify(result).includes('1'.repeat(32)), false);
-  assert.equal(JSON.stringify(result).includes('2'.repeat(32)), false);
+  assert.equal(result.task_id, action.task_id);
+  assert.equal(result.writer_lease_generation, action.writer_lease_generation);
+  assert.equal(result.run_id, '1'.repeat(32));
+  assert.equal(result.wave_id, '2'.repeat(32));
   assert.equal(result.runtime_identity.activation_epoch_id, context.activationEpochId);
   assert.equal(result.runtime_identity.process_instance_id, context.processInstanceId);
   assert.equal(result.runtime_identity.server_instance_id, context.serverInstanceId);

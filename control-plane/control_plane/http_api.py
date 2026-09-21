@@ -35,7 +35,7 @@ from .mcp_oauth import (
     OAuthIntrospectionVerifier,
     oauth_configuration_from_environment,
 )
-from .store import ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
+from .store import ConflictError, ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
 from .web_ui import WEB_UI_CSP, WEB_UI_CSS, WEB_UI_HTML, WEB_UI_JAVASCRIPT
 
 
@@ -349,7 +349,12 @@ class ControlPlaneHttpServer(ThreadingHTTPServer):
             ),
             oauth_patch_write_scope=mcp_oauth.patch_write_scope if mcp_oauth is not None else None,
             oauth_approved_patch_enabled=bool(
-                mcp_oauth is not None and mcp_oauth.approved_patch_enabled
+                mcp_oauth is not None and (
+                    mcp_oauth.approved_patch_enabled or mcp_oauth.standing_write_enabled
+                )
+            ),
+            oauth_standing_write_enabled=bool(
+                mcp_oauth is not None and mcp_oauth.standing_write_enabled
             ),
             oauth_exec_enabled=bool(mcp_oauth is not None and mcp_oauth.exec_enabled),
         )
@@ -485,7 +490,7 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             and configuration.permission_requests_enabled
         ) or (
             name == "agent_workflow"
-            and configuration.approved_patch_enabled
+            and (configuration.approved_patch_enabled or configuration.standing_write_enabled)
         ):
             if configuration.patch_write_scope is None:
                 return required
@@ -898,20 +903,47 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
         )
         if context["device_id"] != device_id or context["endpoint_id"] != node["endpoint_id"]:
             raise PermissionError("context is not assigned to this node.")
+        return {"policy_template": self._read_only_policy_template(context)}
+
+    def _read_only_policy_template(self, context: dict[str, Any]) -> dict[str, Any]:
+        """Project the sole local-policy fields from an already-live context."""
+
         return {
-            "policy_template": {
-                "owner_id": context["owner_id"],
-                "device_id": context["device_id"],
-                "endpoint_id": context["endpoint_id"],
-                "workspace_id": context["workspace_id"],
-                "workspace_generation": context["workspace_generation"],
-                "expires_at_ms": context["expires_at_ms"],
-                "facade_contract": {
-                    key: self.server.mcp_facade.contract[key]
-                    for key in ("schema_version", "profile", "sha256")
-                },
-            }
+            "owner_id": context["owner_id"],
+            "device_id": context["device_id"],
+            "endpoint_id": context["endpoint_id"],
+            "workspace_id": context["workspace_id"],
+            "workspace_generation": context["workspace_generation"],
+            "expires_at_ms": context["expires_at_ms"],
+            "facade_contract": {
+                key: self.server.mcp_facade.contract[key]
+                for key in ("schema_version", "profile", "sha256")
+            },
         }
+
+    def _node_assigned_read_only_policy_template(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """Return a node's single owner-issued policy assignment without a context ID.
+
+        The local owner chooses an already registered root in the Windows UI.
+        The authenticated node then asks for the one live context exactly bound
+        to that root.  This replaces copying a ``ctx_…`` value into Windows;
+        it does not create a context, choose a workspace by display name, or
+        grant policy for an unregistered root.
+        """
+
+        if set(body) != {"workspace_id", "workspace_generation"}:
+            raise ValidationError("node assigned policy payload is invalid.")
+        workspace_id = self._field(body, "workspace_id")
+        workspace_generation = self._field(body, "workspace_generation")
+        if not isinstance(workspace_id, str) or not isinstance(workspace_generation, str):
+            raise ValidationError("node assigned policy fields are invalid.")
+        self._node(device_id)
+        context = self.server.store.assigned_read_only_policy_context(
+            device_id=device_id,
+            workspace_id=workspace_id,
+            workspace_generation=workspace_generation,
+        )
+        return {"policy_template": self._read_only_policy_template(context)}
 
     def _register_node_workspace(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """Accept a path-free workspace inventory only from its own node.
@@ -1534,14 +1566,74 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if self.path == "/v1/action-reconciliations/quarantine-historical-unknown":
                 self._json(HTTPStatus.OK, self._quarantine_historical_unknown_actions(body, browser=False))
                 return
-            node_rotate_match = re.fullmatch(r"/v1/nodes/([^/]+)/rotate-credential", self.path)
-            if node_rotate_match:
-                result = self.server.store.rotate_node_credential(owner_id=self._operator(), device_id=node_rotate_match.group(1))
+            node_rotation_prepare_match = re.fullmatch(
+                r"/v1/nodes/([^/]+)/credential-rotation/prepare", self.path
+            )
+            if node_rotation_prepare_match:
+                device_id = node_rotation_prepare_match.group(1)
+                if set(body) != {"rotation_id", "current_generation", "next_credential_hash"}:
+                    raise ValidationError("credential rotation prepare payload is invalid.")
+                result = self.server.store.prepare_node_credential_rotation(
+                    device_id=device_id,
+                    node_secret=self._auth("Node"),
+                    rotation_id=self._field(body, "rotation_id"),
+                    current_generation=self._field(body, "current_generation"),
+                    next_credential_hash=self._field(body, "next_credential_hash"),
+                )
                 self._json(HTTPStatus.OK, result)
                 return
+            node_rotation_activate_match = re.fullmatch(
+                r"/v1/nodes/([^/]+)/credential-rotation/activate", self.path
+            )
+            if node_rotation_activate_match:
+                device_id = node_rotation_activate_match.group(1)
+                if set(body) != {"rotation_id"}:
+                    raise ValidationError("credential rotation activate payload is invalid.")
+                result = self.server.store.activate_node_credential_rotation(
+                    device_id=device_id,
+                    node_secret=self._auth("Node"),
+                    rotation_id=self._field(body, "rotation_id"),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            node_rotation_ack_match = re.fullmatch(
+                r"/v1/nodes/([^/]+)/credential-rotation/ack", self.path
+            )
+            if node_rotation_ack_match:
+                device_id = node_rotation_ack_match.group(1)
+                if set(body) != {"rotation_id"}:
+                    raise ValidationError("credential rotation acknowledgement payload is invalid.")
+                result = self.server.store.acknowledge_node_credential_rotation(
+                    device_id=device_id,
+                    node_secret=self._auth("Node"),
+                    rotation_id=self._field(body, "rotation_id"),
+                )
+                self._json(HTTPStatus.OK, result)
+                return
+            node_rotate_match = re.fullmatch(r"/v1/nodes/([^/]+)/rotate-credential", self.path)
+            if node_rotate_match:
+                # The former operator route generated a new secret centrally
+                # and could invalidate a node before it persisted the new
+                # value.  Keep the path recognizable for old clients, but
+                # refuse the unsafe immediate switch; rotation is now a
+                # node-mediated prepare/activate/ack protocol above.
+                self._operator()
+                raise ConflictError("node-mediated credential rotation is required.")
             node_revoke_match = re.fullmatch(r"/v1/nodes/([^/]+)/revoke", self.path)
             if node_revoke_match:
                 result = self.server.store.revoke_node(owner_id=self._operator(), device_id=node_revoke_match.group(1))
+                self._json(HTTPStatus.OK, result)
+                return
+            node_enrollment_status_match = re.fullmatch(r"/v1/nodes/([^/]+)/enrollment-status", self.path)
+            if node_enrollment_status_match:
+                # Pending requests do not have a node row yet, so this route
+                # deliberately authenticates through the credential hash
+                # rather than _node(), while keeping the response node-safe.
+                device_id = node_enrollment_status_match.group(1)
+                result = self.server.store.node_enrollment_status(
+                    device_id=device_id,
+                    node_secret=self._auth("Node"),
+                )
                 self._json(HTTPStatus.OK, result)
                 return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/heartbeat", self.path)
@@ -1575,6 +1667,13 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 self._json(
                     HTTPStatus.OK,
                     self._node_read_only_policy_template(node_policy_template_match.group(1), body),
+                )
+                return
+            node_assigned_policy_match = re.fullmatch(r"/v1/nodes/([^/]+)/read-only-policy-assignment", self.path)
+            if node_assigned_policy_match:
+                self._json(
+                    HTTPStatus.OK,
+                    self._node_assigned_read_only_policy_template(node_assigned_policy_match.group(1), body),
                 )
                 return
             node_match = re.fullmatch(r"/v1/nodes/([^/]+)/poll", self.path)

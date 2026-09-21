@@ -1,10 +1,1217 @@
 # Trạng thái triển khai Ubuntu Control Plane
 
-**Cập nhật kiểm tra lại:** 15-09-2026, khoảng 08:58–20:26 +07:00 (Asia/Ho_Chi_Minh)
+> Bản tóm tắt kế hoạch + hiện trạng theo semantics một account nhiều client:
+> [SHARED_ACCOUNT_WORKSPACE_STATUS.md](SHARED_ACCOUNT_WORKSPACE_STATUS.md).
+> Windows exact gate: [WINDOWS_EXACT_VALIDATION_RUNBOOK.md](WINDOWS_EXACT_VALIDATION_RUNBOOK.md).
+> Các checkpoint phía dưới là chronology/evidence, không tự nâng mức proof.
+
+> Bản cập nhật điều hành mới nhất về semantics một tài khoản ChatGPT dùng
+> nhiều client và `binding_id` nằm ở
+> [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md),
+> checkpoint mới nhất **21-09-2026, 12:41 +07, Windows `DESKTOP-63643J4` Wave 36**. Các số liệu bên dưới vẫn giữ nguyên
+> bằng chứng theo từng checkpoint, không tự nâng thành package/live proof.
+
+## Trạng thái điều hành mới nhất — Windows `DESKTOP-63643J4` — 21-09-2026, 12:29 +07
+
+SSH/Tailscale tới `100.72.186.41` đã được kiểm chứng bằng candidate riêng.
+Shared-account two-client route, HTTP→node **22/22**, Recovery **3/3** và
+packaged/installed smoke pass. Mức hiện tại là source/focused proof cộng
+candidate `PACKAGED_PROOF`; Wave 33 đã xác nhận target reachable nhưng
+data root thật rồi dọn sạch; DPAPI/ACL, reboot/reconnect/rotation, live UI
+acceptance và owner acceptance vẫn mở.
+
+## Checkpoint Wave 36 — BLOCKED chờ external owner activation — 21-09-2026, 12:41 +07
+
+Authoritative recheck vẫn `DEV_UI STATUS state=MISSING` với
+`RECOVERY_DESCRIPTOR_STALE`; Supervisor Task `Running` nhưng status
+`spawn_failed`, `SPAWN_FAILED`, executable missing. Cùng blocker đã lặp qua
+Waves 33–36 sau khi source suite đạt **133/133**.
+
+Đã hết safe read-only progress trên target. Đánh dấu **BLOCKED** chờ owner
+thực hiện acceptance ceremony + supported full-clean activation trên exact
+artifact/source, rồi Supervisor install nếu cần. Ubuntu không mở admission,
+không dispatch và không sửa ledger/epoch.
+
+## Checkpoint Wave 35 — focused lifecycle regression — 21-09-2026, 12:39 +07
+
+`node --test tests/dev-ui-lifecycle.test.js tests/full-clean-activation.test.js
+tests/recovery-supervisor.test.js` đạt **133 pass, 0 fail, 1 skip**. Các guard
+exact closure, descriptor stale, full-clean epoch và Supervisor eligibility đều
+được kiểm; không có live mutation trong test.
+
+Windows target vẫn `RECOVERY_DESCRIPTOR_STALE`/`SPAWN_FAILED`, nên source proof
+này không nâng thành `LIVE_ACCEPTED`. Ubuntu admission không đổi.
+
+## Checkpoint Wave 34 — lifecycle preflight và Supervisor status — 21-09-2026, 12:36 +07
+
+`dev:status` từ checkout Windows và candidate đều trả exit 0 nhưng báo
+`state=MISSING`, `host=unavailable`, `error_code=RECOVERY_DESCRIPTOR_STALE`.
+`full-clean-activation --preflight` trả exit 1 với `RECOVERY_DESCRIPTOR_STALE`;
+Supervisor status cho Task `Running` nhưng `state=spawn_failed`,
+`last_error_code=SPAWN_FAILED` vì executable bị thiếu.
+
+Đây là lifecycle proof chính thức của blocker; không retry heartbeat để suy ra
+readiness, không restart/install/sửa epoch, không mở admission và không dispatch.
+Mức proof vẫn `SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate PACKAGED_PROOF`.
+Next action là exact acceptance/full-clean activation rồi Supervisor install hỗ
+trợ, sau đó strict readiness và OAuth binding/task.
+
+## Checkpoint Wave 33 — kiểm tra read-only target và phân loại blocker — 21-09-2026, 12:29 +07
+
+`DESKTOP-63643J4` (`100.72.186.41`) reachable qua Tailscale/SSH. Windows
+checkout đang ở HEAD `3779096a9156bf2827e3164d09bcc1ef647a2c01` với 23 thay
+đổi; candidate packaged `1.0.7` không có `.git`. Accepted-code closure trong
+profile vẫn là checkpoint `8d10f27638e2498cba80edf0bcbe77ce`/accepted HEAD
+`cffd2acee24a4f38f4a83ddfea4c40f766de7a63`, `activation_eligible=true` nhưng
+`affected_components=[]`, `components_current=false`, `lifecycle_clean=false`.
+
+Durable epoch hiển thị `READY/OPEN`, song không có current-process proof: owner
+PID Recovery Host đã chết, runtime PID/revision stale, Supervisor hiện
+`spawn_failed` (`SPAWN_FAILED`). Heartbeat chẩn đoán trả
+`blocked/runtime_unavailable`, `runtime_state=MISSING`, `fully_ready=unknown`,
+`policy_state=expired_or_disabled`; nó chỉ ghi route evidence/last-seen. Đây là
+**exact-source/closure mismatch + stale Supervisor**, không phải lỗi network.
+Không restart/install, không sửa ledger/epoch, không mở admission và không gọi
+model.
+
+Mức proof giữ nguyên `SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate
+PACKAGED_PROOF`; chưa `LIVE_ACCEPTED`. Next action là owner acceptance ceremony
+trên exact artifact/source rồi full-clean activation hỗ trợ; sau đó mới kiểm
+strict readiness và OAuth binding/task live.
+
+## Checkpoint Wave 32 — Tailscale live connection, Recovery IPC và fail-closed start — 21-09-2026, 12:10 +07
+
+SSH/Tailscale tới `DESKTOP-63643J4` (`100.72.186.41`) thành công. Installed
+supervisor manifest còn trỏ tới executable đã bị installed-smoke dọn; candidate
+unpacked `1.0.7` vẫn có executable/installer nên được dùng cho phép thử tạm.
+
+Candidate Recovery Host khởi chạy trên data root hiện hành; `recovery.ping`
+`ok=true/ready=true`, owner process/instance identity khớp và Supervisor từng
+báo `healthy`. `runtime.identity_observation` vẫn `mcp_ready=false`,
+`identity_current=false`. Runtime snapshot giữ
+`central_connected=false`, `authority_ready=false`,
+`central_status_reason=LOCAL_EXECUTOR_NOT_READY`, `fully_ready=false`,
+`update_incomplete=true`, `recovery_blocked=true`. `runtime.start` bị từ chối
+HTTP 409 `UPDATE_INCOMPLETE`: không được thay Coding MCP trong epoch cũ; cần
+full-clean activation epoch mới từ owner.
+
+`runtime-heartbeat` exit 0 ở mức `degraded/packaged_runtime_unready`, không
+dequeue action/receipt. Candidate process đã được dừng theo đúng owner PID sau
+receipt; hiện `Coding Tools MCP` count là 0, descriptor stale. Supervisor ghi
+`OWNER_DEAD` ngay sau cleanup và retry tiếp theo là `SPAWN_FAILED` vì executable
+trong manifest vẫn thiếu. Không mở admission Ubuntu, không đổi OAuth/binding/task, không gọi
+model, không deploy/restart production.
+
+Mức proof không đổi: **source/focused + candidate PACKAGED_PROOF**, chưa
+`LIVE_ACCEPTED`. Next action là owner-authorized full-clean activation trên exact
+artifact/source, rồi strict MCP/Tunnel/UI identity/heartbeat.
+
+## Checkpoint Wave 26 — Tailscale test connection và runtime gate — 21-09-2026, 11:27 +07
+
+SSH/Tailscale tới `DESKTOP-63643J4` xác nhận đúng candidate. Focused rerun trên
+target đạt lifecycle **18/18**, same-account OAuth **3/3**, two-client exec
+**1/1**, document-write **1/1** và standing patch **1/1**; patch fixture có
+warning teardown `WinError 10038` nhưng pass. Node credential heartbeat
+`degraded` trả `exit 0` và local registry có một workspace opaque với
+generation/capability `{read,write,exec}`.
+
+Runtime probe hiện tại không thấy Electron/Node process; `runtime-heartbeat`
+trả `blocked/runtime_unavailable`, `runtime_identity=unreported`,
+`runtime_state=MISSING`. Connected-agent bounded một vòng kết thúc bình thường
+với `MAX_ITERATIONS_REACHED`, không dequeue action và không gửi receipt.
+Ubuntu admission vẫn `recovery`; wave này không tạo OAuth principal/binding/task,
+không thay policy central và không deploy/restart.
+
+Kết luận giữ nguyên: candidate có **PACKAGED_PROOF**, chưa có `LIVE_ACCEPTED`.
+Gate tiếp theo là exact Electron/Recovery packaged startup + strict identity,
+Sau đó owner-authorized binding/task/toolchain/fault/soak.
+
+## Checkpoint Wave 27 — packaged recovery smoke cô lập — 21-09-2026, 11:38 +07
+
+Official packaged smoke trên candidate trả **exit 0**: 17 resources, đủ 8
+smart-v3 tools, Recovery Host/MCP và device identity healthy, Supervisor
+healthy, live-owner/hash-mismatch fail-closed pass, production descriptor stable
+và Scheduled Task không bị mutate. User-data dùng TEMP riêng và đã cleanup;
+không còn candidate process sau khi kết thúc.
+
+Đây chỉ là package/isolation proof. Ubuntu vẫn `recovery`, runtime production
+chưa chạy và chưa có OAuth live binding/task; không mở dispatch hoặc nâng nhãn
+`LIVE_ACCEPTED`.
+
+## Checkpoint Wave 28 — central health và source capability recheck — 21-09-2026, 11:41 +07
+
+GET `/healthz` read-only trả `ok=true`, SQLite `ok`, schema **19**, admission
+`recovery`, actual/expected package SHA khớp, `oauth_principals=0`,
+`node_workspaces=3`, unresolved actions **11**. Targeted source `unittest`
+đạt **7/7 PASS**: account/binding/writer **4/4** và local exec/document/patch
+**3/3**. Local `pytest` không chạy vì interpreter thiếu module; đây là
+environment limitation, không phải regression. Chưa mở central dispatch.
+
+## Checkpoint Wave 29 — full Control Plane source discovery — 21-09-2026, 11:44 +07
+
+`unittest discover` toàn bộ `control-plane/tests` đạt **298/298 PASS trong
+96,772s**. Receipt fixture lifecycle/unknown-state là expected negative/recovery
+coverage; không có failure, không gửi action live và không thay admission. Mức
+này chỉ là source regression proof; Windows runtime/owner gates vẫn mở.
+
+## Checkpoint Wave 30 — installed NSIS smoke và isolation — 21-09-2026, 11:49 +07
+
+Installed smoke trên candidate trả **exit 0**: NSIS `1.0.7` install/register,
+packaged Recovery smoke, uninstall và registration cleanup đều pass. Production
+Recovery descriptor và Scheduled Task definition không đổi. Đây là installed
+candidate proof; chưa mở runtime production, OAuth live binding/task hoặc
+dispatch.
+
+## Checkpoint Wave 31 — post-smoke read-only state — 21-09-2026, 11:51 +07
+
+Target sau installed smoke có **0** process candidate. Recovery descriptor còn
+metadata owner/instance nhưng không có owner process sống; đây là stale state,
+không phải runtime liveness. Ubuntu `/healthz` vẫn `ok`, schema 19,
+`admission=recovery`, `oauth_principals=0`, `node_workspaces=3`, unresolved 11.
+Không có live action hoặc admission/restart change.
+
+## Checkpoint Wave 25 — node workspace registration và policy local — 21-09-2026
+
+Credential node đã heartbeat `degraded` thành công tới Ubuntu (`exit 0`).
+Workspace candidate đăng ký thành công với capability `read/write/exec`; local
+standing policies cho file-read, approved-patch và exec đều inspect được ở
+trạng thái `enabled`/`authority_mode=standing`. ACL thực tế chỉ có user hiện
+tại, SYSTEM và Administrators.
+
+`runtime-heartbeat` không thể báo ready (`runtime_status_unavailable`), còn một
+vòng `run-connected-agent` kết thúc `MAX_ITERATIONS_REACHED` sau trạng thái
+`degraded/CONTROL_PLANE_BRIDGE_FAILED`; không lane nào dequeue. Health Ubuntu
+read-only sau đăng ký ghi nhận `node_workspaces=3`, `oauth_principals=0`,
+`admission_mode=recovery`, unresolved **11**, SQLite/package SHA khớp.
+
+Đây là node registration + local policy proof, **không phải OAuth binding/live
+task proof**. Không mở admission, không tạo principal/binding/task/action,
+không file effect, reboot/restart, deploy, commit hoặc push. Gate tiếp theo là
+khởi chạy đúng Electron/Recovery packaged runtime và chứng minh strict identity;
+sau đó mới có thể nghiệm thu OAuth two-client/binding.
+
+## Checkpoint Wave 24 — candidate reachable nhưng runtime live chưa bind — 21-09-2026, 10:59 +07
+
+Tailscale/SSH tới `DESKTOP-63643J4` (`100.72.186.41`) xác thực thành công.
+Focused Windows candidate recheck đạt secret/rotation/workspace **18/18**,
+same-account OAuth **3/3**, two-client exec **1/1**, document-write **1/1** và
+standing patch **1/1**. Đây là fixture/candidate proof, không phải UI/account
+live proof.
+
+Read-only probe cho thấy Electron/Recovery không chạy; workspace registry chưa
+có (`list-workspaces` rỗng); Supervisor `spawn_failed` và agent
+`integrity_unproven`. `inspect-read-only-policy` packaged trên dev data root bị
+fail-closed với `CONTROL_PLANE_POLICY_PACKAGED_DATA_ROOT_FORBIDDEN`. Vì vậy
+reachability đã đóng, nhưng runtime bind/reconnect chưa được chứng minh.
+
+Giữ trạng thái **`SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate
+PACKAGED_PROOF`**, chưa `LIVE_ACCEPTED`. Wave này không chạm Ubuntu admission,
+credential thật, reboot/restart, deploy, commit hoặc push. Gate tiếp theo cần
+test account/data root được owner ủy quyền: pair/enroll → register workspace →
+heartbeat/connected-agent → reboot/reconnect/rotation/revoke → hai client thật.
+
+## Checkpoint Wave 23 — packaged/installed smoke recheck — 21-09-2026, 10:48 +07
+
+Packaged smoke trên candidate pass với **17 resources**, smart-v3 **8 tools**,
+Recovery/MCP/Supervisor healthy và fail-closed owner/hash; installed smoke
+installer `1.0.7` install/register/uninstall pass, giữ nguyên production
+descriptor và Scheduled Task. Đây là package/isolation proof, không phải
+reboot/reconnect, live account hoặc owner acceptance.
+
+## Checkpoint Wave 22 — structured exec/journal parity trên Windows candidate — 21-09-2026, 10:45 +07
+
+Candidate Windows đạt **1/1 PASS trong 6,38s** cho workflow argv
+`git/build/test/deploy` trên một local lane và **1/1 PASS trong 4,30s** cho
+HTTP→node journal→Recovery terminal receipt. Đây là fixture route/receipt proof,
+không phải workspace production hoặc deploy thật. Ubuntu vẫn ở `recovery`,
+OAuth principals `0`; không mở admission hay tạo action live.
+
+## Checkpoint Wave 21 — Windows target reachable, Ubuntu health read-only — 21-09-2026, 10:31 +07
+
+SSH trực tiếp tới `DESKTOP-63643J4` (`100.72.186.41`) đã thành công. Candidate
+`E:\DEV\Codex-web-candidate-502ffb8` là bản cô lập version `1.0.7`, có
+`dist\win-unpacked` và installer NSIS, không có `.git`. Focused recheck trên
+candidate đạt **18/18** secret/rotation/workspace, **3/3** same-account OAuth,
+**1/1** two-client exec, **1/1** document-write và **1/1** standing patch.
+Receipt Windows candidate trước đó cũng đạt full MCP **1.160/1.160 PASS** và
+Node/Electron **922/922 PASS**; bốn OAuth config assertion POSIX-mode trên NTFS
+được giữ là fixture portability, không phải lý do thay đổi policy bảo mật.
+
+Health Ubuntu chỉ đọc hiện tại: `ok=true`, schema **19**, SQLite `ok`,
+`admission_mode=recovery`, counts **3/4/4/24/18/18/13** (nodes/enrollments/
+bindings/contexts/requests/actions/receipts), OAuth principals **0**, unresolved
+actions **11** (10 quarantined, 1 unquarantined), auth mode
+`legacy_context_grant`, package SHA đúng expected. Vì `oauth_principals=0` và
+admission chưa mở, đây là health/inventory evidence chứ chưa phải central live
+account acceptance.
+
+Wave 21 đã gỡ blocker reachability, không gỡ các gate sản phẩm còn lại. Giữ
+nhãn **`SOURCE_PRESENT + FOCUSED_TEST_PROOF + candidate PACKAGED_PROOF`**;
+chưa gọi là `LIVE_ACCEPTED`. Next action là installed rotation/revoke + reboot/
+reconnect, hai ChatGPT client thật cùng `principal_id`, toolchain thật, T01–T16,
+restore/soak và owner acceptance; không tự reconcile action hay restart Ubuntu.
+
+## Snapshot repository hiện tại — 21-09-2026
+
+Branch `codex/control-plane-quarantine`, HEAD
+`502ffb8cf8b541ee74af30194aff2dce08c3b649`; worktree dirty có chủ ý vì các
+thay đổi source/test/docs/evidence. Lượt này không reset/clean, commit, push,
+deploy hoặc restart service. Mức bằng chứng hiện là
+**`SOURCE_PRESENT + FOCUSED_TEST_PROOF` + candidate `PACKAGED_PROOF`**.
+
+Số liệu authoritative: Control Plane **295/295 PASS**; `npm run test:all` với
+bundled workspace Python 3.12.14/pytest 8.4.2 đạt Node/Electron **858 PASS, 16
+SKIP, 0 FAIL / 874** và MCP **1.153 PASS, 7 SKIP, 0 FAIL / 1.160**; Linux
+resource preflight **427 resources + 9 adapters**; packaged/installed focused
+**5/5 PASS**. Windows candidate package/installer, installed smoke và DPAPI/ACL
+đã có proof; startup/reconnect/revoke/rotation trên installed, two-client live
+acceptance, T01–T16 và soak 24 giờ vẫn là gate mở.
+
+Wave 17 là receipt lịch sử có một dependency-only failure; Wave 18 đã chạy lại
+bằng interpreter có dev extra đúng chuẩn và không còn failure. Không sửa policy
+runtime để làm xanh giả;
+Control Plane unittest **295/295 PASS** và Node/Electron `npm test` **858 PASS,
+16 SKIP, 0 FAIL / 874 trong 43.317s** là receipt chạy trực tiếp trên worktree;
+source-root/secret checks đều PASS.
+
+Wave 14 focused recheck bổ sung **71/71 PASS** cho account/task/HTTP → node và
+**146/146 PASS** cho store/node authority/credential/workspace; Node/Electron
+bridge/enrollment/recovery đạt **34 PASS, 1 SKIP, 0 FAIL**. Đây vẫn là
+source/focused proof; Windows exact/live gates chưa được đóng.
+
+Wave 15 full regression đạt Node/Electron **874 tests: 858 PASS, 16 SKIP, 0
+FAIL trong 43,45s** và Control Plane **295/295 PASS trong 96,37s**; source-root
+và repository-secret checks PASS. Đây vẫn là source/local proof trên Linux.
+
+## Checkpoint Wave 20 — target Windows và evidence guard — 21-09-2026, 08:18 +07
+
+- Read-only SSH tới alias `daochienthang` timeout sau 5 giây; không có copy,
+  cài đặt, test hay restart ngoài được thực hiện.
+- Không có Windows `win-unpacked`/installer trong workspace Linux hiện tại.
+- `npm run check:coding-tools-history`: **PASS (4.873 files)**; repository
+  secret check: **PASS**.
+
+Đây là external-state blocker cho packaged/live gate, không phải source failure.
+Wave 18 vẫn là source/local baseline; Wave 19 vẫn phân loại `windows_only`.
+
+## Checkpoint Wave 19 — phân loại Recovery/packaged gate Windows — 21-09-2026, 08:14 +07
+
+- `npm run test:recovery:e2e`: **3 SKIP, 0 FAIL** vì toàn bộ test yêu cầu
+  `process.platform === "win32"`.
+- `npm run test:recovery:packaged`: `dist:dir` tạo Linux unpacked candidate;
+  packaged smoke trả `{ok:true, skipped:true, reason:"windows_only"}`.
+
+Đây là platform/environment gate chứ không phải source failure. Không nâng
+`PACKAGED_PROOF` hoặc `LIVE_ACCEPTED`; cần Windows exact runner để kiểm
+RunAsNode/Recovery/installer, DPAPI/ACL/startup/reconnect/rotation và sau đó
+two-client/T01–T16.
+
+## Checkpoint Wave 18 — full local gate xanh — 21-09-2026, 08:06 +07
+
+`npm run test:all` đã hoàn tất trên source tree với runtime dependency chuẩn:
+
+- Electron/Desktop: **874 tests, 858 PASS, 16 SKIP, 0 FAIL**; source-root và
+  repository-secret checks PASS.
+- Coding Tools MCP: **1.160 collected, 1.153 PASS, 7 SKIP, 0 FAIL** trong
+  **159,98s**.
+- Warning còn lại chỉ là resource/cleanup warning; không có failure.
+
+Wave này xác nhận các phần Control Plane có thể tiếp tục được tận dụng cho mục
+tiêu account chung: OAuth principal/inventory, binding/task pin, enrollment và
+credential dài hạn theo node, writer/generation fence, queue/receipt,
+Recovery/RuntimeOrchestrator, standing bridges và journal idempotency. Không
+được suy ra Windows packaged/live, quyền Administrator, hai client ChatGPT thật
+hoặc model gateway đã triển khai.
+
+**Next action:** tạo Windows exact candidate và đóng DPAPI/ACL/startup/reconnect/
+rotation; sau đó chạy two-client cùng `principal_id` → chọn `binding_id` →
+đọc/sửa/exec/Git/build/test/deploy trên node đúng → T01–T16, backup/restore,
+soak 24 giờ và owner acceptance.
+
+## Checkpoint Wave 17 — full MCP source-first rerun — 21-09-2026
+
+Full MCP với source repository đứng trước dependency runtime, proxy variables
+unset và `PYTHONWARNINGS=error::ResourceWarning` đạt **1.160 collected: 1.152
+PASS, 1 FAIL, 7 SKIP, 37 warnings trong 161.53s**. SDK HTTP/operator timestamp
+**19/19 PASS**; multi-workspace HTTP và authorized workspace **2/2 PASS**.
+
+Failure duy nhất là continuous-check bookkeeping gọi `python -m pytest` trong
+child system Python không có pytest; cùng logic đạt pass khi child có dev
+dependency và `ShellEnvPolicy(inherit="all")`. Đây là dependency/harness gap;
+không nới policy `PYTHONPATH` hoặc coi full MCP là xanh giả. Windows exact/live,
+two-client ChatGPT, toolchain thật, T01–T16 và soak vẫn mở.
+
+## Checkpoint Wave 16 — full MCP recheck và phân loại blocker (lịch sử) — 21-09-2026
+
+Lần chạy full MCP của Wave 16 thu được **1.160 collected: 1.145 PASS, 8 FAIL,
+7 SKIP, 35 warnings trong 160.43s**; không ghi đây là full pass. Một official
+SDK smoke báo `httpx.InvalidURL` và cần retry khi bỏ proxy; các matrix/
+greenfield/build/continuous-check/workspace-session gọi child `python` trong khi
+host chỉ có `python3`; operator-report cần xác minh lại `24:00:00Z` trên đúng
+interpreter. Đây là phân loại harness/environment hoặc chưa tái hiện source bug,
+không phải bằng chứng local authority đã hỏng.
+
+Receipt trực tiếp vẫn xanh là Control Plane **295/295 PASS** và Node/Electron
+**858 PASS, 16 SKIP, 0 FAIL / 874**. Chưa có Windows exact package/live,
+DPAPI/ACL, reboot/reconnect, two-client ChatGPT thật, toolchain thật, T01–T16,
+backup/restore, soak 24 giờ hoặc owner acceptance; mức proof không đổi:
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF` + integrated local test proof.
+
+## Checkpoint Wave 10 — refresh Linux packaged candidate — 21-09-2026
+
+Candidate `dist/linux-unpacked` được tạo lại bằng `npm run dist:dir` (**PASS**).
+Hai nhóm packaged/installed recovery smoke đạt **3/3 PASS**; packaged smoke
+trả `windows_only` đúng contract trên Linux. Verifier trực tiếp đạt
+**427 resource files exact-source**, **9 control-plane adapters exact-source**
+và **463 entries sanitized**.
+HTTP boundary recheck cho hai client cùng `principal_id` chọn nhiều binding và
+handoff writer lease đạt **2/2 PASS trong 3.053s**.
+HTTP → node → Recovery cho document-write và structured exec đạt **23/23 PASS
+trong 29.601s** với `PYTHONWARNINGS=error::ResourceWarning`.
+Standing-profile configuration, shared-task observation và cross-client
+writer/exec guard đạt **3/3 PASS trong 3.046s**.
+Standing patch không cần per-patch approval và document-create không đưa
+content vào action payload đạt **2/2 PASS trong 0.083s**.
+
+Receipt này chỉ chứng minh resource/package wiring trên Linux. Windows
+RunAsNode fuse, Recovery Host, DPAPI/ACL, reboot/reconnect và live two-client
+vẫn là gate mở; không nâng nhãn proof.
+
+## Checkpoint Wave 11 — documentation contract alignment — 21-09-2026
+
+`control-plane/README.md` đã đánh dấu `install-read-only-policy-*` là legacy
+compatibility-only và mô tả trusted flow hiện hành: OAuth account → opaque
+`binding_id` → standing node-local read/write/structured exec → task pin/
+reconnect. Wave này chỉ sửa tài liệu, không đổi live service hoặc quyền node.
+
+## Checkpoint Wave 12 — T01–T16 source/live matrix — 21-09-2026
+
+Ma trận T01–T16 và trạng thái từng gate được ghi tại
+[SHARED_ACCOUNT_WORKSPACE_STATUS.md](SHARED_ACCOUNT_WORKSPACE_STATUS.md). Các
+receipt fixture/source chỉ giữ mức focused; Windows exact, two-client live,
+DPAPI/ACL, backup/restore và soak chưa được nâng nhãn.
+
+## Checkpoint Wave 9 — Recovery Supervisor không còn khóa vào read-only TTL — 21-09-2026
+
+Audit code/runtime contract đã tìm thấy lỗi nối giữa worker và Supervisor:
+Supervisor đã spawn `run-connected-agent`, nhưng preflight vẫn chỉ đọc
+`control-plane-read-only-policy.json` và bắt `expires_at_ms`. Điều đó mâu thuẫn
+với connected-agent heartbeat độc lập và làm standing write/exec có thể mất
+startup sau khi pilot policy hết hạn; config đã DPAPI hóa cũng không còn
+`node_secret` plaintext để Supervisor đọc.
+
+Đã sửa preflight để xét đúng ba lane standing v2: file-read,
+approved-patch/document-write và structured exec. Supervisor chỉ spawn khi có ít
+nhất một lane enabled, đúng origin/device/endpoint, exact workspace generation
+còn current và resource hash hợp lệ. Thiếu/sai policy, registry hoặc identity
+đều fail-closed; read-only pilot hết hạn/disabled không còn chặn connected
+agent. `node_secret_dpapi` chỉ được nhận diện theo marker, không giải mã hoặc
+đưa secret vào log/argv. Node agent vẫn revalidate policy và workspace ngay
+trước heartbeat/dequeue/effect.
+
+Proof trực tiếp: PowerShell helper class **1/1 PASS**, `test_store` **83/83 PASS`,
+Supervisor Node test **1 PASS, 1 SKIP**, `git diff --check` PASS. Đây chưa phải
+Windows packaged/live proof; chưa chạy reboot/logon, DPAPI/ACL, two-client thật,
+T01–T16 hoặc soak. Next action là đóng gói artifact Windows mới và chạy P1–P6,
+không bật Ubuntu live hay model gateway trong wave này.
+
+## Checkpoint Wave 7 — shared-account HTTP→node capability recheck — 21-09-2026
+
+Focused group gồm OAuth/account, task pin/writer handoff, exec Recovery và
+document-write HTTP→node: **57/57 PASS trong 45.280s**. Full Control Plane
+unittest: **294/294 PASS trong 94.877s** bằng Python 3.14.4 với
+`PYTHONWARNINGS=error::ResourceWarning`; không còn SQLite `ResourceWarning`.
+
+Đã chứng minh local/source path cho shared `principal_id` → nhiều `binding_id`,
+standing patch/document/exec trên node local, writer fence, crash/lost-ACK,
+terminal receipt replay và `unknown/reconcile_required` không redeliver effect.
+Windows package/DPAPI/ACL/reboot/reconnect/live two-client/T01–T16 vẫn chưa có
+receipt và chưa được nâng mức bằng chứng.
+
+## Checkpoint Wave 8 — standing local authority configuration proof — 21-09-2026
+
+OAuth configuration focused **6/6 PASS**: standing write/exec chỉ bật với
+file-read, write scope riêng và flag hợp lệ; các tổ hợp thiếu scope, exec đơn
+độc hoặc giá trị sai đều fail-closed. Full Control Plane sau thay đổi đạt
+**295/295 PASS trong 95.319s** bằng Python 3.14.4 với
+`PYTHONWARNINGS=error::ResourceWarning`.
+
+Đây là proof cấu hình/source; không phải live activation. Ubuntu live chưa được
+mở flag, Windows DPAPI/ACL/package/startup/reconnect và two-client acceptance
+vẫn là gate tiếp theo.
+
+## Checkpoint Wave 4 — node revoke và public task admission — 21-09-2026
+
+OAuth inventory/HTTP focused đã chứng minh node bị revoke vẫn hiển thị như
+target lịch sử nhưng không dispatchable: `node_state=revoked`,
+`dispatch_state=node_revoked`, `dispatch_blockers=["node_revoked"]`. Public
+`task_open` trên binding đó trả `CONFLICT`, không tạo task và không failover;
+projection vẫn credential-free.
+
+Receipt: OAuth HTTP **28/28 PASS trong 14.266s**; toàn bộ Control Plane
+unittest **292/292 PASS trong 92.197s** với `ResourceWarning` được nâng thành
+lỗi (không còn warning SQLite). Đây là source proof mới nhất; không
+thay thế Windows exact package/DPAPI/ACL/startup hoặc live acceptance.
+
+## Checkpoint Wave 5 — principal revoke và retired generation — 21-09-2026
+
+OAuth ingress hiện có focused proof rằng revoke `principal_id` trả `403
+FORBIDDEN`, không tạo pending link và không làm lộ target. Retire generation
+giữ binding lịch sử với `workspace_state=retired`; `task_open` bị chặn bằng
+`CONFLICT`, không retarget/failover.
+
+Receipt mới: OAuth HTTP **30/30 PASS trong 15.812s**; toàn bộ Control Plane
+unittest **294/294 PASS trong 96.371s** với `ResourceWarning` là lỗi. Đây vẫn
+là source/local proof, chưa phải Windows package/live acceptance.
+
+## Checkpoint Wave 6 — Node/Electron regression recheck — 21-09-2026
+
+`npm test` đã PASS **858/874** (16 skip có chủ đích) trong **43.317s**; source
+root và repository-secret checks đều PASS. Đây vẫn là source/local proof, không
+thay thế Windows package/fuse/Recovery/DPAPI/ACL hoặc live acceptance.
+
+## Trạng thái điều hành chốt — một account, nhiều client, 21-09-2026
+
+Một OAuth account được ánh xạ thành cùng `principal_id` trên tất cả client/máy
+đăng nhập account đó; client chọn `binding_id` của máy/workspace cần làm việc.
+Ví dụ máy A bind W1 thành B1 thì máy B/C cùng account chọn B1 và lệnh chạy ở
+A/W1. Task pin bất biến
+`{device_id, endpoint_id, workspace_id, workspace_generation}`. Ubuntu chỉ xác
+thực, định tuyến, xếp hàng và lưu receipt; node đã bind giữ file, Git, process,
+build/test/deploy và quyền OS local. Enrollment/credential tồn tại lâu dài sau
+khi được duyệt; không sao chép token/context và không xin duyệt từng lệnh trong
+standing local scope. `binding_id` không phải bearer token và không có
+`active_workspace` toàn account.
+
+### Reuse map và khoảng trống thực tế
+
+| Có thể dùng ngay | Chưa được coi là đã hoàn tất |
+| --- | --- |
+| `mcp_oauth.py`, `http_api.py`, `mcp_facade.py`, `store.py` cho principal/account inventory, binding, task, writer lease, generation, queue/receipt | Hai OAuth client khác token cùng principal đã route chung bound node trong Windows E2E; UI ChatGPT live vẫn chưa nghiệm thu |
+| Enrollment/device identity/credential, SecretStore/DPAPI source path, heartbeat, reconnect, rotation, workspace capability registry | DPAPI/`safeStorage`/ACL/reboot/startup/revoke/rotation trên package thật |
+| File-read, approved-patch, document-write, structured-exec bridges; Recovery Host/IPC; RuntimeOrchestrator; Coding Tools MCP | Git/build/test/deploy thật và duplicate-effect/reconcile trên packaged Windows |
+| Resource verifier, packaged/installed helper smoke, `.coding-tools` ledger/evidence; Windows `dist:dir`/NSIS/installed smoke đã pass | DPAPI/ACL/reboot/reconnect/rotation live, T01–T16, backup/restore, soak ≥24h, owner acceptance |
+
+Mức bằng chứng hiện tại là **`SOURCE_PRESENT + FOCUSED_TEST_PROOF` + Windows
+candidate `PACKAGED_PROOF`**. Bước kế tiếp theo đúng thứ tự: (1) DPAPI/ACL,
+reboot/startup/reconnect/rotation trên package thật, (2) hai ChatGPT client live
+và binding acceptance, (3) full local toolchain + fault matrix/soak, (4) owner
+acceptance rồi mới xem xét release/deploy. Không thêm executor Ubuntu thứ hai;
+provider/model gateway chỉ là nhánh tùy chọn.
+
+## Checkpoint Wave 3 — lifecycle-aware account inventory — 21-09-2026
+
+Store đã sửa `list_account_targets()` để dùng inventory giữ lịch sử: target của
+cùng account vẫn xuất hiện khi binding bị revoke, node bị revoke, workspace
+generation đã retire hoặc registration bị thiếu. Projection chỉ có ID, display
+name, capability và timestamp; không có absolute path/secret/OAuth subject.
+`dispatch_state`/`dispatch_blockers` cho biết vì sao target không dispatchable;
+`task_open` và các action path vẫn chặn target không còn current.
+
+Focused proof: `control-plane/tests/test_mcp_oauth.py` **27/27 PASS** và
+`control-plane/tests/test_store.py` **83/83 PASS**, OAuth/task focused group
+**39/39 PASS trong 13.03s**; toàn bộ Control Plane unittest **291/291 PASS
+trong 90.154s**. Chưa có thay đổi live; gate
+Windows/package/two-client thật vẫn mở.
+
+Linux package preflight sau source wave: `npm run dist:dir` PASS; resource
+verifier **427 files + 9 control-plane adapter files**; packaged/installed
+recovery/release focused tests **5/5 PASS**. Linux preflight không chứng minh
+Windows RunAsNode fuse, Recovery Host, DPAPI/ACL hay reboot/startup.
+
+## Checkpoint integrated source gate xanh trước Wave 16 — 21-09-2026
+
+`npm run test:all` đã chạy bằng Python runtime product **3.12.14** + pytest
+**8.4.2** và hoàn tất:
+
+- Node/Electron: **874 tests: 858 PASS, 16 SKIP, 0 FAIL**;
+- MCP Python: **1.160 collected: 1.153 PASS, 7 SKIP, 0 FAIL / 159.31s**;
+- source-root, repository-secret và focused hash/timestamp/restart/
+  continuous-check regression: PASS.
+
+Wave này cập nhật exact structured-`argv` hash, canonical timestamp parser,
+platform-aware restart/reconcile expectation và chỉ dùng `trusted` cho
+ContextBudget output fixture; không nới safe policy. Evidence vẫn là
+**`SOURCE_PRESENT + FOCUSED_TEST_PROOF` + integrated local test proof**.
+Windows exact package/fuse/DPAPI/ACL, reboot/reconnect/revoke/rotation, two
+ChatGPT clients, T01–T16 và soak 24h còn mở.
+
+**Next action:** Windows exact package/Recovery smoke → credential/startup gates
+→ same-account two-client acceptance → fault matrix/soak/owner acceptance.
+
+## Checkpoint direct MCP Python initial attempt (superseded) — 21-09-2026
+
+Python **3.14.4** + pytest **8.4.2** với dev dependencies đầy đủ trong runtime
+tạm đã collect **1.160 test: 1.149 PASS, 4 FAIL, 7 SKIP**. Đây là direct suite
+proof; không phải package Windows và không thay thế `npm run test:mcp` trên host,
+vì `/usr/bin/python3` hiện vẫn thiếu pytest.
+
+Bốn blocker cần xử lý trước khi gọi lane xanh:
+
+1. exact tool-contract hash test còn mong `d694…`, trong khi structured `argv`
+   hiện tại sinh `bc44…`;
+2. live restart/reconcile chưa terminalize được managed job sau khi command
+   handle mất, phải giữ process identity/owner fence và không kill PID mù;
+3. canonical timestamp parser chấp nhận `24:00:00Z` trên Python 3.14;
+4. continuous-check fixture chạy `python -m pytest` nhưng child không thấy
+   pytest do runtime không truyền `PYTHONPATH` tạm (environment/harness gap).
+
+Node/source lane vẫn **874 tests: 858 PASS, 16 SKIP, 0 FAIL**; Control Plane
+unittest riêng vẫn **289/289 PASS**. Trạng thái evidence giữ nguyên
+**`SOURCE_PRESENT + FOCUSED_TEST_PROOF`**.
+
+**Next action:** sửa/retest 4 blocker, cài dev extra vào interpreter thật rồi
+chạy lại `npm run test:all`; sau đó mới mở Windows exact package/fuse/DPAPI/ACL,
+reboot/reconnect/revoke/rotation và T01–T16.
+
+## Checkpoint npm host dependency — 21-09-2026 (previous run)
+
+`npm run test:all` đạt Node/source lane **874 tests: 858 PASS, 16 SKIP, 0 FAIL**;
+source-root và repository-secret checks đều PASS. Lệnh kết thúc ở `test:mcp`
+vì `/usr/bin/python3` thiếu `pytest`. Host không có `pip`/`ensurepip`, nên
+`python3 -m pip install -e 'resources/coding-tools-mcp[dev]'` chưa thể chạy.
+Đây là blocker dependency của môi trường; chưa được tính là MCP pytest pass và
+chưa thay đổi mức bằng chứng `SOURCE_PRESENT + FOCUSED_TEST_PROOF`.
+
+## Chốt semantics account/workspace — 21-09-2026
+
+Một account ChatGPT/OAuth dùng chung tạo một `principal_id`. Máy A bind workspace
+và nhận `binding_id`; mọi client cùng account có thể chọn ID đó để gửi việc tới
+đúng A, trong khi file, Git, process, build/test/deploy và quyền OS vẫn nằm ở
+runtime local của A. `binding_id` chỉ là selector, không phải token/context.
+Mỗi task khóa `{device_id, endpoint_id, workspace_id, workspace_generation}`;
+writer lease/idempotency/generation fence ngăn client thứ hai retarget hoặc ghi
+đè task đang chạy. Không tạo `active_workspace` toàn tài khoản và không copy
+cookie, OAuth token, node secret, context hay absolute path giữa máy.
+
+Đã có thể tái sử dụng account inventory/binding/task store, enrollment và
+credential lâu dài theo device, heartbeat/reconnect/rotation source path,
+standing local policy, journal/receipt, Recovery IPC/Host, RuntimeOrchestrator,
+Coding Tools MCP, connected-agent và package verifier. Bằng chứng hiện tại là
+`SOURCE_PRESENT + FOCUSED_TEST_PROOF`: same-account **3/3**, document E2E **3/3**,
+exec parity **12/12**, Control Plane **289/289**, integrated MCP Python **1.153 PASS /
+0 FAIL / 7 SKIP trên 1.160**, Node/Electron **858 PASS / 16 SKIP / 0 FAIL trên
+874**. Exact Windows package/fuse/DPAPI/ACL/live toolchain, hai
+ChatGPT client thật, fault matrix T01–T16 và soak 24 giờ vẫn chưa đóng; không
+được gọi là `PACKAGED_PROOF` hay `LIVE_ACCEPTED`.
+
+## Checkpoint test-runner và regression — 21-09-2026, 04:38 +07
+
+Đã sửa đường `npm run test:mcp` để dùng `scripts/run-python.js --module pytest`,
+chọn đúng interpreter theo host; `pytest>=8,<9` đã được khai báo trong dev
+extra. Regression sau sửa: Python Control Plane **289/289 PASS trong 92.465s**;
+Node/Electron **874 tests: 858 PASS / 16 SKIP / 0 FAIL trong 43.485s**;
+release-runner **2/2 PASS**; source-root, secret check, `node --check` và
+`git diff --check` PASS. Host hiện chưa cài module `pytest`, nên
+`npm run test:mcp` dừng ở `No module named pytest`; đây là dependency gap của
+môi trường, chưa phải MCP pytest proof. Cài dev extras rồi chạy `npm run test:all`
+là bước kế tiếp trước Windows package gate.
+
+## Checkpoint Python 3.14 runtime hardening — 21-09-2026, 04:44 +07
+
+Đã sửa semantic fingerprint để hỗ trợ hằng `slice` và sửa Landlock standalone
+helper để resolve package imports trước khi chạy command. Bằng chứng focused:
+`test_wave_a_runtime` **12/12**, `test_landlock_exec` **3/3**, continuation
+identity/structured argv **2/2**, continuation patch/proof-replan **2/2** và
+`py_compile` đều PASS. Đây là source/local proof; Windows package/live và
+`npm run test:mcp` đầy đủ vẫn mở vì host chưa cài `pytest`.
+
+Bổ sung proof local: `test_controller_continuity` + `test_controller_reattach`
+**21/21 PASS**; `test_run_continuation` **50/50 PASS**. Đây là source/local
+proof, không thay thế pytest suite hoặc Windows live acceptance.
+
+Sandbox pytest **9.0.2** chỉ collection được **1158 items / 1 error** vì thiếu
+`mcp`, lại không khớp constraint `<9`; không tính là pytest proof. Cần cài dev
+extra đầy đủ trên host/pipeline rồi chạy lại `npm run test:all`.
+
+## Checkpoint package/resource preflight — 21-09-2026, 04:46 +07
+
+`npm run dist:dir` tạo `dist/linux-unpacked` và verifier đạt; packaged/installed
+helper tests **3/3 PASS**; smoke runtime trả `windows_only` đúng contract. Đây
+là Linux preflight, chưa phải Windows fuse/Recovery/DPAPI/ACL hoặc
+`PACKAGED_PROOF`.
+
+## Checkpoint W2 focused execution parity — 21-09-2026, 04:08 +07
+
+Đường `exec_command` structured argv hiện đã có focused parity proof cho bốn
+nhóm thao tác Git/build/test/deploy: cùng task/writer lease/binding, poll qua
+node, Recovery bridge thật và terminal receipt cho từng action. Test mới
+`test_oauth_exec_workflow_parity_uses_one_local_lane` nâng HTTP→node→Recovery
+exec suite lên **12/12 PASS trong 22.262s**.
+
+Các argv được fixture ghi nhận là `git --version`, `npm run build`, `npm test`
+và `npm run deploy`. Allowlist vẫn nằm ở policy local; Ubuntu chỉ chuyển
+structured argv và target bất biến. Vì peer MCP là deterministic fixture, mức
+bằng chứng chỉ là **`FOCUSED_TEST_PROOF`**. Chưa có Windows packaged/live
+toolchain, deploy thật, reboot/reconnect/revoke/rotation live hoặc hai client
+ChatGPT thật cùng `principal_id`.
+
+Bước kế tiếp là W2 packaged command proof trên Windows (Git/build/test/deploy
+thật), sau đó W3 same-account two-client acceptance; không tạo executor Ubuntu
+thứ hai và không gọi provider model.
+
+## Checkpoint packaged preflight — 21-09-2026
+
+Preflight trên Linux đã tạo `dist/linux-unpacked` và verifier xác nhận resource
+allowlist/byte identity cùng các bridge document/exec/approved-patch/file-read.
+Hai test helper packaged/installed đạt **3/3 PASS**; nhóm Node build/package
+verification liên quan đạt **12/12 PASS**; smoke runtime chính trả
+`windows_only` nên được phân loại là skip có chủ đích. Lệnh Windows mặc định
+dừng ở `build.electronDist` vì nó trỏ tới Linux Electron; một override CLI tạm
+thời đã tạo PE `dist/win-unpacked/Coding Tools MCP.exe` và verifier độc lập đạt
+**285 resource files + 9 adapter files**, nhưng `afterPack` fail-closed khi
+`assertRunAsNode` cố chạy `.exe` trên Linux. Cần exact Windows build/smoke để
+xác minh fuse/runtime và mới ghi `PACKAGED_PROOF`.
+
+## Checkpoint same-account multi-binding focused proof — 21-09-2026
+
+Test mới `test_same_account_selects_multiple_bindings_without_retargeting_existing_task`
+đã chứng minh qua HTTP facade rằng hai token cùng `principal_id` nhìn thấy hai
+`binding_id`; task A trên binding A và task B trên binding B không lẫn đích, còn
+client B observe task A vẫn nhận target A. Cùng hai regression account/task
+khác đạt **3/3 PASS trong 3.102s**. Đây chỉ là focused source proof; ChatGPT
+client thật, Windows package và Job live handoff vẫn chưa nghiệm thu.
+
+## Checkpoint sau W1 E2E + full regression — 21-09-2026, 03:55 +07
+
+Working tree vẫn ở `codex/control-plane-quarantine@502ffb8cf8b541ee74af30194aff2dce08c3b649`;
+đã xử lý relay/crash setup, thêm lost-ACK proof và chạy lại regression. Không
+tạo Job live, không thay đổi live state, không commit/push/deploy/restart và
+không gọi provider trả phí.
+
+### Account chung và workspace target
+
+Một account ChatGPT/OAuth xác minh thành `principal_id` duy nhất trong control
+plane. Các máy/client cùng account có thể chọn cùng `binding_id`; ID này trỏ
+đến đúng device/endpoint/workspace đã bind. Mỗi task vẫn pin immutable tới
+`{device_id, endpoint_id, workspace_id, workspace_generation}`. Vì vậy client B
+có thể gửi việc tới workspace của máy A nếu chọn cùng binding, nhưng không thể
+retarget task A đang chạy. Ubuntu làm auth/router/queue/receipt; node A giữ
+credential, file, Git, process và quyền OS local.
+
+### Source và proof hiện tại
+
+- Đã có W1 source path: `recovery_document_write_bridge.cjs`,
+  `RecoveryHost` handler `runtime.control_plane_document_write`, node
+  `document_write` poll/loop/CLI, journal/lock và lane thứ năm trong
+  `run-connected-agent`; packaged resource allowlist/smoke cũng đã cập nhật.
+- Central document admission, task/writer/generation/idempotency và digest-only
+  receipt validator đã có từ batch trước.
+- CJS bridge đã nâng `MAX_REQUEST_BYTES` lên `512 KiB`, trong khi document
+  content cap là `256 KiB`; boundary dưới/trên cap có proof.
+- HTTP→node→Recovery→Coding Tools MCP document E2E **3/3 PASS**: create/convert
+  file thật, crash sau effect thành `unknown/reconcile_required`, và mất ACK
+  replay receipt không redelivery. Bridge/adapter focused **10/10 PASS**;
+  Python document node-agent + E2E focused **8/8 PASS**.
+- Full Python control-plane: **289/289 PASS trong 91.287s**. Full Node/Electron:
+  **873 tests; 857 PASS / 16 SKIP / 0 FAIL trong 43.611s**; source-root và
+  repository-secret checks PASS. `py_compile`, `node --check`, `git diff --check`
+  PASS.
+
+Mức hiện tại vẫn là **`SOURCE_PRESENT + FOCUSED_TEST_PROOF`**. Chưa được ghi là
+`PACKAGED_PROOF`/`LIVE_ACCEPTED`; chưa có Windows package/DPAPI/ACL/reboot/
+revoke/rotation, full Git/build/test/deploy acceptance hoặc hai client ChatGPT
+thật cùng `principal_id`.
+
+### Tận dụng và việc kế tiếp
+
+Đã tận dụng OAuth/account inventory, `ControlPlaneStore` bindings/task/writer
+leases/generation, enrollment và credential riêng theo device, heartbeat/
+reconnect/rotation, workspace registry/capability `{read,write,exec}`, standing
+policy v2, journal/receipt, `RecoveryIpcServer`, `RecoveryHost`,
+`RuntimeOrchestrator`, Coding Tools MCP và connected-agent worker. Không dựng
+lại credential, queue, executor Ubuntu, hay cơ chế copy context/token.
+
+Thứ tự tiếp theo: (1) W2 parity cho Git/build/test/deploy trên structured local
+runtime; (2) Windows packaged/live DPAPI/ACL/startup/reconnect/revoke/rotation;
+(3) same-account two-client acceptance với binding/task/writer handoff;
+(4) release/soak/evidence và owner acceptance; (5) chỉ khi thật sự cần mới
+thêm provider gateway cho server-side inference.
+
+## Checkpoint baseline trước khi nối W1 — 21-09-2026, 03:18 +07
+
+Working tree được xác minh ở branch `codex/control-plane-quarantine`, HEAD
+`502ffb8cf8b541ee74af30194aff2dce08c3b649`; không tạo Job, không thay đổi live
+state, không commit/push/deploy/restart và không gọi provider trả phí.
+
+- **Python:** `279/279 PASS` trong `84.520s`.
+- **Node/Electron:** `868 tests; 852 PASS / 16 SKIP / 0 FAIL` trong `43.845s`;
+  source-root và repository-secret checks PASS.
+- **Syntax/integrity:** `py_compile`, `node --check` các bridge/runtime liên
+  quan và `git diff --check` PASS.
+- **Central document create:** focused `1/1 PASS`; đây mới là durable
+  admission/queue/idempotency proof, không phải file-effect proof.
+- **Document bridge/runtime guards:** focused `14/14 PASS`; chưa có
+  Recovery-process create/convert test.
+
+### Reuse map và gap còn lại
+
+Account ChatGPT dùng chung được biểu diễn bằng cùng OAuth `principal_id`; mỗi
+client chọn `binding_id`, còn task bị khóa vào exact device/endpoint/workspace/
+generation. Ubuntu chỉ xác thực, xếp hàng và lưu receipt. Node giữ credential,
+file, Git, process, build/test/deploy và quyền OS local. Đã tận dụng OAuth/account
+inventory, `ControlPlaneStore`, enrollment/rotation, heartbeat/reconnect,
+workspace registry, standing policy v2, journal/receipt, Recovery IPC/Host,
+RuntimeOrchestrator, Coding Tools MCP và connected-agent worker; không có
+credential/context copy hay active workspace toàn tài khoản.
+
+W1 document-write mới có central schema/admission, Electron bridge,
+RuntimeOrchestrator và node helper/journal source. Chưa có CJS descriptor-hiding
+bridge, RecoveryHost handler, node poller/CLI/lane connected-agent và
+Recovery-process file-effect/fault proof. Do đó chưa quảng bá `doc_create` hoặc
+`doc_convert` là quyền ghi live; Windows packaged/DPAPI/ACL/reboot/revoke/
+rotation và hai ChatGPT client thật vẫn là gate sau.
+
+## Checkpoint validation mới nhất — 21-09-2026, 03:05 +07
+
+Đã chạy lại test trên working tree hiện tại; không tạo Job, không đổi live
+state, không commit/push/deploy/restart và không gọi provider trả phí. Git vẫn ở
+`codex/control-plane-quarantine@502ffb8cf8b541ee74af30194aff2dce08c3b649`,
+worktree dirty có chủ ý.
+
+- Python control-plane: **279/279 PASS** trong **83.534s** với
+  `PYTHONPATH=control-plane python3 -m unittest discover -s control-plane/tests -v`.
+- Node/Electron: **868 tests; 852 PASS / 16 SKIP / 0 FAIL** qua `npm test`;
+  source-root và repository-secret checks PASS.
+- `node --check`, `py_compile`, `git diff --check`: PASS.
+- Document central create: **1/1 PASS**; đây là admission/queue/idempotency
+  proof, không phải node file-effect proof.
+
+## Tóm tắt account chung và phần đã tận dụng
+
+Một OAuth-verified `principal_id` có thể được nhiều ChatGPT client dùng chung;
+mỗi task chọn `binding_id` và bị pin tới
+`{device_id, endpoint_id, workspace_id, workspace_generation}`. Ubuntu giữ
+auth/queue/receipt, còn máy đã bind giữ workspace, credential, Git, process và
+quyền OS local. Đã tận dụng OAuth/account inventory, `ControlPlaneStore`
+bindings/task/writer leases, node enrollment/credential/heartbeat/rotation,
+standing local policy, node journal, Recovery IPC/Host, RuntimeOrchestrator và
+Coding Tools MCP. Vì vậy chưa cần dựng lại credential theo máy, queue task,
+hay một executor trung tâm mới.
+
+W1 document-write hiện mới ở mức central schema/admission + Electron bridge
+source. Còn thiếu node `document_write` poller, CJS Recovery bridge, handler
+RecoveryHost và Recovery-process create/convert proof; không được gọi đây là
+full write capability. Hai client ChatGPT thật, Windows packaged/live,
+DPAPI/ACL/reboot/revoke/rotation live và provider gateway (nếu cần) cũng chưa
+đóng gate. Kế hoạch chi tiết và điều kiện nghiệm thu nằm ở
+[TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+
+## Recheck tài liệu mới nhất — 21-09-2026, 02:50 +07
+
+Lượt này chỉ cập nhật tài liệu và đối chiếu source/status; không chạy lại test,
+không tạo Job, không thay đổi live state, không commit/push/deploy/restart và
+không gọi provider trả phí. Các số liệu bên dưới là checkpoint validation gần
+nhất lúc 02:40 +07 trên cùng working tree.
+
+Mô hình vận hành đã chốt là **một tài khoản ChatGPT/OAuth `principal_id` dùng
+nhiều controller, chọn `binding_id` để định tuyến tới máy có workspace**.
+Ubuntu giữ auth/queue/receipt; node Windows giữ file, Git, process, build/test/
+deploy và quyền OS local. `binding_id` không phải token; task luôn pin tới
+`{device_id, endpoint_id, workspace_id, workspace_generation}` và không có
+`active_workspace` toàn tài khoản.
+
+Sau khi bổ sung central document-write schema, lỗi DDL dấu phẩy thừa đã được
+sửa. Validation hiện hành trên working tree:
+
+- Python control-plane discovery: **279/279 PASS trong 82.053s**; focused central
+  document-create test **1/1 PASS** (task-session file **12/12 PASS**).
+- OAuth/task/exec/HTTP focused group: **85/85 PASS**.
+- Node/Electron `npm test`: **852 PASS / 16 SKIP / 0 FAIL** trên 868 test; source
+  root và repository-secret checks PASS.
+
+Điểm cần nói rõ: `document_workflow` read đã có standing-policy proof;
+`doc_create`/`doc_convert` mới có central schema/admission và relay validator
+ở mức source. Node document-write lane, Recovery process bridge, Windows
+packaged/live và hai ChatGPT client thật **chưa nghiệm thu**, nên không bật hoặc
+gọi đây là full write capability. Bảng tái sử dụng, wave W0–W6 và T01–T16 nằm
+trong [kế hoạch hiện hành](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+
+**Next implementation batch (W1):** thêm poller lane `document_write`, bridge
+`RecoveryIpc/RecoveryHost/RuntimeOrchestrator` riêng cho document create/convert,
+gọi `document_workflow` trên exact workspace local và ghi receipt
+`prepared/completed/rejected/unknown` với task/writer/generation correlation.
+Phải có stale-path/generation/allowlist/overwrite rejection và crash/lost-ACK
+proof trước khi mở capability write trên node.
+
+> **Hướng dẫn hiện hành — 21-09-2026:** xem
+> [kế hoạch, hiện trạng và bảng tái sử dụng theo tài khoản/workspace](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md).
+> Các snapshot/receipt trong tài liệu này giữ nguyên ngày quan sát; những mô tả
+> schema 8, admission hay gate pilot dưới đây không phải xác minh live hiện tại.
+> Receipt mới hơn và giới hạn bằng chứng được phân loại trong kế hoạch mới.
+
+**Cập nhật kiểm tra lại:** 21-09-2026, 02:24 +07 cho working-tree G4-F → G4-K,
+SecretStore, node-agent credential protection, schema-22 rotation, Electron
+owner-mediated rotation, account presence inventory và connected-agent worker;
+wave G4-K/SecretStore lúc 22:21–01:40 +07 bổ sung Recovery restart/crash fixture,
+lưu secret crash-safe ở mức source, bảo vệ node credential bằng DPAPI envelope,
+rotation prepare/activate/ack ở mức source, hoàn tất Node/Python regression và
+cập nhật tài liệu và standing patch qua Recovery process thật. Lượt 02:24 chỉ
+chốt rõ semantics một account ChatGPT → nhiều client → `binding_id` chung;
+không thay đổi source/live state. Các snapshot
+deployment bên dưới giữ mốc 15-09-2026, khoảng 08:58–20:26 +07:00
+(Asia/Ho_Chi_Minh).
 
 **Trạng thái:** Pilot có kiểm soát — chưa đủ bằng chứng để gọi là production hoặc autonomous execution.
 
-Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu mới ở [UBUNTU_24X7_COMPLETION_PLAN.md](UBUNTU_24X7_COMPLETION_PLAN.md).
+Tài liệu này phân biệt kiểm tra hiện hành với snapshot triển khai trước. Các tài liệu trong `docs/research/` là chronology/evidence tại thời điểm viết và không bị sửa để làm chúng trông như trạng thái hiện tại. Kế hoạch chi tiết và ma trận nghiệm thu hiện hành ở [TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md](TRUSTED_WORKSPACE_ACCOUNT_COMPLETION_PLAN.md); các receipt cũ bên dưới chỉ giữ giá trị lịch sử.
+
+## Checkpoint working tree hiện hành — G4-F → G4-K Recovery exec/stop/reconcile/crash-restart + presence/connected agent, 21-09-2026
+
+Đây là bằng chứng source/focused trên working tree, **không phải** activation
+của Ubuntu release bên dưới và không phải packaged/live Windows acceptance.
+
+- Central OAuth HTTP, node heartbeat/poll, local standing exec policy, journal
+  và receipt store chạy thật trong fixture. Node agent gọi một Node process
+  fixture riêng có `RecoveryIpcServer`, `RecoveryHost` và
+  `RuntimeOrchestrator.controlPlaneExec()` thật; peer Coding Tools MCP chỉ là
+  HTTP fixture deterministic cho health/bind/exec/control.
+- `exec_run` trả một handle `running`; poll sau đọc lại handle và gọi
+  `exec_poll` mà không spawn lại. Stop giữ `pending` cho tới khi
+  `command_control(kill)` trả terminal evidence, sau đó mới ghi `stopped`
+  receipt và acknowledge stop.
+- Sửa lỗi trung tâm: `store.py` đưa `stopped` vào
+  `TERMINAL_RECEIPT_STATES`; trước đó receipt hợp lệ bị HTTP 400 và action giữ
+  `accepted`. Teardown đóng process stderr pipe để không để warning tài nguyên.
+- G4-G phát hiện một ranh giới journal trong đó `request/result` của Job
+  `running` chỉ được ghi sau khi receipt gửi đi. Node agent nay persist atomic
+  projection đầy đủ trước network boundary; fault fixture làm central commit
+  `accepted` rồi bỏ ACK và chứng minh poll sau replay receipt, gọi `exec_poll`
+  đúng handle, không gọi lại `exec_run`.
+- G4-H đóng socket MCP ngay sau `exec_run`; node ghi một receipt
+  `unknown/reconcile_required`, lần poll sau không re-dispatch và không gọi
+  `exec_poll` trên effect không rõ kết quả.
+- G4-I làm mất ACK sau khi central đã ghi terminal `completed`; node giữ payload
+  terminal trong journal, poll sau replay đúng receipt và không relay lại Job.
+- Validation: HTTP→Recovery process E2E exec/stop/lost-ACK/disconnect/
+  terminal-ACK/crash-restart/running-restart/terminal-crash/terminal-ACK-restart/
+  stop-pending-restart/writer-job-handoff **11/11 PASS**;
+  `test_store` **85/85** ở lane fault; `test_mcp_exec` **8/8**;
+  `test_exec_node_agent` **21/21**; node-secret protection **8/8**; node
+  credential rotation **5/5** và HTTP **1/1**; mốc trước Recovery-process
+  standing patch, full control-plane discovery **275/275 PASS**; `test_store`
+  **83/83 PASS**;
+  OAuth module **24/24 PASS** với
+  `unknown → online → offline`; `py_compile`,
+  `node --check`, `git diff --check`
+  PASS. SecretStore focused **5/5 PASS**. Full Node đã hoàn tất với **868
+  tests: 852 PASS / 16 SKIP / 0 FAIL**. Recovery Supervisor source test
+  **1 PASS / 1 SKIP / 0 FAIL**.
+  Đây chỉ là `FOCUSED_TEST_PROOF`; chưa chứng minh terminal Recovery crash/
+  restart, duplicate-effect/reconcile đầy đủ, Windows package/live, hai ChatGPT
+  client thật, read/write/Git/build/test/deploy end-to-end hay soak.
+
+## Checkpoint mới nhất — standing patch qua Recovery process thật, 21-09-2026, 02:00 +07
+
+Standing approved-patch hiện đã đi qua process fixture có thật
+`RecoveryIpcServer` → `RecoveryHost` → `RuntimeOrchestrator` → Coding Tools
+MCP, thay vì chỉ gọi bridge giả lập:
+
+- Crash sau local MCP đã ghi file nhưng trước khi bridge nhận kết quả: **1/1
+  PASS**; node gửi một receipt `unknown`, central giữ
+  `reconcile_required`, restart process không redeliver `apply_patch`.
+- Central commit `completed` rồi mất ACK: **1/1 PASS**; approved-patch journal
+  replay đúng terminal receipt, store idempotent và observation chỉ có một
+  `apply_patch`.
+- Standing bridge request nay bắt buộc có `authority_mode=standing`; adapter
+  Recovery chuyển đủ `task_id`, `writer_lease_generation`, `run_id`, `wave_id`
+  và postimage metadata trước lớp allowlist. Đây là sửa lỗi contract lộ ra chỉ
+  khi chạy process thật, không mở rộng quyền OS.
+
+Validation của wave: approved-patch HTTP→node class **5/5 PASS trong 11.771s**;
+full Python control-plane discovery **278/278 PASS trong 82.054s**; Node
+approved-patch/Recovery bridge **12/12 PASS**; `node --check` và
+`py_compile` PASS. Mức bằng chứng vẫn là source/focused trên working tree,
+chưa phải Windows packaged/live hoặc Ubuntu live activation.
+
+### Standing artifact/document-read parity — 21-09-2026, 02:18 +07
+
+Artifact `document_workflow` read hiện dùng cùng file-read policy standing
+schema v2 (`authority_mode=standing`, `expires_at_ms=null`) thay vì quay lại
+TTL context. Node vẫn kiểm đúng workspace generation, root-relative allowlist,
+UTF-8/size cap và receipt digest; test không mở quyền ghi và không tự gọi
+Recovery/MCP ngoài scope đọc.
+
+Focused proof: `test_standing_artifact_read_uses_the_same_local_policy_without_ttl`
+**1/1 PASS**; toàn bộ `test_file_read_node_agent.py` **10/10 PASS**. Đây là
+source/local proof cho parity của document read. Document create/convert,
+Recovery-process document bridge, Windows packaged/live và hai client ChatGPT
+thật vẫn chưa được nghiệm thu.
+
+### Standing-write source checkpoint — 21-09-2026, 00:52 +07
+
+Local policy v2 vẫn có `authority_mode=standing` cho file-read/approved-patch/
+exec và connected-agent không phụ thuộc TTL read-only để heartbeat. Central
+`agent_workflow.apply_patch` nay có profile
+`control-plane-oauth-standing-write-v1`, schema-23 `mcp_standing_patch_intents`
+và không yêu cầu `permission_request_id` trong scope đã bật. Admission vẫn bắt
+principal OAuth + distinct write scope + `binding_id`/task + writer
+lease/generation + exact path/digest/envelope/contract; node tiếp tục kiểm
+local policy/OS trước effect. `request_permissions` chỉ còn cho legacy hoặc
+escalation ngoài scope.
+
+Focused test `test_standing_write_queues_without_per_patch_permission_and_replays`
+và HTTP→node `test_oauth_standing_write_to_node_patch_to_verified_status` là
+**2/2 PASS**; full Python discovery **275/275 PASS**. E2E này đã chứng minh
+tools/list standing capability, writer claim, không có `permission_request_id`,
+node poller admission bằng local standing policy, file write trong fixture,
+completed receipt và MCP status projection; facade projection được sửa để
+chấp nhận action `authority_mode=standing` mà vẫn reject field/mode sai. Đây
+mới là `SOURCE_PRESENT + FOCUSED_TEST_PROOF`: chưa có standing fault/
+duplicate-effect/reconcile đầy đủ, Windows packaged/live acceptance, hai
+ChatGPT client thật hoặc full read/write/Git/build/test/deploy E2E.
+
+### Standing HTTP→node completed receipt — 21-09-2026, 01:08 +07
+
+Fixture E2E mới đã chạy đúng chuỗi:
+
+```text
+OAuth bearer + linked principal
+  → tools/list standing contract
+  → task_control.writer_claim
+  → agent_workflow.apply_patch (không permission_request_id)
+  → node `/poll` + policy v2 standing
+  → local bridge fixture ghi file
+  → completed receipt
+  → MCP patch_status relay digest-only result
+```
+
+`_completed_approved_patch_relay()` trước đó chỉ chấp nhận exact action fields
+của owner-review; standing action có thêm `authority_mode=standing`, vì vậy
+receipt đã completed nhưng status bị trả `pending_or_unverified`. Source đã
+được sửa để standing bắt buộc đúng `authority_mode=standing` và compatibility
+`permission_request_id=standing`, còn owner-review vẫn không được mang field
+standing. E2E `test_oauth_standing_write_to_node_patch_to_verified_status`
+**1/1 PASS**; approved-patch HTTP E2E + task facade **14/14 PASS**.
+
+**Git/run state:** branch `codex/control-plane-quarantine`, HEAD
+`502ffb8cf8b541ee74af30194aff2dce08c3b649`, worktree dirty; lượt này không
+commit, push, deploy, restart service hoặc gọi provider trả phí. Bước kế tiếp là
+Windows packaged/live DPAPI/ACL migration and rotation/retry proof, sau đó G4-K
+duplicate-effect/reconcile còn lại và packaged/live gates.
+
+### Latest standing HTTP→node verification — 21-09-2026, 01:19 +07
+
+The affected approved-patch HTTP class was rerun after the stale-generation
+fixture was added: **3/3 PASS**. It covers the owner-review regression, the
+standing path without `permission_request_id` through node poll/local policy to
+completed receipt and `patch_status`, rejection of a stale local workspace
+generation before the mutation bridge, and an explicit `unknown`/
+`reconcile_required` observation that cannot be retried. The full Python
+control-plane discovery then passed **275/275 in 73.574s**. A SQLite
+`ResourceWarning` remains, but there was no test failure.
+
+This is still source/focused evidence on the dirty working tree. It does not
+close standing stale-preimage/path or lost-ACK/duplicate-effect proof, Windows
+packaged/live DPAPI/ACL/startup/reconnect/rotation, two real ChatGPT clients,
+full read/write/Git/build/test/deploy, or the 24-hour soak.
+
+### Standing fault proof continuation — 21-09-2026, 01:32 +07
+
+The same HTTP→node standing fixture now proves two additional boundaries:
+
+- A local `CONTROL_PLANE_APPROVED_PATCH_PREIMAGE_MISMATCH` becomes one settled
+  `rejected` receipt and leaves the fixture file unchanged.
+- If the central service commits `completed` but the node loses the response,
+  the journal retries the same receipt; the store replays it idempotently and
+  the bridge is not invoked again. Only one terminal receipt remains.
+
+The affected HTTP class is **3/3 PASS**; node/store/task regression is
+**105/105 PASS**; full Python discovery is **275/275 PASS in 74.546s**. The
+remaining `ResourceWarning` messages are SQLite cleanup hygiene, not failures.
+This is still source/focused proof, not exact Windows/Recovery packaged proof.
+
+### Standing path-deny + full regression — 21-09-2026, 01:37 +07
+
+The standing fixture now also sends a valid exact-file envelope for a relative
+path outside the local allowlist. Node admission settles it as `rejected`
+before the mutation bridge and does not create the target file. The affected
+HTTP class is **3/3 PASS**; node/store/task regression is **105/105 PASS**; full
+Python discovery is **275/275 PASS in 74.631s**. `git diff --check` and updated
+document whitespace checks pass. Terminal-unknown/duplicate-effect proof on the
+remaining Recovery boundaries and all Windows/live/multi-client gates remain
+open.
+
+### Standing terminal-unknown — 21-09-2026, 01:40 +07
+
+The standing path now also handles a post-prepared bridge timeout as one
+`unknown` receipt and central `reconcile_required` lifecycle. `patch_status`
+reports the uncertainty without patch bytes, and a following poll does not
+invoke the mutation bridge again. Full Python discovery is **275/275 PASS in
+73.941s**; the remaining warnings are SQLite cleanup hygiene. This is still a
+mocked HTTP fixture, not Recovery-process/package/live proof.
+
+### G4-J — process crash sau `exec_run` không redeliver
+
+Node agent ghi `prepared` trước khi gọi Recovery bridge. Nếu bridge trả lỗi sau
+boundary này, entry không còn được phân loại là pre-effect `rejected`; node giữ
+payload unknown với `code=CONTROL_PLANE_EXEC_EFFECT_UNKNOWN` và
+`diagnostic_code`, gửi một receipt `unknown` rồi dừng retry effect. Process
+fixture có thể tự thoát sau khi MCP đã ghi nhận `exec_run`; restart cùng data root
+giữ observation và descriptor mới.
+
+Focused proof: `test_exec_node_agent` **21/21**, E2E HTTP→Recovery **10/10**, full
+Python discovery **254/254**. Đây là proof của process-crash/running-resume/
+terminal-loss boundaries; central terminal ACK loss, stop-pending, Windows Job
+handoff, packaged/live và two-client acceptance vẫn chưa đạt.
+
+### G4-K partial — running handle resume và terminal result loss
+
+Focused fixture hiện chứng minh hai boundary bổ sung:
+
+- Sau receipt `accepted` cho Job `running`, Recovery process bị kill và khởi
+  động lại. Node đọc local handle từ journal, gọi `exec_poll` qua process mới,
+  settle terminal receipt và không gọi `exec_run` lần hai.
+- Khi MCP đã trả terminal result nhưng Recovery chết trước bridge ACK, node giữ
+  `unknown/reconcile_required`; restart không tự biến nó thành `completed` và
+  không dequeue lại action.
+
+Đây là **partial G4-K**; chưa có duplicate-effect/reconcile đầy đủ hoặc
+writer lease/handoff trên Windows Job thật.
+
+### G4-K continuation — terminal ACK và stop-pending qua Recovery restart, 20-09-2026, 22:34 +07
+
+Hai boundary mới đã được kiểm chứng trên cùng process fixture Recovery/Electron:
+
+- Central đã commit terminal `completed` nhưng node mất ACK; Recovery process bị
+  kill ngay sau commit. Journal giữ terminal receipt chưa gửi, process mới chỉ
+  replay receipt và không relay lại `exec_run`/`exec_poll`.
+- Local MCP đã nhận `exec_stop` nhưng Recovery chết trước bridge response. Stop
+  vẫn `pending`, không acknowledge sớm; process mới poll cùng handle, nhận
+  observation stop đã có hiệu lực, ghi `stopped` rồi mới acknowledge.
+
+Focused proof: E2E HTTP→Recovery **11/11 PASS**; node-agent + MCP fault/store/
+exec lane **34/34 PASS**; `node --check`, `py_compile` và `git diff --check`
+PASS. Đây vẫn là source/focused proof với MCP peer deterministic, chưa phải
+Windows Job Object, packaged/live hay hai ChatGPT client thật. G4-K còn mở ở
+writer lease unresolved/handoff và duplicate-effect/reconcile trên Job thật.
+
+### G4-K writer lease trên Job local — 20-09-2026, 22:43 +07
+
+E2E đã nối writer lease trung tâm với Job local qua node journal và Recovery
+process. Task B cùng binding bị `CONFLICT` khi task A còn `running`; release
+sớm của A cũng bị chặn. Sau terminal receipt, A release được lease và B claim
+được generation mới. Observation giữ đúng một `exec_run` và một `exec_poll`.
+
+Focused proof: HTTP→Recovery **11/11 PASS**, full Python discovery **255/255
+PASS**. Đây chưa phải Windows Job Object packaged/live, hai ChatGPT client thật
+hoặc deployment/soak proof.
+
+### SecretStore checkpoint — 20-09-2026, 22:52 +07
+
+Electron `SecretStore` hiện ghi envelope `schema_version=1` bằng temporary file
+độc quyền + `fsync`, đặt mode owner-only, giữ `.bak` và thử backup khi primary
+hỏng. Payload legacy được đọc một lần và migrate ở mutation kế tiếp. Nếu cả hai
+bản hỏng hoặc encryption unavailable, `set/remove` fail-closed thay vì ghi đè
+credential. Test [`tests/secret-store.test.js`](../tests/secret-store.test.js)
+**5/5 PASS**; full Node **867 tests: 851 PASS / 16 SKIP / 0 FAIL**.
+
+Đây chỉ là source/focused proof trên Linux với fake encryption. Chưa có bằng
+chứng Electron `safeStorage`/Windows DPAPI live, ACL thật, migration node secret
+khỏi `control-plane-node.json`, hay rotation chịu crash/mất ACK. Vì vậy tình
+trạng thái vẫn là pilot có kiểm soát; SecretStore chưa đóng gate credential/G2.
+
+### Node-agent credential protection checkpoint — 20-09-2026, 23:06 +07
+
+`control_plane/node_agent.py` hiện có Windows-specific protected credential
+path độc lập với renderer/Electron UI:
+
+- `_write_config()` loại `node_secret` khỏi JSON Windows và lưu
+  `node_secret_dpapi`; `_config()` giải mã chỉ trong memory, từ chối plaintext
+  và protected value cùng tồn tại, và không fallback plaintext khi protection
+  unavailable.
+- Config legacy có raw `node_secret` được migrate ở lần đọc authenticated đầu
+  tiên bằng temporary file độc quyền, `flush` + `fsync` và `os.replace`. Nếu
+  migration lỗi, file cũ vẫn giữ nguyên; không tạo plaintext backup.
+- [`test_node_secret_protection.py`](../control-plane/tests/test_node_secret_protection.py)
+  **6/6 PASS**: Windows protected write, in-memory unwrap/reprotect, ambiguity
+  refusal, fail-closed unavailable protection, legacy migration và non-Windows
+  fixture compatibility. Full Python discovery sau patch **261/261 PASS**.
+
+Đây là **SOURCE_PRESENT + FOCUSED_TEST_PROOF** dùng mocked Windows API, không
+phải DPAPI live/ACL/packaged proof. `SecretStore` Electron **5/5 PASS** vẫn là
+fake-encryption/Linux proof riêng; chưa có rotation hai pha chịu crash/mất ACK,
+restart/reconnect trên exact package, Windows Job live hoặc hai ChatGPT client
+thật. Không commit/push/deploy/restart/provider trong checkpoint này.
+
+### Schema-22 node-mediated credential rotation checkpoint — 20-09-2026, 23:29 +07
+
+The previous operator-facing one-shot rotation is now fail-closed. The source
+contract is a durable node-mediated sequence:
+
+```text
+candidate persisted locally → prepare(hash only) → activate(dual auth)
+→ candidate promoted locally → ack(new credential) → old hash retired
+```
+
+- `node_credential_rotations` stores `rotation_id`, hash digests, generation,
+  state and timestamps; it never stores the raw candidate secret. Repeating
+  `prepare`, `activate` or `ack` for the same ID replays the durable row, while
+  another active rotation is rejected.
+- During `activated`, both old and new node credentials authenticate. Only
+  `ack` with the new credential changes `nodes.credential_hash` and
+  `credential_generation`; a lost response can therefore be retried safely.
+- Node-agent pending candidates are protected through the same Windows DPAPI
+  envelope source path and are removed after completion. CLI state resumes from
+  `candidate_persisted`, `prepared`, `activated` or `promoted` without printing
+  either credential.
+- Focused proof: node-secret protection **8/8**, rotation store/agent **5/5**,
+  HTTP route **1/1**; full Python discovery **269/269 PASS** in **75.868s**.
+
+This is still **SOURCE_PRESENT + FOCUSED_TEST_PROOF** with mocked Windows API,
+local SQLite and HTTP fixtures. It is not Windows packaged/live DPAPI, ACL,
+operator-UI, real-machine rotation, or exact-package crash/soak proof.
+
+### Electron owner-mediated credential rotation checkpoint — 20-09-2026, 23:43 +07
+
+The Electron owner boundary now invokes the durable node-mediated rotation
+protocol without exposing the candidate secret to the renderer or IPC. The
+enrollment service calls only the packaged `node_agent.py rotate-credential`
+command and parses a redacted state/generation receipt. Main IPC requires the
+`central_executor` role and explicit `confirmRotation=true`; preload exposes
+only the confirmed action, and the renderer shows state/generation after an
+approved enrollment and can retry the durable phase.
+
+Focused enrollment/manager/rotation proof is **25/25 PASS**. The full Node
+suite is **868 tests: 852 PASS / 16 SKIP / 0 FAIL**; `node --check` and
+`git diff --check` pass. This is still source/focused proof: Windows packaged
+`safeStorage`/DPAPI, ACL, exact-build crash/lost-ACK rotation, and real
+ChatGPT multi-client acceptance remain open.
+
+### Account inventory presence checkpoint — 21-09-2026, 00:04 +07
+
+`list_account_targets` now returns path-free `presence_state` and
+`heartbeat_age_ms` for each active binding. A missing/invalid heartbeat is
+`unknown`; a heartbeat no older than the 60-second threshold is `online`; a
+stale heartbeat is `offline`. This observation is independent of task/context
+authority and does not create a policy, action, failover or new credential.
+
+The focused regression for `unknown → online → offline` is **1/1 PASS**; the
+OAuth module is **24/24 PASS** and full Python discovery is **270/270 PASS** in
+about **70.766s**. This uses a fake clock and SQLite fixture, so packaged
+Windows heartbeat/reconnect, revoked-vs-offline reconciliation and two real
+ChatGPT clients remain open.
+
+### Connected-agent worker checkpoint — 21-09-2026, 00:22 +07
+
+The packaged Supervisor command is now `run-connected-agent`. It publishes a
+heartbeat before every iteration without requiring the expiring compact
+read-only policy, then gates `file-read`, artifact, approved-patch and exec
+polling on the corresponding standing local policy and current workspace
+generation. Missing/disabled authority is a skipped lane, not a dequeue or
+permission grant. Transport/runtime/auth failures use bounded reconnect
+backoff, and a dedicated lock prevents duplicate connected agents; the legacy
+`run-read-only-agent` remains a diagnostic compatibility command.
+
+Focused connected-agent tests are **3/3 PASS**; full Python discovery is
+**273/273 PASS** in **71.758s**. This is still source/focused proof, not exact
+Windows packaged startup/reconnect, live heartbeat, revoked-vs-offline
+reconciliation, two ChatGPT clients, or full read/write/Git/build/test/deploy
+E2E.
+
+**Next action:** run the exact Windows packaged candidate through DPAPI/ACL,
+restart/reconnect and rotation crash/lost-ACK tests, then continue the remaining
+G4 duplicate-effect/reconcile and write-path parity gates.
 
 ## Checkpoint hiện hành sau delivery local/GitHub
 
@@ -419,3 +1626,33 @@ Trình tự được đề xuất trong snapshot trước (đã được bổ su
 ## Next action chính xác
 
 Review/commit P1a.5 + P1b.0/P1b.1 + P1c.0/P1c.1/P1c.2/P1c.3 + E38–E56 qua delivery guard chỉ khi người dùng giao commit; P0 hiện yêu cầu owner lifecycle giải quyết `mcp_update_pending`/`runtime_update_incomplete`, running/disk revision drift và lấy strict runtime discovery trên đúng development installation, không suy `CURRENT_COMPATIBLE_ACKNOWLEDGED` là admission. Ubuntu first needs an authorized deployment/service-owner packet and a new exact package with `CONTROL_PLANE_EXPECTED_PACKAGE_SOURCE_SHA256`; only then may the GET-only verifier be rerun and its pass be combined with separate systemd/checkout evidence. Chỉ khi P0 Windows strict mới chạy observer read-only để record exact live identity, nhưng vẫn phải provision/review local policy for P1b.1 và xác nhận target/client canary trước binding. P1c.2 is a fixed durable intake only; after capability/target proof, the first execution remains one explicit `poll-read-only-once` canary, not a scheduler; legacy `poll` cannot consume that action. E37/E43/E49/E52/E53/E54 limit receipt loss, node-agent pre-bridge crash, timeout retry and central durable-write/target-isolation behavior; E38/E40 supply snapshot primitive and digest; E39 supplies health correlation; E42 supplies restore preflight; E44/E45/E46/E56 supply package-artifact comparison, optional fail-closed startup, offline expected-value generation and exact read-only health receipt; E48 supplies the restore/reconciliation procedure and E50 supplies a recovery-locked candidate, but neither is an external restore. E57 confirms the deployed endpoint cannot yet produce the required package/admission provenance. Wave source/operations còn lại vẫn là real Recovery IPC/MCP/network crash + full-disk/DB-busy and restore drill/retention; CI focused coverage source đã có nhưng chưa được GitHub Actions chạy. Nếu client không expose connector hợp lệ thì `WAITING_FOR_SUPPORTED_CONNECTOR`, không raw-protocol bypass. Chưa bật scheduler/execution poll chung, chưa remote mutation, chưa restart/deploy. Chi tiết thứ tự và exit gates: [kế hoạch hoàn thiện](UBUNTU_24X7_COMPLETION_PLAN.md).
+
+## Windows Tailscale candidate evidence — 2026-09-21
+
+`DESKTOP-63643J4` (`100.72.186.41`) accepted SSH testing in the isolated
+candidate `E:\DEV\Codex-web-candidate-502ffb8`. Shared-account routing is now
+focused-proven on Windows: three OAuth binding tests and one two-client
+exec-to-same-bound-node E2E pass. The broader HTTP→node E2E group is 22/22
+pass and Recovery process E2E is 3/3 pass. This is source/unpacked evidence;
+it does not promote the Ubuntu service, a Windows package, or a live runtime.
+
+The initial full Windows MCP run was 1,158 pass with two platform-fixture
+failures; after the fixture portability fixes, the candidate rerun is
+**1.160/1.160 PASS in 31m45s**. OAuth configuration still has four
+NTFS/POSIX-mode fixture assertions; keep those separate and do not turn them
+into a false green by weakening credential or execution policy.
+
+The same candidate then passed `dist:dir`, packaged recovery smoke, direct NSIS
+installer build `1.0.7`, and installed install/smoke/uninstall. Packaged smoke
+verified the smart-v3 contract, 17 required resources, Recovery Host/MCP
+readiness, device identity, and fail-closed owner/hash checks; installed smoke
+verified registry cleanup and unchanged production supervisor/descriptor. This
+is candidate package proof only, not a live Windows or Ubuntu deployment proof.
+
+A subsequent Windows probe found inherited broad ACLs on node config/policy
+files. `node_agent.py` now hardens all atomic local JSON writes before rename
+with current-user/SYSTEM/Administrators SID allowlisting and fails closed on
+ACL command failure. Real source and packaged Python probes show DPAPI envelope
+round-trip, no plaintext, and the exact three-principal ACL. Node secret,
+rotation and workspace focused tests are **18/18 PASS** on Windows; HTTP→node
+E2E after the fix is **22/22 PASS** (one known socket-teardown warning).

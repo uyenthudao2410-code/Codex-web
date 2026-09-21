@@ -24,6 +24,18 @@ const {
   admitApprovedPatchBridgeRequest,
   normaliseApprovedPatchResult
 } = require('./controlPlaneApprovedPatchBridge');
+const {
+  loadExecBridgePolicy,
+  resolveRegisteredWorkspaceRoot: resolveExecWorkspaceRoot,
+  admitExecBridgeRequest,
+  normaliseExecResult
+} = require('./controlPlaneExecBridge');
+const {
+  loadDocumentWriteBridgePolicy,
+  resolveRegisteredDocumentWorkspaceRoot,
+  admitDocumentWriteBridgeRequest,
+  normaliseDocumentWriteResult
+} = require('./controlPlaneDocumentWriteBridge');
 const { ensureParent, readJson } = require('./jsonStore');
 const { loadOrCreateDeviceIdentity, normalizeDeviceIdentity } = require('./deviceIdentity');
 const { ComponentRevisionTracker } = require('./componentRevision');
@@ -2123,6 +2135,140 @@ class RecoveryHost {
     return normalized;
   }
 
+  async controlPlaneExec(request = {}) {
+    // Process execution has an independent local policy. Enrollment and
+    // workspace registration alone never grant a command allowlist.
+    const allowExpiredForControl = request && request.operation !== 'exec_run';
+    const policy = loadExecBridgePolicy(this.paths, { allowExpired: allowExpiredForControl });
+    const admitted = admitExecBridgeRequest(policy, request);
+    if (admitted.device_id !== this.deviceIdentity.device_id) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_DEVICE_MISMATCH',
+        'control-plane exec action targets another local device.'
+      );
+    }
+    const workspaceRoot = resolveExecWorkspaceRoot(this.paths, policy);
+    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
+
+    const runtime = await this.orchestrator.lightweightSnapshot();
+    if (!strictControlPlaneBridgeRuntime(runtime)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_RUNTIME_UNREADY',
+        'control-plane exec bridge requires strict current-process runtime evidence.'
+      );
+    }
+    const identity = await this.mcpIdentityObservation();
+    if (identity.mcp_ready !== true || identity.identity_current !== true) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_IDENTITY_UNPROVEN',
+        'control-plane exec bridge requires an exact current MCP identity.'
+      );
+    }
+    if (typeof this.orchestrator.controlPlaneExec !== 'function') {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_UNAVAILABLE',
+        'control-plane exec bridge is unavailable in this runtime.'
+      );
+    }
+    const result = await this.orchestrator.controlPlaneExec(admission);
+    const runtimeIdentity = result?.runtime_identity;
+    if (!runtimeIdentity
+      || runtimeIdentity.activation_epoch_id !== identity.activation_epoch_id
+      || runtimeIdentity.process_instance_id !== identity.mcp_process_instance_id
+      || runtimeIdentity.server_instance_id !== identity.mcp_server_instance_id
+      || runtimeIdentity.tool_contract_sha256 !== identity.tool_contract_sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_IDENTITY_CHANGED',
+        'control-plane exec bridge identity changed while the action was in flight.'
+      );
+    }
+    let normalized;
+    try {
+      normalized = normaliseExecResult(result, admission);
+    } catch (error) {
+      throw controlPlaneBridgeError(
+        error?.code || 'CONTROL_PLANE_EXEC_RESULT_INVALID',
+        'control-plane exec bridge returned an invalid receipt.'
+      );
+    }
+    if (normalized.facade_contract.schema_version !== admission.facade_contract.schema_version
+      || normalized.facade_contract.profile !== admission.facade_contract.profile
+      || normalized.facade_contract.sha256 !== admission.facade_contract.sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_EXEC_CONTRACT_CHANGED',
+        'control-plane exec bridge facade contract changed while the action was in flight.'
+      );
+    }
+    return normalized;
+  }
+
+  async controlPlaneDocumentWrite(request = {}) {
+    // Document create/convert has its own structured admission and receipt
+    // shape. It may reuse the installed writable-root policy, but it must not
+    // inherit a patch or exec handler accidentally.
+    const policy = loadDocumentWriteBridgePolicy(this.paths);
+    const admitted = admitDocumentWriteBridgeRequest(policy, request);
+    if (admitted.device_id !== this.deviceIdentity.device_id) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_DEVICE_MISMATCH',
+        'control-plane document-write action targets another local device.'
+      );
+    }
+    const workspaceRoot = resolveRegisteredDocumentWorkspaceRoot(this.paths, policy);
+    const admission = Object.freeze({ ...admitted, workspace_root: workspaceRoot });
+
+    const runtime = await this.orchestrator.lightweightSnapshot();
+    if (!strictControlPlaneBridgeRuntime(runtime)) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_RUNTIME_UNREADY',
+        'control-plane document-write bridge requires strict current-process runtime evidence.'
+      );
+    }
+    const identity = await this.mcpIdentityObservation();
+    if (identity.mcp_ready !== true || identity.identity_current !== true) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_IDENTITY_UNPROVEN',
+        'control-plane document-write bridge requires an exact current MCP identity.'
+      );
+    }
+    if (typeof this.orchestrator.controlPlaneDocumentWrite !== 'function') {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_UNAVAILABLE',
+        'control-plane document-write bridge is unavailable in this runtime.'
+      );
+    }
+    const result = await this.orchestrator.controlPlaneDocumentWrite(admission);
+    const runtimeIdentity = result?.runtime_identity;
+    if (!runtimeIdentity
+      || runtimeIdentity.activation_epoch_id !== identity.activation_epoch_id
+      || runtimeIdentity.process_instance_id !== identity.mcp_process_instance_id
+      || runtimeIdentity.server_instance_id !== identity.mcp_server_instance_id
+      || runtimeIdentity.tool_contract_sha256 !== identity.tool_contract_sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_IDENTITY_CHANGED',
+        'control-plane document-write bridge identity changed while the action was in flight.'
+      );
+    }
+    let normalized;
+    try {
+      normalized = normaliseDocumentWriteResult(result, admission);
+    } catch (error) {
+      throw controlPlaneBridgeError(
+        error?.code || 'CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID',
+        'control-plane document-write bridge returned an invalid receipt.'
+      );
+    }
+    if (normalized.facade_contract.schema_version !== admission.facade_contract.schema_version
+      || normalized.facade_contract.profile !== admission.facade_contract.profile
+      || normalized.facade_contract.sha256 !== admission.facade_contract.sha256) {
+      throw controlPlaneBridgeError(
+        'CONTROL_PLANE_DOCUMENT_WRITE_CONTRACT_CHANGED',
+        'control-plane document-write bridge facade contract changed while the action was in flight.'
+      );
+    }
+    return normalized;
+  }
+
   handlers() {
     return {
       // Liveness must stay responsive while an unrelated authenticated read is
@@ -2172,6 +2318,8 @@ class RecoveryHost {
       'runtime.control_plane_read_only_workspace_context': async (request = {}) => this.controlPlaneReadOnlyWorkspaceContext(request),
       'runtime.control_plane_bounded_file_read': async (request = {}) => this.controlPlaneBoundedFileRead(request),
       'runtime.control_plane_approved_patch': async (request = {}) => this.controlPlaneApprovedPatch(request),
+      'runtime.control_plane_exec': async (request = {}) => this.controlPlaneExec(request),
+      'runtime.control_plane_document_write': async (request = {}) => this.controlPlaneDocumentWrite(request),
       'runtime.record_execution_control_center_progress': async (observation = {}) => {
         this.assertBootstrapMutationAllowed();
         this.assertReadyAdoptionMutationAllowed();

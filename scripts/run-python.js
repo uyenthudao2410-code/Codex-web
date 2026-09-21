@@ -8,10 +8,23 @@
 
 const { spawnSync } = require('node:child_process');
 
-const [script, ...argumentsList] = process.argv.slice(2);
-if (!script) {
-  process.stderr.write('run-python requires a script path\n');
-  process.exit(2);
+const invocation = process.argv.slice(2);
+let pythonArguments;
+
+if (invocation[0] === '--module') {
+  const moduleName = invocation[1];
+  if (!moduleName || moduleName.startsWith('-')) {
+    process.stderr.write('run-python --module requires a module name\n');
+    process.exit(2);
+  }
+  pythonArguments = ['-m', moduleName, ...invocation.slice(2)];
+} else {
+  const [script, ...argumentsList] = invocation;
+  if (!script) {
+    process.stderr.write('run-python requires a script path or --module name\n');
+    process.exit(2);
+  }
+  pythonArguments = [script, ...argumentsList];
 }
 
 const candidates = process.platform === 'win32'
@@ -19,7 +32,7 @@ const candidates = process.platform === 'win32'
   : ['python3', 'python'];
 
 for (const interpreter of candidates) {
-  const result = spawnSync(interpreter, [script, ...argumentsList], {
+  const result = spawnSync(interpreter, pythonArguments, {
     env: process.env,
     stdio: 'inherit'
   });

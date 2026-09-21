@@ -10,7 +10,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { URL } = require('node:url');
 
-const POLICY_SCHEMA_VERSION = 1;
+const POLICY_SCHEMA_VERSION = 2;
+const LEGACY_POLICY_SCHEMA_VERSION = 1;
+const STANDING_AUTHORITY_MODE = 'standing';
+const BRIDGE_ENVELOPE_SCHEMA_VERSION = 1;
 const BRIDGE_CLIENT_ID = 'electron-control-plane-file-read-bridge';
 const BRIDGE_CLIENT_TYPE = 'electron';
 const ACTION_TOOL_NAME = 'workspace_context';
@@ -145,31 +148,49 @@ function allowedPaths(value, code = 'CONTROL_PLANE_FILE_READ_POLICY_INVALID') {
 }
 
 function normalisePolicy(value, { now = Date.now() } = {}) {
+  const schemaVersion = Number(value?.schema_version);
+  const standing = schemaVersion === POLICY_SCHEMA_VERSION;
+  const legacy = schemaVersion === LEGACY_POLICY_SCHEMA_VERSION;
   const expected = [
     'schema_version', 'enabled', 'server_origin', 'owner_id', 'device_id',
     'endpoint_id', 'workspace_id', 'workspace_generation', 'expires_at_ms',
     'facade_contract', 'allowed_relative_paths', 'max_bytes', 'max_lines'
   ];
-  if (!exactKeys(value, expected) || Number(value.schema_version) !== POLICY_SCHEMA_VERSION) {
+  if (standing) expected.push('authority_mode');
+  if (!exactKeys(value, expected) || (!standing && !legacy)) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_POLICY_INVALID', 'control-plane file-read policy has an invalid schema.');
   }
   if (value.enabled !== true) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_DISABLED', 'control-plane file-read bridge is not locally enabled.');
   }
-  return Object.freeze({
-    schema_version: POLICY_SCHEMA_VERSION,
+  const authorityMode = standing ? STANDING_AUTHORITY_MODE : 'expiring_legacy';
+  if (standing && value.authority_mode !== STANDING_AUTHORITY_MODE) {
+    throw bridgeError('CONTROL_PLANE_FILE_READ_POLICY_INVALID', 'standing file-read authority must declare its mode.');
+  }
+  const expiresAtMs = value.expires_at_ms;
+  if (standing) {
+    if (expiresAtMs !== null) {
+      throw bridgeError('CONTROL_PLANE_FILE_READ_POLICY_INVALID', 'standing file-read authority must not carry an expiry.');
+    }
+  } else {
+    expiry(expiresAtMs, now, 'CONTROL_PLANE_FILE_READ_POLICY_EXPIRED');
+  }
+  const normalised = {
+    schema_version: schemaVersion,
     server_origin: origin(value.server_origin),
     owner_id: identifier(value.owner_id, 'owner_id'),
     device_id: identifier(value.device_id, 'device_id'),
     endpoint_id: identifier(value.endpoint_id, 'endpoint_id'),
     workspace_id: identifier(value.workspace_id, 'workspace_id'),
     workspace_generation: identifier(value.workspace_generation, 'workspace_generation'),
-    expires_at_ms: expiry(value.expires_at_ms, now, 'CONTROL_PLANE_FILE_READ_POLICY_EXPIRED'),
+    expires_at_ms: expiresAtMs,
     facade_contract: facadeContract(value.facade_contract),
     allowed_relative_paths: allowedPaths(value.allowed_relative_paths),
     max_bytes: boundedInteger(value.max_bytes, 'max_bytes', MAX_FILE_BYTES, 'CONTROL_PLANE_FILE_READ_POLICY_INVALID'),
     max_lines: boundedInteger(value.max_lines, 'max_lines', MAX_FILE_LINES, 'CONTROL_PLANE_FILE_READ_POLICY_INVALID')
-  });
+  };
+  if (standing) normalised.authority_mode = authorityMode;
+  return Object.freeze(normalised);
 }
 
 function loadFileReadBridgePolicy(paths, { now = Date.now() } = {}) {
@@ -275,7 +296,7 @@ function admitFileReadBridgeRequest(policy, request, { now = Date.now() } = {}) 
   if (candidate.tool_name !== ACTION_TOOL_NAME || candidate.operation !== 'read_file') {
     throw bridgeError('CONTROL_PLANE_FILE_READ_TOOL_DENIED', 'control-plane file-read bridge only admits its bounded read_file action.');
   }
-  if (candidate.expires_at_ms > policy.expires_at_ms) {
+  if (policy.expires_at_ms != null && candidate.expires_at_ms > policy.expires_at_ms) {
     throw bridgeError('CONTROL_PLANE_FILE_READ_POLICY_EXPIRED', 'control-plane action outlives the local file-read policy.');
   }
   for (const field of ['server_origin', 'owner_id', 'device_id', 'endpoint_id', 'workspace_id', 'workspace_generation']) {
@@ -293,7 +314,7 @@ function admitFileReadBridgeRequest(policy, request, { now = Date.now() } = {}) 
     throw bridgeError('CONTROL_PLANE_FILE_READ_LIMIT_DENIED', 'file-read limits exceed the local policy.');
   }
   return Object.freeze({
-    schema_version: POLICY_SCHEMA_VERSION,
+    schema_version: BRIDGE_ENVELOPE_SCHEMA_VERSION,
     operation_kind: OPERATION_KIND,
     ...candidate,
     policy_sha256: policy.policy_sha256,
@@ -434,6 +455,9 @@ function normaliseFileReadResult(value, admission) {
 
 module.exports = {
   POLICY_SCHEMA_VERSION,
+  LEGACY_POLICY_SCHEMA_VERSION,
+  STANDING_AUTHORITY_MODE,
+  BRIDGE_ENVELOPE_SCHEMA_VERSION,
   BRIDGE_CLIENT_ID,
   BRIDGE_CLIENT_TYPE,
   ACTION_TOOL_NAME,

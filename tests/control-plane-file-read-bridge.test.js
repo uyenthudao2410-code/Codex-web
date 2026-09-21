@@ -151,6 +151,19 @@ test('bounded file-read policy defaults off and an exact registered root is requ
   assert.equal(resolveRegisteredWorkspaceRoot(item.paths, loaded), fs.realpathSync.native(item.root));
 });
 
+test('standing file-read policy remains valid after the former TTL window', (t) => {
+  const item = fixture(t);
+  const standing = policy();
+  standing.schema_version = 2;
+  standing.authority_mode = 'standing';
+  standing.expires_at_ms = null;
+  fs.writeFileSync(item.policyFile, JSON.stringify(standing), 'utf8');
+  const loaded = loadFileReadBridgePolicy(item.paths, { now: NOW + (10 * 365 * 24 * 60 * 60 * 1000) });
+  assert.equal(loaded.schema_version, 2);
+  assert.equal(loaded.authority_mode, 'standing');
+  assert.equal(loaded.expires_at_ms, null);
+});
+
 test('bounded file-read admits only the exact local owner, target, contract, path and limits', (t) => {
   const item = fixture(t);
   fs.writeFileSync(item.policyFile, JSON.stringify(policy()), 'utf8');

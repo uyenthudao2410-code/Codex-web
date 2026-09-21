@@ -7,6 +7,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from contextlib import closing
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -59,18 +60,26 @@ class _Response:
 class _StaticVerifier:
     """A deterministic resource-server verifier for HTTP-boundary tests."""
 
-    def __init__(self, identity: OAuthAccessIdentity | None = None, *, reject: bool = False) -> None:
+    def __init__(
+        self,
+        identity: OAuthAccessIdentity | None = None,
+        *,
+        reject: bool = False,
+        identities: dict[str, OAuthAccessIdentity] | None = None,
+    ) -> None:
         self.identity = identity
         self.reject = reject
+        self.identities = identities or {}
         self.tokens: list[str] = []
 
     def authenticate(self, token: str, *, required_scopes: object = None) -> OAuthAccessIdentity:
         self.tokens.append(token)
-        if self.reject or self.identity is None:
+        identity = self.identities.get(token, self.identity)
+        if self.reject or identity is None:
             raise OAuthAuthenticationError("OAuth access token is invalid.")
-        if required_scopes is not None and not set(required_scopes) <= set(self.identity.scopes):
+        if required_scopes is not None and not set(required_scopes) <= set(identity.scopes):
             raise OAuthAuthenticationError("OAuth access token is invalid.")
-        return self.identity
+        return identity
 
 
 def _configuration(
@@ -78,6 +87,7 @@ def _configuration(
     file_read_enabled: bool = False,
     permission_requests_enabled: bool = False,
     approved_patch_enabled: bool = False,
+    exec_enabled: bool = False,
 ) -> OAuthIntrospectionConfiguration:
     return OAuthIntrospectionConfiguration(
         issuer=ISSUER,
@@ -89,6 +99,7 @@ def _configuration(
         permission_requests_enabled=permission_requests_enabled,
         patch_write_scope=WRITE_SCOPE if permission_requests_enabled else None,
         approved_patch_enabled=approved_patch_enabled,
+        exec_enabled=exec_enabled,
     )
 
 
@@ -212,7 +223,46 @@ class OAuthConfigurationTests(unittest.TestCase):
                             CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED=value,
                             CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE=WRITE_SCOPE,
                         )
-                    )
+                        )
+
+    def test_standing_write_and_exec_profile_is_explicit_and_fail_closed(self) -> None:
+        configuration = oauth_configuration_from_environment(
+            self._environment(
+                CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED="true",
+                CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED="true",
+                CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE=WRITE_SCOPE,
+                CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED="true",
+            )
+        )
+        assert configuration is not None
+        self.assertTrue(configuration.file_read_enabled)
+        self.assertTrue(configuration.standing_write_enabled)
+        self.assertTrue(configuration.exec_enabled)
+        self.assertFalse(configuration.permission_requests_enabled)
+        self.assertFalse(configuration.approved_patch_enabled)
+        self.assertEqual(configuration.patch_write_scope, WRITE_SCOPE)
+
+        invalid_cases = (
+            {
+                "CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED": "true",
+                "CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED": "true",
+            },
+            {
+                "CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED": "true",
+            },
+            {
+                "CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE": WRITE_SCOPE,
+            },
+            {
+                "CONTROL_PLANE_MCP_OAUTH_FILE_READ_ENABLED": "true",
+                "CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED": "TRUE",
+                "CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE": WRITE_SCOPE,
+            },
+        )
+        for overrides in invalid_cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(OAuthConfigurationError):
+                    oauth_configuration_from_environment(self._environment(**overrides))
 
     def test_credentials_must_be_owner_private_regular_json(self) -> None:
         for mode in (0o644, 0o640, 0o700):
@@ -396,7 +446,7 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
         projection_text = json.dumps(listed)
         self.assertNotIn(subject, projection_text)
         self.assertNotIn(ISSUER, projection_text)
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             events = "\n".join(row[0] for row in connection.execute("SELECT details_json FROM events"))
         self.assertNotIn(subject, events)
         self.assertNotIn(ISSUER, events)
@@ -480,7 +530,7 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
             ),
             {"state": "revoked"},
         )
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             events = "\n".join(row[0] for row in connection.execute("SELECT details_json FROM events"))
         self.assertNotIn(subject, events)
         self.assertNotIn(ISSUER, events)
@@ -521,7 +571,7 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
             issuer=ISSUER,
             subject="provider-user-existing@example.test",
         )
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             connection.execute("DROP TABLE oauth_link_requests")
             connection.execute("PRAGMA user_version = 13")
             connection.commit()
@@ -534,7 +584,7 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
             ),
             {"principal_id": linked["principal_id"], "owner_id": "owner-a"},
         )
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
             self.assertIn(
                 "oauth_link_requests",
@@ -552,7 +602,7 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
         self.assertEqual(pending["state"], "pending")
         self.assertEqual(migrated.health()["counts"]["oauth_link_requests"], 1)
 
-    def test_account_target_inventory_cannot_cross_owners_or_include_retired_roots(self) -> None:
+    def test_account_target_inventory_cannot_cross_owners_and_reports_retired_roots(self) -> None:
         binding_a = self._target(owner_id="owner-a", suffix="a")
         self._target(owner_id="owner-b", suffix="b")
         alice = self.store.link_oauth_principal(owner_id="owner-a", issuer=ISSUER, subject="subject-alice")
@@ -575,7 +625,13 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
             display_name="Workspace A replacement",
             capabilities={"read": True, "write": False, "exec": False},
         )
-        self.assertEqual(self.store.list_account_targets(owner_id="owner-a"), [])
+        retired = self.store.list_account_targets(owner_id="owner-a")
+        self.assertEqual([item["binding_id"] for item in retired], [binding_a["binding_id"]])
+        self.assertEqual(retired[0]["binding_state"], "revoked")
+        self.assertEqual(retired[0]["workspace_state"], "retired")
+        self.assertEqual(retired[0]["dispatch_state"], "binding_revoked")
+        self.assertEqual(retired[0]["dispatch_blockers"], ["binding_revoked", "workspace_retired"])
+        self.assertFalse(retired[0]["capabilities"]["write"])
         replacement = self.store.create_binding(
             owner_id="owner-a",
             device_id=node_a,
@@ -584,9 +640,57 @@ class OAuthPrincipalStoreTests(unittest.TestCase):
             display_name="Workspace A replacement",
         )
         self.assertEqual(
-            [item["binding_id"] for item in self.store.list_account_targets(owner_id="owner-a")],
-            [replacement["binding_id"]],
+            {item["binding_id"] for item in self.store.list_account_targets(owner_id="owner-a")},
+            {binding_a["binding_id"], replacement["binding_id"]},
         )
+        current = next(
+            item for item in self.store.list_account_targets(owner_id="owner-a")
+            if item["binding_id"] == replacement["binding_id"]
+        )
+        self.assertEqual(current["workspace_state"], "active")
+        self.assertEqual(current["dispatch_state"], "dispatchable")
+
+    def test_account_target_inventory_reports_revoked_binding_without_making_it_dispatchable(self) -> None:
+        binding = self._target(owner_id="owner-a", suffix="revoked")
+        revoked = self.store.revoke_binding(owner_id="owner-a", binding_id=binding["binding_id"])
+        self.assertIsInstance(revoked["revoked_at_ms"], int)
+
+        targets = self.store.list_account_targets(owner_id="owner-a")
+        self.assertEqual([item["binding_id"] for item in targets], [binding["binding_id"]])
+        target = targets[0]
+        self.assertEqual(target["binding_state"], "revoked")
+        self.assertEqual(target["workspace_state"], "active")
+        self.assertEqual(target["dispatch_state"], "binding_revoked")
+        self.assertEqual(target["dispatch_blockers"], ["binding_revoked"])
+        self.assertEqual(target["binding_revoked_at_ms"], revoked["revoked_at_ms"])
+        self.assertNotIn("canonical_path", json.dumps(target))
+        self.assertNotIn("node_secret", json.dumps(target))
+
+    def test_account_target_inventory_distinguishes_unknown_online_and_stale_presence(self) -> None:
+        binding = self._target(owner_id="owner-a", suffix="presence")
+
+        initial = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(initial["binding_id"], binding["binding_id"])
+        self.assertEqual(initial["presence_state"], "unknown")
+        self.assertIsNone(initial["heartbeat_age_ms"])
+
+        self.store.heartbeat(
+            device_id=binding["device_id"],
+            endpoint_id=binding["endpoint_id"],
+            runtime_instance_id="runtime-presence-0001",
+            mcp_server_instance_id="mcp-presence-0001",
+            activation_epoch="epoch-presence-0001",
+            contract_version="smart-v3-presence",
+            readiness="degraded",
+        )
+        online = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(online["presence_state"], "online")
+        self.assertEqual(online["heartbeat_age_ms"], 0)
+
+        self.now += self.store.heartbeat_max_age_ms + 1
+        stale = self.store.list_account_targets(owner_id="owner-a")[0]
+        self.assertEqual(stale["presence_state"], "offline")
+        self.assertEqual(stale["heartbeat_age_ms"], self.store.heartbeat_max_age_ms + 1)
 
 
 class OAuthMcpHttpTests(unittest.TestCase):
@@ -678,27 +782,27 @@ class OAuthMcpHttpTests(unittest.TestCase):
             method="POST",
         ))
 
-    def _link_and_target(self, *, write: bool = False) -> dict[str, Any]:
+    def _link_and_target(self, *, write: bool = False, execute: bool = False, suffix: str = "001") -> dict[str, Any]:
         self.store.link_oauth_principal(owner_id="owner_default", issuer=ISSUER, subject=self.identity.subject)
         node = self.store.enroll_node(
             owner_id="owner_default",
-            device_id="oauth-http-node-001",
-            endpoint_id="oauth-http-endpoint-001",
-            display_name="OAuth HTTP node",
+            device_id=f"oauth-http-node-{suffix}",
+            endpoint_id=f"oauth-http-endpoint-{suffix}",
+            display_name=f"OAuth HTTP node {suffix}",
         )
         self.store.register_node_workspace(
             device_id=node["device_id"],
-            workspace_id="oauth-http-workspace-001",
-            workspace_generation="oauth-http-generation-001",
-            display_name="OAuth HTTP workspace",
-            capabilities={"read": True, "write": write, "exec": False},
+            workspace_id=f"oauth-http-workspace-{suffix}",
+            workspace_generation=f"oauth-http-generation-{suffix}",
+            display_name=f"OAuth HTTP workspace {suffix}",
+            capabilities={"read": True, "write": write, "exec": execute},
         )
         return self.store.create_binding(
             owner_id="owner_default",
             device_id=node["device_id"],
-            workspace_id="oauth-http-workspace-001",
-            workspace_generation="oauth-http-generation-001",
-            display_name="OAuth HTTP workspace",
+            workspace_id=f"oauth-http-workspace-{suffix}",
+            workspace_generation=f"oauth-http-generation-{suffix}",
+            display_name=f"OAuth HTTP workspace {suffix}",
         )
 
     def test_metadata_is_only_available_from_oauth_mcp_ingress(self) -> None:
@@ -854,6 +958,689 @@ class OAuthMcpHttpTests(unittest.TestCase):
         after = self.store.health()["counts"]
         for name in ("contexts", "work_requests", "actions", "mcp_read_only_intents"):
             self.assertEqual(after[name], before[name])
+
+    def test_oauth_inventory_keeps_revoked_binding_visible_but_not_dispatchable(self) -> None:
+        binding = self._link_and_target(write=True)
+        revoked = self.store.revoke_binding(owner_id="owner_default", binding_id=binding["binding_id"])
+        call = {
+            "jsonrpc": "2.0",
+            "id": "oauth-revoked-inventory-001",
+            "method": "tools/call",
+            "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+        }
+
+        status, response, _headers = self._mcp_post(call, "Bearer opaque-valid-access-token")
+        self.assertEqual(status, 200)
+        targets = response["result"]["structuredContent"]["targets"]
+        self.assertEqual([item["binding_id"] for item in targets], [binding["binding_id"]])
+        target = targets[0]
+        self.assertEqual(target["binding_state"], "revoked")
+        self.assertEqual(target["dispatch_state"], "binding_revoked")
+        self.assertEqual(target["dispatch_blockers"], ["binding_revoked"])
+        self.assertEqual(target["binding_revoked_at_ms"], revoked["revoked_at_ms"])
+        self.assertNotIn("canonical_path", json.dumps(response))
+        self.assertNotIn("node_secret", json.dumps(response))
+
+    def test_revoked_oauth_principal_cannot_use_http_inventory_or_leak_target(self) -> None:
+        """Principal revocation is an account denial, not a new link request."""
+
+        binding = self._link_and_target(write=True)
+        principal = self.store.resolve_oauth_principal(issuer=ISSUER, subject=self.identity.subject)
+        self.store.revoke_oauth_principal(owner_id="owner_default", principal_id=principal["principal_id"])
+        call = {
+            "jsonrpc": "2.0",
+            "id": "oauth-principal-revoked-inventory-001",
+            "method": "tools/call",
+            "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+        }
+
+        status, response, headers = self._mcp_post(call, "Bearer opaque-valid-access-token")
+        self.assertEqual(status, 403)
+        self.assertEqual(response["error"]["code"], "FORBIDDEN")
+        self.assertNotIn("WWW-Authenticate", {key.title(): value for key, value in headers.items()})
+        rendered = json.dumps(response)
+        self.assertNotIn(binding["binding_id"], rendered)
+        self.assertNotIn("canonical_path", rendered)
+        self.assertNotIn("node_secret", rendered)
+        self.assertNotIn("OAUTH_ACCOUNT_LINK_PENDING", rendered)
+
+    def test_oauth_inventory_keeps_retired_generation_visible_and_task_open_fails_closed(self) -> None:
+        """Retiring a generation never retargets a public task to its replacement."""
+
+        binding = self._link_and_target(write=True)
+        self.store.register_node_workspace(
+            device_id=binding["device_id"],
+            workspace_id=binding["workspace_id"],
+            workspace_generation=f"{binding['workspace_generation']}-replacement",
+            display_name="OAuth HTTP workspace replacement",
+            capabilities={"read": True, "write": True, "exec": False},
+        )
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+        try:
+            inventory = {
+                "jsonrpc": "2.0",
+                "id": "oauth-retired-inventory-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+            }
+            status, response, _headers = self._mcp_post(
+                inventory,
+                "Bearer opaque-valid-access-token",
+                base_url=candidate_url,
+            )
+            self.assertEqual(status, 200)
+            target = response["result"]["structuredContent"]["targets"][0]
+            self.assertEqual(target["binding_id"], binding["binding_id"])
+            self.assertEqual(target["binding_state"], "revoked")
+            self.assertEqual(target["workspace_state"], "retired")
+            self.assertEqual(target["dispatch_state"], "binding_revoked")
+            self.assertEqual(target["dispatch_blockers"], ["binding_revoked", "workspace_retired"])
+            self.assertNotIn("canonical_path", json.dumps(response))
+            self.assertNotIn("node_secret", json.dumps(response))
+
+            task_open = {
+                "jsonrpc": "2.0",
+                "id": "oauth-retired-task-open-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {
+                    "operation": "task_open",
+                    "binding_id": binding["binding_id"],
+                    "label": "Must reject retired generation",
+                    "idempotency_key": "oauth-retired-task-open-001",
+                }},
+            }
+            status, rejected, _headers = self._mcp_post(
+                task_open,
+                "Bearer opaque-valid-access-token",
+                base_url=candidate_url,
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+            self.assertIn("no longer dispatchable", rejected["error"]["data"]["message"])
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_oauth_inventory_keeps_revoked_node_visible_and_task_open_fails_closed(self) -> None:
+        """A shared account can see the node lifecycle state but cannot open work on it."""
+
+        binding = self._link_and_target(write=True)
+        revoked = self.store.revoke_node(owner_id="owner_default", device_id=binding["device_id"])
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+        try:
+            inventory = {
+                "jsonrpc": "2.0",
+                "id": "oauth-node-revoked-inventory-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+            }
+            status, response, _headers = self._mcp_post(
+                inventory,
+                "Bearer opaque-valid-access-token",
+                base_url=candidate_url,
+            )
+            self.assertEqual(status, 200)
+            target = response["result"]["structuredContent"]["targets"][0]
+            self.assertEqual(target["binding_id"], binding["binding_id"])
+            self.assertEqual(target["binding_state"], "active")
+            self.assertEqual(target["node_state"], "revoked")
+            self.assertEqual(target["workspace_state"], "active")
+            self.assertEqual(target["dispatch_state"], "node_revoked")
+            self.assertEqual(target["dispatch_blockers"], ["node_revoked"])
+            self.assertEqual(target["node_revoked_at_ms"], revoked["revoked_at_ms"])
+            self.assertNotIn("canonical_path", json.dumps(response))
+            self.assertNotIn("node_secret", json.dumps(response))
+
+            task_open = {
+                "jsonrpc": "2.0",
+                "id": "oauth-node-revoked-task-open-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {
+                    "operation": "task_open",
+                    "binding_id": binding["binding_id"],
+                    "label": "Must reject revoked node",
+                    "idempotency_key": "oauth-node-revoked-task-open-001",
+                }},
+            }
+            status, rejected, _headers = self._mcp_post(
+                task_open,
+                "Bearer opaque-valid-access-token",
+                base_url=candidate_url,
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+            self.assertIn("no longer dispatchable", rejected["error"]["data"]["message"])
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_two_clients_same_oauth_principal_share_binding_and_observe_one_task(self) -> None:
+        """Different access tokens for one linked account retain one target and task lineage."""
+
+        self.verifier.identities = {
+            "client-a-token": self.identity,
+            "client-b-token": self.identity,
+        }
+        binding = self._link_and_target(write=True)
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+        inventory = {
+            "jsonrpc": "2.0",
+            "id": "shared-account-inventory-001",
+            "method": "tools/call",
+            "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+        }
+        seen = []
+        try:
+            for token in ("client-a-token", "client-b-token"):
+                status, response, _headers = self._mcp_post(inventory, f"Bearer {token}", base_url=candidate_url)
+                self.assertEqual(status, 200)
+                targets = response["result"]["structuredContent"]["targets"]
+                self.assertEqual([target["binding_id"] for target in targets], [binding["binding_id"]])
+                seen.append(targets[0]["binding_id"])
+            self.assertEqual(seen[0], seen[1])
+
+            open_task = {
+                "jsonrpc": "2.0",
+                "id": "shared-account-task-open-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {
+                    "operation": "task_open",
+                    "binding_id": binding["binding_id"],
+                    "label": "Two client shared task",
+                    "idempotency_key": "shared-account-task-open-001",
+                }},
+            }
+            status, opened, _headers = self._mcp_post(open_task, "Bearer client-a-token", base_url=candidate_url)
+            self.assertEqual(status, 200)
+            task = opened["result"]["structuredContent"]["task"]
+            self.assertEqual(task["binding_id"], binding["binding_id"])
+
+            replay_status, replayed, _headers = self._mcp_post(open_task, "Bearer client-b-token", base_url=candidate_url)
+            self.assertEqual(replay_status, 200)
+            self.assertEqual(replayed["result"]["structuredContent"]["task"]["task_id"], task["task_id"])
+
+            observe = {
+                "jsonrpc": "2.0",
+                "id": "shared-account-task-observe-001",
+                "method": "tools/call",
+                "params": {"name": "task_control", "arguments": {
+                    "operation": "task_observe", "task_id": task["task_id"],
+                }},
+            }
+            status, observed, _headers = self._mcp_post(observe, "Bearer client-b-token", base_url=candidate_url)
+            self.assertEqual(status, 200)
+            projection = observed["result"]["structuredContent"]
+            self.assertEqual(projection["task"]["binding_id"], binding["binding_id"])
+            self.assertNotIn("node_secret", json.dumps(projection))
+            self.assertNotIn("arguments_json", json.dumps(projection))
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_same_account_selects_multiple_bindings_without_retargeting_existing_task(self) -> None:
+        """A shared account may choose another host without moving an open task."""
+
+        self.verifier.identities = {
+            "client-a-token": self.identity,
+            "client-b-token": self.identity,
+        }
+        binding_a = self._link_and_target(write=True, execute=True, suffix="001")
+        binding_b = self._link_and_target(write=True, execute=True, suffix="002")
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+
+        def call(token: str, request: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            status, response, _headers = self._mcp_post(
+                request,
+                f"Bearer {token}",
+                base_url=candidate_url,
+            )
+            return status, response
+
+        def inventory(token: str, request_id: str) -> list[dict[str, Any]]:
+            status, response = call(token, {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {"operation": "inventory"}},
+            })
+            self.assertEqual(status, 200)
+            return response["result"]["structuredContent"]["targets"]
+
+        def open_task(token: str, binding_id: str, request_id: str, key: str) -> dict[str, Any]:
+            status, response = call(token, {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {
+                    "operation": "task_open",
+                    "binding_id": binding_id,
+                    "label": request_id,
+                    "idempotency_key": key,
+                }},
+            })
+            self.assertEqual(status, 200)
+            return response["result"]["structuredContent"]["task"]
+
+        try:
+            targets_a = inventory("client-a-token", "multi-binding-inventory-a")
+            targets_b = inventory("client-b-token", "multi-binding-inventory-b")
+            expected_ids = {binding_a["binding_id"], binding_b["binding_id"]}
+            self.assertEqual({target["binding_id"] for target in targets_a}, expected_ids)
+            self.assertEqual({target["binding_id"] for target in targets_b}, expected_ids)
+
+            task_a = open_task("client-a-token", binding_a["binding_id"], "multi-binding-task-a", "multi-binding-task-a-key")
+            task_b = open_task("client-b-token", binding_b["binding_id"], "multi-binding-task-b", "multi-binding-task-b-key")
+            self.assertEqual(task_a["binding_id"], binding_a["binding_id"])
+            self.assertEqual(task_b["binding_id"], binding_b["binding_id"])
+            self.assertNotEqual(task_a["task_id"], task_b["task_id"])
+
+            status, observed = call("client-b-token", {
+                "jsonrpc": "2.0",
+                "id": "multi-binding-task-a-observe",
+                "method": "tools/call",
+                "params": {"name": "task_control", "arguments": {
+                    "operation": "task_observe",
+                    "task_id": task_a["task_id"],
+                }},
+            })
+            self.assertEqual(status, 200)
+            projection = observed["result"]["structuredContent"]
+            self.assertEqual(projection["task"]["binding_id"], binding_a["binding_id"])
+            self.assertEqual(projection["task"]["device_id"], binding_a["device_id"])
+            self.assertNotIn("node_secret", json.dumps(projection))
+            self.assertNotIn("canonical_path", json.dumps(projection))
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_two_clients_same_oauth_principal_handoff_writer_lease_over_http(self) -> None:
+        """A shared account serializes mutations across two HTTP clients."""
+
+        self.verifier.identities = {
+            "client-a-token": self.identity,
+            "client-b-token": self.identity,
+        }
+        binding = self._link_and_target(write=True)
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+
+        def call(token: str, request: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            status, response, _headers = self._mcp_post(
+                request,
+                f"Bearer {token}",
+                base_url=candidate_url,
+            )
+            return status, response
+
+        def task_open(*, token: str, request_id: str, idempotency_key: str, label: str) -> dict[str, Any]:
+            status, response = call(
+                token,
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "tools/call",
+                    "params": {"name": "workspace_context", "arguments": {
+                        "operation": "task_open",
+                        "binding_id": binding["binding_id"],
+                        "label": label,
+                        "idempotency_key": idempotency_key,
+                    }},
+                },
+            )
+            self.assertEqual(status, 200)
+            return response["result"]["structuredContent"]["task"]
+
+        def task_control(*, token: str, request_id: str, operation: str, task_id: str, reason: str | None = None) -> tuple[int, dict[str, Any]]:
+            arguments: dict[str, Any] = {"operation": operation, "task_id": task_id}
+            if reason is not None:
+                arguments["reason"] = reason
+            return call(
+                token,
+                {
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "tools/call",
+                    "params": {"name": "task_control", "arguments": arguments},
+                },
+            )
+
+        try:
+            task_a = task_open(
+                token="client-a-token",
+                request_id="shared-writer-task-a-open-001",
+                idempotency_key="shared-writer-task-a-open-001",
+                label="Shared writer client A",
+            )
+            status, claimed_a = task_control(
+                token="client-a-token",
+                request_id="shared-writer-task-a-claim-001",
+                operation="writer_claim",
+                task_id=task_a["task_id"],
+            )
+            self.assertEqual(status, 200)
+            lease_a = claimed_a["result"]["structuredContent"]["writer_lease"]
+            self.assertEqual(lease_a["state"], "held")
+            self.assertEqual(lease_a["lease_generation"], 1)
+
+            task_b = task_open(
+                token="client-b-token",
+                request_id="shared-writer-task-b-open-001",
+                idempotency_key="shared-writer-task-b-open-001",
+                label="Shared writer client B",
+            )
+            self.assertEqual(task_b["binding_id"], binding["binding_id"])
+            status, rejected = task_control(
+                token="client-b-token",
+                request_id="shared-writer-task-b-claim-001",
+                operation="writer_claim",
+                task_id=task_b["task_id"],
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+            self.assertIn("another task", rejected["error"]["data"]["message"])
+
+            status, released = task_control(
+                token="client-a-token",
+                request_id="shared-writer-task-a-release-001",
+                operation="writer_release",
+                task_id=task_a["task_id"],
+                reason="client-handoff",
+            )
+            self.assertEqual(status, 200)
+            lease_released = released["result"]["structuredContent"]["writer_lease"]
+            self.assertEqual(lease_released["state"], "released")
+            self.assertEqual(lease_released["lease_generation"], 1)
+
+            status, claimed_b = task_control(
+                token="client-b-token",
+                request_id="shared-writer-task-b-claim-002",
+                operation="writer_claim",
+                task_id=task_b["task_id"],
+            )
+            self.assertEqual(status, 200)
+            lease_b = claimed_b["result"]["structuredContent"]["writer_lease"]
+            self.assertEqual(lease_b["state"], "held")
+            # Generations are monotonic per task; the task identity is also
+            # sealed into every action, so a new task starts at generation 1
+            # without being able to replay task A's authority.
+            self.assertEqual(lease_b["lease_generation"], 1)
+            self.assertEqual(lease_b["binding_id"], binding["binding_id"])
+
+            serialized = json.dumps(claimed_b)
+            self.assertNotIn("node_secret", serialized)
+            self.assertNotIn("arguments_json", serialized)
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_writer_lease_blocks_cross_client_exec_before_dispatch_over_http(self) -> None:
+        """A competing task cannot create an exec action before handoff."""
+
+        self.verifier.identities = {
+            "client-a-token": self.identity,
+            "client-b-token": self.identity,
+        }
+        binding = self._link_and_target(write=True, execute=True)
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(
+                file_read_enabled=True,
+                permission_requests_enabled=True,
+                approved_patch_enabled=True,
+                exec_enabled=True,
+            ),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+
+        def call(token: str, request: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            status, response, _headers = self._mcp_post(
+                request,
+                f"Bearer {token}",
+                base_url=candidate_url,
+            )
+            return status, response
+
+        try:
+            expected_contract = {
+                key: candidate_server.mcp_facade.contract[key]
+                for key in ("schema_version", "profile", "sha256")
+            }
+
+            def open_task(token: str, request_id: str, idempotency_key: str, label: str) -> dict[str, Any]:
+                status, response = call(
+                    token,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": "workspace_context", "arguments": {
+                            "operation": "task_open",
+                            "binding_id": binding["binding_id"],
+                            "label": label,
+                            "idempotency_key": idempotency_key,
+                        }},
+                    },
+                )
+                self.assertEqual(status, 200)
+                return response["result"]["structuredContent"]["task"]
+
+            def control(token: str, request_id: str, operation: str, task_id: str) -> tuple[int, dict[str, Any]]:
+                return call(
+                    token,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": "task_control", "arguments": {
+                            "operation": operation,
+                            "task_id": task_id,
+                        }},
+                    },
+                )
+
+            def exec_run(token: str, request_id: str, task_id: str, idempotency_key: str) -> tuple[int, dict[str, Any]]:
+                return call(
+                    token,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": request_id,
+                        "method": "tools/call",
+                        "params": {"name": "exec_command", "arguments": {
+                            "operation": "exec_run",
+                            "binding_id": binding["binding_id"],
+                            "task_id": task_id,
+                            "argv": ["python", "-c", "print('writer-guard')"],
+                            "idempotency_key": idempotency_key,
+                            "expected_facade_contract": expected_contract,
+                        }},
+                    },
+                )
+
+            task_a = open_task(
+                "client-a-token", "shared-exec-task-a-open-001", "shared-exec-task-a-open-001", "Exec writer A"
+            )
+            status, claimed = control("client-a-token", "shared-exec-task-a-claim-001", "writer_claim", task_a["task_id"])
+            self.assertEqual(status, 200)
+            self.assertEqual(claimed["result"]["structuredContent"]["writer_lease"]["state"], "held")
+            task_b = open_task(
+                "client-b-token", "shared-exec-task-b-open-001", "shared-exec-task-b-open-001", "Exec writer B"
+            )
+            before = self.store.health()["counts"].copy()
+            status, rejected = exec_run("client-b-token", "shared-exec-task-b-run-001", task_b["task_id"], "shared-exec-key-001")
+            self.assertEqual(status, 200)
+            self.assertEqual(rejected["error"]["data"]["code"], "CONFLICT")
+            after = self.store.health()["counts"]
+            for count_name in ("contexts", "work_requests", "actions"):
+                self.assertEqual(after[count_name], before[count_name], count_name)
+
+            status, released = control("client-a-token", "shared-exec-task-a-release-001", "writer_release", task_a["task_id"])
+            self.assertEqual(status, 200)
+            self.assertEqual(released["result"]["structuredContent"]["writer_lease"]["state"], "released")
+            status, accepted = exec_run("client-b-token", "shared-exec-task-b-run-002", task_b["task_id"], "shared-exec-key-001")
+            self.assertEqual(status, 200)
+            result = accepted["result"]["structuredContent"]
+            self.assertEqual(result["task_id"], task_b["task_id"])
+            action = self.store.action(owner_id="owner_default", action_id=result["action_id"])
+            self.assertEqual(action["delivery_state"], "queued")
+            intent = self.store.mcp_exec_intent_for_delivery(action_id=result["action_id"])
+            self.assertIsNotNone(intent)
+            assert intent is not None
+            self.assertEqual(intent["task_id"], task_b["task_id"])
+            self.assertEqual(intent["writer_lease_generation"], 1)
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
+
+    def test_task_control_routes_writer_handoff_through_oauth_ingress(self) -> None:
+        """A linked account can observe/hand off a task without node secrets."""
+
+        binding = self._link_and_target(write=True)
+        candidate_server = ControlPlaneHttpServer(
+            ("127.0.0.1", 0),
+            self.store,
+            "o" * 40,
+            mcp_enabled=True,
+            mcp_ingress_only=True,
+            mcp_oauth=_configuration(file_read_enabled=True),
+            mcp_oauth_verifier=self.verifier,
+        )
+        candidate_thread = threading.Thread(target=candidate_server.serve_forever, daemon=True)
+        candidate_thread.start()
+        candidate_url = f"http://127.0.0.1:{candidate_server.server_port}"
+        authorization = "Bearer opaque-valid-access-token"
+        try:
+            status, listed, _headers = self._mcp_post(
+                {"jsonrpc": "2.0", "id": "task-control-tools-001", "method": "tools/list", "params": {}},
+                authorization,
+                base_url=candidate_url,
+            )
+            self.assertEqual(status, 200)
+            by_name = {tool["name"]: tool for tool in listed["result"]["tools"]}
+            self.assertEqual(
+                by_name["task_control"]["_meta"]["control_plane"]["implemented_operations"],
+                ["task_observe", "writer_claim", "writer_release"],
+            )
+            task_open = {
+                "jsonrpc": "2.0",
+                "id": "task-control-open-001",
+                "method": "tools/call",
+                "params": {"name": "workspace_context", "arguments": {
+                    "operation": "task_open",
+                    "binding_id": binding["binding_id"],
+                    "label": "OAuth handoff",
+                    "idempotency_key": "oauth-task-control-open-001",
+                }},
+            }
+            status, opened, _headers = self._mcp_post(task_open, authorization, base_url=candidate_url)
+            self.assertEqual(status, 200)
+            task_id = opened["result"]["structuredContent"]["task"]["task_id"]
+            claim = {
+                "jsonrpc": "2.0",
+                "id": "task-control-claim-001",
+                "method": "tools/call",
+                "params": {"name": "task_control", "arguments": {
+                    "operation": "writer_claim", "task_id": task_id,
+                }},
+            }
+            status, claimed, _headers = self._mcp_post(claim, authorization, base_url=candidate_url)
+            self.assertEqual(status, 200)
+            self.assertEqual(claimed["result"]["structuredContent"]["writer_lease"]["state"], "held")
+            observe = {
+                "jsonrpc": "2.0",
+                "id": "task-control-observe-001",
+                "method": "tools/call",
+                "params": {"name": "task_control", "arguments": {
+                    "operation": "task_observe", "task_id": task_id,
+                }},
+            }
+            status, observed, _headers = self._mcp_post(observe, authorization, base_url=candidate_url)
+            self.assertEqual(status, 200)
+            projection = observed["result"]["structuredContent"]
+            self.assertEqual(projection["task"]["binding_id"], binding["binding_id"])
+            self.assertNotIn("node_secret", json.dumps(projection))
+            self.assertNotIn("arguments_json", json.dumps(projection))
+            release = {
+                "jsonrpc": "2.0",
+                "id": "task-control-release-001",
+                "method": "tools/call",
+                "params": {"name": "task_control", "arguments": {
+                    "operation": "writer_release", "task_id": task_id, "reason": "http-handoff",
+                }},
+            }
+            status, released, _headers = self._mcp_post(release, authorization, base_url=candidate_url)
+            self.assertEqual(status, 200)
+            self.assertEqual(released["result"]["structuredContent"]["writer_lease"]["state"], "released")
+        finally:
+            candidate_server.shutdown()
+            candidate_server.server_close()
+            candidate_thread.join(timeout=2)
 
     def test_permission_request_candidate_is_wired_through_oauth_http_ingress_without_effect(self) -> None:
         """The HTTP server must preserve the opt-in flag all the way to MCP.

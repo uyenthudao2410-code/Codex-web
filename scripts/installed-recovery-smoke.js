@@ -84,18 +84,23 @@ function safeRemoveScratch(scratchRoot) {
   const tempRoot = `${path.resolve(os.tmpdir())}${path.sep}`;
   assert(resolved.startsWith(tempRoot), 'INSTALLED_SMOKE_SCRATCH_OUTSIDE_TEMP');
   assert(path.basename(resolved).startsWith('webmcp-installed-recovery-'), 'INSTALLED_SMOKE_SCRATCH_IDENTITY_INVALID');
+  // NSIS can leave its self-deleting uninstaller handle open briefly after its
+  // process exits. Keep cleanup bounded, but do not report that Windows
+  // teardown race as a false failed package smoke.
+  const deadline = Date.now() + 30_000;
   let lastError = null;
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  do {
     try {
       fs.rmSync(resolved, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
-      return;
+      if (!fs.existsSync(resolved)) return;
     } catch (error) {
       if (!['EPERM', 'EBUSY', 'ENOTEMPTY'].includes(error?.code)) throw error;
       lastError = error;
-      sleep(250);
     }
-  }
-  throw lastError;
+    if (Date.now() >= deadline) break;
+    sleep(500);
+  } while (true);
+  throw lastError || new Error('INSTALLED_SMOKE_SCRATCH_REMAINS');
 }
 
 function parseSmokeResult(stdout) {
@@ -164,8 +169,12 @@ function main() {
   }
 }
 
-try { main(); }
-catch (error) {
-  console.error(error?.stack || String(error));
-  process.exitCode = 1;
+if (require.main === module) {
+  try { main(); }
+  catch (error) {
+    console.error(error?.stack || String(error));
+    process.exitCode = 1;
+  }
 }
+
+module.exports = { safeRemoveScratch };

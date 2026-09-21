@@ -183,6 +183,9 @@ class OAuthIntrospectionConfiguration:
     # This remains off until the independent Windows patch policy/bridge is
     # packaged and intentionally enabled for a canary.
     approved_patch_enabled: bool = False
+    # Standing write removes the per-patch owner-review gate while retaining
+    # the distinct OAuth write scope and the node's local standing policy.
+    standing_write_enabled: bool = False
     # Bounded exec reuses the patch write scope but needs its own explicit
     # flag: argv execution is a new authority even after patch relay exists.
     exec_enabled: bool = False
@@ -258,6 +261,7 @@ def oauth_configuration_from_environment(
         "CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED",
         "CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE",
         "CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED",
+        "CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED",
         "CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED",
     )
     if mode == MCP_AUTH_MODE_LEGACY_CONTEXT_GRANT:
@@ -287,21 +291,25 @@ def oauth_configuration_from_environment(
     patch_write_scope = raw_patch_write_scope or None
     if patch_write_scope is not None and _SCOPE_PATTERN.fullmatch(patch_write_scope) is None:
         raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE is invalid.")
-    if raw_permission_requests == "true":
+    raw_standing_write = source.get("CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED", "")
+    if not isinstance(raw_standing_write, str) or raw_standing_write not in {"", "false", "true"}:
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_STANDING_WRITE_ENABLED must be true or false.")
+    write_capability_enabled = raw_permission_requests == "true" or raw_standing_write == "true"
+    if write_capability_enabled:
         if patch_write_scope is None or patch_write_scope == required_scope:
-            raise OAuthConfigurationError("OAuth patch permission requests require a distinct CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE.")
+            raise OAuthConfigurationError("OAuth write capability requires a distinct CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE.")
     elif patch_write_scope is not None:
-        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE requires CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED=true.")
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_PATCH_WRITE_SCOPE requires an OAuth write capability to be enabled.")
     raw_approved_patch = source.get("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED", "")
     if not isinstance(raw_approved_patch, str) or raw_approved_patch not in {"", "false", "true"}:
         raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED must be true or false.")
-    if raw_approved_patch == "true" and raw_permission_requests != "true":
-        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED requires CONTROL_PLANE_MCP_OAUTH_PERMISSION_REQUESTS_ENABLED=true.")
+    if raw_approved_patch == "true" and raw_permission_requests != "true" and raw_standing_write != "true":
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED requires permission requests or standing write to be enabled.")
     raw_exec = source.get("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED", "")
     if not isinstance(raw_exec, str) or raw_exec not in {"", "false", "true"}:
         raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED must be true or false.")
-    if raw_exec == "true" and raw_approved_patch != "true":
-        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED requires CONTROL_PLANE_MCP_OAUTH_APPROVED_PATCH_ENABLED=true.")
+    if raw_exec == "true" and raw_approved_patch != "true" and raw_standing_write != "true":
+        raise OAuthConfigurationError("CONTROL_PLANE_MCP_OAUTH_EXEC_ENABLED requires an approved-patch or standing-write bridge.")
     credentials = _read_client_credentials(_required_environment(source, "CONTROL_PLANE_MCP_OAUTH_CREDENTIAL_FILE"))
     return OAuthIntrospectionConfiguration(
         issuer=issuer,
@@ -313,6 +321,7 @@ def oauth_configuration_from_environment(
         permission_requests_enabled=raw_permission_requests == "true",
         patch_write_scope=patch_write_scope,
         approved_patch_enabled=raw_approved_patch == "true",
+        standing_write_enabled=raw_standing_write == "true",
         exec_enabled=raw_exec == "true",
     )
 

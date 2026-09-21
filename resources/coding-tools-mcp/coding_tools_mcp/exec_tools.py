@@ -211,9 +211,55 @@ def truncate_evidence(text: str, limit: int = 240) -> str:
 class ExecToolsMixin:
     def exec_command(self, args: dict[str, Any]) -> dict[str, Any]:
         self._prune_sessions()
+        bridge_argv = args.get("argv")
         raw_argv = args.get("_argv")
         structured_argv: list[str] | None = None
-        if raw_argv is not None:
+        if bridge_argv is not None:
+            identity = self._current_hub_client()
+            if not isinstance(identity, dict) or identity.get("client_id") != "electron-control-plane-exec-bridge" \
+                    or identity.get("client_type") != "electron" \
+                    or identity.get("attestation_verified") is not True:
+                raise ToolFailure(
+                    "CONTROL_PLANE_STRUCTURED_ARGV_DENIED",
+                    "Structured argv is reserved for the attested local control-plane bridge.",
+                    category="security",
+                )
+            if raw_argv is not None or not isinstance(bridge_argv, list) or not bridge_argv or len(bridge_argv) > 32:
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "Control-plane structured argv must be a bounded non-empty string array.",
+                    category="validation",
+                )
+            structured_argv = [str(item) for item in bridge_argv]
+            if any(
+                not item
+                or "\x00" in item
+                or "\r" in item
+                or "\n" in item
+                or any(token in item for token in (";", "&&", "||", "`", "$(", "|", ">", "<"))
+                for item in structured_argv
+            ):
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "Control-plane structured argv contains an unsafe argument.",
+                    category="validation",
+                )
+            if len("\0".join(structured_argv).encode("utf-8")) > 8_192:
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "Control-plane structured argv exceeds its bounded size.",
+                    category="validation",
+                )
+            if str(args.get("cmd", "")) != structured_argv[0]:
+                raise ToolFailure(
+                    "INVALID_ARGUMENT",
+                    "Control-plane cmd must equal the structured executable name.",
+                    category="validation",
+                )
+            # This string is an audit/resource label only. It is never supplied
+            # to a shell: process creation below uses the original argv list.
+            cmd = structured_argv[0]
+        elif raw_argv is not None:
             if args.get("_continuation_internal") is not True:
                 raise ToolFailure(
                     "INTERNAL_STRUCTURED_ARGV_DENIED",

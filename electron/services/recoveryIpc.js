@@ -31,6 +31,8 @@ const RPC_ACTIONS = Object.freeze([
   'runtime.control_plane_read_only_workspace_context',
   'runtime.control_plane_bounded_file_read',
   'runtime.control_plane_approved_patch',
+  'runtime.control_plane_document_write',
+  'runtime.control_plane_exec',
   'runtime.record_execution_control_center_progress',
   'runtime.start',
   'runtime.stop',
@@ -55,6 +57,8 @@ const MUTATING_ACTIONS = new Set([
   'runtime.restart',
   'runtime.record_execution_control_center_progress',
   'runtime.control_plane_approved_patch',
+  'runtime.control_plane_document_write',
+  'runtime.control_plane_exec',
   'runtime.complete_activation_epoch',
   'runtime.switch_workspace',
   'runtime.update_authorized_roots',
@@ -449,6 +453,9 @@ class RecoveryIpcClient {
   }
   controlPlaneApprovedPatch(request, options = {}) {
     return this.call('runtime.control_plane_approved_patch', [request], options);
+  }
+  controlPlaneDocumentWrite(request, options = {}) {
+    return this.call('runtime.control_plane_document_write', [request], options);
   }
   recordExecutionControlCenterProgress(observation) { return this.call('runtime.record_execution_control_center_progress', [observation]); }
   supervise() { return this.lightweightSnapshot(); }

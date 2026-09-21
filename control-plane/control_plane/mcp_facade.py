@@ -1,11 +1,11 @@
-"""Fail-closed, context-scoped root MCP facade.
+"""Fail-closed root MCP facade for legacy contexts and trusted account lanes.
 
-This module gives one authenticated, time-bounded, context-scoped MCP
-principal a way to discover the exact eight tool public surface, inspect that
-context's central state, and atomically record exactly one fixed read-only
-intent. After the separately admitted node action completes, it can expose one
-allowlisted compact receipt projection. It never calls a node, forwards a
-client credential, polls, or turns a central record into local authority.
+The historical context mode remains time-bounded and read-only. The OAuth mode
+maps one verified account to one ``principal_id`` and lets its clients select an
+opaque ``binding_id``; standing file-read/write/document/structured-exec lanes
+still queue work for independent node-local admission and receipt verification.
+The facade never forwards a client credential, treats a central record as OS
+authority, or claims local effect before the enrolled node proves it.
 """
 
 from __future__ import annotations
@@ -20,11 +20,16 @@ from .store import (
     MCP_APPROVED_PATCH_MAX_BYTES,
     MCP_APPROVED_PATCH_OPERATION,
     MCP_APPROVED_PATCH_TOOL_NAME,
+    MCP_DOCUMENT_WRITE_MAX_CONTENT_BYTES,
+    MCP_DOCUMENT_WRITE_MAX_TITLE_BYTES,
+    MCP_DOCUMENT_WRITE_OPERATIONS,
+    MCP_DOCUMENT_WRITE_TARGET_SUFFIXES,
     MCP_PATCH_PERMISSION_OPERATION,
     MCP_PATCH_PERMISSION_TOOL_NAME,
     MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
     ControlPlaneError,
     ControlPlaneStore,
+    NotFoundError,
     PermissionError,
     ValidationError,
 )
@@ -62,6 +67,10 @@ OAUTH_PERMISSION_REQUEST_FACADE_PROFILE = "control-plane-oauth-permission-reques
 # it can queue any local mutation candidate.
 OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION = 17
 OAUTH_APPROVED_PATCH_FACADE_PROFILE = "control-plane-oauth-approved-patch-v3"
+# Standing write is a distinct discovery contract: it removes the central
+# owner-review record but still requires the OAuth write scope and local policy.
+OAUTH_STANDING_WRITE_FACADE_SCHEMA_VERSION = 19
+OAUTH_STANDING_WRITE_FACADE_PROFILE = "control-plane-oauth-standing-write-v1"
 # Bounded exec is a separate candidate on top of the patch lane. It reuses the
 # same write scope and task pinning but requires its own rediscovery because
 # argv execution changes authority again.
@@ -125,7 +134,7 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
                 "operation": {
                     "type": "string",
                     "enum": ["inventory", "task_open", "task_list", "task_close", "read_file", "read_status"],
-                    "description": "inventory lists account targets only. task_open/task_list/task_close manage one durable server-issued task handle pinned to an explicit binding. read_file queues one bounded local file read for an explicit binding, optionally linked to a task. read_status observes only that OAuth principal's own bounded-file action.",
+                    "description": "inventory lists account targets and lifecycle state only; dispatch_state/dispatch_blockers explain revoked, retired, missing or dispatchable targets. task_open/task_list/task_close manage one durable server-issued task handle pinned to an explicit binding. read_file queues one bounded local file read for an explicit binding, optionally linked to a task. read_status observes only that OAuth principal's own bounded-file action.",
                 },
                 "binding_id": {
                     "type": "string",
@@ -143,6 +152,12 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
                     "minLength": 1,
                     "maxLength": 120,
                     "description": "Required for task_open. Short human label for the Console task list; never a target selector.",
+                },
+                "idempotency_key": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 256,
+                    "description": "Required for task_open; retries with the same key and exact target/label return the same task handle.",
                 },
                 "path": {
                     "type": "string",
@@ -225,6 +240,39 @@ def _workspace_context_input_schema(*, oauth_enabled: bool, oauth_file_read_enab
     }
 
 
+def _task_control_input_schema(*, enabled: bool) -> dict[str, Any]:
+    """Describe cross-client task observation and writer handoff."""
+
+    if not enabled:
+        return _unavailable_tool_input_schema()
+    return {
+        "type": "object",
+        "required": ["operation"],
+        "additionalProperties": False,
+        "properties": {
+            "operation": {
+                "type": "string",
+                "enum": ["task_observe", "writer_claim", "writer_release"],
+                "description": (
+                    "Observe one task or claim/release its workspace writer lease. "
+                    "A lease serializes mutations from same-account chats; it never grants OS authority."
+                ),
+            },
+            "task_id": {
+                "type": "string",
+                "pattern": "^task_[a-f0-9]{32}$",
+                "description": "Exact server-issued durable task handle.",
+            },
+            "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "description": "Optional handoff/release reason; it is audit metadata only.",
+            },
+        },
+    }
+
+
 def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
     """Describe the one non-executable C4 permission-request operation."""
 
@@ -298,11 +346,61 @@ def _permission_request_input_schema(*, enabled: bool) -> dict[str, Any]:
     }
 
 
-def _approved_patch_input_schema(*, enabled: bool) -> dict[str, Any]:
-    """Describe the single C4 action shape; this is not a shell interface."""
+def _approved_patch_input_schema(*, enabled: bool, standing: bool = False) -> dict[str, Any]:
+    """Describe the single-file mutation shape; this is not a shell interface."""
 
     if not enabled:
         return _unavailable_tool_input_schema()
+    if standing:
+        return {
+            "type": "object",
+            "required": ["operation"],
+            "additionalProperties": False,
+            "properties": {
+                "operation": {
+                    "type": "string",
+                    "enum": ["apply_patch", "patch_status"],
+                    "description": "apply_patch queues one exact Write Exact File envelope under the selected workspace's standing local policy. It does not require a per-patch owner approval; patch_status observes only the caller's own action.",
+                },
+                "binding_id": {
+                    "type": "string", "minLength": 3, "maxLength": 128,
+                    "description": "Required for apply_patch. Exact opaque target from account inventory.",
+                },
+                "task_id": {
+                    "type": "string", "pattern": "^task_[a-f0-9]{32}$",
+                    "description": "Required for apply_patch. The task pins the target and writer lease across ChatGPT clients.",
+                },
+                "path": {
+                    "type": "string", "minLength": 1, "maxLength": 512,
+                    "description": "Required for apply_patch. Relative path inside the selected local workspace policy.",
+                },
+                "preimage_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                "patch_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                "validation_profile": {"type": "string", "enum": ["targeted"]},
+                "patch_envelope": {
+                    "type": "string", "minLength": 1, "maxLength": MCP_APPROVED_PATCH_MAX_BYTES,
+                    "description": "Required for apply_patch. Exact UTF-8 Write Exact File envelope; the node rechecks preimage, postimage and local policy.",
+                },
+                "idempotency_key": {
+                    "type": "string", "minLength": 8, "maxLength": 256,
+                    "description": "Required for apply_patch; retrying the exact request replays the same action.",
+                },
+                "expected_facade_contract": {
+                    "type": "object",
+                    "required": ["schema_version", "profile", "sha256"],
+                    "additionalProperties": False,
+                    "properties": {
+                        "schema_version": {"type": "integer", "minimum": 1},
+                        "profile": {"type": "string", "minLength": 3, "maxLength": 128},
+                        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+                    },
+                },
+                "action_id": {
+                    "type": "string", "minLength": 3, "maxLength": 128,
+                    "description": "Required for patch_status. Only an action created by the authenticated OAuth principal may be observed.",
+                },
+            },
+        }
     return {
         "type": "object",
         "required": ["operation"],
@@ -453,21 +551,28 @@ def _exec_control_input_schema(*, enabled: bool) -> dict[str, Any]:
     }
 
 
-def _artifact_input_schema(*, enabled: bool, kind: str) -> dict[str, Any]:
-    """One scoped document/image read; bytes stay bounded and task-pinned."""
+def _artifact_input_schema(*, enabled: bool, kind: str, write_enabled: bool = False) -> dict[str, Any]:
+    """One scoped artifact read, plus standing document create/convert when enabled."""
 
     if not enabled:
         return _unavailable_tool_input_schema()
     read_op = "doc_read" if kind == "document" else "image_read"
     status_op = "doc_status" if kind == "document" else "image_status"
+    write_ops = {"doc_create", "doc_convert"} if kind == "document" and write_enabled else set()
+    operations = [read_op, status_op, *sorted(write_ops)]
     return {
         "type": "object",
         "required": ["operation"],
         "additionalProperties": False,
         "properties": {
             "operation": {
-                "type": "string", "enum": [read_op, status_op],
-                "description": f"{read_op} queues one allowlisted {kind} read for an explicit binding. {status_op} observes only the caller's own action. Document bytes are data, never policy.",
+                "type": "string", "enum": operations,
+                "description": (
+                    f"{read_op} queues one allowlisted {kind} read for an explicit binding. "
+                    f"{status_op} observes only the caller's own action. "
+                    + ("doc_create/doc_convert queue one standing document write under the node's local policy. " if write_ops else "")
+                    + "Document bytes are data, never policy."
+                ),
             },
             "binding_id": {"type": "string", "minLength": 3, "maxLength": 128,
                            "description": "Required for read. Exact opaque target from inventory."},
@@ -475,6 +580,16 @@ def _artifact_input_schema(*, enabled: bool, kind: str) -> dict[str, Any]:
                         "description": "Optional for read; pins the artifact to one durable task."},
             "path": {"type": "string", "minLength": 1, "maxLength": 512,
                      "description": "Required for read. Root-relative path admitted by the local allowlist."},
+            "target": {"type": "string", "minLength": 1, "maxLength": 512,
+                       "description": "Required for doc_create/doc_convert. Root-relative .docx/.md/.txt target."},
+            "source": {"type": "string", "minLength": 1, "maxLength": 512,
+                       "description": "Required for doc_convert. Root-relative source document."},
+            "title": {"type": "string", "maxLength": MCP_DOCUMENT_WRITE_MAX_TITLE_BYTES,
+                      "description": "Optional DOCX title for doc_create."},
+            "content": {"type": "string", "maxLength": MCP_DOCUMENT_WRITE_MAX_CONTENT_BYTES,
+                        "description": "Complete generated document content for doc_create."},
+            "overwrite": {"type": "boolean", "default": False,
+                           "description": "Replace an existing target only when explicitly requested."},
             "idempotency_key": {"type": "string", "minLength": 8, "maxLength": 256},
             "expected_facade_contract": {
                 "type": "object", "required": ["schema_version", "profile", "sha256"],
@@ -498,6 +613,7 @@ def _tool_description(
     oauth_file_read_enabled: bool = False,
     oauth_permission_requests_enabled: bool = False,
     oauth_approved_patch_enabled: bool = False,
+    oauth_standing_write_enabled: bool = False,
     oauth_exec_enabled: bool = False,
 ) -> str:
     if name == "workspace_context":
@@ -506,12 +622,23 @@ def _tool_description(
         if oauth_enabled:
             return "Return the authenticated account's authorized, path-free node/workspace inventory. Context selection and local execution remain unavailable until a separate relay is accepted."
         return "Return central status, queue only the fixed read-only workspace_context action, or show its verified compact completed receipt; this facade never directly accesses a local workspace."
+    if name == "task_control" and oauth_enabled and oauth_file_read_enabled:
+        return (
+            "Observe a durable task from any linked ChatGPT client or explicitly claim/release its "
+            "short workspace writer lease. The lease serializes same-account mutations; it does not "
+            "grant OS Administrator rights, change local policy, or retarget the task."
+        )
     if name == "request_permissions" and oauth_permission_requests_enabled:
         return (
             "Record or observe one exact owner-reviewed proposed patch scope. Approval does not itself queue an action, "
             "change Windows policy, write a file, launch a process, or grant local authority."
         )
-    if name == "agent_workflow" and oauth_approved_patch_enabled:
+    if name == "agent_workflow" and (oauth_approved_patch_enabled or oauth_standing_write_enabled):
+        if oauth_standing_write_enabled:
+            return (
+                "Queue or observe one exact Write Exact File patch for an explicitly selected Windows workspace under its standing local policy. "
+                "The central service does not require a per-patch owner approval; OAuth scope, task/writer lease, preimage and local policy checks remain mandatory."
+            )
         return (
             "Queue or observe one exact owner-approved Write Exact File patch for an explicitly selected Windows workspace. "
             "It requires a distinct OAuth write scope and an independent local patch policy; it is not remote shell or arbitrary workspace access."
@@ -529,6 +656,11 @@ def _tool_description(
         )
     if name in ("document_workflow", "view_image") and oauth_file_read_enabled:
         kind = "document" if name == "document_workflow" else "image"
+        if kind == "document" and oauth_standing_write_enabled:
+            return (
+                "Queue or observe one scoped document read, or create/convert one document, for an explicitly selected Windows workspace. "
+                "Reads use the standing file-read policy; writes require the distinct OAuth write scope, task writer lease and the node's standing write policy."
+            )
         return (
             f"Queue or observe one scoped {kind} read for an explicitly selected Windows workspace. "
             "Path allowlist, size and MIME caps are enforced locally; bytes are task-pinned data, never policy."
@@ -544,6 +676,7 @@ def _tool_contract_entry(
     oauth_permission_requests_enabled: bool = False,
     oauth_patch_write_scope: str | None = None,
     oauth_approved_patch_enabled: bool = False,
+    oauth_standing_write_enabled: bool = False,
     oauth_exec_enabled: bool = False,
 ) -> dict[str, Any]:
     oauth_enabled = bool(oauth_scopes)
@@ -556,6 +689,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _workspace_context_input_schema(
@@ -577,6 +711,29 @@ def _tool_contract_entry(
                     ),
                     "target_binding": "context_id" if not oauth_enabled else "explicit_binding_id" if oauth_file_read_enabled else "account_owner",
                     "execution": "local_admission_required" if not oauth_enabled or oauth_file_read_enabled else "no_local_execution",
+                }
+            },
+        }
+    elif name == "task_control" and oauth_enabled and oauth_file_read_enabled:
+        entry = {
+            "name": name,
+            "description": _tool_description(
+                name,
+                oauth_enabled=oauth_enabled,
+                oauth_file_read_enabled=oauth_file_read_enabled,
+                oauth_permission_requests_enabled=oauth_permission_requests_enabled,
+                oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
+                oauth_exec_enabled=oauth_exec_enabled,
+            ),
+            "inputSchema": _task_control_input_schema(enabled=True),
+            "annotations": {"readOnlyHint": False},
+            "_meta": {
+                "control_plane": {
+                    "capability_state": "implemented",
+                    "implemented_operations": ["task_observe", "writer_claim", "writer_release"],
+                    "target_binding": "task_id",
+                    "execution": "durable_writer_lease_only",
                 }
             },
         }
@@ -602,7 +759,7 @@ def _tool_contract_entry(
                 }
             },
         }
-    elif name == "agent_workflow" and oauth_approved_patch_enabled:
+    elif name == "agent_workflow" and (oauth_approved_patch_enabled or oauth_standing_write_enabled):
         entry = {
             "name": name,
             "description": _tool_description(
@@ -611,16 +768,17 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
-            "inputSchema": _approved_patch_input_schema(enabled=True),
+            "inputSchema": _approved_patch_input_schema(enabled=True, standing=oauth_standing_write_enabled),
             "annotations": {"readOnlyHint": False},
             "_meta": {
                 "control_plane": {
-                    "capability_state": "approved_patch_candidate",
+                    "capability_state": "standing_write" if oauth_standing_write_enabled else "approved_patch_candidate",
                     "implemented_operations": ["apply_patch", "patch_status"],
                     "execution": "local_patch_policy_required",
-                    "reason": "WINDOWS_APPROVED_PATCH_BRIDGE_REQUIRED",
+                    "reason": "STANDING_LOCAL_POLICY_REQUIRED" if oauth_standing_write_enabled else "WINDOWS_APPROVED_PATCH_BRIDGE_REQUIRED",
                 }
             },
         }
@@ -633,6 +791,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _exec_input_schema(enabled=True),
@@ -655,6 +814,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _exec_control_input_schema(enabled=True),
@@ -678,17 +838,25 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
-            "inputSchema": _artifact_input_schema(enabled=True, kind=kind),
-            "annotations": {"readOnlyHint": True},
+            "inputSchema": _artifact_input_schema(
+                enabled=True,
+                kind=kind,
+                write_enabled=bool(kind == "document" and oauth_standing_write_enabled),
+            ),
+            "annotations": {"readOnlyHint": not (kind == "document" and oauth_standing_write_enabled)},
             "_meta": {
                 "control_plane": {
-                    "capability_state": "bounded_artifact_candidate",
-                    "implemented_operations": [f"{'doc' if kind == 'document' else 'image'}_read",
-                                               f"{'doc' if kind == 'document' else 'image'}_status"],
-                    "execution": "local_admission_required",
-                    "reason": "WINDOWS_ARTIFACT_BRIDGE_REQUIRED",
+                    "capability_state": "standing_document_write" if kind == "document" and oauth_standing_write_enabled else "bounded_artifact_candidate",
+                    "implemented_operations": (
+                        ["doc_read", "doc_status", "doc_create", "doc_convert"]
+                        if kind == "document" and oauth_standing_write_enabled
+                        else [f"{'doc' if kind == 'document' else 'image'}_read", f"{'doc' if kind == 'document' else 'image'}_status"]
+                    ),
+                    "execution": "local_document_policy_required" if kind == "document" and oauth_standing_write_enabled else "local_admission_required",
+                    "reason": "STANDING_LOCAL_POLICY_REQUIRED" if kind == "document" and oauth_standing_write_enabled else "WINDOWS_ARTIFACT_BRIDGE_REQUIRED",
                 }
             },
         }
@@ -701,6 +869,7 @@ def _tool_contract_entry(
                 oauth_file_read_enabled=oauth_file_read_enabled,
                 oauth_permission_requests_enabled=oauth_permission_requests_enabled,
                 oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+                oauth_standing_write_enabled=oauth_standing_write_enabled,
                 oauth_exec_enabled=oauth_exec_enabled,
             ),
             "inputSchema": _unavailable_tool_input_schema(),
@@ -721,7 +890,9 @@ def _tool_contract_entry(
         required_scopes = oauth_scopes
         if name == "request_permissions" and oauth_permission_requests_enabled:
             required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
-        elif name == "agent_workflow" and oauth_approved_patch_enabled:
+        elif name == "agent_workflow" and (oauth_approved_patch_enabled or oauth_standing_write_enabled):
+            required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
+        elif name == "document_workflow" and oauth_standing_write_enabled:
             required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
         elif name in ("exec_command", "command_control") and oauth_exec_enabled:
             required_scopes = (*oauth_scopes, str(oauth_patch_write_scope or ""))
@@ -1075,20 +1246,38 @@ def _completed_approved_patch_relay(
         action_arguments = json.loads(str(action.get("arguments_json") or ""))
     except (TypeError, ValueError):
         return None
-    expected_action_fields = {
+    if not isinstance(action_arguments, dict):
+        return None
+    base_action_fields = {
         "operation", "permission_request_id", "path", "preimage_sha256", "patch_sha256", "validation_profile",
     }
-    if (
-        not isinstance(action_arguments, dict)
-        or set(action_arguments) != expected_action_fields
-        or action_arguments.get("operation") != MCP_APPROVED_PATCH_OPERATION
-        or action_arguments.get("validation_profile") != MCP_PATCH_PERMISSION_VALIDATION_PROFILE
-    ):
-        return None
     expected_path = _safe_bounded_relative_path(expected_file.get("path"))
     expected_preimage_sha256 = expected_file.get("preimage_sha256")
     expected_postimage_sha256 = expected_file.get("postimage_sha256")
     expected_patch_sha256 = expected_file.get("patch_sha256")
+    authority_mode = expected_file.get("authority_mode")
+    if authority_mode == "standing":
+        expected_action_fields = base_action_fields | {"authority_mode"}
+        if action_arguments.get("authority_mode") != "standing":
+            return None
+    elif authority_mode == "owner_review":
+        expected_action_fields = base_action_fields
+    else:
+        return None
+    if (
+        set(action_arguments) != expected_action_fields
+        or action_arguments.get("operation") != MCP_APPROVED_PATCH_OPERATION
+        or action_arguments.get("validation_profile") != MCP_PATCH_PERMISSION_VALIDATION_PROFILE
+        or (
+            authority_mode == "standing"
+            and action_arguments.get("permission_request_id") != "standing"
+        )
+        or (
+            authority_mode == "owner_review"
+            and action_arguments.get("permission_request_id") == "standing"
+        )
+    ):
+        return None
     if (
         expected_path is None
         or not all(
@@ -1118,7 +1307,8 @@ def _completed_approved_patch_relay(
             not isinstance(payload, dict)
             or set(payload) != {
                 "schema_version", "operation_kind", "patch_applied", "local_handle", "policy_sha256",
-                "local_semantic_acceptance", "actor", "runtime_identity", "facade_contract", "file", "response_sha256",
+                "local_semantic_acceptance", "task_id", "writer_lease_generation", "run_id", "wave_id",
+                "actor", "runtime_identity", "facade_contract", "file", "response_sha256",
             }
             or payload.get("schema_version") != 1
             or payload.get("operation_kind") != "control_plane_approved_patch"
@@ -1126,6 +1316,16 @@ def _completed_approved_patch_relay(
             # A completed node receipt proves the exact postimage, but never
             # claims that the local RUN/WAVE has been semantically accepted.
             or payload.get("local_semantic_acceptance") != "pending"
+            or not isinstance(payload.get("task_id"), str)
+            or not re.fullmatch(r"^task_[a-f0-9]{32}$", payload.get("task_id", ""))
+            or payload.get("task_id") != action.get("task_id")
+            or not isinstance(payload.get("writer_lease_generation"), int)
+            or isinstance(payload.get("writer_lease_generation"), bool)
+            or payload.get("writer_lease_generation") != action.get("writer_lease_generation")
+            or not isinstance(payload.get("run_id"), str)
+            or re.fullmatch(r"^[a-f0-9]{32}$", payload.get("run_id", "")) is None
+            or not isinstance(payload.get("wave_id"), str)
+            or re.fullmatch(r"^[a-f0-9]{32}$", payload.get("wave_id", "")) is None
             or not isinstance(payload.get("local_handle"), str)
             or re.fullmatch(r"cp_ap_[a-f0-9]{48}", payload["local_handle"]) is None
             or not isinstance(payload.get("policy_sha256"), str)
@@ -1189,6 +1389,10 @@ def _completed_approved_patch_relay(
             "receipt_id": receipt.get("receipt_id"),
             "received_at_ms": receipt.get("received_at_ms"),
             "local_semantic_acceptance": "pending",
+            "task_id": payload.get("task_id"),
+            "writer_lease_generation": payload.get("writer_lease_generation"),
+            "run_id": payload.get("run_id"),
+            "wave_id": payload.get("wave_id"),
             "file": safe_file,
             "response_sha256": expected_response_sha256,
         }
@@ -1224,28 +1428,64 @@ def _completed_exec_relay(action: dict[str, Any], contract: dict[str, int | str]
             or payload.get("operation_kind") != "control_plane_exec"
             or payload.get("facade_contract") != contract
             or payload.get("actor") != {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"}
+            or not isinstance(payload.get("task_id"), str)
+            or payload.get("task_id") != action.get("task_id")
+            or not isinstance(payload.get("writer_lease_generation"), int)
+            or isinstance(payload.get("writer_lease_generation"), bool)
+            or payload.get("writer_lease_generation") != action.get("writer_lease_generation")
             or not isinstance(payload.get("local_handle"), str)
             or re.fullmatch(r"cp_exec_[a-f0-9]{48}", str(payload.get("local_handle"))) is None
+            or not isinstance(payload.get("command_id"), str)
+            or not payload.get("command_id").strip()
+            or not isinstance(payload.get("job_id"), str)
+            or not payload.get("job_id").strip()
+            or payload.get("status") not in {"exited", "terminated", "timeout", "stopped"}
             or not isinstance(payload.get("exit_code"), int)
             or isinstance(payload.get("exit_code"), bool)
             or not -256 <= payload.get("exit_code") <= 256
             or not isinstance(payload.get("stdout"), str)
             or not isinstance(payload.get("stderr"), str)
             or not isinstance(payload.get("truncated"), bool)
+            or not isinstance(payload.get("timed_out"), bool)
             or not isinstance(payload.get("output_bytes"), int)
             or isinstance(payload.get("output_bytes"), bool)
             or not 0 <= payload.get("output_bytes") <= 65536
+            or not isinstance(payload.get("run_id"), str)
+            or not isinstance(payload.get("wave_id"), str)
+            or not isinstance(payload.get("output_refs"), (dict, type(None)))
+            or not isinstance(payload.get("runtime_identity"), dict)
             or not isinstance(payload.get("response_sha256"), str)
             or re.fullmatch(r"[a-f0-9]{64}", str(payload.get("response_sha256")).lower()) is None
         ):
             continue
         stdout = str(payload.get("stdout"))
         stderr = str(payload.get("stderr"))
-        if len(stdout.encode("utf-8")) + len(stderr.encode("utf-8")) > 65536:
+        if len(stdout.encode("utf-8")) + len(stderr.encode("utf-8")) > 65536 or payload.get("output_bytes") != len(stdout.encode("utf-8")) + len(stderr.encode("utf-8")):
             continue
+        runtime_identity = payload.get("runtime_identity")
+        if (
+            set(runtime_identity) != {"activation_epoch_id", "process_instance_id", "server_instance_id", "tool_contract_sha256"}
+            or any(not isinstance(runtime_identity.get(field), str) or not runtime_identity[field].strip()
+                   for field in ("activation_epoch_id", "process_instance_id", "server_instance_id"))
+            or not isinstance(runtime_identity.get("tool_contract_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", runtime_identity["tool_contract_sha256"].lower()) is None
+        ):
+            continue
+        safe_output = {
+            "status": payload.get("status"),
+            "exit_code": payload.get("exit_code"),
+            "stdout": stdout,
+            "stderr": stderr,
+            "truncated": payload.get("truncated"),
+            "timed_out": payload.get("timed_out"),
+            "command_id": payload.get("command_id"),
+            "job_id": payload.get("job_id"),
+            "run_id": payload.get("run_id"),
+            "wave_id": payload.get("wave_id"),
+            "output_refs": payload.get("output_refs"),
+        }
         expected = hashlib.sha256(
-            _canonical_json({"exit_code": payload.get("exit_code"), "stdout": stdout, "stderr": stderr,
-                             "truncated": payload.get("truncated")}).encode("utf-8")
+            _canonical_json(safe_output).encode("utf-8")
         ).hexdigest()
         if str(payload.get("response_sha256")).lower() != expected:
             continue
@@ -1254,11 +1494,21 @@ def _completed_exec_relay(action: dict[str, Any], contract: dict[str, int | str]
             "receipt_state": receipt.get("receipt_state"),
             "received_at_ms": receipt.get("received_at_ms"),
             "local_handle": str(payload.get("local_handle")),
+            "task_id": payload.get("task_id"),
+            "writer_lease_generation": payload.get("writer_lease_generation"),
+            "command_id": payload.get("command_id"),
+            "job_id": payload.get("job_id"),
+            "status": payload.get("status"),
             "exit_code": payload.get("exit_code"),
             "stdout": stdout,
             "stderr": stderr,
             "truncated": payload.get("truncated"),
+            "timed_out": payload.get("timed_out"),
             "output_bytes": payload.get("output_bytes"),
+            "run_id": payload.get("run_id"),
+            "wave_id": payload.get("wave_id"),
+            "output_refs": payload.get("output_refs"),
+            "runtime_identity": runtime_identity,
             "response_sha256": expected,
         }
     return None
@@ -1353,6 +1603,78 @@ def _completed_artifact_relay(action: dict[str, Any], contract: dict[str, int | 
     return None
 
 
+def _completed_document_write_relay(action: dict[str, Any], contract: dict[str, int | str]) -> dict[str, Any] | None:
+    """Validate a digest-only document workflow receipt from the local node."""
+
+    if action.get("tool_name") != "document_workflow" or not isinstance(action.get("receipts"), list):
+        return None
+    attempts = action.get("attempts")
+    attempt_ids = {
+        item.get("attempt_id")
+        for item in attempts
+        if isinstance(item, dict) and isinstance(item.get("attempt_id"), str)
+    } if isinstance(attempts, list) else set()
+    for receipt in reversed(action["receipts"]):
+        if not isinstance(receipt, dict) or receipt.get("receipt_state") != "completed":
+            continue
+        raw = receipt.get("payload_json")
+        if not isinstance(raw, str) or len(raw.encode("utf-8")) > 64 * 1024:
+            continue
+        try:
+            payload = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != 1
+            or payload.get("operation_kind") != "control_plane_document_write"
+            or payload.get("facade_contract") != contract
+            or payload.get("actor") != {"client_id": "electron-control-plane-document-bridge", "client_type": "electron"}
+            or not isinstance(payload.get("local_handle"), str)
+            or re.fullmatch(r"cp_doc_[a-f0-9]{48}", str(payload.get("local_handle"))) is None
+            or payload.get("action_id") != action.get("action_id")
+            or payload.get("attempt_id") not in attempt_ids
+            or not isinstance(payload.get("task_id"), str)
+            or not isinstance(payload.get("writer_lease_generation"), int)
+            or not isinstance(payload.get("operation"), str)
+            or payload.get("operation") not in {"document_create", "document_convert"}
+            or not isinstance(payload.get("target"), str)
+            or _safe_bounded_relative_path(payload.get("target")) is None
+            or not isinstance(payload.get("result"), dict)
+            or not isinstance(payload.get("response_sha256"), str)
+            or re.fullmatch(r"[a-f0-9]{64}", payload["response_sha256"].lower()) is None
+        ):
+            continue
+        safe_result = {
+            "operation": payload["operation"],
+            "target": payload["target"],
+            "source": payload.get("source"),
+            "size": payload["result"].get("size"),
+            "sha256": payload["result"].get("sha256"),
+            "format": payload["result"].get("format"),
+        }
+        if not isinstance(safe_result["size"], int) or safe_result["size"] < 0 or safe_result["size"] > 256 * 1024:
+            continue
+        if not isinstance(safe_result["sha256"], str) or re.fullmatch(r"[a-f0-9]{64}", safe_result["sha256"].lower()) is None:
+            continue
+        expected = hashlib.sha256(_canonical_json(safe_result).encode("utf-8")).hexdigest()
+        if payload["response_sha256"].lower() != expected:
+            continue
+        return {
+            "receipt_id": receipt.get("receipt_id"),
+            "received_at_ms": receipt.get("received_at_ms"),
+            "local_handle": payload["local_handle"],
+            "task_id": payload["task_id"],
+            "writer_lease_generation": payload["writer_lease_generation"],
+            "operation": payload["operation"],
+            "target": payload["target"],
+            "source": payload.get("source"),
+            "result": safe_result,
+            "response_sha256": expected,
+        }
+    return None
+
+
 def tool_contract(
     *,
     oauth_scopes: tuple[str, ...] = (),
@@ -1360,6 +1682,7 @@ def tool_contract(
     oauth_permission_requests_enabled: bool = False,
     oauth_patch_write_scope: str | None = None,
     oauth_approved_patch_enabled: bool = False,
+    oauth_standing_write_enabled: bool = False,
     oauth_exec_enabled: bool = False,
 ) -> dict[str, Any]:
     if any(not isinstance(scope, str) or not scope for scope in oauth_scopes):
@@ -1376,12 +1699,21 @@ def tool_contract(
             or oauth_patch_write_scope in oauth_scopes
         ):
             raise ValueError("OAuth permission requests require one distinct OAuth write scope.")
-    elif oauth_patch_write_scope is not None:
-        raise ValueError("OAuth write scope requires the permission-request candidate contract.")
-    if oauth_approved_patch_enabled and not oauth_permission_requests_enabled:
-        raise ValueError("OAuth approved patches require the permission-request candidate contract.")
-    if oauth_exec_enabled and not oauth_approved_patch_enabled:
-        raise ValueError("OAuth bounded exec requires the approved-patch candidate contract.")
+    elif oauth_patch_write_scope is not None and not oauth_standing_write_enabled:
+        raise ValueError("OAuth write scope requires a permission-request or standing-write contract.")
+    if oauth_standing_write_enabled and (not oauth_enabled or not oauth_file_read_enabled):
+        raise ValueError("OAuth standing write requires the bounded-file-read account contract.")
+    if oauth_standing_write_enabled:
+        if (
+            not isinstance(oauth_patch_write_scope, str)
+            or not re.fullmatch(r"[A-Za-z0-9._:-]{3,128}", oauth_patch_write_scope)
+            or oauth_patch_write_scope in oauth_scopes
+        ):
+            raise ValueError("OAuth standing write requires one distinct OAuth write scope.")
+    if oauth_approved_patch_enabled and not (oauth_permission_requests_enabled or oauth_standing_write_enabled):
+        raise ValueError("OAuth approved patches require a permission-request or standing-write contract.")
+    if oauth_exec_enabled and not (oauth_approved_patch_enabled or oauth_standing_write_enabled):
+        raise ValueError("OAuth bounded exec requires an approved-patch or standing-write contract.")
     tools = [
         _tool_contract_entry(
             name,
@@ -1390,12 +1722,14 @@ def tool_contract(
             oauth_permission_requests_enabled=oauth_permission_requests_enabled,
             oauth_patch_write_scope=oauth_patch_write_scope,
             oauth_approved_patch_enabled=oauth_approved_patch_enabled,
+            oauth_standing_write_enabled=oauth_standing_write_enabled,
             oauth_exec_enabled=oauth_exec_enabled,
         )
         for name in PUBLIC_TOOL_NAMES
     ]
     schema_version = (
         OAUTH_EXEC_FACADE_SCHEMA_VERSION if oauth_exec_enabled
+        else OAUTH_STANDING_WRITE_FACADE_SCHEMA_VERSION if oauth_standing_write_enabled
         else OAUTH_APPROVED_PATCH_FACADE_SCHEMA_VERSION if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_SCHEMA_VERSION if oauth_permission_requests_enabled
         else OAUTH_FILE_READ_FACADE_SCHEMA_VERSION if oauth_file_read_enabled
@@ -1404,6 +1738,7 @@ def tool_contract(
     )
     profile = (
         OAUTH_EXEC_FACADE_PROFILE if oauth_exec_enabled
+        else OAUTH_STANDING_WRITE_FACADE_PROFILE if oauth_standing_write_enabled
         else OAUTH_APPROVED_PATCH_FACADE_PROFILE if oauth_approved_patch_enabled
         else OAUTH_PERMISSION_REQUEST_FACADE_PROFILE if oauth_permission_requests_enabled
         else OAUTH_FILE_READ_FACADE_PROFILE if oauth_file_read_enabled
@@ -1462,6 +1797,7 @@ class ControlPlaneMcpFacade:
         oauth_permission_requests_enabled: bool = False,
         oauth_patch_write_scope: str | None = None,
         oauth_approved_patch_enabled: bool = False,
+        oauth_standing_write_enabled: bool = False,
         oauth_exec_enabled: bool = False,
     ) -> None:
         self.store = store
@@ -1478,16 +1814,25 @@ class ControlPlaneMcpFacade:
                 or oauth_patch_write_scope in oauth_scopes
             ):
                 raise ValueError("OAuth permission requests require one distinct OAuth write scope.")
-        elif oauth_patch_write_scope is not None:
-            raise ValueError("OAuth write scope requires the permission-request candidate contract.")
-        if oauth_approved_patch_enabled and not oauth_permission_requests_enabled:
-            raise ValueError("OAuth approved patches require the permission-request candidate contract.")
-        if oauth_exec_enabled and not oauth_approved_patch_enabled:
-            raise ValueError("OAuth bounded exec requires the approved-patch candidate contract.")
+        elif oauth_patch_write_scope is not None and not oauth_standing_write_enabled:
+            raise ValueError("OAuth write scope requires a permission-request or standing-write contract.")
+        if oauth_standing_write_enabled and (not self.oauth_enabled or not oauth_file_read_enabled):
+            raise ValueError("OAuth standing write requires the bounded-file-read account contract.")
+        if oauth_standing_write_enabled and (
+            not isinstance(oauth_patch_write_scope, str)
+            or not re.fullmatch(r"[A-Za-z0-9._:-]{3,128}", oauth_patch_write_scope)
+            or oauth_patch_write_scope in oauth_scopes
+        ):
+            raise ValueError("OAuth standing write requires one distinct OAuth write scope.")
+        if oauth_approved_patch_enabled and not (oauth_permission_requests_enabled or oauth_standing_write_enabled):
+            raise ValueError("OAuth approved patches require a permission-request or standing-write contract.")
+        if oauth_exec_enabled and not (oauth_approved_patch_enabled or oauth_standing_write_enabled):
+            raise ValueError("OAuth bounded exec requires an approved-patch or standing-write contract.")
         self.oauth_file_read_enabled = bool(oauth_file_read_enabled)
         self.oauth_permission_requests_enabled = bool(oauth_permission_requests_enabled)
         self.oauth_patch_write_scope = oauth_patch_write_scope
         self.oauth_approved_patch_enabled = bool(oauth_approved_patch_enabled)
+        self.oauth_standing_write_enabled = bool(oauth_standing_write_enabled)
         self.oauth_exec_enabled = bool(oauth_exec_enabled)
         self.contract = tool_contract(
             oauth_scopes=oauth_scopes,
@@ -1495,6 +1840,7 @@ class ControlPlaneMcpFacade:
             oauth_permission_requests_enabled=self.oauth_permission_requests_enabled,
             oauth_patch_write_scope=self.oauth_patch_write_scope,
             oauth_approved_patch_enabled=self.oauth_approved_patch_enabled,
+            oauth_standing_write_enabled=self.oauth_standing_write_enabled,
             oauth_exec_enabled=self.oauth_exec_enabled,
         )
 
@@ -1507,6 +1853,8 @@ class ControlPlaneMcpFacade:
         if self.oauth_exec_enabled:
             return "bounded_exec_local_policy_required"
         if self.oauth_approved_patch_enabled:
+            if self.oauth_standing_write_enabled:
+                return "standing_write_local_policy_required"
             return "bounded_file_read_plus_approved_patch_local_policy_required"
         if self.oauth_permission_requests_enabled:
             return "bounded_file_read_plus_permission_request_local_mutation_bridge_required"
@@ -1532,6 +1880,8 @@ class ControlPlaneMcpFacade:
                 "This facade returns account inventory, can queue one bounded structured exec or one approved exact-file patch only under a distinct OAuth write scope and "
                 "independent local Windows policies, and can observe paged output or request verified stop. cwd is a start directory, never a sandbox; shell is never accepted."
                 if self.oauth_exec_enabled
+                else "This facade returns account inventory and can queue one exact-file patch under the selected workspace's standing local policy without a per-patch owner approval. It still requires the distinct OAuth write scope, task writer lease and independent Windows policy; "
+                if self.oauth_standing_write_enabled
                 else "This facade returns account inventory, can queue one explicitly approved exact-file patch only under a distinct OAuth write scope and an "
                 "independent local Windows patch policy, and can record owner-reviewed patch permission scopes. It cannot launch processes, select a last-used "
                 "target, use remote shell, or access a workspace directly."
@@ -1616,6 +1966,24 @@ class ControlPlaneMcpFacade:
         arguments = params.get("arguments")
         if not isinstance(arguments, dict):
             raise ValidationError("tools/call arguments must be an object.")
+        if name == "task_control" and self.oauth_enabled and self.oauth_file_read_enabled:
+            operation = arguments.get("operation")
+            if operation not in {"task_observe", "writer_claim", "writer_release"}:
+                raise ValidationError("task_control operation is unsupported.")
+            required = {"operation", "task_id"}
+            allowed = required | ({"reason"} if operation == "writer_release" else set())
+            if not required <= set(arguments) or not set(arguments) <= allowed:
+                raise ValidationError(f"{operation} requires one exact task_id.")
+            task_id = arguments.get("task_id")
+            if not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None:
+                raise ValidationError("task_id is invalid.")
+            result: dict[str, Any] = {"operation": operation, "task_id": task_id}
+            if operation == "writer_release":
+                reason = arguments.get("reason", "controller_handoff")
+                if not isinstance(reason, str) or not 1 <= len(reason.strip()) <= 64:
+                    raise ValidationError("lease release reason is invalid.")
+                result["reason"] = reason.strip()
+            return name, result
         if name == "request_permissions" and self.oauth_permission_requests_enabled:
             operation = arguments.get("operation")
             if operation == "request_patch":
@@ -1674,9 +2042,60 @@ class ControlPlaneMcpFacade:
                     raise ValidationError("permission_request_id is invalid.")
                 return name, {"operation": "status", "permission_request_id": permission_request_id.strip()}
             raise ValidationError("request_permissions operation is unsupported.")
-        if name == "agent_workflow" and self.oauth_approved_patch_enabled:
+        if name == "agent_workflow" and (self.oauth_approved_patch_enabled or self.oauth_standing_write_enabled):
             operation = arguments.get("operation")
             if operation == "apply_patch":
+                if self.oauth_standing_write_enabled:
+                    required = {
+                        "operation", "binding_id", "task_id", "path", "preimage_sha256",
+                        "patch_sha256", "validation_profile", "patch_envelope", "idempotency_key",
+                        "expected_facade_contract",
+                    }
+                    if set(arguments) != required:
+                        raise ValidationError(
+                            "standing apply_patch requires one exact binding, task, path, digests, patch envelope, idempotency key and expected facade contract."
+                        )
+                    binding_id = arguments.get("binding_id")
+                    task_id = arguments.get("task_id")
+                    path = arguments.get("path")
+                    key = arguments.get("idempotency_key")
+                    if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
+                        raise ValidationError("binding_id is invalid.")
+                    if not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None:
+                        raise ValidationError("task_id is invalid.")
+                    normalized_path = _safe_bounded_relative_path(path)
+                    if normalized_path is None:
+                        raise ValidationError("path is invalid.")
+                    if not isinstance(key, str) or not 8 <= len(key.strip()) <= 256:
+                        raise ValidationError("idempotency_key is invalid.")
+                    hashes = {field: arguments.get(field) for field in ("preimage_sha256", "patch_sha256")}
+                    if any(
+                        not isinstance(value, str) or re.fullmatch(r"[a-f0-9]{64}", value.strip().lower()) is None
+                        for value in hashes.values()
+                    ):
+                        raise ValidationError("patch scope digest is invalid.")
+                    if arguments.get("validation_profile") != MCP_PATCH_PERMISSION_VALIDATION_PROFILE:
+                        raise ValidationError("validation_profile is invalid.")
+                    patch_envelope = arguments.get("patch_envelope")
+                    try:
+                        patch_bytes = patch_envelope.encode("utf-8") if isinstance(patch_envelope, str) else b""
+                    except UnicodeEncodeError:
+                        patch_bytes = b""
+                    if not patch_bytes or len(patch_bytes) > MCP_APPROVED_PATCH_MAX_BYTES:
+                        raise ValidationError("patch_envelope is invalid.")
+                    return name, {
+                        "operation": "apply_patch",
+                        "authority_mode": "standing",
+                        "binding_id": binding_id.strip(),
+                        "task_id": task_id,
+                        "path": normalized_path,
+                        "preimage_sha256": str(hashes["preimage_sha256"]).strip().lower(),
+                        "patch_sha256": str(hashes["patch_sha256"]).strip().lower(),
+                        "validation_profile": MCP_PATCH_PERMISSION_VALIDATION_PROFILE,
+                        "patch_envelope": patch_envelope,
+                        "idempotency_key": key.strip(),
+                        "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                    }
                 required = {
                     "operation", "permission_request_id", "patch_envelope",
                     "idempotency_key", "expected_facade_contract",
@@ -1799,6 +2218,55 @@ class ControlPlaneMcpFacade:
             read_op = "doc_read" if kind == "document" else "image_read"
             status_op = "doc_status" if kind == "document" else "image_status"
             operation = arguments.get("operation")
+            if kind == "document" and self.oauth_standing_write_enabled and operation in {"doc_create", "doc_convert"}:
+                if operation == "doc_create":
+                    required = {"operation", "binding_id", "task_id", "target", "content", "idempotency_key", "expected_facade_contract"}
+                    allowed = required | {"title", "overwrite"}
+                else:
+                    required = {"operation", "binding_id", "task_id", "source", "target", "idempotency_key", "expected_facade_contract"}
+                    allowed = required | {"overwrite"}
+                if not required <= set(arguments) or not set(arguments) <= allowed:
+                    raise ValidationError(f"{operation} requires one exact binding, task, source/target, idempotency key and expected facade contract.")
+                binding_id = arguments.get("binding_id")
+                task_id = arguments.get("task_id")
+                key = arguments.get("idempotency_key")
+                if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
+                    raise ValidationError("binding_id is invalid.")
+                if not isinstance(task_id, str) or re.fullmatch(r"task_[a-f0-9]{32}", task_id) is None:
+                    raise ValidationError("task_id is invalid.")
+                if not isinstance(key, str) or not 8 <= len(key.strip()) <= 256:
+                    raise ValidationError("idempotency_key is invalid.")
+                target = _safe_bounded_relative_path(arguments.get("target"))
+                if target is None or target.rsplit("/", 1)[-1].lower().endswith(tuple(MCP_DOCUMENT_WRITE_TARGET_SUFFIXES)) is False:
+                    raise ValidationError("target is invalid.")
+                overwrite = arguments.get("overwrite", False)
+                if not isinstance(overwrite, bool):
+                    raise ValidationError("overwrite is invalid.")
+                if operation == "doc_create":
+                    content = arguments.get("content")
+                    if not isinstance(content, str) or len(content.encode("utf-8")) > MCP_DOCUMENT_WRITE_MAX_CONTENT_BYTES:
+                        raise ValidationError("content is invalid or too large.")
+                    title = arguments.get("title", "")
+                    if not isinstance(title, str) or len(title.encode("utf-8")) > MCP_DOCUMENT_WRITE_MAX_TITLE_BYTES:
+                        raise ValidationError("title is invalid or too large.")
+                    return name, {
+                        "operation": operation,
+                        "binding_id": binding_id.strip(), "task_id": task_id,
+                        "target": target, "source": None, "title": title,
+                        "content": content, "overwrite": overwrite,
+                        "idempotency_key": key.strip(),
+                        "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                    }
+                source = _safe_bounded_relative_path(arguments.get("source"))
+                if source is None or source == target or not target.lower().endswith(".docx"):
+                    raise ValidationError("source/target is invalid.")
+                return name, {
+                    "operation": operation,
+                    "binding_id": binding_id.strip(), "task_id": task_id,
+                    "target": target, "source": source, "title": "", "content": "",
+                    "overwrite": overwrite, "idempotency_key": key.strip(),
+                    "expected_facade_contract": _expected_contract(arguments.get("expected_facade_contract")),
+                }
             if operation == read_op:
                 required = {"operation", "binding_id", "path", "idempotency_key", "expected_facade_contract"}
                 allowed = required | {"task_id"}
@@ -1840,16 +2308,19 @@ class ControlPlaneMcpFacade:
             if not self.oauth_file_read_enabled:
                 raise ValidationError("OAuth account inventory requires operation=inventory and no target arguments.")
             if operation == "task_open":
-                allowed = {"operation", "binding_id", "label"}
+                allowed = {"operation", "binding_id", "label", "idempotency_key"}
                 if set(arguments) != allowed:
-                    raise ValidationError("task_open requires one exact binding and a short label.")
+                    raise ValidationError("task_open requires one exact binding, label and idempotency_key.")
                 binding_id = arguments.get("binding_id")
                 label = arguments.get("label")
+                idempotency_key = arguments.get("idempotency_key")
                 if not isinstance(binding_id, str) or not 3 <= len(binding_id.strip()) <= 128:
                     raise ValidationError("binding_id is invalid.")
                 if not isinstance(label, str) or not 1 <= len(label.strip()) <= 120:
                     raise ValidationError("label is invalid.")
-                return name, {"operation": "task_open", "binding_id": binding_id.strip(), "label": label.strip()}
+                if not isinstance(idempotency_key, str) or not 8 <= len(idempotency_key.strip()) <= 256:
+                    raise ValidationError("idempotency_key is invalid.")
+                return name, {"operation": "task_open", "binding_id": binding_id.strip(), "label": label.strip(), "idempotency_key": idempotency_key.strip()}
             if operation == "task_list":
                 if set(arguments) != {"operation"}:
                     raise ValidationError("task_list requires no target arguments.")
@@ -2198,6 +2669,7 @@ class ControlPlaneMcpFacade:
             principal_id=principal_id,
             binding_id=arguments["binding_id"],
             label=arguments["label"],
+            idempotency_key=arguments["idempotency_key"],
         )
         return {
             "content": [{"type": "text", "text": "Durable task opened and pinned to the selected binding. Use this task_id for later reads, permission requests and patches so two chats never retarget each other."}],
@@ -2240,6 +2712,59 @@ class ControlPlaneMcpFacade:
                 "schema_version": self.contract["schema_version"],
                 "observation_kind": "control_plane_task_session",
                 "task": task,
+            },
+            "isError": False,
+        }
+
+    def _task_control(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Observe or hand off one durable task across linked clients."""
+
+        operation = arguments["operation"]
+        task_id = arguments["task_id"]
+        if operation == "task_observe":
+            observation = self.store.observe_mcp_task(
+                owner_id=owner_id,
+                principal_id=principal_id,
+                task_id=task_id,
+            )
+            message = "Task observation returned without acquiring its writer lease."
+        elif operation == "writer_claim":
+            lease = self.store.claim_mcp_task_writer_lease(
+                owner_id=owner_id,
+                principal_id=principal_id,
+                task_id=task_id,
+            )
+            observation = {
+                "task_id": task_id,
+                "writer_lease": lease,
+                "execution": "writer_lease_claimed",
+            }
+            message = "Workspace writer lease claimed for this task; local OS authority is unchanged."
+        else:
+            lease = self.store.release_mcp_task_writer_lease(
+                owner_id=owner_id,
+                principal_id=principal_id,
+                task_id=task_id,
+                reason=arguments.get("reason", "controller_handoff"),
+            )
+            observation = {
+                "task_id": task_id,
+                "writer_lease": lease,
+                "execution": "writer_lease_released",
+            }
+            message = "Workspace writer lease released; another linked client may claim it."
+        return {
+            "content": [{"type": "text", "text": message}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_task_control",
+                **observation,
             },
             "isError": False,
         }
@@ -2339,6 +2864,59 @@ class ControlPlaneMcpFacade:
                 "workspace_accessed": False,
                 "local_admission": "not_requested",
                 "permission_request": request,
+            },
+            "isError": False,
+        }
+
+    def _request_standing_patch(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Queue one exact patch under a durable node-local standing policy."""
+
+        current_contract = _contract_metadata(self.contract)
+        if arguments["expected_facade_contract"] != current_contract:
+            raise ContractMismatchError("expected facade contract does not match this control-plane surface.")
+        intent = self.store.request_mcp_standing_patch(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            binding_id=arguments["binding_id"],
+            path=arguments["path"],
+            preimage_sha256=arguments["preimage_sha256"],
+            patch_sha256=arguments["patch_sha256"],
+            validation_profile=arguments["validation_profile"],
+            patch_envelope=arguments["patch_envelope"],
+            idempotency_key=arguments["idempotency_key"],
+            facade_contract=current_contract,
+            task_id=arguments["task_id"],
+        )
+        action = self.store.mcp_approved_patch_action_observation(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            action_id=intent["action_id"],
+        )
+        return {
+            "content": [{
+                "type": "text",
+                "text": "Standing patch action is queued for local workspace-policy admission. No per-patch owner approval was requested; the node has not yet written a file.",
+            }],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_standing_patch_intent",
+                "execution": "queued_for_standing_local_policy",
+                "workspace_accessed": False,
+                "patch_applied": False,
+                "local_admission": "required",
+                "authority_mode": "standing",
+                "request_id": intent["request_id"],
+                "action_id": intent["action_id"],
+                "intent_digest": intent["intent_digest"],
+                "facade_contract": intent["facade_contract"],
+                "replayed": intent["replayed"],
+                "action": self._action_lifecycle_projection(action),
             },
             "isError": False,
         }
@@ -2487,7 +3065,7 @@ class ControlPlaneMcpFacade:
         }
 
     def _has_patch_write_scope(self, oauth_scopes: frozenset[str]) -> bool:
-        if not self.oauth_permission_requests_enabled or not isinstance(self.oauth_patch_write_scope, str):
+        if not isinstance(self.oauth_patch_write_scope, str):
             return False
         return set(self.oauth_scopes) <= set(oauth_scopes) and self.oauth_patch_write_scope in oauth_scopes
 
@@ -2620,6 +3198,81 @@ class ControlPlaneMcpFacade:
             "isError": False,
         }
 
+    def _request_document_write(self, *, owner_id: str, principal_id: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        current_contract = _contract_metadata(self.contract)
+        if arguments["expected_facade_contract"] != current_contract:
+            raise ContractMismatchError("expected facade contract does not match this control-plane surface.")
+        operation = "document_create" if arguments["operation"] == "doc_create" else "document_convert"
+        intent = self.store.request_mcp_document_write(
+            owner_id=owner_id,
+            principal_id=principal_id,
+            binding_id=arguments["binding_id"],
+            task_id=arguments["task_id"],
+            operation=operation,
+            target=arguments["target"],
+            source=arguments.get("source"),
+            title=arguments.get("title", ""),
+            content=arguments.get("content", ""),
+            overwrite=arguments.get("overwrite", False),
+            idempotency_key=arguments["idempotency_key"],
+            facade_contract=current_contract,
+        )
+        action = self.store.mcp_document_write_action_observation(
+            owner_id=owner_id, principal_id=principal_id, action_id=intent["action_id"]
+        )
+        return {
+            "content": [{"type": "text", "text": "Standing document write is queued for the selected node's local policy; the facade has not written bytes."}],
+            "structuredContent": {
+                "schema_version": self.contract["schema_version"],
+                "observation_kind": "control_plane_document_write_intent",
+                "execution": "queued_for_local_admission",
+                "local_admission": "required",
+                "request_id": intent["request_id"],
+                "action_id": intent["action_id"],
+                "task_id": intent["task_id"],
+                "writer_lease_generation": intent["writer_lease_generation"],
+                "operation": operation,
+                "target": arguments["target"],
+                "intent_digest": intent["intent_digest"],
+                "facade_contract": intent["facade_contract"],
+                "replayed": intent["replayed"],
+                "action": self._action_lifecycle_projection(action),
+            },
+            "isError": False,
+        }
+
+    def _document_write_status(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        action = self.store.mcp_document_write_action_observation(
+            owner_id=owner_id, principal_id=principal_id, action_id=action_id
+        )
+        relay = _completed_document_write_relay(action, _contract_metadata(self.contract))
+        if action["delivery_state"] == "reconcile_required":
+            return {
+                "content": [{"type": "text", "text": "Document write effect is unknown; inspect the node before retrying."}],
+                "structuredContent": {
+                    "schema_version": self.contract["schema_version"],
+                    "observation_kind": "control_plane_document_write_status",
+                    "execution": "local_document_effect_unknown_reconcile_required",
+                    "reconciliation_required": True,
+                    "action": self._action_lifecycle_projection(action),
+                },
+                "isError": False,
+            }
+        observation: dict[str, Any] = {
+            "schema_version": self.contract["schema_version"],
+            "observation_kind": "control_plane_document_write_status",
+            "execution": "completed_document_write_relay" if relay is not None else "local_admission_pending_or_unverified",
+            "local_admission": "completed" if relay is not None else "required_or_pending",
+            "action": self._action_lifecycle_projection(action),
+        }
+        if relay is not None:
+            observation["document"] = relay
+        return {
+            "content": [{"type": "text", "text": "The node relayed one verified document workflow result." if relay else "Document write has no verified completed receipt yet."}],
+            "structuredContent": observation,
+            "isError": False,
+        }
+
     def _artifact_status(self, *, owner_id: str, principal_id: str, kind: str, action_id: str) -> dict[str, Any]:
         action = self.store.mcp_artifact_action_observation(owner_id=owner_id, principal_id=principal_id, action_id=action_id)
         relay = _completed_artifact_relay(action, _contract_metadata(self.contract), kind=kind)
@@ -2663,6 +3316,12 @@ class ControlPlaneMcpFacade:
         params: dict[str, Any],
     ) -> dict[str, Any]:
         name, arguments = self._arguments(params)
+        if name == "task_control" and self.oauth_enabled and self.oauth_file_read_enabled:
+            return self._task_control(
+                owner_id=owner_id,
+                principal_id=principal_id,
+                arguments=arguments,
+            )
         if name == "request_permissions" and self.oauth_permission_requests_enabled:
             if not self._has_patch_write_scope(oauth_scopes):
                 return self._call_error(
@@ -2681,7 +3340,7 @@ class ControlPlaneMcpFacade:
                 principal_id=principal_id,
                 permission_request_id=arguments["permission_request_id"],
             )
-        if name == "agent_workflow" and self.oauth_approved_patch_enabled:
+        if name == "agent_workflow" and (self.oauth_approved_patch_enabled or self.oauth_standing_write_enabled):
             if not self._has_patch_write_scope(oauth_scopes):
                 return self._call_error(
                     code="OAUTH_WRITE_SCOPE_REQUIRED",
@@ -2689,6 +3348,12 @@ class ControlPlaneMcpFacade:
                     tool_name=name,
                 )
             if arguments["operation"] == "apply_patch":
+                if self.oauth_standing_write_enabled:
+                    return self._request_standing_patch(
+                        owner_id=owner_id,
+                        principal_id=principal_id,
+                        arguments=arguments,
+                    )
                 return self._request_approved_patch(
                     owner_id=owner_id,
                     principal_id=principal_id,
@@ -2722,6 +3387,23 @@ class ControlPlaneMcpFacade:
             read_op = "doc_read" if kind == "document" else "image_read"
             if arguments["operation"] == read_op:
                 return self._request_artifact(owner_id=owner_id, principal_id=principal_id, kind=kind, arguments=arguments)
+            if kind == "document" and self.oauth_standing_write_enabled and arguments["operation"] in {"doc_create", "doc_convert"}:
+                if not self._has_patch_write_scope(oauth_scopes):
+                    return self._call_error(
+                        code="OAUTH_WRITE_SCOPE_REQUIRED",
+                        message="Standing document writes require the dedicated OAuth write scope.",
+                        tool_name=name,
+                    )
+                return self._request_document_write(
+                    owner_id=owner_id, principal_id=principal_id, arguments=arguments
+                )
+            if kind == "document" and self.oauth_standing_write_enabled and arguments["operation"] == "doc_status":
+                try:
+                    return self._document_write_status(
+                        owner_id=owner_id, principal_id=principal_id, action_id=arguments["action_id"]
+                    )
+                except NotFoundError:
+                    pass
             return self._artifact_status(owner_id=owner_id, principal_id=principal_id, kind=kind, action_id=arguments["action_id"])
         if name != "workspace_context":
             return self._call_error(

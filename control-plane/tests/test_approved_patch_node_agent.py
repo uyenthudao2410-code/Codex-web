@@ -141,6 +141,8 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
             "workspace_generation": "generation-control-plane-0001",
             "context_id": "context-approved-patch-0001",
             "binding_id": "binding-approved-patch-0001",
+            "mcp_task_id": "task_" + "a" * 32,
+            "writer_lease_generation": 1,
             "tool_name": "agent_workflow",
             "arguments_json": json.dumps({
                 "operation": "apply_patch",
@@ -180,6 +182,29 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
             max_file_bytes=4096,
         )
 
+    def test_standing_approved_patch_policy_is_not_bound_to_the_former_ttl(self) -> None:
+        policy = _install_approved_patch_policy_values(
+            self.args(),
+            config_path=self.config_path,
+            config=self.config,
+            owner_id="owner-control-plane-0001",
+            workspace_id="workspace-control-plane-0001",
+            workspace_generation="generation-control-plane-0001",
+            expires_at_ms=None,
+            facade_contract=FACADE_CONTRACT,
+            allowed_relative_paths=["src/fixture.txt"],
+            max_patch_bytes=4096,
+            max_file_bytes=4096,
+        )
+        self.assertEqual(policy["schema_version"], 2)
+        self.assertEqual(policy["authority_mode"], "standing")
+        self.assertIsNone(policy["expires_at_ms"])
+        request = _approved_patch_bridge_request(self.action(), self.config)
+        admitted, _entry = _admit_approved_patch_policy_request(
+            self.args(), config_path=self.config_path, config=self.config, request=request
+        )
+        self.assertEqual(admitted["authority_mode"], "standing")
+
     def bridge_result(self, request: dict[str, object], policy: dict[str, object]) -> dict[str, object]:
         patch = zlib.decompress(base64.b64decode(
             "".join(line[1:] for line in str(request["patch_envelope"]).splitlines()[3:-1])
@@ -197,6 +222,10 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
             "runtime_mode": "development",
             "action_id": request["action_id"],
             "attempt_id": request["attempt_id"],
+            "task_id": request["task_id"],
+            "writer_lease_generation": request["writer_lease_generation"],
+            "run_id": "a" * 32,
+            "wave_id": "b" * 32,
             "local_handle": "cp_ap_" + "e" * 48,
             "patch_applied": True,
             "local_semantic_acceptance": "pending",
@@ -387,6 +416,30 @@ class ApprovedPatchNodeAgentTests(unittest.TestCase):
                     "reason": expected_code,
                     "completed_iterations": 0,
                 })
+
+    def test_approved_patch_cli_without_expiry_installs_standing_policy(self) -> None:
+        command = [
+            "install-approved-patch-policy", "--config", str(self.config_path),
+            "--workspace-registry", str(self.registry_path),
+            "--owner-id", "owner-control-plane-0001",
+            "--workspace-id", "workspace-control-plane-0001",
+            "--workspace-generation", "generation-control-plane-0001",
+            "--facade-schema-version", "10",
+            "--facade-profile", FACADE_CONTRACT["profile"],
+            "--facade-sha256", FACADE_CONTRACT["sha256"],
+            "--allowed-relative-path", "src/fixture.txt",
+            "--max-patch-bytes", "4096", "--max-file-bytes", "4096",
+            "--confirm-install", "--data-root", str(self.data_root),
+        ]
+        with redirect_stdout(io.StringIO()) as output:
+            self.assertEqual(node_agent_main(command), 0)
+        receipt = json.loads(output.getvalue())
+        self.assertEqual(receipt["authority_mode"], "standing")
+        self.assertIsNone(receipt["expires_at_ms"])
+        installed = json.loads((self.data_root / "control-plane-approved-patch-policy.json").read_text(encoding="utf-8"))
+        self.assertEqual(installed["schema_version"], 2)
+        self.assertEqual(installed["authority_mode"], "standing")
+        self.assertIsNone(installed["expires_at_ms"])
 
     def test_poll_rejects_wrong_tool_before_the_mutation_bridge(self) -> None:
         action = self.action()

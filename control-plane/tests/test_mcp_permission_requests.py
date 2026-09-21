@@ -7,6 +7,7 @@ import sqlite3
 import tempfile
 import unittest
 import zlib
+from contextlib import closing
 from pathlib import Path
 
 from control_plane.mcp_facade import ControlPlaneMcpFacade
@@ -139,7 +140,7 @@ class McpPermissionRequestTests(unittest.TestCase):
         self.assertEqual(counts["work_requests"], 0)
         self.assertEqual(counts["actions"], 0)
         self.assertEqual(self.store.poll_actions(device_id=self.node["device_id"]), [])
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             events = "\n".join(row[0] for row in connection.execute("SELECT details_json FROM events"))
         self.assertNotIn("src/fixture.txt", events)
         self.assertNotIn("a" * 64, events)
@@ -246,7 +247,7 @@ class McpPermissionRequestTests(unittest.TestCase):
     def test_v14_database_gains_permission_request_table_without_rewriting_history(self) -> None:
         legacy_path = Path(self.temporary.name) / "v14-permission-requests.sqlite3"
         ControlPlaneStore(legacy_path, clock=lambda: self.now)
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             connection.execute("DROP TABLE mcp_permission_requests")
             connection.execute("PRAGMA user_version = 14")
             connection.commit()
@@ -254,7 +255,7 @@ class McpPermissionRequestTests(unittest.TestCase):
         migrated = ControlPlaneStore(legacy_path, clock=lambda: self.now)
         self.assertEqual(migrated.health()["schema_version"], SCHEMA_VERSION)
         self.assertEqual(migrated.health()["counts"]["mcp_permission_requests"], 0)
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             indices = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
         self.assertIn("mcp_permission_requests", tables)
@@ -309,7 +310,7 @@ class McpPermissionRequestTests(unittest.TestCase):
         )
         self.assertEqual(json.loads(observation["arguments_json"])["operation"], "apply_patch")
         self.assertNotIn(patch, json.dumps(observation))
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             event_text = "\n".join(row[0] for row in connection.execute("SELECT details_json FROM events"))
             persisted_patch = connection.execute(
                 "SELECT patch_envelope FROM mcp_approved_patch_intents WHERE action_id = ?",
@@ -382,7 +383,7 @@ class McpPermissionRequestTests(unittest.TestCase):
     def test_v15_database_gains_approved_patch_intent_table_without_rewriting_history(self) -> None:
         legacy_path = Path(self.temporary.name) / "v15-approved-patch-intents.sqlite3"
         ControlPlaneStore(legacy_path, clock=lambda: self.now)
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             connection.execute("DROP TABLE mcp_approved_patch_intents")
             connection.execute("PRAGMA user_version = 15")
             connection.commit()
@@ -390,7 +391,7 @@ class McpPermissionRequestTests(unittest.TestCase):
         migrated = ControlPlaneStore(legacy_path, clock=lambda: self.now)
         self.assertEqual(migrated.health()["schema_version"], SCHEMA_VERSION)
         self.assertEqual(migrated.health()["counts"]["mcp_approved_patch_intents"], 0)
-        with sqlite3.connect(legacy_path) as connection:
+        with closing(sqlite3.connect(legacy_path)) as connection:
             tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
             indices = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
         self.assertIn("mcp_approved_patch_intents", tables)

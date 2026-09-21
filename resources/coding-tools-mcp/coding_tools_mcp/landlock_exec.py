@@ -10,9 +10,21 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .envutils import ENV_PREFIX
-from .errors import ToolFailure
-from .fs_utils import is_relative_to
+if __package__ in {None, ""}:
+    # The restricted child is intentionally launched as a standalone script so
+    # it can apply Landlock before replacing itself with the requested command.
+    # Add the package parent for that process shape; normal package imports keep
+    # using relative imports below.
+    _package_parent = str(Path(__file__).resolve().parent.parent)
+    if _package_parent not in sys.path:
+        sys.path.insert(0, _package_parent)
+    from coding_tools_mcp.envutils import ENV_PREFIX
+    from coding_tools_mcp.errors import ToolFailure
+    from coding_tools_mcp.fs_utils import is_relative_to
+else:
+    from .envutils import ENV_PREFIX
+    from .errors import ToolFailure
+    from .fs_utils import is_relative_to
 
 PR_SET_NO_NEW_PRIVS = 38
 SYS_LANDLOCK_RESTRICT_SELF = 446

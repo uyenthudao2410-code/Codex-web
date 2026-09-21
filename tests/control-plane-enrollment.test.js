@@ -6,15 +6,18 @@ const path = require('node:path');
 
 const {
   centralServerOrigin,
-  centralContextId,
   centralWorkspaceId,
   centralWorkspaceGeneration,
   endpointId,
   parseEnrollmentResult,
+  parseEnrollmentStatusResult,
+  parseCredentialRotationResult,
   parseReadOnlyPolicyInstallResult,
   parseWorkspaceRegistrationResult,
   parseWorkspaceListResult,
   parseWorkspaceRetirementResult,
+  parseWorkspaceReplacementResult,
+  normalizeWorkspaceCapabilities,
   ControlPlaneEnrollmentService
 } = require('../electron/services/controlPlaneEnrollment');
 
@@ -80,7 +83,94 @@ test('central enrollment invokes only the packaged node agent and never passes O
   assert.deepEqual(options.env, { PATH: '/safe/path' });
 });
 
-test('central executor installs only a locally confirmed, node-scoped read-only policy', async (t) => {
+test('central enrollment reconciles durable status after reload without passing the node secret to renderer', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-enrollment-status-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const calls = [];
+  const service = new ControlPlaneEnrollmentService({
+    paths: fixturePaths(root),
+    environment: { PATH: '/safe/path', OPENAI_API_KEY: 'must-not-reach-agent' },
+    runner: async (...args) => {
+      calls.push(args);
+      return { code: 0, stdout: JSON.stringify({
+        device_id: identity.device_id,
+        enrollment_id: 'enroll_12345678',
+        state: 'approved',
+        credential_generation: 2,
+        fresh: true,
+        observed_at_ms: Date.now(),
+        error_code: null
+      }) + '\n', stderr: '' };
+    }
+  });
+  const status = await service.reconcileEnrollment({ deviceIdentity: identity });
+  assert.equal(status.state, 'approved');
+  assert.equal(status.credential_generation, 2);
+  assert.equal(calls.length, 1);
+  const [command, args, options] = calls[0];
+  assert.equal(command, path.join(root, 'python.exe'));
+  assert.deepEqual(args.slice(0, 6), ['-I', path.join(root, 'node_agent.py'), 'reconcile-enrollment', '--config', path.join(root, 'control-plane-node.json'), '--device-id']);
+  assert.equal(args.includes('must-not-reach-agent'), false);
+  assert.deepEqual(options.env, { PATH: '/safe/path' });
+  assert.throws(
+    () => parseEnrollmentStatusResult(JSON.stringify({
+      device_id: identity.device_id, enrollment_id: 'enroll_12345678', state: 'approved',
+      credential_generation: 2, fresh: true, observed_at_ms: Date.now(), error_code: 'bad code'
+    }), identity.device_id),
+    { code: 'CONTROL_PLANE_ENROLLMENT_STATUS_OUTPUT_INVALID' }
+  );
+});
+
+test('central executor runs durable credential rotation through the packaged node agent without exposing a secret', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-credential-rotation-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const calls = [];
+  const service = new ControlPlaneEnrollmentService({
+    paths: fixturePaths(root),
+    environment: { PATH: '/safe/path', OPENAI_API_KEY: 'must-not-reach-agent', NODE_SECRET: 'must-not-reach-agent' },
+    runner: async (...args) => {
+      calls.push(args);
+      return { code: 0, stdout: JSON.stringify({
+        device_id: identity.device_id,
+        rotation_id: `rotate_${'a'.repeat(32)}`,
+        state: 'completed',
+        current_generation: 2,
+        next_generation: 3,
+        fresh: true,
+        error_code: null
+      }) + '\n', stderr: '' };
+    }
+  });
+  const status = await service.rotateCredential({ deviceIdentity: identity });
+  assert.deepEqual(status, {
+    device_id: identity.device_id.toLowerCase(),
+    rotation_id: `rotate_${'a'.repeat(32)}`,
+    state: 'completed',
+    current_generation: 2,
+    next_generation: 3,
+    fresh: true,
+    error_code: null
+  });
+  assert.equal(calls.length, 1);
+  const [command, args, options] = calls[0];
+  assert.equal(command, path.join(root, 'python.exe'));
+  assert.deepEqual(args.slice(0, 6), [
+    '-I', path.join(root, 'node_agent.py'), 'rotate-credential',
+    '--config', path.join(root, 'control-plane-node.json'), '--project-root'
+  ]);
+  assert.equal(args.includes('must-not-reach-agent'), false);
+  assert.deepEqual(options.env, { PATH: '/safe/path' });
+  assert.throws(
+    () => parseCredentialRotationResult(JSON.stringify({
+      device_id: identity.device_id, rotation_id: `rotate_${'a'.repeat(32)}`,
+      state: 'completed', current_generation: 2, next_generation: 4,
+      fresh: true, error_code: null
+    }), identity.device_id),
+    { code: 'CONTROL_PLANE_CREDENTIAL_ROTATION_OUTPUT_INVALID' }
+  );
+});
+
+test('central executor installs only a locally confirmed, assigned read-only policy for one registered workspace', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-policy-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const calls = [];
@@ -96,8 +186,9 @@ test('central executor installs only a locally confirmed, node-scoped read-only 
       }) + '\n', stderr: '' };
     }
   });
-  const contextId = 'ctx_0123456789abcdef0123456789abcdef';
-  const receipt = await service.installReadOnlyPolicy({ contextId, replaceExisting: true });
+  const workspaceId = 'workspace_0123456789abcdef0123456789abcdef';
+  const workspaceGeneration = 'generation_abcdef0123456789abcdef0123456789';
+  const receipt = await service.installReadOnlyPolicyAssignment({ workspaceId, workspaceGeneration, replaceExisting: true });
   assert.deepEqual(receipt, {
     enabled: true, expires_at_ms: receipt.expires_at_ms, policy_sha256: 'b'.repeat(64),
     runtime_mode: 'packaged', windows_acl_verified: false
@@ -105,23 +196,25 @@ test('central executor installs only a locally confirmed, node-scoped read-only 
   assert.equal(calls.length, 1);
   const [command, args, options] = calls[0];
   assert.equal(command, path.join(root, 'python.exe'));
-  assert.deepEqual(args.slice(0, 4), ['-I', path.join(root, 'node_agent.py'), 'install-read-only-policy-from-context', '--config']);
-  assert.equal(args.includes(contextId), true);
+  assert.deepEqual(args.slice(0, 4), ['-I', path.join(root, 'node_agent.py'), 'install-read-only-policy-from-assignment', '--config']);
+  assert.equal(args.includes(workspaceId), true);
+  assert.equal(args.includes(workspaceGeneration), true);
+  assert.equal(args.some((value) => String(value).startsWith('ctx_')), false);
   assert.equal(args.includes('--workspace-registry'), true);
   assert.equal(args.includes(path.join(root, 'control-plane-workspaces.json')), true);
   assert.equal(args.includes('--confirm-install'), true);
   assert.equal(args.includes('--replace'), true);
   assert.equal(args.includes('must-not-reach-agent'), false);
   assert.deepEqual(options.env, { PATH: '/safe/path' });
-  assert.equal(centralContextId(contextId.toUpperCase()), contextId);
-  assert.throws(() => centralContextId('ctx_wrong'), { code: 'CONTROL_PLANE_CONTEXT_ID_INVALID' });
+  assert.equal(centralWorkspaceId(workspaceId.toUpperCase()), workspaceId);
+  assert.equal(centralWorkspaceGeneration(workspaceGeneration.toUpperCase()), workspaceGeneration);
   assert.throws(
     () => parseReadOnlyPolicyInstallResult(JSON.stringify({ operation: 'control_plane_read_only_policy_installed', enabled: true, expires_at_ms: Date.now() + 60_000, policy_sha256: 'b'.repeat(64), runtime_mode: 'development', windows_acl_verified: false })),
     { code: 'CONTROL_PLANE_POLICY_OUTPUT_INVALID' }
   );
 });
 
-test('central executor registers only a local read-only workspace without passing secrets or path to Ubuntu receipt', async (t) => {
+test('central executor registers a local workspace with the safe read-only default without passing secrets or path to Ubuntu receipt', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-workspace-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const workspace = path.join(root, 'fixture-workspace');
@@ -172,12 +265,113 @@ test('central executor registers only a local read-only workspace without passin
       workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
       workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
       display_name: 'fixture-workspace',
-      capabilities: { read: true, write: true, exec: false },
+      capabilities: { read: false, write: false, exec: false },
       replayed: false,
       state: 'registered'
     })),
     { code: 'CONTROL_PLANE_WORKSPACE_OUTPUT_INVALID' }
   );
+});
+
+test('central executor passes owner-selected write and exec capabilities to the packaged node agent', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-workspace-capabilities-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, 'fixture-workspace');
+  fs.mkdirSync(workspace);
+  const calls = [];
+  const service = new ControlPlaneEnrollmentService({
+    paths: fixturePaths(root),
+    environment: { PATH: '/safe/path', OPENAI_API_KEY: 'must-not-reach-agent' },
+    runner: async (...args) => {
+      calls.push(args);
+      return { code: 0, stdout: JSON.stringify({
+        workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
+        workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
+        display_name: 'fixture-workspace',
+        capabilities: { read: true, write: true, exec: true },
+        replayed: false,
+        state: 'registered'
+      }) + '\n', stderr: '' };
+    }
+  });
+  const receipt = await service.registerWorkspace({
+    workspacePath: workspace,
+    capabilities: { read: true, write: true, exec: true }
+  });
+  assert.deepEqual(receipt.capabilities, { read: true, write: true, exec: true });
+  const [, args] = calls[0];
+  assert.equal(args.includes('--capability-read'), true);
+  assert.equal(args.includes('--capability-write'), true);
+  assert.equal(args.includes('--capability-exec'), true);
+  assert.equal(args.includes('must-not-reach-agent'), false);
+});
+
+test('central executor replaces a registered workspace generation only through explicit packaged confirmation', async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'control-plane-workspace-replace-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workspace = path.join(root, 'fixture-workspace');
+  fs.mkdirSync(workspace);
+  const calls = [];
+  const service = new ControlPlaneEnrollmentService({
+    paths: fixturePaths(root),
+    environment: { PATH: '/safe/path', OPENAI_API_KEY: 'must-not-reach-agent' },
+    runner: async (...args) => {
+      calls.push(args);
+      return { code: 0, stdout: JSON.stringify({
+        workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
+        old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
+        workspace_generation: 'generation_fedcba9876543210fedcba9876543210',
+        display_name: 'fixture-workspace',
+        capabilities: { read: true, write: true, exec: true },
+        replayed: true,
+        state: 'replaced'
+      }) + '\n', stderr: '' };
+    }
+  });
+  const receipt = await service.replaceWorkspace({ workspacePath: workspace, capabilities: { read: true, write: true, exec: true } });
+  assert.deepEqual(receipt, {
+    workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
+    old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
+    workspace_generation: 'generation_fedcba9876543210fedcba9876543210',
+    display_name: 'fixture-workspace',
+    capabilities: { read: true, write: true, exec: true },
+    replayed: true,
+    state: 'replaced'
+  });
+  assert.equal(calls.length, 1);
+  const [command, args, options] = calls[0];
+  assert.equal(command, path.join(root, 'python.exe'));
+  assert.deepEqual(args.slice(0, 4), ['-I', path.join(root, 'node_agent.py'), 'replace-workspace', '--config']);
+  assert.equal(args.includes('--confirm-replace'), true);
+  assert.equal(args.includes('--capability-read'), true);
+  assert.equal(args.includes('--capability-write'), true);
+  assert.equal(args.includes('--capability-exec'), true);
+  assert.equal(args.includes('must-not-reach-agent'), false);
+  assert.deepEqual(options.env, { PATH: '/safe/path' });
+  assert.equal(JSON.stringify(receipt).includes(workspace), false);
+  assert.throws(
+    () => parseWorkspaceReplacementResult(JSON.stringify({
+      workspace_id: 'workspace_0123456789abcdef0123456789abcdef',
+      old_workspace_generation: 'generation_abcdef0123456789abcdef0123456789',
+      workspace_generation: 'generation_fedcba9876543210fedcba9876543210',
+      display_name: 'fixture-workspace', capabilities: { read: true, write: true, exec: true },
+      replayed: false, state: 'registered'
+    })),
+    { code: 'CONTROL_PLANE_WORKSPACE_REPLACE_OUTPUT_INVALID' }
+  );
+});
+
+test('workspace capability input is exact, boolean-only, and always requires read', () => {
+  assert.deepEqual(normalizeWorkspaceCapabilities(), { read: true, write: false, exec: false });
+  assert.deepEqual(normalizeWorkspaceCapabilities({ read: true, write: true, exec: true }), { read: true, write: true, exec: true });
+  for (const value of [
+    { read: true, write: false },
+    { read: true, write: false, exec: false, shell: true },
+    { read: true, write: 'yes', exec: false },
+    { read: false, write: true, exec: true }
+  ]) {
+    assert.throws(() => normalizeWorkspaceCapabilities(value), { code: /CONTROL_PLANE_WORKSPACE_/ });
+  }
 });
 
 test('central executor lists and retires only an opaque registered workspace after a central receipt', async (t) => {
@@ -253,7 +447,7 @@ test('central executor lists and retires only an opaque registered workspace aft
       workspace_id: workspaceId,
       workspace_generation: workspaceGeneration,
       display_name: 'fixture-workspace',
-      capabilities: { read: true, write: true, exec: false }
+      capabilities: { read: false, write: true, exec: false }
     }] })),
     { code: 'CONTROL_PLANE_WORKSPACE_LIST_OUTPUT_INVALID' }
   );
@@ -286,9 +480,13 @@ test('central enrollment rejects malformed agent output and development source m
     development.registerWorkspace({ workspacePath: root }),
     { code: 'CONTROL_PLANE_WORKSPACE_PACKAGED_REQUIRED' }
   );
+  await assert.rejects(
+    development.rotateCredential({ deviceIdentity: identity }),
+    { code: 'CONTROL_PLANE_CREDENTIAL_ROTATION_PACKAGED_REQUIRED' }
+  );
   assert.equal(called, false);
   assert.throws(
-    () => parseEnrollmentResult(JSON.stringify({ enrollment_id: 'enroll_12345678', device_id: identity.device_id, state: 'approved' }), identity.device_id),
+    () => parseEnrollmentResult(JSON.stringify({ enrollment_id: 'enroll_12345678', device_id: identity.device_id, state: 'revoked' }), identity.device_id),
     { code: 'CONTROL_PLANE_ENROLLMENT_OUTPUT_INVALID' }
   );
 });

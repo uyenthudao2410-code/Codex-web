@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from coding_tools_mcp import landlock_exec
@@ -12,6 +15,19 @@ class _ExecIntercept(RuntimeError):
 
 
 class LandlockStructuredArgvTests(unittest.TestCase):
+    def test_standalone_helper_resolves_package_imports_before_argument_validation(self) -> None:
+        helper = Path(landlock_exec.__file__).resolve()
+        result = subprocess.run(
+            [sys.executable, str(helper)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 126)
+        expected = "landlock_exec requires" if sys.platform == "linux" else "only supported on Linux"
+        self.assertIn(expected, result.stderr)
+        self.assertNotIn("attempted relative import", result.stderr)
+
     def test_argv_builder_uses_json_handoff_for_structured_command(self) -> None:
         argv = ["/usr/bin/python3", "-c", "print('literal&&not-a-shell-command')"]
         wrapped = landlock_exec.landlock_exec_argv(41, argv)

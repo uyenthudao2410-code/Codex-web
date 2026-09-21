@@ -128,6 +128,27 @@ function Get-OptionalProperty($Object,[string]$Name,$Default){if($null-eq$Object
 function Get-ControlPlaneAgentConfigPath($M) { Join-Path ([string]$M.data_root) 'control-plane-node.json' }
 function Get-ControlPlaneAgentPolicyPath($M) { Join-Path ([string]$M.data_root) 'control-plane-read-only-policy.json' }
 function Get-ControlPlaneWorkspaceRegistryPath($M) { Join-Path ([string]$M.data_root) 'control-plane-workspaces.json' }
+function Get-ControlPlaneStandingPolicyCandidates($M) {
+  @(
+    [pscustomobject]@{lane='file_read';path=(Join-Path ([string]$M.data_root) 'control-plane-file-read-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_paths','max_bytes','max_lines','authority_mode')},
+    [pscustomobject]@{lane='approved_patch';path=(Join-Path ([string]$M.data_root) 'control-plane-approved-patch-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_relative_paths','max_patch_bytes','max_file_bytes','validation_profile','authority_mode')},
+    [pscustomobject]@{lane='exec';path=(Join-Path ([string]$M.data_root) 'control-plane-exec-policy.json');fields=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract','allowed_argv_prefixes','max_timeout_ms','max_output_bytes','max_concurrent','authority_mode')}
+  )
+}
+function Test-ControlPlanePropertySet($Object,$Expected) {
+  if($Object -isnot [PSCustomObject]){return $false}
+  $actual=@($Object.PSObject.Properties.Name|Sort-Object)
+  $expected=@($Expected|Sort-Object)
+  ($actual -join "`n") -eq ($expected -join "`n")
+}
+function Test-ControlPlaneNodeCredential($Config) {
+  # The Python agent migrates plaintext credentials to DPAPI after the first
+  # authenticated read.  Supervisor must accept either representation without
+  # ever decrypting, logging or forwarding the secret itself.
+  $plain=[string](Get-OptionalProperty $Config 'node_secret' '')
+  $protected=[string](Get-OptionalProperty $Config 'node_secret_dpapi' '')
+  $plain.Length -ge 16 -or $protected -match '^dpapi-v1:.{16,}$'
+}
 function Test-ControlPlaneWorkspaceRegistration([string]$RegistryPath,$Policy) {
   # The Python agent re-resolves the selected root immediately before every
   # admission/effect.  This supervisor preflight is deliberately smaller: it
@@ -167,23 +188,36 @@ function Get-ControlPlaneAgentSpec($M) {
   $resources=Join-Path ([string]$M.app_root) 'resources\resources';$python=Join-Path $resources 'native-python\python.exe';$agent=Join-Path $resources 'control-plane\node_agent.py'
   if(-not(Test-PathEqual ([string]$M.control_plane_python_path) $python)-or-not(Test-PathEqual ([string]$M.control_plane_node_agent_path) $agent)-or[string]$M.control_plane_python_sha256-notmatch'^[a-f0-9]{64}$'-or[string]$M.control_plane_node_agent_sha256-notmatch'^[a-f0-9]{64}$'-or-not(Test-Path -LiteralPath $python -PathType Leaf)-or-not(Test-Path -LiteralPath $agent -PathType Leaf)-or(Get-Sha256File $python)-ne[string]$M.control_plane_python_sha256-or(Get-Sha256File $agent)-ne[string]$M.control_plane_node_agent_sha256){return [pscustomobject]@{eligible=$false;state='integrity_unproven';pid=$null}}
   $configPath=Get-ControlPlaneAgentConfigPath $M;if(-not(Test-Path -LiteralPath $configPath -PathType Leaf)){return [pscustomobject]@{eligible=$false;state='waiting_for_pairing';pid=$null}};$workspaceRegistryPath=Get-ControlPlaneWorkspaceRegistryPath $M
-  try{$config=Read-BoundedJson $configPath $MaxJsonBytes -Required;$policy=Read-BoundedJson (Get-ControlPlaneAgentPolicyPath $M) $MaxJsonBytes -Required}catch{return [pscustomobject]@{eligible=$false;state='policy_or_config_unavailable';pid=$null}}
-  $requiredPolicy=@('schema_version','enabled','server_origin','owner_id','device_id','endpoint_id','workspace_id','workspace_generation','expires_at_ms','facade_contract')
-  if($config -isnot [PSCustomObject]-or$policy -isnot [PSCustomObject]-or@($requiredPolicy|Where-Object{$null-eq$policy.PSObject.Properties[$_]}).Count-ne0-or[int]$policy.schema_version-ne2-or$policy.enabled-ne$true){return [pscustomobject]@{eligible=$false;state='policy_disabled_or_invalid';pid=$null}}
-  try{$expires=[long]$policy.expires_at_ms}catch{return [pscustomobject]@{eligible=$false;state='policy_disabled_or_invalid';pid=$null}}
-  if($expires-le[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()){return [pscustomobject]@{eligible=$false;state='policy_expired';pid=$null}}
+  try{$config=Read-BoundedJson $configPath $MaxJsonBytes -Required}catch{return [pscustomobject]@{eligible=$false;state='config_unavailable';pid=$null}}
+  if($config -isnot [PSCustomObject]){return [pscustomobject]@{eligible=$false;state='config_invalid';pid=$null}}
   $origin=Get-ControlPlaneOrigin ([string](Get-OptionalProperty $config 'server_url' ''))
-  $nodeSecret=[string](Get-OptionalProperty $config 'node_secret' '')
-  if($null-eq$origin-or[string]$policy.server_origin-ne$origin-or[string]$policy.device_id-ne[string](Get-OptionalProperty $config 'device_id' '')-or[string]$policy.endpoint_id-ne[string](Get-OptionalProperty $config 'endpoint_id' '')-or$nodeSecret.Length-lt16){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
-  $workspaceState=Test-ControlPlaneWorkspaceRegistration $workspaceRegistryPath $policy
-  if($workspaceState-ne'current'){return [pscustomobject]@{eligible=$false;state=$workspaceState;pid=$null}}
+  $deviceId=[string](Get-OptionalProperty $config 'device_id' '')
+  $endpointId=[string](Get-OptionalProperty $config 'endpoint_id' '')
+  if($null-eq$origin-or[string]::IsNullOrWhiteSpace($deviceId)-or[string]::IsNullOrWhiteSpace($endpointId)-or-not(Test-ControlPlaneNodeCredential $config)){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
+  $candidateStates=@();$eligiblePolicies=0
+  foreach($candidate in @(Get-ControlPlaneStandingPolicyCandidates $M)) {
+    if(-not(Test-Path -LiteralPath ([string]$candidate.path) -PathType Leaf)){continue}
+    try{$policy=Read-BoundedJson ([string]$candidate.path) $MaxJsonBytes -Required}catch{$candidateStates+=@('standing_policy_invalid');continue}
+    if(-not(Test-ControlPlanePropertySet $policy $candidate.fields)-or[int]$policy.schema_version-ne2-or$policy.enabled-ne$true-or[string]$policy.authority_mode-ne'standing'-or$null-ne$policy.expires_at_ms-or$null-eq$policy.facade_contract){$candidateStates+=@('standing_policy_invalid');continue}
+    $policyOrigin=Get-ControlPlaneOrigin ([string]$policy.server_origin)
+    if($null-eq$policyOrigin-or$policyOrigin-ne$origin-or[string]$policy.device_id-ne$deviceId-or[string]$policy.endpoint_id-ne$endpointId){$candidateStates+=@('policy_config_mismatch');continue}
+    $workspaceState=Test-ControlPlaneWorkspaceRegistration $workspaceRegistryPath $policy
+    if($workspaceState-ne'current'){$candidateStates+=@($workspaceState);continue}
+    $eligiblePolicies+=1
+  }
+  if($eligiblePolicies -lt 1){
+    if($candidateStates -contains 'workspace_registry_unavailable'){return [pscustomobject]@{eligible=$false;state='workspace_registry_unavailable';pid=$null}}
+    if($candidateStates -contains 'workspace_registration_not_current'){return [pscustomobject]@{eligible=$false;state='workspace_registration_not_current';pid=$null}}
+    if($candidateStates -contains 'policy_config_mismatch'){return [pscustomobject]@{eligible=$false;state='policy_config_mismatch';pid=$null}}
+    return [pscustomobject]@{eligible=$false;state='standing_policy_unavailable';pid=$null}
+  }
   [pscustomobject]@{eligible=$true;state='eligible';pid=$null;python_path=$python;agent_path=$agent;config_path=$configPath;workspace_registry_path=$workspaceRegistryPath}
 }
 function Start-ControlPlaneReadOnlyAgent($M,$Spec) {
-  $args=@('-I',[string]$Spec.agent_path,'run-read-only-agent','--config',[string]$Spec.config_path,'--workspace-registry',[string]$Spec.workspace_registry_path,'--project-root',[string]$M.app_root,'--node',[string]$M.executable,'--runtime-mode','packaged')|ForEach-Object{Quote-Fixed ([string]$_)}
+  $args=@('-I',[string]$Spec.agent_path,'run-connected-agent','--config',[string]$Spec.config_path,'--workspace-registry',[string]$Spec.workspace_registry_path,'--project-root',[string]$M.app_root,'--node',[string]$M.executable,'--runtime-mode','packaged')|ForEach-Object{Quote-Fixed ([string]$_)}
   $psi=New-Object Diagnostics.ProcessStartInfo;$psi.FileName=[string]$Spec.python_path;$psi.Arguments=$args-join' ';$psi.WorkingDirectory=[string]$M.app_root;$psi.UseShellExecute=$false;$psi.CreateNoWindow=$true;$psi.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden
   foreach($key in @($psi.EnvironmentVariables.Keys)){if([string]$key-match'^(OPENAI_API_KEY|ANTHROPIC_API_KEY|AZURE_OPENAI_API_KEY|.*(?:AUTHORIZATION|ACCESS_TOKEN|BEARER_TOKEN|PASSWORD|PASSWD|COOKIE|PRIVATE_KEY|SECRET_KEY|API_KEY|AUTH_TOKEN|MCP_AUTH_TOKEN|P5_A0_SEED).*)$'){$psi.EnvironmentVariables.Remove([string]$key)}}
-  $psi.EnvironmentVariables.Remove('NODE_OPTIONS');$psi.EnvironmentVariables.Remove('NODE_EXTRA_CA_CERTS');$psi.EnvironmentVariables['WEBCODEX_PROCESS_ROLE']='control-plane-read-only-agent';$p=[Diagnostics.Process]::Start($psi);if($null-eq$p){throw 'Control-plane read-only agent spawn failed.'};[int]$p.Id
+  $psi.EnvironmentVariables.Remove('NODE_OPTIONS');$psi.EnvironmentVariables.Remove('NODE_EXTRA_CA_CERTS');$psi.EnvironmentVariables['WEBCODEX_PROCESS_ROLE']='control-plane-read-only-agent';$p=[Diagnostics.Process]::Start($psi);if($null-eq$p){throw 'Control-plane connected agent spawn failed.'};[int]$p.Id
 }
 function Invoke-ControlPlaneReadOnlyAgent($M,$State) {
   $spec=Get-ControlPlaneAgentSpec $M;if(-not$spec.eligible){$State.control_plane_agent_state=[string]$spec.state;$State.control_plane_agent_pid=$null;$State.control_plane_agent_last_error_code=$null;return $State}

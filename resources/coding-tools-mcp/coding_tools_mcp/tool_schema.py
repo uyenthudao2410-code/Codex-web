@@ -965,6 +965,17 @@ def input_schemas() -> dict[str, dict[str, Any]]:
         "exec_command": object_schema(
             {
                 "cmd": {**string, "minLength": 1},
+                "argv": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 32,
+                    "items": {**string, "minLength": 1, "maxLength": 2048},
+                    "description": (
+                        "Structured argv reserved for the attested local control-plane bridge. "
+                        "Ordinary callers must use cmd; the runtime rejects argv without the "
+                        "bridge identity and connector attestation."
+                    ),
+                },
                 "workdir": {**string, "default": "."},
                 "cwd": {**string},
                 "timeout_ms": {**integer, "minimum": 1, "maximum": 600000, "default": 30000},

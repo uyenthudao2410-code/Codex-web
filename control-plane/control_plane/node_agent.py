@@ -47,10 +47,14 @@ READ_ONLY_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 READ_ONLY_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
 READ_ONLY_AGENT_LOCK_SCHEMA_VERSION = 1
 READ_ONLY_AGENT_MAX_BACKOFF_SECONDS = 15 * 60
+CONNECTED_AGENT_LOCK_SCHEMA_VERSION = 1
+CONNECTED_AGENT_MAX_BACKOFF_SECONDS = 15 * 60
 FILE_READ_TOOL_NAME = "workspace_context"
 FILE_READ_OPERATION = "read_file"
 FILE_READ_JOURNAL_SCHEMA_VERSION = 1
-FILE_READ_POLICY_SCHEMA_VERSION = 1
+FILE_READ_POLICY_SCHEMA_VERSION = 2
+FILE_READ_POLICY_LEGACY_SCHEMA_VERSION = 1
+FILE_READ_POLICY_STANDING_AUTHORITY = "standing"
 FILE_READ_POLICY_MAX_BYTES = 16 * 1024
 FILE_READ_POLICY_MAX_TTL_MS = 24 * 60 * 60 * 1000
 FILE_READ_POLICY_FILE_NAME = "control-plane-file-read-policy.json"
@@ -65,7 +69,9 @@ APPROVED_PATCH_TOOL_NAME = "agent_workflow"
 APPROVED_PATCH_OPERATION = "apply_patch"
 APPROVED_PATCH_VALIDATION_PROFILE = "targeted"
 APPROVED_PATCH_JOURNAL_SCHEMA_VERSION = 1
-APPROVED_PATCH_POLICY_SCHEMA_VERSION = 1
+APPROVED_PATCH_POLICY_SCHEMA_VERSION = 2
+APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION = 1
+APPROVED_PATCH_POLICY_STANDING_AUTHORITY = "standing"
 APPROVED_PATCH_POLICY_MAX_BYTES = 16 * 1024
 APPROVED_PATCH_POLICY_MAX_TTL_MS = 24 * 60 * 60 * 1000
 APPROVED_PATCH_POLICY_FILE_NAME = "control-plane-approved-patch-policy.json"
@@ -77,10 +83,26 @@ APPROVED_PATCH_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 APPROVED_PATCH_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
 APPROVED_PATCH_LOOP_LOCK_SCHEMA_VERSION = 1
 APPROVED_PATCH_ACTION_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
+MCP_TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
+DOCUMENT_WRITE_TOOL_NAME = "document_workflow"
+DOCUMENT_WRITE_OPERATIONS = frozenset({"document_create", "document_convert"})
+DOCUMENT_WRITE_ACTION_IDENTIFIER_PATTERN = APPROVED_PATCH_ACTION_IDENTIFIER_PATTERN
+DOCUMENT_WRITE_JOURNAL_SCHEMA_VERSION = 1
+DOCUMENT_WRITE_MAX_CONTENT_BYTES = 256 * 1024
+DOCUMENT_WRITE_MAX_TITLE_BYTES = 256
+DOCUMENT_WRITE_MAX_RESULT_BYTES = 256 * 1024
+DOCUMENT_WRITE_TARGET_SUFFIXES = frozenset({".docx", ".md", ".txt"})
+DOCUMENT_WRITE_SOURCE_SUFFIXES = frozenset({".pdf", ".docx", ".md", ".txt", ".csv", ".json", ".xml", ".html", ".htm"})
+DOCUMENT_WRITE_LOOP_MIN_INTERVAL_SECONDS = 15
+DOCUMENT_WRITE_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
+DOCUMENT_WRITE_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
+DOCUMENT_WRITE_LOOP_LOCK_SCHEMA_VERSION = 1
 EXEC_TOOL_NAME = "exec_command"
 EXEC_OPERATION = "exec_run"
 EXEC_JOURNAL_SCHEMA_VERSION = 1
-EXEC_POLICY_SCHEMA_VERSION = 1
+EXEC_POLICY_SCHEMA_VERSION = 2
+EXEC_POLICY_LEGACY_SCHEMA_VERSION = 1
+EXEC_POLICY_STANDING_AUTHORITY = "standing"
 EXEC_POLICY_MAX_BYTES = 16 * 1024
 EXEC_POLICY_MAX_TTL_MS = 24 * 60 * 60 * 1000
 EXEC_POLICY_FILE_NAME = "control-plane-exec-policy.json"
@@ -94,13 +116,38 @@ EXEC_LOOP_MIN_INTERVAL_SECONDS = 15
 EXEC_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 EXEC_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
 EXEC_LOOP_LOCK_SCHEMA_VERSION = 1
+EXEC_ACTION_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
+EXEC_COMMAND_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
+EXEC_LOCAL_HANDLE_PATTERN = re.compile(r"^cp_exec_[a-f0-9]{48}$")
+EXEC_CONTROL_OPERATIONS = frozenset({"exec_run", "exec_poll", "exec_stop"})
+EXEC_CONTROL_SIGNALS = frozenset({"TERM", "KILL", "INT"})
 NODE_CONFIG_SCHEMA_VERSION = 1
+NODE_SECRET_PROTECTED_FIELD = "node_secret_dpapi"
+NODE_SECRET_PENDING_FIELD = "node_secret_pending"
+NODE_SECRET_PENDING_PROTECTED_FIELD = "node_secret_pending_dpapi"
+NODE_SECRET_PROTECTED_PREFIX = "dpapi-v1:"
+NODE_SECRET_MAX_BYTES = 4096
+NODE_SECRET_ENTROPY = b"Tools-Codex-web/control-plane-node/v1"
+ENROLLMENT_ID_PATTERN = re.compile(r"^enroll[A-Za-z0-9_.:-]{3,255}$")
+NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
+NODE_ROTATION_STATES = frozenset({
+    "candidate_persisted", "prepared", "activated", "promoted", "completed",
+})
+ENROLLMENT_STATES = frozenset({
+    "unconfigured", "request_sent", "pending_operator_approval", "approved", "revoked", "unknown",
+})
 MAX_HTTP_RESPONSE_BYTES = 256 * 1024
 POLICY_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,255}$")
 WORKSPACE_REGISTRY_SCHEMA_VERSION = 1
 WORKSPACE_REGISTRY_MAX_BYTES = 64 * 1024
 WORKSPACE_REGISTRY_MAX_ENTRIES = 64
 WORKSPACE_REGISTRY_PATH_MAX_CHARS = 16 * 1024
+WORKSPACE_REPLACEMENT_SCHEMA_VERSION = 1
+WORKSPACE_REPLACEMENT_MAX_BYTES = 16 * 1024
+WORKSPACE_REPLACEMENT_FILE_NAME = "control-plane-workspace-replacement.json"
+WORKSPACE_REPLACEMENT_PHASES = frozenset({
+    "planned", "retire_sent", "retired", "register_sent",
+})
 WORKSPACE_SUMMARY_SCHEMA_VERSION = 1
 WORKSPACE_SUMMARY_MAX_BYTES = 8 * 1024
 WORKSPACE_SUMMARY_TEXT_MAX = 256
@@ -229,6 +276,46 @@ APPROVED_PATCH_POLICY_STOP_CODES = frozenset({
     "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT",
     "CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED",
 })
+DOCUMENT_WRITE_PRE_EFFECT_REJECTION_CODES = frozenset({
+    "CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_MISSING",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_EXPIRED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_DISABLED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_CONFIG_MISMATCH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_EXPIRY_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_FACADE_CONTRACT_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_EXPIRED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_TARGET_MISMATCH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_TOOL_DENIED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_CONTRACT_MISMATCH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_SENSITIVE_PATH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_TARGET_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_REPARSE_DENIED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_MISSING",
+    "CONTROL_PLANE_DOCUMENT_WRITE_DEVICE_MISMATCH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_RUNTIME_UNREADY",
+    "CONTROL_PLANE_DOCUMENT_WRITE_IDENTITY_UNPROVEN",
+    "CONTROL_PLANE_DOCUMENT_WRITE_UNAVAILABLE",
+    "CONTROL_PLANE_DOCUMENT_WRITE_ADMISSION_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_WORKSPACE_MISMATCH",
+    "CONTROL_PLANE_DOCUMENT_WRITE_WORKSPACE_REGISTRY_REQUIRED",
+    "MCP_AUTH_UNAVAILABLE",
+    "CONNECTOR_ATTESTATION_BINDING_UNAVAILABLE",
+    "RECOVERY_HOST_INSTALLATION_MISMATCH",
+})
+DOCUMENT_WRITE_POLICY_STOP_CODES = frozenset({
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_MISSING",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_EXPIRED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_DISABLED",
+    "CONTROL_PLANE_DOCUMENT_WRITE_POLICY_CONFIG_MISMATCH",
+    "CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT",
+    "CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED",
+})
 
 
 def _request(url: str, path: str, payload: dict[str, Any], authorization: str | None = None) -> dict[str, Any]:
@@ -294,6 +381,173 @@ def _enrollment_server_origin(value: Any) -> str:
     return f"{parsed.scheme}://{host}"
 
 
+def _dpapi_crypt(data: bytes, *, protect: bool) -> bytes:
+    """Protect/unprotect bytes with the current Windows user's DPAPI key.
+
+    The node agent can run under the packaged same-user Supervisor without an
+    Electron process, so this boundary cannot depend on Electron safeStorage.
+    DPAPI is intentionally loaded lazily: non-Windows source tests keep the
+    legacy config path, while a packaged Windows node fails closed if DPAPI is
+    unavailable rather than writing a plaintext fallback.
+    """
+
+    if os.name != "nt":
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTION_UNAVAILABLE")
+    if not isinstance(data, bytes) or not data or len(data) > NODE_SECRET_MAX_BYTES:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_INVALID")
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class _DataBlob(ctypes.Structure):
+            _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_ubyte))]
+
+        crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        function_name = "CryptProtectData" if protect else "CryptUnprotectData"
+        function = getattr(crypt32, function_name)
+        function.restype = wintypes.BOOL
+        function.argtypes = [
+            ctypes.POINTER(_DataBlob),
+            ctypes.c_void_p,
+            ctypes.POINTER(_DataBlob),
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.POINTER(_DataBlob),
+        ]
+
+        source_buffer = ctypes.create_string_buffer(data)
+        entropy_buffer = ctypes.create_string_buffer(NODE_SECRET_ENTROPY)
+        source_blob = _DataBlob(
+            len(data),
+            ctypes.cast(source_buffer, ctypes.POINTER(ctypes.c_ubyte)),
+        )
+        entropy_blob = _DataBlob(
+            len(NODE_SECRET_ENTROPY),
+            ctypes.cast(entropy_buffer, ctypes.POINTER(ctypes.c_ubyte)),
+        )
+        output_blob = _DataBlob()
+        description = ctypes.c_void_p()
+        if protect:
+            ok = function(
+                ctypes.byref(source_blob),
+                ctypes.c_wchar_p("Tools-Codex-web node credential"),
+                ctypes.byref(entropy_blob),
+                None,
+                None,
+                0,
+                ctypes.byref(output_blob),
+            )
+        else:
+            ok = function(
+                ctypes.byref(source_blob),
+                ctypes.byref(description),
+                ctypes.byref(entropy_blob),
+                None,
+                None,
+                0,
+                ctypes.byref(output_blob),
+            )
+        if not ok or not output_blob.pbData or not output_blob.cbData:
+            error_code = ctypes.get_last_error()
+            raise RuntimeError(
+                "CONTROL_PLANE_NODE_SECRET_PROTECTION_UNAVAILABLE"
+                if error_code
+                else "CONTROL_PLANE_NODE_SECRET_INVALID"
+            )
+        try:
+            return ctypes.string_at(output_blob.pbData, output_blob.cbData)
+        finally:
+            kernel32.LocalFree(output_blob.pbData)
+            if description.value:
+                kernel32.LocalFree(description)
+    except RuntimeError:
+        raise
+    except (AttributeError, OSError, TypeError, ValueError) as error:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTION_UNAVAILABLE") from error
+
+
+def _protect_node_secret(secret: str) -> str:
+    value = str(secret or "").strip()
+    encoded = value.encode("utf-8")
+    if len(encoded) < 16 or len(encoded) > NODE_SECRET_MAX_BYTES:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_INVALID")
+    protected = _dpapi_crypt(encoded, protect=True)
+    return NODE_SECRET_PROTECTED_PREFIX + base64.b64encode(protected).decode("ascii")
+
+
+def _unprotect_node_secret(value: Any) -> str:
+    encoded_value = str(value or "")
+    if not encoded_value.startswith(NODE_SECRET_PROTECTED_PREFIX):
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTED_VALUE_INVALID")
+    try:
+        protected = base64.b64decode(
+            encoded_value[len(NODE_SECRET_PROTECTED_PREFIX):],
+            validate=True,
+        )
+    except (ValueError, base64.binascii.Error) as error:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTED_VALUE_INVALID") from error
+    if not protected or len(protected) > NODE_SECRET_MAX_BYTES * 2:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTED_VALUE_INVALID")
+    secret_bytes = _dpapi_crypt(protected, protect=False)
+    try:
+        secret = secret_bytes.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTED_VALUE_INVALID") from error
+    if len(secret.encode("utf-8")) < 16 or len(secret.encode("utf-8")) > NODE_SECRET_MAX_BYTES:
+        raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTED_VALUE_INVALID")
+    return secret
+
+
+def _harden_windows_private_file(path: Path) -> None:
+    """Remove inherited Windows ACLs and retain only the node owner/system.
+
+    ``chmod(0600)`` has no security meaning on NTFS.  The node config carries
+    a DPAPI envelope, but an account that can edit the surrounding JSON can
+    still redirect the authenticated node or suppress its runtime.  Harden the
+    temporary file *before* the atomic rename so an ACL failure never replaces
+    a previously valid config.  SIDs are used instead of localized group
+    names, and command output is intentionally not returned to the caller.
+    """
+
+    if os.name != "nt" or sys.platform != "win32":
+        return
+    try:
+        identity = subprocess.run(
+            ["whoami.exe", "/user", "/fo", "csv", "/nh"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+        match = re.search(r"S-\d-(?:\d+-){1,14}\d+", str(identity.stdout or ""))
+        if identity.returncode != 0 or match is None:
+            raise RuntimeError("CONTROL_PLANE_NODE_CONFIG_ACL_UNAVAILABLE")
+        owner_sid = match.group(0)
+        result = subprocess.run(
+            [
+                "icacls.exe",
+                str(path),
+                "/inheritance:r",
+                "/grant:r",
+                f"*{owner_sid}:F",
+                "*S-1-5-18:F",       # Local System
+                "*S-1-5-32-544:F",   # Built-in Administrators
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.TimeoutExpired, ValueError) as error:
+        raise RuntimeError("CONTROL_PLANE_NODE_CONFIG_ACL_UNAVAILABLE") from error
+    if result.returncode != 0:
+        raise RuntimeError("CONTROL_PLANE_NODE_CONFIG_ACL_UNAVAILABLE")
+
+
 def _config(path: Path) -> dict[str, Any]:
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
@@ -301,26 +555,95 @@ def _config(path: Path) -> dict[str, Any]:
         raise RuntimeError("node_config_missing") from error
     if not isinstance(parsed, dict):
         raise RuntimeError("node_config_invalid")
+    protected = parsed.get(NODE_SECRET_PROTECTED_FIELD)
+    active_migrated = False
+    if protected is not None:
+        if parsed.get("node_secret") not in (None, ""):
+            raise RuntimeError("CONTROL_PLANE_NODE_SECRET_AMBIGUOUS")
+        parsed["node_secret"] = _unprotect_node_secret(protected)
+        # This marker is process-local and is never persisted by _write_config.
+        parsed["_node_secret_protected"] = True
+    elif os.name == "nt" and parsed.get("node_secret") not in (None, ""):
+        # Migrate a legacy plaintext config at the first authenticated read.
+        # The old file remains intact if DPAPI or the atomic replacement fails;
+        # no plaintext backup is created by the migration path.
+        _write_config(path, parsed)
+        parsed["_node_secret_protected"] = True
+        active_migrated = True
+    pending_protected = parsed.get(NODE_SECRET_PENDING_PROTECTED_FIELD)
+    if pending_protected is not None:
+        if parsed.get(NODE_SECRET_PENDING_FIELD) not in (None, ""):
+            raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PENDING_AMBIGUOUS")
+        parsed[NODE_SECRET_PENDING_FIELD] = _unprotect_node_secret(pending_protected)
+        parsed["_node_secret_pending_protected"] = True
+    elif os.name == "nt" and parsed.get(NODE_SECRET_PENDING_FIELD) not in (None, "") and not active_migrated:
+        # A rotation candidate can be present in a legacy config written by an
+        # older source build.  Migrate both active and pending credentials in
+        # one atomic replacement before any rotation network boundary.
+        _write_config(path, parsed)
+        parsed["_node_secret_pending_protected"] = True
+    elif active_migrated and parsed.get(NODE_SECRET_PENDING_FIELD) not in (None, ""):
+        # The active migration above persisted both values atomically.
+        parsed["_node_secret_pending_protected"] = True
     return parsed
 
 
 def _write_config(path: Path, config: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    temporary.write_text(json.dumps(config, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    os.replace(temporary, path)
+    persisted = dict(config)
+    secret = persisted.pop("node_secret", None)
+    pending_secret = persisted.pop(NODE_SECRET_PENDING_FIELD, None)
+    # A pending value is always materialized in memory by _config().  Remove
+    # any stale protected copy when the rotation reaches ``completed`` rather
+    # than accidentally retaining a second credential forever.
+    persisted.pop(NODE_SECRET_PENDING_PROTECTED_FIELD, None)
+    persisted.pop("_node_secret_protected", None)
+    persisted.pop("_node_secret_pending_protected", None)
+    if os.name == "nt":
+        if secret not in (None, ""):
+            persisted[NODE_SECRET_PROTECTED_FIELD] = _protect_node_secret(str(secret))
+        elif not persisted.get(NODE_SECRET_PROTECTED_FIELD):
+            raise RuntimeError("CONTROL_PLANE_NODE_SECRET_PROTECTION_UNAVAILABLE")
+        if pending_secret not in (None, ""):
+            persisted[NODE_SECRET_PENDING_PROTECTED_FIELD] = _protect_node_secret(str(pending_secret))
+    elif secret is not None:
+        # Linux/macOS source fixtures retain the legacy shape.  Packaged
+        # Windows never reaches this branch; it must use DPAPI above.
+        persisted["node_secret"] = secret
+        if pending_secret is not None:
+            persisted[NODE_SECRET_PENDING_FIELD] = pending_secret
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(8)}.tmp")
+    descriptor = None
     try:
-        os.chmod(path, 0o600)
-    except OSError:
-        pass
+        descriptor = os.open(str(temporary), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        payload = (json.dumps(persisted, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = None
+            stream.write(payload)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _harden_windows_private_file(temporary)
+        os.replace(temporary, path)
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            pass
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
-    """Persist non-secret local bridge evidence before an external boundary."""
+    """Persist local bridge/policy state with the same Windows ACL boundary."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
     try:
         temporary.write_text(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        _harden_windows_private_file(temporary)
         os.replace(temporary, path)
         try:
             os.chmod(path, 0o600)
@@ -335,6 +658,308 @@ def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
 
 def _credential_hash(secret: str) -> str:
     return hashlib.sha256(json.dumps({"node_secret": secret}, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _enrollment_id(value: Any, *, allow_none: bool = False) -> str | None:
+    if value is None and allow_none:
+        return None
+    candidate = str(value or "").strip()
+    if ENROLLMENT_ID_PATTERN.fullmatch(candidate) is None:
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    return candidate
+
+
+def _enrollment_state(value: Any) -> str:
+    state = str(value or "").strip().lower()
+    if state not in ENROLLMENT_STATES:
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    return state
+
+
+def _enrollment_request_projection(response: Any, *, config: dict[str, Any]) -> dict[str, Any]:
+    """Validate a credential-free enrollment request response.
+
+    The central request endpoint intentionally returns the same durable row on
+    retries.  A missing ``approved_at_ms`` is treated as pending so older
+    central fixtures remain compatible, while an explicit approval is persisted
+    as soon as the node observes it.
+    """
+
+    if not isinstance(response, dict):
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_RESPONSE_INVALID")
+    enrollment_id = _enrollment_id(response.get("enrollment_id"))
+    if response.get("device_id") is not None and str(response.get("device_id") or "") != str(config.get("device_id") or ""):
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_TARGET_MISMATCH")
+    approved_at_ms = response.get("approved_at_ms")
+    if approved_at_ms is not None and (not isinstance(approved_at_ms, int) or isinstance(approved_at_ms, bool) or approved_at_ms <= 0):
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_RESPONSE_INVALID")
+    return {
+        "enrollment_id": enrollment_id,
+        "device_id": str(config["device_id"]),
+        "state": "approved" if approved_at_ms is not None else "pending_operator_approval",
+        "approved_at_ms": approved_at_ms,
+    }
+
+
+def _enrollment_status_projection(response: Any, *, config: dict[str, Any]) -> dict[str, Any]:
+    expected = {
+        "enrollment_id", "device_id", "state", "credential_generation",
+        "requested_at_ms", "approved_at_ms", "observed_at_ms",
+    }
+    if not isinstance(response, dict) or set(response) != expected:
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    enrollment_id = _enrollment_id(response.get("enrollment_id"), allow_none=True)
+    if str(response.get("device_id") or "") != str(config.get("device_id") or ""):
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_TARGET_MISMATCH")
+    state = str(response.get("state") or "").strip().lower()
+    if state not in {"pending_operator_approval", "approved", "revoked"}:
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    generation = response.get("credential_generation")
+    if generation is not None and (not isinstance(generation, int) or isinstance(generation, bool) or generation < 1):
+        raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    for name in ("requested_at_ms", "approved_at_ms", "observed_at_ms"):
+        value = response.get(name)
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
+            raise RuntimeError("CONTROL_PLANE_ENROLLMENT_STATUS_INVALID")
+    return {
+        "enrollment_id": enrollment_id,
+        "device_id": str(config["device_id"]),
+        "state": state,
+        "credential_generation": generation,
+        "requested_at_ms": response.get("requested_at_ms"),
+        "approved_at_ms": response.get("approved_at_ms"),
+        "observed_at_ms": response["observed_at_ms"],
+    }
+
+
+def _persist_enrollment_projection(config_path: Path, config: dict[str, Any], projection: dict[str, Any], *, last_error: str | None = None) -> dict[str, Any]:
+    updated = dict(config)
+    if projection.get("enrollment_id") is not None:
+        updated["enrollment_id"] = projection["enrollment_id"]
+    updated["enrollment_state"] = projection["state"]
+    updated["enrollment_observed_at_ms"] = projection.get("observed_at_ms") or int(time.time() * 1000)
+    if projection.get("credential_generation") is not None:
+        updated["credential_generation"] = projection["credential_generation"]
+    updated["enrollment_last_error"] = last_error
+    _write_config(config_path, updated)
+    return updated
+
+
+def _enrollment_local_status(config: dict[str, Any], *, fresh: bool, error_code: str | None = None) -> dict[str, Any]:
+    state = str(config.get("enrollment_state") or "unconfigured").strip().lower()
+    if state not in ENROLLMENT_STATES:
+        state = "unknown"
+    return {
+        "device_id": str(config.get("device_id") or ""),
+        "enrollment_id": _enrollment_id(config.get("enrollment_id"), allow_none=True) if config.get("enrollment_id") else None,
+        "state": state,
+        "credential_generation": config.get("credential_generation"),
+        "fresh": bool(fresh),
+        "observed_at_ms": config.get("enrollment_observed_at_ms"),
+        "error_code": error_code or config.get("enrollment_last_error"),
+    }
+
+
+def _credential_rotation_id(value: Any) -> str:
+    rotation_id = str(value or "").strip().lower()
+    if NODE_ROTATION_ID_PATTERN.fullmatch(rotation_id) is None:
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_ID_INVALID")
+    return rotation_id
+
+
+def _credential_rotation_projection(response: Any, *, config: dict[str, Any], allowed_states: set[str] | frozenset[str]) -> dict[str, Any]:
+    expected = {
+        "rotation_id", "device_id", "state", "current_generation", "next_generation",
+        "created_at_ms", "activated_at_ms", "completed_at_ms",
+    }
+    if not isinstance(response, dict) or set(response) != expected:
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_RESPONSE_INVALID")
+    rotation_id = _credential_rotation_id(response.get("rotation_id"))
+    if rotation_id != str(config.get("credential_rotation_id") or ""):
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_TARGET_MISMATCH")
+    if str(response.get("device_id") or "") != str(config.get("device_id") or ""):
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_TARGET_MISMATCH")
+    state = str(response.get("state") or "").strip().lower()
+    if state not in allowed_states:
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_STATE_INVALID")
+    current_generation = response.get("current_generation")
+    next_generation = response.get("next_generation")
+    if (
+        not isinstance(current_generation, int) or isinstance(current_generation, bool) or current_generation < 1
+        or not isinstance(next_generation, int) or isinstance(next_generation, bool)
+        or next_generation != current_generation + 1
+    ):
+        raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_GENERATION_INVALID")
+    for name in ("created_at_ms", "activated_at_ms", "completed_at_ms"):
+        value = response.get(name)
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value <= 0):
+            raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_RESPONSE_INVALID")
+    return {
+        "rotation_id": rotation_id,
+        "device_id": str(config["device_id"]),
+        "state": state,
+        "current_generation": current_generation,
+        "next_generation": next_generation,
+        "created_at_ms": response["created_at_ms"],
+        "activated_at_ms": response["activated_at_ms"],
+        "completed_at_ms": response["completed_at_ms"],
+    }
+
+
+def _credential_rotation_local_status(config: dict[str, Any], *, fresh: bool, error_code: str | None = None) -> dict[str, Any]:
+    state = str(config.get("credential_rotation_state") or "idle").strip().lower()
+    if state not in NODE_ROTATION_STATES and state != "idle":
+        state = "unknown"
+    return {
+        "device_id": str(config.get("device_id") or ""),
+        "rotation_id": _credential_rotation_id(config.get("credential_rotation_id"))
+        if config.get("credential_rotation_id") else None,
+        "state": state,
+        "current_generation": config.get("credential_generation"),
+        "next_generation": config.get("credential_rotation_next_generation"),
+        "fresh": bool(fresh),
+        "error_code": error_code or config.get("credential_rotation_last_error"),
+    }
+
+
+def rotate_node_credential(args: argparse.Namespace) -> int:
+    """Rotate a node credential with durable prepare/activate/ack phases.
+
+    The active credential is kept until the central ``activate`` commit is
+    observed.  After that commit both old and candidate credentials are valid;
+    the node persists the candidate before sending ``ack``.  A lost response or
+    process crash therefore resumes with whichever credential the central
+    state can still authenticate, without putting a raw secret in SQLite or
+    stdout.
+    """
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    try:
+        server_url = _enrollment_server_origin(config.get("server_url"))
+        device_id = str(config.get("device_id") or "").strip()
+        node_secret = str(config.get("node_secret") or "")
+        generation = config.get("credential_generation")
+        if (
+            POLICY_IDENTIFIER_PATTERN.fullmatch(device_id) is None
+            or len(node_secret) < 16
+            or not isinstance(generation, int)
+            or isinstance(generation, bool)
+            or generation < 1
+        ):
+            raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_CONFIG_INVALID")
+        state = str(config.get("credential_rotation_state") or "idle").strip().lower()
+        if state == "idle" or state == "completed":
+            rotation_id = f"rotate_{secrets.token_hex(16)}"
+            pending = secrets.token_urlsafe(32)
+            next_generation = generation + 1
+            config.update({
+                "credential_rotation_id": rotation_id,
+                "credential_rotation_state": "candidate_persisted",
+                "credential_rotation_next_generation": next_generation,
+                "credential_rotation_last_error": None,
+                NODE_SECRET_PENDING_FIELD: pending,
+            })
+            _write_config(config_path, config)
+            state = "candidate_persisted"
+        elif state not in NODE_ROTATION_STATES:
+            raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_STATE_INVALID")
+        rotation_id = _credential_rotation_id(config.get("credential_rotation_id"))
+        pending = str(config.get(NODE_SECRET_PENDING_FIELD) or "")
+        if len(pending) < 16:
+            raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_PENDING_SECRET_INVALID")
+        current_generation = config.get("credential_generation")
+        next_generation = config.get("credential_rotation_next_generation")
+        if (
+            not isinstance(current_generation, int) or isinstance(current_generation, bool) or current_generation < 1
+            or not isinstance(next_generation, int) or isinstance(next_generation, bool)
+            or next_generation != current_generation + 1
+        ):
+            raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_GENERATION_INVALID")
+
+        if state == "candidate_persisted":
+            prepared = _request(
+                server_url,
+                f"/v1/nodes/{device_id}/credential-rotation/prepare",
+                {
+                    "rotation_id": rotation_id,
+                    "current_generation": current_generation,
+                    "next_credential_hash": _credential_hash(pending),
+                },
+                f"Node {node_secret}",
+            )
+            projection = _credential_rotation_projection(
+                prepared,
+                config=config,
+                allowed_states={"prepared", "activated", "completed"},
+            )
+            if projection["current_generation"] != current_generation or projection["next_generation"] != next_generation:
+                raise RuntimeError("CONTROL_PLANE_CREDENTIAL_ROTATION_GENERATION_INVALID")
+            config["credential_rotation_state"] = projection["state"]
+            config["credential_rotation_last_error"] = None
+            _write_config(config_path, config)
+            state = projection["state"]
+
+        if state == "prepared":
+            activated = _request(
+                server_url,
+                f"/v1/nodes/{device_id}/credential-rotation/activate",
+                {"rotation_id": rotation_id},
+                f"Node {node_secret}",
+            )
+            projection = _credential_rotation_projection(
+                activated,
+                config=config,
+                allowed_states={"activated", "completed"},
+            )
+            config["credential_rotation_state"] = projection["state"]
+            config["credential_rotation_last_error"] = None
+            _write_config(config_path, config)
+            state = projection["state"]
+
+        if state == "activated":
+            # This write is the local handoff boundary.  The old credential is
+            # still accepted centrally until the following acknowledgement.
+            config["node_secret"] = pending
+            config["credential_rotation_state"] = "promoted"
+            config["credential_rotation_last_error"] = None
+            _write_config(config_path, config)
+            state = "promoted"
+
+        if state == "promoted":
+            new_secret = str(config.get("node_secret") or "")
+            acknowledged = _request(
+                server_url,
+                f"/v1/nodes/{device_id}/credential-rotation/ack",
+                {"rotation_id": rotation_id},
+                f"Node {new_secret}",
+            )
+            projection = _credential_rotation_projection(
+                acknowledged,
+                config=config,
+                allowed_states={"completed"},
+            )
+            config["credential_generation"] = projection["next_generation"]
+            config["credential_rotation_state"] = "completed"
+            config["credential_rotation_next_generation"] = projection["next_generation"]
+            config["credential_rotation_last_id"] = rotation_id
+            config["credential_rotation_last_error"] = None
+            config.pop(NODE_SECRET_PENDING_FIELD, None)
+            _write_config(config_path, config)
+            state = "completed"
+        print(json.dumps(_credential_rotation_local_status(config, fresh=True), separators=(",", ":")))
+        return 0
+    except RuntimeError as error:
+        code = _safe_error_code(str(error), "CONTROL_PLANE_CREDENTIAL_ROTATION_FAILED")
+        try:
+            config["credential_rotation_last_error"] = code
+            _write_config(config_path, config)
+        except RuntimeError:
+            # Preserve the original failure classification; a failed local
+            # persistence attempt must not print credential material.
+            pass
+        print(json.dumps(_credential_rotation_local_status(config, fresh=False, error_code=code), separators=(",", ":")))
+        return 0
 
 
 def parse_dev_ui_status(output: str) -> dict[str, str]:
@@ -698,25 +1323,37 @@ def _normalise_file_read_policy(
 ) -> dict[str, Any]:
     """Validate the exact C3 local policy without opening Recovery IPC."""
 
+    schema_version = policy.get("schema_version") if isinstance(policy, dict) else None
+    standing = schema_version == FILE_READ_POLICY_SCHEMA_VERSION
+    legacy = schema_version == FILE_READ_POLICY_LEGACY_SCHEMA_VERSION
     expected_fields = {
         "schema_version", "enabled", "server_origin", "owner_id", "device_id",
         "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms",
         "facade_contract", "allowed_relative_paths", "max_bytes", "max_lines",
     }
+    if standing:
+        expected_fields.add("authority_mode")
     if (
         not isinstance(policy, dict)
         or set(policy) != expected_fields
-        or policy.get("schema_version") != FILE_READ_POLICY_SCHEMA_VERSION
+        or not (standing or legacy)
         or not isinstance(policy.get("enabled"), bool)
     ):
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
     if require_enabled and policy["enabled"] is not True:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_DISABLED")
-    expires_at_ms = policy.get("expires_at_ms")
-    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+    authority_mode = FILE_READ_POLICY_STANDING_AUTHORITY if standing else "expiring_legacy"
+    if standing and policy.get("authority_mode") != FILE_READ_POLICY_STANDING_AUTHORITY:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
-    if now_ms is not None and expires_at_ms <= now_ms:
-        raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
+    expires_at_ms = policy.get("expires_at_ms")
+    if standing:
+        if expires_at_ms is not None:
+            raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+    else:
+        if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+            raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
+        if now_ms is not None and expires_at_ms <= now_ms:
+            raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
     facade = policy.get("facade_contract")
     if not isinstance(facade, dict) or set(facade) != {"schema_version", "profile", "sha256"}:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_INVALID")
@@ -727,8 +1364,8 @@ def _normalise_file_read_policy(
     max_bytes, max_lines = _file_read_policy_limits(
         policy.get("max_bytes"), policy.get("max_lines"), code="CONTROL_PLANE_FILE_READ_POLICY_INVALID"
     )
-    return {
-        "schema_version": FILE_READ_POLICY_SCHEMA_VERSION,
+    result = {
+        "schema_version": schema_version,
         "enabled": policy["enabled"],
         "server_origin": server_origin,
         "owner_id": _policy_identifier(policy.get("owner_id"), "owner_id"),
@@ -744,6 +1381,9 @@ def _normalise_file_read_policy(
         "max_bytes": max_bytes,
         "max_lines": max_lines,
     }
+    if standing:
+        result["authority_mode"] = authority_mode
+    return result
 
 
 def _read_file_read_policy(policy_path: Path) -> dict[str, Any]:
@@ -835,26 +1475,38 @@ def _normalise_approved_patch_policy(
 ) -> dict[str, Any]:
     """Validate the exact C4 default-deny local mutation policy."""
 
+    schema_version = policy.get("schema_version") if isinstance(policy, dict) else None
+    standing = schema_version == APPROVED_PATCH_POLICY_SCHEMA_VERSION
+    legacy = schema_version == APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION
     expected_fields = {
         "schema_version", "enabled", "server_origin", "owner_id", "device_id",
         "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms",
         "facade_contract", "allowed_relative_paths", "max_patch_bytes",
         "max_file_bytes", "validation_profile",
     }
+    if standing:
+        expected_fields.add("authority_mode")
     if (
         not isinstance(policy, dict)
         or set(policy) != expected_fields
-        or policy.get("schema_version") != APPROVED_PATCH_POLICY_SCHEMA_VERSION
+        or not (standing or legacy)
         or not isinstance(policy.get("enabled"), bool)
     ):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
     if require_enabled and policy["enabled"] is not True:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_DISABLED")
-    expires_at_ms = policy.get("expires_at_ms")
-    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+    authority_mode = APPROVED_PATCH_POLICY_STANDING_AUTHORITY if standing else "expiring_legacy"
+    if standing and policy.get("authority_mode") != APPROVED_PATCH_POLICY_STANDING_AUTHORITY:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
-    if now_ms is not None and expires_at_ms <= now_ms:
-        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED")
+    expires_at_ms = policy.get("expires_at_ms")
+    if standing:
+        if expires_at_ms is not None:
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+    else:
+        if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
+        if now_ms is not None and expires_at_ms <= now_ms:
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED")
     if policy.get("validation_profile") != APPROVED_PATCH_VALIDATION_PROFILE:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID")
     facade = policy.get("facade_contract")
@@ -869,8 +1521,8 @@ def _normalise_approved_patch_policy(
         policy.get("max_file_bytes"),
         code="CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID",
     )
-    return {
-        "schema_version": APPROVED_PATCH_POLICY_SCHEMA_VERSION,
+    result = {
+        "schema_version": schema_version,
         "enabled": policy["enabled"],
         "server_origin": server_origin,
         "owner_id": _policy_identifier(policy.get("owner_id"), "owner_id"),
@@ -887,6 +1539,9 @@ def _normalise_approved_patch_policy(
         "max_file_bytes": max_file_bytes,
         "validation_profile": APPROVED_PATCH_VALIDATION_PROFILE,
     }
+    if standing:
+        result["authority_mode"] = authority_mode
+    return result
 
 
 def _read_approved_patch_policy(policy_path: Path) -> dict[str, Any]:
@@ -973,7 +1628,7 @@ def _admit_file_read_policy_request(
         raise RuntimeError("CONTROL_PLANE_FILE_READ_REQUEST_INVALID")
     if expires_at_ms <= now_ms:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_REQUEST_EXPIRED")
-    if expires_at_ms > policy["expires_at_ms"]:
+    if policy["expires_at_ms"] is not None and expires_at_ms > policy["expires_at_ms"]:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
     if request.get("path") not in policy["allowed_relative_paths"]:
         raise RuntimeError("CONTROL_PLANE_FILE_READ_PATH_DENIED")
@@ -1106,12 +1761,18 @@ def _admit_approved_patch_policy_request(
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Revalidate exact C4 policy, scope and patch bytes before mutation."""
 
+    if isinstance(request, dict) and "authority_mode" not in request:
+        # Legacy direct fixtures and already persisted owner-review actions
+        # predate the explicit mode field.  Treat them as the old reviewed
+        # lane; standing actions must carry the field end-to-end.
+        request = {**request, "authority_mode": "owner_review"}
     expected_fields = {
         "server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id",
         "workspace_generation", "context_id", "binding_id", "action_id", "attempt_id",
+        "task_id", "writer_lease_generation",
         "tool_name", "operation", "permission_request_id", "permission_digest",
         "intent_digest", "path", "preimage_sha256", "patch_sha256", "patch_envelope",
-        "validation_profile", "expires_at_ms", "facade_contract",
+        "validation_profile", "expires_at_ms", "facade_contract", "authority_mode",
     }
     if not isinstance(request, dict) or set(request) != expected_fields:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
@@ -1125,12 +1786,28 @@ def _admit_approved_patch_policy_request(
         request.get("tool_name") != APPROVED_PATCH_TOOL_NAME
         or request.get("operation") != APPROVED_PATCH_OPERATION
         or request.get("validation_profile") != APPROVED_PATCH_VALIDATION_PROFILE
+        or request.get("authority_mode") not in {"owner_review", APPROVED_PATCH_POLICY_STANDING_AUTHORITY}
     ):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_TOOL_DENIED")
     for field in ("context_id", "binding_id", "action_id", "attempt_id", "permission_request_id"):
         value = request.get(field)
         if not isinstance(value, str) or APPROVED_PATCH_ACTION_IDENTIFIER_PATTERN.fullmatch(value) is None:
             raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    if request["authority_mode"] == APPROVED_PATCH_POLICY_STANDING_AUTHORITY:
+        if request["permission_request_id"] != "standing":
+            raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    elif request["permission_request_id"] == "standing":
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
+    task_id = request.get("task_id")
+    writer_lease_generation = request.get("writer_lease_generation")
+    if (
+        not isinstance(task_id, str)
+        or MCP_TASK_ID_PATTERN.fullmatch(task_id) is None
+        or not isinstance(writer_lease_generation, int)
+        or isinstance(writer_lease_generation, bool)
+        or not 1 <= writer_lease_generation <= 1_000_000_000
+    ):
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
     for field in ("permission_digest", "intent_digest", "preimage_sha256", "patch_sha256"):
         value = request.get(field)
         if not isinstance(value, str) or SHA256_PATTERN.fullmatch(value.lower()) is None:
@@ -1141,7 +1818,7 @@ def _admit_approved_patch_policy_request(
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID")
     if expires_at_ms <= now_ms:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_REQUEST_EXPIRED")
-    if expires_at_ms > policy["expires_at_ms"]:
+    if policy["expires_at_ms"] is not None and expires_at_ms > policy["expires_at_ms"]:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED")
     if request.get("path") not in policy["allowed_relative_paths"]:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_PATH_DENIED")
@@ -1356,6 +2033,55 @@ def _policy_install_receipt(policy: dict[str, Any], args: argparse.Namespace) ->
     }, separators=(",", ":")))
 
 
+def _read_only_policy_template_from_response(response: Any, config: dict[str, Any]) -> dict[str, Any]:
+    """Validate the only server projection accepted for a local read policy.
+
+    The server deliberately omits the context identity from this projection.
+    A node may install a policy only when the resulting target still matches
+    both its own credential-bound identity and a current local registry entry.
+    """
+
+    if not isinstance(response, dict) or set(response) != {"policy_template"}:
+        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_INVALID")
+    template = response.get("policy_template")
+    expected_fields = {
+        "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms", "facade_contract",
+    }
+    if not isinstance(template, dict) or set(template) != expected_fields:
+        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_INVALID")
+    if template["device_id"] != config["device_id"] or template["endpoint_id"] != config["endpoint_id"]:
+        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_TARGET_MISMATCH")
+    return template
+
+
+def _install_read_only_policy_from_template(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    template: dict[str, Any],
+) -> int:
+    """Recheck the local root at the effect boundary, then write its policy."""
+
+    _require_current_local_workspace_registration(
+        args,
+        config_path=config_path,
+        workspace_id=template["workspace_id"],
+        workspace_generation=template["workspace_generation"],
+    )
+    policy = _install_read_only_policy_values(
+        args,
+        config=config,
+        owner_id=template["owner_id"],
+        workspace_id=template["workspace_id"],
+        workspace_generation=template["workspace_generation"],
+        expires_at_ms=template["expires_at_ms"],
+        facade_contract=template["facade_contract"],
+    )
+    _policy_install_receipt(policy, args)
+    return 0
+
+
 def install_read_only_policy(args: argparse.Namespace) -> int:
     """Install one explicit, bounded local policy; this never contacts Ubuntu."""
 
@@ -1384,7 +2110,8 @@ def install_read_only_policy_from_context(args: argparse.Namespace) -> int:
 
     if getattr(args, "confirm_install", False) is not True:
         raise RuntimeError("CONTROL_PLANE_POLICY_CONFIRMATION_REQUIRED")
-    config = _config(Path(args.config).expanduser().resolve())
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
     context_id = _policy_identifier(args.context_id, "context_id")
     response = _request(
         str(config["server_url"]),
@@ -1392,33 +2119,58 @@ def install_read_only_policy_from_context(args: argparse.Namespace) -> int:
         {"context_id": context_id},
         f"Node {config['node_secret']}",
     )
-    if not isinstance(response, dict) or set(response) != {"policy_template"}:
-        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_INVALID")
-    template = response.get("policy_template")
-    expected_fields = {
-        "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation", "expires_at_ms", "facade_contract",
-    }
-    if not isinstance(template, dict) or set(template) != expected_fields:
-        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_INVALID")
-    if template["device_id"] != config["device_id"] or template["endpoint_id"] != config["endpoint_id"]:
-        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_TARGET_MISMATCH")
+    template = _read_only_policy_template_from_response(response, config)
+    return _install_read_only_policy_from_template(
+        args,
+        config_path=config_path,
+        config=config,
+        template=template,
+    )
+
+
+def install_read_only_policy_from_assignment(args: argparse.Namespace) -> int:
+    """Install an owner-issued policy for one locally selected registered root.
+
+    Unlike the legacy diagnostic command above, this public onboarding path
+    never accepts or reveals a ``ctx_…`` value.  The authenticated node sends
+    only its already-registered opaque workspace identity to Ubuntu.  Ubuntu
+    resolves exactly one pre-existing, live internal context for that root or
+    fails closed when none (or more than one) exists.
+    """
+
+    if getattr(args, "confirm_install", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_POLICY_CONFIRMATION_REQUIRED")
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    workspace_id = _policy_identifier(args.workspace_id, "workspace_id")
+    workspace_generation = _policy_identifier(args.workspace_generation, "workspace_generation")
+    # Do not disclose or request an assignment for a root that the local
+    # owner has already removed. Recheck again after the HTTP response before
+    # writing the policy in case the registry changed concurrently.
     _require_current_local_workspace_registration(
         args,
-        config_path=Path(args.config).expanduser().resolve(),
-        workspace_id=template["workspace_id"],
-        workspace_generation=template["workspace_generation"],
+        config_path=config_path,
+        workspace_id=workspace_id,
+        workspace_generation=workspace_generation,
     )
-    policy = _install_read_only_policy_values(
+    response = _request(
+        str(config["server_url"]),
+        f"/v1/nodes/{config['device_id']}/read-only-policy-assignment",
+        {"workspace_id": workspace_id, "workspace_generation": workspace_generation},
+        f"Node {config['node_secret']}",
+    )
+    template = _read_only_policy_template_from_response(response, config)
+    if (
+        template["workspace_id"] != workspace_id
+        or template["workspace_generation"] != workspace_generation
+    ):
+        raise RuntimeError("CONTROL_PLANE_POLICY_TEMPLATE_TARGET_MISMATCH")
+    return _install_read_only_policy_from_template(
         args,
+        config_path=config_path,
         config=config,
-        owner_id=template["owner_id"],
-        workspace_id=template["workspace_id"],
-        workspace_generation=template["workspace_generation"],
-        expires_at_ms=template["expires_at_ms"],
-        facade_contract=template["facade_contract"],
+        template=template,
     )
-    _policy_install_receipt(policy, args)
-    return 0
 
 
 def inspect_read_only_policy(args: argparse.Namespace) -> int:
@@ -1498,7 +2250,8 @@ def _install_file_read_policy_values(
     """
 
     now_ms = int(time.time() * 1000)
-    if (
+    standing = expires_at_ms is None
+    if not standing and (
         not isinstance(expires_at_ms, int)
         or isinstance(expires_at_ms, bool)
         or expires_at_ms <= now_ms
@@ -1518,7 +2271,7 @@ def _install_file_read_policy_values(
     if entry["capabilities"].get("read") is not True:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
     policy = {
-        "schema_version": FILE_READ_POLICY_SCHEMA_VERSION,
+        "schema_version": FILE_READ_POLICY_SCHEMA_VERSION if standing else FILE_READ_POLICY_LEGACY_SCHEMA_VERSION,
         "enabled": True,
         "server_origin": _server_origin(config.get("server_url")),
         "owner_id": _policy_identifier(owner_id, "owner_id"),
@@ -1534,6 +2287,8 @@ def _install_file_read_policy_values(
         "max_bytes": max_bytes,
         "max_lines": max_lines,
     }
+    if standing:
+        policy["authority_mode"] = FILE_READ_POLICY_STANDING_AUTHORITY
     policy = _normalise_file_read_policy(policy, now_ms=now_ms, require_enabled=True)
     _write_local_policy(_file_read_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
     return policy
@@ -1543,6 +2298,7 @@ def _file_read_policy_install_receipt(policy: dict[str, Any], args: argparse.Nam
     print(json.dumps({
         "operation": "control_plane_file_read_policy_installed",
         "enabled": True,
+        "authority_mode": policy.get("authority_mode", "expiring_legacy"),
         "expires_at_ms": policy["expires_at_ms"],
         "policy_sha256": _policy_digest(policy),
         "allowed_path_count": len(policy["allowed_relative_paths"]),
@@ -1569,7 +2325,7 @@ def install_file_read_policy(args: argparse.Namespace) -> int:
         owner_id=args.owner_id,
         workspace_id=args.workspace_id,
         workspace_generation=args.workspace_generation,
-        expires_at_ms=args.expires_at_ms,
+        expires_at_ms=getattr(args, "expires_at_ms", None),
         facade_contract={
             "schema_version": args.facade_schema_version,
             "profile": args.facade_profile,
@@ -1589,11 +2345,15 @@ def inspect_file_read_policy(args: argparse.Namespace) -> int:
     try:
         policy = _read_file_read_policy(_file_read_policy_path(args))
         now_ms = int(time.time() * 1000)
-        state = "enabled" if policy["enabled"] and policy["expires_at_ms"] > now_ms else "expired_or_disabled"
+        state = "enabled" if policy["enabled"] and (
+            policy.get("authority_mode") == FILE_READ_POLICY_STANDING_AUTHORITY
+            or (isinstance(policy["expires_at_ms"], int) and policy["expires_at_ms"] > now_ms)
+        ) else "expired_or_disabled"
         result: dict[str, Any] = {
             "operation": "control_plane_file_read_policy_observation",
             "state": state,
             "enabled": policy["enabled"],
+            "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
             "policy_sha256": _policy_digest(policy),
             "allowed_path_count": len(policy["allowed_relative_paths"]),
@@ -1656,7 +2416,8 @@ def _install_approved_patch_policy_values(
     """
 
     now_ms = int(time.time() * 1000)
-    if (
+    standing = expires_at_ms is None
+    if not standing and (
         not isinstance(expires_at_ms, int)
         or isinstance(expires_at_ms, bool)
         or expires_at_ms <= now_ms
@@ -1676,7 +2437,7 @@ def _install_approved_patch_policy_values(
     if entry["capabilities"].get("write") is not True:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
     policy = {
-        "schema_version": APPROVED_PATCH_POLICY_SCHEMA_VERSION,
+        "schema_version": APPROVED_PATCH_POLICY_SCHEMA_VERSION if standing else APPROVED_PATCH_POLICY_LEGACY_SCHEMA_VERSION,
         "enabled": True,
         "server_origin": _server_origin(config.get("server_url")),
         "owner_id": _policy_identifier(owner_id, "owner_id"),
@@ -1693,6 +2454,8 @@ def _install_approved_patch_policy_values(
         "max_file_bytes": max_file_bytes,
         "validation_profile": APPROVED_PATCH_VALIDATION_PROFILE,
     }
+    if standing:
+        policy["authority_mode"] = APPROVED_PATCH_POLICY_STANDING_AUTHORITY
     policy = _normalise_approved_patch_policy(policy, now_ms=now_ms, require_enabled=True)
     _write_local_policy(_approved_patch_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
     return policy
@@ -1702,6 +2465,7 @@ def _approved_patch_policy_install_receipt(policy: dict[str, Any], args: argpars
     print(json.dumps({
         "operation": "control_plane_approved_patch_policy_installed",
         "enabled": True,
+        "authority_mode": policy.get("authority_mode", "expiring_legacy"),
         "expires_at_ms": policy["expires_at_ms"],
         "policy_sha256": _policy_digest(policy),
         "allowed_path_count": len(policy["allowed_relative_paths"]),
@@ -1729,7 +2493,7 @@ def install_approved_patch_policy(args: argparse.Namespace) -> int:
         owner_id=args.owner_id,
         workspace_id=args.workspace_id,
         workspace_generation=args.workspace_generation,
-        expires_at_ms=args.expires_at_ms,
+        expires_at_ms=getattr(args, "expires_at_ms", None),
         facade_contract={
             "schema_version": args.facade_schema_version,
             "profile": args.facade_profile,
@@ -1749,11 +2513,15 @@ def inspect_approved_patch_policy(args: argparse.Namespace) -> int:
     try:
         policy = _read_approved_patch_policy(_approved_patch_policy_path(args))
         now_ms = int(time.time() * 1000)
-        state = "enabled" if policy["enabled"] and policy["expires_at_ms"] > now_ms else "expired_or_disabled"
+        state = "enabled" if policy["enabled"] and (
+            policy.get("authority_mode") == APPROVED_PATCH_POLICY_STANDING_AUTHORITY
+            or (isinstance(policy["expires_at_ms"], int) and policy["expires_at_ms"] > now_ms)
+        ) else "expired_or_disabled"
         result: dict[str, Any] = {
             "operation": "control_plane_approved_patch_policy_observation",
             "state": state,
             "enabled": policy["enabled"],
+            "authority_mode": policy.get("authority_mode", "expiring_legacy"),
             "expires_at_ms": policy["expires_at_ms"],
             "policy_sha256": _policy_digest(policy),
             "allowed_path_count": len(policy["allowed_relative_paths"]),
@@ -2056,6 +2824,22 @@ def _approved_patch_action_identifier(action: dict[str, Any], field: str) -> str
     return value
 
 
+def _writer_lease_authority(action: dict[str, Any], *, code: str) -> tuple[str, int]:
+    """Require the central writer fence identity before any local effect."""
+
+    task_id = action.get("mcp_task_id")
+    generation = action.get("writer_lease_generation")
+    if (
+        not isinstance(task_id, str)
+        or MCP_TASK_ID_PATTERN.fullmatch(task_id.strip()) is None
+        or not isinstance(generation, int)
+        or isinstance(generation, bool)
+        or not 1 <= generation <= 1_000_000_000
+    ):
+        raise RuntimeError(code)
+    return task_id.strip(), generation
+
+
 def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
     """Rebuild one sealed C4 patch delivery; never forward general arguments.
 
@@ -2070,14 +2854,21 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         arguments = json.loads(str(action.get("arguments_json") or ""))
     except (TypeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED") from error
+    authority_mode = action.get("mcp_approved_patch_authority_mode") or "owner_review"
+    if authority_mode not in {"owner_review", APPROVED_PATCH_POLICY_STANDING_AUTHORITY}:
+        raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     expected_arguments = {
         "operation", "permission_request_id", "path", "preimage_sha256", "patch_sha256", "validation_profile",
     }
+    if authority_mode == APPROVED_PATCH_POLICY_STANDING_AUTHORITY:
+        expected_arguments.add("authority_mode")
     if (
         not isinstance(arguments, dict)
         or set(arguments) != expected_arguments
         or arguments.get("operation") != APPROVED_PATCH_OPERATION
         or arguments.get("validation_profile") != APPROVED_PATCH_VALIDATION_PROFILE
+        or (authority_mode == APPROVED_PATCH_POLICY_STANDING_AUTHORITY
+            and arguments.get("authority_mode") != APPROVED_PATCH_POLICY_STANDING_AUTHORITY)
     ):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     try:
@@ -2108,7 +2899,11 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     permission_digest = permission_digest.strip().lower()
     intent_digest = intent_digest.strip().lower()
-    if action.get("admission_reference") != f"mcp_approved_patch:{intent_digest}":
+    expected_reference_prefix = (
+        "mcp_standing_patch:" if authority_mode == APPROVED_PATCH_POLICY_STANDING_AUTHORITY
+        else "mcp_approved_patch:"
+    )
+    if action.get("admission_reference") != f"{expected_reference_prefix}{intent_digest}":
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     if (
         action.get("mcp_approved_patch_permission_request_id") != permission_request_id
@@ -2116,6 +2911,7 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         or str(action.get("mcp_approved_patch_preimage_sha256") or "").strip().lower() != preimage_sha256
         or str(action.get("mcp_approved_patch_sha256") or "").strip().lower() != patch_sha256
         or action.get("mcp_approved_patch_validation_profile") != APPROVED_PATCH_VALIDATION_PROFILE
+        or action.get("mcp_approved_patch_authority_mode", "owner_review") != authority_mode
     ):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
     patch_envelope = action.get("mcp_approved_patch_envelope")
@@ -2133,6 +2929,9 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
     expires_at_ms = action.get("expires_at_ms")
     if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
         raise RuntimeError("CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED")
+    task_id, writer_lease_generation = _writer_lease_authority(
+        action, code="CONTROL_PLANE_APPROVED_PATCH_ACTION_DENIED"
+    )
     return {
         "server_origin": server_origin,
         "owner_id": _approved_patch_action_text(action, "owner_id"),
@@ -2144,8 +2943,11 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         "binding_id": _approved_patch_action_identifier(action, "binding_id"),
         "action_id": _approved_patch_action_identifier(action, "action_id"),
         "attempt_id": _approved_patch_action_identifier(action, "attempt_id"),
+        "task_id": task_id,
+        "writer_lease_generation": writer_lease_generation,
         "tool_name": APPROVED_PATCH_TOOL_NAME,
         "operation": APPROVED_PATCH_OPERATION,
+        "authority_mode": authority_mode,
         "permission_request_id": permission_request_id,
         "permission_digest": permission_digest,
         "intent_digest": intent_digest,
@@ -2157,6 +2959,251 @@ def _approved_patch_bridge_request(action: dict[str, Any], config: dict[str, Any
         "expires_at_ms": expires_at_ms,
         "facade_contract": facade_contract,
     }
+
+
+def _document_write_action_text(action: dict[str, Any], field: str) -> str:
+    value = action.get(field)
+    if not isinstance(value, str) or not 3 <= len(value.strip()) <= 256:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    return value.strip()
+
+
+def _document_write_action_identifier(action: dict[str, Any], field: str) -> str:
+    value = _document_write_action_text(action, field)
+    if DOCUMENT_WRITE_ACTION_IDENTIFIER_PATTERN.fullmatch(value) is None:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    return value
+
+
+def _document_write_relative_path(value: Any, *, code: str) -> str:
+    try:
+        return _approved_patch_relative_path(value, code=code)
+    except RuntimeError as error:
+        # The approved-patch helper is intentionally reused for the same
+        # root-relative/sensitive-path boundary, but this lane must never leak
+        # an approved-patch classification into its receipt contract.
+        mapped = str(error).replace("APPROVED_PATCH", "DOCUMENT_WRITE")
+        raise RuntimeError(mapped if mapped.startswith("CONTROL_PLANE_DOCUMENT_WRITE_") else code) from error
+
+
+def _document_write_bridge_request(action: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    """Rebuild one sealed document intent without forwarding generic action data."""
+
+    if not isinstance(action, dict) or action.get("tool_name") != DOCUMENT_WRITE_TOOL_NAME:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    try:
+        arguments = json.loads(str(action.get("arguments_json") or ""))
+    except (TypeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED") from error
+    expected_arguments = {
+        "operation", "authority_mode", "target", "source", "title", "content_sha256", "overwrite",
+    }
+    if not isinstance(arguments, dict) or set(arguments) != expected_arguments:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    operation = action.get("mcp_document_write_operation")
+    if operation not in DOCUMENT_WRITE_OPERATIONS or arguments.get("operation") != operation:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    if arguments.get("authority_mode") != "standing":
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    try:
+        target = _document_write_relative_path(
+            arguments.get("target"), code="CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED"
+        )
+        raw_source = arguments.get("source")
+        source = None if raw_source is None else _document_write_relative_path(
+            raw_source, code="CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED"
+        )
+    except RuntimeError as error:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED") from error
+    if target != action.get("mcp_document_write_target_path") or source != action.get("mcp_document_write_source_path"):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    title = action.get("mcp_document_write_title")
+    content = action.get("mcp_document_write_content")
+    if (
+        not isinstance(title, str)
+        or len(title.encode("utf-8")) > DOCUMENT_WRITE_MAX_TITLE_BYTES
+        or any(ord(character) < 32 or ord(character) == 127 for character in title)
+        or not isinstance(content, str)
+        or len(content.encode("utf-8")) > DOCUMENT_WRITE_MAX_CONTENT_BYTES
+        or "\x00" in content
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    content_sha256 = arguments.get("content_sha256")
+    if (
+        not isinstance(content_sha256, str)
+        or SHA256_PATTERN.fullmatch(content_sha256.strip().lower()) is None
+        or hashlib.sha256(content.encode("utf-8")).hexdigest() != content_sha256.strip().lower()
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    overwrite = arguments.get("overwrite")
+    if not isinstance(overwrite, bool) or overwrite != bool(action.get("mcp_document_write_overwrite")):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    if operation == "document_create":
+        # Empty titles are valid for Markdown/text targets; the local MCP tool
+        # owns any format-specific title defaulting.
+        if source is not None:
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    elif source is None or source == target or not target.lower().endswith(".docx"):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    target_suffix = Path(target).suffix.lower()
+    if target_suffix not in DOCUMENT_WRITE_TARGET_SUFFIXES:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_TARGET_INVALID")
+    if source is not None and Path(source).suffix.lower() not in DOCUMENT_WRITE_SOURCE_SUFFIXES:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    facade_contract = _policy_facade_contract(
+        action.get("mcp_document_write_facade_schema_version"),
+        action.get("mcp_document_write_facade_profile"),
+        action.get("mcp_document_write_facade_contract_sha256"),
+    )
+    intent_digest = action.get("mcp_document_write_intent_digest")
+    if not isinstance(intent_digest, str) or SHA256_PATTERN.fullmatch(intent_digest.strip().lower()) is None:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    intent_digest = intent_digest.strip().lower()
+    if action.get("admission_reference") != f"mcp_document_write:{intent_digest}":
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    task_id, writer_lease_generation = _writer_lease_authority(
+        action, code="CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED"
+    )
+    expires_at_ms = action.get("expires_at_ms")
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    return {
+        "server_origin": _server_origin(config.get("server_url")),
+        "owner_id": _document_write_action_text(action, "owner_id"),
+        "device_id": _document_write_action_text(action, "device_id"),
+        "endpoint_id": _document_write_action_text(action, "endpoint_id"),
+        "workspace_id": _document_write_action_text(action, "workspace_id"),
+        "workspace_generation": _document_write_action_text(action, "workspace_generation"),
+        "context_id": _document_write_action_identifier(action, "context_id"),
+        "binding_id": _document_write_action_identifier(action, "binding_id"),
+        "action_id": _document_write_action_identifier(action, "action_id"),
+        "attempt_id": _document_write_action_identifier(action, "attempt_id"),
+        "task_id": task_id,
+        "writer_lease_generation": writer_lease_generation,
+        "authority_mode": "standing",
+        "tool_name": DOCUMENT_WRITE_TOOL_NAME,
+        "operation": operation,
+        "target": target,
+        "source": source,
+        "title": title,
+        "content": content,
+        "content_sha256": content_sha256.strip().lower(),
+        "overwrite": overwrite,
+        "intent_digest": intent_digest,
+        "admission_reference": f"mcp_document_write:{intent_digest}",
+        "expires_at_ms": expires_at_ms,
+        "facade_contract": facade_contract,
+    }
+
+
+def _document_write_policy_admission(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Reuse the standing approved-patch write policy as document authority."""
+
+    try:
+        policy, entry = _approved_patch_policy_admission(args, config_path=config_path, config=config)
+    except RuntimeError as error:
+        raise RuntimeError(str(error).replace("APPROVED_PATCH", "DOCUMENT_WRITE")) from error
+    if (
+        policy.get("schema_version") != APPROVED_PATCH_POLICY_SCHEMA_VERSION
+        or policy.get("authority_mode") != APPROVED_PATCH_POLICY_STANDING_AUTHORITY
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_POLICY_INVALID")
+    if entry.get("capabilities", {}).get("write") is not True:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
+    return policy, entry
+
+
+def _admit_document_write_policy_request(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    request: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Recheck target, generation, content and local allowlist before effect."""
+
+    expected_fields = {
+        "server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id",
+        "workspace_generation", "context_id", "binding_id", "action_id", "attempt_id",
+        "task_id", "writer_lease_generation", "authority_mode", "tool_name", "operation",
+        "target", "source", "title", "content", "content_sha256", "overwrite", "intent_digest",
+        "admission_reference", "expires_at_ms", "facade_contract",
+    }
+    if not isinstance(request, dict) or set(request) != expected_fields:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    policy, entry = _document_write_policy_admission(args, config_path=config_path, config=config)
+    for field in ("server_origin", "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
+        if request.get(field) != policy[field]:
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_TARGET_MISMATCH")
+    if request.get("authority_mode") != "standing" or request.get("tool_name") != DOCUMENT_WRITE_TOOL_NAME:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_TOOL_DENIED")
+    if request.get("facade_contract") != policy["facade_contract"]:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_CONTRACT_MISMATCH")
+    if request.get("operation") not in DOCUMENT_WRITE_OPERATIONS:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    try:
+        target = _document_write_relative_path(request.get("target"), code="CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+        source = None if request.get("source") is None else _document_write_relative_path(
+            request.get("source"), code="CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID"
+        )
+    except RuntimeError as error:
+        raise RuntimeError(str(error)) from error
+    if target != request["target"] or (source is not None and source != request["source"]):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    if Path(target).suffix.lower() not in DOCUMENT_WRITE_TARGET_SUFFIXES:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_TARGET_INVALID")
+    if request["operation"] == "document_create":
+        if source is not None:
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    elif source is None or source == target or Path(target).suffix.lower() != ".docx":
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    if source is not None and Path(source).suffix.lower() not in DOCUMENT_WRITE_SOURCE_SUFFIXES:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_SOURCE_INVALID")
+    if (
+        not isinstance(request.get("title"), str)
+        or len(request["title"].encode("utf-8")) > DOCUMENT_WRITE_MAX_TITLE_BYTES
+        or any(ord(character) < 32 or ord(character) == 127 for character in request["title"])
+        or not isinstance(request.get("content"), str)
+        or len(request["content"].encode("utf-8")) > DOCUMENT_WRITE_MAX_CONTENT_BYTES
+        or "\x00" in request["content"]
+        or not isinstance(request.get("overwrite"), bool)
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    content_sha256 = str(request.get("content_sha256") or "").strip().lower()
+    if SHA256_PATTERN.fullmatch(content_sha256) is None or hashlib.sha256(request["content"].encode("utf-8")).hexdigest() != content_sha256:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    if not isinstance(request.get("intent_digest"), str) or SHA256_PATTERN.fullmatch(request["intent_digest"].lower()) is None:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    if request.get("admission_reference") != f"mcp_document_write:{request['intent_digest'].lower()}":
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    task_id = request.get("task_id")
+    generation = request.get("writer_lease_generation")
+    if (
+        not isinstance(task_id, str)
+        or MCP_TASK_ID_PATTERN.fullmatch(task_id) is None
+        or not isinstance(generation, int)
+        or isinstance(generation, bool)
+        or not 1 <= generation <= 1_000_000_000
+        or task_id != request["task_id"]
+        or generation != request["writer_lease_generation"]
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    expires_at_ms = request.get("expires_at_ms")
+    now_ms = int(time.time() * 1000)
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_INVALID")
+    if expires_at_ms <= now_ms:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_REQUEST_EXPIRED")
+    if request["target"] not in policy["allowed_relative_paths"] or (
+        source is not None and source not in policy["allowed_relative_paths"]
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_PATH_DENIED")
+    return policy, entry
 
 
 def _file_read_projection_digest(value: dict[str, Any]) -> str:
@@ -2350,6 +3397,7 @@ def _safe_approved_patch_bridge_result(
 
     expected_fields = {
         "schema_version", "operation_kind", "installation_id", "runtime_mode", "action_id", "attempt_id",
+        "task_id", "writer_lease_generation", "run_id", "wave_id",
         "local_handle", "patch_applied", "local_semantic_acceptance", "policy_sha256", "actor", "runtime_identity",
         "facade_contract", "file", "response_sha256",
     }
@@ -2360,6 +3408,12 @@ def _safe_approved_patch_bridge_result(
         or value.get("operation_kind") != "control_plane_approved_patch"
         or value.get("action_id") != request["action_id"]
         or value.get("attempt_id") != request["attempt_id"]
+        or value.get("task_id") != request["task_id"]
+        or value.get("writer_lease_generation") != request["writer_lease_generation"]
+        or not isinstance(value.get("run_id"), str)
+        or not re.fullmatch(r"[a-f0-9]{32}", value["run_id"].lower())
+        or not isinstance(value.get("wave_id"), str)
+        or not re.fullmatch(r"[a-f0-9]{32}", value["wave_id"].lower())
         or value.get("patch_applied") is not True
         # The local workflow deliberately remains in ACCEPTING until a
         # separately locally-authorized proof/acceptance step. This node relay
@@ -2438,6 +3492,10 @@ def _safe_approved_patch_bridge_result(
         "patch_applied": True,
         "local_semantic_acceptance": "pending",
         "local_handle": str(value["local_handle"]),
+        "task_id": str(value["task_id"]),
+        "writer_lease_generation": int(value["writer_lease_generation"]),
+        "run_id": str(value["run_id"]).lower(),
+        "wave_id": str(value["wave_id"]).lower(),
         "policy_sha256": expected_policy_sha256,
         "actor": {
             "client_id": "electron-control-plane-approved-patch-bridge",
@@ -2453,6 +3511,223 @@ def _safe_approved_patch_bridge_result(
         "file": safe_file,
         "response_sha256": response_sha256,
     }
+
+
+def _document_write_projection_digest(value: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+    ).hexdigest()
+
+
+def _safe_document_write_bridge_result(
+    value: Any,
+    request: dict[str, Any],
+    *,
+    expected_policy_sha256: str,
+) -> dict[str, Any]:
+    """Allowlist one digest-only document result before central receipt."""
+
+    expected_fields = {
+        "schema_version", "operation_kind", "local_handle", "action_id", "attempt_id", "task_id",
+        "writer_lease_generation", "operation", "target", "source", "result", "actor", "policy_sha256",
+        "facade_contract", "runtime_identity", "response_sha256",
+    }
+    if not isinstance(value, dict) or set(value) != expected_fields:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_ENVELOPE_INVALID")
+    if (
+        value.get("schema_version") != 1
+        or value.get("operation_kind") != "control_plane_document_write"
+        or value.get("action_id") != request["action_id"]
+        or value.get("attempt_id") != request["attempt_id"]
+        or value.get("task_id") != request["task_id"]
+        or value.get("writer_lease_generation") != request["writer_lease_generation"]
+        or value.get("operation") != request["operation"]
+        or value.get("target") != request["target"]
+        or value.get("source") != request.get("source")
+        or value.get("actor") != {"client_id": "electron-control-plane-document-bridge", "client_type": "electron"}
+        or str(value.get("policy_sha256") or "").lower() != expected_policy_sha256
+        or value.get("facade_contract") != request.get("facade_contract")
+        or re.fullmatch(r"cp_doc_[a-f0-9]{48}", str(value.get("local_handle") or "")) is None
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_ENVELOPE_INVALID")
+    identity = value.get("runtime_identity")
+    if (
+        not isinstance(identity, dict)
+        or set(identity) != {"activation_epoch_id", "process_instance_id", "server_instance_id", "tool_contract_sha256"}
+        or any(
+            not isinstance(identity.get(field), str) or not 1 <= len(identity[field]) <= 128
+            for field in ("activation_epoch_id", "process_instance_id", "server_instance_id")
+        )
+        or SHA256_PATTERN.fullmatch(str(identity.get("tool_contract_sha256") or "").lower()) is None
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_IDENTITY_INVALID")
+    result = value.get("result")
+    if not isinstance(result, dict) or set(result) != {"operation", "target", "source", "size", "sha256", "format"}:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID")
+    safe_result = {
+        "operation": result.get("operation"),
+        "target": result.get("target"),
+        "source": result.get("source"),
+        "size": result.get("size"),
+        "sha256": str(result.get("sha256") or "").lower(),
+        "format": str(result.get("format") or "").lower(),
+    }
+    if (
+        safe_result["operation"] != request["operation"]
+        or safe_result["target"] != request["target"]
+        or safe_result["source"] != request.get("source")
+        or not isinstance(safe_result["size"], int)
+        or isinstance(safe_result["size"], bool)
+        or not 1 <= safe_result["size"] <= DOCUMENT_WRITE_MAX_RESULT_BYTES
+        or SHA256_PATTERN.fullmatch(safe_result["sha256"]) is None
+        or re.fullmatch(r"[a-z0-9]{1,16}", safe_result["format"]) is None
+        or safe_result["format"] != Path(request["target"]).suffix.lower().lstrip(".")
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID")
+    response_sha256 = str(value.get("response_sha256") or "").lower()
+    if SHA256_PATTERN.fullmatch(response_sha256) is None or response_sha256 != _document_write_projection_digest(safe_result):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_RESULT_DIGEST_INVALID")
+    return {
+        "schema_version": 1,
+        "operation_kind": "control_plane_document_write",
+        "local_handle": str(value["local_handle"]),
+        "action_id": request["action_id"],
+        "attempt_id": request["attempt_id"],
+        "task_id": request["task_id"],
+        "writer_lease_generation": request["writer_lease_generation"],
+        "operation": request["operation"],
+        "target": request["target"],
+        "source": request.get("source"),
+        "result": safe_result,
+        "actor": {"client_id": "electron-control-plane-document-bridge", "client_type": "electron"},
+        "policy_sha256": expected_policy_sha256,
+        "facade_contract": dict(request["facade_contract"]),
+        "runtime_identity": {
+            "activation_epoch_id": identity["activation_epoch_id"],
+            "process_instance_id": identity["process_instance_id"],
+            "server_instance_id": identity["server_instance_id"],
+            "tool_contract_sha256": str(identity["tool_contract_sha256"]).lower(),
+        },
+        "response_sha256": response_sha256,
+    }
+
+
+def _document_write_journal_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.document-write-bridge-journal.json")
+
+
+def _read_document_write_journal(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"schema_version": DOCUMENT_WRITE_JOURNAL_SCHEMA_VERSION, "entries": {}}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_JOURNAL_INVALID") from error
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema_version", "entries"}
+        or value.get("schema_version") != DOCUMENT_WRITE_JOURNAL_SCHEMA_VERSION
+        or not isinstance(value.get("entries"), dict)
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_JOURNAL_INVALID")
+    return value
+
+
+def _document_write_journal_key(action_id: str, attempt_id: str) -> str:
+    if (
+        DOCUMENT_WRITE_ACTION_IDENTIFIER_PATTERN.fullmatch(action_id) is None
+        or DOCUMENT_WRITE_ACTION_IDENTIFIER_PATTERN.fullmatch(attempt_id) is None
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+    return f"{action_id}|{attempt_id}"
+
+
+def _document_write_journal_receipt(
+    action_id: str,
+    attempt_id: str,
+    receipt_state: str,
+    local_handle: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "action_id": action_id,
+        "attempt_id": attempt_id,
+        "receipt_state": receipt_state,
+        "local_handle": local_handle,
+        "payload": payload,
+        "receipt_submitted": False,
+    }
+
+
+def _record_document_write_receipt(
+    journal_path: Path,
+    journal: dict[str, Any],
+    *,
+    state: str,
+    action_id: str,
+    attempt_id: str,
+    receipt_state: str,
+    local_handle: str,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    key = _document_write_journal_key(action_id, attempt_id)
+    entry = {
+        "state": state,
+        "action_id": action_id,
+        "attempt_id": attempt_id,
+        "receipt": _document_write_journal_receipt(action_id, attempt_id, receipt_state, local_handle, payload),
+    }
+    journal["entries"][key] = entry
+    _write_json_atomic(journal_path, journal)
+    return entry
+
+
+def _recover_document_write_prepared_entry(
+    entry: dict[str, Any],
+    diagnostic_code: str = "CONTROL_PLANE_DOCUMENT_WRITE_PREPARED_RECOVERED",
+) -> None:
+    """Never replay a document effect after the local effect boundary."""
+
+    if entry.get("state") != "prepared":
+        return
+    action_id = _document_write_action_identifier(entry, "action_id")
+    attempt_id = _document_write_action_identifier(entry, "attempt_id")
+    entry["state"] = "unknown"
+    entry["receipt"] = _document_write_journal_receipt(
+        action_id,
+        attempt_id,
+        "unknown",
+        "",
+        {
+            "schema_version": 1,
+            "operation_kind": "control_plane_document_write",
+            "code": "CONTROL_PLANE_DOCUMENT_WRITE_EFFECT_UNKNOWN",
+            "diagnostic_code": _safe_error_code(
+                diagnostic_code,
+                "CONTROL_PLANE_DOCUMENT_WRITE_PREPARED_RECOVERED",
+            ),
+            "reconciliation_required": True,
+        },
+    )
+
+
+def _flush_document_write_journal(config: dict[str, Any], journal_path: Path, journal: dict[str, Any]) -> int:
+    submitted = 0
+    for key in sorted(journal["entries"]):
+        entry = journal["entries"][key]
+        if not isinstance(entry, dict):
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_JOURNAL_INVALID")
+        if entry.get("state") == "prepared":
+            _recover_document_write_prepared_entry(entry)
+            _write_json_atomic(journal_path, journal)
+        receipt = entry.get("receipt")
+        if not isinstance(receipt, dict):
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_JOURNAL_INVALID")
+        if receipt.get("receipt_submitted") is not True:
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted += 1
+    return submitted
 
 
 def _journal_path(config_path: Path) -> Path:
@@ -2769,6 +4044,100 @@ def recovery_approved_patch_bridge(
     return None, _safe_error_code(
         error.get("code") if isinstance(error, dict) else None,
         "CONTROL_PLANE_APPROVED_PATCH_FAILED",
+    )
+
+
+def recovery_exec_bridge(
+    args: argparse.Namespace,
+    project_root: Path,
+    request: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Call the descriptor-hiding Electron exec bridge exactly once.
+
+    The Python node agent never receives the Recovery descriptor/token or the
+    local MCP credential.  A successful result is still revalidated by the
+    journal/receipt boundary before it is submitted to Ubuntu.
+    """
+
+    bridge = Path(__file__).with_name("recovery_exec_bridge.cjs")
+    if not bridge.is_file():
+        return None, "CONTROL_PLANE_EXEC_UNAVAILABLE"
+    try:
+        command, environment = _adapter_command(args, bridge, project_root)
+        completed = subprocess.run(
+            command,
+            cwd=project_root,
+            env=environment,
+            input=json.dumps(request, separators=(",", ":")),
+            capture_output=True,
+            text=True,
+            timeout=args.timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "CONTROL_PLANE_EXEC_TIMEOUT"
+    except OSError:
+        return None, "CONTROL_PLANE_EXEC_UNAVAILABLE"
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return None, "CONTROL_PLANE_EXEC_RESULT_INVALID"
+    if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return None, "CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID"
+        return result, None
+    error = payload.get("error") if isinstance(payload, dict) else None
+    return None, _safe_error_code(
+        error.get("code") if isinstance(error, dict) else None,
+        "CONTROL_PLANE_EXEC_FAILED",
+    )
+
+
+def recovery_document_write_bridge(
+    args: argparse.Namespace,
+    project_root: Path,
+    request: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Call the descriptor-hiding document-write bridge exactly once.
+
+    The node agent never receives a Recovery descriptor, local MCP credential,
+    absolute workspace root, or document bytes back from Electron.  A result
+    is still revalidated by the journal boundary before it becomes a receipt.
+    """
+
+    bridge = Path(__file__).with_name("recovery_document_write_bridge.cjs")
+    if not bridge.is_file():
+        return None, "CONTROL_PLANE_DOCUMENT_WRITE_UNAVAILABLE"
+    try:
+        command, environment = _adapter_command(args, bridge, project_root)
+        completed = subprocess.run(
+            command,
+            cwd=project_root,
+            env=environment,
+            input=json.dumps(request, separators=(",", ":")),
+            capture_output=True,
+            text=True,
+            timeout=args.timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return None, "CONTROL_PLANE_DOCUMENT_WRITE_TIMEOUT"
+    except OSError:
+        return None, "CONTROL_PLANE_DOCUMENT_WRITE_UNAVAILABLE"
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return None, "CONTROL_PLANE_DOCUMENT_WRITE_RESULT_INVALID"
+    if completed.returncode == 0 and isinstance(payload, dict) and payload.get("ok") is True:
+        result = payload.get("result")
+        if not isinstance(result, dict):
+            return None, "CONTROL_PLANE_DOCUMENT_WRITE_RESULT_ENVELOPE_INVALID"
+        return result, None
+    error = payload.get("error") if isinstance(payload, dict) else None
+    return None, _safe_error_code(
+        error.get("code") if isinstance(error, dict) else None,
+        "CONTROL_PLANE_DOCUMENT_WRITE_FAILED",
     )
 
 
@@ -3100,6 +4469,13 @@ def request_enrollment(args: argparse.Namespace) -> int:
         raise RuntimeError("CONTROL_PLANE_ENROLLMENT_ARGUMENTS_INVALID")
     existing = _config(config_path) if config_path.exists() else None
     node_secret = ""
+    prior_state: dict[str, Any] = {
+        "enrollment_id": None,
+        "enrollment_state": "unconfigured",
+        "enrollment_observed_at_ms": None,
+        "credential_generation": None,
+        "enrollment_last_error": None,
+    }
     if existing is not None:
         try:
             existing_target = {
@@ -3120,6 +4496,10 @@ def request_enrollment(args: argparse.Namespace) -> int:
             raise RuntimeError("CONTROL_PLANE_ENROLLMENT_CONFIG_INVALID")
         else:
             node_secret = existing_secret
+            prior_state = {
+                key: existing.get(key, default)
+                for key, default in prior_state.items()
+            }
     if not node_secret:
         node_secret = secrets.token_urlsafe(32)
     config = {
@@ -3127,18 +4507,81 @@ def request_enrollment(args: argparse.Namespace) -> int:
         **requested_target,
         "display_name": args.display_name,
         "node_secret": node_secret,
+        **prior_state,
+        "enrollment_state": "request_sent",
+        "enrollment_last_error": None,
     }
     # Write before sending so a loss after the server records the request is
     # retried with the same node credential and therefore stays idempotent.
     # Replacing an existing target requires the explicit CLI flag above.
     _write_config(config_path, config)
-    response = _request(config["server_url"], "/v1/enrollment-requests", {
+    try:
+        response = _request(config["server_url"], "/v1/enrollment-requests", {
+            "device_id": config["device_id"],
+            "endpoint_id": config["endpoint_id"],
+            "display_name": config["display_name"],
+            "credential_hash": _credential_hash(node_secret),
+        })
+        projection = _enrollment_request_projection(response, config=config)
+    except RuntimeError as error:
+        config["enrollment_last_error"] = _safe_error_code(str(error), "CONTROL_PLANE_ENROLLMENT_REQUEST_FAILED")
+        _write_config(config_path, config)
+        raise
+    _persist_enrollment_projection(config_path, config, projection)
+    print(json.dumps({
+        "enrollment_id": projection["enrollment_id"],
         "device_id": config["device_id"],
-        "endpoint_id": config["endpoint_id"],
-        "display_name": config["display_name"],
-        "credential_hash": _credential_hash(node_secret),
-    })
-    print(json.dumps({"enrollment_id": response.get("enrollment_id"), "device_id": config["device_id"], "state": "pending_operator_approval"}, separators=(",", ":")))
+        "state": projection["state"],
+    }, separators=(",", ":")))
+    return 0
+
+
+def reconcile_enrollment(args: argparse.Namespace) -> int:
+    """Reconcile durable enrollment state after restart or a lost response.
+
+    A transport failure returns the last persisted state with ``fresh=false``;
+    it never turns stale approval into a new enrollment or silently grants
+    execution.  A successful response updates the same config atomically.
+    """
+
+    config_path = Path(args.config).expanduser().resolve()
+    if not config_path.exists():
+        print(json.dumps({
+            "device_id": str(args.device_id or ""), "enrollment_id": None, "state": "unconfigured",
+            "credential_generation": None, "fresh": False, "observed_at_ms": None,
+            "error_code": None,
+        }, separators=(",", ":")))
+        return 0
+    config = _config(config_path)
+    try:
+        server_url = _enrollment_server_origin(config.get("server_url"))
+        device_id = str(config.get("device_id") or "").strip()
+        endpoint_id = str(config.get("endpoint_id") or "").strip()
+        node_secret = str(config.get("node_secret") or "")
+        if (POLICY_IDENTIFIER_PATTERN.fullmatch(device_id) is None
+            or device_id != str(args.device_id or "").strip()
+            or POLICY_IDENTIFIER_PATTERN.fullmatch(endpoint_id) is None
+            or len(node_secret) < 16):
+            raise RuntimeError("CONTROL_PLANE_ENROLLMENT_CONFIG_INVALID")
+        response = _request(
+            server_url,
+            f"/v1/nodes/{device_id}/enrollment-status",
+            {"enrollment_id": config.get("enrollment_id")},
+            f"Node {node_secret}",
+        )
+        projection = _enrollment_status_projection(response, config=config)
+    except RuntimeError as error:
+        code = _safe_error_code(str(error), "CONTROL_PLANE_ENROLLMENT_RECONCILE_FAILED")
+        print(json.dumps(_enrollment_local_status(config, fresh=False, error_code=code), separators=(",", ":")))
+        return 0
+    updated = _persist_enrollment_projection(config_path, config, projection)
+    output = _enrollment_local_status(updated, fresh=True)
+    output["enrollment_id"] = projection["enrollment_id"]
+    output["state"] = projection["state"]
+    output["credential_generation"] = projection["credential_generation"]
+    output["observed_at_ms"] = projection["observed_at_ms"]
+    output["error_code"] = None
+    print(json.dumps(output, separators=(",", ":")))
     return 0
 
 
@@ -3210,6 +4653,75 @@ def _workspace_registry_path(args: argparse.Namespace, config_path: Path) -> Pat
     if path.parent != config_path.parent:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_PATH_INVALID")
     return path
+
+
+def _workspace_replacement_journal_path(config_path: Path) -> Path:
+    """Return the same-user, sibling journal used by replacement retries.
+
+    The journal contains only opaque IDs, a local path and the selected
+    capability shape.  It is intentionally kept beside the node config so a
+    crash between the central retire/register boundaries can resume without
+    another credential or a renderer-supplied context.
+    """
+
+    return config_path.with_name(f"{config_path.name}.{WORKSPACE_REPLACEMENT_FILE_NAME}")
+
+
+def _workspace_replacement_record(value: Any) -> dict[str, Any]:
+    expected = {
+        "schema_version", "phase", "device_id", "workspace_id",
+        "old_workspace_generation", "new_workspace_generation",
+        "old_display_name", "old_capabilities", "canonical_path",
+        "display_name", "capabilities", "created_at_ms",
+    }
+    if not isinstance(value, dict) or set(value) != expected:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    if value.get("schema_version") != WORKSPACE_REPLACEMENT_SCHEMA_VERSION:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    phase = value.get("phase")
+    if phase not in WORKSPACE_REPLACEMENT_PHASES:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    canonical_path = str(value.get("canonical_path") or "")
+    if not canonical_path or len(canonical_path) > WORKSPACE_REGISTRY_PATH_MAX_CHARS:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    try:
+        if not Path(canonical_path).is_absolute():
+            raise ValueError("not absolute")
+    except (OSError, ValueError):
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID") from None
+    created_at_ms = value.get("created_at_ms")
+    if not isinstance(created_at_ms, int) or isinstance(created_at_ms, bool) or created_at_ms <= 0:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    return {
+        "schema_version": WORKSPACE_REPLACEMENT_SCHEMA_VERSION,
+        "phase": phase,
+        "device_id": _policy_identifier(value.get("device_id"), "device_id"),
+        "workspace_id": _policy_identifier(value.get("workspace_id"), "workspace_id"),
+        "old_workspace_generation": _policy_identifier(value.get("old_workspace_generation"), "old_workspace_generation"),
+        "new_workspace_generation": _policy_identifier(value.get("new_workspace_generation"), "new_workspace_generation"),
+        "old_display_name": _workspace_display_name(value.get("old_display_name")),
+        "old_capabilities": _workspace_capabilities(value.get("old_capabilities")),
+        "canonical_path": canonical_path,
+        "display_name": _workspace_display_name(value.get("display_name")),
+        "capabilities": _workspace_capabilities(value.get("capabilities")),
+        "created_at_ms": created_at_ms,
+    }
+
+
+def _read_workspace_replacement_journal(path: Path) -> dict[str, Any] | None:
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return None
+    except OSError as error:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_UNAVAILABLE") from error
+    if len(raw) > WORKSPACE_REPLACEMENT_MAX_BYTES:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID")
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_JOURNAL_INVALID") from error
+    return _workspace_replacement_record(value)
 
 
 def _workspace_registry_entry(value: Any) -> dict[str, Any]:
@@ -3535,6 +5047,36 @@ def _disable_matching_retired_workspace_approved_patch_policy(args: argparse.Nam
     return True
 
 
+def _disable_matching_retired_workspace_exec_policy(args: argparse.Namespace, entry: dict[str, Any]) -> bool:
+    """Disable standing exec authority bound to a retired generation."""
+
+    try:
+        policy_path = _exec_policy_path(args)
+    except RuntimeError:
+        if _runtime_mode(args) == "development":
+            return False
+        raise
+    try:
+        policy = _read_exec_policy(policy_path)
+    except RuntimeError as error:
+        if str(error) in {
+            "CONTROL_PLANE_EXEC_POLICY_MISSING",
+            "CONTROL_PLANE_EXEC_POLICY_INVALID",
+            "CONTROL_PLANE_EXEC_POLICY_EXPIRED",
+        }:
+            return False
+        raise
+    if (
+        policy["workspace_id"] != entry["workspace_id"]
+        or policy["workspace_generation"] != entry["workspace_generation"]
+        or policy["enabled"] is not True
+    ):
+        return False
+    policy["enabled"] = False
+    _write_local_policy(policy_path, policy, replace=True)
+    return True
+
+
 def list_workspaces(args: argparse.Namespace) -> int:
     """List only path-free local workspace inventory for the Electron UI."""
 
@@ -3586,6 +5128,7 @@ def retire_workspace(args: argparse.Namespace) -> int:
     _disable_matching_retired_workspace_policy(args, entry)
     _disable_matching_retired_workspace_file_read_policy(args, entry)
     _disable_matching_retired_workspace_approved_patch_policy(args, entry)
+    _disable_matching_retired_workspace_exec_policy(args, entry)
     registry["entries"] = [
         item
         for item in registry["entries"]
@@ -3596,6 +5139,232 @@ def retire_workspace(args: argparse.Namespace) -> int:
     ]
     _write_json_atomic(registry_path, registry)
     print(json.dumps({**receipt, "state": "retired"}, separators=(",", ":")))
+    return 0
+
+
+def _workspace_replacement_output(
+    *,
+    config: dict[str, Any],
+    journal: dict[str, Any],
+    replayed: bool,
+) -> dict[str, Any]:
+    return {
+        "workspace_id": journal["workspace_id"],
+        "old_workspace_generation": journal["old_workspace_generation"],
+        "workspace_generation": journal["new_workspace_generation"],
+        "display_name": journal["display_name"],
+        "capabilities": journal["capabilities"],
+        "replayed": bool(replayed),
+        "state": "replaced",
+    }
+
+
+def _replace_local_workspace_registry_entry(
+    registry_path: Path,
+    *,
+    journal: dict[str, Any],
+    old_entry: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Commit the new generation only after central registration is durable."""
+
+    registry = _read_workspace_registry(registry_path)
+    old_identity = (journal["workspace_id"], journal["old_workspace_generation"])
+    new_identity = (journal["workspace_id"], journal["new_workspace_generation"])
+    current_old = next(
+        (
+            item for item in registry["entries"]
+            if (item["workspace_id"], item["workspace_generation"]) == old_identity
+        ),
+        None,
+    )
+    current_new = next(
+        (
+            item for item in registry["entries"]
+            if (item["workspace_id"], item["workspace_generation"]) == new_identity
+        ),
+        None,
+    )
+    if old_entry is not None and current_old is not None:
+        if (
+            current_old["canonical_path"] != old_entry["canonical_path"]
+            or current_old["display_name"] != journal["old_display_name"]
+            or current_old["capabilities"] != journal["old_capabilities"]
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+    if current_new is not None:
+        if (
+            current_new["canonical_path"] != journal["canonical_path"]
+            or current_new["display_name"] != journal["display_name"]
+            or current_new["capabilities"] != journal["capabilities"]
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+        # A retry after the final local write is idempotent.  Remove any stale
+        # old entry below, but do not rewrite the validated new entry.
+        replacement = current_new
+    else:
+        if current_old is None and old_entry is not None:
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+        if any(
+            item["canonical_path"] == journal["canonical_path"]
+            and (item["workspace_id"], item["workspace_generation"]) != old_identity
+            for item in registry["entries"]
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+        replacement = {
+            "workspace_id": journal["workspace_id"],
+            "workspace_generation": journal["new_workspace_generation"],
+            "canonical_path": journal["canonical_path"],
+            "display_name": journal["display_name"],
+            "capabilities": journal["capabilities"],
+            "created_at_ms": int(time.time() * 1000),
+        }
+    entries = [
+        item for item in registry["entries"]
+        if (item["workspace_id"], item["workspace_generation"]) not in {old_identity, new_identity}
+    ]
+    entries.append(replacement)
+    if len(entries) > WORKSPACE_REGISTRY_MAX_ENTRIES:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_FULL")
+    _write_json_atomic(registry_path, {"schema_version": WORKSPACE_REGISTRY_SCHEMA_VERSION, "entries": entries})
+    return replacement
+
+
+def replace_workspace(args: argparse.Namespace) -> int:
+    """Replace a registered root's capability/label without silent overwrite.
+
+    The central retirement is committed first.  A small local journal then
+    makes a crash between retirement and registration resume the same opaque
+    workspace ID/generation transition instead of creating a duplicate root.
+    """
+
+    if getattr(args, "confirm_replace", False) is not True:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_CONFIRMATION_REQUIRED")
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    registry_path = _workspace_registry_path(args, config_path)
+    canonical_path = _canonical_workspace_root(args.workspace_path)
+    display_name = _workspace_display_name(args.display_name)
+    capabilities = _workspace_capabilities({
+        "read": getattr(args, "capability_read", False) is True,
+        "write": getattr(args, "capability_write", False) is True,
+        "exec": getattr(args, "capability_exec", False) is True,
+    })
+    journal_path = _workspace_replacement_journal_path(config_path)
+    journal = _read_workspace_replacement_journal(journal_path)
+    resumed = journal is not None
+    registry = _read_workspace_registry(registry_path)
+    if journal is None:
+        old_entry = next(
+            (item for item in registry["entries"] if item["canonical_path"] == canonical_path),
+            None,
+        )
+        if old_entry is None:
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_NOT_FOUND")
+        if old_entry["display_name"] == display_name and old_entry["capabilities"] == capabilities:
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_NO_CHANGE")
+        journal = {
+            "schema_version": WORKSPACE_REPLACEMENT_SCHEMA_VERSION,
+            "phase": "planned",
+            "device_id": config["device_id"],
+            "workspace_id": old_entry["workspace_id"],
+            "old_workspace_generation": old_entry["workspace_generation"],
+            "new_workspace_generation": f"generation_{uuid.uuid4().hex}",
+            "old_display_name": old_entry["display_name"],
+            "old_capabilities": old_entry["capabilities"],
+            "canonical_path": canonical_path,
+            "display_name": display_name,
+            "capabilities": capabilities,
+            "created_at_ms": int(time.time() * 1000),
+        }
+        journal = _workspace_replacement_record(journal)
+        _write_json_atomic(journal_path, journal)
+    else:
+        if (
+            journal["device_id"] != config["device_id"]
+            or journal["canonical_path"] != canonical_path
+            or journal["display_name"] != display_name
+            or journal["capabilities"] != capabilities
+        ):
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_IN_PROGRESS")
+        old_entry = next(
+            (
+                item for item in registry["entries"]
+                if item["workspace_id"] == journal["workspace_id"]
+                and item["workspace_generation"] == journal["old_workspace_generation"]
+            ),
+            None,
+        )
+        new_entry = next(
+            (
+                item for item in registry["entries"]
+                if item["workspace_id"] == journal["workspace_id"]
+                and item["workspace_generation"] == journal["new_workspace_generation"]
+            ),
+            None,
+        )
+        if old_entry is None and new_entry is not None:
+            _workspace_replacement_journal_path(config_path).unlink(missing_ok=True)
+            print(json.dumps(_workspace_replacement_output(config=config, journal=journal, replayed=True), separators=(",", ":")))
+            return 0
+        if old_entry is None:
+            raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+
+    if (
+        old_entry["canonical_path"] != journal["canonical_path"]
+        or old_entry["display_name"] != journal["old_display_name"]
+        or old_entry["capabilities"] != journal["old_capabilities"]
+    ):
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REPLACEMENT_REGISTRY_CONFLICT")
+    if journal["phase"] in {"planned", "retire_sent"}:
+        journal = _workspace_replacement_record({**journal, "phase": "retire_sent"})
+        _write_json_atomic(journal_path, journal)
+        response = _request(
+            str(config["server_url"]),
+            f"/v1/nodes/{config['device_id']}/workspace-registrations/retire",
+            {
+                "workspace_id": journal["workspace_id"],
+                "workspace_generation": journal["old_workspace_generation"],
+            },
+            f"Node {config['node_secret']}",
+        )
+        _workspace_retirement_response(response, config=config, entry=old_entry)
+        journal = _workspace_replacement_record({**journal, "phase": "retired"})
+        _write_json_atomic(journal_path, journal)
+
+    # Central retirement is now durable; revoke every local policy family
+    # before the new generation can be registered in the local registry.
+    _disable_matching_retired_workspace_policy(args, old_entry)
+    _disable_matching_retired_workspace_file_read_policy(args, old_entry)
+    _disable_matching_retired_workspace_approved_patch_policy(args, old_entry)
+    _disable_matching_retired_workspace_exec_policy(args, old_entry)
+
+    new_entry = {
+        "workspace_id": journal["workspace_id"],
+        "workspace_generation": journal["new_workspace_generation"],
+        "canonical_path": journal["canonical_path"],
+        "display_name": journal["display_name"],
+        "capabilities": journal["capabilities"],
+        "created_at_ms": journal["created_at_ms"],
+    }
+    if journal["phase"] != "register_sent":
+        journal = _workspace_replacement_record({**journal, "phase": "register_sent"})
+        _write_json_atomic(journal_path, journal)
+    response = _request(
+        str(config["server_url"]),
+        f"/v1/nodes/{config['device_id']}/workspace-registrations",
+        {
+            "workspace_id": new_entry["workspace_id"],
+            "workspace_generation": new_entry["workspace_generation"],
+            "display_name": new_entry["display_name"],
+            "capabilities": new_entry["capabilities"],
+        },
+        f"Node {config['node_secret']}",
+    )
+    registration = _workspace_registration_response(response, config=config, entry=new_entry)
+    _replace_local_workspace_registry_entry(registry_path, journal=journal, old_entry=old_entry)
+    journal_path.unlink(missing_ok=True)
+    replayed = resumed or bool(registration.get("replayed"))
+    print(json.dumps(_workspace_replacement_output(config=config, journal=journal, replayed=replayed), separators=(",", ":")))
     return 0
 
 
@@ -4436,6 +6205,338 @@ def run_file_read_loop(args: argparse.Namespace) -> int:
     return 0
 
 
+def _poll_document_write_once(args: argparse.Namespace) -> int:
+    """Run one policy-gated document create/convert delivery attempt."""
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    journal_path = _document_write_journal_path(config_path)
+    journal = _read_document_write_journal(journal_path)
+    submitted_receipts = _flush_document_write_journal(config, journal_path, journal)
+
+    project_root = Path(args.project_root).expanduser().resolve()
+    status = _runtime_status(args, project_root)
+    readiness, reason = runtime_readiness(status)
+    if readiness != "ready":
+        print(json.dumps({
+            "execution": "document_write_not_started",
+            "reason": reason,
+            "received_action_ids": [],
+            "submitted_receipts": submitted_receipts,
+        }, separators=(",", ":")))
+        return 0
+    identity = observed_runtime_identity(recovery_identity_observation(args, project_root))
+    if identity is None:
+        print(json.dumps({
+            "execution": "document_write_not_started",
+            "reason": "runtime_identity_unproven",
+            "received_action_ids": [],
+            "submitted_receipts": submitted_receipts,
+        }, separators=(",", ":")))
+        return 0
+
+    response = _request(
+        str(config["server_url"]),
+        f"/v1/nodes/{config['device_id']}/poll",
+        {"limit": 1, "lane": "document_write"},
+        f"Node {config['node_secret']}",
+    )
+    actions = response.get("actions")
+    if not isinstance(actions, list) or len(actions) > 1:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+
+    completed: list[str] = []
+    rejected: list[str] = []
+    unknown: list[str] = []
+    received: list[str] = []
+    for action in actions:
+        if not isinstance(action, dict):
+            raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+        action_id = _document_write_action_identifier(action, "action_id")
+        attempt_id = _document_write_action_identifier(action, "attempt_id")
+        received.append(action_id)
+        key = _document_write_journal_key(action_id, attempt_id)
+        if key in journal["entries"]:
+            submitted_receipts += _flush_document_write_journal(config, journal_path, journal)
+            continue
+        try:
+            request = _document_write_bridge_request(action, config)
+            policy, _entry = _admit_document_write_policy_request(
+                args,
+                config_path=config_path,
+                config=config,
+                request=request,
+            )
+            # RecoveryHost and RuntimeOrchestrator bind the result to this
+            # exact policy projection. Keep the digest out of the central
+            # action and add it only inside the local bridge envelope.
+            request = {**request, "policy_sha256": _policy_digest(policy)}
+            expected_policy_sha256 = _policy_digest(policy)
+        except RuntimeError as error:
+            code = _safe_error_code(error, "CONTROL_PLANE_DOCUMENT_WRITE_ACTION_DENIED")
+            entry = _record_document_write_receipt(
+                journal_path,
+                journal,
+                state="rejected",
+                action_id=action_id,
+                attempt_id=attempt_id,
+                receipt_state="rejected",
+                local_handle="",
+                payload={
+                    "schema_version": 1,
+                    "operation_kind": "control_plane_document_write",
+                    "code": code,
+                },
+            )
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            rejected.append(action_id)
+            continue
+
+        journal["entries"][key] = {
+            "state": "prepared",
+            "action_id": action_id,
+            "attempt_id": attempt_id,
+        }
+        _write_json_atomic(journal_path, journal)
+        try:
+            try:
+                result, error_code = recovery_document_write_bridge(args, project_root, request)
+            except Exception:
+                result, error_code = None, "CONTROL_PLANE_DOCUMENT_WRITE_AGENT_EXCEPTION"
+            if result is not None:
+                safe_result = _safe_document_write_bridge_result(
+                    result,
+                    request,
+                    expected_policy_sha256=expected_policy_sha256,
+                )
+                entry = _record_document_write_receipt(
+                    journal_path,
+                    journal,
+                    state="completed",
+                    action_id=action_id,
+                    attempt_id=attempt_id,
+                    receipt_state="completed",
+                    local_handle=str(safe_result["local_handle"]),
+                    payload=safe_result,
+                )
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted_receipts += 1
+                completed.append(action_id)
+                continue
+
+            code = _safe_error_code(error_code, "CONTROL_PLANE_DOCUMENT_WRITE_FAILED")
+            pre_effect = code in DOCUMENT_WRITE_PRE_EFFECT_REJECTION_CODES
+            entry = _record_document_write_receipt(
+                journal_path,
+                journal,
+                state="rejected" if pre_effect else "unknown",
+                action_id=action_id,
+                attempt_id=attempt_id,
+                receipt_state="rejected" if pre_effect else "unknown",
+                local_handle="",
+                payload={
+                    "schema_version": 1,
+                    "operation_kind": "control_plane_document_write",
+                    "code": code if pre_effect else "CONTROL_PLANE_DOCUMENT_WRITE_EFFECT_UNKNOWN",
+                    **({} if pre_effect else {"diagnostic_code": code, "reconciliation_required": True}),
+                },
+            )
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            (rejected if pre_effect else unknown).append(action_id)
+        except Exception as error:
+            prepared = journal["entries"].get(key)
+            if not isinstance(prepared, dict) or prepared.get("state") != "prepared":
+                raise
+            _recover_document_write_prepared_entry(prepared, _safe_error_code(error))
+            _write_json_atomic(journal_path, journal)
+            _submit_receipt(config, prepared)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            unknown.append(action_id)
+
+    print(json.dumps({
+        "execution": "document_write_once",
+        "runtime_identity": "reported",
+        "received_action_ids": received,
+        "completed_action_ids": completed,
+        "rejected_action_ids": rejected,
+        "unknown_action_ids": unknown,
+        "submitted_receipts": submitted_receipts,
+    }, separators=(",", ":")))
+    return 0
+
+
+def _document_write_poll_lock_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.document-write-poll.lock")
+
+
+def _document_write_loop_lock_path(config_path: Path) -> Path:
+    return config_path.with_name(f"{config_path.name}.document-write-loop.lock")
+
+
+def _stale_document_write_lock(lock_path: Path) -> bool:
+    try:
+        value = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    return bool(
+        isinstance(value, dict)
+        and set(value) == {"schema_version", "instance_id", "pid"}
+        and value.get("schema_version") == DOCUMENT_WRITE_LOOP_LOCK_SCHEMA_VERSION
+        and isinstance(value.get("instance_id"), str)
+        and bool(value["instance_id"])
+        and isinstance(value.get("pid"), int)
+        and not isinstance(value.get("pid"), bool)
+        and not _pid_is_live(value["pid"])
+    )
+
+
+@contextmanager
+def _exclusive_document_write_lock(
+    lock_path: Path,
+    *,
+    already_running_code: str,
+) -> Iterator[None]:
+    """Own document-write polling independently from every other lane."""
+
+    instance_id = uuid.uuid4().hex
+    descriptor = {
+        "schema_version": DOCUMENT_WRITE_LOOP_LOCK_SCHEMA_VERSION,
+        "instance_id": instance_id,
+        "pid": os.getpid(),
+    }
+    acquired = False
+    for _attempt in range(2):
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            file_descriptor = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            if not _stale_document_write_lock(lock_path):
+                raise RuntimeError(already_running_code)
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                raise RuntimeError(already_running_code) from error
+            continue
+        try:
+            with os.fdopen(file_descriptor, "w", encoding="utf-8") as lock_file:
+                lock_file.write(json.dumps(descriptor, separators=(",", ":")) + "\n")
+                lock_file.flush()
+                os.fsync(lock_file.fileno())
+        except OSError:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+            raise
+        acquired = True
+        break
+    if not acquired:
+        raise RuntimeError(already_running_code)
+    try:
+        yield
+    finally:
+        try:
+            value = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            value = None
+        if isinstance(value, dict) and value.get("instance_id") == instance_id and value.get("pid") == os.getpid():
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+
+def poll_document_write_once(args: argparse.Namespace) -> int:
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    with _exclusive_document_write_lock(
+        _document_write_poll_lock_path(config_path),
+        already_running_code="CONTROL_PLANE_DOCUMENT_WRITE_POLL_ALREADY_RUNNING",
+    ):
+        return _poll_document_write_once(args)
+
+
+def _document_write_loop_interval(args: argparse.Namespace) -> int:
+    interval_seconds = getattr(args, "interval_seconds", None)
+    if (
+        not isinstance(interval_seconds, int)
+        or isinstance(interval_seconds, bool)
+        or not DOCUMENT_WRITE_LOOP_MIN_INTERVAL_SECONDS <= interval_seconds <= DOCUMENT_WRITE_LOOP_MAX_INTERVAL_SECONDS
+    ):
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_LOOP_INTERVAL_INVALID")
+    return interval_seconds
+
+
+def _document_write_loop_policy_admission(args: argparse.Namespace) -> None:
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    _document_write_policy_admission(args, config_path=config_path, config=config)
+
+
+def _document_write_iteration(args: argparse.Namespace) -> None:
+    _document_write_loop_policy_admission(args)
+    runtime_heartbeat(args)
+    poll_document_write_once(args)
+
+
+def run_document_write_loop(args: argparse.Namespace) -> int:
+    """Run a bounded, owner-enabled document-write worker."""
+
+    interval_seconds = _document_write_loop_interval(args)
+    max_iterations = args.max_iterations
+    if not isinstance(max_iterations, int) or isinstance(max_iterations, bool) or max_iterations < 1:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_LOOP_ITERATIONS_INVALID")
+    if interval_seconds * max_iterations > DOCUMENT_WRITE_LOOP_MAX_DURATION_SECONDS:
+        raise RuntimeError("CONTROL_PLANE_DOCUMENT_WRITE_LOOP_DURATION_EXCEEDED")
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    completed_iterations = 0
+    try:
+        with _exclusive_document_write_lock(
+            _document_write_loop_lock_path(config_path),
+            already_running_code="CONTROL_PLANE_DOCUMENT_WRITE_LOOP_ALREADY_RUNNING",
+        ):
+            for iteration in range(1, max_iterations + 1):
+                try:
+                    _document_write_iteration(args)
+                    state = "completed"
+                    reason = None
+                except RuntimeError as error:
+                    reason = _safe_error_code(error)
+                    if reason in DOCUMENT_WRITE_POLICY_STOP_CODES:
+                        print(json.dumps({
+                            "execution": "document_write_loop_not_started" if iteration == 1 else "document_write_loop_stopped",
+                            "reason": reason,
+                            "completed_iterations": completed_iterations,
+                        }, separators=(",", ":")))
+                        return 0
+                    state = "degraded"
+                completed_iterations = iteration
+                print(json.dumps({
+                    "execution": "document_write_loop_iteration",
+                    "iteration": iteration,
+                    "state": state,
+                    "reason": reason,
+                }, separators=(",", ":")))
+                if iteration < max_iterations:
+                    time.sleep(interval_seconds)
+    except KeyboardInterrupt:
+        print(json.dumps({
+            "execution": "document_write_loop_interrupted",
+            "completed_iterations": completed_iterations,
+        }, separators=(",", ":")))
+        return 130
+    return 0
+
+
 def _approved_patch_poll_lock_path(config_path: Path) -> Path:
     return config_path.with_name(f"{config_path.name}.approved-patch-poll.lock")
 
@@ -4931,6 +7032,240 @@ def run_read_only_agent(args: argparse.Namespace) -> int:
     return 0
 
 
+def _connected_agent_interval(args: argparse.Namespace) -> int:
+    interval_seconds = getattr(args, "interval_seconds", None)
+    if (
+        not isinstance(interval_seconds, int)
+        or isinstance(interval_seconds, bool)
+        or not READ_ONLY_LOOP_MIN_INTERVAL_SECONDS <= interval_seconds <= READ_ONLY_LOOP_MAX_INTERVAL_SECONDS
+    ):
+        raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_INTERVAL_INVALID")
+    return interval_seconds
+
+
+def _connected_agent_lock_path(config_path: Path) -> Path:
+    """Keep the long-lived connected-agent lock beside the private config."""
+
+    return config_path.with_name(f"{config_path.name}.connected-agent.lock")
+
+
+def _stale_connected_agent_lock(lock_path: Path) -> bool:
+    try:
+        value = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return False
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema_version", "instance_id", "pid"}
+        or value.get("schema_version") != CONNECTED_AGENT_LOCK_SCHEMA_VERSION
+        or not isinstance(value.get("instance_id"), str)
+        or not value["instance_id"]
+        or not isinstance(value.get("pid"), int)
+        or isinstance(value.get("pid"), bool)
+    ):
+        return False
+    return not _pid_is_live(value["pid"])
+
+
+@contextmanager
+def _exclusive_connected_agent_lock(config_path: Path) -> Iterator[None]:
+    """Allow one connected agent per node profile, reclaiming only dead locks."""
+
+    lock_path = _connected_agent_lock_path(config_path)
+    instance_id = uuid.uuid4().hex
+    descriptor = {
+        "schema_version": CONNECTED_AGENT_LOCK_SCHEMA_VERSION,
+        "instance_id": instance_id,
+        "pid": os.getpid(),
+    }
+    acquired = False
+    for _attempt in range(2):
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            file_descriptor = os.open(str(lock_path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:
+            if not _stale_connected_agent_lock(lock_path):
+                raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_ALREADY_RUNNING")
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError as error:
+                raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_ALREADY_RUNNING") from error
+            continue
+        try:
+            with os.fdopen(file_descriptor, "w", encoding="utf-8") as lock_file:
+                lock_file.write(json.dumps(descriptor, separators=(",", ":")) + "\n")
+                lock_file.flush()
+                os.fsync(lock_file.fileno())
+        except OSError:
+            try:
+                lock_path.unlink()
+            except OSError:
+                pass
+            raise
+        acquired = True
+        break
+    if not acquired:
+        raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_ALREADY_RUNNING")
+    try:
+        yield
+    finally:
+        try:
+            value = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            value = None
+        if isinstance(value, dict) and value.get("instance_id") == instance_id and value.get("pid") == os.getpid():
+            try:
+                lock_path.unlink()
+            except FileNotFoundError:
+                pass
+
+
+def _connected_exec_policy_admission(args: argparse.Namespace) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Check standing exec authority without allocating or consuming an action."""
+
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    policy = _normalise_exec_policy(
+        _read_exec_policy(_exec_policy_path(args)),
+        now_ms=int(time.time() * 1000),
+        require_enabled=True,
+    )
+    if (
+        policy["server_origin"] != _server_origin(config.get("server_url"))
+        or policy["device_id"] != config.get("device_id")
+        or policy["endpoint_id"] != config.get("endpoint_id")
+    ):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
+    entry = _require_policy_workspace_registration(args, config_path=config_path, policy=policy)
+    if entry is not None and entry["capabilities"].get("exec") is not True:
+        raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
+    return policy, entry
+
+
+def _connected_agent_lane_admission(args: argparse.Namespace, lane: str) -> None:
+    config_path = Path(args.config).expanduser().resolve()
+    config = _config(config_path)
+    if lane in {"file_read", "artifact"}:
+        _file_read_policy_admission(args, config_path=config_path, config=config)
+        return
+    if lane == "approved_patch":
+        _approved_patch_policy_admission(args, config_path=config_path, config=config)
+        return
+    if lane == "document_write":
+        _document_write_policy_admission(args, config_path=config_path, config=config)
+        return
+    if lane == "exec":
+        _connected_exec_policy_admission(args)
+        return
+    raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_LANE_INVALID")
+
+
+def _connected_agent_iteration(args: argparse.Namespace) -> list[dict[str, str]]:
+    """Heartbeat first, then poll only locally enabled standing capability lanes."""
+
+    runtime_heartbeat(args)
+    lanes: list[tuple[str, Any]] = [
+        ("file_read", poll_file_read_once),
+        ("artifact", poll_artifact_once),
+        ("approved_patch", poll_approved_patch_once),
+        ("document_write", poll_document_write_once),
+        ("exec", poll_exec_once),
+    ]
+    stop_codes = (
+        set(FILE_READ_POLICY_STOP_CODES)
+        | set(APPROVED_PATCH_POLICY_STOP_CODES)
+        | set(DOCUMENT_WRITE_POLICY_STOP_CODES)
+        | set(EXEC_POLICY_STOP_CODES)
+        | {"CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT", "CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED"}
+    )
+    result: list[dict[str, str]] = []
+    for lane, poller in lanes:
+        try:
+            _connected_agent_lane_admission(args, lane)
+        except RuntimeError as error:
+            code = _safe_error_code(error)
+            if code in stop_codes:
+                result.append({"lane": lane, "state": "disabled", "reason": code})
+                continue
+            raise
+        poller(args)
+        result.append({"lane": lane, "state": "polled", "reason": ""})
+    return result
+
+
+def run_connected_agent(args: argparse.Namespace) -> int:
+    """Keep an enrolled node connected independently of the read-only pilot.
+
+    A heartbeat is always attempted after enrollment.  Local standing policy
+    files decide which capability lanes may dequeue work; a missing/disabled
+    lane is reported and skipped, never treated as permission to broaden the
+    node.  Transport/runtime/auth failures use bounded reconnect backoff.
+    """
+
+    interval_seconds = _connected_agent_interval(args)
+    max_backoff_seconds = getattr(args, "max_backoff_seconds", None)
+    max_iterations = getattr(args, "max_iterations", None)
+    if (
+        not isinstance(max_backoff_seconds, int)
+        or isinstance(max_backoff_seconds, bool)
+        or not interval_seconds <= max_backoff_seconds <= CONNECTED_AGENT_MAX_BACKOFF_SECONDS
+    ):
+        raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_BACKOFF_INVALID")
+    if not isinstance(max_iterations, int) or isinstance(max_iterations, bool) or max_iterations < 0:
+        raise RuntimeError("CONTROL_PLANE_CONNECTED_AGENT_ITERATIONS_INVALID")
+
+    config_path = Path(args.config).expanduser().resolve()
+    _config(config_path)
+    completed_iterations = 0
+    failures = 0
+    try:
+        with _exclusive_connected_agent_lock(config_path):
+            print(json.dumps({
+                "execution": "connected_agent_started",
+                "interval_seconds": interval_seconds,
+                "max_backoff_seconds": max_backoff_seconds,
+            }, separators=(",", ":")))
+            while max_iterations == 0 or completed_iterations < max_iterations:
+                iteration = completed_iterations + 1
+                lanes: list[dict[str, str]] = []
+                try:
+                    lanes = _connected_agent_iteration(args)
+                    state = "completed"
+                    reason = None
+                    failures = 0
+                    delay_seconds = interval_seconds
+                except RuntimeError as error:
+                    reason = _safe_error_code(error)
+                    state = "degraded"
+                    failures += 1
+                    delay_seconds = min(max_backoff_seconds, interval_seconds * (2 ** min(failures - 1, 16)))
+                completed_iterations = iteration
+                print(json.dumps({
+                    "execution": "connected_agent_iteration",
+                    "iteration": iteration,
+                    "state": state,
+                    "reason": reason,
+                    "lanes": lanes,
+                    "next_delay_seconds": delay_seconds,
+                }, separators=(",", ":")))
+                if max_iterations == 0 or completed_iterations < max_iterations:
+                    time.sleep(delay_seconds)
+    except KeyboardInterrupt:
+        print(json.dumps({
+            "execution": "connected_agent_interrupted",
+            "completed_iterations": completed_iterations,
+        }, separators=(",", ":")))
+        return 130
+    print(json.dumps({
+        "execution": "connected_agent_stopped",
+        "reason": "MAX_ITERATIONS_REACHED",
+        "completed_iterations": completed_iterations,
+    }, separators=(",", ":")))
+    return 0
+
+
 EXEC_POLICY_STOP_CODES = frozenset({
     "CONTROL_PLANE_EXEC_POLICY_MISSING",
     "CONTROL_PLANE_EXEC_POLICY_INVALID",
@@ -4938,16 +7273,6 @@ EXEC_POLICY_STOP_CODES = frozenset({
     "CONTROL_PLANE_EXEC_DISABLED",
     "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH",
 })
-EXEC_PRE_EFFECT_REJECTION_CODES = EXEC_POLICY_STOP_CODES | frozenset({
-    "CONTROL_PLANE_EXEC_ACTION_DENIED",
-    "CONTROL_PLANE_EXEC_REQUEST_INVALID",
-    "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED",
-    "CONTROL_PLANE_EXEC_WORKSPACE_BUSY",
-    "CONTROL_PLANE_EXEC_RUNTIME_UNREADY",
-    "CONTROL_PLANE_EXEC_IDENTITY_UNPROVEN",
-})
-
-
 def _exec_policy_path(args: argparse.Namespace) -> Path:
     return _policy_data_root(args) / EXEC_POLICY_FILE_NAME
 
@@ -5053,20 +7378,34 @@ def _exec_argv_item(value: Any) -> str:
 
 
 def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_enabled: bool = False) -> dict[str, Any]:
+    if not isinstance(policy, dict):
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    schema_version = policy.get("schema_version")
+    standing = schema_version == EXEC_POLICY_SCHEMA_VERSION
+    legacy = schema_version == EXEC_POLICY_LEGACY_SCHEMA_VERSION
     expected = {"schema_version", "enabled", "server_origin", "owner_id", "device_id", "endpoint_id",
                 "workspace_id", "workspace_generation", "expires_at_ms", "facade_contract",
                 "allowed_argv_prefixes", "max_timeout_ms", "max_output_bytes", "max_concurrent"}
-    if not isinstance(policy, dict) or set(policy) != expected:
+    if standing:
+        expected.add("authority_mode")
+    if not (standing or legacy) or set(policy) != expected:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
-    if policy.get("schema_version") != EXEC_POLICY_SCHEMA_VERSION or not isinstance(policy.get("enabled"), bool):
+    if not isinstance(policy.get("enabled"), bool):
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
     if require_enabled and policy["enabled"] is not True:
         raise RuntimeError("CONTROL_PLANE_EXEC_DISABLED")
-    expires_at_ms = policy.get("expires_at_ms")
-    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+    authority_mode = EXEC_POLICY_STANDING_AUTHORITY if standing else "expiring_legacy"
+    if standing and policy.get("authority_mode") != EXEC_POLICY_STANDING_AUTHORITY:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
-    if now_ms is not None and expires_at_ms <= now_ms:
-        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+    expires_at_ms = policy.get("expires_at_ms")
+    if standing:
+        if expires_at_ms is not None:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+    else:
+        if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
+        if now_ms is not None and expires_at_ms <= now_ms:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
     facade = policy.get("facade_contract")
     if not isinstance(facade, dict):
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
@@ -5089,8 +7428,9 @@ def _normalise_exec_policy(policy: Any, *, now_ms: int | None = None, require_en
     if not isinstance(max_concurrent, int) or isinstance(max_concurrent, bool) or not 1 <= max_concurrent <= 4:
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
     return {
-        "schema_version": EXEC_POLICY_SCHEMA_VERSION,
+        "schema_version": schema_version,
         "enabled": policy["enabled"],
+        "authority_mode": authority_mode,
         "server_origin": _server_origin(policy.get("server_origin")),
         "owner_id": _policy_identifier(policy.get("owner_id"), "owner_id"),
         "device_id": _policy_identifier(policy.get("device_id"), "device_id"),
@@ -5122,16 +7462,16 @@ def _read_exec_policy(policy_path: Path) -> dict[str, Any]:
 def _install_exec_policy_values(*, owner_id: str, device_id: str, endpoint_id: str, workspace_id: str,
                                 workspace_generation: str, server_origin: str, facade_contract: dict[str, Any],
                                 allowed_argv_prefixes: list[list[str]], max_timeout_ms: int,
-                                max_output_bytes: int, ttl_ms: int = 24 * 60 * 60 * 1000) -> dict[str, Any]:
-    now_ms = int(time.time() * 1000)
+                                max_output_bytes: int) -> dict[str, Any]:
     return _normalise_exec_policy({
         "schema_version": EXEC_POLICY_SCHEMA_VERSION, "enabled": True, "server_origin": server_origin,
         "owner_id": owner_id, "device_id": device_id, "endpoint_id": endpoint_id,
         "workspace_id": workspace_id, "workspace_generation": workspace_generation,
-        "expires_at_ms": now_ms + ttl_ms, "facade_contract": facade_contract,
+        "authority_mode": EXEC_POLICY_STANDING_AUTHORITY, "expires_at_ms": None,
+        "facade_contract": facade_contract,
         "allowed_argv_prefixes": allowed_argv_prefixes, "max_timeout_ms": max_timeout_ms,
         "max_output_bytes": max_output_bytes, "max_concurrent": 2,
-    }, now_ms=now_ms, require_enabled=True)
+    }, require_enabled=True)
 
 
 def _exec_allowlist_match(argv: list[str], prefixes: list[list[str]]) -> bool:
@@ -5142,7 +7482,7 @@ def _exec_allowlist_match(argv: list[str], prefixes: list[list[str]]) -> bool:
 
 
 def _exec_bridge_request(action: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
-    for field in ("action_id", "attempt_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
+    for field in ("action_id", "attempt_id", "owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation", "context_id", "binding_id"):
         value = action.get(field)
         if not isinstance(value, str) or not value.strip():
             raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
@@ -5169,25 +7509,94 @@ def _exec_bridge_request(action: dict[str, Any], config: dict[str, Any]) -> dict
         raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
     if not isinstance(max_output, int) or not 1024 <= max_output <= EXEC_MAX_OUTPUT_BYTES:
         raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
-    return {"action_id": action["action_id"], "attempt_id": action["attempt_id"],
-            "device_id": action["device_id"], "endpoint_id": action["endpoint_id"],
-            "workspace_id": action["workspace_id"], "workspace_generation": action["workspace_generation"],
+    task_id, writer_lease_generation = _writer_lease_authority(
+        action, code="CONTROL_PLANE_EXEC_ACTION_DENIED"
+    )
+    expires_at_ms = action.get("expires_at_ms")
+    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool):
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    return {"server_origin": _server_origin(config.get("server_url")),
+            "owner_id": action["owner_id"], "device_id": action["device_id"],
+            "endpoint_id": action["endpoint_id"], "workspace_id": action["workspace_id"],
+            "workspace_generation": action["workspace_generation"],
+            "context_id": action["context_id"], "binding_id": action["binding_id"],
+            "action_id": action["action_id"], "attempt_id": action["attempt_id"],
+            "expires_at_ms": expires_at_ms,
+            "task_id": task_id, "writer_lease_generation": writer_lease_generation,
+            "tool_name": EXEC_TOOL_NAME, "operation": "exec_run",
             "argv": argv, "cwd": cwd, "timeout_ms": timeout_ms, "max_output_bytes": max_output,
             "facade_contract": {"schema_version": action.get("mcp_exec_facade_schema_version"),
                                 "profile": action.get("mcp_exec_facade_profile"),
-                                "sha256": action.get("mcp_exec_facade_contract_sha256")}}
+                                "sha256": action.get("mcp_exec_facade_contract_sha256")},
+            "command_id": None, "job_id": None, "local_handle": None,
+            "consumer_id": None, "yield_time_ms": None, "signal": None, "wait_ms": None,
+            "run_id": None, "wave_id": None}
+
+
+def _exec_control_request(base_request: dict[str, Any], result: dict[str, Any], *, operation: str,
+                          signal: str | None = None, wait_ms: int | None = None,
+                          yield_time_ms: int = 10_000) -> dict[str, Any]:
+    """Build a control envelope for one already-created local command.
+
+    The original exec request and its local handle are journal authority.  A
+    control poll/stop may observe or terminate that exact handle, but it never
+    carries a new argv that could create a replacement process.
+    """
+
+    if operation not in {"exec_poll", "exec_stop"}:
+        raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+    command_id = result.get("command_id")
+    job_id = result.get("job_id")
+    local_handle = result.get("local_handle")
+    if (not isinstance(command_id, str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(command_id) is None
+            or not isinstance(job_id, str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(job_id) is None
+            or not isinstance(local_handle, str) or EXEC_LOCAL_HANDLE_PATTERN.fullmatch(local_handle) is None):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if not isinstance(yield_time_ms, int) or isinstance(yield_time_ms, bool) or not 0 <= yield_time_ms <= 30_000:
+        raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+    if operation == "exec_poll":
+        if signal is not None or wait_ms is not None:
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+    else:
+        signal = str(signal or "TERM").strip().upper()
+        if signal not in EXEC_CONTROL_SIGNALS or not isinstance(wait_ms, int) or isinstance(wait_ms, bool) or not 0 <= wait_ms <= 30_000:
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+    request = dict(base_request)
+    request.update({
+        "operation": operation,
+        "command_id": command_id,
+        "job_id": job_id,
+        "local_handle": local_handle,
+        "consumer_id": f"control-plane-exec:{base_request['task_id']}",
+        "yield_time_ms": yield_time_ms,
+        "signal": signal,
+        "wait_ms": wait_ms,
+        "run_id": str(result.get("run_id") or ""),
+        "wave_id": str(result.get("wave_id") or ""),
+    })
+    return request
 
 
 def _admit_exec_policy_request(args: argparse.Namespace, *, config_path: Path, config: dict[str, Any],
                                request: dict[str, Any]) -> dict[str, Any]:
+    operation = request.get("operation")
+    if operation not in EXEC_CONTROL_OPERATIONS:
+        raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
     policy = _read_exec_policy(_exec_policy_path(args))
     if policy["enabled"] is not True:
         raise RuntimeError("CONTROL_PLANE_EXEC_DISABLED")
     now_ms = int(time.time() * 1000)
-    if policy["expires_at_ms"] <= now_ms:
-        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+    # A poll/stop is recovery of an already-created local Job.  It may remain
+    # actionable after the short action/policy window, but it must still bind
+    # the exact persisted target, argv and command handle below.  New spawns
+    # continue to require a live policy.
+    if operation == "exec_run":
+        if policy["authority_mode"] == "expiring_legacy" and policy["expires_at_ms"] <= now_ms:
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRED")
+        if request.get("expires_at_ms") <= now_ms:
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_EXPIRED")
     for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
-        if policy[field] != request[field] and field != "owner_id":
+        if policy[field] != request.get(field):
             raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
     if policy["server_origin"] != _server_origin(config.get("server_url")):
         raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH")
@@ -5197,6 +7606,26 @@ def _admit_exec_policy_request(args: argparse.Namespace, *, config_path: Path, c
         raise RuntimeError("CONTROL_PLANE_EXEC_ALLOWLIST_DENIED")
     if request["timeout_ms"] > policy["max_timeout_ms"] or request["max_output_bytes"] > policy["max_output_bytes"]:
         raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_TOO_LARGE")
+    if operation == "exec_run":
+        if any(request.get(field) is not None for field in ("command_id", "job_id", "local_handle", "consumer_id", "yield_time_ms", "signal", "wait_ms", "run_id", "wave_id")):
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+    else:
+        if (not isinstance(request.get("command_id"), str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(request["command_id"]) is None
+                or not isinstance(request.get("job_id"), str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(request["job_id"]) is None
+                or not isinstance(request.get("local_handle"), str) or EXEC_LOCAL_HANDLE_PATTERN.fullmatch(request["local_handle"]) is None
+                or not isinstance(request.get("consumer_id"), str) or not 1 <= len(request["consumer_id"].strip()) <= 128
+                or not isinstance(request.get("yield_time_ms"), int) or isinstance(request["yield_time_ms"], bool)
+                or not 0 <= request["yield_time_ms"] <= 30_000
+                or not isinstance(request.get("run_id"), str) or len(request["run_id"]) > 128
+                or not isinstance(request.get("wave_id"), str) or len(request["wave_id"]) > 128):
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+        if operation == "exec_poll":
+            if request.get("signal") is not None or request.get("wait_ms") is not None:
+                raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
+        elif (str(request.get("signal") or "").upper() not in EXEC_CONTROL_SIGNALS
+              or not isinstance(request.get("wait_ms"), int) or isinstance(request["wait_ms"], bool)
+              or not 0 <= request["wait_ms"] <= 30_000):
+            raise RuntimeError("CONTROL_PLANE_EXEC_REQUEST_INVALID")
     return policy
 
 
@@ -5274,7 +7703,12 @@ def _run_bounded_exec(*, argv: list[str], cwd_path: Path, timeout_ms: int, max_o
 
 
 def _exec_journal_key(action_id: str, attempt_id: str) -> str:
-    return f"{action_id}\0{attempt_id}"
+    if (
+        EXEC_ACTION_IDENTIFIER_PATTERN.fullmatch(action_id) is None
+        or EXEC_ACTION_IDENTIFIER_PATTERN.fullmatch(attempt_id) is None
+    ):
+        raise RuntimeError("CONTROL_PLANE_EXEC_ACTION_DENIED")
+    return f"{action_id}|{attempt_id}"
 
 
 def _read_exec_journal(journal_path: Path) -> dict[str, Any]:
@@ -5284,29 +7718,486 @@ def _read_exec_journal(journal_path: Path) -> dict[str, Any]:
         return {"schema_version": EXEC_JOURNAL_SCHEMA_VERSION, "entries": {}}
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID") from error
-    if not isinstance(value, dict) or value.get("schema_version") != EXEC_JOURNAL_SCHEMA_VERSION or not isinstance(value.get("entries"), dict):
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema_version", "entries"}
+        or value.get("schema_version") != EXEC_JOURNAL_SCHEMA_VERSION
+        or not isinstance(value.get("entries"), dict)
+    ):
         raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
     return value
 
 
 def _record_exec_receipt(journal_path: Path, journal: dict[str, Any], *, state: str, action_id: str,
                          attempt_id: str, receipt_state: str, local_handle: str, payload: dict[str, Any]) -> dict[str, Any]:
-    entry = {"state": state, "action_id": action_id, "attempt_id": attempt_id,
-             "receipt_state": receipt_state, "local_handle": local_handle, "payload": payload}
+    entry = {
+        "state": state,
+        "action_id": action_id,
+        "attempt_id": attempt_id,
+        "receipt": _journal_receipt(action_id, attempt_id, receipt_state, local_handle, payload),
+    }
     journal["entries"][_exec_journal_key(action_id, attempt_id)] = entry
+    _write_json_atomic(journal_path, journal)
     return entry
+
+
+def _recover_exec_prepared_entry(
+    entry: dict[str, Any],
+    diagnostic_code: str = "CONTROL_PLANE_EXEC_PREPARED_RECOVERED",
+) -> None:
+    """Never re-run an exec after its durable pre-effect boundary was crossed."""
+
+    if entry.get("state") != "prepared":
+        return
+    action_id = str(entry.get("action_id") or "")
+    attempt_id = str(entry.get("attempt_id") or "")
+    _exec_journal_key(action_id, attempt_id)
+    entry["state"] = "unknown"
+    entry["receipt"] = _journal_receipt(
+        action_id,
+        attempt_id,
+        "unknown",
+        "",
+        {
+            "schema_version": 1,
+            "operation_kind": "control_plane_exec",
+            "code": "CONTROL_PLANE_EXEC_EFFECT_UNKNOWN",
+            "diagnostic_code": _safe_error_code(
+                diagnostic_code,
+                "CONTROL_PLANE_EXEC_PREPARED_RECOVERED",
+            ),
+        },
+    )
 
 
 def _flush_exec_journal(config: dict[str, Any], journal_path: Path, journal: dict[str, Any]) -> int:
     submitted = 0
-    for key in list(journal["entries"]):
+    for key in sorted(journal["entries"]):
         entry = journal["entries"][key]
-        if not isinstance(entry, dict) or entry.get("state") != "prepared":
-            continue
-        _submit_receipt(config, entry)
-        submitted += 1
-    _write_json_atomic(journal_path, journal)
+        if not isinstance(entry, dict):
+            raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
+        if entry.get("state") == "prepared":
+            _recover_exec_prepared_entry(entry)
+            _write_json_atomic(journal_path, journal)
+        receipt = entry.get("receipt")
+        if not isinstance(receipt, dict):
+            raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
+        if receipt.get("receipt_submitted") is not True:
+            _submit_receipt(config, entry)
+            _write_json_atomic(journal_path, journal)
+            submitted += 1
     return submitted
+
+
+def _safe_exec_bridge_result(
+    value: Any,
+    request: dict[str, Any],
+    expected_policy_sha256: str,
+) -> dict[str, Any]:
+    """Allowlist one Electron/MCP exec projection before it becomes a receipt."""
+
+    if not isinstance(value, dict) or value.get("schema_version") != 1:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("operation_kind") != "control_plane_exec":
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("action_id") != request.get("action_id") or value.get("attempt_id") != request.get("attempt_id"):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("task_id") != request.get("task_id") or value.get("writer_lease_generation") != request.get("writer_lease_generation"):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("policy_sha256") != expected_policy_sha256:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("actor") != {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"}:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if value.get("facade_contract") != request.get("facade_contract"):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_CONTRACT_INVALID")
+    local_handle = value.get("local_handle") or request.get("local_handle")
+    if not isinstance(local_handle, str) or EXEC_LOCAL_HANDLE_PATTERN.fullmatch(local_handle) is None:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    command_id = value.get("command_id") or request.get("command_id")
+    job_id = value.get("job_id") or request.get("job_id")
+    if not isinstance(command_id, str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(command_id.strip()) is None:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if not isinstance(job_id, str) or EXEC_COMMAND_IDENTIFIER_PATTERN.fullmatch(job_id.strip()) is None:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if request.get("command_id") is not None and command_id.strip() != request["command_id"]:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    if request.get("job_id") is not None and job_id.strip() != request["job_id"]:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID")
+    status = value.get("status")
+    if status not in {"running", "exited", "terminated", "timeout", "stopped", "reconciled_terminal"}:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    stdout = value.get("stdout", "")
+    stderr = value.get("stderr", "")
+    if not isinstance(stdout, str) or not isinstance(stderr, str):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    if len(stdout.encode("utf-8")) + len(stderr.encode("utf-8")) > int(request["max_output_bytes"]) * 2:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_TOO_LARGE")
+    truncated = value.get("truncated")
+    timed_out = value.get("timed_out")
+    if not isinstance(truncated, bool) or not isinstance(timed_out, bool):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    exit_code = value.get("exit_code")
+    if status not in {"running", "reconciled_terminal"} and (not isinstance(exit_code, int) or isinstance(exit_code, bool) or not -255 <= exit_code <= 255):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    if status == "running" and exit_code is not None and (not isinstance(exit_code, int) or isinstance(exit_code, bool)):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    runtime_identity = value.get("runtime_identity")
+    if not isinstance(runtime_identity, dict) or set(runtime_identity) != {
+        "activation_epoch_id", "process_instance_id", "server_instance_id", "tool_contract_sha256"
+    }:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID")
+    if any(not isinstance(runtime_identity.get(field), str) or not runtime_identity[field].strip() or len(runtime_identity[field]) > 128
+           for field in ("activation_epoch_id", "process_instance_id", "server_instance_id")):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID")
+    if SHA256_PATTERN.fullmatch(str(runtime_identity.get("tool_contract_sha256") or "").lower()) is None:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID")
+    run_id = value.get("run_id", "")
+    wave_id = value.get("wave_id", "")
+    if not isinstance(run_id, str) or not isinstance(wave_id, str) or len(run_id) > 128 or len(wave_id) > 128:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    output_refs = value.get("output_refs")
+    if output_refs is not None and not isinstance(output_refs, dict):
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_INVALID")
+    safe = {
+        "status": status,
+        "exit_code": exit_code,
+        "stdout": stdout,
+        "stderr": stderr,
+        "truncated": truncated,
+        "timed_out": timed_out,
+        "command_id": command_id,
+        "job_id": job_id,
+        "run_id": run_id,
+        "wave_id": wave_id,
+        "output_refs": output_refs,
+    }
+    expected_response = hashlib.sha256(json.dumps(
+        safe, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")).hexdigest()
+    if str(value.get("response_sha256") or "").lower() != expected_response:
+        raise RuntimeError("CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID")
+    return {
+        "schema_version": 1,
+        "operation_kind": "control_plane_exec",
+        "local_handle": local_handle,
+        "action_id": request["action_id"],
+        "attempt_id": request["attempt_id"],
+        "task_id": request["task_id"],
+        "writer_lease_generation": request["writer_lease_generation"],
+        "policy_sha256": expected_policy_sha256,
+        "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
+        "facade_contract": dict(request["facade_contract"]),
+        "runtime_identity": {
+            "activation_epoch_id": runtime_identity["activation_epoch_id"],
+            "process_instance_id": runtime_identity["process_instance_id"],
+            "server_instance_id": runtime_identity["server_instance_id"],
+            "tool_contract_sha256": str(runtime_identity["tool_contract_sha256"]).lower(),
+        },
+        "command_id": command_id,
+        "job_id": job_id,
+        "status": status,
+        "exit_code": exit_code,
+        "stdout": stdout,
+        "stderr": stderr,
+        "truncated": truncated,
+        "timed_out": timed_out,
+        "run_id": run_id,
+        "wave_id": wave_id,
+        "output_refs": output_refs,
+        "response_sha256": expected_response,
+    }
+
+
+EXEC_CONTROL_RECONCILE_CODES = frozenset({
+    "CONTROL_PLANE_EXEC_POLICY_CONFIG_MISMATCH",
+    "CONTROL_PLANE_EXEC_POLICY_CHANGED",
+    "CONTROL_PLANE_EXEC_TARGET_MISMATCH",
+    "CONTROL_PLANE_EXEC_DEVICE_MISMATCH",
+    "CONTROL_PLANE_EXEC_WORKSPACE_MISMATCH",
+    "CONTROL_PLANE_EXEC_CONTRACT_CHANGED",
+    "CONTROL_PLANE_EXEC_RESULT_INVALID",
+    "CONTROL_PLANE_EXEC_RESULT_ENVELOPE_INVALID",
+    "CONTROL_PLANE_EXEC_RESULT_IDENTITY_INVALID",
+    "CONTROL_PLANE_EXEC_RESULT_CONTRACT_INVALID",
+    "CONTROL_PLANE_EXEC_RESULT_DIGEST_INVALID",
+    "CONTROL_PLANE_EXEC_MCP_REJECTED",
+})
+
+
+def _exec_terminal_state(result: dict[str, Any], *, operation: str) -> str | None:
+    """Map one verified bridge result to the central receipt state."""
+
+    status = result.get("status")
+    if status == "running":
+        return None
+    if status == "stopped":
+        return "stopped"
+    if status == "reconciled_terminal" and result.get("exit_code") is None:
+        return "unknown"
+    exit_code = result.get("exit_code")
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool):
+        return "unknown"
+    return "completed" if exit_code == 0 else "failed"
+
+
+def _store_running_exec_observation(journal_path: Path, journal: dict[str, Any], entry: dict[str, Any], result: dict[str, Any]) -> None:
+    entry["state"] = "running"
+    entry["result"] = result
+    entry.pop("last_control_error", None)
+    entry["last_observed_at_ms"] = int(time.time() * 1000)
+    _write_json_atomic(journal_path, journal)
+
+
+def _record_control_result(
+    *,
+    journal_path: Path,
+    journal: dict[str, Any],
+    entry: dict[str, Any],
+    result: dict[str, Any],
+    config: dict[str, Any],
+    operation: str,
+) -> tuple[str, int]:
+    """Persist a poll/stop observation without ever spawning a replacement."""
+
+    state = _exec_terminal_state(result, operation=operation)
+    if state is None:
+        _store_running_exec_observation(journal_path, journal, entry, result)
+        return "running", 0
+    action_id = str(entry.get("action_id") or "")
+    attempt_id = str(entry.get("attempt_id") or "")
+    local_handle = str(result.get("local_handle") or "")
+    if state == "unknown":
+        payload = dict(result)
+        payload["code"] = "CONTROL_PLANE_EXEC_TERMINAL_EVIDENCE_UNCERTAIN"
+    else:
+        payload = result
+    next_entry = _record_exec_receipt(
+        journal_path,
+        journal,
+        state=state,
+        action_id=action_id,
+        attempt_id=attempt_id,
+        receipt_state=state,
+        local_handle=local_handle,
+        payload=payload,
+    )
+    next_entry["request"] = entry.get("request")
+    next_entry["policy_sha256"] = entry.get("policy_sha256")
+    next_entry["result"] = result
+    _write_json_atomic(journal_path, journal)
+    _submit_receipt(config, next_entry)
+    _write_json_atomic(journal_path, journal)
+    return state, 1
+
+
+def _record_exec_control_unknown(
+    *, journal_path: Path, journal: dict[str, Any], entry: dict[str, Any], config: dict[str, Any], code: str
+) -> int:
+    payload = {
+        "schema_version": 1,
+        "operation_kind": "control_plane_exec",
+        "code": code,
+        "reconciliation_required": True,
+    }
+    next_entry = _record_exec_receipt(
+        journal_path,
+        journal,
+        state="unknown",
+        action_id=str(entry.get("action_id") or ""),
+        attempt_id=str(entry.get("attempt_id") or ""),
+        receipt_state="unknown",
+        local_handle=str((entry.get("result") or {}).get("local_handle") or ""),
+        payload=payload,
+    )
+    next_entry["request"] = entry.get("request")
+    next_entry["policy_sha256"] = entry.get("policy_sha256")
+    _write_json_atomic(journal_path, journal)
+    _submit_receipt(config, next_entry)
+    _write_json_atomic(journal_path, journal)
+    return 1
+
+
+def _control_bridge_observation(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    journal_path: Path,
+    journal: dict[str, Any],
+    entry: dict[str, Any],
+    project_root: Path,
+    operation: str,
+    signal: str | None = None,
+    wait_ms: int | None = None,
+) -> tuple[str, int]:
+    """Poll or stop one journaled command using only its durable handle."""
+
+    request = entry.get("request")
+    prior = entry.get("result")
+    if not isinstance(request, dict) or not isinstance(prior, dict):
+        return "unknown", _record_exec_control_unknown(
+            journal_path=journal_path, journal=journal, entry=entry, config=config,
+            code="CONTROL_PLANE_EXEC_JOURNAL_INVALID",
+        )
+    try:
+        control_request = _exec_control_request(
+            request,
+            prior,
+            operation=operation,
+            signal=signal,
+            wait_ms=wait_ms,
+            yield_time_ms=min(30_000, max(0, int(getattr(args, "timeout_seconds", 20) * 1000))),
+        )
+        policy = _admit_exec_policy_request(args, config_path=config_path, config=config, request=control_request)
+        expected_policy_sha256 = _policy_digest(policy)
+        if expected_policy_sha256 != entry.get("policy_sha256"):
+            raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_CHANGED")
+        result, error_code = recovery_exec_bridge(args, project_root, control_request)
+        if result is None:
+            code = _safe_error_code(error_code, "CONTROL_PLANE_EXEC_CONTROL_UNAVAILABLE")
+            if code in EXEC_CONTROL_RECONCILE_CODES:
+                return "unknown", _record_exec_control_unknown(
+                    journal_path=journal_path, journal=journal, entry=entry, config=config, code=code,
+                )
+            entry["last_control_error"] = code
+            entry["last_observed_at_ms"] = int(time.time() * 1000)
+            _write_json_atomic(journal_path, journal)
+            return "running", 0
+        safe = _safe_exec_bridge_result(result, control_request, expected_policy_sha256)
+        # The initial exec_run receipt adds this projection before it is
+        # submitted.  Control observations are independently validated and
+        # must carry the same bounded byte count before a terminal receipt is
+        # relayed; otherwise the central MCP status verifier would discard a
+        # valid terminal result as incomplete.
+        safe["output_bytes"] = len(safe["stdout"].encode("utf-8")) + len(safe["stderr"].encode("utf-8"))
+        state, submitted = _record_control_result(
+            journal_path=journal_path, journal=journal, entry=entry, result=safe,
+            config=config, operation=operation,
+        )
+        return state, submitted
+    except RuntimeError as error:
+        code = _safe_error_code(error, "CONTROL_PLANE_EXEC_CONTROL_INVALID")
+        if code in EXEC_CONTROL_RECONCILE_CODES or code in {"CONTROL_PLANE_EXEC_JOURNAL_INVALID", "CONTROL_PLANE_EXEC_POLICY_CHANGED"}:
+            return "unknown", _record_exec_control_unknown(
+                journal_path=journal_path, journal=journal, entry=entry, config=config, code=code,
+            )
+        entry["last_control_error"] = code
+        entry["last_observed_at_ms"] = int(time.time() * 1000)
+        _write_json_atomic(journal_path, journal)
+        return "running", 0
+
+
+def _resume_running_exec_entries(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    journal_path: Path,
+    journal: dict[str, Any],
+    project_root: Path,
+) -> tuple[dict[str, list[str]], int]:
+    """Resume exact running handles before accepting any new exec action."""
+
+    summary: dict[str, list[str]] = {"completed": [], "failed": [], "stopped": [], "unknown": [], "running": []}
+    submitted = 0
+    for key in sorted(list(journal.get("entries", {}))):
+        entry = journal["entries"].get(key)
+        if not isinstance(entry, dict) or entry.get("state") != "running":
+            continue
+        state, count = _control_bridge_observation(
+            args,
+            config_path=config_path,
+            config=config,
+            journal_path=journal_path,
+            journal=journal,
+            entry=entry,
+            project_root=project_root,
+            operation="exec_poll",
+        )
+        submitted += count
+        action_id = str(entry.get("action_id") or "")
+        summary.setdefault(state, []).append(action_id)
+    return summary, submitted
+
+
+def _poll_exec_stop_requests(
+    args: argparse.Namespace,
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    journal_path: Path,
+    journal: dict[str, Any],
+    project_root: Path,
+) -> tuple[list[str], list[str], int]:
+    """Consume stop requests and acknowledge only after terminal evidence."""
+
+    response = _request(
+        str(config["server_url"]),
+        f"/v1/nodes/{config['device_id']}/exec-stops",
+        {},
+        f"Node {config['node_secret']}",
+    )
+    stop_requests = response.get("stop_requests")
+    if not isinstance(stop_requests, list):
+        raise RuntimeError("CONTROL_PLANE_EXEC_STOP_RESPONSE_INVALID")
+    acknowledged: list[str] = []
+    pending: list[str] = []
+    submitted = 0
+    by_action = {
+        str(entry.get("action_id")): entry
+        for entry in journal.get("entries", {}).values()
+        if isinstance(entry, dict) and entry.get("action_id")
+    }
+    for stop in stop_requests:
+        if not isinstance(stop, dict):
+            continue
+        action_id = str(stop.get("action_id") or "")
+        entry = by_action.get(action_id)
+        if entry is None:
+            pending.append(action_id)
+            continue
+        state = entry.get("state")
+        if state in {"completed", "failed", "stopped", "rejected"}:
+            receipt = entry.get("receipt")
+            if isinstance(receipt, dict) and receipt.get("receipt_submitted") is not True:
+                _submit_receipt(config, entry)
+                _write_json_atomic(journal_path, journal)
+                submitted += 1
+            _request(
+                str(config["server_url"]),
+                f"/v1/nodes/{config['device_id']}/exec-stops/{action_id}/acknowledge",
+                {},
+                f"Node {config['node_secret']}",
+            )
+            acknowledged.append(action_id)
+            continue
+        if state != "running":
+            pending.append(action_id)
+            continue
+        next_state, count = _control_bridge_observation(
+            args,
+            config_path=config_path,
+            config=config,
+            journal_path=journal_path,
+            journal=journal,
+            entry=entry,
+            project_root=project_root,
+            operation="exec_stop",
+            signal="TERM",
+            wait_ms=3_000,
+        )
+        submitted += count
+        if next_state in {"completed", "failed", "stopped", "rejected"}:
+            _request(
+                str(config["server_url"]),
+                f"/v1/nodes/{config['device_id']}/exec-stops/{action_id}/acknowledge",
+                {},
+                f"Node {config['node_secret']}",
+            )
+            acknowledged.append(action_id)
+        else:
+            pending.append(action_id)
+    return acknowledged, pending, submitted
 
 
 def _poll_exec_once(args: argparse.Namespace) -> int:
@@ -5327,6 +8218,24 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
         print(json.dumps({"execution": "exec_not_started", "reason": "runtime_identity_unproven",
                           "received_action_ids": [], "submitted_receipts": submitted_receipts}, separators=(",", ":")))
         return 0
+    resumed, resumed_submitted = _resume_running_exec_entries(
+        args,
+        config_path=config_path,
+        config=config,
+        journal_path=journal_path,
+        journal=journal,
+        project_root=project_root,
+    )
+    submitted_receipts += resumed_submitted
+    acknowledged_stops, pending_stops, stop_submitted = _poll_exec_stop_requests(
+        args,
+        config_path=config_path,
+        config=config,
+        journal_path=journal_path,
+        journal=journal,
+        project_root=project_root,
+    )
+    submitted_receipts += stop_submitted
     response = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/poll",
                         {"limit": 1, "lane": "bounded_exec"}, f"Node {config['node_secret']}")
     actions = response.get("actions")
@@ -5397,92 +8306,99 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
             rejected.append(action_id)
             continue
         try:
-            journal["entries"][key] = {"state": "prepared", "action_id": action_id, "attempt_id": attempt_id}
+            journal["entries"][key] = {
+                "state": "prepared",
+                "action_id": action_id,
+                "attempt_id": attempt_id,
+                "request": request,
+                "policy_sha256": expected_policy_sha256,
+            }
             _write_json_atomic(journal_path, journal)
-            stop_state = {"requested": False}
-            def _stop_check() -> bool:
-                try:
-                    stops = _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/exec-stops",
-                                     {}, f"Node {config['node_secret']}")
-                    for item in stops.get("stop_requests", []):
-                        if isinstance(item, dict) and item.get("action_id") == action_id:
-                            stop_state["requested"] = True
-                            return True
-                except Exception:
-                    return False
-                return False
-            result, error_code = _run_bounded_exec(argv=request["argv"], cwd_path=cwd_path,
-                                                   timeout_ms=request["timeout_ms"],
-                                                   max_output_bytes=request["max_output_bytes"],
-                                                   stop_check=_stop_check)
-            local_handle = f"cp_exec_{secrets.token_hex(24)}"
-            if result is not None and result.get("stopped"):
-                try:
-                    _request(str(config["server_url"]), f"/v1/nodes/{config['device_id']}/exec-stops/{action_id}/acknowledge",
-                             {}, f"Node {config['node_secret']}")
-                except Exception:
-                    pass
-                output_bytes = len(result["stdout"].encode()) + len(result["stderr"].encode())
-                response_sha = hashlib.sha256(json.dumps(
-                    {"exit_code": result["exit_code"], "stdout": result["stdout"],
-                     "stderr": result["stderr"], "truncated": result["truncated"]},
-                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                payload = {"schema_version": 1, "operation_kind": "control_plane_exec",
-                           "local_handle": local_handle, "policy_sha256": expected_policy_sha256,
-                           "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
-                           "facade_contract": request["facade_contract"], "exit_code": result["exit_code"],
-                           "stdout": result["stdout"], "stderr": result["stderr"], "truncated": result["truncated"],
-                           "output_bytes": output_bytes, "response_sha256": response_sha,
-                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
-                                                "process_instance_id": identity.get("process_instance_id", "proc"),
-                                                "server_instance_id": identity.get("server_instance_id", "srv"),
-                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
-                entry = _record_exec_receipt(journal_path, journal, state="stopped", action_id=action_id,
-                                             attempt_id=attempt_id, receipt_state="stopped",
-                                             local_handle=local_handle, payload=payload)
-                _submit_receipt(config, entry)
-                _write_json_atomic(journal_path, journal)
-                submitted_receipts += 1
-                stopped.append(action_id)
-                continue
+            result, error_code = recovery_exec_bridge(args, project_root, request)
             if result is not None:
-                output_bytes = len(result["stdout"].encode()) + len(result["stderr"].encode())
-                response_sha = hashlib.sha256(json.dumps(
-                    {"exit_code": result["exit_code"], "stdout": result["stdout"],
-                     "stderr": result["stderr"], "truncated": result["truncated"]},
-                    ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                payload = {"schema_version": 1, "operation_kind": "control_plane_exec",
-                           "local_handle": local_handle, "policy_sha256": expected_policy_sha256,
-                           "actor": {"client_id": "electron-control-plane-exec-bridge", "client_type": "electron"},
-                           "facade_contract": request["facade_contract"], "exit_code": result["exit_code"],
-                           "stdout": result["stdout"], "stderr": result["stderr"], "truncated": result["truncated"],
-                           "output_bytes": output_bytes, "response_sha256": response_sha,
-                           "runtime_identity": {"activation_epoch_id": identity.get("activation_epoch_id", "epoch"),
-                                                "process_instance_id": identity.get("process_instance_id", "proc"),
-                                                "server_instance_id": identity.get("server_instance_id", "srv"),
-                                                "tool_contract_sha256": identity.get("tool_contract_sha256", "f" * 64)}}
-                terminal = "completed" if result["exit_code"] == 0 else "failed"
-                entry = _record_exec_receipt(journal_path, journal, state=terminal, action_id=action_id,
-                                             attempt_id=attempt_id, receipt_state=terminal,
-                                             local_handle=local_handle, payload=payload)
+                safe = _safe_exec_bridge_result(result, request, expected_policy_sha256)
+                safe["output_bytes"] = len(safe["stdout"].encode("utf-8")) + len(safe["stderr"].encode("utf-8"))
+                status = safe["status"]
+                if status == "running":
+                    # The initial MCP yield returned a durable command handle.
+                    # Keep the original request and handle in the journal; a
+                    # later poll wave will use command_control and must never
+                    # spawn a replacement command.
+                    journal["entries"][key] = {
+                        "state": "running",
+                        "action_id": action_id,
+                        "attempt_id": attempt_id,
+                        "request": request,
+                        "policy_sha256": expected_policy_sha256,
+                        "result": safe,
+                    }
+                    entry = _record_exec_receipt(
+                        journal_path, journal, state="running", action_id=action_id,
+                        attempt_id=attempt_id, receipt_state="accepted",
+                        local_handle=safe["local_handle"], payload=safe,
+                    )
+                    entry["request"] = request
+                    entry["policy_sha256"] = expected_policy_sha256
+                    entry["result"] = safe
+                    journal["entries"][key] = entry
+                    # Persist the complete running projection before crossing
+                    # the central receipt boundary.  If the central service
+                    # commits the receipt but the response/ACK is lost, the
+                    # next invocation must still have the exact request and
+                    # local handle needed for poll/stop; otherwise it could
+                    # downgrade a live effect to an unrecoverable unknown.
+                    _write_json_atomic(journal_path, journal)
+                    _submit_receipt(config, entry)
+                    _write_json_atomic(journal_path, journal)
+                    submitted_receipts += 1
+                    completed.append(f"{action_id}:running")
+                    continue
+                terminal = _exec_terminal_state(safe, operation="exec_run")
+                if terminal is None:
+                    terminal = "unknown"
+                entry = _record_exec_receipt(
+                    journal_path, journal, state=terminal, action_id=action_id,
+                    attempt_id=attempt_id, receipt_state=terminal,
+                    local_handle=safe["local_handle"], payload=safe,
+                )
                 _submit_receipt(config, entry)
                 _write_json_atomic(journal_path, journal)
                 submitted_receipts += 1
-                (completed if terminal == "completed" else failed).append(action_id)
+                (completed if terminal == "completed" else stopped if terminal == "stopped"
+                 else failed if terminal == "failed" else unknown).append(action_id)
                 continue
             code = _safe_error_code(error_code, "CONTROL_PLANE_EXEC_FAILED")
-            pre_effect = code in EXEC_PRE_EFFECT_REJECTION_CODES or code in {
-                "CONTROL_PLANE_EXEC_SPAWN_FAILED", "CONTROL_PLANE_EXEC_REQUEST_INVALID",
-                "CONTROL_PLANE_EXEC_ALLOWLIST_DENIED", "CONTROL_PLANE_EXEC_WORKSPACE_BUSY"}
-            entry = _record_exec_receipt(journal_path, journal, state="rejected" if pre_effect else "unknown",
-                                         action_id=action_id, attempt_id=attempt_id,
-                                         receipt_state="rejected" if pre_effect else "unknown",
-                                         local_handle="", payload={"schema_version": 1,
-                                                                    "operation_kind": "control_plane_exec", "code": code})
-            _submit_receipt(config, entry)
+            # The durable ``prepared`` marker was written before the bridge
+            # subprocess was invoked.  From this point a bridge error cannot
+            # prove that no local effect crossed the Recovery boundary (the
+            # Recovery process may have accepted the request and then died),
+            # so it must never be converted into a pre-effect ``rejected``
+            # receipt.  Preserve the marker as UNKNOWN and require explicit
+            # reconciliation; otherwise a later poll could redeliver exec_run.
+            prepared = journal["entries"].get(key)
+            if not isinstance(prepared, dict) or prepared.get("state") != "prepared":
+                raise RuntimeError("CONTROL_PLANE_EXEC_JOURNAL_INVALID")
+            _recover_exec_prepared_entry(prepared, code)
+            _write_json_atomic(journal_path, journal)
+            _submit_receipt(config, prepared)
             _write_json_atomic(journal_path, journal)
             submitted_receipts += 1
-            (rejected if pre_effect else unknown).append(action_id)
+            unknown.append(action_id)
+        except Exception as error:
+            # Once the durable prepared marker exists, the command may have
+            # started.  Never turn a crash, bridge failure, or receipt-format
+            # regression into another execution attempt.  A terminal receipt
+            # that merely failed transport remains pending in the journal and
+            # will be replayed unchanged on the next poll.
+            prepared = journal["entries"].get(key)
+            if not isinstance(prepared, dict) or prepared.get("state") != "prepared":
+                raise
+            _recover_exec_prepared_entry(prepared, _safe_error_code(error))
+            _write_json_atomic(journal_path, journal)
+            _submit_receipt(config, prepared)
+            _write_json_atomic(journal_path, journal)
+            submitted_receipts += 1
+            unknown.append(action_id)
         finally:
             try:
                 ws_lock.unlink()
@@ -5491,7 +8407,9 @@ def _poll_exec_once(args: argparse.Namespace) -> int:
     print(json.dumps({"execution": "exec_once", "runtime_identity": "reported", "received_action_ids": received,
                       "completed_action_ids": completed, "failed_action_ids": failed,
                       "stopped_action_ids": stopped, "rejected_action_ids": rejected,
-                      "unknown_action_ids": unknown, "submitted_receipts": submitted_receipts},
+                      "unknown_action_ids": unknown, "submitted_receipts": submitted_receipts,
+                      "resumed": resumed, "acknowledged_stop_action_ids": acknowledged_stops,
+                      "pending_stop_action_ids": pending_stops},
                      separators=(",", ":")))
     return 0
 
@@ -5558,10 +8476,8 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         if not isinstance(parsed, list) or not parsed:
             raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_INVALID")
         prefixes.append([_exec_argv_item(item) for item in parsed])
-    now_ms = int(time.time() * 1000)
-    expires_at_ms = getattr(args, "expires_at_ms", None)
-    if not isinstance(expires_at_ms, int) or isinstance(expires_at_ms, bool) or expires_at_ms <= now_ms or expires_at_ms > now_ms + EXEC_POLICY_MAX_TTL_MS:
-        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRY_INVALID")
+    if getattr(args, "expires_at_ms", None) is not None:
+        raise RuntimeError("CONTROL_PLANE_EXEC_POLICY_EXPIRY_UNSUPPORTED")
     workspace_id = _policy_identifier(getattr(args, "workspace_id", ""), "workspace_id")
     workspace_generation = _policy_identifier(getattr(args, "workspace_generation", ""), "workspace_generation")
     entry = _require_current_local_workspace_registration(
@@ -5570,12 +8486,13 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRATION_NOT_CURRENT")
     policy = _normalise_exec_policy({
         "schema_version": EXEC_POLICY_SCHEMA_VERSION, "enabled": True,
+        "authority_mode": EXEC_POLICY_STANDING_AUTHORITY,
         "server_origin": _server_origin(config.get("server_url")),
         "owner_id": _policy_identifier(getattr(args, "owner_id", ""), "owner_id"),
         "device_id": _policy_identifier(config.get("device_id"), "device_id"),
         "endpoint_id": _policy_identifier(config.get("endpoint_id"), "endpoint_id"),
         "workspace_id": workspace_id, "workspace_generation": workspace_generation,
-        "expires_at_ms": expires_at_ms,
+        "expires_at_ms": None,
         "facade_contract": _policy_facade_contract(
             getattr(args, "facade_schema_version", None), getattr(args, "facade_profile", None),
             getattr(args, "facade_sha256", None)),
@@ -5583,17 +8500,18 @@ def install_exec_policy(args: argparse.Namespace) -> int:
         "max_timeout_ms": getattr(args, "max_timeout_ms", None),
         "max_output_bytes": getattr(args, "max_output_bytes", None),
         "max_concurrent": 2,
-    }, now_ms=now_ms, require_enabled=True)
+    }, require_enabled=True)
     _write_local_policy(_exec_policy_path(args), policy, replace=getattr(args, "replace", False) is True)
     print(json.dumps({"execution": "exec_policy_installed", "policy_sha256": _policy_digest(policy),
-                      "expires_at_ms": policy["expires_at_ms"]}, separators=(",", ":")))
+                      "authority_mode": policy["authority_mode"], "expires_at_ms": None}, separators=(",", ":")))
     return 0
 
 
 def inspect_exec_policy(args: argparse.Namespace) -> int:
     policy = _read_exec_policy(_exec_policy_path(args))
     print(json.dumps({"execution": "exec_policy_inspected", "policy_sha256": _policy_digest(policy),
-                      "expires_at_ms": policy["expires_at_ms"], "enabled": policy["enabled"]},
+                      "authority_mode": policy["authority_mode"], "expires_at_ms": None,
+                      "enabled": policy["enabled"]},
                      separators=(",", ":")))
     return 0
 
@@ -5678,16 +8596,17 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
             if action.get("device_id") != config["device_id"] or action.get("endpoint_id") != config["endpoint_id"]:
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ACTION_DENIED")
-            policy = _read_file_read_policy(_file_read_policy_path(args))
-            now_ms = int(time.time() * 1000)
-            if policy.get("enabled") is not True or policy.get("expires_at_ms", 0) <= now_ms:
-                raise RuntimeError("CONTROL_PLANE_FILE_READ_POLICY_EXPIRED")
+            policy, entry = _file_read_policy_admission(
+                args,
+                config_path=config_path,
+                config=config,
+            )
+            for field in ("owner_id", "device_id", "endpoint_id", "workspace_id", "workspace_generation"):
+                if action.get(field) != policy[field]:
+                    raise RuntimeError("CONTROL_PLANE_FILE_READ_TARGET_MISMATCH")
             allowed = policy.get("allowed_relative_paths", [])
             if rel not in allowed:
                 raise RuntimeError("CONTROL_PLANE_ARTIFACT_ALLOWLIST_DENIED")
-            registry = _read_workspace_registry(_workspace_registry_path(args, config_path))
-            entry = _registered_workspace_entry(
-                registry, workspace_id=action.get("workspace_id"), workspace_generation=action.get("workspace_generation"))
             root = Path(entry["canonical_path"]).resolve()
             target = (root / rel).resolve()
             try:
@@ -5700,6 +8619,8 @@ def _poll_artifact_once(args: argparse.Namespace) -> int:
                         "profile": action.get("mcp_artifact_facade_profile"),
                         "sha256": action.get("mcp_artifact_facade_contract_sha256")}
             _policy_facade_contract(contract["schema_version"], contract["profile"], contract["sha256"])
+            if contract != policy["facade_contract"]:
+                raise RuntimeError("CONTROL_PLANE_FILE_READ_CONTRACT_MISMATCH")
             local_handle = f"cp_artifact_{secrets.token_hex(24)}"
             if kind == "document":
                 raw = target.read_bytes()
@@ -5816,6 +8737,17 @@ def main(argv: list[str] | None = None) -> int:
     enroll.add_argument("--project-root", default="")
     enroll.add_argument("--node", default="node")
     enroll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    reconcile = subcommands.add_parser("reconcile-enrollment")
+    reconcile.add_argument("--config", required=True)
+    reconcile.add_argument("--device-id", required=True)
+    reconcile.add_argument("--project-root", default="")
+    reconcile.add_argument("--node", default="node")
+    reconcile.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    rotate = subcommands.add_parser("rotate-credential")
+    rotate.add_argument("--config", required=True)
+    rotate.add_argument("--project-root", default="")
+    rotate.add_argument("--node", default="node")
+    rotate.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     register_workspace_parser = subcommands.add_parser("register-workspace")
     register_workspace_parser.add_argument("--config", required=True)
     register_workspace_parser.add_argument("--workspace-registry", required=True)
@@ -5842,6 +8774,19 @@ def main(argv: list[str] | None = None) -> int:
     retire_workspace_parser.add_argument("--project-root", default="")
     retire_workspace_parser.add_argument("--node", default="node")
     retire_workspace_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    replace_workspace_parser = subcommands.add_parser("replace-workspace")
+    replace_workspace_parser.add_argument("--config", required=True)
+    replace_workspace_parser.add_argument("--workspace-registry", required=True)
+    replace_workspace_parser.add_argument("--workspace-path", required=True)
+    replace_workspace_parser.add_argument("--display-name", required=True)
+    replace_workspace_parser.add_argument("--capability-read", action="store_true")
+    replace_workspace_parser.add_argument("--capability-write", action="store_true")
+    replace_workspace_parser.add_argument("--capability-exec", action="store_true")
+    replace_workspace_parser.add_argument("--confirm-replace", action="store_true")
+    replace_workspace_parser.add_argument("--data-root", default="")
+    replace_workspace_parser.add_argument("--project-root", default="")
+    replace_workspace_parser.add_argument("--node", default="node")
+    replace_workspace_parser.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     heart = subcommands.add_parser("heartbeat")
     heart.add_argument("--config", required=True)
     heart.add_argument("--runtime-instance-id", default="unverified")
@@ -5900,6 +8845,17 @@ def main(argv: list[str] | None = None) -> int:
     # runs, never as an implied Windows scheduler installation.
     read_only_agent.add_argument("--max-iterations", type=int, default=0)
     read_only_agent.add_argument("--data-root", default="")
+    connected_agent = subcommands.add_parser("run-connected-agent")
+    connected_agent.add_argument("--config", required=True)
+    connected_agent.add_argument("--workspace-registry", required=True)
+    connected_agent.add_argument("--project-root", required=True)
+    connected_agent.add_argument("--node", default="node")
+    connected_agent.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    connected_agent.add_argument("--timeout-seconds", type=int, default=20)
+    connected_agent.add_argument("--interval-seconds", type=int, default=15)
+    connected_agent.add_argument("--max-backoff-seconds", type=int, default=5 * 60)
+    connected_agent.add_argument("--max-iterations", type=int, default=0)
+    connected_agent.add_argument("--data-root", default="")
     file_read_poll = subcommands.add_parser("poll-file-read-once")
     file_read_poll.add_argument("--config", required=True)
     file_read_poll.add_argument("--workspace-registry", required=True)
@@ -5930,7 +8886,10 @@ def main(argv: list[str] | None = None) -> int:
     install_file_read_policy_parser.add_argument("--allowed-relative-path", action="append", required=True)
     install_file_read_policy_parser.add_argument("--max-bytes", type=int, required=True)
     install_file_read_policy_parser.add_argument("--max-lines", type=int, required=True)
-    install_file_read_policy_parser.add_argument("--expires-at-ms", type=int, required=True)
+    # Omitted expiry installs standing local file-read authority.  The hidden
+    # compatibility form remains parseable so an explicit legacy migration can
+    # be audited and bounded by FILE_READ_POLICY_MAX_TTL_MS.
+    install_file_read_policy_parser.add_argument("--expires-at-ms", type=int, required=False, help=argparse.SUPPRESS)
     install_file_read_policy_parser.add_argument("--confirm-install", action="store_true")
     install_file_read_policy_parser.add_argument("--replace", action="store_true")
     install_file_read_policy_parser.add_argument("--data-root", default="")
@@ -5966,6 +8925,24 @@ def main(argv: list[str] | None = None) -> int:
     approved_patch_loop.add_argument("--interval-seconds", type=int, default=60)
     approved_patch_loop.add_argument("--max-iterations", type=int, default=1)
     approved_patch_loop.add_argument("--data-root", default="")
+    document_write_poll = subcommands.add_parser("poll-document-write-once")
+    document_write_poll.add_argument("--config", required=True)
+    document_write_poll.add_argument("--workspace-registry", required=True)
+    document_write_poll.add_argument("--project-root", required=True)
+    document_write_poll.add_argument("--node", default="node")
+    document_write_poll.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    document_write_poll.add_argument("--timeout-seconds", type=int, default=20)
+    document_write_poll.add_argument("--data-root", default="")
+    document_write_loop = subcommands.add_parser("run-document-write-loop")
+    document_write_loop.add_argument("--config", required=True)
+    document_write_loop.add_argument("--workspace-registry", required=True)
+    document_write_loop.add_argument("--project-root", required=True)
+    document_write_loop.add_argument("--node", default="node")
+    document_write_loop.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    document_write_loop.add_argument("--timeout-seconds", type=int, default=20)
+    document_write_loop.add_argument("--interval-seconds", type=int, default=60)
+    document_write_loop.add_argument("--max-iterations", type=int, default=1)
+    document_write_loop.add_argument("--data-root", default="")
     install_approved_patch_policy_parser = subcommands.add_parser("install-approved-patch-policy")
     install_approved_patch_policy_parser.add_argument("--config", required=True)
     install_approved_patch_policy_parser.add_argument("--workspace-registry", required=True)
@@ -5978,7 +8955,9 @@ def main(argv: list[str] | None = None) -> int:
     install_approved_patch_policy_parser.add_argument("--allowed-relative-path", action="append", required=True)
     install_approved_patch_policy_parser.add_argument("--max-patch-bytes", type=int, required=True)
     install_approved_patch_policy_parser.add_argument("--max-file-bytes", type=int, required=True)
-    install_approved_patch_policy_parser.add_argument("--expires-at-ms", type=int, required=True)
+    # Omitted expiry installs standing local patch authority.  An explicit
+    # expiry remains a bounded legacy compatibility installation.
+    install_approved_patch_policy_parser.add_argument("--expires-at-ms", type=int, required=False, help=argparse.SUPPRESS)
     install_approved_patch_policy_parser.add_argument("--confirm-install", action="store_true")
     install_approved_patch_policy_parser.add_argument("--replace", action="store_true")
     install_approved_patch_policy_parser.add_argument("--data-root", default="")
@@ -6026,7 +9005,9 @@ def main(argv: list[str] | None = None) -> int:
     install_exec_policy_parser.add_argument("--allowed-argv-prefix", action="append", required=True)
     install_exec_policy_parser.add_argument("--max-timeout-ms", type=int, required=True)
     install_exec_policy_parser.add_argument("--max-output-bytes", type=int, required=True)
-    install_exec_policy_parser.add_argument("--expires-at-ms", type=int, required=True)
+    # Standing local exec authority is intentionally not time-limited.  Keep
+    # the legacy option parseable only to return a typed migration error.
+    install_exec_policy_parser.add_argument("--expires-at-ms", type=int, required=False, help=argparse.SUPPRESS)
     install_exec_policy_parser.add_argument("--confirm-install", action="store_true")
     install_exec_policy_parser.add_argument("--replace", action="store_true")
     install_exec_policy_parser.add_argument("--data-root", default="")
@@ -6077,6 +9058,17 @@ def main(argv: list[str] | None = None) -> int:
     install_policy_context.add_argument("--project-root", default="")
     install_policy_context.add_argument("--node", default="node")
     install_policy_context.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
+    install_policy_assignment = subcommands.add_parser("install-read-only-policy-from-assignment")
+    install_policy_assignment.add_argument("--config", required=True)
+    install_policy_assignment.add_argument("--workspace-registry", required=True)
+    install_policy_assignment.add_argument("--workspace-id", required=True)
+    install_policy_assignment.add_argument("--workspace-generation", required=True)
+    install_policy_assignment.add_argument("--confirm-install", action="store_true")
+    install_policy_assignment.add_argument("--replace", action="store_true")
+    install_policy_assignment.add_argument("--data-root", default="")
+    install_policy_assignment.add_argument("--project-root", default="")
+    install_policy_assignment.add_argument("--node", default="node")
+    install_policy_assignment.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     inspect_policy = subcommands.add_parser("inspect-read-only-policy")
     inspect_policy.add_argument("--data-root", default="")
     inspect_policy.add_argument("--project-root", default="")
@@ -6092,15 +9084,19 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return {
             "request-enrollment": request_enrollment,
+            "reconcile-enrollment": reconcile_enrollment,
+            "rotate-credential": rotate_node_credential,
             "register-workspace": register_workspace,
             "list-workspaces": list_workspaces,
             "retire-workspace": retire_workspace,
+            "replace-workspace": replace_workspace,
             "heartbeat": heartbeat,
             "runtime-heartbeat": runtime_heartbeat,
             "poll": poll,
             "poll-read-only-once": poll_read_only_once,
             "run-read-only-loop": run_read_only_loop,
             "run-read-only-agent": run_read_only_agent,
+            "run-connected-agent": run_connected_agent,
             "poll-file-read-once": poll_file_read_once,
             "run-file-read-loop": run_file_read_loop,
             "install-file-read-policy": install_file_read_policy,
@@ -6108,6 +9104,8 @@ def main(argv: list[str] | None = None) -> int:
             "disable-file-read-policy": disable_file_read_policy,
             "poll-approved-patch-once": poll_approved_patch_once,
             "run-approved-patch-loop": run_approved_patch_loop,
+            "poll-document-write-once": poll_document_write_once,
+            "run-document-write-loop": run_document_write_loop,
             "install-approved-patch-policy": install_approved_patch_policy,
             "inspect-approved-patch-policy": inspect_approved_patch_policy,
             "disable-approved-patch-policy": disable_approved_patch_policy,
@@ -6119,6 +9117,7 @@ def main(argv: list[str] | None = None) -> int:
             "poll-artifact-once": poll_artifact_once,
             "install-read-only-policy": install_read_only_policy,
             "install-read-only-policy-from-context": install_read_only_policy_from_context,
+            "install-read-only-policy-from-assignment": install_read_only_policy_from_assignment,
             "inspect-read-only-policy": inspect_read_only_policy,
             "disable-read-only-policy": disable_read_only_policy,
         }[args.command](args)

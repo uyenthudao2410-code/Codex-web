@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from control_plane.store import ConflictError, ControlPlaneStore
@@ -147,7 +148,7 @@ class McpFaultMatrixTests(unittest.TestCase):
         self.assertEqual(action["delivery_state"], "reconcile_required")
         # A second poll must not redeliver an unknown-effect action.
         self.assertEqual(self.store.poll_actions(device_id=self.node["device_id"], lane="bounded_exec"), [])
-        with sqlite3.connect(self.store.path) as connection:
+        with closing(sqlite3.connect(self.store.path)) as connection:
             rows = connection.execute(
                 "SELECT receipt_state FROM receipts WHERE action_id = ?", (intent["action_id"],)).fetchall()
         self.assertEqual([row[0] for row in rows], ["unknown"])

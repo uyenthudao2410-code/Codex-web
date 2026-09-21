@@ -8,6 +8,7 @@ psutil<8,>=7.0
 mcp<2,>=1.26
 mypy<2.2,>=2.1
 PyYAML>=6.0
+pytest<9,>=8
 ruff<0.16,>=0.15
 typing_extensions>=4.12
 

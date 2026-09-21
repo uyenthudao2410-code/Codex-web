@@ -95,6 +95,8 @@ function request(now = NOW, source = 'before\n', output = 'after\n') {
     binding_id: 'binding-control-plane-0001',
     action_id: 'action-control-plane-0001',
     attempt_id: 'attempt-control-plane-0001',
+    task_id: `task_${'a'.repeat(32)}`,
+    writer_lease_generation: 1,
     tool_name: 'agent_workflow',
     operation: 'apply_patch',
     permission_request_id: 'permission-control-plane-0001',
@@ -143,6 +145,10 @@ function safeResult(admission) {
     local_handle: `cp_ap_${'a'.repeat(48)}`,
     action_id: admission.action_id,
     attempt_id: admission.attempt_id,
+    task_id: admission.task_id,
+    writer_lease_generation: admission.writer_lease_generation,
+    run_id: '1'.repeat(32),
+    wave_id: '2'.repeat(32),
     patch_applied: true,
     local_semantic_acceptance: 'pending',
     actor: { client_id: BRIDGE_CLIENT_ID, client_type: BRIDGE_CLIENT_TYPE },
@@ -209,6 +215,19 @@ test('approved-patch policy defaults closed and requires an exact writable regis
   );
   writeRegistry(item.paths, item.root);
   assert.equal(resolveRegisteredWorkspaceRoot(item.paths, loaded), fs.realpathSync.native(item.root));
+});
+
+test('standing approved-patch policy remains valid after the former TTL window', (t) => {
+  const item = fixture(t);
+  const standing = policy();
+  standing.schema_version = 2;
+  standing.authority_mode = 'standing';
+  standing.expires_at_ms = null;
+  fs.writeFileSync(item.policyFile, JSON.stringify(standing), 'utf8');
+  const loaded = loadApprovedPatchBridgePolicy(item.paths, { now: NOW + (10 * 365 * 24 * 60 * 60 * 1000) });
+  assert.equal(loaded.schema_version, 2);
+  assert.equal(loaded.authority_mode, 'standing');
+  assert.equal(loaded.expires_at_ms, null);
 });
 
 test('approved-patch admits only an exact approved envelope, local target and contract', (t) => {

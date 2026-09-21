@@ -25,6 +25,7 @@ class McpExecCentralTests(unittest.TestCase):
             owner_id=self.owner_id, device_id="exec-node-0001",
             endpoint_id="exec-endpoint-0001", display_name="Exec node",
         )
+        self.endpoint_id = "exec-endpoint-0001"
         self.store.register_node_workspace(
             device_id=self.node["device_id"], workspace_id="exec-workspace-0001",
             workspace_generation="exec-generation-0001", display_name="Exec workspace",
@@ -97,6 +98,12 @@ class McpExecCentralTests(unittest.TestCase):
         content = ok["result"]["structuredContent"]
         self.assertEqual(content["task_id"], task["task_id"])
         action_id = content["action_id"]
+        action = self.store.action(owner_id=self.owner_id, action_id=action_id)
+        self.assertEqual(action["writer_lease_generation"], 1)
+        delivery_intent = self.store.mcp_exec_intent_for_delivery(action_id=action_id)
+        assert delivery_intent is not None
+        self.assertEqual(delivery_intent["task_id"], task["task_id"])
+        self.assertEqual(delivery_intent["writer_lease_generation"], 1)
         linked = self.store.list_mcp_task_actions(
             owner_id=self.owner_id, principal_id=self.principal["principal_id"], task_id=task["task_id"])
         self.assertEqual([row["action_id"] for row in linked], [action_id])
@@ -118,6 +125,108 @@ class McpExecCentralTests(unittest.TestCase):
             owner_id=self.owner_id, principal_id=self.principal["principal_id"], task_id=task["task_id"])
         again = self._call("command_control", {"operation": "exec_stop", "action_id": action_id})
         self.assertEqual(again["result"]["structuredContent"]["stop_state"], "pending")
+
+    def test_released_writer_generation_fences_queued_exec_before_node_dispatch(self) -> None:
+        task = self.store.create_mcp_task_session(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"],
+            binding_id=self.binding["binding_id"], label="Fenced exec",
+        )
+        intent = self.store.request_mcp_exec(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"],
+            binding_id=self.binding["binding_id"], task_id=task["task_id"],
+            argv=["python", "-c", "print('fenced')"],
+            idempotency_key="exec-key-fence-011", facade_contract=self._contract(),
+        )
+        self.assertEqual(intent["writer_lease_generation"], 1)
+        self.store.release_mcp_task_writer_lease(
+            owner_id=self.owner_id, principal_id=self.principal["principal_id"],
+            task_id=task["task_id"], reason="controller_handoff",
+        )
+        self.store.heartbeat(
+            device_id=self.node["device_id"], endpoint_id=self.endpoint_id,
+            runtime_instance_id="runtime-fence-0001", mcp_server_instance_id="server-fence-0001",
+            activation_epoch="epoch-fence-0001", contract_version="smart-v3", readiness="ready",
+        )
+        self.assertEqual(self.store.poll_actions(device_id=self.node["device_id"], lane="bounded_exec"), [])
+        observed = self.store.action(owner_id=self.owner_id, action_id=intent["action_id"])
+        self.assertEqual(observed["delivery_state"], "settled")
+        with self.store._connection() as connection:
+            event = connection.execute(
+                "SELECT details_json FROM events WHERE subject_type = 'action' AND subject_id = ? "
+                "AND event_type = 'action_dispatch_refused' ORDER BY created_at_ms DESC LIMIT 1",
+                (intent["action_id"],),
+            ).fetchone()
+        assert event is not None
+        self.assertIn("writer_lease_not_current", event["details_json"])
+
+    def test_dispatched_exec_keeps_writer_lease_until_terminal_receipt(self) -> None:
+        """A dispatched effect cannot be handed off until its outcome is terminal."""
+
+        task_a = self.store.create_mcp_task_session(
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            binding_id=self.binding["binding_id"],
+            label="Dispatched writer A",
+            idempotency_key="dispatched-writer-task-a-001",
+        )
+        task_b = self.store.create_mcp_task_session(
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            binding_id=self.binding["binding_id"],
+            label="Dispatched writer B",
+            idempotency_key="dispatched-writer-task-b-001",
+        )
+        intent = self.store.request_mcp_exec(
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            binding_id=self.binding["binding_id"],
+            task_id=task_a["task_id"],
+            argv=["python", "-c", "print('terminal-fence')"],
+            idempotency_key="dispatched-writer-exec-001",
+            facade_contract=self._contract(),
+        )
+        self.store.heartbeat(
+            device_id=self.node["device_id"],
+            endpoint_id=self.endpoint_id,
+            runtime_instance_id="runtime-dispatched-writer-0001",
+            mcp_server_instance_id="server-dispatched-writer-0001",
+            activation_epoch="epoch-dispatched-writer-0001",
+            contract_version="smart-v3",
+            readiness="ready",
+        )
+        dispatched = self.store.poll_actions(device_id=self.node["device_id"], lane="bounded_exec")
+        self.assertEqual([row["action_id"] for row in dispatched], [intent["action_id"]])
+        attempt_id = dispatched[0]["attempt_id"]
+        with self.assertRaisesRegex(ConflictError, "unresolved dispatched action"):
+            self.store.release_mcp_task_writer_lease(
+                owner_id=self.owner_id,
+                principal_id=self.principal["principal_id"],
+                task_id=task_a["task_id"],
+                reason="premature_handoff",
+            )
+        terminal = self.store.record_receipt(
+            device_id=self.node["device_id"],
+            action_id=intent["action_id"],
+            attempt_id=attempt_id,
+            receipt_state="completed",
+            local_handle="cp_exec_terminal_fence_0001",
+            payload={"status": "exited", "exit_code": 0},
+        )
+        self.assertEqual(terminal["delivery_state"], "settled")
+        released = self.store.release_mcp_task_writer_lease(
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            task_id=task_a["task_id"],
+            reason="terminal_handoff",
+        )
+        self.assertEqual(released["state"], "released")
+        next_lease = self.store.claim_mcp_task_writer_lease(
+            owner_id=self.owner_id,
+            principal_id=self.principal["principal_id"],
+            task_id=task_b["task_id"],
+        )
+        self.assertEqual(next_lease["state"], "held")
+        self.assertEqual(next_lease["binding_id"], self.binding["binding_id"])
 
     def test_exec_requires_exec_capability(self) -> None:
         node = self.store.enroll_node(

@@ -13,7 +13,10 @@ const path = require('node:path');
 const zlib = require('node:zlib');
 const { URL } = require('node:url');
 
-const POLICY_SCHEMA_VERSION = 1;
+const POLICY_SCHEMA_VERSION = 2;
+const LEGACY_POLICY_SCHEMA_VERSION = 1;
+const STANDING_AUTHORITY_MODE = 'standing';
+const BRIDGE_ENVELOPE_SCHEMA_VERSION = 1;
 const BRIDGE_CLIENT_ID = 'electron-control-plane-approved-patch-bridge';
 const BRIDGE_CLIENT_TYPE = 'electron';
 const ACTION_TOOL_NAME = 'agent_workflow';
@@ -42,6 +45,7 @@ const SHA256_RE = /^[a-f0-9]{64}$/;
 // bridge handle; no caller-selected PID or process id is a control-plane
 // authority token.
 const ORCHESTRATION_IDENTIFIER_RE = /^[a-f0-9]{32}$/;
+const TASK_ID_RE = /^task_[a-f0-9]{32}$/;
 const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
 
 const SENSITIVE_DIRECTORY_NAMES = new Set([
@@ -162,13 +166,17 @@ function allowedPaths(value, code = 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID
 }
 
 function normalisePolicy(value, { now = Date.now() } = {}) {
+  const schemaVersion = Number(value?.schema_version);
+  const standing = schemaVersion === POLICY_SCHEMA_VERSION;
+  const legacy = schemaVersion === LEGACY_POLICY_SCHEMA_VERSION;
   const expected = [
     'schema_version', 'enabled', 'server_origin', 'owner_id', 'device_id',
     'endpoint_id', 'workspace_id', 'workspace_generation', 'expires_at_ms',
     'facade_contract', 'allowed_relative_paths', 'max_patch_bytes',
     'max_file_bytes', 'validation_profile'
   ];
-  if (!exactKeys(value, expected) || Number(value.schema_version) !== POLICY_SCHEMA_VERSION) {
+  if (standing) expected.push('authority_mode');
+  if (!exactKeys(value, expected) || (!standing && !legacy)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'control-plane approved-patch policy has an invalid schema.');
   }
   if (value.enabled !== true) {
@@ -177,21 +185,35 @@ function normalisePolicy(value, { now = Date.now() } = {}) {
   if (value.validation_profile !== VALIDATION_PROFILE) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'control-plane approved-patch validation profile is invalid.');
   }
-  return Object.freeze({
-    schema_version: POLICY_SCHEMA_VERSION,
+  const authorityMode = standing ? STANDING_AUTHORITY_MODE : 'expiring_legacy';
+  if (standing && value.authority_mode !== STANDING_AUTHORITY_MODE) {
+    throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'standing approved-patch authority must declare its mode.');
+  }
+  const expiresAtMs = value.expires_at_ms;
+  if (standing) {
+    if (expiresAtMs !== null) {
+      throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID', 'standing approved-patch authority must not carry an expiry.');
+    }
+  } else {
+    expiry(expiresAtMs, now, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED');
+  }
+  const normalised = {
+    schema_version: schemaVersion,
     server_origin: origin(value.server_origin),
     owner_id: identifier(value.owner_id, 'owner_id'),
     device_id: identifier(value.device_id, 'device_id'),
     endpoint_id: identifier(value.endpoint_id, 'endpoint_id'),
     workspace_id: identifier(value.workspace_id, 'workspace_id'),
     workspace_generation: identifier(value.workspace_generation, 'workspace_generation'),
-    expires_at_ms: expiry(value.expires_at_ms, now, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED'),
+    expires_at_ms: expiresAtMs,
     facade_contract: facadeContract(value.facade_contract),
     allowed_relative_paths: allowedPaths(value.allowed_relative_paths),
     max_patch_bytes: boundedInteger(value.max_patch_bytes, 'max_patch_bytes', MAX_PATCH_BYTES, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID'),
     max_file_bytes: boundedInteger(value.max_file_bytes, 'max_file_bytes', MAX_EXACT_FILE_BYTES, 'CONTROL_PLANE_APPROVED_PATCH_POLICY_INVALID'),
     validation_profile: VALIDATION_PROFILE
-  });
+  };
+  if (standing) normalised.authority_mode = authorityMode;
+  return Object.freeze(normalised);
 }
 
 function loadApprovedPatchBridgePolicy(paths, { now = Date.now() } = {}) {
@@ -340,10 +362,17 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
   const expected = [
     'server_origin', 'owner_id', 'device_id', 'endpoint_id', 'workspace_id',
     'workspace_generation', 'context_id', 'binding_id', 'action_id', 'attempt_id',
+    'task_id', 'writer_lease_generation',
     'tool_name', 'operation', 'permission_request_id', 'permission_digest',
     'intent_digest', 'path', 'preimage_sha256', 'patch_sha256', 'patch_envelope',
     'validation_profile', 'expires_at_ms', 'facade_contract'
   ];
+  // Standing policy is a distinct local authority.  Keep the mode in the
+  // sealed request so an owner-review action cannot be relayed through a
+  // standing policy (or vice versa), while preserving the legacy owner-review
+  // request shape for existing callers and fixtures.
+  const standing = policy?.authority_mode === STANDING_AUTHORITY_MODE;
+  if (standing) expected.push('authority_mode');
   if (!exactKeys(request, expected)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID', 'control-plane approved-patch request has an invalid schema.');
   }
@@ -358,6 +387,8 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
     binding_id: identifier(request.binding_id, 'binding_id', ACTION_IDENTIFIER_RE, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID'),
     action_id: identifier(request.action_id, 'action_id', ACTION_IDENTIFIER_RE, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID'),
     attempt_id: identifier(request.attempt_id, 'attempt_id', ACTION_IDENTIFIER_RE, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID'),
+    task_id: identifier(request.task_id, 'task_id', TASK_ID_RE, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID'),
+    writer_lease_generation: Number(request.writer_lease_generation),
     tool_name: request.tool_name,
     operation: request.operation,
     permission_request_id: identifier(request.permission_request_id, 'permission_request_id', ACTION_IDENTIFIER_RE, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID'),
@@ -371,13 +402,24 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
     expires_at_ms: expiry(request.expires_at_ms, now, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_EXPIRED'),
     facade_contract: facadeContract(request.facade_contract, 'CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID')
   };
+  if (standing && request.authority_mode !== STANDING_AUTHORITY_MODE) {
+    throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_TOOL_DENIED', 'standing approved-patch requests must declare standing authority.');
+  }
+  if (!standing && Object.prototype.hasOwnProperty.call(request, 'authority_mode')) {
+    throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_TOOL_DENIED', 'owner-review approved-patch requests cannot declare standing authority.');
+  }
+  if (standing) candidate.authority_mode = STANDING_AUTHORITY_MODE;
   if (candidate.tool_name !== ACTION_TOOL_NAME || candidate.operation !== LOCAL_TOOL_NAME
     || candidate.validation_profile !== VALIDATION_PROFILE || !SHA256_RE.test(candidate.permission_digest)
     || !SHA256_RE.test(candidate.intent_digest) || !SHA256_RE.test(candidate.preimage_sha256)
     || !SHA256_RE.test(candidate.patch_sha256)) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_TOOL_DENIED', 'control-plane approved-patch bridge only admits an exact approved apply_patch action.');
   }
-  if (candidate.expires_at_ms > policy.expires_at_ms) {
+  if (!Number.isSafeInteger(candidate.writer_lease_generation)
+    || candidate.writer_lease_generation < 1 || candidate.writer_lease_generation > 1_000_000_000) {
+    throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_REQUEST_INVALID', 'writer lease generation is invalid.');
+  }
+  if (policy.expires_at_ms != null && candidate.expires_at_ms > policy.expires_at_ms) {
     throw bridgeError('CONTROL_PLANE_APPROVED_PATCH_POLICY_EXPIRED', 'control-plane action outlives the local approved-patch policy.');
   }
   for (const field of ['server_origin', 'owner_id', 'device_id', 'endpoint_id', 'workspace_id', 'workspace_generation']) {
@@ -399,7 +441,7 @@ function admitApprovedPatchBridgeRequest(policy, request, { now = Date.now() } =
     maxFileBytes: policy.max_file_bytes
   });
   return Object.freeze({
-    schema_version: POLICY_SCHEMA_VERSION,
+    schema_version: BRIDGE_ENVELOPE_SCHEMA_VERSION,
     operation_kind: OPERATION_KIND,
     ...candidate,
     postimage_sha256: patch.postimage_sha256,
@@ -600,6 +642,11 @@ function normaliseApprovedPatchResult(value, admission) {
     || !file || typeof file !== 'object' || Array.isArray(file)
     || value.schema_version !== 1 || value.operation_kind !== OPERATION_KIND
     || value.patch_applied !== true || value.action_id !== admission.action_id || value.attempt_id !== admission.attempt_id
+    || value.task_id !== admission.task_id
+    || !Number.isSafeInteger(value.writer_lease_generation)
+    || value.writer_lease_generation !== admission.writer_lease_generation
+    || !ORCHESTRATION_IDENTIFIER_RE.test(text(value.run_id).toLowerCase())
+    || !ORCHESTRATION_IDENTIFIER_RE.test(text(value.wave_id).toLowerCase())
     || value.local_semantic_acceptance !== LOCAL_SEMANTIC_ACCEPTANCE_PENDING
     || actor?.client_id !== BRIDGE_CLIENT_ID || actor?.client_type !== BRIDGE_CLIENT_TYPE
     || !/^cp_ap_[a-f0-9]{48}$/.test(text(value.local_handle))
@@ -648,6 +695,10 @@ function normaliseApprovedPatchResult(value, admission) {
     local_handle: text(value.local_handle),
     action_id: admission.action_id,
     attempt_id: admission.attempt_id,
+    task_id: admission.task_id,
+    writer_lease_generation: admission.writer_lease_generation,
+    run_id: text(value.run_id).toLowerCase(),
+    wave_id: text(value.wave_id).toLowerCase(),
     policy_sha256: text(value.policy_sha256).toLowerCase(),
     actor: { client_id: BRIDGE_CLIENT_ID, client_type: BRIDGE_CLIENT_TYPE },
     runtime_identity: {
@@ -664,6 +715,9 @@ function normaliseApprovedPatchResult(value, admission) {
 
 module.exports = {
   POLICY_SCHEMA_VERSION,
+  LEGACY_POLICY_SCHEMA_VERSION,
+  STANDING_AUTHORITY_MODE,
+  BRIDGE_ENVELOPE_SCHEMA_VERSION,
   BRIDGE_CLIENT_ID,
   BRIDGE_CLIENT_TYPE,
   ACTION_TOOL_NAME,

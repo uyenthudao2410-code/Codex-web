@@ -25,8 +25,11 @@ ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{2,127}$")
 KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{7,255}$")
 TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
-SCHEMA_VERSION = 19
+NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
+NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
+SCHEMA_VERSION = 24
 MCP_TASK_SESSION_MAX_TTL_MS = 24 * 60 * 60 * 1000
+MCP_TASK_WRITER_LEASE_TTL_MS = 60 * 1000
 MAX_HEARTBEAT_AGE_MS = 60_000
 MCP_READ_ONLY_WORKSPACE_CONTEXT_ARGUMENTS = {"detail": "compact", "max_entries": 1}
 MCP_BOUNDED_FILE_READ_MAX_BYTES = 16 * 1024
@@ -49,6 +52,10 @@ MCP_PATCH_PERMISSION_VALIDATION_PROFILE = "targeted"
 MCP_APPROVED_PATCH_MAX_BYTES = 32 * 1024
 MCP_APPROVED_PATCH_TOOL_NAME = "agent_workflow"
 MCP_APPROVED_PATCH_OPERATION = "apply_patch"
+# A standing local policy removes the owner-review step, not the durable
+# action/receipt window.  Keep the central queue TTL short so a stale replay
+# cannot become a new mutation after the task or target has changed.
+MCP_STANDING_PATCH_ACTION_TTL_MS = 10 * 60 * 1000
 # Bounded exec is intentionally narrow: argv array without shell, cwd confined
 # to the task workspace, explicit timeout/output caps. Central records the
 # request; the Windows node revalidates argv against its local allowlist and
@@ -70,7 +77,20 @@ MCP_ARTIFACT_MAX_BYTES = 256 * 1024
 MCP_ARTIFACT_IMAGE_MAX_BYTES = 1024 * 1024
 MCP_ARTIFACT_MAX_TTL_MS = 5 * 60 * 1000
 MCP_ARTIFACT_ALLOWED_MIME = ("image/png", "image/jpeg", "image/webp")
-TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed"}
+# Standing document writes reuse the selected node's write policy and writer
+# lease, but keep their structured content/source in a dedicated intent table.
+# The action row and event stream retain only digests/metadata; the raw content
+# is delivered to the enrolled node exactly like the existing patch envelope.
+MCP_DOCUMENT_WRITE_MAX_CONTENT_BYTES = 256 * 1024
+MCP_DOCUMENT_WRITE_MAX_TITLE_BYTES = 256
+MCP_DOCUMENT_WRITE_MAX_TTL_MS = 10 * 60 * 1000
+MCP_DOCUMENT_WRITE_TOOL_NAME = "document_workflow"
+MCP_DOCUMENT_WRITE_OPERATIONS = frozenset({"document_create", "document_convert"})
+MCP_DOCUMENT_WRITE_TARGET_SUFFIXES = frozenset({".docx", ".md", ".txt"})
+# A stopped process is terminal evidence just like a normal exit or failure.
+# Keep it in the same delivery-settling set so the node can acknowledge a stop
+# only after the central action has recorded the verified quiescence receipt.
+TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed", "stopped"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
 QUARANTINE_UNKNOWN_DISPOSITION = "quarantined_unknown"
 QUARANTINE_UNKNOWN_DECLARATION = "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT"
@@ -847,6 +867,20 @@ class ControlPlaneStore:
                     approved_at_ms INTEGER,
                     approved_by TEXT
                 );
+                CREATE TABLE IF NOT EXISTS node_credential_rotations (
+                    rotation_id TEXT PRIMARY KEY,
+                    device_id TEXT NOT NULL REFERENCES nodes(device_id),
+                    owner_id TEXT NOT NULL,
+                    current_generation INTEGER NOT NULL,
+                    next_generation INTEGER NOT NULL,
+                    current_credential_hash TEXT NOT NULL,
+                    next_credential_hash TEXT NOT NULL,
+                    state TEXT NOT NULL CHECK(state IN ('prepared', 'activated', 'completed', 'aborted')),
+                    created_at_ms INTEGER NOT NULL,
+                    activated_at_ms INTEGER,
+                    completed_at_ms INTEGER,
+                    UNIQUE(device_id, current_generation, next_generation)
+                );
                 CREATE TABLE IF NOT EXISTS bindings (
                     binding_id TEXT PRIMARY KEY,
                     owner_id TEXT NOT NULL,
@@ -894,6 +928,7 @@ class ControlPlaneStore:
                     tool_name TEXT NOT NULL,
                     arguments_json TEXT NOT NULL,
                     action_digest TEXT NOT NULL,
+                    writer_lease_generation INTEGER,
                     idempotency_key TEXT NOT NULL,
                     admission_reference TEXT NOT NULL,
                     created_at_ms INTEGER NOT NULL,
@@ -1008,6 +1043,32 @@ class ControlPlaneStore:
                     patch_sha256 TEXT NOT NULL,
                     validation_profile TEXT NOT NULL CHECK(validation_profile = 'targeted'),
                     patch_envelope TEXT NOT NULL,
+                    task_id TEXT REFERENCES mcp_task_sessions(task_id),
+                    writer_lease_generation INTEGER,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_standing_patch_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    authority_mode TEXT NOT NULL CHECK(authority_mode = 'standing'),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    relative_path TEXT NOT NULL,
+                    preimage_sha256 TEXT NOT NULL,
+                    patch_sha256 TEXT NOT NULL,
+                    validation_profile TEXT NOT NULL CHECK(validation_profile = 'targeted'),
+                    patch_envelope TEXT NOT NULL,
+                    task_id TEXT REFERENCES mcp_task_sessions(task_id),
+                    writer_lease_generation INTEGER,
                     facade_schema_version INTEGER NOT NULL,
                     facade_profile TEXT NOT NULL,
                     facade_contract_sha256 TEXT NOT NULL,
@@ -1033,6 +1094,7 @@ class ControlPlaneStore:
                     principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
                     binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
                     task_id TEXT REFERENCES mcp_task_sessions(task_id),
+                    writer_lease_generation INTEGER,
                     argv_json TEXT NOT NULL,
                     argv_digest TEXT NOT NULL,
                     cwd TEXT NOT NULL DEFAULT '',
@@ -1077,6 +1139,34 @@ class ControlPlaneStore:
                     PRIMARY KEY(principal_id, idempotency_key),
                     UNIQUE(request_id),
                     UNIQUE(action_id)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_document_write_intents (
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    task_id TEXT NOT NULL REFERENCES mcp_task_sessions(task_id),
+                    writer_lease_generation INTEGER NOT NULL,
+                    operation TEXT NOT NULL CHECK(operation IN ('document_create', 'document_convert')),
+                    source_path TEXT,
+                    target_path TEXT NOT NULL,
+                    title TEXT NOT NULL DEFAULT '',
+                    content TEXT NOT NULL DEFAULT '',
+                    overwrite INTEGER NOT NULL CHECK(overwrite IN (0, 1)),
+                    intent_digest TEXT NOT NULL,
+                    idempotency_key TEXT NOT NULL,
+                    facade_schema_version INTEGER NOT NULL,
+                    facade_profile TEXT NOT NULL,
+                    facade_contract_sha256 TEXT NOT NULL,
+                    request_id TEXT NOT NULL REFERENCES work_requests(request_id),
+                    action_id TEXT NOT NULL REFERENCES actions(action_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key),
+                    UNIQUE(request_id),
+                    UNIQUE(action_id),
+                    CHECK(
+                        (operation = 'document_create' AND source_path IS NULL)
+                        OR (operation = 'document_convert' AND source_path IS NOT NULL)
+                    )
                 );
                 CREATE TABLE IF NOT EXISTS oauth_principals (
                     principal_id TEXT PRIMARY KEY,
@@ -1148,6 +1238,33 @@ class ControlPlaneStore:
                     PRIMARY KEY(task_id, action_id),
                     UNIQUE(action_id)
                 );
+                CREATE TABLE IF NOT EXISTS mcp_task_open_idempotency (
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    idempotency_key TEXT NOT NULL,
+                    intent_digest TEXT NOT NULL,
+                    task_id TEXT NOT NULL UNIQUE REFERENCES mcp_task_sessions(task_id),
+                    created_at_ms INTEGER NOT NULL,
+                    PRIMARY KEY(principal_id, idempotency_key)
+                );
+                CREATE TABLE IF NOT EXISTS mcp_task_writer_leases (
+                    lease_id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL REFERENCES mcp_task_sessions(task_id),
+                    owner_id TEXT NOT NULL,
+                    principal_id TEXT NOT NULL REFERENCES oauth_principals(principal_id),
+                    binding_id TEXT NOT NULL REFERENCES bindings(binding_id),
+                    lease_generation INTEGER NOT NULL,
+                    acquired_at_ms INTEGER NOT NULL,
+                    renewed_at_ms INTEGER NOT NULL,
+                    expires_at_ms INTEGER NOT NULL,
+                    released_at_ms INTEGER,
+                    release_reason TEXT,
+                    CHECK(lease_generation >= 1),
+                    CHECK(expires_at_ms >= renewed_at_ms),
+                    CHECK(
+                        (released_at_ms IS NULL AND release_reason IS NULL)
+                        OR (released_at_ms IS NOT NULL AND release_reason IS NOT NULL)
+                    )
+                );
                 CREATE TABLE IF NOT EXISTS mcp_patch_acceptances (
                     action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
                     owner_id TEXT NOT NULL,
@@ -1159,6 +1276,8 @@ class ControlPlaneStore:
                 );
                 CREATE INDEX IF NOT EXISTS actions_node_delivery_idx
                     ON actions(device_id, delivery_state, expires_at_ms);
+                CREATE INDEX IF NOT EXISTS node_credential_rotations_device_state_idx
+                    ON node_credential_rotations(device_id, state, created_at_ms);
                 CREATE INDEX IF NOT EXISTS receipts_action_idx ON receipts(action_id, received_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_read_only_intents_action_idx
                     ON mcp_read_only_intents(action_id);
@@ -1174,6 +1293,10 @@ class ControlPlaneStore:
                     ON mcp_approved_patch_intents(action_id);
                 CREATE INDEX IF NOT EXISTS mcp_approved_patch_intents_owner_principal_idx
                     ON mcp_approved_patch_intents(owner_id, principal_id, created_at_ms);
+                CREATE INDEX IF NOT EXISTS mcp_standing_patch_intents_action_idx
+                    ON mcp_standing_patch_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_standing_patch_intents_owner_principal_idx
+                    ON mcp_standing_patch_intents(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_access_grants_context_idx
                     ON mcp_access_grants(context_id, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS oauth_principals_owner_idx
@@ -1190,12 +1313,21 @@ class ControlPlaneStore:
                     ON mcp_task_sessions(binding_id, expires_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_task_action_links_action_idx
                     ON mcp_task_action_links(action_id);
+                CREATE UNIQUE INDEX IF NOT EXISTS mcp_task_writer_leases_active_binding_idx
+                    ON mcp_task_writer_leases(binding_id)
+                    WHERE released_at_ms IS NULL;
+                CREATE INDEX IF NOT EXISTS mcp_task_writer_leases_task_idx
+                    ON mcp_task_writer_leases(task_id, lease_generation);
                 CREATE INDEX IF NOT EXISTS mcp_exec_intents_action_idx
                     ON mcp_exec_intents(action_id);
                 CREATE INDEX IF NOT EXISTS mcp_exec_intents_owner_principal_idx
                     ON mcp_exec_intents(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_artifact_intents_action_idx
                     ON mcp_artifact_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_document_write_intents_action_idx
+                    ON mcp_document_write_intents(action_id);
+                CREATE INDEX IF NOT EXISTS mcp_document_write_intents_owner_principal_idx
+                    ON mcp_document_write_intents(owner_id, principal_id, created_at_ms);
                     """.split(";"),
                 ):
                     connection.execute(statement)
@@ -1221,6 +1353,23 @@ class ControlPlaneStore:
                 receipt_columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(receipts)").fetchall()}
                 if "receipt_digest" not in receipt_columns:
                     connection.execute("ALTER TABLE receipts ADD COLUMN receipt_digest TEXT")
+                action_columns = {str(row["name"]) for row in connection.execute("PRAGMA table_info(actions)").fetchall()}
+                if "writer_lease_generation" not in action_columns:
+                    connection.execute("ALTER TABLE actions ADD COLUMN writer_lease_generation INTEGER")
+                approved_patch_columns = {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(mcp_approved_patch_intents)").fetchall()
+                }
+                if "task_id" not in approved_patch_columns:
+                    connection.execute("ALTER TABLE mcp_approved_patch_intents ADD COLUMN task_id TEXT")
+                if "writer_lease_generation" not in approved_patch_columns:
+                    connection.execute("ALTER TABLE mcp_approved_patch_intents ADD COLUMN writer_lease_generation INTEGER")
+                exec_columns = {
+                    str(row["name"])
+                    for row in connection.execute("PRAGMA table_info(mcp_exec_intents)").fetchall()
+                }
+                if "writer_lease_generation" not in exec_columns:
+                    connection.execute("ALTER TABLE mcp_exec_intents ADD COLUMN writer_lease_generation INTEGER")
                 intent_columns = {
                     str(row["name"])
                     for row in connection.execute("PRAGMA table_info(mcp_read_only_intents)").fetchall()
@@ -1358,9 +1507,27 @@ class ControlPlaneStore:
             raise ValidationError("credential_hash is invalid.")
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
-            if connection.execute("SELECT 1 FROM nodes WHERE device_id = ?", (device_id,)).fetchone() is not None:
-                connection.execute("ROLLBACK")
-                raise ConflictError("device is already enrolled.")
+            enrolled = connection.execute(
+                "SELECT credential_hash, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if enrolled is not None:
+                # A retry after the approval response was lost must be a
+                # replay, not a second enrollment.  Only the exact credential
+                # that was approved may learn that this device is already
+                # enrolled; a different secret remains a conflict.
+                if not hmac.compare_digest(str(enrolled["credential_hash"]), credential_hash):
+                    connection.execute("ROLLBACK")
+                    raise ConflictError("device is already enrolled; rotate credentials explicitly instead.")
+                existing_request = connection.execute(
+                    "SELECT * FROM enrollment_requests WHERE device_id = ? AND credential_hash = ?",
+                    (device_id, credential_hash),
+                ).fetchone()
+                if existing_request is None:
+                    connection.execute("ROLLBACK")
+                    raise ConflictError("device is already enrolled; enrollment lineage is unavailable.")
+                connection.execute("COMMIT")
+                return _row(existing_request) or {}
             existing = connection.execute("SELECT * FROM enrollment_requests WHERE device_id = ?", (device_id,)).fetchone()
             if existing is not None:
                 if existing["credential_hash"] != credential_hash or existing["endpoint_id"] != endpoint_id:
@@ -1377,6 +1544,325 @@ class ControlPlaneStore:
             self._event(connection, "enrollment", enrollment_id, "enrollment_requested", {"device_id": device_id, "endpoint_id": endpoint_id})
             connection.execute("COMMIT")
         return self.enrollment_request(enrollment_id=enrollment_id)
+
+    @staticmethod
+    def _node_credential_rotation_projection(row: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+        """Return rotation state without either credential hash."""
+
+        return {
+            "rotation_id": str(row["rotation_id"]),
+            "device_id": str(row["device_id"]),
+            "state": str(row["state"]),
+            "current_generation": int(row["current_generation"]),
+            "next_generation": int(row["next_generation"]),
+            "created_at_ms": int(row["created_at_ms"]),
+            "activated_at_ms": row["activated_at_ms"],
+            "completed_at_ms": row["completed_at_ms"],
+        }
+
+    @staticmethod
+    def _validate_node_rotation_id(value: Any) -> str:
+        rotation_id = str(value or "").strip().lower()
+        if NODE_ROTATION_ID_PATTERN.fullmatch(rotation_id) is None:
+            raise ValidationError("credential rotation id is invalid.")
+        return rotation_id
+
+    @staticmethod
+    def _validate_credential_hash(value: Any) -> str:
+        credential_hash = str(value or "").strip().lower()
+        if SHA256_PATTERN.fullmatch(credential_hash) is None:
+            raise ValidationError("credential hash is invalid.")
+        return credential_hash
+
+    def _authenticated_node_with_rotation(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        device_id: str,
+        node_secret: str,
+    ) -> tuple[sqlite3.Row, str]:
+        """Authenticate current credential or the active rotation candidate.
+
+        During the two-phase handoff both hashes are intentionally accepted.
+        The old hash remains valid until the node acknowledges the candidate;
+        the candidate is accepted only after the central ``activate`` commit.
+        This makes a lost response recoverable without storing a raw secret in
+        SQLite or forcing the node to guess which side committed.
+        """
+
+        row = connection.execute("SELECT * FROM nodes WHERE device_id = ?", (device_id,)).fetchone()
+        if row is None:
+            raise NotFoundError("device is not enrolled.")
+        if row["revoked_at_ms"] is not None:
+            raise PermissionError("node authentication failed.")
+        provided_hash = _digest({"node_secret": str(node_secret or "")})
+        if hmac.compare_digest(str(row["credential_hash"]), provided_hash):
+            return row, "current"
+        rotation = connection.execute(
+            "SELECT * FROM node_credential_rotations WHERE device_id = ? AND state = 'activated' ORDER BY created_at_ms DESC LIMIT 1",
+            (device_id,),
+        ).fetchone()
+        if rotation is not None and hmac.compare_digest(str(rotation["next_credential_hash"]), provided_hash):
+            return row, "next"
+        raise PermissionError("node authentication failed.")
+
+    def prepare_node_credential_rotation(
+        self,
+        *,
+        device_id: str,
+        node_secret: str,
+        rotation_id: str,
+        current_generation: int,
+        next_credential_hash: str,
+    ) -> dict[str, Any]:
+        """Durably stage a node-generated candidate without switching auth."""
+
+        device_id = _text(device_id, "device_id")
+        rotation_id = self._validate_node_rotation_id(rotation_id)
+        if not isinstance(current_generation, int) or isinstance(current_generation, bool) or current_generation < 1:
+            raise ValidationError("current credential generation is invalid.")
+        next_credential_hash = self._validate_credential_hash(next_credential_hash)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node, role = self._authenticated_node_with_rotation(
+                connection,
+                device_id=device_id,
+                node_secret=node_secret,
+            )
+            existing = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ?",
+                (rotation_id,),
+            ).fetchone()
+            if existing is not None:
+                if (
+                    str(existing["device_id"]) != device_id
+                    or int(existing["current_generation"]) != current_generation
+                    or str(existing["next_credential_hash"]) != next_credential_hash
+                ):
+                    connection.execute("ROLLBACK")
+                    raise ConflictError("credential rotation id is bound to a different candidate.")
+                # A retry after any response loss returns the same durable row.
+                connection.execute("COMMIT")
+                return self._node_credential_rotation_projection(existing)
+            if role != "current":
+                connection.execute("ROLLBACK")
+                raise ConflictError("credential rotation preparation requires the current credential.")
+            if int(node["credential_generation"]) != current_generation:
+                connection.execute("ROLLBACK")
+                raise ConflictError("credential generation is stale.")
+            active = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE device_id = ? AND state IN ('prepared', 'activated') ORDER BY created_at_ms DESC LIMIT 1",
+                (device_id,),
+            ).fetchone()
+            if active is not None:
+                connection.execute("ROLLBACK")
+                raise ConflictError("another credential rotation is already active.")
+            now = self.clock()
+            next_generation = current_generation + 1
+            connection.execute(
+                "INSERT INTO node_credential_rotations(rotation_id, device_id, owner_id, current_generation, next_generation, current_credential_hash, next_credential_hash, state, created_at_ms, activated_at_ms, completed_at_ms) VALUES (?, ?, ?, ?, ?, ?, ?, 'prepared', ?, NULL, NULL)",
+                (
+                    rotation_id,
+                    device_id,
+                    node["owner_id"],
+                    current_generation,
+                    next_generation,
+                    node["credential_hash"],
+                    next_credential_hash,
+                    now,
+                ),
+            )
+            self._event(
+                connection,
+                "node",
+                device_id,
+                "node_credential_rotation_prepared",
+                {"rotation_id": rotation_id, "current_generation": current_generation, "next_generation": next_generation},
+            )
+            row = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ?",
+                (rotation_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._node_credential_rotation_projection(row)
+
+    def activate_node_credential_rotation(
+        self,
+        *,
+        device_id: str,
+        node_secret: str,
+        rotation_id: str,
+    ) -> dict[str, Any]:
+        """Commit the dual-credential window; node acknowledgement remains."""
+
+        device_id = _text(device_id, "device_id")
+        rotation_id = self._validate_node_rotation_id(rotation_id)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node, role = self._authenticated_node_with_rotation(
+                connection,
+                device_id=device_id,
+                node_secret=node_secret,
+            )
+            row = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ? AND device_id = ?",
+                (rotation_id, device_id),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("credential rotation does not exist.")
+            if row["state"] == "prepared":
+                if role != "current" or str(node["credential_hash"]) != str(row["current_credential_hash"]):
+                    connection.execute("ROLLBACK")
+                    raise PermissionError("current credential is required to activate rotation.")
+                now = self.clock()
+                connection.execute(
+                    "UPDATE node_credential_rotations SET state = 'activated', activated_at_ms = ? WHERE rotation_id = ?",
+                    (now, rotation_id),
+                )
+                self._event(connection, "node", device_id, "node_credential_rotation_activated", {"rotation_id": rotation_id})
+            elif row["state"] == "aborted":
+                connection.execute("ROLLBACK")
+                raise ConflictError("credential rotation is aborted.")
+            # ``activated`` and ``completed`` are replay-safe.  The old
+            # credential remains valid in ``activated``; after completion only
+            # the new credential can authenticate.
+            row = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ?",
+                (rotation_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._node_credential_rotation_projection(row)
+
+    def acknowledge_node_credential_rotation(
+        self,
+        *,
+        device_id: str,
+        node_secret: str,
+        rotation_id: str,
+    ) -> dict[str, Any]:
+        """Promote the candidate and retire the old hash atomically."""
+
+        device_id = _text(device_id, "device_id")
+        rotation_id = self._validate_node_rotation_id(rotation_id)
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node, role = self._authenticated_node_with_rotation(
+                connection,
+                device_id=device_id,
+                node_secret=node_secret,
+            )
+            row = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ? AND device_id = ?",
+                (rotation_id, device_id),
+            ).fetchone()
+            if row is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("credential rotation does not exist.")
+            if row["state"] == "completed":
+                if role != "current" or str(node["credential_hash"]) != str(row["next_credential_hash"]):
+                    connection.execute("ROLLBACK")
+                    raise PermissionError("new credential is required to acknowledge rotation.")
+                connection.execute("COMMIT")
+                return self._node_credential_rotation_projection(row)
+            if row["state"] != "activated":
+                connection.execute("ROLLBACK")
+                raise ConflictError("credential rotation is not activated.")
+            if role != "next" or not hmac.compare_digest(str(row["next_credential_hash"]), _digest({"node_secret": str(node_secret or "")})):
+                connection.execute("ROLLBACK")
+                raise PermissionError("new credential is required to acknowledge rotation.")
+            now = self.clock()
+            connection.execute(
+                "UPDATE nodes SET credential_hash = ?, credential_created_at_ms = ?, credential_generation = ? WHERE device_id = ?",
+                (row["next_credential_hash"], now, row["next_generation"], device_id),
+            )
+            connection.execute(
+                "UPDATE node_credential_rotations SET state = 'completed', completed_at_ms = ? WHERE rotation_id = ?",
+                (now, rotation_id),
+            )
+            self._event(
+                connection,
+                "node",
+                device_id,
+                "node_credential_rotation_completed",
+                {"rotation_id": rotation_id, "credential_generation": int(row["next_generation"])},
+            )
+            row = connection.execute(
+                "SELECT * FROM node_credential_rotations WHERE rotation_id = ?",
+                (rotation_id,),
+            ).fetchone()
+            connection.execute("COMMIT")
+        return self._node_credential_rotation_projection(row)
+
+    def node_enrollment_status(self, *, device_id: str, node_secret: str) -> dict[str, Any]:
+        """Return durable enrollment state authenticated by the node secret.
+
+        Pending requests have no ``nodes`` row yet, so this method authenticates
+        the hash against the pending request.  Approved and revoked nodes are
+        checked against the node row even when revoked, allowing a node to
+        learn that its credential was revoked without exposing status to an
+        unauthenticated caller.  The response contains no secret, owner, path,
+        or OAuth identity.
+        """
+
+        device_id = _text(device_id, "device_id")
+        node_secret = str(node_secret or "")
+        credential_hash = _digest({"node_secret": node_secret})
+        with self._connection() as connection:
+            node = connection.execute(
+                "SELECT device_id, credential_hash, credential_generation, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            request = connection.execute(
+                "SELECT enrollment_id, device_id, credential_hash, requested_at_ms, approved_at_ms FROM enrollment_requests WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            authenticated = False
+            authenticated_generation: int | None = None
+            if node is not None:
+                if node["revoked_at_ms"] is not None:
+                    # A revoked node may still reconcile to a truthful
+                    # ``revoked`` projection, but it can never authenticate
+                    # ordinary heartbeat/dispatch routes.
+                    authenticated = hmac.compare_digest(str(node["credential_hash"]), credential_hash)
+                else:
+                    try:
+                        authenticated_node, role = self._authenticated_node_with_rotation(
+                            connection,
+                            device_id=device_id,
+                            node_secret=node_secret,
+                        )
+                        authenticated = authenticated_node is not None
+                        if role == "next":
+                            active_rotation = connection.execute(
+                                "SELECT next_generation FROM node_credential_rotations WHERE device_id = ? AND state = 'activated' ORDER BY created_at_ms DESC LIMIT 1",
+                                (device_id,),
+                            ).fetchone()
+                            authenticated_generation = int(active_rotation["next_generation"]) if active_rotation is not None else None
+                    except (NotFoundError, PermissionError):
+                        authenticated = False
+            elif request is not None:
+                authenticated = hmac.compare_digest(str(request["credential_hash"]), credential_hash)
+            if not authenticated:
+                raise PermissionError("node authentication failed.")
+            now = self.clock()
+            if node is None:
+                state = "pending_operator_approval"
+                generation = None
+                approved_at_ms = None
+            else:
+                state = "revoked" if node["revoked_at_ms"] is not None else "approved"
+                generation = authenticated_generation or int(node["credential_generation"])
+                approved_at_ms = request["approved_at_ms"] if request is not None else None
+            return {
+                "enrollment_id": request["enrollment_id"] if request is not None else None,
+                "device_id": device_id,
+                "state": state,
+                "credential_generation": generation,
+                "requested_at_ms": request["requested_at_ms"] if request is not None else None,
+                "approved_at_ms": approved_at_ms,
+                "observed_at_ms": now,
+            }
 
     def enrollment_request(self, *, enrollment_id: str) -> dict[str, Any]:
         enrollment_id = _text(enrollment_id, "enrollment_id")
@@ -1420,11 +1906,17 @@ class ControlPlaneStore:
 
     def authenticate_node(self, *, device_id: str, node_secret: str) -> dict[str, Any]:
         device_id = _text(device_id, "device_id")
-        provided_hash = _digest({"node_secret": str(node_secret or "")})
         with self._connection() as connection:
-            row = connection.execute("SELECT * FROM nodes WHERE device_id = ?", (device_id,)).fetchone()
-        if row is None or row["revoked_at_ms"] is not None or not hmac.compare_digest(row["credential_hash"], provided_hash):
-            raise PermissionError("node authentication failed.")
+            row, role = self._authenticated_node_with_rotation(
+                connection,
+                device_id=device_id,
+                node_secret=node_secret,
+            )
+            if role == "next":
+                # Keep the node projection truthful while the dual-credential
+                # window is active; the durable generation advances only at
+                # acknowledge, not at activate.
+                return dict(row)
         return _row(row) or {}
 
     def heartbeat(self, *, device_id: str, endpoint_id: str, runtime_instance_id: str, activation_epoch: str, contract_version: str, readiness: str, mcp_server_instance_id: str = "", policy_observation: Any = None) -> dict[str, Any]:
@@ -1978,21 +2470,14 @@ class ControlPlaneStore:
         return len(rows)
 
     def rotate_node_credential(self, *, owner_id: str, device_id: str) -> dict[str, str | int]:
-        owner_id = _text(owner_id, "owner_id")
-        device_id = _text(device_id, "device_id")
-        new_secret = secrets.token_urlsafe(32)
-        with self._connection() as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            node = self._node_for_owner(connection, owner_id, device_id)
-            now = self.clock()
-            generation = int(node["credential_generation"]) + 1
-            connection.execute(
-                "UPDATE nodes SET credential_hash = ?, credential_created_at_ms = ?, credential_generation = ? WHERE device_id = ?",
-                (_digest({"node_secret": new_secret}), now, generation, device_id),
-            )
-            self._event(connection, "node", device_id, "node_credential_rotated", {"credential_generation": generation})
-            connection.execute("COMMIT")
-        return {"device_id": device_id, "node_secret": new_secret, "credential_generation": generation}
+        # Retain the symbol for older callers so they receive a typed failure,
+        # but never perform the historical one-shot switch.  That path could
+        # invalidate a node before it durably persisted the replacement.  The
+        # only supported product path is node-mediated
+        # prepare/activate/ack above.
+        _text(owner_id, "owner_id")
+        _text(device_id, "device_id")
+        raise ConflictError("node-mediated credential rotation is required.")
 
     def revoke_node(self, *, owner_id: str, device_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
@@ -2370,12 +2855,15 @@ class ControlPlaneStore:
         return [dict(row) for row in rows]
 
     def list_account_targets(self, *, owner_id: str) -> list[dict[str, Any]]:
-        """List only currently shared, path-free targets for an OAuth account.
+        """List path-free binding inventory, including durable inactive state.
 
         An account connection is deliberately independent of a short-lived
         task context. This inventory does not create a context, policy, grant,
-        or action and excludes bindings whose node/root generation is no longer
-        current.
+        or action.  A revoked binding, revoked node, retired generation, or
+        missing registration remains visible as an opaque historical target so
+        every linked client can display the real state and avoid silent
+        failover.  Dispatchability is reported separately; task-open and every
+        action path still require a current, non-revoked registration.
         """
 
         owner_id = _text(owner_id, "owner_id")
@@ -2386,31 +2874,72 @@ class ControlPlaneStore:
                     b.binding_id, b.device_id, b.endpoint_id, b.workspace_id,
                     b.workspace_generation, b.display_name AS workspace_display_name,
                     b.created_at_ms AS binding_created_at_ms,
+                    b.revoked_at_ms AS binding_revoked_at_ms,
                     n.display_name AS node_display_name, n.last_seen_at_ms,
+                    n.revoked_at_ms AS node_revoked_at_ms,
                     n.readiness, n.contract_version, n.policy_state,
                     n.policy_expires_at_ms, n.policy_observed_at_ms,
-                    nw.capabilities_json, nw.registered_at_ms
+                    nw.capabilities_json, nw.registered_at_ms,
+                    nw.retired_at_ms AS workspace_retired_at_ms
                 FROM bindings AS b
                 JOIN nodes AS n ON n.device_id = b.device_id
-                JOIN node_workspaces AS nw
+                LEFT JOIN node_workspaces AS nw
                   ON nw.device_id = b.device_id
                  AND nw.workspace_id = b.workspace_id
                  AND nw.workspace_generation = b.workspace_generation
-                 AND nw.retired_at_ms IS NULL
                 WHERE b.owner_id = ?
-                  AND b.revoked_at_ms IS NULL
                   AND n.owner_id = ?
-                  AND n.revoked_at_ms IS NULL
                 ORDER BY b.created_at_ms, b.binding_id
                 """,
                 (owner_id, owner_id),
             ).fetchall()
+        now = self.clock()
         targets: list[dict[str, Any]] = []
         for row in rows:
-            try:
-                capabilities = _workspace_capabilities(json.loads(str(row["capabilities_json"])))
-            except (TypeError, ValueError, json.JSONDecodeError) as error:
-                raise RuntimeError("stored workspace capabilities are invalid.") from error
+            raw_capabilities = row["capabilities_json"]
+            if raw_capabilities is None:
+                # A missing registration is historical evidence, not a
+                # capability grant.  Keep the shape exact and non-dispatchable
+                # without inventing a read permission.
+                capabilities = {"exec": False, "read": False, "write": False}
+            else:
+                try:
+                    capabilities = _workspace_capabilities(json.loads(str(raw_capabilities)))
+                except (TypeError, ValueError, json.JSONDecodeError) as error:
+                    raise RuntimeError("stored workspace capabilities are invalid.") from error
+            binding_revoked_at_ms = row["binding_revoked_at_ms"]
+            node_revoked_at_ms = row["node_revoked_at_ms"]
+            workspace_registered_at_ms = row["registered_at_ms"]
+            workspace_retired_at_ms = row["workspace_retired_at_ms"]
+            binding_state = "revoked" if binding_revoked_at_ms is not None else "active"
+            node_state = "revoked" if node_revoked_at_ms is not None else "active"
+            if workspace_registered_at_ms is None:
+                workspace_state = "missing"
+            elif workspace_retired_at_ms is not None:
+                workspace_state = "retired"
+            else:
+                workspace_state = "active"
+            dispatch_blockers: list[str] = []
+            if binding_state != "active":
+                dispatch_blockers.append("binding_revoked")
+            if node_state != "active":
+                dispatch_blockers.append("node_revoked")
+            if workspace_state == "retired":
+                dispatch_blockers.append("workspace_retired")
+            elif workspace_state == "missing":
+                dispatch_blockers.append("workspace_missing")
+            dispatch_state = dispatch_blockers[0] if dispatch_blockers else "dispatchable"
+            last_seen_at_ms = row["last_seen_at_ms"]
+            if not isinstance(last_seen_at_ms, int) or isinstance(last_seen_at_ms, bool) or last_seen_at_ms <= 0:
+                presence_state = "unknown"
+                heartbeat_age_ms = None
+            else:
+                heartbeat_age_ms = max(0, int(now) - last_seen_at_ms)
+                presence_state = (
+                    "online"
+                    if last_seen_at_ms + self.heartbeat_max_age_ms >= int(now)
+                    else "offline"
+                )
             targets.append(
                 {
                     "binding_id": row["binding_id"],
@@ -2422,8 +2951,18 @@ class ControlPlaneStore:
                     "workspace_display_name": row["workspace_display_name"],
                     "capabilities": capabilities,
                     "binding_created_at_ms": row["binding_created_at_ms"],
-                    "workspace_registered_at_ms": row["registered_at_ms"],
+                    "binding_revoked_at_ms": binding_revoked_at_ms,
+                    "binding_state": binding_state,
+                    "node_revoked_at_ms": node_revoked_at_ms,
+                    "node_state": node_state,
+                    "workspace_registered_at_ms": workspace_registered_at_ms,
+                    "workspace_retired_at_ms": workspace_retired_at_ms,
+                    "workspace_state": workspace_state,
+                    "dispatch_state": dispatch_state,
+                    "dispatch_blockers": dispatch_blockers,
                     "last_seen_at_ms": row["last_seen_at_ms"],
+                    "presence_state": presence_state,
+                    "heartbeat_age_ms": heartbeat_age_ms,
                     "readiness": row["readiness"],
                     "contract_version": row["contract_version"],
                     "policy_state": row["policy_state"],
@@ -2536,6 +3075,377 @@ class ControlPlaneStore:
         )
         return task
 
+    @staticmethod
+    def _task_writer_lease_projection(
+        row: sqlite3.Row,
+        *,
+        now: int | None = None,
+        replayed: bool = False,
+    ) -> dict[str, Any]:
+        """Project a task writer lease without exposing controller internals."""
+
+        observed_at_ms = int(row["renewed_at_ms"] if now is None else now)
+        expires_at_ms = int(row["expires_at_ms"])
+        released_at_ms = row["released_at_ms"]
+        state = "released" if released_at_ms is not None else "held"
+        if released_at_ms is None and expires_at_ms <= observed_at_ms:
+            state = "expired"
+        return {
+            "task_id": str(row["task_id"]),
+            "binding_id": str(row["binding_id"]),
+            "lease_generation": int(row["lease_generation"]),
+            "acquired_at_ms": int(row["acquired_at_ms"]),
+            "renewed_at_ms": int(row["renewed_at_ms"]),
+            "expires_at_ms": expires_at_ms,
+            "released_at_ms": released_at_ms,
+            "release_reason": row["release_reason"],
+            "state": state,
+            "replayed": bool(replayed),
+        }
+
+    def _release_task_writer_lease_in_transaction(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        task_id: str,
+        now: int,
+        reason: str,
+    ) -> dict[str, Any] | None:
+        row = connection.execute(
+            "SELECT * FROM mcp_task_writer_leases WHERE task_id = ? AND released_at_ms IS NULL "
+            "ORDER BY lease_generation DESC LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        unresolved = connection.execute(
+            """
+            SELECT action.action_id, action.delivery_state
+            FROM actions AS action
+            JOIN mcp_task_action_links AS link ON link.action_id = action.action_id
+            WHERE link.task_id = ?
+              AND action.binding_id = ?
+              AND action.writer_lease_generation = ?
+              AND action.delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+            ORDER BY action.created_at_ms, action.action_id
+            LIMIT 1
+            """,
+            (task_id, row["binding_id"], int(row["lease_generation"])),
+        ).fetchone()
+        if unresolved is not None:
+            # A dispatched/accepted/unknown effect still has an unresolved
+            # local outcome.  Releasing or taking over its lease would allow
+            # another controller to mutate the same workspace concurrently.
+            # Keep the lease held until the action reaches a terminal receipt
+            # or an explicit reconciliation path settles it.
+            raise ConflictError("workspace writer lease has an unresolved dispatched action.")
+        connection.execute(
+            "UPDATE mcp_task_writer_leases SET released_at_ms = ?, release_reason = ? "
+            "WHERE lease_id = ? AND released_at_ms IS NULL",
+            (now, reason, row["lease_id"]),
+        )
+        updated = connection.execute(
+            "SELECT * FROM mcp_task_writer_leases WHERE lease_id = ?",
+            (row["lease_id"],),
+        ).fetchone()
+        self._event(
+            connection,
+            "mcp_task_session",
+            task_id,
+            "mcp_task_writer_lease_released",
+            {"lease_generation": int(row["lease_generation"]), "reason": reason},
+        )
+        return self._task_writer_lease_projection(updated, now=now) if updated is not None else None
+
+    def _claim_mcp_task_writer_lease_in_transaction(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+        binding_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Claim the single workspace writer slot for one live task.
+
+        A task is the durable controller identity.  Repeated calls from the
+        same task renew its lease; a different task cannot write the same
+        binding until the prior lease expires or its task is explicitly closed.
+        The short lease makes a crashed ChatGPT controller recoverable without
+        inventing a second writer or asking Ubuntu to approve each command.
+        """
+
+        task = self._require_live_mcp_task(
+            connection,
+            owner_id=owner_id,
+            principal_id=principal_id,
+            task_id=task_id,
+            binding_id=binding_id,
+        )
+        now = self.clock()
+        active = connection.execute(
+            "SELECT * FROM mcp_task_writer_leases WHERE binding_id = ? AND released_at_ms IS NULL "
+            "ORDER BY acquired_at_ms DESC LIMIT 1",
+            (task["binding_id"],),
+        ).fetchone()
+        if active is not None and int(active["expires_at_ms"]) <= now:
+            self._release_task_writer_lease_in_transaction(
+                connection,
+                task_id=str(active["task_id"]),
+                now=now,
+                reason="lease_expired",
+            )
+            active = None
+        if active is not None:
+            if str(active["task_id"]) != task_id:
+                raise ConflictError("workspace writer lease is held by another task.")
+            connection.execute(
+                "UPDATE mcp_task_writer_leases SET renewed_at_ms = ?, expires_at_ms = ? "
+                "WHERE lease_id = ? AND released_at_ms IS NULL",
+                (now, now + MCP_TASK_WRITER_LEASE_TTL_MS, active["lease_id"]),
+            )
+            renewed = connection.execute(
+                "SELECT * FROM mcp_task_writer_leases WHERE lease_id = ?",
+                (active["lease_id"],),
+            ).fetchone()
+            if renewed is None:
+                raise RuntimeError("task writer lease disappeared during renewal.")
+            return self._task_writer_lease_projection(renewed, now=now, replayed=True)
+
+        previous = connection.execute(
+            "SELECT MAX(lease_generation) AS generation FROM mcp_task_writer_leases WHERE task_id = ?",
+            (task_id,),
+        ).fetchone()
+        generation = int(previous["generation"] or 0) + 1
+        lease_id = f"lease_{uuid.uuid4().hex}"
+        connection.execute(
+            """
+            INSERT INTO mcp_task_writer_leases(
+                lease_id, task_id, owner_id, principal_id, binding_id,
+                lease_generation, acquired_at_ms, renewed_at_ms, expires_at_ms,
+                released_at_ms, release_reason
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+            """,
+            (
+                lease_id,
+                task_id,
+                owner_id,
+                principal_id,
+                task["binding_id"],
+                generation,
+                now,
+                now,
+                now + MCP_TASK_WRITER_LEASE_TTL_MS,
+            ),
+        )
+        self._event(
+            connection,
+            "mcp_task_session",
+            task_id,
+            "mcp_task_writer_lease_claimed",
+            {"lease_generation": generation, "binding_id": task["binding_id"]},
+        )
+        created = connection.execute(
+            "SELECT * FROM mcp_task_writer_leases WHERE lease_id = ?",
+            (lease_id,),
+        ).fetchone()
+        if created is None:
+            raise RuntimeError("task writer lease was not persisted.")
+        return self._task_writer_lease_projection(created, now=now)
+
+    def _require_mcp_task_writer_lease(
+        self,
+        connection: sqlite3.Connection,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+        binding_id: str | None = None,
+    ) -> dict[str, Any]:
+        return self._claim_mcp_task_writer_lease_in_transaction(
+            connection,
+            owner_id=owner_id,
+            principal_id=principal_id,
+            task_id=task_id,
+            binding_id=binding_id,
+        )
+
+    def claim_mcp_task_writer_lease(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+    ) -> dict[str, Any]:
+        """Explicitly claim/renew a task's workspace writer lease."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                lease = self._claim_mcp_task_writer_lease_in_transaction(
+                    connection,
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    task_id=task_id,
+                )
+                connection.execute("COMMIT")
+                return lease
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+
+    def release_mcp_task_writer_lease(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+        reason: Any = "controller_handoff",
+    ) -> dict[str, Any]:
+        """Release a task lease so another same-account task can take over."""
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        if not isinstance(reason, str) or not 1 <= len(reason.strip()) <= 64:
+            raise ValidationError("lease release reason is invalid.")
+        reason = reason.strip()
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                task = connection.execute(
+                    "SELECT owner_id, principal_id FROM mcp_task_sessions WHERE task_id = ?",
+                    (task_id,),
+                ).fetchone()
+                if task is None:
+                    raise NotFoundError("task does not exist.")
+                if task["owner_id"] != owner_id or task["principal_id"] != principal_id:
+                    raise PermissionError("task is not owned by this OAuth account.")
+                lease = self._release_task_writer_lease_in_transaction(
+                    connection,
+                    task_id=task_id,
+                    now=self.clock(),
+                    reason=reason,
+                )
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        if lease is None:
+            return {
+                "task_id": task_id,
+                "state": "released",
+                "released": False,
+                "release_reason": reason,
+            }
+        lease["released"] = True
+        return lease
+
+    def observe_mcp_task(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        task_id: str,
+    ) -> dict[str, Any]:
+        """Return a redacted task/lease view usable by another controller.
+
+        Observation deliberately excludes action arguments, patch envelopes,
+        file contents and node credentials.  It is safe to call from a second
+        ChatGPT client using the same linked principal and does not acquire or
+        renew the writer lease.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is invalid.")
+        with self._connection() as connection:
+            task = connection.execute(
+                "SELECT * FROM mcp_task_sessions WHERE task_id = ?",
+                (task_id,),
+            ).fetchone()
+            if task is None:
+                raise NotFoundError("task does not exist.")
+            if task["owner_id"] != owner_id or task["principal_id"] != principal_id:
+                raise PermissionError("task is not owned by this OAuth account.")
+            now = self.clock()
+            active_or_latest = connection.execute(
+                "SELECT * FROM mcp_task_writer_leases WHERE binding_id = ? AND released_at_ms IS NULL "
+                "ORDER BY acquired_at_ms DESC LIMIT 1",
+                (task["binding_id"],),
+            ).fetchone()
+            if active_or_latest is None:
+                active_or_latest = connection.execute(
+                    "SELECT * FROM mcp_task_writer_leases WHERE task_id = ? "
+                    "ORDER BY lease_generation DESC LIMIT 1",
+                    (task_id,),
+                ).fetchone()
+            action_rows = connection.execute(
+                """
+                SELECT action_id, tool_name, binding_id, device_id, endpoint_id,
+                       workspace_id, workspace_generation, created_at_ms,
+                       expires_at_ms, delivery_state, settled_at_ms
+                FROM actions
+                WHERE owner_id = ? AND action_id IN (
+                    SELECT action_id FROM mcp_task_action_links WHERE task_id = ?
+                )
+                ORDER BY created_at_ms, action_id
+                """,
+                (owner_id, task_id),
+            ).fetchall()
+        task_projection = {
+            "task_id": str(task["task_id"]),
+            "owner_id": str(task["owner_id"]),
+            "principal_id": str(task["principal_id"]),
+            "binding_id": str(task["binding_id"]),
+            "device_id": str(task["device_id"]),
+            "endpoint_id": str(task["endpoint_id"]),
+            "workspace_id": str(task["workspace_id"]),
+            "workspace_generation": str(task["workspace_generation"]),
+            "label": str(task["label"]),
+            "created_at_ms": int(task["created_at_ms"]),
+            "expires_at_ms": int(task["expires_at_ms"]),
+            "closed_at_ms": task["closed_at_ms"],
+            "close_reason": task["close_reason"],
+            "state": (
+                "closed" if task["closed_at_ms"] is not None
+                else "expired" if int(task["expires_at_ms"]) <= now
+                else "open"
+            ),
+        }
+        actions = [
+            {
+                "action_id": str(row["action_id"]),
+                "tool_name": str(row["tool_name"]),
+                "binding_id": str(row["binding_id"]),
+                "device_id": str(row["device_id"]),
+                "endpoint_id": str(row["endpoint_id"]),
+                "workspace_id": str(row["workspace_id"]),
+                "workspace_generation": str(row["workspace_generation"]),
+                "created_at_ms": int(row["created_at_ms"]),
+                "expires_at_ms": int(row["expires_at_ms"]),
+                "delivery_state": str(row["delivery_state"]),
+                "settled_at_ms": row["settled_at_ms"],
+            }
+            for row in action_rows
+        ]
+        return {
+            "task": task_projection,
+            "writer_lease": (
+                self._task_writer_lease_projection(active_or_latest, now=now)
+                if active_or_latest is not None
+                else None
+            ),
+            "actions": actions,
+            "observed_at_ms": now,
+        }
+
     def create_mcp_task_session(
         self,
         *,
@@ -2544,6 +3454,7 @@ class ControlPlaneStore:
         binding_id: str,
         label: Any,
         ttl_ms: int | None = None,
+        idempotency_key: str | None = None,
     ) -> dict[str, Any]:
         """Open one durable multi-call task pinned to an explicit binding.
 
@@ -2560,6 +3471,15 @@ class ControlPlaneStore:
             ttl_ms = MCP_TASK_SESSION_MAX_TTL_MS
         if not isinstance(ttl_ms, int) or isinstance(ttl_ms, bool) or not 60_000 <= ttl_ms <= MCP_TASK_SESSION_MAX_TTL_MS:
             raise ValidationError("task ttl is invalid.")
+        if idempotency_key is None:
+            # Legacy private Console callers may omit the key; public MCP
+            # task_open validation requires one.  A generated key preserves
+            # the new table's lineage without pretending an unkeyed caller is
+            # retry-safe.
+            idempotency_key = f"legacy_{uuid.uuid4().hex}"
+        else:
+            idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        intent_digest = _digest({"binding_id": binding_id, "label": label, "ttl_ms": ttl_ms})
         task_id = f"task_{uuid.uuid4().hex}"
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -2570,6 +3490,21 @@ class ControlPlaneStore:
                 ).fetchone()
                 if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
                     raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing_key = connection.execute(
+                    "SELECT intent_digest, task_id FROM mcp_task_open_idempotency WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing_key is not None:
+                    if str(existing_key["intent_digest"]) != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different task target or label.")
+                    existing_task = connection.execute(
+                        "SELECT owner_id, principal_id FROM mcp_task_sessions WHERE task_id = ?",
+                        (existing_key["task_id"],),
+                    ).fetchone()
+                    if existing_task is None or existing_task["owner_id"] != owner_id or existing_task["principal_id"] != principal_id:
+                        raise ConflictError("task idempotency lineage is invalid.")
+                    connection.execute("COMMIT")
+                    return self.mcp_task_session(owner_id=owner_id, principal_id=principal_id, task_id=str(existing_key["task_id"]))
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
                 live = connection.execute(
@@ -2619,6 +3554,10 @@ class ControlPlaneStore:
                         live["workspace_id"], live["workspace_generation"],
                         label, now, now + ttl_ms,
                     ),
+                )
+                connection.execute(
+                    "INSERT INTO mcp_task_open_idempotency(principal_id, idempotency_key, intent_digest, task_id, created_at_ms) VALUES (?, ?, ?, ?, ?)",
+                    (principal_id, idempotency_key, intent_digest, task_id, now),
                 )
                 self._event(connection, "mcp_task_session", task_id, "mcp_task_session_created", {"binding_id": binding_id})
                 connection.execute("COMMIT")
@@ -2676,6 +3615,12 @@ class ControlPlaneStore:
                     raise PermissionError("task is not owned by this OAuth account.")
                 if row["closed_at_ms"] is None:
                     now = self.clock()
+                    self._release_task_writer_lease_in_transaction(
+                        connection,
+                        task_id=task_id,
+                        now=now,
+                        reason="task_closed",
+                    )
                     connection.execute(
                         "UPDATE mcp_task_sessions SET closed_at_ms = ?, close_reason = ? WHERE task_id = ?",
                         (now, reason, task_id),
@@ -2837,6 +3782,71 @@ class ControlPlaneStore:
             self._event(connection, "context", context_id, "context_created", {"binding_id": binding["binding_id"]})
             connection.execute("COMMIT")
         return self.context(owner_id=owner_id, context_id=context_id)
+
+    def assigned_read_only_policy_context(
+        self,
+        *,
+        device_id: str,
+        workspace_id: str,
+        workspace_generation: str,
+    ) -> dict[str, Any]:
+        """Resolve the one locally installable policy assignment for a node root.
+
+        A Windows executor never receives a context identifier from its UI.
+        The owner creates a normal short-lived context for an explicitly bound
+        workspace in the Ubuntu Console; this lookup lets that exact node
+        retrieve the resulting read-only policy template only after its local
+        owner has selected the matching registered root.  Multiple live
+        contexts are intentionally ambiguous rather than silently picking a
+        "latest" authority window.
+
+        The returned record is an internal server result.  HTTP callers must
+        derive a policy template from it and must not expose ``context_id`` to
+        the executor UI or a ChatGPT client.
+        """
+
+        device_id = _text(device_id, "device_id")
+        workspace_id = _text(workspace_id, "workspace_id")
+        workspace_generation = _text(workspace_generation, "workspace_generation")
+        with self._connection() as connection:
+            node = connection.execute(
+                "SELECT device_id, owner_id, endpoint_id, revoked_at_ms FROM nodes WHERE device_id = ?",
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                raise NotFoundError("device is not enrolled.")
+            if node["revoked_at_ms"] is not None:
+                raise ConflictError("node is revoked.")
+            self._require_current_workspace_registration(
+                connection,
+                device_id=device_id,
+                workspace_id=workspace_id,
+                workspace_generation=workspace_generation,
+            )
+            rows = connection.execute(
+                """
+                SELECT c.*
+                FROM contexts AS c
+                JOIN bindings AS b ON b.binding_id = c.binding_id
+                JOIN nodes AS n ON n.device_id = c.device_id
+                WHERE c.device_id = ?
+                  AND c.workspace_id = ?
+                  AND c.workspace_generation = ?
+                  AND c.closed_at_ms IS NULL
+                  AND c.expires_at_ms > ?
+                  AND b.revoked_at_ms IS NULL
+                  AND n.revoked_at_ms IS NULL
+                  AND c.owner_id = b.owner_id
+                  AND b.owner_id = n.owner_id
+                ORDER BY c.created_at_ms, c.context_id
+                """,
+                (device_id, workspace_id, workspace_generation, self.clock()),
+            ).fetchall()
+        if not rows:
+            raise NotFoundError("no live read-only policy assignment exists for this workspace.")
+        if len(rows) != 1:
+            raise ConflictError("read-only policy assignment is ambiguous; close older contexts first.")
+        return _row(rows[0]) or {}
 
     def context(self, *, owner_id: str, context_id: str, require_live: bool = False) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
@@ -4142,6 +5152,12 @@ class ControlPlaneStore:
                     raise PermissionError("task is not owned by this principal.")
                 if row["closed_at_ms"] is None:
                     now = self.clock()
+                    self._release_task_writer_lease_in_transaction(
+                        connection,
+                        task_id=task_id,
+                        now=now,
+                        reason="owner_task_closed",
+                    )
                     connection.execute(
                         "UPDATE mcp_task_sessions SET closed_at_ms = ?, close_reason = ? WHERE task_id = ?",
                         (now, reason[:64], task_id),
@@ -4326,6 +5342,7 @@ class ControlPlaneStore:
         request_id = f"req_{uuid.uuid4().hex}"
         action_id = f"act_{uuid.uuid4().hex}"
         context_id = f"ctx_{uuid.uuid4().hex}"
+        writer_lease_generation: int | None = None
 
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -4385,6 +5402,13 @@ class ControlPlaneStore:
                         "request_id": existing["request_id"],
                         "action_id": existing["action_id"],
                         "intent_digest": existing["intent_digest"],
+                        "task_id": existing["task_id"] if "task_id" in existing.keys() else None,
+                        "writer_lease_generation": (
+                            int(existing["writer_lease_generation"])
+                            if "writer_lease_generation" in existing.keys()
+                            and existing["writer_lease_generation"] is not None
+                            else None
+                        ),
                         "facade_contract": {
                             "schema_version": existing["facade_schema_version"],
                             "profile": existing["facade_profile"],
@@ -4406,13 +5430,14 @@ class ControlPlaneStore:
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
                 if effective_task_id is not None:
-                    self._require_live_mcp_task(
+                    writer_lease = self._require_mcp_task_writer_lease(
                         connection,
                         owner_id=owner_id,
                         principal_id=principal_id,
                         task_id=str(effective_task_id),
                         binding_id=str(permission["binding_id"]),
                     )
+                    writer_lease_generation = int(writer_lease["lease_generation"])
                 live = self._mcp_patch_permission_binding(
                     connection,
                     owner_id=owner_id,
@@ -4448,6 +5473,7 @@ class ControlPlaneStore:
                     "admission_reference": f"mcp_approved_patch:{intent_digest}",
                     "expires_at_ms": expires_at_ms,
                     "facade_contract": facade_contract,
+                    "writer_lease_generation": writer_lease_generation,
                 }
                 action_digest = _digest(action_immutable)
                 conflicting_action = connection.execute(
@@ -4488,9 +5514,9 @@ class ControlPlaneStore:
                     INSERT INTO actions(
                         action_id, owner_id, request_id, context_id, binding_id, device_id,
                         endpoint_id, workspace_id, workspace_generation, tool_name,
-                        arguments_json, action_digest, idempotency_key, admission_reference,
+                        arguments_json, action_digest, writer_lease_generation, idempotency_key, admission_reference,
                         created_at_ms, expires_at_ms, delivery_state, settled_at_ms
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)
                     """,
                     (
                         action_id,
@@ -4505,6 +5531,7 @@ class ControlPlaneStore:
                         MCP_APPROVED_PATCH_TOOL_NAME,
                         _canonical_json(action_arguments),
                         action_digest,
+                        writer_lease_generation,
                         action_idempotency_key,
                         f"mcp_approved_patch:{intent_digest}",
                         now,
@@ -4517,9 +5544,10 @@ class ControlPlaneStore:
                         owner_id, principal_id, permission_request_id, permission_digest,
                         binding_id, idempotency_key, intent_digest, relative_path,
                         preimage_sha256, patch_sha256, validation_profile, patch_envelope,
+                        task_id, writer_lease_generation,
                         facade_schema_version, facade_profile, facade_contract_sha256,
                         request_id, action_id, created_at_ms
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         owner_id,
@@ -4534,6 +5562,8 @@ class ControlPlaneStore:
                         permission["patch_sha256"],
                         permission["validation_profile"],
                         approved_patch,
+                        effective_task_id,
+                        writer_lease_generation,
                         facade_contract["schema_version"],
                         facade_contract["profile"],
                         facade_contract["sha256"],
@@ -4569,6 +5599,260 @@ class ControlPlaneStore:
             "request_id": request_id,
             "action_id": action_id,
             "intent_digest": intent_digest,
+            "task_id": effective_task_id,
+            "writer_lease_generation": writer_lease_generation,
+            "facade_contract": facade_contract,
+            "replayed": False,
+        }
+
+    def request_mcp_standing_patch(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        path: Any,
+        preimage_sha256: Any,
+        patch_sha256: Any,
+        validation_profile: Any,
+        patch_envelope: Any,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+        task_id: str,
+    ) -> dict[str, Any]:
+        """Queue one exact patch under the node's standing local policy.
+
+        This is the durable write path for the shared-account contract.  The
+        central service authenticates the OAuth principal, pins the binding and
+        task, requires the current writer lease, and records the exact
+        preimage/patch envelope.  It does not create an owner-review request;
+        the node's standing policy remains the authority that may admit the
+        effect locally.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is required for standing patch authority.")
+        scope = _mcp_patch_permission_scope(
+            path=path,
+            preimage_sha256=preimage_sha256,
+            patch_sha256=patch_sha256,
+            validation_profile=validation_profile,
+        )
+        approved_patch = _mcp_approved_patch_envelope(
+            patch_envelope,
+            expected_path=scope["path"],
+            expected_preimage_sha256=scope["preimage_sha256"],
+            expected_patch_sha256=scope["patch_sha256"],
+        )
+        facade_contract = _facade_contract(facade_contract)
+        now = self.clock()
+        expires_at_ms = now + MCP_STANDING_PATCH_ACTION_TTL_MS
+        immutable = {
+            "kind": "mcp_facade_standing_patch_v1",
+            "authority_mode": "standing",
+            "owner_id": owner_id,
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "task_id": task_id,
+            "path": scope["path"],
+            "preimage_sha256": scope["preimage_sha256"],
+            "patch_sha256": scope["patch_sha256"],
+            "validation_profile": scope["validation_profile"],
+            "idempotency_key": idempotency_key,
+            "facade_contract": facade_contract,
+        }
+        intent_digest = _digest(immutable)
+        permission_digest = _digest({"kind": "mcp_standing_write_scope_v1", **immutable})
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_standing_patch_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different standing patch.")
+                    connection.execute("COMMIT")
+                    return {
+                        "request_id": existing["request_id"],
+                        "action_id": existing["action_id"],
+                        "intent_digest": existing["intent_digest"],
+                        "authority_mode": "standing",
+                        "task_id": existing["task_id"],
+                        "writer_lease_generation": (
+                            int(existing["writer_lease_generation"])
+                            if existing["writer_lease_generation"] is not None
+                            else None
+                        ),
+                        "facade_contract": {
+                            "schema_version": existing["facade_schema_version"],
+                            "profile": existing["facade_profile"],
+                            "sha256": existing["facade_contract_sha256"],
+                        },
+                        "replayed": True,
+                    }
+                legacy_existing = connection.execute(
+                    "SELECT intent_digest FROM mcp_approved_patch_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if legacy_existing is not None:
+                    raise ConflictError("idempotency key is already bound to a different patch authority mode.")
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                self._require_live_mcp_task(
+                    connection,
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    task_id=task_id,
+                    binding_id=binding_id,
+                )
+                writer_lease = self._require_mcp_task_writer_lease(
+                    connection,
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    task_id=task_id,
+                    binding_id=binding_id,
+                )
+                writer_lease_generation = int(writer_lease["lease_generation"])
+                live = self._mcp_patch_permission_binding(
+                    connection,
+                    owner_id=owner_id,
+                    binding_id=binding_id,
+                )
+                action_arguments = {
+                    "operation": MCP_APPROVED_PATCH_OPERATION,
+                    "authority_mode": "standing",
+                    # The node bridge still receives a bounded identifier in
+                    # this compatibility field; it is not a bearer approval.
+                    "permission_request_id": "standing",
+                    "path": scope["path"],
+                    "preimage_sha256": scope["preimage_sha256"],
+                    "patch_sha256": scope["patch_sha256"],
+                    "validation_profile": scope["validation_profile"],
+                }
+                action_idempotency_key = "mcpap_" + hashlib.sha256(
+                    f"{principal_id}\0{idempotency_key}".encode("utf-8")
+                ).hexdigest()
+                action_immutable = {
+                    "request_id": request_id,
+                    "context_id": context_id,
+                    "binding_id": binding_id,
+                    "principal_id": principal_id,
+                    "authority_mode": "standing",
+                    "permission_digest": permission_digest,
+                    "intent_digest": intent_digest,
+                    "device_id": live["device_id"],
+                    "endpoint_id": live["endpoint_id"],
+                    "workspace_id": live["workspace_id"],
+                    "workspace_generation": live["workspace_generation"],
+                    "tool_name": MCP_APPROVED_PATCH_TOOL_NAME,
+                    "arguments": action_arguments,
+                    "idempotency_key": action_idempotency_key,
+                    "admission_reference": f"mcp_standing_patch:{intent_digest}",
+                    "expires_at_ms": expires_at_ms,
+                    "facade_contract": facade_contract,
+                    "writer_lease_generation": writer_lease_generation,
+                }
+                action_digest = _digest(action_immutable)
+                conflicting_action = connection.execute(
+                    "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                    (owner_id, live["device_id"], action_idempotency_key),
+                ).fetchone()
+                if conflicting_action is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+                connection.execute(
+                    "INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        context_id, owner_id, binding_id, live["device_id"], live["endpoint_id"],
+                        live["workspace_id"], live["workspace_generation"], now, expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (
+                        request_id, owner_id, context_id,
+                        "Apply one exact patch under the node's standing local workspace policy.",
+                        _canonical_json({"kind": "standing_patch", "tool_name": MCP_APPROVED_PATCH_TOOL_NAME}),
+                        _canonical_json({"operation": MCP_APPROVED_PATCH_OPERATION, "authority_mode": "standing"}),
+                        now, expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO actions(
+                        action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name,
+                        arguments_json, action_digest, writer_lease_generation, idempotency_key,
+                        admission_reference, created_at_ms, expires_at_ms, delivery_state, settled_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)
+                    """,
+                    (
+                        action_id, owner_id, request_id, context_id, binding_id,
+                        live["device_id"], live["endpoint_id"], live["workspace_id"],
+                        live["workspace_generation"], MCP_APPROVED_PATCH_TOOL_NAME,
+                        _canonical_json(action_arguments), action_digest, writer_lease_generation,
+                        action_idempotency_key, f"mcp_standing_patch:{intent_digest}", now, expires_at_ms,
+                    ),
+                )
+                connection.execute(
+                    """
+                    INSERT INTO mcp_standing_patch_intents(
+                        owner_id, principal_id, authority_mode, binding_id, idempotency_key,
+                        intent_digest, relative_path, preimage_sha256, patch_sha256,
+                        validation_profile, patch_envelope, task_id, writer_lease_generation,
+                        facade_schema_version, facade_profile, facade_contract_sha256,
+                        request_id, action_id, created_at_ms
+                    ) VALUES (?, ?, 'standing', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        owner_id, principal_id, binding_id, idempotency_key, intent_digest,
+                        scope["path"], scope["preimage_sha256"], scope["patch_sha256"],
+                        scope["validation_profile"], approved_patch, task_id, writer_lease_generation,
+                        facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
+                        request_id, action_id, now,
+                    ),
+                )
+                self._event(
+                    connection,
+                    "work_request",
+                    request_id,
+                    "mcp_standing_patch_request_created",
+                    {"authority_mode": "standing", "intent_digest": intent_digest, "task_id": task_id},
+                )
+                self._event(
+                    connection,
+                    "action",
+                    action_id,
+                    "action_sealed",
+                    {"request_id": request_id, "digest": action_digest, "authority_mode": "standing"},
+                )
+                self.link_mcp_task_action(connection, task_id=task_id, action_id=action_id)
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {
+            "request_id": request_id,
+            "action_id": action_id,
+            "intent_digest": intent_digest,
+            "authority_mode": "standing",
+            "task_id": task_id,
+            "writer_lease_generation": writer_lease_generation,
             "facade_contract": facade_contract,
             "replayed": False,
         }
@@ -4596,8 +5880,12 @@ class ControlPlaneStore:
                 """
                 SELECT action_id FROM mcp_approved_patch_intents
                 WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                UNION ALL
+                SELECT action_id FROM mcp_standing_patch_intents
+                WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                LIMIT 1
                 """,
-                (owner_id, principal_id, action_id),
+                (owner_id, principal_id, action_id, owner_id, principal_id, action_id),
             ).fetchone()
         if intent is None:
             raise NotFoundError("approved patch action does not exist.")
@@ -4633,11 +5921,19 @@ class ControlPlaneStore:
             intent = connection.execute(
                 """
                 SELECT relative_path, preimage_sha256, patch_sha256, patch_envelope,
-                       facade_schema_version, facade_profile, facade_contract_sha256
+                       facade_schema_version, facade_profile, facade_contract_sha256,
+                       'owner_review' AS authority_mode
                 FROM mcp_approved_patch_intents
                 WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                UNION ALL
+                SELECT relative_path, preimage_sha256, patch_sha256, patch_envelope,
+                       facade_schema_version, facade_profile, facade_contract_sha256,
+                       authority_mode
+                FROM mcp_standing_patch_intents
+                WHERE owner_id = ? AND principal_id = ? AND action_id = ?
+                LIMIT 1
                 """,
-                (owner_id, principal_id, action_id),
+                (owner_id, principal_id, action_id, owner_id, principal_id, action_id),
             ).fetchone()
         if intent is None:
             raise NotFoundError("approved patch action does not exist.")
@@ -4663,6 +5959,7 @@ class ControlPlaneStore:
             "preimage_sha256": str(intent["preimage_sha256"]),
             "postimage_sha256": postimage_sha256,
             "patch_sha256": str(intent["patch_sha256"]),
+            "authority_mode": str(intent["authority_mode"]),
             "facade_contract": {
                 "schema_version": int(intent["facade_schema_version"]),
                 "profile": str(intent["facade_profile"]),
@@ -4720,6 +6017,7 @@ class ControlPlaneStore:
         request_id = f"req_{uuid.uuid4().hex}"
         action_id = f"act_{uuid.uuid4().hex}"
         context_id = f"ctx_{uuid.uuid4().hex}"
+        writer_lease_generation: int | None = None
         with self._connection() as connection:
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -4741,6 +6039,13 @@ class ControlPlaneStore:
                         "request_id": existing["request_id"],
                         "action_id": existing["action_id"],
                         "intent_digest": existing["intent_digest"],
+                        "task_id": existing["task_id"] if "task_id" in existing.keys() else None,
+                        "writer_lease_generation": (
+                            int(existing["writer_lease_generation"])
+                            if "writer_lease_generation" in existing.keys()
+                            and existing["writer_lease_generation"] is not None
+                            else None
+                        ),
                         "facade_contract": {
                             "schema_version": existing["facade_schema_version"],
                             "profile": existing["facade_profile"],
@@ -4752,7 +6057,14 @@ class ControlPlaneStore:
                 if self._admission_mode(connection) != "open":
                     raise ConflictError("central admission is in recovery mode.")
                 if task_id is not None:
-                    self._require_live_mcp_task(connection, owner_id=owner_id, principal_id=principal_id, task_id=task_id, binding_id=binding_id)
+                    writer_lease = self._require_mcp_task_writer_lease(
+                        connection,
+                        owner_id=owner_id,
+                        principal_id=principal_id,
+                        task_id=task_id,
+                        binding_id=binding_id,
+                    )
+                    writer_lease_generation = int(writer_lease["lease_generation"])
                 live = connection.execute(
                     """
                     SELECT b.binding_id, b.owner_id AS binding_owner_id, b.device_id,
@@ -4803,7 +6115,8 @@ class ControlPlaneStore:
                                     "workspace_generation": live["workspace_generation"], "tool_name": MCP_EXEC_TOOL_NAME,
                                     "arguments": action_arguments, "idempotency_key": action_idempotency_key,
                                     "admission_reference": f"mcp_exec:{intent_digest}", "expires_at_ms": expires_at_ms,
-                                    "facade_contract": facade_contract}
+                                    "facade_contract": facade_contract,
+                                    "writer_lease_generation": writer_lease_generation}
                 action_digest = _digest(action_immutable)
                 conflicting = connection.execute(
                     "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
@@ -4825,19 +6138,21 @@ class ControlPlaneStore:
                 connection.execute(
                     """INSERT INTO actions(action_id, owner_id, request_id, context_id, binding_id, device_id,
                         endpoint_id, workspace_id, workspace_generation, tool_name, arguments_json, action_digest,
-                        idempotency_key, admission_reference, created_at_ms, expires_at_ms, delivery_state, settled_at_ms)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)""",
+                        writer_lease_generation, idempotency_key, admission_reference, created_at_ms, expires_at_ms,
+                        delivery_state, settled_at_ms)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)""",
                     (action_id, owner_id, request_id, context_id, binding_id, live["device_id"], live["endpoint_id"],
                      live["workspace_id"], live["workspace_generation"], MCP_EXEC_TOOL_NAME,
-                     _canonical_json(action_arguments), action_digest, action_idempotency_key,
+                     _canonical_json(action_arguments), action_digest, writer_lease_generation, action_idempotency_key,
                      f"mcp_exec:{intent_digest}", now, expires_at_ms),
                 )
                 connection.execute(
-                    """INSERT INTO mcp_exec_intents(owner_id, principal_id, binding_id, task_id, argv_json, argv_digest,
+                    """INSERT INTO mcp_exec_intents(owner_id, principal_id, binding_id, task_id, writer_lease_generation, argv_json, argv_digest,
                         cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest, facade_schema_version,
                         facade_profile, facade_contract_sha256, request_id, action_id, created_at_ms)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (owner_id, principal_id, binding_id, task_id, _canonical_json({"argv": argv}), argv_digest,
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (owner_id, principal_id, binding_id, task_id, writer_lease_generation,
+                     _canonical_json({"argv": argv}), argv_digest,
                      cwd, timeout_ms, max_output_bytes, idempotency_key, intent_digest,
                      facade_contract["schema_version"], facade_contract["profile"], facade_contract["sha256"],
                      request_id, action_id, now),
@@ -4852,6 +6167,7 @@ class ControlPlaneStore:
                 connection.execute("ROLLBACK")
                 raise
         return {"request_id": request_id, "action_id": action_id, "intent_digest": intent_digest,
+                "task_id": task_id, "writer_lease_generation": writer_lease_generation,
                 "facade_contract": facade_contract, "replayed": False}
 
     def mcp_exec_action_observation(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
@@ -5113,6 +6429,252 @@ class ControlPlaneStore:
             raise NotFoundError("artifact action does not exist.")
         return self.action_observation(owner_id=owner_id, action_id=action_id)
 
+    def request_mcp_document_write(
+        self,
+        *,
+        owner_id: str,
+        principal_id: str,
+        binding_id: str,
+        task_id: str,
+        operation: str,
+        target: Any,
+        source: Any = None,
+        title: Any = "",
+        content: Any = "",
+        overwrite: Any = False,
+        idempotency_key: str,
+        facade_contract: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Queue one standing document create/convert action.
+
+        Document writes share the account/binding/task/writer contract with
+        standing patches, but retain their structured payload in a dedicated
+        intent table and are delivered through the document-workflow lane. The
+        central service never resolves a local root or writes bytes itself;
+        the node's installed write policy and Coding Tools MCP remain the last
+        authority before the effect.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        binding_id = _text(binding_id, "binding_id")
+        if not isinstance(task_id, str) or TASK_ID_PATTERN.fullmatch(task_id) is None:
+            raise ValidationError("task_id is required for standing document write authority.")
+        if operation not in MCP_DOCUMENT_WRITE_OPERATIONS:
+            raise ValidationError("document write operation is invalid.")
+        target_path = _bounded_file_read_path(target)
+        target_suffix = Path(target_path).suffix.lower()
+        if target_suffix not in MCP_DOCUMENT_WRITE_TARGET_SUFFIXES:
+            raise ValidationError("document target must be .docx, .md or .txt.")
+        source_path: str | None = None
+        if operation == "document_convert":
+            source_path = _bounded_file_read_path(source)
+            if Path(target_path).suffix.lower() != ".docx" or source_path == target_path:
+                raise ValidationError("document conversion source/target is invalid.")
+        elif source is not None:
+            raise ValidationError("document create does not accept a source path.")
+        if not isinstance(title, str):
+            raise ValidationError("document title is invalid.")
+        if len(title.encode("utf-8")) > MCP_DOCUMENT_WRITE_MAX_TITLE_BYTES:
+            raise ValidationError("document title is too large.")
+        if not isinstance(content, str):
+            raise ValidationError("document content is invalid.")
+        if len(content.encode("utf-8")) > MCP_DOCUMENT_WRITE_MAX_CONTENT_BYTES:
+            raise ValidationError("document content is too large.")
+        if operation == "document_convert" and content:
+            raise ValidationError("document conversion does not accept inline content.")
+        if not isinstance(overwrite, bool):
+            raise ValidationError("document overwrite flag is invalid.")
+        idempotency_key = _text(idempotency_key, "idempotency_key", pattern=KEY_PATTERN)
+        facade_contract = _facade_contract(facade_contract)
+        intent = {
+            "kind": "mcp_facade_standing_document_write_v1",
+            "authority_mode": "standing",
+            "owner_id": owner_id,
+            "principal_id": principal_id,
+            "binding_id": binding_id,
+            "task_id": task_id,
+            "operation": operation,
+            "source": source_path,
+            "target": target_path,
+            "title": title,
+            "content": content,
+            "overwrite": overwrite,
+            "idempotency_key": idempotency_key,
+            "facade_contract": facade_contract,
+        }
+        intent_digest = _digest(intent)
+        action_idempotency_key = "mcpdw_" + hashlib.sha256(
+            f"{principal_id}\0{idempotency_key}".encode("utf-8")
+        ).hexdigest()
+        request_id = f"req_{uuid.uuid4().hex}"
+        action_id = f"act_{uuid.uuid4().hex}"
+        context_id = f"ctx_{uuid.uuid4().hex}"
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                principal = connection.execute(
+                    "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                    (principal_id,),
+                ).fetchone()
+                if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                    raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+                existing = connection.execute(
+                    "SELECT * FROM mcp_document_write_intents WHERE principal_id = ? AND idempotency_key = ?",
+                    (principal_id, idempotency_key),
+                ).fetchone()
+                if existing is not None:
+                    if existing["intent_digest"] != intent_digest:
+                        raise ConflictError("idempotency key is already bound to a different document write.")
+                    connection.execute("COMMIT")
+                    return {
+                        "request_id": existing["request_id"],
+                        "action_id": existing["action_id"],
+                        "intent_digest": existing["intent_digest"],
+                        "authority_mode": "standing",
+                        "task_id": existing["task_id"],
+                        "writer_lease_generation": int(existing["writer_lease_generation"]),
+                        "facade_contract": {
+                            "schema_version": existing["facade_schema_version"],
+                            "profile": existing["facade_profile"],
+                            "sha256": existing["facade_contract_sha256"],
+                        },
+                        "replayed": True,
+                    }
+                if self._admission_mode(connection) != "open":
+                    raise ConflictError("central admission is in recovery mode.")
+                self._require_live_mcp_task(
+                    connection,
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    task_id=task_id,
+                    binding_id=binding_id,
+                )
+                writer_lease = self._require_mcp_task_writer_lease(
+                    connection,
+                    owner_id=owner_id,
+                    principal_id=principal_id,
+                    task_id=task_id,
+                    binding_id=binding_id,
+                )
+                writer_lease_generation = int(writer_lease["lease_generation"])
+                live = self._mcp_patch_permission_binding(
+                    connection,
+                    owner_id=owner_id,
+                    binding_id=binding_id,
+                )
+                now = self.clock()
+                expires_at_ms = now + MCP_DOCUMENT_WRITE_MAX_TTL_MS
+                action_arguments = {
+                    "operation": operation,
+                    "authority_mode": "standing",
+                    "target": target_path,
+                    "source": source_path,
+                    "title": title,
+                    "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+                    "overwrite": overwrite,
+                }
+                action_immutable = {
+                    "request_id": request_id,
+                    "context_id": context_id,
+                    "binding_id": binding_id,
+                    "principal_id": principal_id,
+                    "device_id": live["device_id"],
+                    "endpoint_id": live["endpoint_id"],
+                    "workspace_id": live["workspace_id"],
+                    "workspace_generation": live["workspace_generation"],
+                    "tool_name": MCP_DOCUMENT_WRITE_TOOL_NAME,
+                    "arguments": action_arguments,
+                    "idempotency_key": action_idempotency_key,
+                    "admission_reference": f"mcp_document_write:{intent_digest}",
+                    "expires_at_ms": expires_at_ms,
+                    "facade_contract": facade_contract,
+                    "writer_lease_generation": writer_lease_generation,
+                }
+                action_digest = _digest(action_immutable)
+                if connection.execute(
+                    "SELECT action_id FROM actions WHERE owner_id = ? AND device_id = ? AND idempotency_key = ?",
+                    (owner_id, live["device_id"], action_idempotency_key),
+                ).fetchone() is not None:
+                    raise ConflictError("idempotency key is already bound to a different action.")
+                connection.execute(
+                    "INSERT INTO contexts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (context_id, owner_id, binding_id, live["device_id"], live["endpoint_id"],
+                     live["workspace_id"], live["workspace_generation"], now, expires_at_ms),
+                )
+                connection.execute(
+                    "INSERT INTO work_requests VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)",
+                    (request_id, owner_id, context_id,
+                     "Create or convert one document through the node's standing local policy.",
+                     _canonical_json({"kind": "standing_document_write", "tool_name": MCP_DOCUMENT_WRITE_TOOL_NAME}),
+                     _canonical_json({"operation": operation, "authority_mode": "standing", "target": target_path}),
+                     now, expires_at_ms),
+                )
+                connection.execute(
+                    """INSERT INTO actions(
+                        action_id, owner_id, request_id, context_id, binding_id, device_id,
+                        endpoint_id, workspace_id, workspace_generation, tool_name,
+                        arguments_json, action_digest, writer_lease_generation, idempotency_key,
+                        admission_reference, created_at_ms, expires_at_ms, delivery_state, settled_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'queued', NULL)""",
+                    (action_id, owner_id, request_id, context_id, binding_id, live["device_id"],
+                     live["endpoint_id"], live["workspace_id"], live["workspace_generation"],
+                     MCP_DOCUMENT_WRITE_TOOL_NAME, _canonical_json(action_arguments), action_digest,
+                     writer_lease_generation, action_idempotency_key,
+                     f"mcp_document_write:{intent_digest}", now, expires_at_ms),
+                )
+                connection.execute(
+                    """INSERT INTO mcp_document_write_intents(
+                        owner_id, principal_id, binding_id, task_id, writer_lease_generation,
+                        operation, source_path, target_path, title, content, overwrite,
+                        intent_digest, idempotency_key, facade_schema_version, facade_profile,
+                        facade_contract_sha256, request_id, action_id, created_at_ms
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (owner_id, principal_id, binding_id, task_id, writer_lease_generation,
+                     operation, source_path, target_path, title, content, int(overwrite),
+                     intent_digest, idempotency_key, facade_contract["schema_version"],
+                     facade_contract["profile"], facade_contract["sha256"], request_id, action_id, now),
+                )
+                self._event(connection, "work_request", request_id, "mcp_document_write_request_created",
+                            {"authority_mode": "standing", "operation": operation,
+                             "intent_digest": intent_digest, "task_id": task_id})
+                self._event(connection, "action", action_id, "action_sealed",
+                            {"request_id": request_id, "digest": action_digest, "authority_mode": "standing"})
+                self.link_mcp_task_action(connection, task_id=task_id, action_id=action_id)
+                connection.execute("COMMIT")
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+        return {
+            "request_id": request_id,
+            "action_id": action_id,
+            "intent_digest": intent_digest,
+            "authority_mode": "standing",
+            "task_id": task_id,
+            "writer_lease_generation": writer_lease_generation,
+            "facade_contract": facade_contract,
+            "replayed": False,
+        }
+
+    def mcp_document_write_action_observation(self, *, owner_id: str, principal_id: str, action_id: str) -> dict[str, Any]:
+        owner_id = _text(owner_id, "owner_id")
+        principal_id = _text(principal_id, "principal_id")
+        action_id = _text(action_id, "action_id")
+        with self._connection() as connection:
+            principal = connection.execute(
+                "SELECT owner_id, revoked_at_ms FROM oauth_principals WHERE principal_id = ?",
+                (principal_id,),
+            ).fetchone()
+            if principal is None or principal["owner_id"] != owner_id or principal["revoked_at_ms"] is not None:
+                raise PermissionError("authenticated OAuth account is not authorized for this control plane.")
+            intent = connection.execute(
+                "SELECT action_id FROM mcp_document_write_intents WHERE owner_id = ? AND principal_id = ? AND action_id = ?",
+                (owner_id, principal_id, action_id),
+            ).fetchone()
+        if intent is None:
+            raise NotFoundError("document write action does not exist.")
+        return self.action_observation(owner_id=owner_id, action_id=action_id)
+
     def action(self, *, owner_id: str, action_id: str) -> dict[str, Any]:
         owner_id = _text(owner_id, "owner_id")
         action_id = _text(action_id, "action_id")
@@ -5144,6 +6706,37 @@ class ControlPlaneStore:
             return "context_not_live"
         if row["_request_canceled_at_ms"] is not None or row["_request_expires_at_ms"] <= now:
             return "work_request_not_live"
+        writer_generation = row["writer_lease_generation"]
+        if writer_generation is not None:
+            try:
+                writer_generation = int(writer_generation)
+            except (TypeError, ValueError):
+                return "writer_lease_generation_invalid"
+            if writer_generation < 1:
+                return "writer_lease_generation_invalid"
+            current_task = row["_writer_lease_task_id"]
+            current_generation = row["_writer_lease_generation"]
+            current_expires = row["_writer_lease_expires_at_ms"]
+            if (
+                not isinstance(current_task, str)
+                or not current_task
+                or current_generation is None
+                or current_expires is None
+                or int(current_expires) <= now
+                or current_task != row["mcp_task_id"]
+                or int(current_generation) != writer_generation
+            ):
+                return "writer_lease_not_current"
+            intent_task = row["mcp_approved_patch_task_id"]
+            intent_generation = row["mcp_approved_patch_writer_lease_generation"]
+            if "mcp_exec_task_id" in row.keys() and row["mcp_exec_task_id"] is not None:
+                intent_task = row["mcp_exec_task_id"]
+                intent_generation = row["mcp_exec_writer_lease_generation"]
+            if "mcp_document_write_task_id" in row.keys() and row["mcp_document_write_task_id"] is not None:
+                intent_task = row["mcp_document_write_task_id"]
+                intent_generation = row["mcp_document_write_writer_lease_generation"]
+            if intent_task != row["mcp_task_id"] or intent_generation is None or int(intent_generation) != writer_generation:
+                return "writer_lease_identity_mismatch"
         if (
             row["endpoint_id"] != row["_node_endpoint_id"]
             or row["endpoint_id"] != row["_binding_endpoint_id"]
@@ -5194,16 +6787,18 @@ class ControlPlaneStore:
             "approved_patch",
             "bounded_exec",
             "bounded_artifact",
+            "document_write",
         }:
             raise ValidationError("poll lane is invalid.")
         lane_predicate = {
-            None: "f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
-            "generic": "m.action_id IS NULL AND f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
-            "read_only_workspace_context": "m.action_id IS NOT NULL AND f.action_id IS NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
-            "bounded_file_read": "f.action_id IS NOT NULL AND p.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL",
-            "approved_patch": "p.action_id IS NOT NULL",
-            "bounded_exec": "e.action_id IS NOT NULL",
-            "bounded_artifact": "a2.action_id IS NOT NULL",
+            None: "f.action_id IS NULL AND p.action_id IS NULL AND s.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL AND d.action_id IS NULL",
+            "generic": "m.action_id IS NULL AND f.action_id IS NULL AND p.action_id IS NULL AND s.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL AND d.action_id IS NULL",
+            "read_only_workspace_context": "m.action_id IS NOT NULL AND f.action_id IS NULL AND p.action_id IS NULL AND s.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL AND d.action_id IS NULL",
+            "bounded_file_read": "f.action_id IS NOT NULL AND p.action_id IS NULL AND s.action_id IS NULL AND e.action_id IS NULL AND a2.action_id IS NULL AND d.action_id IS NULL",
+            "approved_patch": "(p.action_id IS NOT NULL OR s.action_id IS NOT NULL) AND d.action_id IS NULL",
+            "bounded_exec": "e.action_id IS NOT NULL AND d.action_id IS NULL",
+            "bounded_artifact": "a2.action_id IS NOT NULL AND d.action_id IS NULL",
+            "document_write": "d.action_id IS NOT NULL AND a2.action_id IS NULL",
         }[lane]
         now = self.clock()
         with self._connection() as connection:
@@ -5215,6 +6810,10 @@ class ControlPlaneStore:
                 f"""
                 SELECT
                     a.*,
+                    tl.task_id AS mcp_task_id,
+                    wl.task_id AS _writer_lease_task_id,
+                    wl.lease_generation AS _writer_lease_generation,
+                    wl.expires_at_ms AS _writer_lease_expires_at_ms,
                     n.endpoint_id AS _node_endpoint_id,
                     n.revoked_at_ms AS _node_revoked_at_ms,
                     n.last_seen_at_ms AS _node_last_seen_at_ms,
@@ -5246,23 +6845,31 @@ class ControlPlaneStore:
                     f.facade_schema_version AS mcp_file_read_facade_schema_version,
                     f.facade_profile AS mcp_file_read_facade_profile,
                     f.facade_contract_sha256 AS mcp_file_read_facade_contract_sha256,
-                    p.permission_request_id AS mcp_approved_patch_permission_request_id,
-                    p.permission_digest AS mcp_approved_patch_permission_digest,
-                    p.intent_digest AS mcp_approved_patch_intent_digest,
-                    p.relative_path AS mcp_approved_patch_relative_path,
-                    p.preimage_sha256 AS mcp_approved_patch_preimage_sha256,
-                    p.patch_sha256 AS mcp_approved_patch_sha256,
-                    p.validation_profile AS mcp_approved_patch_validation_profile,
-                    p.patch_envelope AS mcp_approved_patch_envelope,
-                    p.facade_schema_version AS mcp_approved_patch_facade_schema_version,
-                    p.facade_profile AS mcp_approved_patch_facade_profile,
-                    p.facade_contract_sha256 AS mcp_approved_patch_facade_contract_sha256,
+                    CASE WHEN p.action_id IS NOT NULL THEN 'owner_review'
+                         WHEN s.action_id IS NOT NULL THEN s.authority_mode
+                         ELSE NULL END AS mcp_approved_patch_authority_mode,
+                    CASE WHEN s.action_id IS NOT NULL THEN 'standing'
+                         ELSE p.permission_request_id END AS mcp_approved_patch_permission_request_id,
+                    COALESCE(p.permission_digest, s.intent_digest) AS mcp_approved_patch_permission_digest,
+                    COALESCE(p.intent_digest, s.intent_digest) AS mcp_approved_patch_intent_digest,
+                    COALESCE(p.relative_path, s.relative_path) AS mcp_approved_patch_relative_path,
+                    COALESCE(p.preimage_sha256, s.preimage_sha256) AS mcp_approved_patch_preimage_sha256,
+                    COALESCE(p.patch_sha256, s.patch_sha256) AS mcp_approved_patch_sha256,
+                    COALESCE(p.validation_profile, s.validation_profile) AS mcp_approved_patch_validation_profile,
+                    COALESCE(p.patch_envelope, s.patch_envelope) AS mcp_approved_patch_envelope,
+                    COALESCE(p.task_id, s.task_id) AS mcp_approved_patch_task_id,
+                    COALESCE(p.writer_lease_generation, s.writer_lease_generation) AS mcp_approved_patch_writer_lease_generation,
+                    COALESCE(p.facade_schema_version, s.facade_schema_version) AS mcp_approved_patch_facade_schema_version,
+                    COALESCE(p.facade_profile, s.facade_profile) AS mcp_approved_patch_facade_profile,
+                    COALESCE(p.facade_contract_sha256, s.facade_contract_sha256) AS mcp_approved_patch_facade_contract_sha256,
                     e.argv_json AS mcp_exec_argv_json,
                     e.argv_digest AS mcp_exec_argv_digest,
                     e.cwd AS mcp_exec_cwd,
                     e.timeout_ms AS mcp_exec_timeout_ms,
                     e.max_output_bytes AS mcp_exec_max_output_bytes,
                     e.intent_digest AS mcp_exec_intent_digest,
+                    e.task_id AS mcp_exec_task_id,
+                    e.writer_lease_generation AS mcp_exec_writer_lease_generation,
                     e.facade_schema_version AS mcp_exec_facade_schema_version,
                     e.facade_profile AS mcp_exec_facade_profile,
                     e.facade_contract_sha256 AS mcp_exec_facade_contract_sha256,
@@ -5271,12 +6878,28 @@ class ControlPlaneStore:
                     a2.intent_digest AS mcp_artifact_intent_digest,
                     a2.facade_schema_version AS mcp_artifact_facade_schema_version,
                     a2.facade_profile AS mcp_artifact_facade_profile,
-                    a2.facade_contract_sha256 AS mcp_artifact_facade_contract_sha256
+                    a2.facade_contract_sha256 AS mcp_artifact_facade_contract_sha256,
+                    d.operation AS mcp_document_write_operation,
+                    d.source_path AS mcp_document_write_source_path,
+                    d.target_path AS mcp_document_write_target_path,
+                    d.title AS mcp_document_write_title,
+                    d.content AS mcp_document_write_content,
+                    d.overwrite AS mcp_document_write_overwrite,
+                    d.intent_digest AS mcp_document_write_intent_digest,
+                    d.task_id AS mcp_document_write_task_id,
+                    d.writer_lease_generation AS mcp_document_write_writer_lease_generation,
+                    d.facade_schema_version AS mcp_document_write_facade_schema_version,
+                    d.facade_profile AS mcp_document_write_facade_profile,
+                    d.facade_contract_sha256 AS mcp_document_write_facade_contract_sha256
                 FROM actions a
                 JOIN nodes n ON n.device_id = a.device_id
                 JOIN bindings b ON b.binding_id = a.binding_id
                 JOIN contexts c ON c.context_id = a.context_id
                 JOIN work_requests w ON w.request_id = a.request_id
+                LEFT JOIN mcp_task_action_links tl ON tl.action_id = a.action_id
+                LEFT JOIN mcp_task_writer_leases wl
+                    ON wl.binding_id = a.binding_id
+                   AND wl.released_at_ms IS NULL
                 LEFT JOIN node_workspaces nw
                     ON nw.device_id = a.device_id
                     AND nw.workspace_id = a.workspace_id
@@ -5284,8 +6907,10 @@ class ControlPlaneStore:
                 LEFT JOIN mcp_read_only_intents m ON m.action_id = a.action_id
                 LEFT JOIN mcp_file_read_intents f ON f.action_id = a.action_id
                 LEFT JOIN mcp_approved_patch_intents p ON p.action_id = a.action_id
+                LEFT JOIN mcp_standing_patch_intents s ON s.action_id = a.action_id
                 LEFT JOIN mcp_exec_intents e ON e.action_id = a.action_id
                 LEFT JOIN mcp_artifact_intents a2 ON a2.action_id = a.action_id
+                LEFT JOIN mcp_document_write_intents d ON d.action_id = a.action_id
                 WHERE a.device_id = ? AND a.delivery_state = 'queued' AND {lane_predicate}
                 ORDER BY a.created_at_ms
                 LIMIT ?
@@ -5594,9 +7219,14 @@ class ControlPlaneStore:
                 """,
                 (action_id,),
             ).fetchone()
+            task_link = connection.execute(
+                "SELECT task_id FROM mcp_task_action_links WHERE action_id = ?",
+                (action_id,),
+            ).fetchone()
         action["attempts"] = [dict(item) for item in attempts]
         action["receipts"] = [dict(item) for item in receipts]
         action["reconciliation"] = _row(reconciliation)
+        action["task_id"] = str(task_link["task_id"]) if task_link is not None else None
         return action
 
     def list_action_lifecycle(self, *, owner_id: str, limit: int = 100) -> list[dict[str, Any]]:
@@ -5618,7 +7248,8 @@ class ControlPlaneStore:
                 SELECT action.action_id, action.request_id, action.context_id,
                        action.device_id, action.tool_name, action.created_at_ms,
                        action.expires_at_ms, action.delivery_state, action.settled_at_ms,
-                       CASE WHEN approved_patch.action_id IS NULL THEN 0 ELSE 1 END AS approved_patch_candidate,
+                       CASE WHEN approved_patch.action_id IS NULL AND standing_patch.action_id IS NULL
+                            THEN 0 ELSE 1 END AS approved_patch_candidate,
                        reconciliation.disposition AS reconciliation_disposition,
                        reconciliation.reconciled_at_ms
                 FROM actions AS action
@@ -5626,6 +7257,8 @@ class ControlPlaneStore:
                   ON reconciliation.action_id = action.action_id
                 LEFT JOIN mcp_approved_patch_intents AS approved_patch
                   ON approved_patch.action_id = action.action_id
+                LEFT JOIN mcp_standing_patch_intents AS standing_patch
+                  ON standing_patch.action_id = action.action_id
                 WHERE action.owner_id = ?
                 ORDER BY action.created_at_ms DESC, action.action_id DESC
                 LIMIT ?
@@ -5682,6 +7315,7 @@ class ControlPlaneStore:
                     "mcp_file_read_intents",
                     "mcp_permission_requests",
                     "mcp_approved_patch_intents",
+                    "mcp_standing_patch_intents",
                     "mcp_access_grants",
                     "oauth_principals",
                     "oauth_link_requests",
