@@ -42,6 +42,7 @@ READ_ONLY_POLICY_FILE_NAME = "control-plane-read-only-policy.json"
 ROUTE_EVIDENCE_FILE_NAME = "control-plane-route-evidence.json"
 ROUTE_EVIDENCE_SCHEMA_VERSION = 1
 ROUTE_EVIDENCE_KIND = "control_plane_authenticated_heartbeat"
+STANDING_POLICY_OBSERVATION_TTL_MS = 60_000
 READ_ONLY_LOOP_MIN_INTERVAL_SECONDS = 15
 READ_ONLY_LOOP_MAX_INTERVAL_SECONDS = 60 * 60
 READ_ONLY_LOOP_MAX_DURATION_SECONDS = 24 * 60 * 60
@@ -1239,6 +1240,89 @@ def _read_local_policy(policy_path: Path) -> dict[str, Any]:
     return _normalise_read_only_policy(value)
 
 
+def _standing_policy_observation(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    """Observe the installed standing lanes for central route freshness.
+
+    The compact legacy policy is a short-lived read-only pilot artifact.  A
+    trusted workspace may instead have only the independent standing
+    file-read, approved-patch or exec policies.  Heartbeat must therefore
+    reflect that standing authority without treating a policy file as an
+    action grant.  ``expires_at_ms`` in this projection is deliberately the
+    freshness bound of this observation, not the standing policy's lifetime.
+
+    ``None`` means no standing policy file exists and lets the legacy pilot
+    observation remain a compatibility fallback.  Once a standing file is
+    present, malformed, mismatched or stale local state is fail-closed.
+    """
+
+    candidates = (
+        ("file_read", _file_read_policy_path, _read_file_read_policy),
+        ("approved_patch", _approved_patch_policy_path, _read_approved_patch_policy),
+        ("exec", _exec_policy_path, _read_exec_policy),
+    )
+    saw_candidate = False
+    admitted: list[dict[str, str]] = []
+    for lane, path_factory, reader in candidates:
+        try:
+            policy_path = path_factory(args)
+            if not policy_path.exists():
+                continue
+            saw_candidate = True
+            policy = reader(policy_path)
+            if (
+                policy.get("enabled") is not True
+                or policy.get("authority_mode") != "standing"
+                or policy.get("expires_at_ms") is not None
+                or policy.get("server_origin") != _server_origin(config.get("server_url"))
+                or policy.get("device_id") != config.get("device_id")
+                or policy.get("endpoint_id") != config.get("endpoint_id")
+            ):
+                continue
+            if hasattr(args, "workspace_registry"):
+                if not str(getattr(args, "workspace_registry", "") or "").strip():
+                    raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED")
+                config_path = Path(args.config).expanduser().resolve()
+                _require_current_local_workspace_registration(
+                    args,
+                    config_path=config_path,
+                    workspace_id=policy["workspace_id"],
+                    workspace_generation=policy["workspace_generation"],
+                )
+            elif _runtime_mode(args) == "packaged":
+                # The installed Supervisor always supplies the sibling
+                # registry.  A packaged caller without it cannot prove the
+                # policy still targets a current local root.
+                raise RuntimeError("CONTROL_PLANE_WORKSPACE_REGISTRY_REQUIRED")
+            admitted.append({
+                "lane": lane,
+                "policy_sha256": _policy_digest(policy),
+                "workspace_id": policy["workspace_id"],
+                "workspace_generation": policy["workspace_generation"],
+            })
+        except (OSError, RuntimeError, ValueError):
+            # Keep the observation credential-free and avoid allowing one
+            # malformed lane to make another lane look broader than it is.
+            continue
+
+    if not saw_candidate:
+        return None
+    now_ms = int(time.time() * 1000)
+    if not admitted:
+        return {
+            "state": "unavailable",
+            "expires_at_ms": None,
+            "policy_sha256": None,
+            "reason": "CONTROL_PLANE_STANDING_POLICY_UNAVAILABLE",
+        }
+    digest_input = json.dumps(sorted(admitted, key=lambda item: item["lane"]), separators=(",", ":"), sort_keys=True)
+    return {
+        "state": "enabled",
+        "expires_at_ms": now_ms + STANDING_POLICY_OBSERVATION_TTL_MS,
+        "policy_sha256": hashlib.sha256(digest_input.encode("utf-8")).hexdigest(),
+        "reason": "",
+    }
+
+
 def _file_read_policy_path(args: argparse.Namespace) -> Path:
     """Return the independently installed C3 file-content policy path.
 
@@ -1862,12 +1946,16 @@ def _read_only_loop_policy_admission(args: argparse.Namespace) -> None:
 def read_only_policy_observation(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
     """Project local policy state without exposing its content or granting work.
 
-    The policy remains entirely local authority.  This projection is merely a
-    small, typed operator diagnostic that lets the central UI distinguish a
-    missing/expired/mismatched policy from an otherwise-ready runtime.
+    Standing workspace lanes are preferred when present.  The legacy compact
+    policy remains a compatibility fallback for the old read-only pilot.  In
+    either case this projection is only typed telemetry; the local bridge and
+    each individual action still revalidate authority at the effect boundary.
     """
 
     try:
+        standing = _standing_policy_observation(args, config)
+        if standing is not None:
+            return standing
         policy = _read_local_policy(_read_only_policy_path(args))
         if (
             policy["server_origin"] != _server_origin(config.get("server_url"))
@@ -8799,6 +8887,7 @@ def main(argv: list[str] | None = None) -> int:
     heart.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")
     runtime_heart = subcommands.add_parser("runtime-heartbeat")
     runtime_heart.add_argument("--config", required=True)
+    runtime_heart.add_argument("--workspace-registry", required=False, default="")
     runtime_heart.add_argument("--project-root", required=True)
     runtime_heart.add_argument("--node", default="node")
     runtime_heart.add_argument("--runtime-mode", choices=("development", "packaged"), default="development")

@@ -277,6 +277,14 @@ policy digest, policy file, local workspace path, and every credential; old
 nodes that omit this field retain their last observation rather than being
 shown as a fabricated new state.
 
+For the trusted workspace profile, the node first observes the enabled
+standing `file-read`, `approved-patch`, or structured `exec` lane that matches
+the current local workspace generation. In that case the reported expiry is a
+60-second heartbeat-freshness bound, not a fabricated expiry for the standing
+policy itself. The legacy compact read-only policy remains a compatibility
+fallback only. A malformed, mismatched, or unregistered standing lane never
+becomes route authority, and each action still rechecks its own local policy.
+
 Static routes are an exact allowlist with CSP, no-referrer, no-frame, nosniff,
 and no-store headers. The dashboard uses `textContent` for observations and
 polls a single central overview about every five seconds only while visible; it
@@ -843,6 +851,7 @@ changes a binding/context/action, or grants mutation authority.
 $env:PYTHONPATH = "$PWD/control-plane"
 python -m control_plane.node_agent runtime-heartbeat `
   --config "$env:APPDATA\web-mcp-assistant\control-plane-node.json" `
+  --workspace-registry "$env:APPDATA\web-mcp-assistant\control-plane-workspaces.json" `
   --project-root "$PWD"
 ```
 

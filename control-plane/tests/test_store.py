@@ -46,6 +46,7 @@ from control_plane.node_agent import (
     observed_runtime_identity,
     runtime_heartbeat_projection,
     runtime_readiness,
+    STANDING_POLICY_OBSERVATION_TTL_MS,
     main as node_agent_main,
 )
 from control_plane.store import (
@@ -2542,6 +2543,91 @@ class ControlPlaneStoreTests(unittest.TestCase):
         self.assertEqual(evidence["endpoint_id"], "endpoint-runtime-policy-0001")
         self.assertEqual(evidence["policy_state"], "unavailable")
         self.assertNotIn("node-secret-never-in-policy-observation", json.dumps(evidence))
+
+    def test_standing_policy_observation_bootstraps_route_without_legacy_ttl_policy(self) -> None:
+        data_root = Path(self.tempdir.name) / "standing-only-data"
+        data_root.mkdir()
+        config_path = data_root / "node.json"
+        workspace_root = data_root / "workspace"
+        workspace_root.mkdir()
+        config = {
+            "server_url": "https://control.example.test",
+            "device_id": "device-standing-only-0001",
+            "endpoint_id": "endpoint-standing-only-0001",
+            "node_secret": "standing-only-secret-not-reported",
+        }
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        registry_path = data_root / "control-plane-workspaces.json"
+        registry_path.write_text(json.dumps({
+            "schema_version": 1,
+            "entries": [{
+                "workspace_id": "workspace-standing-only-0001",
+                "workspace_generation": "generation-standing-only-0001",
+                "canonical_path": str(workspace_root.resolve()),
+                "display_name": "standing-only",
+                "capabilities": {"read": True, "write": True, "exec": True},
+                "created_at_ms": 1_700_000_000_000,
+            }],
+        }), encoding="utf-8")
+        (data_root / "control-plane-file-read-policy.json").write_text(json.dumps({
+            "schema_version": 2,
+            "enabled": True,
+            "authority_mode": "standing",
+            "server_origin": config["server_url"],
+            "owner_id": "owner-standing-only-0001",
+            "device_id": config["device_id"],
+            "endpoint_id": config["endpoint_id"],
+            "workspace_id": "workspace-standing-only-0001",
+            "workspace_generation": "generation-standing-only-0001",
+            "expires_at_ms": None,
+            "facade_contract": FACADE_CONTRACT,
+            "allowed_relative_paths": ["README.md"],
+            "max_bytes": 1024,
+            "max_lines": 20,
+        }), encoding="utf-8")
+        args = SimpleNamespace(
+            config=str(config_path), workspace_registry=str(registry_path),
+            data_root=str(data_root), project_root=str(data_root), runtime_mode="development", node="node", timeout_seconds=20,
+        )
+
+        observation = read_only_policy_observation(args, config)
+        self.assertEqual(observation["state"], "enabled")
+        self.assertEqual(observation["reason"], "")
+        self.assertIsInstance(observation["expires_at_ms"], int)
+        self.assertGreaterEqual(observation["expires_at_ms"], int(time.time() * 1000))
+        self.assertLessEqual(observation["expires_at_ms"], int(time.time() * 1000) + STANDING_POLICY_OBSERVATION_TTL_MS + 1_000)
+        self.assertRegex(observation["policy_sha256"], r"^[a-f0-9]{64}$")
+
+        submitted: list[dict] = []
+
+        def request(_url: str, path: str, payload: dict, _authorization: str | None = None) -> dict:
+            self.assertEqual(path, "/v1/nodes/device-standing-only-0001/heartbeat")
+            submitted.append(payload)
+            observed_policy = payload["policy_observation"]
+            return {
+                "device_id": config["device_id"],
+                "endpoint_id": config["endpoint_id"],
+                "revoked_at_ms": None,
+                "credential_generation": 1,
+                "last_seen_at_ms": int(time.time() * 1000),
+                "readiness": "blocked",
+                "policy_state": "enabled",
+                "policy_expires_at_ms": observed_policy["expires_at_ms"],
+                "policy_sha256": observed_policy["policy_sha256"],
+            }
+
+        with mock.patch("control_plane.node_agent._runtime_status", return_value={"state": "MISSING", "host": "unavailable"}), \
+             mock.patch("control_plane.node_agent._request", side_effect=request), \
+             redirect_stdout(io.StringIO()):
+            self.assertEqual(runtime_heartbeat(args), 0)
+        submitted_observation = submitted[0]["policy_observation"]
+        self.assertEqual(submitted_observation["state"], observation["state"])
+        self.assertEqual(submitted_observation["policy_sha256"], observation["policy_sha256"])
+        self.assertIsInstance(submitted_observation["expires_at_ms"], int)
+        evidence = json.loads((data_root / "control-plane-route-evidence.json").read_text(encoding="utf-8"))
+        self.assertEqual(evidence["policy_state"], "enabled")
+        self.assertEqual(evidence["policy_sha256"], observation["policy_sha256"])
+        self.assertNotIn("standing-only-secret-not-reported", json.dumps(evidence))
 
     def test_runtime_heartbeat_refuses_an_incomplete_authenticated_echo_before_writing_route_evidence(self) -> None:
         config_path = Path(self.tempdir.name) / "runtime-route-invalid.json"
