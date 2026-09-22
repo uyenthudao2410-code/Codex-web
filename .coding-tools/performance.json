@@ -1,6 +1,6 @@
 {
   "version": 6,
-  "tool_calls": 2689,
+  "tool_calls": 2690,
   "errors": 373,
   "cache_hits": 5,
   "deduplicated_calls": 2,
@@ -64,7 +64,7 @@
     "input_fingerprint_changed": 13
   },
   "proof_cache_saved_ms": 0,
-  "local_execution_ms": 9094340,
+  "local_execution_ms": 9094683,
   "estimated_wait_ms": 26070284,
   "request_bytes": 1846738,
   "response_bytes": 145894909,
@@ -93,16 +93,16 @@
   "result_continuation_rereads": 0,
   "result_continuation_stale": 0,
   "execution_mode_counts": {
-    "deep_single_lane": 7,
+    "deep_single_lane": 8,
     "mcp_only": 1378,
     "auto": 22
   },
   "route_resolved_counts": {
-    "sol_xhigh": 7,
+    "sol_xhigh": 8,
     "deterministic": 887
   },
   "orchestration_state_counts": {
-    "CHECKPOINTED": 197,
+    "CHECKPOINTED": 198,
     "ACCEPTING": 324,
     "ABORTED": 67,
     "REPLAN": 302,
@@ -112,9 +112,9 @@
   },
   "run_metrics": {
     "234713daf77f427ca486a7044fefd204": {
-      "tool_calls": 7,
+      "tool_calls": 8,
       "errors": 0,
-      "local_execution_ms": 4687,
+      "local_execution_ms": 5030,
       "estimated_wait_ms": 0,
       "request_bytes": 0,
       "response_bytes": 0,
@@ -151,13 +151,13 @@
       "result_continuation_rereads": 0,
       "result_continuation_stale": 0,
       "execution_mode_counts": {
-        "deep_single_lane": 7
+        "deep_single_lane": 8
       },
       "route_resolved_counts": {
-        "sol_xhigh": 7
+        "sol_xhigh": 8
       },
       "first_started_at": "2026-09-14T19:48:58.745Z",
-      "last_finished_at": "2026-09-22T06:59:38.432Z"
+      "last_finished_at": "2026-09-22T12:05:58.542Z"
     },
     "11f5493c418345fab86d49676733c0ec": {
       "tool_calls": 3,
@@ -4875,67 +4875,8 @@
       "last_finished_at": "2026-09-15T11:37:00.812Z"
     }
   },
-  "last_finished_at": "2026-09-22T06:59:48.707Z",
+  "last_finished_at": "2026-09-22T12:05:58.542Z",
   "recent": [
-    {
-      "tool": "exec_command",
-      "started_at": "2026-09-15T11:16:32.954Z",
-      "finished_at": "2026-09-15T11:16:35.729Z",
-      "wall_time_source": "operation_boundary",
-      "duration_ms": 2781,
-      "wait_before_ms": 8750,
-      "request_bytes": 1697,
-      "response_bytes": 5387,
-      "model_visible_bytes": 3284,
-      "model_visible_chars": 3284,
-      "invocation": {
-        "schema_version": 1,
-        "invocation_id": "1473c96607b3e94cc9e755c37e9b1431cf98f8847f76f124541760543e5eba25",
-        "identity_source": "transport_request_id",
-        "request_id": "0",
-        "task_context_id": "ctx_7c67f3d75e0cd86af7ec70695846e6d8",
-        "session_instance": "0f9b9a27857d27e4",
-        "execution_context_id": "mcp2026:2e3d3c20ea315682da4c189a6b96b247f075eb4fb869617fbca4c7b1",
-        "client_id": "chatweb",
-        "client_type": "chatweb",
-        "trace_context": {
-          "trace_id": "6aa928da00000000b8fb2c8231afecea",
-          "parent_span_id": "16a4f8cae82af914",
-          "trace_flags": "00",
-          "trace_context_schema_version": 1,
-          "tracestate_present": true
-        }
-      },
-      "outcome": {
-        "status": "ok"
-      },
-      "truncated": false,
-      "cache_hit": false,
-      "deduplicated": false,
-      "idempotency_eligible": true,
-      "idempotency_key_present": false,
-      "idempotency_policy": "optional",
-      "idempotency_key_source": "none",
-      "idempotency_operation": "exec_command",
-      "idempotency_missing_reason": "",
-      "error_class": "",
-      "proof_cache_eligible": 0,
-      "proof_cache_hits": 0,
-      "proof_cache_misses": 0,
-      "proof_cache_miss_reasons": {},
-      "proof_cache_saved_ms": 0,
-      "ok": true,
-      "run_id": "",
-      "wave_id": "",
-      "delegation_id": "",
-      "execution_mode": "",
-      "route_requested": "",
-      "route_resolved": "",
-      "orchestration_state": "",
-      "phase_timing": {},
-      "localization": {},
-      "result_tail": {}
-    },
     {
       "tool": "task_control",
       "started_at": "2026-09-15T11:16:54.690Z",
@@ -10801,74 +10742,51 @@
       "phase_timing": {},
       "localization": {},
       "result_tail": {}
+    },
+    {
+      "tool": "workspace_preheat",
+      "started_at": "2026-09-22T12:05:58.201Z",
+      "finished_at": "2026-09-22T12:05:58.542Z",
+      "wall_time_source": "operation_boundary",
+      "duration_ms": 343,
+      "wait_before_ms": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "invocation": {},
+      "outcome": {
+        "status": "ok"
+      },
+      "truncated": false,
+      "cache_hit": false,
+      "deduplicated": false,
+      "idempotency_eligible": false,
+      "idempotency_key_present": false,
+      "idempotency_policy": "none",
+      "idempotency_key_source": "none",
+      "idempotency_operation": "workspace_preheat",
+      "idempotency_missing_reason": "",
+      "error_class": "",
+      "proof_cache_eligible": 0,
+      "proof_cache_hits": 0,
+      "proof_cache_misses": 0,
+      "proof_cache_miss_reasons": {},
+      "proof_cache_saved_ms": 0,
+      "ok": true,
+      "run_id": "234713daf77f427ca486a7044fefd204",
+      "wave_id": "8e83adcca2b7420dbde6c2722e8f2c1d",
+      "delegation_id": "1835a28961e94b9b975e26ba3133ebb2",
+      "execution_mode": "deep_single_lane",
+      "route_requested": "sol_xhigh",
+      "route_resolved": "sol_xhigh",
+      "orchestration_state": "CHECKPOINTED",
+      "phase_timing": {},
+      "localization": {},
+      "result_tail": {}
     }
   ],
   "hourly_metrics": {
-    "497071": {
-      "hour": 497071,
-      "tool_calls": 361,
-      "errors": 64,
-      "cache_hits": 1,
-      "request_bytes": 359296,
-      "response_bytes": 16088658,
-      "model_visible_bytes": 199524,
-      "model_visible_chars": 199522,
-      "local_execution_ms": 1477981,
-      "estimated_wait_ms": 2642435,
-      "last_finished_at": "2026-09-15T07:59:47.066Z"
-    },
-    "497072": {
-      "hour": 497072,
-      "tool_calls": 318,
-      "errors": 51,
-      "cache_hits": 1,
-      "request_bytes": 180955,
-      "response_bytes": 19885097,
-      "model_visible_bytes": 486122,
-      "model_visible_chars": 480506,
-      "local_execution_ms": 1408013,
-      "estimated_wait_ms": 2756644,
-      "last_finished_at": "2026-09-15T08:59:56.479Z"
-    },
-    "497073": {
-      "hour": 497073,
-      "tool_calls": 301,
-      "errors": 48,
-      "cache_hits": 0,
-      "request_bytes": 239006,
-      "response_bytes": 28720845,
-      "model_visible_bytes": 604622,
-      "model_visible_chars": 604598,
-      "local_execution_ms": 896955,
-      "estimated_wait_ms": 2936970,
-      "last_finished_at": "2026-09-15T10:00:05.409Z"
-    },
-    "497074": {
-      "hour": 497074,
-      "tool_calls": 207,
-      "errors": 26,
-      "cache_hits": 1,
-      "request_bytes": 178925,
-      "response_bytes": 15355419,
-      "model_visible_bytes": 258840,
-      "model_visible_chars": 258840,
-      "local_execution_ms": 827825,
-      "estimated_wait_ms": 2231496,
-      "last_finished_at": "2026-09-15T11:00:11.397Z"
-    },
-    "497075": {
-      "hour": 497075,
-      "tool_calls": 123,
-      "errors": 15,
-      "cache_hits": 0,
-      "request_bytes": 103202,
-      "response_bytes": 5088986,
-      "model_visible_bytes": 313601,
-      "model_visible_chars": 313597,
-      "local_execution_ms": 428199,
-      "estimated_wait_ms": 1162964,
-      "last_finished_at": "2026-09-15T11:37:00.812Z"
-    },
     "497235": {
       "hour": 497235,
       "tool_calls": 2,
@@ -10907,6 +10825,19 @@
       "local_execution_ms": 750,
       "estimated_wait_ms": 10264,
       "last_finished_at": "2026-09-22T06:59:48.707Z"
+    },
+    "497244": {
+      "hour": 497244,
+      "tool_calls": 1,
+      "errors": 0,
+      "cache_hits": 0,
+      "request_bytes": 0,
+      "response_bytes": 0,
+      "model_visible_bytes": 0,
+      "model_visible_chars": 0,
+      "local_execution_ms": 343,
+      "estimated_wait_ms": 0,
+      "last_finished_at": "2026-09-22T12:05:58.542Z"
     }
   }
 }

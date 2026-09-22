@@ -4,7 +4,7 @@ Ngày lập: **22/09/2026 — Asia/Saigon (UTC+07)**. Repository: `E:\DEV\Codex-
 
 Trạng thái tài liệu: **RECOVERY REHEARSAL ACTIVE — người dùng đã cấp controlled recovery; backup/candidate cô lập đã tạo, canonical chưa thay, candidate chưa activation-eligible**.
 
-> **Cập nhật mới nhất 22/09 khoảng 18:28 +07:** user đã cho phép recovery theo phạm vi backup/isolated rehearsal trước; candidate QUARANTINED có lịch sử thiếu và giữ current rows, xem **16.17**. Canonical hash vẫn nguyên. HEAD do luồng khác chuyển sang `ee11ec2`; goal ACTIVE, chưa complete.
+> **Cập nhật mới nhất 22/09 khoảng 19:08 +07:** rehearsal candidate đã qua structural/event/append/duplicate probes trên clone writable; projection và unknown-effect gates vẫn fail-closed, xem **16.19**. Canonical hash vẫn nguyên; goal ACTIVE, chưa complete.
 
 ## 0. Kết luận điều hành
 
@@ -1320,3 +1320,25 @@ Rehearsal report: `E:\Caches\Temp\codex-ledger-recovery-rehearsal-udbg894e\rehea
 **Đã đạt trong wave:** backup nhất quán, allowlist exact, isolated merge, all-table preservation, integrity/FK, event lineage, authority withholding và unknown-effect refusal. **Chưa đạt:** supported problem-projection reconciliation cho seq `318–320`, authority high-water review/owner sign-off, exact runtime activation/loaded package, client strict discovery/MCP-Tunnel/workspace read, reboot/two-machine, natural continuation và independent outcome. Vì vậy không được copy candidate lên live ledger, không restart/reboot/install/deploy/push, và không đánh dấu hai Problem đã đóng.
 
 **Next action chính:** bổ sung verifier append-after-recovery và negative duplicate/authority checks trên clone writable của candidate; sau đó owner review một receipt bất biến. Chỉ khi có supported reconciliation contract + quiesced runtime + target-specific approval mới xem xét canonical switch; mọi switch vẫn phải có rollback backup, postflight integrity/projection/readback và acceptance riêng.
+
+### 16.19. Verifier candidate: append-after-recovery và negative duplicate/authority — 22/09 khoảng 19:02–19:08 +07
+
+Đã triển khai [audit-ledger-recovery-candidate.py](../../scripts/audit-ledger-recovery-candidate.py) và test [test_ledger_recovery_candidate_audit.py](../../tests/test_ledger_recovery_candidate_audit.py). Verifier nhận ba file đã hash-check, mở chúng read-only, rồi chỉ tạo một clone tạm của candidate để chạy các probe có ghi. Không có đường lệnh apply/switch canonical.
+
+Kết quả trên candidate SHA `651f6c40c633974f0f2668f3b18ccfdb751e946f5ce6b8bd7bb96f7dc97d1be5`:
+
+| Gate | Kết quả | Ý nghĩa |
+| --- | --- | --- |
+| Current rows preserved / authority current-only | PASS | Candidate không đổi row hiện tại; authority tables bằng current; historical leases/reattach/hub vẫn withheld |
+| SQLite integrity/FK | PASS | candidate/current/historical đều `integrity=ok`, FK `0` |
+| Event sequence + hash chain | PASS | 25,822 events, 555 RUN chains, seq monotonic, link/digest errors `0` |
+| Append-after-recovery | PASS trên clone | Tạo RUN/WAVE/event mới bằng `OrchestrationLedger`; event persist đúng, hash đầu chain rỗng là đúng với RUN mới; clone integrity/FK `ok/0` |
+| Unknown-effect replay refusal | PASS trên clone | `663` unknown/in-progress claim bị từ chối; `1` running background được đánh dấu orphaned; sau probe không còn running/in-progress |
+| Completed duplicate refusal | PASS trên clone | claim lại một idempotency record `completed` trả `reason=completed`, không claim effect lần hai |
+| Problem projection | **BLOCKED** | `prl-22e…` thread seq `317`, event seq `320`; cần supported projection reconciliation, không copy thread historical |
+| Unknown-effect reconciliation | **BLOCKED** | Candidate còn `1 running` background + `662 unknown` + `1 in_progress` idempotency trước probe; đó là evidence cần owner phân loại, không được tự mark completed |
+| Operator/support switch authority | **MISSING** | Không có receipt quiesce/owner review/supported importer cho canonical switch |
+
+Focused suite hiện tại: **5 tests PASS, 11.58s** (`test_ledger_recovery_rehearsal.py` + `test_ledger_recovery_candidate_audit.py`); verifier `py_compile` PASS. Đây là proof cho safety behavior của rehearsal và clone, không phải source acceptance của toàn app, không phải live runtime/client proof.
+
+**Phân loại checkpoint:** PROGRESS. Hai probe mới đã đóng phần “candidate có thể mở/append/không replay duplicate” trong môi trường cô lập, nhưng không làm thay đổi verdict `activation_eligible=false`. Không thực hiện canonical write, runtime restart, reboot, package/install, deploy, push hoặc tạo outcome tự nhiên. Next action vẫn là owner review + contract reconciliation cho `prl-22e…` và unknown effects; nếu không có supported API/authority, phải giữ candidate quarantine và không gọi đây là recovery đã áp dụng.
