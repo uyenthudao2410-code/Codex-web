@@ -795,6 +795,70 @@ class ControlPlaneStoreTests(unittest.TestCase):
                 declaration="a different declaration",
             )
 
+    def test_operator_can_quarantine_expired_unobserved_dispatch_without_receipt(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-unobserved-dispatch-0001",
+            admission_reference="admission-unobserved-dispatch-0001",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        attempt = self.store.poll_actions(device_id="device-alpha")[0]
+        self.now += 30_000
+        disposition = self.store.quarantine_historical_unobserved_dispatches(
+            owner_id="owner_default",
+            device_id="device-alpha",
+            action_ids=[action["action_id"]],
+            declaration="HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH",
+            rationale="expired legacy read-only dispatch; node policy/runtime unavailable for observation",
+        )
+        self.assertEqual(disposition["actions"][0]["attempt_id"], attempt["attempt_id"])
+        observation = self.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual(observation["receipts"], [])
+        self.assertEqual(observation["dispatch_disposition"]["disposition"], "historical_read_only_unobserved_dispatch")
+        self.assertEqual(self.store.poll_actions(device_id="device-alpha"), [])
+        health = self.store.health()
+        self.assertEqual(health["unresolved_action_count"], 1)
+        self.assertEqual(health["historical_unobserved_dispatch_count"], 1)
+        self.assertEqual(health["quarantined_unresolved_action_count"], 1)
+        self.assertEqual(health["unquarantined_unresolved_action_count"], 0)
+
+        with self.assertRaises(ConflictError):
+            self.store.quarantine_historical_unobserved_dispatches(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH",
+                rationale="duplicate",
+            )
+
+    def test_unobserved_dispatch_requires_expiry_and_unavailable_node(self) -> None:
+        _, request = self._request()
+        action = self.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="action-key-unobserved-dispatch-0002",
+            admission_reference="admission-unobserved-dispatch-0002",
+            expires_at_ms=self.now + 20_000,
+        )
+        self._ready_node()
+        self.store.poll_actions(device_id="device-alpha")
+        with self.assertRaises(ConflictError):
+            self.store.quarantine_historical_unobserved_dispatches(
+                owner_id="owner_default",
+                device_id="device-alpha",
+                action_ids=[action["action_id"]],
+                declaration="HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH",
+                rationale="not expired and node still dispatchable",
+            )
+
     def test_legacy_rotate_credential_path_fails_closed(self) -> None:
         with self.assertRaises(ConflictError):
             self.store.rotate_node_credential(owner_id="owner_default", device_id="device-alpha")

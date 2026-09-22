@@ -460,6 +460,17 @@ session, backup, or real environment file. Creating it does not change the
   `quarantined_unknown` disposition, receipt/evidence digests, timestamp and an
   audit event. It does **not** alter receipts or delivery state, settle the
   action, permit redelivery, or claim that a workspace was untouched or read.
+  A separate operator-only
+  `POST /v1/action-dispositions/quarantine-historical-unobserved-dispatch`
+  (and same-origin browser route) handles one narrower legacy case: an expired
+  `workspace_context` action that is still `dispatch_unconfirmed`, has exactly
+  one attempt and zero receipts, and whose node is stale/unavailable or lacks a
+  valid local policy/runtime observation. It requires the literal declaration
+  `HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH` plus a bounded rationale. The
+  disposition is stored in a separate evidence table with an attempt-bound
+  digest; it leaves the action `dispatch_unconfirmed`, creates no receipt,
+  never retries and does not open admission. This is an explicit owner risk
+  decision, not proof that the node did or did not read the workspace.
   Backup inspection reports both all unresolved actions and the smaller count
   still unquarantined; the healthcheck may pass only when the latter is zero.
 - `POST /mcp` is a stateless JSON-RPC façade for MCP `2025-11-25`, reachable
@@ -510,7 +521,7 @@ named local admission lane must independently pass its policy, strict-runtime
 and actor gates before a completed receipt can be observed. Mutation remains
 blocked until a local adapter can pass the local authority gate. A grant alone
 is never a file, process, local-policy, or task-approval authority.
-Schema migrations are additive, source-versioned (current `user_version=24`),
+Schema migrations are additive, source-versioned (current `user_version=25`),
 and applied atomically by the store. `ControlPlaneStore.backup_to()` creates a
 verified, non-overwriting SQLite Backup API snapshot when an operator calls it
 explicitly. It is not an automatic startup backup and does not execute a

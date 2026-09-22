@@ -35,7 +35,13 @@ from .mcp_oauth import (
     OAuthIntrospectionVerifier,
     oauth_configuration_from_environment,
 )
-from .store import ConflictError, ControlPlaneError, ControlPlaneStore, PermissionError, ValidationError
+from .store import (
+    ConflictError,
+    ControlPlaneError,
+    ControlPlaneStore,
+    PermissionError,
+    ValidationError,
+)
 from .web_ui import WEB_UI_CSP, WEB_UI_CSS, WEB_UI_HTML, WEB_UI_JAVASCRIPT
 
 
@@ -884,6 +890,20 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             declaration=self._field(body, "declaration"),
         )
 
+    def _quarantine_historical_unobserved_dispatches(self, body: dict[str, Any], *, browser: bool) -> dict[str, Any]:
+        """Persist a no-receipt historical disposition without faking a receipt."""
+
+        if set(body) != {"device_id", "action_ids", "declaration", "rationale"}:
+            raise ValidationError("historical unobserved dispatch payload is invalid.")
+        owner_id = self._ui_operator(require_csrf=True) if browser else self._operator()
+        return self.server.store.quarantine_historical_unobserved_dispatches(
+            owner_id=owner_id,
+            device_id=self._field(body, "device_id"),
+            action_ids=self._field(body, "action_ids"),
+            declaration=self._field(body, "declaration"),
+            rationale=self._field(body, "rationale"),
+        )
+
     def _node_read_only_policy_template(self, device_id: str, body: dict[str, Any]) -> dict[str, Any]:
         """Return a live-context template only to its authenticated executor.
 
@@ -1475,6 +1495,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
             if self.path == "/v1/ui/action-reconciliations/quarantine-historical-unknown":
                 self._json(HTTPStatus.OK, self._quarantine_historical_unknown_actions(body, browser=True))
                 return
+            if self.path == "/v1/ui/action-dispositions/quarantine-historical-unobserved-dispatch":
+                self._json(HTTPStatus.OK, self._quarantine_historical_unobserved_dispatches(body, browser=True))
+                return
             if self.path == "/v1/ui/read-only-requests":
                 self._json(HTTPStatus.CREATED, self._create_ui_read_only_request(body))
                 return
@@ -1565,6 +1588,9 @@ class ControlPlaneHandler(BaseHTTPRequestHandler):
                 return
             if self.path == "/v1/action-reconciliations/quarantine-historical-unknown":
                 self._json(HTTPStatus.OK, self._quarantine_historical_unknown_actions(body, browser=False))
+                return
+            if self.path == "/v1/action-dispositions/quarantine-historical-unobserved-dispatch":
+                self._json(HTTPStatus.OK, self._quarantine_historical_unobserved_dispatches(body, browser=False))
                 return
             node_rotation_prepare_match = re.fullmatch(
                 r"/v1/nodes/([^/]+)/credential-rotation/prepare", self.path

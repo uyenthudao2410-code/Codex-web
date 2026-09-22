@@ -236,6 +236,37 @@ restore production.
    maintenance boundary. Report the unresolved scope and next human action;
    do not claim restoration is complete.
 
+### 6.1 Historical `dispatch_unconfirmed` with no receipt
+
+The normal quarantine route requires a durable node `unknown` receipt. A legacy
+or interrupted poll can instead leave an expired read-only action in
+`dispatch_unconfirmed` with one recorded attempt and no receipt. That state is
+not safe to retry and cannot be converted into a fabricated `unknown`,
+`completed`, or `cancelled` receipt.
+
+For that exact case, an authenticated owner may use
+`POST /v1/action-dispositions/quarantine-historical-unobserved-dispatch` (or
+the CSRF-protected same-origin browser route) only when all of these predicates
+are rechecked in one transaction:
+
+- the action is exactly `workspace_context`, belongs to the selected owner and
+  device, is expired, remains `dispatch_unconfirmed`, has exactly one attempt,
+  and has zero receipts;
+- the node is stale/unavailable or lacks a valid ready runtime/policy
+  observation, so current node-side dispatch cannot be confused with the old
+  attempt;
+- the literal declaration is
+  `HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH`, with a bounded non-secret
+  operator rationale.
+
+The operation writes a separate attempt-bound evidence disposition and audit
+event. It does not insert a receipt, modify `actions.delivery_state`, replay or
+cancel the action, or open admission. Health and backup inspection may count
+the action as an explicitly quarantined unresolved item, but the action remains
+unobserved and the central service must stay in `recovery` until the owner
+separately accepts the complete reconciliation packet. If any predicate fails,
+stop and retain the original unresolved state.
+
 ## 7. Required evidence and acceptance
 
 ### T13 — restore of an older central database

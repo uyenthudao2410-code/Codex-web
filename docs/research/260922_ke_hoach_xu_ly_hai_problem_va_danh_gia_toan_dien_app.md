@@ -1910,6 +1910,21 @@ Ranh giới còn lại không đổi: remote service vẫn `declared_source_revi
 
 **Operator checkpoint:** package code provenance đã được thu hẹp từ “chưa xác minh” thành **fingerprint khớp Git-export HEAD**, còn release identity vẫn lệch revision metadata. Không deploy/restart/reconcile thêm trong wave này. Exact next action nếu có deployment authority là build/install release canonical từ Git-export của HEAD hiện tại, đọc lại cả `declared_source_revision` và fingerprint, rồi vẫn giữ `recovery` cho đến khi action unresolved và các gate Windows/natural-use được xử lý.
 
+### 16.39. Đã bổ sung disposition fail-closed cho dispatch cũ không có receipt — 22/09/2026
+
+Source hiện nâng schema control-plane lên `25` và thêm `action_dispatch_dispositions` riêng cho đúng blocker còn lại: action `workspace_context` đã hết hạn, `dispatch_unconfirmed`, có đúng một attempt, không có receipt, trong khi node stale/unavailable hoặc thiếu runtime/policy observation hợp lệ. Operator route mới là:
+
+```text
+POST /v1/action-dispositions/quarantine-historical-unobserved-dispatch
+POST /v1/ui/action-dispositions/quarantine-historical-unobserved-dispatch
+```
+
+Route yêu cầu declaration chính xác `HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH` và rationale bounded. Transaction kiểm tra owner/device/action/attempt/expiry/zero-receipt/node state, ghi evidence digest + audit event, nhưng **không** tạo receipt, không đổi `actions.delivery_state`, không retry/cancel/replay và không mở admission. Health/backup inspection có thể coi disposition là một unresolved item đã được operator cách ly để healthcheck không còn đếm là `unquarantined`, song action vẫn giữ `dispatch_unconfirmed` và không phải completed, local read, acceptance hay natural outcome.
+
+Focused proof: store + HTTP/UI tests cho route/auth/no-receipt và các điều kiện expiry/dispatchability đều pass; full control-plane suite trên Windows còn 12 failure môi trường độc lập (python3 không có trên PATH, CRLF output, OAuth file mode/symlink privilege, HTTP stress timeout và release-builder dirty-source guard), không phải failure của disposition mới. Chưa invoke route trên Ubuntu, chưa deploy schema 25, chưa mở admission và chưa có strict Windows discovery/natural-work outcome.
+
+**Operator checkpoint:** blocker nay có một đường xử lý được audit mà không cần giả receipt. Exact next action là commit/push source + runbook/tests, sau đó chỉ khi có maintenance authority mới build Git-export canonical, backup/migrate/restart Ubuntu lên schema 25, đọc lại service/package identity và invoke route với exact action/device/rationale. Giữ `recovery` cho tới khi owner chấp nhận reconciliation packet; không tuyên bố hoàn tất từ health `200` hoặc disposition.
+
 ### 16.39. Hardening release builder và đính chính fingerprint canonical — 22/09/2026 khoảng 22:00 +07
 
 Đã sửa release builder để clean build (`require_clean_source=true`) đọc trực tiếp bytes của `git show HEAD:<path>` thay vì bytes đã qua Windows checkout/EOL conversion; package fingerprint được tính lại trên đúng staging bytes sẽ đưa vào archive. Đây là source fix nhằm loại bỏ sai lệch reproducibility, không phải deploy.

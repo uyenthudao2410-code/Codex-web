@@ -27,7 +27,7 @@ TASK_ID_PATTERN = re.compile(r"^task_[a-f0-9]{32}$")
 SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 NODE_ROTATION_ID_PATTERN = re.compile(r"^rotate_[a-f0-9]{32}$")
 NODE_ROTATION_STATES = frozenset({"prepared", "activated", "completed", "aborted"})
-SCHEMA_VERSION = 24
+SCHEMA_VERSION = 25
 MCP_TASK_SESSION_MAX_TTL_MS = 24 * 60 * 60 * 1000
 MCP_TASK_WRITER_LEASE_TTL_MS = 60 * 1000
 MAX_HEARTBEAT_AGE_MS = 60_000
@@ -94,6 +94,8 @@ TERMINAL_RECEIPT_STATES = {"rejected", "completed", "failed", "stopped"}
 RECONCILIATION_RECEIPT_STATES = {"unknown"}
 QUARANTINE_UNKNOWN_DISPOSITION = "quarantined_unknown"
 QUARANTINE_UNKNOWN_DECLARATION = "HISTORICAL_READ_ONLY_UNKNOWN_EFFECT"
+HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION = "historical_read_only_unobserved_dispatch"
+HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION = "HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH"
 UNVERIFIED_RUNTIME_IDENTITIES = {"", "none", "unknown", "unreported", "unverified"}
 POLICY_OBSERVATION_STATES = {"unobserved", "enabled", "expired_or_disabled", "unavailable"}
 POLICY_REASON_PATTERN = re.compile(r"^[A-Z0-9_]{3,96}$")
@@ -584,6 +586,8 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
         }
         delivery_state_counts: dict[str, int] = {}
         quarantined_unknown_action_count = 0
+        historical_unobserved_dispatch_count = 0
+        quarantined_unresolved_action_count = 0
         if "actions" in tables:
             delivery_state_counts = {
                 str(row["delivery_state"]): int(row["count"])
@@ -605,6 +609,46 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
                         (QUARANTINE_UNKNOWN_DISPOSITION,),
                     ).fetchone()[0]
                 )
+            if "action_dispatch_dispositions" in tables:
+                historical_unobserved_dispatch_count = int(
+                    connection.execute(
+                        """
+                        SELECT COUNT(*)
+                        FROM actions AS action
+                        JOIN action_dispatch_dispositions AS disposition
+                          ON disposition.action_id = action.action_id
+                        WHERE action.delivery_state = 'dispatch_unconfirmed'
+                          AND disposition.disposition = ?
+                        """,
+                        (HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION,),
+                    ).fetchone()[0]
+                )
+            disposition_tables = []
+            disposition_parameters: list[str] = []
+            if "action_reconciliations" in tables:
+                disposition_tables.append(
+                    "SELECT action_id FROM action_reconciliations WHERE disposition = ?"
+                )
+                disposition_parameters.append(QUARANTINE_UNKNOWN_DISPOSITION)
+            if "action_dispatch_dispositions" in tables:
+                disposition_tables.append(
+                    "SELECT action_id FROM action_dispatch_dispositions WHERE disposition = ?"
+                )
+                disposition_parameters.append(HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION)
+            if disposition_tables:
+                union = " UNION ALL ".join(disposition_tables)
+                quarantined_unresolved_action_count = int(
+                    connection.execute(
+                        f"""
+                        SELECT COUNT(DISTINCT action.action_id)
+                        FROM actions AS action
+                        JOIN ({union}) AS disposition
+                          ON disposition.action_id = action.action_id
+                        WHERE action.delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+                        """,
+                        tuple(disposition_parameters),
+                    ).fetchone()[0]
+                )
         admission_mode: str | None = None
         if "control_plane_state" in tables:
             row = connection.execute(
@@ -617,7 +661,7 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
         delivery_state_counts.get(state, 0)
         for state in ("dispatch_unconfirmed", "accepted", "reconcile_required")
     )
-    unquarantined_unresolved_action_count = unresolved_action_count - quarantined_unknown_action_count
+    unquarantined_unresolved_action_count = unresolved_action_count - quarantined_unresolved_action_count
     return {
         "sqlite_integrity": integrity,
         "schema_version": schema_version,
@@ -626,6 +670,8 @@ def inspect_verified_snapshot(snapshot_path: str | Path, *, expected_sha256: str
         "delivery_state_counts": delivery_state_counts,
         "unresolved_action_count": unresolved_action_count,
         "quarantined_unknown_action_count": quarantined_unknown_action_count,
+        "historical_unobserved_dispatch_count": historical_unobserved_dispatch_count,
+        "quarantined_unresolved_action_count": quarantined_unresolved_action_count,
         "unquarantined_unresolved_action_count": unquarantined_unresolved_action_count,
     }
 
@@ -1216,6 +1262,23 @@ class ControlPlaneStore:
                     evidence_digest TEXT NOT NULL,
                     reconciled_at_ms INTEGER NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS action_dispatch_dispositions (
+                    action_id TEXT PRIMARY KEY REFERENCES actions(action_id),
+                    owner_id TEXT NOT NULL,
+                    device_id TEXT NOT NULL,
+                    attempt_id TEXT NOT NULL REFERENCES delivery_attempts(attempt_id),
+                    disposition TEXT NOT NULL CHECK(disposition = 'historical_read_only_unobserved_dispatch'),
+                    declaration TEXT NOT NULL CHECK(declaration = 'HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH'),
+                    evidence_digest TEXT NOT NULL,
+                    rationale TEXT NOT NULL,
+                    action_expires_at_ms INTEGER NOT NULL,
+                    node_last_seen_at_ms INTEGER,
+                    node_readiness TEXT NOT NULL,
+                    node_policy_state TEXT NOT NULL,
+                    node_policy_reason TEXT,
+                    decided_by TEXT NOT NULL,
+                    decided_at_ms INTEGER NOT NULL
+                );
                 CREATE TABLE IF NOT EXISTS mcp_task_sessions (
                     task_id TEXT PRIMARY KEY,
                     owner_id TEXT NOT NULL,
@@ -1307,6 +1370,8 @@ class ControlPlaneStore:
                     ON node_workspaces(device_id, workspace_id, retired_at_ms);
                 CREATE INDEX IF NOT EXISTS action_reconciliations_owner_device_idx
                     ON action_reconciliations(owner_id, device_id, reconciled_at_ms);
+                CREATE INDEX IF NOT EXISTS action_dispatch_dispositions_owner_device_idx
+                    ON action_dispatch_dispositions(owner_id, device_id, decided_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_task_sessions_owner_principal_idx
                     ON mcp_task_sessions(owner_id, principal_id, created_at_ms);
                 CREATE INDEX IF NOT EXISTS mcp_task_sessions_binding_idx
@@ -7313,6 +7378,208 @@ class ControlPlaneStore:
             "actions": reconciled,
         }
 
+    def quarantine_historical_unobserved_dispatches(
+        self,
+        *,
+        owner_id: str,
+        device_id: str,
+        action_ids: Any,
+        declaration: str,
+        rationale: Any,
+    ) -> dict[str, Any]:
+        """Record a bounded operator disposition for an old send with no receipt.
+
+        This is deliberately separate from ``action_reconciliations``: there is
+        no node receipt to reconcile and this method must never create a
+        sentinel/fake receipt.  It is limited to an expired, read-only
+        ``workspace_context`` action with exactly one recorded attempt and no
+        receipt while the target node is stale, unavailable, or lacks a valid
+        local policy/runtime observation.  The action remains
+        ``dispatch_unconfirmed`` and cannot be delivered again.
+        """
+
+        owner_id = _text(owner_id, "owner_id")
+        device_id = _text(device_id, "device_id")
+        if declaration != HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION:
+            raise ValidationError("historical unobserved dispatch declaration is invalid.")
+        if not isinstance(rationale, str):
+            raise ValidationError("historical unobserved dispatch rationale is invalid.")
+        rationale = rationale.strip()
+        if not 1 <= len(rationale) <= 500 or any(ord(character) < 32 or ord(character) == 127 for character in rationale):
+            raise ValidationError("historical unobserved dispatch rationale is invalid.")
+        if not isinstance(action_ids, list) or not 1 <= len(action_ids) <= 50:
+            raise ValidationError("action_ids must contain between 1 and 50 exact action IDs.")
+        normalized_action_ids = [_text(value, "action_id") for value in action_ids]
+        if len(set(normalized_action_ids)) != len(normalized_action_ids):
+            raise ValidationError("action_ids must not contain duplicates.")
+
+        with self._connection() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            node = connection.execute(
+                """
+                SELECT device_id, owner_id, endpoint_id, last_seen_at_ms,
+                       runtime_instance_id, mcp_server_instance_id,
+                       activation_epoch, contract_version, readiness,
+                       policy_state, policy_expires_at_ms, policy_reason
+                FROM nodes
+                WHERE device_id = ?
+                """,
+                (device_id,),
+            ).fetchone()
+            if node is None:
+                connection.execute("ROLLBACK")
+                raise NotFoundError("device is not enrolled.")
+            if node["owner_id"] != owner_id:
+                connection.execute("ROLLBACK")
+                raise PermissionError("device is not owned by this principal.")
+
+            now = self.clock()
+            heartbeat_fresh = (
+                isinstance(node["last_seen_at_ms"], int)
+                and node["last_seen_at_ms"] + self.heartbeat_max_age_ms >= now
+            )
+            runtime_reported = all(
+                _reported_runtime_identity(node[key])
+                for key in (
+                    "runtime_instance_id",
+                    "mcp_server_instance_id",
+                    "activation_epoch",
+                    "contract_version",
+                )
+            )
+            policy_enabled = (
+                node["policy_state"] == "enabled"
+                and isinstance(node["policy_expires_at_ms"], int)
+                and node["policy_expires_at_ms"] > now
+            )
+            node_unavailable = not (
+                node["readiness"] == "ready" and heartbeat_fresh and runtime_reported and policy_enabled
+            )
+            if not node_unavailable:
+                connection.execute("ROLLBACK")
+                raise ConflictError("node is still dispatchable; obtain node-side evidence instead.")
+
+            disposed: list[dict[str, Any]] = []
+            try:
+                for action_id in normalized_action_ids:
+                    action = connection.execute(
+                        "SELECT * FROM actions WHERE action_id = ?", (action_id,)
+                    ).fetchone()
+                    if action is None:
+                        raise NotFoundError("action does not exist.")
+                    if action["owner_id"] != owner_id:
+                        raise PermissionError("action is not owned by this principal.")
+                    if action["device_id"] != device_id:
+                        raise ConflictError("action does not belong to the selected device.")
+                    if action["tool_name"] != "workspace_context":
+                        raise ConflictError("only workspace_context actions can use this historical disposition.")
+                    if action["delivery_state"] != "dispatch_unconfirmed":
+                        raise ConflictError("action is not an unobserved dispatch.")
+                    if not isinstance(action["expires_at_ms"], int) or action["expires_at_ms"] > now:
+                        raise ConflictError("action has not expired yet.")
+                    if connection.execute(
+                        "SELECT 1 FROM action_reconciliations WHERE action_id = ?", (action_id,)
+                    ).fetchone() is not None:
+                        raise ConflictError("action already has a receipt reconciliation disposition.")
+                    if connection.execute(
+                        "SELECT 1 FROM action_dispatch_dispositions WHERE action_id = ?", (action_id,)
+                    ).fetchone() is not None:
+                        raise ConflictError("action already has a historical dispatch disposition.")
+                    receipts = connection.execute(
+                        "SELECT COUNT(*) FROM receipts WHERE action_id = ?", (action_id,)
+                    ).fetchone()[0]
+                    if int(receipts) != 0:
+                        raise ConflictError("action has a receipt; use receipt reconciliation instead.")
+                    attempts = connection.execute(
+                        """
+                        SELECT attempt_id, attempt_number, dispatched_at_ms
+                        FROM delivery_attempts
+                        WHERE action_id = ?
+                        ORDER BY attempt_number DESC, attempt_id DESC
+                        """,
+                        (action_id,),
+                    ).fetchall()
+                    if len(attempts) != 1:
+                        raise ConflictError("action must have exactly one recorded delivery attempt.")
+                    attempt = attempts[0]
+                    evidence_digest = _digest(
+                        {
+                            "schema_version": 1,
+                            "action_id": action_id,
+                            "owner_id": owner_id,
+                            "device_id": device_id,
+                            "attempt_id": attempt["attempt_id"],
+                            "attempt_number": attempt["attempt_number"],
+                            "dispatched_at_ms": attempt["dispatched_at_ms"],
+                            "action_digest": action["action_digest"],
+                            "tool_name": action["tool_name"],
+                            "delivery_state": action["delivery_state"],
+                            "action_expires_at_ms": action["expires_at_ms"],
+                            "node_last_seen_at_ms": node["last_seen_at_ms"],
+                            "node_readiness": node["readiness"],
+                            "node_policy_state": node["policy_state"],
+                            "node_policy_reason": node["policy_reason"],
+                            "declaration": HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION,
+                            "rationale": rationale,
+                        }
+                    )
+                    connection.execute(
+                        """
+                        INSERT INTO action_dispatch_dispositions(
+                            action_id, owner_id, device_id, attempt_id, disposition,
+                            declaration, evidence_digest, rationale, action_expires_at_ms,
+                            node_last_seen_at_ms, node_readiness, node_policy_state,
+                            node_policy_reason, decided_by, decided_at_ms
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            action_id,
+                            owner_id,
+                            device_id,
+                            attempt["attempt_id"],
+                            HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION,
+                            HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION,
+                            evidence_digest,
+                            rationale,
+                            action["expires_at_ms"],
+                            node["last_seen_at_ms"],
+                            node["readiness"],
+                            node["policy_state"],
+                            node["policy_reason"],
+                            owner_id,
+                            now,
+                        ),
+                    )
+                    self._event(
+                        connection,
+                        "action",
+                        action_id,
+                        "action_historical_unobserved_dispatch_quarantined",
+                        {
+                            "disposition": HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION,
+                            "declaration": HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION,
+                            "attempt_id": attempt["attempt_id"],
+                            "evidence_digest": evidence_digest,
+                        },
+                    )
+                    disposed.append(
+                        {
+                            "action_id": action_id,
+                            "attempt_id": attempt["attempt_id"],
+                            "disposition": HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION,
+                            "decided_at_ms": now,
+                        }
+                    )
+            except Exception:
+                connection.execute("ROLLBACK")
+                raise
+            connection.execute("COMMIT")
+        return {
+            "device_id": device_id,
+            "declaration": HISTORICAL_UNOBSERVED_DISPATCH_DECLARATION,
+            "actions": disposed,
+        }
+
     def action_observation(self, *, owner_id: str, action_id: str) -> dict[str, Any]:
         """Return owner-scoped immutable action, delivery attempts, and receipts."""
         action = self.action(owner_id=owner_id, action_id=action_id)
@@ -7335,6 +7602,17 @@ class ControlPlaneStore:
                 """,
                 (action_id,),
             ).fetchone()
+            dispatch_disposition = connection.execute(
+                """
+                SELECT action_id, owner_id, device_id, attempt_id, disposition,
+                       declaration, evidence_digest, rationale, action_expires_at_ms,
+                       node_last_seen_at_ms, node_readiness, node_policy_state,
+                       node_policy_reason, decided_by, decided_at_ms
+                FROM action_dispatch_dispositions
+                WHERE action_id = ?
+                """,
+                (action_id,),
+            ).fetchone()
             task_link = connection.execute(
                 "SELECT task_id FROM mcp_task_action_links WHERE action_id = ?",
                 (action_id,),
@@ -7342,6 +7620,7 @@ class ControlPlaneStore:
         action["attempts"] = [dict(item) for item in attempts]
         action["receipts"] = [dict(item) for item in receipts]
         action["reconciliation"] = _row(reconciliation)
+        action["dispatch_disposition"] = _row(dispatch_disposition)
         action["task_id"] = str(task_link["task_id"]) if task_link is not None else None
         return action
 
@@ -7367,10 +7646,14 @@ class ControlPlaneStore:
                        CASE WHEN approved_patch.action_id IS NULL AND standing_patch.action_id IS NULL
                             THEN 0 ELSE 1 END AS approved_patch_candidate,
                        reconciliation.disposition AS reconciliation_disposition,
-                       reconciliation.reconciled_at_ms
+                       reconciliation.reconciled_at_ms,
+                       dispatch_disposition.disposition AS dispatch_disposition,
+                       dispatch_disposition.decided_at_ms AS dispatch_disposition_at_ms
                 FROM actions AS action
                 LEFT JOIN action_reconciliations AS reconciliation
                   ON reconciliation.action_id = action.action_id
+                LEFT JOIN action_dispatch_dispositions AS dispatch_disposition
+                  ON dispatch_disposition.action_id = action.action_id
                 LEFT JOIN mcp_approved_patch_intents AS approved_patch
                   ON approved_patch.action_id = action.action_id
                 LEFT JOIN mcp_standing_patch_intents AS standing_patch
@@ -7437,6 +7720,7 @@ class ControlPlaneStore:
                     "oauth_link_requests",
                     "node_workspaces",
                     "action_reconciliations",
+                    "action_dispatch_dispositions",
                 )
             }
             unresolved_action_count = int(
@@ -7460,6 +7744,42 @@ class ControlPlaneStore:
                     (QUARANTINE_UNKNOWN_DISPOSITION,),
                 ).fetchone()[0]
             )
+            historical_unobserved_dispatch_count = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM actions AS action
+                    JOIN action_dispatch_dispositions AS disposition
+                      ON disposition.action_id = action.action_id
+                    WHERE action.delivery_state = 'dispatch_unconfirmed'
+                      AND disposition.disposition = ?
+                    """,
+                    (HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION,),
+                ).fetchone()[0]
+            )
+            quarantined_unresolved_action_count = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(DISTINCT action_id)
+                    FROM (
+                        SELECT action.action_id
+                        FROM actions AS action
+                        JOIN action_reconciliations AS reconciliation
+                          ON reconciliation.action_id = action.action_id
+                        WHERE action.delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+                          AND reconciliation.disposition = ?
+                        UNION ALL
+                        SELECT action.action_id
+                        FROM actions AS action
+                        JOIN action_dispatch_dispositions AS disposition
+                          ON disposition.action_id = action.action_id
+                        WHERE action.delivery_state IN ('dispatch_unconfirmed', 'accepted', 'reconcile_required')
+                          AND disposition.disposition = ?
+                    )
+                    """,
+                    (QUARANTINE_UNKNOWN_DISPOSITION, HISTORICAL_UNOBSERVED_DISPATCH_DISPOSITION),
+                ).fetchone()[0]
+            )
         return {
             "ok": integrity == "ok",
             "sqlite_integrity": integrity,
@@ -7468,5 +7788,7 @@ class ControlPlaneStore:
             "counts": counts,
             "unresolved_action_count": unresolved_action_count,
             "quarantined_unknown_action_count": quarantined_unknown_action_count,
-            "unquarantined_unresolved_action_count": unresolved_action_count - quarantined_unknown_action_count,
+            "historical_unobserved_dispatch_count": historical_unobserved_dispatch_count,
+            "quarantined_unresolved_action_count": quarantined_unresolved_action_count,
+            "unquarantined_unresolved_action_count": unresolved_action_count - quarantined_unresolved_action_count,
         }

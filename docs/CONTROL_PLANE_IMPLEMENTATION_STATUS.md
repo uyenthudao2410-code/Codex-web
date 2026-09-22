@@ -12,6 +12,23 @@
 > Các số liệu bên dưới vẫn giữ nguyên bằng chứng theo từng checkpoint, không tự
 > nâng thành package/live proof.
 
+## Checkpoint Wave 48 — no-receipt historical dispatch disposition added — 22-09-2026
+
+Source schema hiện là **25**. Đã bổ sung một bảng disposition riêng và hai
+route operator cho đúng legacy case còn sót: `workspace_context` đã hết hạn,
+`dispatch_unconfirmed`, đúng một attempt, không có receipt, và node stale/
+unavailable hoặc thiếu runtime/policy observation hợp lệ. Operation yêu cầu
+literal declaration `HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH` cùng rationale
+bounded; ghi digest gắn với action/attempt/node observation và audit event.
+
+Disposition này **không** tạo receipt, không đổi `actions.delivery_state`, không
+retry/cancel/replay và không mở admission. Health/backup inspection tách riêng
+`historical_unobserved_dispatch_count` và trừ disposition này khỏi
+`unquarantined_unresolved_action_count`, nhưng action vẫn là evidence chưa quan
+sát, không phải completed hay natural outcome. Store + HTTP/UI focused suite
+đã PASS; chưa có operator invocation trên Ubuntu, chưa có deployment/restart,
+strict Windows discovery hoặc natural-work outcome.
+
 ## Checkpoint Wave 47 — exact checkout đã đồng bộ sau enrollment — 22-09-2026, 06:34 +07
 
 Linux, GitHub và Windows `E:\DEV\Codex-web` hiện cùng ở

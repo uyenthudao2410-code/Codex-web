@@ -145,6 +145,15 @@ WEB_UI_HTML = """<!doctype html>
           <label>Gõ chính xác <code>HISTORICAL_READ_ONLY_UNKNOWN_EFFECT</code> để chấp nhận rủi ro kiểm toán <input id="reconciliation-declaration" maxlength="128" autocomplete="off" spellcheck="false" required></label>
           <button type="submit">Cách ly, không retry</button>
         </form>
+        <form id="dispatch-disposition-form" class="operator-form reconciliation-form">
+          <h3>Cách ly dispatch cũ không có receipt</h3>
+          <p class="muted">Chỉ dùng cho <code>workspace_context</code> đã hết hạn, đúng một attempt, không có receipt và node stale/unavailable. Action vẫn là <code>dispatch_unconfirmed</code>; thao tác này không tạo receipt, không retry và không mở admission.</p>
+          <label>Node <select id="dispatch-disposition-device-id" required></select></label>
+          <label>Action IDs (mỗi ID một dòng)<textarea id="dispatch-disposition-action-ids" rows="4" maxlength="7000" autocomplete="off" spellcheck="false" required></textarea></label>
+          <label>Gõ chính xác <code>HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH</code> <input id="dispatch-disposition-declaration" maxlength="128" autocomplete="off" spellcheck="false" required></label>
+          <label>Lý do vận hành (không ghi secret/path)<textarea id="dispatch-disposition-rationale" rows="2" maxlength="500" autocomplete="off" spellcheck="false" required></textarea></label>
+          <button type="submit">Cách ly dispatch, không retry</button>
+        </form>
         <div class="table-wrap"><table><thead><tr><th>Action / tool</th><th>Context / node</th><th>Delivery</th><th>Receipt mới nhất</th><th>Thời gian</th><th>Nghiệm thu</th></tr></thead><tbody id="actions-body"></tbody></table></div>
       </section>
     </section>
@@ -212,6 +221,7 @@ WEB_UI_JAVASCRIPT = """(() => {
   const bindingForm = byId('binding-form');
   const contextForm = byId('context-form');
   const actionReconciliationForm = byId('action-reconciliation-form');
+  const dispatchDispositionForm = byId('dispatch-disposition-form');
 
   function text(id, value) { byId(id).textContent = value === null || value === undefined || value === '' ? 'chưa có quan sát' : String(value); }
   function formatTime(value) {
@@ -385,6 +395,7 @@ WEB_UI_JAVASCRIPT = """(() => {
       label: `${registration.display_name} · ${registration.device_id} · ${registration.workspace_generation}`,
     })), 'Chọn workspace node đã đăng ký', 'workspace registration');
     setSelectOptions('reconciliation-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
+    setSelectOptions('dispatch-disposition-device-id', (data.nodes || []).filter((node) => !node.revoked_at_ms).map((node) => ({ value: node.device_id, label: `${node.display_name || node.device_id} (${node.device_id})` })), 'Chọn node đã duyệt', 'node');
 
     const contextsByBinding = new Map();
     for (const context of data.contexts || []) { const entries = contextsByBinding.get(context.binding_id) || []; entries.push(`${context.context_id} / ${formatTime(context.expires_at_ms)}`); contextsByBinding.set(context.binding_id, entries); }
@@ -465,7 +476,8 @@ WEB_UI_JAVASCRIPT = """(() => {
       const row = document.createElement('tr');
       appendCell(row, `${action.action_id} / ${action.tool_name || '—'}`);
       appendCell(row, `${action.context_id || '—'} / ${action.device_id || '—'}`);
-      const delivery = action.delivery_state === 'queued' ? 'queued — chưa gửi node'
+      const delivery = action.dispatch_disposition === 'historical_read_only_unobserved_dispatch' ? 'historical_read_only_unobserved_dispatch — đã cách ly dispatch cũ, không receipt/không retry'
+        : action.delivery_state === 'queued' ? 'queued — chưa gửi node'
         : action.delivery_state === 'dispatch_unconfirmed' ? 'dispatch_unconfirmed — chưa rõ node đã nhận'
         : action.delivery_state === 'accepted' ? 'accepted — chờ receipt kết thúc'
         : action.approved_patch_candidate === true && action.delivery_state === 'reconcile_required' ? 'unknown/reconcile_required — patch có thể đã áp tại Windows; phải đối soát local, không retry'
@@ -657,6 +669,30 @@ WEB_UI_JAVASCRIPT = """(() => {
       connectionStatus.textContent = `Đã cách ly ${result.actions.length} action historical unknown. Receipt gốc vẫn giữ nguyên; không action nào được retry.`;
       actionReconciliationForm.reset(); await loadOverview();
     } catch (error) { connectionStatus.textContent = `Không cách ly action: ${error.message}`; }
+    finally { button.disabled = !csrfToken; }
+  });
+  dispatchDispositionForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const button = dispatchDispositionForm.querySelector('button[type="submit"]');
+    const actionIds = byId('dispatch-disposition-action-ids').value.split(/\s+/).filter(Boolean);
+    const declaration = byId('dispatch-disposition-declaration').value.trim();
+    const rationale = byId('dispatch-disposition-rationale').value.trim();
+    if (!confirm(`Cách ly ${actionIds.length} dispatch cũ không có receipt? Action vẫn unconfirmed, không retry và không tạo receipt.`)) return;
+    button.disabled = true; connectionStatus.textContent = 'Đang ghi nhận disposition dispatch lịch sử…';
+    try {
+      const result = await api('/v1/ui/action-dispositions/quarantine-historical-unobserved-dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Control-Plane-CSRF': csrfToken },
+        body: JSON.stringify({
+          device_id: byId('dispatch-disposition-device-id').value,
+          action_ids: actionIds,
+          declaration,
+          rationale,
+        }),
+      });
+      connectionStatus.textContent = `Đã cách ly ${result.actions.length} dispatch lịch sử; không tạo receipt và không retry.`;
+      dispatchDispositionForm.reset(); await loadOverview();
+    } catch (error) { connectionStatus.textContent = `Không cách ly dispatch: ${error.message}`; }
     finally { button.disabled = !csrfToken; }
   });
   refresh.addEventListener('click', loadOverview);

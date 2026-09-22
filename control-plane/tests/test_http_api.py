@@ -797,6 +797,70 @@ class ControlPlaneHttpApiTests(unittest.TestCase):
         self.assertIn("quarantine-historical-unknown", WEB_UI_JAVASCRIPT.decode("utf-8"))
         self.assertIn("HISTORICAL_READ_ONLY_UNKNOWN_EFFECT", WEB_UI_HTML.decode("utf-8"))
 
+    def test_historical_unobserved_dispatch_route_requires_operator_and_preserves_no_receipt(self) -> None:
+        node = self.server.store.enroll_node(
+            owner_id="owner_default",
+            device_id="device-http-unobserved-0001",
+            endpoint_id="endpoint-http-unobserved-0001",
+            display_name="HTTP unobserved node",
+        )
+        binding = self._registered_binding(
+            owner_id="owner_default",
+            device_id=node["device_id"],
+            workspace_id="workspace-http-unobserved-0001",
+            workspace_generation="generation-http-unobserved-0001",
+            display_name="HTTP unobserved workspace",
+        )
+        context = self.server.store.create_context(
+            owner_id="owner_default", binding_id=binding["binding_id"], expires_at_ms=self.server.store.clock() + 60_000
+        )
+        request = self.server.store.create_work_request(
+            owner_id="owner_default",
+            context_id=context["context_id"],
+            objective="Historical unobserved dispatch fixture",
+            criteria={"kind": "read_only"},
+            scope={"kind": "fixture"},
+            expires_at_ms=self.server.store.clock() + 30_000,
+        )
+        action = self.server.store.seal_action(
+            owner_id="owner_default",
+            request_id=request["request_id"],
+            tool_name="workspace_context",
+            arguments={"mode": "status"},
+            idempotency_key="http-unobserved-action-key-0001",
+            admission_reference="http-unobserved-admission-0001",
+            expires_at_ms=self.server.store.clock() + 20_000,
+        )
+        self.server.store.heartbeat(
+            device_id=node["device_id"],
+            endpoint_id="endpoint-http-unobserved-0001",
+            runtime_instance_id="runtime-http-unobserved-0001",
+            mcp_server_instance_id="server-http-unobserved-0001",
+            activation_epoch="epoch-http-unobserved-0001",
+            contract_version="smart-v3",
+            readiness="ready",
+        )
+        self.server.store.poll_actions(device_id=node["device_id"])
+        self.server.store.clock = lambda: action["expires_at_ms"] + 1
+        payload = {
+            "device_id": node["device_id"],
+            "action_ids": [action["action_id"]],
+            "declaration": "HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH",
+            "rationale": "legacy read-only dispatch expired without node evidence",
+        }
+        path = "/v1/action-dispositions/quarantine-historical-unobserved-dispatch"
+        status, forbidden = self._post(path, payload)
+        self.assertEqual(status, 403)
+        self.assertEqual(forbidden["error"]["code"], "FORBIDDEN")
+        status, result = self._post(path, payload, authorization=f"Bearer {self.operator_token}")
+        self.assertEqual(status, 200)
+        self.assertEqual(result["actions"][0]["action_id"], action["action_id"])
+        observation = self.server.store.action_observation(owner_id="owner_default", action_id=action["action_id"])
+        self.assertEqual(observation["delivery_state"], "dispatch_unconfirmed")
+        self.assertEqual(observation["receipts"], [])
+        self.assertEqual(observation["dispatch_disposition"]["declaration"], "HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH")
+        self.assertIn("HISTORICAL_READ_ONLY_UNOBSERVED_DISPATCH", WEB_UI_HTML.decode("utf-8"))
+
     def test_node_policy_template_is_bound_to_its_live_context_and_node_credential(self) -> None:
         first = self.server.store.enroll_node(
             owner_id="owner_default",
